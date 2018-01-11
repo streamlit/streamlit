@@ -3,6 +3,7 @@
 - Create something fast in react
   - Test if I can make a fast scrolling text bar in react
     - Get bootstrap working in react
+    - Test a production build and see how much faster that is
   - Test if I can set text quickly in react
   - Add a big table
     -  https://bvaughn.github.io/react-virtualized/#/components/MultiGrid
