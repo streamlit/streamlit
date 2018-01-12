@@ -2,7 +2,7 @@
 
 - Create something fast in react
   - Test if I can make a fast scrolling text bar in react
-    - Get bootstrap working in react
+    - create a little scrolling text bar with a timer
     - Test a production build and see how much faster that is
   - Test if I can set text quickly in react
   - Add a big table
