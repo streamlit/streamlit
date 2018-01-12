@@ -1,13 +1,6 @@
 #### Todo
 
 - Create something fast in react
-  - Test if I can make a fast scrolling text bar in react
-    - create a little scrolling text bar with a timer
-    - Test a production build and see how much faster that is
-  - Test if I can set text quickly in react
-  - Add a big table
-    -  https://bvaughn.github.io/react-virtualized/#/components/MultiGrid
-    - repeat speed Test
   - Add a big graph
     - repeat speed test
   -  Figure out react build tools and make my own thing
@@ -15,7 +8,8 @@
     - repeat speed Test
   - start playing around with protobufs
     - keep repeating speed Test
-- make the aweseomest library ever
+- make the awesomest library ever
+
+#### More things to play with and try
 - Follow the docker tutorial
-  -
 - Install node within docker

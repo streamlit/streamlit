@@ -1,5 +1,5 @@
 import React, {
-  Component,
+  // Component,
   PureComponent
 } from 'react';
 
@@ -33,24 +33,28 @@ class DataFrame extends PureComponent {
   }
 
   render() {
+    const height = 300;
+    const border = 2;
     return (
-      <div style={{height:300 + 2}}>
-        <AutoSizer style={{height: 300}}>
+      <div style={{height}}>
+        <AutoSizer>
             {({width}) => (
-              <div style={{width:width+2, height:300+2, border:'1px solid black'}}>
+              <div style={{width:width, border:'1px solid black'}}>
                 <MultiGrid
                   className="dataFrame"
                   cellRenderer={this._cellRenderer}
                   fixedColumnCount={1}
                   fixedRowCount={1}
-                  columnWidth={75}
+                  columnWidth={({index}) => {
+                    return 30 + 2 * index;
+                  }}
                   columnCount={50}
                   enableFixedColumnScroll
                   enableFixedRowScroll
-                  height={300}
+                  height={height}
                   rowHeight={30}
                   rowCount={50}
-                  width={width}
+                  width={width - border}
                 />
             </div>
           )}
@@ -69,7 +73,7 @@ class DataFrame extends PureComponent {
       ...style,
       // width: 75,
       // height: 40,
-      border: '1px solid black',
+      // border: '1px solid black',
       backgroundColor: backgroundColor
     };
     return (
