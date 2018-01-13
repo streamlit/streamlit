@@ -19,7 +19,7 @@ function Chart(props) {
       <AutoSizer>
         {({width}) => (
           <LineChart width={width} height={height} data={props.data}>
-            <XAxis dataKey="x" />
+            <XAxis dataKey="x" type="number" domain={['dataMin', 'dataMax']}/>
             {/* <XAxis dataKey="x"/> */}
             <YAxis
               type="number"

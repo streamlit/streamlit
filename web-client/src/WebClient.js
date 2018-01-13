@@ -67,7 +67,13 @@ class WebClient extends PureComponent {
     const websocket = new WebSocket(wsUri);
     websocket.onmessage = ({data}) => {
       console.log('got a message:')
-      console.log(data)
+      let new_state = JSON.parse(data)
+      this.setState((old_state) => ({
+        ...new_state,
+        data: [...old_state.data, {x: new_state.progress, y: Math.random()}],
+      }));
+      console.log(this.state)
+      console.log(new_state)
     };
 
     // Debug - beging - fill in the other event handler

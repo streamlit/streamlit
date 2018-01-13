@@ -11,7 +11,7 @@ WEBSOCKET_PORT = 8315
 
 async def handle_connection(websocket, path):
     print('Got a connection.')
-    for progress in range(100):
+    for progress in range(1000):
         await asyncio.sleep(0.01)
         await websocket.send(json.dumps({'progress': progress}))
 
