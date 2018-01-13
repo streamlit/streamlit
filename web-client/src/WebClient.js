@@ -100,7 +100,22 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-    this.timerID = setInterval(() => {
+    this.timerID = this._setupAnimation();
+    this.websocket = this._setupWebsocket();
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timerID);
+
+    const NORMAL_CLOSURE = 1000;
+    this.websocket.close(NORMAL_CLOSURE)
+  }
+
+  /**
+   * Sets up the initial animation.
+   */
+  _setupAnimation() {
+    return setInterval(() => {
       let {progress, data} = this.state
       if (progress < 100) {
         const deltaProgress = 1;
@@ -111,24 +126,52 @@ class WebClient extends PureComponent {
     }, 10);
   }
 
-  componentWillUnmount() {
-    clearInterval(this.timerID);
-  }
-
   /**
    * Set up a websocket connection.
    */
   _setupWebsocket() {
     const wsUri = "ws://echo.websocket.org/";
-    this.websocket = new WebSocket(wsUri);
+    const websocket = new WebSocket(wsUri);
     // websocket.onopen = onOpen;
     // websocket.onclose = onClose;
-    this.websocket.onmessage = ({data}) => {
+    websocket.onmessage = ({data}) => {
       console.log('got a message:')
       console.log(data)
     };
-    // websocket.onerror = onError;
 
+    // Now we're going to test ourselves against the echo websocket.
+    websocket.onopen = () => {
+      const messages = [
+        'hello',
+        'world',
+        'this',
+        'is',
+        'truly',
+        'a',
+        'great',
+        'world',
+      ]
+      function* msgGenerator() {
+        for (let msg of messages)
+          yield msg;
+      }
+
+      let msgs = msgGenerator()
+      function sendMsg() {
+        let {value, done} = msgs.next()
+        if (!done) {
+          websocket.send(value);
+          setTimeout(sendMsg, 10);
+        }
+      }
+
+      console.log('playing with msgGenerator');
+      setTimeout(sendMsg, 10);
+    };
+
+    // websocket.onerror = onError;
+    console.log('The websocket is set up.')
+    return websocket;
   }
 
 

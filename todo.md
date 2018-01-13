@@ -2,12 +2,15 @@
 
 - Create something fast in react
   - Tiny websockets server
-    - Get rid of AutoSizer from Chart.js and use the recharts version.
+    - Create a websocket in python.
     - repeat speed Test
   - start playing around with protobufs
     - keep repeating speed Test
 - make the awesomest library ever
 
 #### More things to play with and try
+
+- Get rid of AutoSizer from Chart.js and use the recharts version.
+- Reimplement core logic in Redux
 - Follow the docker tutorial
 - Install node within docker

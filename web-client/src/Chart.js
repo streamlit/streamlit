@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import React from 'react';
 import {
   LineChart,
   Line,
@@ -21,7 +21,10 @@ function Chart(props) {
           <LineChart width={width} height={height} data={props.data}>
             <XAxis dataKey="x" />
             {/* <XAxis dataKey="x"/> */}
-            <YAxis type="number"/>
+            <YAxis
+              type="number"
+              domain={[0.0, 1.0]}
+            />
             <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
             <Line
               isAnimationActive={false}
