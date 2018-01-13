@@ -2,8 +2,8 @@
 
 - Create something fast in react
   - Tiny websockets server
-    - Create a websocket in python.
-    - repeat speed Test
+    - Make the python webserver send a lot of information quickly
+    - repeat speed Test, gating the loads on the websockets
   - start playing around with protobufs
     - keep repeating speed Test
 - make the awesomest library ever

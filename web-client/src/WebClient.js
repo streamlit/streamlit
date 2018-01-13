@@ -1,7 +1,4 @@
-import React, {
-  // Component,
-  PureComponent
-} from 'react';
+import React, { PureComponent } from 'react';
 
 import {
   Col as BootstrapCol,
@@ -12,11 +9,8 @@ import {
   Row as BootstrapRow,
 } from 'reactstrap';
 
-import { AutoSizer, MultiGrid } from 'react-virtualized';
-
-
-
 import Chart from './Chart'
+import DataFrame from './DataFrame'
 import './WebClient.css';
 
 // This my custom row which contains a complete 100% width column
@@ -27,67 +21,6 @@ const Row = ({children}) => (
     </BootstrapCol>
   </BootstrapRow>
 );
-
-
-
-// Represents a Pandas Dataframe on the screen.
-class DataFrame extends PureComponent {
-  constructor(props) {
-    super(props);
-    this._cellRenderer = this._cellRenderer.bind(this)
-  }
-
-  render() {
-    const height = 300;
-    const border = 2;
-    return (
-      <div style={{height}}>
-        <AutoSizer>
-            {({width}) => (
-              <div style={{width:width, border:'1px solid black'}}>
-                <MultiGrid
-                  className="dataFrame"
-                  cellRenderer={this._cellRenderer}
-                  fixedColumnCount={1}
-                  fixedRowCount={1}
-                  columnWidth={({index}) => {
-                    return 30 + 2 * index;
-                  }}
-                  columnCount={50}
-                  enableFixedColumnScroll
-                  enableFixedRowScroll
-                  height={height}
-                  rowHeight={30}
-                  rowCount={50}
-                  width={width - border}
-                />
-            </div>
-          )}
-        </AutoSizer>
-      </div>
-    );
-  }
-
-  // Renders out each cell
-  _cellRenderer({columnIndex, key, rowIndex, style}) {
-    let backgroundColor = '#ddd';
-    if ((columnIndex + rowIndex) % 2 === 0) {
-      backgroundColor = '#eee';
-    }
-    const the_style = {
-      ...style,
-      // width: 75,
-      // height: 40,
-      // border: '1px solid black',
-      backgroundColor: backgroundColor
-    };
-    return (
-      <div key={key} style={the_style}>
-        {columnIndex}, {rowIndex}, {key}
-      </div>
-    );
-  }
-}
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -100,12 +33,12 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-    this.timerID = this._setupAnimation();
+    // this.timerID = this._setupAnimation();
     this.websocket = this._setupWebsocket();
   }
 
   componentWillUnmount() {
-    clearInterval(this.timerID);
+    // clearInterval(this.timerID);
 
     const NORMAL_CLOSURE = 1000;
     this.websocket.close(NORMAL_CLOSURE)
@@ -130,44 +63,22 @@ class WebClient extends PureComponent {
    * Set up a websocket connection.
    */
   _setupWebsocket() {
-    const wsUri = "ws://echo.websocket.org/";
+    const wsUri = "ws://localhost:8315/";
     const websocket = new WebSocket(wsUri);
-    // websocket.onopen = onOpen;
-    // websocket.onclose = onClose;
     websocket.onmessage = ({data}) => {
       console.log('got a message:')
       console.log(data)
     };
 
-    // Now we're going to test ourselves against the echo websocket.
-    websocket.onopen = () => {
-      const messages = [
-        'hello',
-        'world',
-        'this',
-        'is',
-        'truly',
-        'a',
-        'great',
-        'world',
-      ]
-      function* msgGenerator() {
-        for (let msg of messages)
-          yield msg;
-      }
-
-      let msgs = msgGenerator()
-      function sendMsg() {
-        let {value, done} = msgs.next()
-        if (!done) {
-          websocket.send(value);
-          setTimeout(sendMsg, 10);
-        }
-      }
-
-      console.log('playing with msgGenerator');
-      setTimeout(sendMsg, 10);
-    };
+    // Debug - beging - fill in the other event handler
+    function handleEvent(hanlderName, event) {
+      console.log(hanlderName)
+      console.log(event)
+    }
+    websocket.onopen = handleEvent.bind(this, 'onopen')
+    websocket.onclose = handleEvent.bind(this, 'onclose')
+    websocket.onerror = handleEvent.bind(this, 'onerror')
+    // Debug end
 
     // websocket.onerror = onError;
     console.log('The websocket is set up.')
