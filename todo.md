@@ -2,6 +2,10 @@
 
 - Create something fast in react
   - Add a big graph
+    - options
+      - recharts.org
+      - https://rma-consulting.github.io/react-easy-chart/
+      - [react-chartjs-2](https://github.com/jerairrest/react-chartjs-2)
     - repeat speed test
   -  Figure out react build tools and make my own thing
   - Tiny websockets server

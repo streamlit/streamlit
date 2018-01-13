@@ -14,6 +14,20 @@ import {
 
 import { AutoSizer, MultiGrid } from 'react-virtualized';
 
+import {
+  LineChart,
+  Line,
+  CartesianGrid,
+  Legend,
+  XAxis,
+  YAxis
+} from 'recharts';
+
+import {
+  LineChart as EasyLineChart,
+  Legend as EasyLegend,
+} from 'react-easy-chart';
+
 import './WebClient.css';
 
 // This my custom row which contains a complete 100% width column
@@ -24,6 +38,81 @@ const Row = ({children}) => (
     </BootstrapCol>
   </BootstrapRow>
 );
+
+// Represents a chart with some data
+class Chart extends PureComponent {
+  constructor(props) {
+    super(props);
+  }
+
+  render () {
+    const height=200;
+    return (
+      <div style={{height}}>
+        <AutoSizer>
+          {({width}) => (
+            <LineChart width={width} height={height} data={this.props.data}>
+              <XAxis dataKey="x" type={this.props.data.length < 99 ? undefined : 'number'}/>
+              {/* <XAxis dataKey="x"/> */}
+              <YAxis type="number"/>
+              <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+              <Line
+                isAnimationActive={false}
+                type="linear"
+                dataKey="y"
+                stroke="rgb(40, 113, 238)"
+                dot={false}
+              />
+              <Legend />
+            </LineChart>
+          )}
+        </AutoSizer>
+      </div>
+    );
+  }
+}
+
+// Represents a chart with some data
+class EasyChart extends PureComponent {
+  constructor(props) {
+    super(props);
+  }
+
+  render () {
+    const height=200;
+    const legendHeight = 20;
+    console.log('About to render and EasyChart');
+    console.log(this.props.data);
+    return (
+      <div style={{height: height + legendHeight}}>
+        <AutoSizer>
+          {({width}) => (
+            <div>
+              <EasyLineChart
+                axisLabel={{x: 'This is X', y: 'This is Y'}}
+                lineColors={['rgb(40, 113, 238)']}
+                grid
+                axes={true}
+                width={width}
+                height={height}
+                data={[this.props.data]}
+              />
+              <div width={width} height={legendHeight}>
+                <EasyLegend
+                  width={width}
+                  height={legendHeight}
+                  data={[{key:'xs', color:'rgb(40, 113, 238)'}]}
+                  dataId="key"
+                  horizontal
+                />
+              </div>
+            </div>
+          )}
+        </AutoSizer>
+      </div>
+    );
+  }
+}
 
 // Represents a Pandas Dataframe on the screen.
 class DataFrame extends PureComponent {
@@ -90,16 +179,19 @@ class WebClient extends PureComponent {
 
     this.state = {
       progress: 0,
+      data: [],
     };
   }
 
   componentDidMount() {
-    console.log('In componentDidMount.')
     this.timerID = setInterval(() => {
-      const deltaProgress = 1;
-      const progress = Math.min(100, this.state.progress + deltaProgress);
-      // console.log(`Updating state ${this.state.progress} -> ${progress}`)
-      this.setState({progress})
+      let {progress, data} = this.state
+      if (progress < 100) {
+        const deltaProgress = 1;
+        progress = progress + deltaProgress;
+        data = [...data, {x: progress, y: Math.random()}];
+        this.setState({progress, data});
+      }
     }, 10);
   }
 
@@ -125,7 +217,19 @@ class WebClient extends PureComponent {
             <samp>Progress: {this.state.progress}% | FPS: 21</samp>
           </Row>
           <Row>
-            <samp>And this is some more.</samp>
+            <samp>Let's start with an easy chart:</samp>
+          </Row>
+          <Row>
+            <EasyChart data={this.state.data} />
+          </Row>
+          <Row>
+            <samp>Now for some recharts:</samp>
+          </Row>
+          <Row>
+            <Chart data={this.state.data}/>
+          </Row>
+          <Row>
+            <samp>And a little more.</samp>
           </Row>
           <Row>
             <DataFrame />
