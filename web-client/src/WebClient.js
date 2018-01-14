@@ -4,6 +4,7 @@ import {
   Col as BootstrapCol,
   Container,
   Navbar,
+  NavItem,
   NavbarBrand,
   Progress,
   Row as BootstrapRow,
@@ -11,6 +12,7 @@ import {
 
 import Chart from './Chart'
 import DataFrame from './DataFrame'
+import PersistentWebsocket from './PersistentWebsocket'
 import './WebClient.css';
 
 // This my custom row which contains a complete 100% width column
@@ -30,98 +32,67 @@ class WebClient extends PureComponent {
       progress: 0,
       data: [],
     };
+
+    // Bind event handlers.
+    this.handleReconnect = this.handleReconnect.bind(this);
+    this.handleMessage = this.handleMessage.bind(this);
   }
 
   componentDidMount() {
-    // this.timerID = this._setupAnimation();
-    this.websocket = this._setupWebsocket();
   }
 
   componentWillUnmount() {
-    // clearInterval(this.timerID);
-
-    const NORMAL_CLOSURE = 1000;
-    this.websocket.close(NORMAL_CLOSURE)
   }
 
   /**
-   * Sets up the initial animation.
+   * Callback when we establish a websocket connection.
    */
-  _setupAnimation() {
-    return setInterval(() => {
-      let {progress, data} = this.state
-      if (progress < 100) {
-        const deltaProgress = 1;
-        progress = progress + deltaProgress;
-        data = [...data, {x: progress, y: Math.random()}];
-        this.setState({progress, data});
-      }
-    }, 10);
+  handleReconnect() {
+    console.log('CONNECTED TO THE SERVER');
   }
 
   /**
-   * Set up a websocket connection.
+   * Callback when we get a message from the server.
    */
-  _setupWebsocket() {
-    const wsUri = "ws://localhost:8315/";
-    const websocket = new WebSocket(wsUri);
-    websocket.onmessage = ({data}) => {
-      console.log('got a message:')
-      let new_state = JSON.parse(data)
-      this.setState((old_state) => ({
-        ...new_state,
-        data: [...old_state.data, {x: new_state.progress, y: Math.random()}],
-      }));
-      console.log(this.state)
-      console.log(new_state)
-    };
-
-    // Debug - beging - fill in the other event handler
-    function handleEvent(hanlderName, event) {
-      console.log(hanlderName)
-      console.log(event)
-    }
-    websocket.onopen = handleEvent.bind(this, 'onopen')
-    websocket.onclose = handleEvent.bind(this, 'onclose')
-    websocket.onerror = handleEvent.bind(this, 'onerror')
-    // Debug end
-
-    // websocket.onerror = onError;
-    console.log('The websocket is set up.')
-    return websocket;
+  handleMessage(data) {
+    console.log('RECEIVED MEESAGE')
+    console.log(data)
   }
-
 
   render() {
     return (
       <div>
-        <Navbar color='dark'>
+        <Navbar color='dark' className="fixed-top">
           <NavbarBrand href="/">Tiny Notebook</NavbarBrand>
+          <NavItem>
+            <PersistentWebsocket
+              uri="ws://localhost:8315/"
+              onReconnect={this.handleReconnect}
+              onMessage={this.handleMessage}
+            />
+          </NavItem>
         </Navbar>
-        <Container>
+        <Container className="notebook-container">
           <Row>
-            <h3>Testing React Speed</h3>
+            <h3>Dumb Client</h3>
           </Row>
           <Row>
-            <Progress value={this.state.progress}/>
+            <samp>
+              This client is printing out all messages to the console.
+            </samp>
           </Row>
           <Row>
-            <samp>Progress: {this.state.progress}% | FPS: 21</samp>
-          </Row>
-          <Row>
-            <samp>Now for some recharts:</samp>
-          </Row>
-          <Row>
-            <Chart data={this.state.data}/>
-          </Row>
-          <Row>
-            <samp>And a little more.</samp>
-          </Row>
-          <Row>
-            <DataFrame />
-          </Row>
-          <Row>
-            <samp>And this is some more.</samp>
+            <samp>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce ac sollicitudin ex. Sed pretium tincidunt justo, non blandit augue condimentum in. Integer ullamcorper sem urna. Aliquam magna massa, volutpat eu tincidunt ut, aliquam a arcu. Duis pulvinar pharetra malesuada. Nam bibendum maximus faucibus. Etiam eu nisi mattis, facilisis enim at, dapibus magna. Phasellus a nulla a tortor ultrices auctor.
+
+Nulla molestie ante lorem, nec tempor dolor vulputate quis. Suspendisse euismod nulla leo, et finibus erat aliquet et. Nulla augue ligula, vehicula ac odio id, fermentum dictum erat. Quisque lobortis aliquam hendrerit. Aliquam et iaculis nulla. Donec blandit finibus est, nec bibendum magna commodo sit amet. Curabitur ultrices eu ligula non luctus. Phasellus molestie bibendum tortor sed malesuada. Donec accumsan mi in tempor vestibulum. In vitae quam vel ex ultrices consequat nec nec ipsum. Etiam venenatis dapibus feugiat. Praesent rhoncus enim eget quam accumsan, ut venenatis sem tristique.
+
+Sed porttitor magna ac est luctus, ac commodo justo facilisis. Proin id scelerisque odio. Donec vulputate magna sed dolor vestibulum, eget luctus lorem vestibulum. In condimentum mi a ligula posuere, consectetur auctor sapien mollis. Quisque dignissim vel turpis vitae euismod. Morbi venenatis ultrices metus, vel fermentum nisl placerat eu. Aliquam lobortis felis risus, eget pharetra nibh scelerisque sed. Sed elementum ex magna, ut sagittis leo eleifend vel. Proin id aliquam neque. Aenean arcu ex, finibus eu sodales et, sagittis ac velit. Nam euismod dignissim neque, at consequat nisl venenatis id. Aliquam pretium semper justo, id posuere est bibendum a.
+
+Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Donec vulputate auctor tortor, et faucibus odio finibus vitae. Morbi ut iaculis quam. Vivamus dictum libero in ligula efficitur, hendrerit dignissim lorem mattis. Ut pharetra ante a odio auctor viverra. Aliquam ac tellus leo. In pulvinar fringilla commodo. Sed aliquet varius quam id auctor. Donec dapibus consectetur mi vel cursus.
+
+Sed auctor, arcu sit amet hendrerit sodales, odio leo aliquet nisl, quis accumsan eros urna eu erat. Sed vitae augue velit. Vestibulum volutpat consectetur tempus. Nam vitae imperdiet sapien, vitae ultricies dui. Sed consequat augue tellus, ac tristique lacus tincidunt ac. Sed accumsan, ex sit amet tempus elementum, quam augue auctor nibh, quis ultrices urna nulla sit amet magna. Mauris venenatis laoreet suscipit. Duis libero enim, feugiat id congue id, consequat vitae felis.
+            </samp>
           </Row>
         </Container>
 
