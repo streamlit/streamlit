@@ -12,7 +12,7 @@
       - Make an object which can accumulate deltas.
       - Create a text object and its ability to deltas.
       - Have it create a text object and send out deltas on that.
-      - Start to display the deltas on the client.
+      - Start to display the deltas  on the client.
   - Put in the http load
 
   - Tiny websockets server
@@ -20,6 +20,8 @@
     - repeat speed Test, gating the loads on the websockets
     - keep repeating speed Test
 - make the awesomest library ever
+
+#### How to reload the webpage within the server
 
 #### More things to play with and try
 
