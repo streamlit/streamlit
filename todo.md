@@ -1,6 +1,5 @@
 #### Todo
 
-- Use `osascript ./web-client/node_modules/react-dev-utils/openChrome.applescript https://www.google.com` to refresh the page
 - Make an object which can accumulate deltas.
 - Create a text object and its ability to deltas.
 - Have it create a text object and send out deltas on that.
