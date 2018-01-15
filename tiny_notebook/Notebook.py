@@ -7,6 +7,10 @@ import threading
 import json
 
 WEBSOCKET_PORT = 8315
+LAUNCH_BROWSER_SCRIPT = \
+    'osascript '
+    './web-client/node_modules/react-dev-utils/openChrome.applescript '
+    'http://localhost:3000/'
 
 class Notebook:
     def __init__(self):
