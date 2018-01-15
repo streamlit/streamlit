@@ -69,6 +69,7 @@ class WebClient extends PureComponent {
               uri="ws://localhost:8315/"
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
+              persist={false}
             />
           </NavItem>
         </Navbar>
