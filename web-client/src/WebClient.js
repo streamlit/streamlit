@@ -13,6 +13,7 @@ import {
 import Chart from './Chart'
 import DataFrame from './DataFrame'
 import PersistentWebsocket from './PersistentWebsocket'
+import {Text} from './protobuf/notebook_pb'
 import './WebClient.css';
 
 // This my custom row which contains a complete 100% width column
@@ -39,6 +40,7 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
+    console.log('Component did mount.')
   }
 
   componentWillUnmount() {
@@ -60,6 +62,7 @@ class WebClient extends PureComponent {
   }
 
   render() {
+    return (<div></div>);
     return (
       <div>
         <Navbar color='dark' className="fixed-top">

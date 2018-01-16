@@ -13,3 +13,7 @@ A stateless alternative to Jupyter notebooks for machine learning and data scien
 - [Create React App](https://github.com/facebookincubator/create-react-app/)
   - `npm install -g create-react-app`
   - The application framework for our React SPA.
+- protobufs
+  - `brew install protobuf`
+  - `pip install protobuf`
+  - Allows us to communicate the messages quickly.
