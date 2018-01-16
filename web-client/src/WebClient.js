@@ -13,8 +13,10 @@ import {
 import Chart from './Chart'
 import DataFrame from './DataFrame'
 import PersistentWebsocket from './PersistentWebsocket'
-import {Text} from './protobuf/notebook_pb'
 import './WebClient.css';
+
+// Testing the new protobuf format.
+import { Text } from './protobuf/notebook'
 
 // This my custom row which contains a complete 100% width column
 const Row = ({children}) => (
@@ -41,6 +43,19 @@ class WebClient extends PureComponent {
 
   componentDidMount() {
     console.log('Component did mount.')
+    console.log('Got an awesome message:')
+    console.log(Text)
+    console.log('Here is a created message:')
+    let text = Text.create()
+    console.log(text)
+    text.text = 'Some text.'
+    console.log('Classes:')
+    console.log(text.classes)
+    text.classes.push(123)
+    console.log(text)
+    console.log('Verifying...')
+    console.log(Text.verify(text))
+    console.log('Done verifying.')
   }
 
   componentWillUnmount() {
@@ -56,13 +71,38 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(data) {
-    console.log('RECEIVED MEESAGE')
-    console.log(data)
+  handleMessage(blob) {
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(blob)
+    reader.onloadend = () => {
+      console.log('Got some data from the blob')
+      console.log(reader.result)
+      const uint8array = new Uint8Array(reader.result);
+      console.log(uint8array)
+      const text = Text.decode(uint8array)
+      console.log('decoded the following')
+      console.log(text)
+      console.log(`protobuf_len: ${blob.size}`);
+      console.log(`json_len: ${JSON.stringify(text).length}`);
+      console.log(JSON.stringify(text))
+
+      // const text = Text.create()
+      // text.text = 'some text'
+      // text.classes = ['here is a class', 'here is another class']
+      // console.log('text object', text)
+      // const encoded = Text.encode(text)
+      // console.log('encoded', encoded)
+      // console.log('encoded length', encoded.length)
+      // console.log(Text.decode(encoded))
+
+      // let text = Text.decode(reader.result)
+      // console.log(text)
+      // console.log(JSON.stringify(text))
+      // console.log(`json_len: ${JSON.stringify(text).length}`)
+    }
   }
 
   render() {
-    return (<div></div>);
     return (
       <div>
         <Navbar color='dark' className="fixed-top">

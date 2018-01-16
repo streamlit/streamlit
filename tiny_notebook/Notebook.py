@@ -6,6 +6,7 @@ import os
 import websockets
 import threading
 import json
+from tiny_notebook import protobuf
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
@@ -76,9 +77,21 @@ class Notebook:
     async def _async_handle_connection(self, websocket, path):
         """Handles a websocket connection."""
         print('Got a connection.')
+        text = protobuf.Text()
+        print(f'Created text with text="{text.text}".')
+        text.text = 'some text'
+        print(f'Created text with text="{text.text}".')
+        text.classes.append('here is a class')
+        text.classes.append('here is another class')
+        print('Here is text', text)
+        print('Here are the classes', list(text.classes))
+        print('Here is the string:')
+        print('length', len(text.SerializeToString()))
+
         for progress in range(100):
             await asyncio.sleep(0.01)
-            await websocket.send(json.dumps({'progress': progress}))
+            await websocket.send(text.SerializeToString())
+
         # Go into an endless loop.
         while self._server_running:
             await asyncio.sleep(SHUTDOWN_DELAY_SECS);

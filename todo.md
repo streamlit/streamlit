@@ -1,14 +1,14 @@
 #### Todo
 
 - Play with protobufs.
-  - Figure out how to compile code how I want.
   - Create a message in Python.
-  - Load the code in javascript
+  - Make sure to .gitignore created files.
   - Transfer a simple message. (Check length!)
     - Figure out how to do binary transfers over the channel.
+  - Do a cleanup and check in all the protobuf code.
   - Play around with different protobuf formats in Python
   - Make a first cut of the object hierarchy.
-  - See if I can send and load those objects
+  - See if I can send and load those objects.
 - Create a delta message
   - See if I can encode it
   - See if I can decode it.

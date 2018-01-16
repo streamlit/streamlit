@@ -73,7 +73,8 @@ const ERROR_STATE = 'error'
 
       this.websocket.onclose = () => {
         console.log('PersistentWebsocket: Closed.')
-        this.setState({state: DISCONNECTED_STATE})
+        if (this.state.state !== ERROR_STATE)
+          this.setState({state: DISCONNECTED_STATE})
         this.closeWebsocket();
         if (this.props.persist)
           setTimeout(this.openWebsocket, RECONNECT_TIMEOUT);

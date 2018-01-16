@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message Text {
+  // The text to display.
+  string text = 1;
+
+  // The display classes for this text.
+  repeated string classes = 2;
+}
