@@ -86,8 +86,6 @@ class WebClient extends PureComponent {
           throw new Error(`Cannot parse delta type "${delta.type}".`)
         }
       }
-      console.log('Got new elements:')
-      console.log(elements.toArray())
       return {elements};
     });
   }

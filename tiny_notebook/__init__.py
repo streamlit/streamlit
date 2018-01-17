@@ -2,4 +2,3 @@
 to create and interact with printed elements."""
 
 from .notebook import Notebook
-from . import delta

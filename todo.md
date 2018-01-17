@@ -1,7 +1,7 @@
 #### Todo
 
 - Test it with multiple clients reading.
-  - 
+  - Move all asyncs in notebook into sub-methods.
 - Start implementing the rest of the messages.
 - Implement images really nicely.
 - Rename it from tiny-notebook to printf

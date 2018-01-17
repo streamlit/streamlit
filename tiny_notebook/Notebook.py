@@ -2,10 +2,14 @@
 write objects out to a wbpage."""
 
 import asyncio
+import copy
 import os
-import websockets
 import threading
-from tiny_notebook import delta, protobuf
+import websockets
+
+from tiny_notebook import protobuf
+from tiny_notebook.DeltaAccumulator import DeltaAccumulator
+from tiny_notebook.DeltaGenerator import DeltaGenerator
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
@@ -13,7 +17,7 @@ LAUNCH_BROWSER_SCRIPT = \
     './web-client/node_modules/react-dev-utils/openChrome.applescript ' \
     'http://localhost:3000/'
 SHUTDOWN_DELAY_SECS = 1.0
-THROTTLE_SECONDS = 0.01
+THROTTLE_SECS = 0.01
 
 class Notebook:
     def __init__(self):
@@ -22,9 +26,8 @@ class Notebook:
         self._server_running = False
 
         # Here is where we can create text
-        self._delta_accumulators = [delta.Accumulator()]
-        self._delta_generator = delta.Generator(
-            self._delta_accumulators[0].add_delta)
+        self._delta_accumulators = [DeltaAccumulator()]
+        self._delta_generator = DeltaGenerator(self._add_delta)
 
     def __enter__(self):
         # start the webserver
@@ -46,7 +49,7 @@ class Notebook:
 
         # close down the server
         print("About to send out an asynchronous stop.")
-        asyncio.run_coroutine_threadsafe(self._async_stop(), self._server_loop)
+        self._stop()
         print("Sent out the stop")
 
         # # A small delay to flush anything left.
@@ -67,8 +70,8 @@ class Notebook:
             print("Starting server in separate thread.")
             self._server_running = True
             asyncio.set_event_loop(self._server_loop)
-            start_server = websockets.serve(
-                self._async_handle_connection, '', WEBSOCKET_PORT)
+            handler = self._get_connection_handler()
+            start_server = websockets.serve(handler, '', WEBSOCKET_PORT)
             try:
                 self._server_loop.run_until_complete(start_server)
                 print('Starting the server loop...')
@@ -79,27 +82,50 @@ class Notebook:
 
         threading.Thread(target=run_server, daemon=True).start()
 
-    async def _async_handle_connection(self, websocket, path):
+    def _add_delta(self, delta):
+        """Distributes this delta into all accumulators."""
+        # Distribute the delta into every accumulator. The first accumulator
+        # is special: it's the master accumulator from which all others derive.
+        async def async_add_delta():
+            for accumulator in self._delta_accumulators:
+                accumulator.add_delta(delta)
+
+        # All code touching an accumulator must be run in the server even loop.
+        asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
+
+    def _get_connection_handler(self):
         """Handles a websocket connection."""
-        # Go into an endless loop.
-        while self._server_running:
-            deltas = self._delta_accumulators[0].get_deltas()
-            # print('Found and am sending deltas:', bool(deltas))
-            if deltas:
-                delta_list = protobuf.DeltaList()
-                delta_list.deltas.extend(deltas)
-                await websocket.send(delta_list.SerializeToString())
+        async def async_handle_connection(websocket, path):
+            # Creates a new accumulator for this connection.
+            accumulator = copy.deepcopy(self._delta_accumulators[0])
+            self._delta_accumulators.append(accumulator)
 
-            await asyncio.sleep(THROTTLE_SECONDS)
+            # Go into an endless loop.
+            async def send_deltas():
+                deltas = accumulator.get_deltas()
+                if deltas:
+                    delta_list = protobuf.DeltaList()
+                    delta_list.deltas.extend(deltas)
+                    await websocket.send(delta_list.SerializeToString())
+            while self._server_running:
+                await send_deltas()
+                await asyncio.sleep(THROTTLE_SECS)
+            await send_deltas()
 
-        print('Naturally finished handle connection.')
+            print('Naturally finished handle connection.')
+        return async_handle_connection
 
-    async def _async_stop(self):
+    def _stop(self):
         """Stops the server loop."""
-        print('Executing an asynchronous stop:', self._server_loop.is_running())
-        def stop_server_running():
-            self._server_running = False
-        self._server_loop.call_later(THROTTLE_SECONDS * 2,
-            stop_server_running)
-        self._server_loop.call_later(SHUTDOWN_DELAY_SECS,
-            self._server_loop.stop)
+        # Stops the server loop.
+        async def async_stop():
+            # First, gracefully stop connections with _server_running = False.
+            self._server_loop.call_later(THROTTLE_SECS * 2,
+                lambda: setattr(self, '_server_running', False))
+
+            # After a short delay, hard-stop the server loop.
+            self._server_loop.call_later(SHUTDOWN_DELAY_SECS,
+                self._server_loop.stop)
+
+        # Code to stop the thread must be run in the server loop.
+        asyncio.run_coroutine_threadsafe(async_stop(), self._server_loop)
