@@ -1,8 +1,6 @@
 #### Todo
 
 - Start implementing the rest of the messages.
-  - "alert"    : formats the string as an alert
-  - "header"   : formats the string as a header
   - "info"     : prints out df.info() on a DataFrame-like object
   - "img"      : prints an image out
   - "auto"     : figures out the

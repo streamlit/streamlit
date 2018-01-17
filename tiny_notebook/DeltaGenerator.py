@@ -36,13 +36,24 @@ class DeltaGenerator:
     def alert(self, text, type='danger'):
         """
         Creates an alert element.
+
         text - The text to display. Can include newlines.
         type - 'success' | 'info' | 'warning' | 'danger' (default)
         """
         ALLOWED_TYPES = ['success', 'info', 'warning', 'danger']
         assert type in ALLOWED_TYPES, \
             f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
-        return self.text(text, f'alert alert-{type}')
+        return self.text(text, classes=f'alert alert-{type}')
+
+    def header(self, text, level=1):
+        """
+        Creates a header element.
+
+        text  - The text to display. Can include newlines.
+        level - 1 (largest text) through 6 (smallest text)
+        """
+        assert 1 <= level <= 6, 'Level must be between 1 and 6.'
+        return self.text(text, classes=f'h{level}')
 
     def _new_element(self, element):
         """Creates a new element delta, calls the accumulator, and returns the
