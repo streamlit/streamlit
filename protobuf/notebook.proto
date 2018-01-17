@@ -4,7 +4,7 @@ syntax = "proto3";
 message Element {
 
   // An element can be one of the following element types.
-  oneof element {
+  oneof type {
     DivElement div = 1;
   }
 }

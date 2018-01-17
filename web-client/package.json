@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0-beta.3",
+    "immutable": "^3.8.2",
     "protobufjs": "^6.8.4",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",

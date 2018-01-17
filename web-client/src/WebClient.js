@@ -1,5 +1,4 @@
 import React, { PureComponent } from 'react';
-
 import {
   Col as BootstrapCol,
   Container,
@@ -9,14 +8,14 @@ import {
   Progress,
   Row as BootstrapRow,
 } from 'reactstrap';
+import { List } from 'immutable';
 
 import Chart from './Chart'
 import DataFrame from './DataFrame'
 import PersistentWebsocket from './PersistentWebsocket'
+import { DeltaList } from './protobuf/notebook'
 import './WebClient.css';
 
-// Testing the new protobuf format.
-import { DeltaList } from './protobuf/notebook'
 
 // This my custom row which contains a complete 100% width column
 const Row = ({children}) => (
@@ -32,9 +31,10 @@ class WebClient extends PureComponent {
     super(props);
 
     this.state = {
-      progress: 0,
-      data: [],
+      elements: List()
     };
+
+    console.log('Created an immutable list', this.state)
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
@@ -58,32 +58,34 @@ class WebClient extends PureComponent {
    * Callback when we get a message from the server.
    */
   handleMessage(blob) {
+    // Parse the deltas out and apply them to the state.
     const reader = new FileReader();
     reader.readAsArrayBuffer(blob)
     reader.onloadend = () => {
+      // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
-      const delta_list = DeltaList.decode(result)
-      console.log('decoded the following')
-      console.log(delta_list)
-      console.log(`protobuf_len: ${blob.size}`);
-      console.log(`json_len: ${JSON.stringify(delta_list).length}`);
-      console.log(`id: ${delta_list.deltas[0].id}`)
-      console.log(`elemement: ${delta_list.deltas[0].newElement}`)
-
-      // const text = Text.create()
-      // text.text = 'some text'
-      // text.classes = ['here is a class', 'here is another class']
-      // console.log('text object', text)
-      // const encoded = Text.encode(text)
-      // console.log('encoded', encoded)
-      // console.log('encoded length', encoded.length)
-      // console.log(Text.decode(encoded))
-
-      // let text = Text.decode(reader.result)
-      // console.log(text)
-      // console.log(JSON.stringify(text))
-      // console.log(`json_len: ${JSON.stringify(text).length}`)
+      const deltaList = DeltaList.decode(result)
+      this.applyDeltas(deltaList);
     }
+  }
+
+  /**
+   * Applies a list of deltas to the elements.
+   */
+  applyDeltas(deltaList) {
+    this.setState(({elements}) => {
+      console.log('Updating the state elements.')
+      for (const delta of deltaList.deltas) {
+        if (delta.type === 'newElement') {
+          elements = elements.set(delta.id, delta.newElement);
+        } else {
+          throw new Error(`Cannot parse delta type "${delta.type}".`)
+        }
+      }
+      console.log('Got new elements:')
+      console.log(elements.toArray())
+      return {elements};
+    });
   }
 
   render() {
@@ -104,7 +106,10 @@ class WebClient extends PureComponent {
           <Row>
             <h3>Dumb Client</h3>
           </Row>
-          <Row>
+
+          { this.renderElements() }
+
+          {/* <Row>
             <samp>
               This client is printing out all messages to the console.
             </samp>
@@ -121,11 +126,23 @@ Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos
 
 Sed auctor, arcu sit amet hendrerit sodales, odio leo aliquet nisl, quis accumsan eros urna eu erat. Sed vitae augue velit. Vestibulum volutpat consectetur tempus. Nam vitae imperdiet sapien, vitae ultricies dui. Sed consequat augue tellus, ac tristique lacus tincidunt ac. Sed accumsan, ex sit amet tempus elementum, quam augue auctor nibh, quis ultrices urna nulla sit amet magna. Mauris venenatis laoreet suscipit. Duis libero enim, feugiat id congue id, consequat vitae felis.
             </samp>
-          </Row>
+          </Row> */}
         </Container>
 
       </div>
     );
+  }
+
+  renderElements() {
+    return this.state.elements.map((element, indx) => {
+      console.log(`rendering ${element} at ${indx}`);
+      if (element.type === 'div') {
+        
+      }
+      console.log(element);
+      console.log(element.type);
+      return <div>{indx}</div>;
+    }).toList();
   }
 }
 
