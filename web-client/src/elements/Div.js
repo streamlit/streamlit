@@ -11,8 +11,11 @@ import './Div.css';
  const Div = ({element}) => (
    <div className={element.classes}>
      {element.text.replace('\r', '').split('\n').map((line, indx) => (
-       <div id={indx}>
-         {line}
+       <div key={indx}>
+         {
+           // Replace spaces with unicode nonbreaking spaces.
+           line.replace(/ /g, "\u00a0")
+         }
        </div>
      ))}
    </div>

@@ -148,7 +148,7 @@ Sed auctor, arcu sit amet hendrerit sodales, odio leo aliquet nisl, quis accumsa
         </Alert>
       );
     }).map((element, indx) => (
-      <Row id={indx}>{element}</Row>
+      <Row key={indx}>{element}</Row>
     ));
   }
 }

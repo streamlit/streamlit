@@ -72,7 +72,6 @@ const ERROR_STATE = 'error'
       };
 
       this.websocket.onclose = () => {
-        console.log('PersistentWebsocket: Closed.')
         if (this.state.state !== ERROR_STATE)
           this.setState({state: DISCONNECTED_STATE})
         this.closeWebsocket();
@@ -81,8 +80,6 @@ const ERROR_STATE = 'error'
       };
 
       this.websocket.onerror = (event) => {
-        console.log('PersistentWebsocket: Received error.');
-        console.log(event);
         this.setState({
           state: ERROR_STATE,
           errorMsg: 'Error Connecting:' + this.props.uri
