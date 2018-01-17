@@ -5,8 +5,7 @@ import asyncio
 import os
 import websockets
 import threading
-import json
-from tiny_notebook import protobuf
+from tiny_notebook import delta, protobuf
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
@@ -14,12 +13,18 @@ LAUNCH_BROWSER_SCRIPT = \
     './web-client/node_modules/react-dev-utils/openChrome.applescript ' \
     'http://localhost:3000/'
 SHUTDOWN_DELAY_SECS = 1.0
+THROTTLE_SECONDS = 0.01
 
 class Notebook:
     def __init__(self):
-        print('Just created a notebook object.')
+        # Create objects for the server.
         self._server_loop = asyncio.new_event_loop()
         self._server_running = False
+
+        # Here is where we can create text
+        self._delta_accumulators = [delta.Accumulator()]
+        self._delta_generator = delta.Generator(
+            self._delta_accumulators[0].add_delta)
 
     def __enter__(self):
         # start the webserver
@@ -28,8 +33,8 @@ class Notebook:
         # launch the webbrowser
         os.system(LAUNCH_BROWSER_SCRIPT)
 
-        # this is the element we us to
-        return self
+        # the generator allows the user to create new deltas
+        return self._delta_generator
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Shut down the server."""
@@ -76,25 +81,16 @@ class Notebook:
 
     async def _async_handle_connection(self, websocket, path):
         """Handles a websocket connection."""
-        print('Got a connection.')
-        text = protobuf.Text()
-        print(f'Created text with text="{text.text}".')
-        text.text = 'some text'
-        print(f'Created text with text="{text.text}".')
-        text.classes.append('here is a class')
-        text.classes.append('here is another class')
-        print('Here is text', text)
-        print('Here are the classes', list(text.classes))
-        print('Here is the string:')
-        print('length', len(text.SerializeToString()))
-
-        for progress in range(100):
-            await asyncio.sleep(0.01)
-            await websocket.send(text.SerializeToString())
-
         # Go into an endless loop.
         while self._server_running:
-            await asyncio.sleep(SHUTDOWN_DELAY_SECS);
+            deltas = self._delta_accumulators[0].get_deltas()
+            if deltas:
+                delta_list = protobuf.DeltaList()
+                delta_list.deltas.extend(deltas)
+                await websocket.send(delta_list.SerializeToString())
+
+            await asyncio.sleep(THROTTLE_SECONDS)
+
         print('Naturally finished handle connection.')
 
     async def _async_stop(self):

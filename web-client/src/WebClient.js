@@ -16,7 +16,7 @@ import PersistentWebsocket from './PersistentWebsocket'
 import './WebClient.css';
 
 // Testing the new protobuf format.
-import { Text } from './protobuf/notebook'
+import { DeltaList } from './protobuf/notebook'
 
 // This my custom row which contains a complete 100% width column
 const Row = ({children}) => (
@@ -42,20 +42,6 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-    console.log('Component did mount.')
-    console.log('Got an awesome message:')
-    console.log(Text)
-    console.log('Here is a created message:')
-    let text = Text.create()
-    console.log(text)
-    text.text = 'Some text.'
-    console.log('Classes:')
-    console.log(text.classes)
-    text.classes.push(123)
-    console.log(text)
-    console.log('Verifying...')
-    console.log(Text.verify(text))
-    console.log('Done verifying.')
   }
 
   componentWillUnmount() {
@@ -75,16 +61,14 @@ class WebClient extends PureComponent {
     const reader = new FileReader();
     reader.readAsArrayBuffer(blob)
     reader.onloadend = () => {
-      console.log('Got some data from the blob')
-      console.log(reader.result)
-      const uint8array = new Uint8Array(reader.result);
-      console.log(uint8array)
-      const text = Text.decode(uint8array)
+      const result = new Uint8Array(reader.result);
+      const delta_list = DeltaList.decode(result)
       console.log('decoded the following')
-      console.log(text)
+      console.log(delta_list)
       console.log(`protobuf_len: ${blob.size}`);
-      console.log(`json_len: ${JSON.stringify(text).length}`);
-      console.log(JSON.stringify(text))
+      console.log(`json_len: ${JSON.stringify(delta_list).length}`);
+      console.log(`id: ${delta_list.deltas[0].id}`)
+      console.log(`elemement: ${delta_list.deltas[0].newElement}`)
 
       // const text = Text.create()
       // text.text = 'some text'

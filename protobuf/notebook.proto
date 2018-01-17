@@ -1,9 +1,42 @@
 syntax = "proto3";
 
-message Text {
+// An element which can be displayed on the screen.
+message Element {
+
+  // An element can be one of the following element types.
+  oneof element {
+    DivElement div = 1;
+  }
+}
+
+// Some text wrapped in a div.
+message DivElement {
+
   // The text to display.
   string text = 1;
 
-  // The display classes for this text.
-  repeated string classes = 2;
+  // The display classes (space separated) for this text.
+  string classes = 2;
+}
+
+// A change to an element.
+message Delta {
+  // Each delta applies to a particular ID.
+  uint32 id = 1;
+
+  // There are two kinds of supported deltas.
+  oneof type {
+    Element new_element = 2;
+    DataFrame add_rows = 3;
+  }
+}
+
+// A list of deltas
+message DeltaList {
+  repeated Delta deltas = 1;
+}
+
+// Represents a pandas DataFrame.
+message DataFrame {
+  string name = 1;
 }
