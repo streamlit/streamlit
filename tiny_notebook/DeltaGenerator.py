@@ -31,7 +31,18 @@ class DeltaGenerator:
         element = protobuf.Element()
         element.div.CopyFrom(div)
 
-        self._new_element(element)
+        return self._new_element(element)
+
+    def alert(self, text, type='danger'):
+        """
+        Creates an alert element.
+        text - The text to display. Can include newlines.
+        type - 'success' | 'info' | 'warning' | 'danger' (default)
+        """
+        ALLOWED_TYPES = ['success', 'info', 'warning', 'danger']
+        assert type in ALLOWED_TYPES, \
+            f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
+        return self.text(text, f'alert alert-{type}')
 
     def _new_element(self, element):
         """Creates a new element delta, calls the accumulator, and returns the

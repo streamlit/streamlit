@@ -1,8 +1,12 @@
 #### Todo
 
-- Test it with multiple clients reading.
-  - Move all asyncs in notebook into sub-methods.
 - Start implementing the rest of the messages.
+  - "alert"    : formats the string as an alert
+  - "header"   : formats the string as a header
+  - "info"     : prints out df.info() on a DataFrame-like object
+  - "img"      : prints an image out
+  - "auto"     : figures out the
+- "progress" : prints out a progress bar (for a 0<num<1)
 - Implement images really nicely.
 - Rename it from tiny-notebook to printf
 - Rename notebook everywhere to printf.
