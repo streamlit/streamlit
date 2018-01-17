@@ -1,10 +1,15 @@
 #### Todo
 
-- Display the text message on the screen of the javascript client.
+- Display the text nicely.
+- Test sending a second piece of text with a delay.
 - Test it with multiple clients reading.
 - Start implementing the rest of the messages.
 - Implement images really nicely.
+- Rename it from tiny-notebook to printf
+- Rename notebook everywhere to printf.
 - Make it work with pip.
+- Give it a nice favicon.
+- Get the name printf.com.
 - Make a presentation to show how this will all work.
 - make the awesomest library ever
 

@@ -10,7 +10,7 @@ import time # debug
 
 with Notebook() as write:
     print('Created a Notebook.')
-    write.text('This is some text. Hello, world!')
+    write.text('This is some text. Hello, world!\nAnd some more text.\n    ...and a couple spaces with text')
     print('Sleeping for 3 seconds.')
     import time
     time.sleep(3)

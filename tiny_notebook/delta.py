@@ -23,7 +23,7 @@ class Generator:
             self._generate_new_ids = False
             self._id = id
 
-    def text(self, text, classes=''):
+    def text(self, text, classes='fixed-width'):
         div = protobuf.DivElement()
         div.text = text
         div.classes = classes

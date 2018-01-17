@@ -1,5 +1,6 @@
 import React, { PureComponent } from 'react';
 import {
+  Alert,
   Col as BootstrapCol,
   Container,
   Navbar,
@@ -10,8 +11,9 @@ import {
 } from 'reactstrap';
 import { List } from 'immutable';
 
-import Chart from './Chart'
-import DataFrame from './DataFrame'
+import Chart from './elements/Chart'
+import DataFrame from './elements/DataFrame'
+import Div from './elements/Div'
 import PersistentWebsocket from './PersistentWebsocket'
 import { DeltaList } from './protobuf/notebook'
 import './WebClient.css';
@@ -102,7 +104,7 @@ class WebClient extends PureComponent {
             />
           </NavItem>
         </Navbar>
-        <Container className="notebook-container">
+        <Container className="printf-container">
           <Row>
             <h3>Dumb Client</h3>
           </Row>
@@ -134,15 +136,20 @@ Sed auctor, arcu sit amet hendrerit sodales, odio leo aliquet nisl, quis accumsa
   }
 
   renderElements() {
-    return this.state.elements.map((element, indx) => {
-      console.log(`rendering ${element} at ${indx}`);
+    return this.state.elements.map((element) => {
       if (element.type === 'div') {
-        
+        return <Div element={element.div}/>
       }
-      console.log(element);
-      console.log(element.type);
-      return <div>{indx}</div>;
-    }).toList();
+
+      // Default render if we don't understand the type.
+      return (
+        <Alert color="secondary">
+          I don't understand "{element.type}" as an element type. WTF?!
+        </Alert>
+      );
+    }).map((element, indx) => (
+      <Row id={indx}>{element}</Row>
+    ));
   }
 }
 
