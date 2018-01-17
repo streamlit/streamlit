@@ -67,6 +67,8 @@ class WebClient extends PureComponent {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
       const deltaList = DeltaList.decode(result)
+      console.log('Received a message and am applying...')
+      console.log(deltaList)
       this.applyDeltas(deltaList);
     }
   }

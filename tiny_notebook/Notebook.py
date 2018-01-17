@@ -84,6 +84,7 @@ class Notebook:
         # Go into an endless loop.
         while self._server_running:
             deltas = self._delta_accumulators[0].get_deltas()
+            # print('Found and am sending deltas:', bool(deltas))
             if deltas:
                 delta_list = protobuf.DeltaList()
                 delta_list.deltas.extend(deltas)
@@ -96,6 +97,9 @@ class Notebook:
     async def _async_stop(self):
         """Stops the server loop."""
         print('Executing an asynchronous stop:', self._server_loop.is_running())
-        self._server_running = False
+        def stop_server_running():
+            self._server_running = False
+        self._server_loop.call_later(THROTTLE_SECONDS * 2,
+            stop_server_running)
         self._server_loop.call_later(SHUTDOWN_DELAY_SECS,
             self._server_loop.stop)

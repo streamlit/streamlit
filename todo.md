@@ -1,8 +1,7 @@
 #### Todo
 
-- Display the text nicely.
-- Test sending a second piece of text with a delay.
 - Test it with multiple clients reading.
+  - 
 - Start implementing the rest of the messages.
 - Implement images really nicely.
 - Rename it from tiny-notebook to printf
