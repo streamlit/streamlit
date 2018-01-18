@@ -21,6 +21,8 @@
 - Give it a nice favicon.
 - Get the name printf.com.
 - Make a presentation to show how this will all work.
+- Clean things up:
+  - Enable DataFrame to parse int arrays.
 - make the awesomest library ever
 
 #### How charts might work.

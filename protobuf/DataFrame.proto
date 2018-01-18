@@ -5,11 +5,52 @@ message DataFrame {
   // The data in the array.
   Table data = 1;
 
-  // List of column names. (Mutliple implies a multi-index.)
-  Table columns = 2;
-
   // List of row names. (Mutliple implies a multi-index.)
-  Table index = 3;
+  Index index = 2;
+
+  // List of column names. (Mutliple implies a multi-index.)
+  Index columns = 3;
+}
+
+// An index in the dataFrame
+message Index {
+  oneof type {
+    PlainIndex plain_index = 1;
+    // RangeIndex range_index = 2;
+    // CategoricalIndex categorical_index = 3;
+    MultiIndex multi_index = 4;
+    // IntervalIndex interval_index = 5;
+    // DatetimeIndex date_time_index = 6;
+    // TimedeltaIndex time_delta_index = 7;
+    // PeriodIndex period_index = 8;
+    // Int64Index int_64_index = 9;
+    // UInt64Index uint_64_index = 10;
+    // Float64Index float_64_index = 11;
+  }
+}
+
+// Basic, 1D index.
+message PlainIndex {
+  AnyArray data = 1;
+
+  //// Not yet implemented:
+  // DType dtype = 2;
+  // bool copy = 3;
+  // string name = 4;
+  // bool tupleize_cols = 5;
+}
+
+// A multi-level, or hierarchical, Index
+// See https://pandas.pydata.org/pandas-docs/stable/generated/pandas.MultiIndex.html#pandas.MultiIndex
+message MultiIndex {
+  repeated Index levels = 1;
+  repeated UInt32Array labels = 2;
+
+  //// Not yet implemented:
+  // int sort_order = 3;
+  // StringArray names = 4;
+  // bool copy = 5;
+  // bool verify_integrity = 6;
 }
 
 message StringArray {
@@ -20,15 +61,19 @@ message DoubleArray {
   repeated double data = 1;
 }
 
-message IntArray {
+message Int32Array {
   repeated sint32 data = 1;
+}
+
+message UInt32Array {
+  repeated uint32 data = 1;
 }
 
 message AnyArray {
   oneof type {
     StringArray strings = 1;
     DoubleArray doubles = 2;
-    IntArray ints = 3;
+    Int32Array int32s = 3;
   }
 }
 

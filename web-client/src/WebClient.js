@@ -16,6 +16,7 @@ import DataFrame from './elements/DataFrame'
 import Div from './elements/Div'
 import PersistentWebsocket from './PersistentWebsocket'
 import { DeltaList } from './protobuf/printf'
+
 import './WebClient.css';
 
 // This my custom row which contains a complete 100% width column
@@ -73,6 +74,8 @@ class WebClient extends PureComponent {
       const deltaList = DeltaList.decode(result)
       console.log('Received a message and am applying...')
       console.log(deltaList)
+      console.log('Protobuf Length:', reader.result.byteLength);
+      console.log('JSON Length:', JSON.stringify(deltaList).length);
       this.applyDeltas(deltaList);
     }
   }
@@ -119,7 +122,9 @@ class WebClient extends PureComponent {
   renderElements() {
     return this.state.elements.map((element) => {
       if (element.type === 'div') {
-        return <Div element={element.div}/>
+        return <Div element={element.div}/>;
+      } else if (element.type === 'dataFrame') {
+        return <DataFrame element={element.dataFrame}/>;
       }
 
       // Default render if we don't understand the type.

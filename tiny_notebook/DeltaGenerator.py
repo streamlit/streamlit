@@ -55,24 +55,18 @@ class DeltaGenerator:
         assert 1 <= level <= 6, 'Level must be between 1 and 6.'
         return self.text(text, classes=f'h{level}')
 
-    def dataFrame(self, df):
+    def dataFrame(self, pandas_df):
         """
         Renders a dataframe to the client.
 
-        df - The dataframe.
+        pandas_df - The dataframe.
         """
-        df = data_frame_io.marshall_data_frame(df)
+        # Convert the pd.DataFrame into a protobuf.DataFrame.
+        element = protobuf.Element()
+        data_frame_io.marshall_data_frame(pandas_df, element.data_frame)
 
-        # debug - begin
-        print('About to convert this dataframe:')
-        print(df)
-        # debug - end
-
-
-        # print('columns', list(df.columns))
-        # print('columns.levels', df.columns.levels)
-        # print('columns.labels', df.columns.labels)
-        # print('columns.names', df.columns.names)
+        # Create a NewElement delta with this DataFrame element.
+        return self._new_element(element)
 
     def _new_element(self, element):
         """Creates a new element delta, calls the accumulator, and returns the
