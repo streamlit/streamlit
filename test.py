@@ -28,6 +28,8 @@ with Notebook() as write:
     print('transposed')
     print(df.T.index)
     print(df.T.columns)
+    write.dataFrame(df)
+    write.dataFrame(df.T)
 
     # write.alert('Sleeping for 5 seconds.')
     # import time
@@ -43,6 +45,6 @@ with Notebook() as write:
     # write.header('Header 4', level=4)
     # write.header('Header 5', level=5)
     # write.header('Header 6', level=6)
-    # write.header('Header 10', level=10)
+
 print('Sleeping for another second...')
 time.sleep(1)

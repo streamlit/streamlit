@@ -15,9 +15,8 @@ import Chart from './elements/Chart'
 import DataFrame from './elements/DataFrame'
 import Div from './elements/Div'
 import PersistentWebsocket from './PersistentWebsocket'
-import { DeltaList } from './protobuf/notebook'
+import { DeltaList } from './protobuf/printf'
 import './WebClient.css';
-
 
 // This my custom row which contains a complete 100% width column
 const Row = ({children}) => (

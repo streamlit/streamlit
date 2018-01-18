@@ -2,7 +2,6 @@
 
 - Start implementing the rest of the messages.
   - 'dataframe':
-    - add all new files, as needed, to the repository
     - see if I can serialize a dataframe product
       - create a dataframe method on DeltaGenerator
     - deserialize it properly

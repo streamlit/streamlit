@@ -29,6 +29,9 @@ class DeltaGenerator:
         div.classes = classes
 
         element = protobuf.Element()
+        print('elemen.div', type(element.div))
+        print('div', type(div))
+        print('are equal', type(element.div) == type(div))
         element.div.CopyFrom(div)
 
         return self._new_element(element)
@@ -54,6 +57,15 @@ class DeltaGenerator:
         """
         assert 1 <= level <= 6, 'Level must be between 1 and 6.'
         return self.text(text, classes=f'h{level}')
+
+    def dataFrame(self, df):
+        """
+        Renders a dataframe to the client.
+
+        df - The dataframe.
+        """
+        print('About to convert this dataframe:')
+        print(df)
 
     def _new_element(self, element):
         """Creates a new element delta, calls the accumulator, and returns the
