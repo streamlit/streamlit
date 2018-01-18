@@ -24,7 +24,7 @@ class DeltaGenerator:
             self._id = id
 
     def text(self, text, classes='fixed-width'):
-        div = protobuf.DivElement()
+        div = protobuf.Div()
         div.text = text
         div.classes = classes
 

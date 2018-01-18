@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// Represents a pandas DataFrame.
+message DataFrame {
+  // The data in the array.
+  repeated AnyArray data = 1;
+
+  // List of column names. (Mutliple implies a multi-index.)
+  repeated AnyArray columns = 2;
+
+  // List of row names. (Mutliple implies a multi-index.)
+  repeated AnyArray index = 3;
+}
+
+message StringArray {
+  repeated string data = 1;
+}
+
+message DoubleArray {
+  repeated double data = 1;
+}
+
+message IntArray {
+  repeated sint32 data = 1;
+}
+
+message AnyArray {
+  oneof type {
+    StringArray strings = 1;
+    DoubleArray doubles = 2;
+    IntArray ints = 3;
+  }
+}

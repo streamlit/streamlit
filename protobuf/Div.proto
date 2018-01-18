@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// Some text wrapped in a div.
+message Div {
+
+  // The text to display.
+  string text = 1;
+
+  // The display classes (space separated) for this text.
+  string classes = 2;
+}

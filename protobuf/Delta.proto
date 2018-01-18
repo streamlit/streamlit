@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "Element.proto";
+
+// A change to an element.
+message Delta {
+  // Each delta applies to a particular ID.
+  uint32 id = 1;
+
+  // There are two kinds of supported deltas.
+  oneof type {
+    Element new_element = 2;
+    // DataFrame add_rows = 3;
+  }
+}
+
+// A list of deltas
+message DeltaList {
+  repeated Delta deltas = 1;
+}

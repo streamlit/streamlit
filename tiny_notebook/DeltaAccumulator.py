@@ -23,10 +23,6 @@ class DeltaAccumulator:
         # Combine the previous and new delta.
         self._deltas[index] = self.compose(self._deltas[index], delta)
 
-        print('Finished adding deltas.')
-        print(self._id_map)
-        print(self._deltas)
-
     def get_deltas(self):
         """Returns a list of deltas in a DeltaList message
         and clears this accumulator."""

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "Div.proto";
+
+// An element which can be displayed on the screen.
+message Element {
+
+  // An element can be one of the following element types.
+  oneof type {
+    Div div = 1;
+  }
+}
