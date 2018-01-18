@@ -20,14 +20,6 @@ with Notebook() as write:
     print(arrays)
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
         columns=['A', 'B', 'C', 'D'])
-    print(df)
-    print(df.T)
-    print('the index')
-    print(df.index)
-    print(df.columns)
-    print('transposed')
-    print(df.T.index)
-    print(df.T.columns)
     write.dataFrame(df)
     write.dataFrame(df.T)
 

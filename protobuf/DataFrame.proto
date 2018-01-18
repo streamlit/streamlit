@@ -3,13 +3,13 @@ syntax = "proto3";
 // Represents a pandas DataFrame.
 message DataFrame {
   // The data in the array.
-  repeated AnyArray data = 1;
+  Table data = 1;
 
   // List of column names. (Mutliple implies a multi-index.)
-  repeated AnyArray columns = 2;
+  Table columns = 2;
 
   // List of row names. (Mutliple implies a multi-index.)
-  repeated AnyArray index = 3;
+  Table index = 3;
 }
 
 message StringArray {
@@ -30,4 +30,8 @@ message AnyArray {
     DoubleArray doubles = 2;
     IntArray ints = 3;
   }
+}
+
+message Table {
+  repeated AnyArray cols = 1;
 }

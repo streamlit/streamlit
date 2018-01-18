@@ -1,6 +1,6 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-from tiny_notebook import protobuf
+from tiny_notebook import protobuf, data_frame_io
 
 class DeltaGenerator:
     """
@@ -29,9 +29,6 @@ class DeltaGenerator:
         div.classes = classes
 
         element = protobuf.Element()
-        print('elemen.div', type(element.div))
-        print('div', type(div))
-        print('are equal', type(element.div) == type(div))
         element.div.CopyFrom(div)
 
         return self._new_element(element)
@@ -64,8 +61,18 @@ class DeltaGenerator:
 
         df - The dataframe.
         """
+        df = data_frame_io.marshall_data_frame(df)
+
+        # debug - begin
         print('About to convert this dataframe:')
         print(df)
+        # debug - end
+
+
+        # print('columns', list(df.columns))
+        # print('columns.levels', df.columns.levels)
+        # print('columns.labels', df.columns.labels)
+        # print('columns.names', df.columns.names)
 
     def _new_element(self, element):
         """Creates a new element delta, calls the accumulator, and returns the
