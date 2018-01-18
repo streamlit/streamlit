@@ -11,7 +11,7 @@ import {
 } from 'reactstrap';
 import { List } from 'immutable';
 
-import Chart from './elements/Chart'
+// import Chart from './elements/Chart'
 import DataFrame from './elements/DataFrame'
 import Div from './elements/Div'
 import PersistentWebsocket from './PersistentWebsocket'

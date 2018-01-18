@@ -2,6 +2,11 @@
 
 - Start implementing the rest of the messages.
   - 'dataframe':
+    - see if I can get rid of the copy DeltaGenerator:87
+    - more closely match the MultiIndex types
+    - see what other types I need to support the given example
+    - see what other types I need to a raw numpy array
+    - work on rendering those on the client
     - see if I can serialize a dataframe product
       - create a dataframe method on DeltaGenerator
     - deserialize it properly

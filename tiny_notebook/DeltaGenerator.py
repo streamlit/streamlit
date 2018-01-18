@@ -24,14 +24,10 @@ class DeltaGenerator:
             self._id = id
 
     def text(self, text, classes='fixed-width'):
-        div = protobuf.Div()
-        div.text = text
-        div.classes = classes
-
-        element = protobuf.Element()
-        element.div.CopyFrom(div)
-
-        return self._new_element(element)
+        def set_text(element):
+            element.div.text = text
+            element.div.classes = classes
+        return self._new_element(set_text)
 
     def alert(self, text, type='danger'):
         """
@@ -61,16 +57,18 @@ class DeltaGenerator:
 
         pandas_df - The dataframe.
         """
-        # Convert the pd.DataFrame into a protobuf.DataFrame.
-        element = protobuf.Element()
-        data_frame_io.marshall_data_frame(pandas_df, element.data_frame)
+        def set_data_frame(element):
+            data_frame_io.marshall_data_frame(pandas_df, element.data_frame)
+        return self._new_element(set_data_frame)
 
-        # Create a NewElement delta with this DataFrame element.
-        return self._new_element(element)
+    def _new_element(self, set_element):
+        """
+        Creates a new element delta, sets its value with set_element,
+        sends the new element to the delta accumulator, and finally
+        returns a generator for that element ID.
 
-    def _new_element(self, element):
-        """Creates a new element delta, calls the accumulator, and returns the
-        generator."""
+        set_element - Function which sets the feilds for a protobuf.Element
+        """
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:
             id = self._next_id
@@ -81,10 +79,10 @@ class DeltaGenerator:
             generator = self
 
         # Create a delta message.
-        new_element_delta = protobuf.Delta()
-        new_element_delta.id = id
-        new_element_delta.new_element.CopyFrom(element)
+        delta = protobuf.Delta()
+        delta.id = id
+        set_element(delta.new_element)
 
         # Call the accumulator and return the new element.
-        self._accumulator(new_element_delta)
+        self._accumulator(delta)
         return generator
