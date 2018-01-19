@@ -4,10 +4,6 @@ from tiny_notebook import Notebook
 import pandas as pd
 import numpy as np
 
-print('Notebook')
-print(Notebook)
-notebook = Notebook()
-
 import time # debug
 
 with Notebook() as write:
@@ -17,11 +13,15 @@ with Notebook() as write:
     arrays = [
         np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
         np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
-    print(arrays)
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
         columns=['A', 'B', 'C', 'D'])
-    write.dataFrame(df)
-    write.dataFrame(df.T)
+    # write.dataFrame(df)
+    # write.text('Here is the transpose table:')
+    # write.dataFrame(df.T)
+    write.header('A big numpy array:', level=5)
+    write.dataFrame(np.random.randn(100, 100))
+
+    time.sleep(10)
 
     # write.alert('Sleeping for 5 seconds.')
     # import time

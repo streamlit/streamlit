@@ -2,15 +2,8 @@
 
 - Start implementing the rest of the messages.
   - 'dataframe':
-    - see if I can get rid of the copy DeltaGenerator:87
-    - more closely match the MultiIndex types
-    - see what other types I need to support the given example
     - see what other types I need to a raw numpy array
-    - work on rendering those on the client
-    - see if I can serialize a dataframe product
-      - create a dataframe method on DeltaGenerator
-    - deserialize it properly
-    - handle multiple headings properly
+    - check in.. dataFrames complete!!
   - 'chart'
     - Create dataframe data model (proto)
     - Create the chart proto datamodel
@@ -28,6 +21,7 @@
 - Make a presentation to show how this will all work.
 - Clean things up:
   - Enable DataFrame to parse int arrays.
+  - Fix resizing bug with the table dimensions.
 - make the awesomest library ever
 
 #### How charts might work.

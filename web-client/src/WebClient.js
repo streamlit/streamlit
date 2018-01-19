@@ -76,6 +76,8 @@ class WebClient extends PureComponent {
       console.log(deltaList)
       console.log('Protobuf Length:', reader.result.byteLength);
       console.log('JSON Length:', JSON.stringify(deltaList).length);
+      console.log('Applying')
+      console.log(deltaList)
       this.applyDeltas(deltaList);
     }
   }
@@ -121,9 +123,11 @@ class WebClient extends PureComponent {
 
   renderElements() {
     return this.state.elements.map((element) => {
-      if (element.type === 'div') {
+      if (!element)
+        return <Alert color="warning">Transmission error.</Alert>
+      else if (element.div) {
         return <Div element={element.div}/>;
-      } else if (element.type === 'dataFrame') {
+      } else if (element.dataFrame) {
         return <DataFrame element={element.dataFrame}/>;
       }
 

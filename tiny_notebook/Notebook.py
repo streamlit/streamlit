@@ -5,7 +5,9 @@ import asyncio
 import copy
 import os
 import threading
+import traceback
 import websockets
+import time
 
 from tiny_notebook import protobuf
 from tiny_notebook.DeltaAccumulator import DeltaAccumulator
@@ -41,11 +43,12 @@ class Notebook:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Shut down the server."""
-        # # Display the stack trace if necessary.
-        # if exc_type != None:
-        #     tb_list = traceback.format_list(traceback.extract_tb(exc_tb))
-        #     tb_list.append(f'{exc_type.__name__}: {exc_val}')
-        #     self._elts.alert('\n'.join(tb_list))
+        # Display the stack trace if necessary.
+        if exc_type != None:
+            tb_list = traceback.format_list(traceback.extract_tb(exc_tb))
+            tb_list.append(f'{exc_type.__name__}: {exc_val}')
+            self._delta_generator.alert('\n'.join(tb_list))
+            time.sleep(0.1)
 
         # close down the server
         print("About to send out an asynchronous stop.")

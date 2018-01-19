@@ -16,7 +16,7 @@ message DataFrame {
 message Index {
   oneof type {
     PlainIndex plain_index = 1;
-    // RangeIndex range_index = 2;
+    RangeIndex range_index = 2;
     // CategoricalIndex categorical_index = 3;
     MultiIndex multi_index = 4;
     // IntervalIndex interval_index = 5;
@@ -38,6 +38,18 @@ message PlainIndex {
   // bool copy = 3;
   // string name = 4;
   // bool tupleize_cols = 5;
+}
+
+// Range index
+// See https://pandas.pydata.org/pandas-docs/stable/generated/pandas.RangeIndex.html
+message RangeIndex {
+  int64 start = 1;
+  int64 stop = 2;
+  int64 step = 3;
+
+  //// Not yet implemented:
+  // string name = 4;
+  // bool copy = 5;
 }
 
 // A multi-level, or hierarchical, Index

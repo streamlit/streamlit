@@ -15,6 +15,7 @@
   font-family: "Roboto Mono", monospace;
   text-align: right;
   padding: 3px 6px 0px 0px;
+  /* border: 1px solid red; */
 }
 
 .printf-container .dataframe.row-header {
@@ -30,11 +31,11 @@
 }
 
 .printf-container .dataframe.data.even {
-  background-color: var(--background-color-data-light);
+  background-color: var(--background-color-data-dark);
 }
 
 .printf-container .dataframe.data.odd {
-  background-color: var(--background-color-data-dark);
+  background-color: var(--background-color-data-light);
 }
 
 .printf-container .dataframe.col-header.odd {
