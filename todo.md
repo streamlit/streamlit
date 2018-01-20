@@ -21,6 +21,7 @@
 - Clean things up:
   - Enable DataFrame to parse int arrays.
   - Fix resizing bug with the table dimensions.
+  - Put in properties for CHART_COMPONENTS
 - make the awesomest library ever
 
 #### How charts might work.

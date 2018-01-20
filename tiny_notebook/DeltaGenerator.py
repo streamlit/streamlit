@@ -1,7 +1,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import pandas as pd
-from tiny_notebook import protobuf, data_frame_io
+from tiny_notebook import protobuf, data_frame_proto
 
 class DeltaGenerator:
     """
@@ -61,7 +61,7 @@ class DeltaGenerator:
         if type(pandas_df) != pd.DataFrame:
             pandas_df = pd.DataFrame(pandas_df)
         def set_data_frame(element):
-            data_frame_io.marshall_data_frame(pandas_df, element.data_frame)
+            data_frame_proto.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
 
     def chart(self, chart):

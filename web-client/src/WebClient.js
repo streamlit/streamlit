@@ -11,9 +11,9 @@ import {
 } from 'reactstrap';
 import { List } from 'immutable';
 
-// import Chart from './elements/Chart'
 import DataFrame from './elements/DataFrame'
 import Div from './elements/Div'
+import Chart from './elements/Chart'
 import PersistentWebsocket from './PersistentWebsocket'
 import { DeltaList } from './protobuf/printf'
 
@@ -129,14 +129,11 @@ class WebClient extends PureComponent {
         return <Div element={element.div}/>;
       } else if (element.dataFrame) {
         return <DataFrame element={element.dataFrame}/>;
+      } else if (element.chart) {
+        return <Chart element={element.chart}/>
+      } else {
+        return <Alert color="warning">WTF is "{element.type}"?!</Alert>
       }
-
-      // Default render if we don't understand the type.
-      return (
-        <Alert color="secondary">
-          I don't understand "{element.type}" as an element type. WTF?!
-        </Alert>
-      );
     }).map((element, indx) => (
       <Row key={indx}>{element}</Row>
     ));

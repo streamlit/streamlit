@@ -26,18 +26,17 @@ with Notebook() as write:
     data = pd.DataFrame(np.random.randn(20, 2), columns=['pv', 'uv'])
     write.dataFrame(data)
 
+    write.text('And here is a chart.')
+
     # write the chart
-    line_chart = Chart(data, 'line_chart',
-        width=600, height=300)
-    line_chart.x_axis(data_key="name")
+    line_chart = Chart(data, 'line_chart', height=300)
+    line_chart.x_axis()
     line_chart.y_axis()
     line_chart.cartesian_grid(stroke_dasharray='3 3')
     line_chart.tooltip()
     line_chart.legend()
-    line_chart.line(type='monotone', data_key='pv', stroke='#8884d8',
-        strokeDasharray='5 5')
-    line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d',
-        strokeDasharray='3 4 5 2')
+    line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
+    line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
     write.chart(line_chart)
 
     # write.alert('Sleeping for 5 seconds.')
