@@ -86,6 +86,15 @@ class DeltaGenerator:
             image_proto.marshall_images(imgs, caption, width, element.imgs)
         return self._new_element(set_images)
 
+    def progress(self, value):
+        """Diplay a progress bar.
+
+        value - Should be between 0 and 100
+        """
+        def set_progress(element):
+            element.progress.value = value
+        return self._new_element(set_progress)
+
     def _new_element(self, set_element):
         """
         Creates a new element delta, sets its value with set_element,

@@ -2,10 +2,13 @@
 
 - Start implementing the rest of the messages.
   - "progress" : prints out a progress bar (for a 0<num<1)
+    - make the proto format
+    - marshall the proto format
+    - unmarshall the proto format
   - "auto"     : figures out the
 - Clean up some names in the code.
   - Make the `DataFrame` prop into `df`
-  - make the `Chart` prop into `chart`
+  - make the `Chart` prop into `ch art`
 - Create some great examples
   - Speed test recapitulates previous demo.
     - See if I need to add the fancier delta for charts.

@@ -7,5 +7,10 @@
 }
 
 .printf-container .element-container {
+  display: inline-block;
   margin-bottom: 20px;
+}
+
+.printf-container .footer {
+  height: 25px;
 }

@@ -142,6 +142,13 @@ with Notebook() as write:
         '  ...  2 leading spaces\n' +
         '   ... 3 leading spaces');
 
+    # Progress
+    write.header('Progress Bars', level=3)
+
+    for percent in [100, 75, 50, 25, 0]:
+        write.text(f'{percent}% progress:')
+        write.progress(percent)
+
 
 print('Sleeping for another second...')
 time.sleep(1)

@@ -142,13 +142,17 @@ class WebClient extends PureComponent {
         return <Chart element={element.chart} width={width}/>;
       } else if (element.imgs) {
         return <ImageList imgs={element.imgs} width={width}/>;
+      } else if (element.progress) {
+        return <Progress value={element.progress.value} style={{width}}/>
       } else {
         const msg = `Cannot parse type "${element.type}". WTF?!`
         return <Alert color="warning" style={{width}}>{msg}</Alert>;
       }
-    }).map((element, indx) => (
+    }).push(
+      <div style={{width}} className="footer"/>
+    ). map((element, indx) => (
       <div className="element-container" key={indx}>{element}</div>
-    ));
+    ))
   }
 }
 

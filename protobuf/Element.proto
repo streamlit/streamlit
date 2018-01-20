@@ -4,6 +4,7 @@ import "Div.proto";
 import "DataFrame.proto";
 import "Chart.proto";
 import "Image.proto";
+import "Progress.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -14,5 +15,6 @@ message Element {
     DataFrame data_frame = 2;
     Chart chart = 3;
     ImageList imgs = 4;
+    Progress progress = 5;
   }
 }
