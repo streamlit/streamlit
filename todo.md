@@ -1,14 +1,13 @@
 #### Todo
 
+- Move the AutoSizer out.
+- Make a full periodic table.
+- Create a nice set of widgets for the periodic table.
 - Start implementing the rest of the messages.
-  - 'chart'
-    - Create dataframe data model (proto)
-    - Create the chart proto datamodel
-    - Create Chart class
   - "info"     : prints out df.info() on a DataFrame-like object
   - "img"      : prints an image out
   - "auto"     : figures out the
-- "progress" : prints out a progress bar (for a 0<num<1)
+  - "progress" : prints out a progress bar (for a 0<num<1)
 - Implement images really nicely.
 - Test how it goes on a keras example
 - See if I need to add the fancier delta for charts.
