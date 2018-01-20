@@ -10,7 +10,7 @@ import websockets
 import time
 
 from tiny_notebook import protobuf
-from tiny_notebook.DeltaAccumulator import DeltaAccumulator
+from tiny_notebook.DeltaQueue import DeltaQueue
 from tiny_notebook.DeltaGenerator import DeltaGenerator
 
 WEBSOCKET_PORT = 8315
@@ -28,7 +28,7 @@ class Notebook:
         self._server_running = False
 
         # Here is where we can create text
-        self._delta_accumulators = [DeltaAccumulator()]
+        self._delta_accumulators = [DeltaQueue()]
         self._delta_generator = DeltaGenerator(self._add_delta)
 
     def __enter__(self):

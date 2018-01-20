@@ -14,5 +14,13 @@ $(protobuf_bundle_python): $(protobuf_sources)
 $(protobuf_bundle_js): $(protobuf_sources)
 	pbjs $(protobuf_sources) -t static-module -w es6 > $(protobuf_bundle_js)
 
+# Cleans out generated files.
 clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
+
+# Counts the number of lines of code in the project
+loc:
+	find tiny_notebook web-client/src protobuf \
+		-iname '*.py' -or -iname '*.js' -or -iname '*.proto' | \
+		egrep -v "(_pb2)|(printf\.js)|(registerServiceWorker)" | \
+		xargs wc

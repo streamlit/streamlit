@@ -17,7 +17,7 @@ with Notebook() as write:
 
     write.header('Numpy Arrays', level=3)
 
-    write.dataFrame(np.random.randn(100, 100))
+    write.data_frame(np.random.randn(100, 100))
 
     # Charts.
 
@@ -87,15 +87,15 @@ with Notebook() as write:
         columns=['A', 'B', 'C', 'D'])
 
     write.text('Here is a dataframe.')
-    write.dataFrame(df)
+    write.data_frame(df)
     write.text('And here is its transpose.')
-    write.dataFrame(df.T)
+    write.data_frame(df.T)
 
     # Alerts
 
     write.header('Alerts', level=3)
     write.alert('This is a "success" alert.', type='success')
-    write.alert('This is a "info" alert.', type='info')
+    write.alert('This is an "info" alert.', type='info')
     write.alert('This is a "warning" alert.', type='warning')
     write.alert('This is a "danger" alert.', type='danger')
 

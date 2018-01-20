@@ -8,8 +8,8 @@ import './Div.css';
  /**
   * Functional element representing some text in a div.
   */
- const Div = ({element}) => (
-   <div className={element.classes}>
+ const Div = ({element, width}) => (
+   <div className={element.classes} style={{width}}>
      {element.text.replace('\r', '').split('\n').map((line, indx) => (
        <div key={indx}>
          {

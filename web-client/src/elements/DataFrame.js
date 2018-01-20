@@ -2,8 +2,6 @@
  * Component display a Pandas Dataframe.
  */
 
-// import React, { PureComponent } from 'react';
-
 import React from 'react';
 import { Alert }  from 'reactstrap';
 import { AutoSizer, MultiGrid } from 'react-virtualized';
@@ -15,31 +13,9 @@ import { indexGetLevelsAndLength, tableGetRowsAndCols, indexGet, tableGet }
 import './DataFrame.css';
 
 /**
-* Represents a Pandas Dataframe on the screen.
-*/
-// class DataFrame extends PureComponent {
-//   constructor(props) {
-//     super(props);
-//     this._cellRenderer = this._cellRenderer.bind(this)
-//   }
-//
-
-//   }
-//
-//   // Renders out each cell
-//   _cellRenderer({columnIndex, key, rowIndex, style}) {
-
-//   }
-// }
-
-function takesAnIndex(index) {
-  console.log(index);
-}
-
- /**
-  * Functional element representing a DataFrame.
-  */
-const DataFrame = ({element}) => {
+ * Functional element representing a DataFrame.
+ */
+const DataFrame = ({element, width}) => {
   try {
     // Calculate the dimensions of this array.
     const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(element.index);
@@ -53,15 +29,12 @@ const DataFrame = ({element}) => {
     // Debug - begin
     console.log('Rendering this DataFrame');
     console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-    console.log('headerRows', headerRows)
-    console.log('headerCols', headerCols)
-    console.log('dataRows', dataRows)
-    console.log('dataCols', dataCols)
+    console.log('width', width);
+    console.log('headerRows', headerRows);
+    console.log('headerCols', headerCols);
+    console.log('dataRows', dataRows);
+    console.log('dataCols', dataCols);
     // Debug - end
-
-    // Get the cell renderer.
-    const cellContents = getCellContents(element, headerRows, headerCols);
-    const cellRenderer = getCellRenderer(cellContents);
 
     // Rendering constants.
     const rowHeight = 25;
@@ -69,43 +42,40 @@ const DataFrame = ({element}) => {
     const border = 3;
     const height = Math.min(rows * rowHeight, 300) + border;
 
+    // Get the cell renderer.
+    const cellContents = getCellContents(element, headerRows, headerCols);
+    const cellRenderer = getCellRenderer(cellContents);
+    const {columnWidth, headerWidth} =
+    getWidths(cols, rows, headerCols, width - border, cellContents);
+
     // Put it all together.
     return (
-      <div style={{height}}>
-        <AutoSizer>
-            {({width}) => {
-              const {columnWidth, headerWidth} =
-                getWidths(cols, rows, headerCols, width - border, cellContents);
-              return (
-                <div style={{width, height}}
-                  className="dataframe-container">
-                    <MultiGrid
-                      className="dataFrame"
-                      cellRenderer={cellRenderer}
-                      fixedColumnCount={headerCols}
-                      fixedRowCount={headerRows}
-                      columnWidth={columnWidth}
-                      columnCount={cols}
-                      enableFixedColumnScroll
-                      enableFixedRowScroll
-                      height={height - border}
-                      rowHeight={rowHeight}
-                      rowCount={rows}
-                      width={width - border}
-                    />
-                    <div className="fixup fixup-top-right" style={{
-                      width: border,
-                      height: headerHeight,
-                    }}/>
-                    <div className="fixup fixup-bottom-left" style={{
-                      width: headerWidth,
-                      height: border,
-                    }}/>
-                </div>
-              );
-            }
-          }
-        </AutoSizer>
+      <div style={{width, height}}>
+        <div style={{width, height, position: 'absolute'}}
+          className="dataframe-container">
+            <MultiGrid
+              className="dataFrame"
+              cellRenderer={cellRenderer}
+              fixedColumnCount={headerCols}
+              fixedRowCount={headerRows}
+              columnWidth={columnWidth}
+              columnCount={cols}
+              enableFixedColumnScroll
+              enableFixedRowScroll
+              height={height - border}
+              rowHeight={rowHeight}
+              rowCount={rows}
+              width={width - border}
+            />
+            <div className="fixup fixup-top-right" style={{
+              width: border,
+              height: headerHeight,
+            }}/>
+            <div className="fixup fixup-bottom-left" style={{
+              width: headerWidth,
+              height: border,
+            }}/>
+        </div>
       </div>
     );
   } catch (e) {
@@ -202,11 +172,15 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
   // Grow the cells to fill the array width.
   const sum = (array) => array.reduce((a, b) => a + b, 0);
   const totalWidth = sum(colWidthArray);
+  console.log(`totalWidth (before): ${totalWidth} > ${width}`)
+  console.log(colWidthArray)
   if (totalWidth < width) {
     for (let i = headerCols ; i < cols ; i++) {
       colWidthArray[i] += (width - totalWidth) / (cols - headerCols);
     }
   }
+  console.log(`totalWidth (after): ${sum(colWidthArray)} > ${width}`)
+  console.log(colWidthArray)
 
   // Package up return values.
   const headerWidth = sum(colWidthArray.slice(0, headerCols));

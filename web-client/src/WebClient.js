@@ -1,4 +1,5 @@
 import React, { PureComponent } from 'react';
+import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
   Col as BootstrapCol,
@@ -114,28 +115,40 @@ class WebClient extends PureComponent {
           </NavItem>
         </Navbar>
         <Container className="printf-container">
-          { this.renderElements() }
+          <BootstrapRow>
+            <BootstrapCol className="col-12">
+              {/* {this.renderElements(0)} */}
+              <AutoSizer>
+                {
+                  ({width}) => {
+                    console.log('Rendering with width:', width);
+                    return this.renderElements(width)
+                  }
+                }
+              </AutoSizer>
+            </BootstrapCol>
+          </BootstrapRow>
         </Container>
 
       </div>
     );
   }
 
-  renderElements() {
+  renderElements(width) {
     return this.state.elements.map((element) => {
       if (!element)
         return <Alert color="warning">Transmission error.</Alert>
       else if (element.div) {
-        return <Div element={element.div}/>;
+        return <Div element={element.div} width={width}/>;
       } else if (element.dataFrame) {
-        return <DataFrame element={element.dataFrame}/>;
+        return <DataFrame element={element.dataFrame} width={width}/>;
       } else if (element.chart) {
-        return <Chart element={element.chart}/>
+        return <Chart element={element.chart} width={width}/>;
       } else {
         return <Alert color="warning">WTF is "{element.type}"?!</Alert>
       }
     }).map((element, indx) => (
-      <Row key={indx}>{element}</Row>
+      <div className="element-container" key={indx}>{element}</div>
     ));
   }
 }

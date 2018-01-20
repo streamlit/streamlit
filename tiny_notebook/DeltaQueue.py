@@ -1,9 +1,9 @@
 """
-Provides DeltaAccumulator, a data structure for storing a bunch of deltas.
+Provides DeltaQueue, a data structure for storing a bunch of deltas.
 Whenever possible, deltas are combined.
 """
 
-class DeltaAccumulator:
+class DeltaQueue:
     """Accumulates a bunch of deltas."""
 
     def __init__(self):

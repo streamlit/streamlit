@@ -1,10 +1,5 @@
 #### Todo
 
-- Make a full periodic table.
-  - Make radial bar charts possible
-- Move the AutoSizer out.
-  - see if it fixes the table resizing problem
-- Create a nice set of widgets for the periodic table.
 - Start implementing the rest of the messages.
   - "info"     : prints out df.info() on a DataFrame-like object
   - "img"      : prints an image out
@@ -15,16 +10,15 @@
 - See if I need to add the fancier delta for charts.
 - Rename it from tiny-notebook to printf
 - Rename notebook everywhere to printf.
-- Make it work with pip.
+- Figure out how to make an installer with pip
 - Give it a nice favicon.
 - Get the name printf.com.
 - Make a presentation to show how this will all work.
-- Clean things up:
-  - Enable DataFrame to parse int arrays.
-  - Fix resizing bug with the table dimensions.
-  - Put in properties for CHART_COMPONENTS
-  - Fix `radial_bar_chart`
 - make the awesomest library ever
+
+#### After the Demo
+
+- Fix the problem where you have to sleep for another second.
 
 #### How charts might work.
 
@@ -39,10 +33,16 @@ printf(chart)
 
 - Reimplement core logic in Redux
 - start playing around with protobufs
-- Get rid of AutoSizer from Chart.js and use the charts version.
 - Follow the docker tutorial
 - Install node within docker
-- Figure out how to make an installer with pip
+- Enable DataFrame to parse int arrays.
+- Fix resizing bug with the table dimensions.
+- Put in properties for CHART_COMPONENTS
+- Fix up charts.
+  - Make chart component recursive.
+  - Fix `radial_bar_chart`
+  - Get `pie_chart` to work.. put dataframes in the components.   
+- Fix the problem when you resize a table.
 
 #### Protobuf Messages
 

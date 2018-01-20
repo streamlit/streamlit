@@ -74,9 +74,13 @@ const COMPONENTS = {
 }
 
 // Represents a chart with some data
-function Chart({element}) {
+function Chart({element, width}) {
   // Default height is 200 if not specified.
-  const height = element.height || 200;
+  const chartXOffset = 35;
+  const chartDims = {
+    width: (element.width || width) + chartXOffset,
+    height: element.height || 200,
+  }
 
   // Convert the data into a format that Recharts understands.
   const dataFrame = element.data;
@@ -91,20 +95,17 @@ function Chart({element}) {
     data.push(rowData)
   }
 
-  const chartXOffset = 35;
+  // Parse out the chart props into an object.
+  const chart_props = {};
+  for (const chartProperty of element.props)
+    chart_props[chartProperty.key] = chartProperty.value;
+
   return (
-    <div style={{height, left: -chartXOffset}}>
-      <AutoSizer>
-        {(dims) => {
-          const width = (element.width || dims.width) + chartXOffset;
-          const chart_props = {};
-          for (const chartProperty of element.props)
-            chart_props[chartProperty.key] = chartProperty.value;
-          console.log('chart_props:')
-          console.log(chart_props)
-          return React.createElement(
-            COMPONENTS[element.type],
-            {width, height, data, ...chart_props},
+    <div style={chartDims}>
+      <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
+        {
+          React.createElement(
+            COMPONENTS[element.type], {...chartDims, data, ...chart_props},
             ...element.components.map((component) => {
                 const component_props = {};
                 for (const chartProperty of component.props)
@@ -113,9 +114,9 @@ function Chart({element}) {
                   COMPONENTS[component.type],
                   component_props);
             })
-          );
-        }}
-      </AutoSizer>
+          )
+        }
+      </div>
     </div>
   );
 }

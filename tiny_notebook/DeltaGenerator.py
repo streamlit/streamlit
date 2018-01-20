@@ -52,7 +52,7 @@ class DeltaGenerator:
         assert 1 <= level <= 6, 'Level must be between 1 and 6.'
         return self.text(text, classes=f'h{level}')
 
-    def dataFrame(self, pandas_df):
+    def data_frame(self, pandas_df):
         """
         Renders a dataframe to the client.
 
