@@ -8,6 +8,7 @@ message Chart {
   uint32 width = 3;
   uint32 height = 4;
   repeated ChartComponent components = 5;
+  repeated ChartProperty props = 6;
 }
 
 message ChartComponent {

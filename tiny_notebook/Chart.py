@@ -41,19 +41,20 @@ import pandas as pd
 from tiny_notebook import data_frame_proto
 
 class Chart:
-    def __init__(self, data, type, width=0, height=0):
+    def __init__(self, data, type, width=0, height=0, **props):
         """
         Constructs a chart object.
 
         type - 'area_chart', 'bar_chart', etc...
         data - a np.Array or pd.DataFrame, series are reference by colum names.
         """
-        assert type in CHART_CHARTS, f'Did not recognize "{type}" chart type.'
+        assert type in CHART_TYPES, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
         self._type = type
         self._width = width
         self._height = height
         self._components = []
+        self._props = [(str(k), str(v)) for (k,v) in props.items()]
 
     def marshall(self, proto_chart):
         """Loads this chart data into that proto_chart."""
@@ -64,6 +65,10 @@ class Chart:
         for component in self._components:
             proto_component = proto_chart.components.add()
             component.marshall(proto_component)
+        for (key, value) in self._props:
+            proto_prop = proto_chart.props.add()
+            proto_prop.key = to_lower_camel_case(key)
+            proto_prop.value = value
 
     @classmethod
     def add_component(cls, type, implemented):
@@ -106,17 +111,17 @@ def to_snake_case(camel_case_str):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camel_case_str)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-CHART_CHARTS = map(to_snake_case, [
+CHART_TYPES = set(map(to_snake_case, [
     'AreaChart',
     'BarChart',
     'LineChart',
     'ComposedChart',
-    'PieChart',
+    # 'PieChart',
     'RadarChart',
-    'RadialBarChart',
-    'ScatterChart',
+    # 'RadialBarChart',
+    # 'ScatterChart',
     'Treemap',
-])
+]))
 
 # see http://recharts.org/#/en-US/api
 CHART_COMPONENTS = {

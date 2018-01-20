@@ -8,69 +8,69 @@ const COMPONENTS = {
   // Charts //
   ////////////
 
-  AreaChart       : recharts.AreaChart,
-  BarChart        : recharts.BarChart,
-  LineChart       : recharts.LineChart,
-  ComposedChart   : recharts.ComposedChart,
-  PieChart        : recharts.PieChart,
-  RadarChart      : recharts.RadarChart,
-  RadialBarChart  : recharts.RadialBarChart,
-  ScatterChart    : recharts.ScatterChart,
-  Treemap         : recharts.Treemap,
+  AreaChart         : recharts.AreaChart,
+  BarChart          : recharts.BarChart,
+  LineChart         : recharts.LineChart,
+  ComposedChart     : recharts.ComposedChart,
+  // PieChart       <- not implemented
+  RadarChart        : recharts.RadarChart,
+  // RadialBarChart <- not implemented
+  // ScatterChart   <- not implemented
+  Treemap           : recharts.Treemap,
 
   ////////////////////////
   // General Components //
   ////////////////////////
 
   // ResponsiveContainer, <- not implemented
-  Area            : recharts.Area,
-  Legend          : recharts.Legend,
-  Tooltip         : recharts.Tooltip,
-  // Cell         <- not implemented
-  // Text         <- not implemented
-  // Label        <- not implemented
-  // LabelList    <- not implemented
+  Area              : recharts.Area,
+  Legend            : recharts.Legend,
+  Tooltip           : recharts.Tooltip,
+  // Cell           <- not implemented
+  // Text           <- not implemented
+  // Label          <- not implemented
+  // LabelList      <- not implemented
 
   //////////////////////////
   // Cartesian Components //
   //////////////////////////
 
-  Area            : recharts.Area,
-  Bar             : recharts.Bar,
-  Line            : recharts.Line,
-  Scatter         : recharts.Scatter,
-  XAxis           : recharts.XAxis,
-  YAxis           : recharts.YAxis,
-  ZAxis           : recharts.ZAxis,
-  Brush           : recharts.Brush,
-  CartesianAxis   : recharts.CartesianAxis,
-  CartesianGrid   : recharts.CartesianGrid,
-  ReferenceLine   : recharts.ReferenceLine,
-  ReferenceDot    : recharts.ReferenceDot,
-  ReferenceArea   : recharts.ReferenceArea,
-  ErrorBar        : recharts.ErrorBar,
+  Area              : recharts.Area,
+  Bar               : recharts.Bar,
+  Line              : recharts.Line,
+  Scatter           : recharts.Scatter,
+  XAxis             : recharts.XAxis,
+  YAxis             : recharts.YAxis,
+  ZAxis             : recharts.ZAxis,
+  Brush             : recharts.Brush,
+  CartesianAxis     : recharts.CartesianAxis,
+  CartesianGrid     : recharts.CartesianGrid,
+  ReferenceLine     : recharts.ReferenceLine,
+  ReferenceDot      : recharts.ReferenceDot,
+  ReferenceArea     : recharts.ReferenceArea,
+  ErrorBar          : recharts.ErrorBar,
 
   //////////////////////
   // Polar Components //
   //////////////////////
 
-  Pie             : recharts.Pie,
-  Radar           : recharts.Radar,
-  RadialBar       : recharts.RadialBar,
-  PolarAngleAxis  : recharts.PolarAngleAxis,
-  PolarGrid       : recharts.PolarGrid,
-  PolarRadiusAxis : recharts.PolarRadiusAxis,
+  Pie               : recharts.Pie,
+  Radar             : recharts.Radar,
+  RadialBar         : recharts.RadialBar,
+  PolarAngleAxis    : recharts.PolarAngleAxis,
+  PolarGrid         : recharts.PolarGrid,
+  PolarRadiusAxis   : recharts.PolarRadiusAxis,
 
   ////////////
   // Shapes //
   ////////////
 
-  // Cross        <- not implemented
-  // Curve        <- not implemented
-  // Dot          <- not implemented
-  // Polygon      <- not implemented
-  // Rectangle    <- not implemented
-  // Sector       <- not implemented
+  // Cross          <- not implemented
+  // Curve          <- not implemented
+  // Dot            <- not implemented
+  // Polygon        <- not implemented
+  // Rectangle      <- not implemented
+  // Sector         <- not implemented
 }
 
 // Represents a chart with some data
@@ -97,16 +97,21 @@ function Chart({element}) {
       <AutoSizer>
         {(dims) => {
           const width = (element.width || dims.width) + chartXOffset;
+          const chart_props = {};
+          for (const chartProperty of element.props)
+            chart_props[chartProperty.key] = chartProperty.value;
+          console.log('chart_props:')
+          console.log(chart_props)
           return React.createElement(
             COMPONENTS[element.type],
-            {width, height, data, margin: "0 0 0 0"},
+            {width, height, data, ...chart_props},
             ...element.components.map((component) => {
-                let props = {};
+                const component_props = {};
                 for (const chartProperty of component.props)
-                  props[chartProperty.key] = chartProperty.value;
+                  component_props[chartProperty.key] = chartProperty.value;
                 return React.createElement(
                   COMPONENTS[component.type],
-                  props);
+                  component_props);
             })
           );
         }}

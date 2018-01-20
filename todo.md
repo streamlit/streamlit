@@ -1,7 +1,9 @@
 #### Todo
 
-- Move the AutoSizer out.
 - Make a full periodic table.
+  - Make radial bar charts possible
+- Move the AutoSizer out.
+  - see if it fixes the table resizing problem
 - Create a nice set of widgets for the periodic table.
 - Start implementing the rest of the messages.
   - "info"     : prints out df.info() on a DataFrame-like object
@@ -21,6 +23,7 @@
   - Enable DataFrame to parse int arrays.
   - Fix resizing bug with the table dimensions.
   - Put in properties for CHART_COMPONENTS
+  - Fix `radial_bar_chart`
 - make the awesomest library ever
 
 #### How charts might work.

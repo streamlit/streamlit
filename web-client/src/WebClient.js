@@ -103,7 +103,7 @@ class WebClient extends PureComponent {
     return (
       <div>
         <Navbar color='dark' className="fixed-top">
-          <NavbarBrand href="/">Tiny Notebook</NavbarBrand>
+          <NavbarBrand href="/">Printf</NavbarBrand>
           <NavItem>
             <PersistentWebsocket
               uri="ws://localhost:8315/"
