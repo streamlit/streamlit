@@ -25,7 +25,7 @@ class DeltaQueue:
 
     def get_deltas(self):
         """Returns a list of deltas in a DeltaList message
-        and clears this accumulator."""
+        and clears this queue."""
         deltas = self._deltas
         self._empty()
         return deltas

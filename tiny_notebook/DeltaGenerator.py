@@ -9,14 +9,14 @@ class DeltaGenerator:
     message and a new Generator with that id is created."
     """
 
-    def __init__(self, accumulator, id=None):
+    def __init__(self, queue, id=None):
         """
         Constructor.
 
-        accumulator - callback when delta is generated
+        queue - callback when delta is generated
         id          - id for deltas, or None to create a new generator each time
         """
-        self._accumulator = accumulator
+        self._queue = queue
         if id == None:
             self._generate_new_ids = True
             self._next_id = 0
@@ -75,7 +75,7 @@ class DeltaGenerator:
     def _new_element(self, set_element):
         """
         Creates a new element delta, sets its value with set_element,
-        sends the new element to the delta accumulator, and finally
+        sends the new element to the delta queue, and finally
         returns a generator for that element ID.
 
         set_element - Function which sets the feilds for a protobuf.Element
@@ -83,7 +83,7 @@ class DeltaGenerator:
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:
             id = self._next_id
-            generator = DeltaGenerator(self._accumulator, id)
+            generator = DeltaGenerator(self._queue, id)
             self._next_id += 1
         else:
             id = self._id
@@ -94,6 +94,6 @@ class DeltaGenerator:
         delta.id = id
         set_element(delta.new_element)
 
-        # Call the accumulator and return the new element.
-        self._accumulator(delta)
+        # Call the queue and return the new element.
+        self._queue(delta)
         return generator

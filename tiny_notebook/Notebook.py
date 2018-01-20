@@ -28,7 +28,7 @@ class Notebook:
         self._server_running = False
 
         # Here is where we can create text
-        self._delta_accumulators = [DeltaQueue()]
+        self._delta_queues = [DeltaQueue()]
         self._delta_generator = DeltaGenerator(self._add_delta)
 
     def __enter__(self):
@@ -86,26 +86,26 @@ class Notebook:
         threading.Thread(target=run_server, daemon=True).start()
 
     def _add_delta(self, delta):
-        """Distributes this delta into all accumulators."""
-        # Distribute the delta into every accumulator. The first accumulator
-        # is special: it's the master accumulator from which all others derive.
+        """Distributes this delta into all queues."""
+        # Distribute the delta into every queue. The first queue
+        # is special: it's the master queue from which all others derive.
         async def async_add_delta():
-            for accumulator in self._delta_accumulators:
-                accumulator.add_delta(delta)
+            for queue in self._delta_queues:
+                queue.add_delta(delta)
 
-        # All code touching an accumulator must be run in the server even loop.
+        # All code touching an queue must be run in the server even loop.
         asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
 
     def _get_connection_handler(self):
         """Handles a websocket connection."""
         async def async_handle_connection(websocket, path):
-            # Creates a new accumulator for this connection.
-            accumulator = copy.deepcopy(self._delta_accumulators[0])
-            self._delta_accumulators.append(accumulator)
+            # Creates a new queue for this connection.
+            queue = copy.deepcopy(self._delta_queues[0])
+            self._delta_queues.append(queue)
 
             # Go into an endless loop.
             async def send_deltas():
-                deltas = accumulator.get_deltas()
+                deltas = queue.get_deltas()
                 if deltas:
                     delta_list = protobuf.DeltaList()
                     delta_list.deltas.extend(deltas)
