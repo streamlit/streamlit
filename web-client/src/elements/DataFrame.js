@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Alert }  from 'reactstrap';
-import { AutoSizer, MultiGrid } from 'react-virtualized';
+import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
 
 import { indexGetLevelsAndLength, tableGetRowsAndCols, indexGet, tableGet }

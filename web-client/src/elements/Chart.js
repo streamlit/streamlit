@@ -1,6 +1,5 @@
 import React from 'react';
 import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
-import { AutoSizer } from 'react-virtualized';
 
 import * as recharts from 'recharts';
 const COMPONENTS = {
@@ -35,7 +34,6 @@ const COMPONENTS = {
   // Cartesian Components //
   //////////////////////////
 
-  Area              : recharts.Area,
   Bar               : recharts.Bar,
   Line              : recharts.Line,
   Scatter           : recharts.Scatter,

@@ -3,6 +3,7 @@ syntax = "proto3";
 import "Div.proto";
 import "DataFrame.proto";
 import "Chart.proto";
+import "Image.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -12,5 +13,6 @@ message Element {
     Div div = 1;
     DataFrame data_frame = 2;
     Chart chart = 3;
+    ImageList imgs = 4;
   }
 }

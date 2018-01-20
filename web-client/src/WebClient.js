@@ -2,32 +2,27 @@ import React, { PureComponent } from 'react';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
-  Col as BootstrapCol,
+  Col,
   Container,
   Navbar,
   NavItem,
   NavbarBrand,
   Progress,
-  Row as BootstrapRow,
+  Row,
 } from 'reactstrap';
 import { List } from 'immutable';
 
+// Display Elements
 import DataFrame from './elements/DataFrame'
 import Div from './elements/Div'
 import Chart from './elements/Chart'
+import ImageList from './elements/ImageList'
+
+// Other local imports.
 import PersistentWebsocket from './PersistentWebsocket'
 import { DeltaList } from './protobuf/printf'
 
 import './WebClient.css';
-
-// This my custom row which contains a complete 100% width column
-const Row = ({children}) => (
-  <BootstrapRow>
-    <BootstrapCol>
-      {children}
-    </BootstrapCol>
-  </BootstrapRow>
-);
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -115,8 +110,8 @@ class WebClient extends PureComponent {
           </NavItem>
         </Navbar>
         <Container className="printf-container">
-          <BootstrapRow>
-            <BootstrapCol className="col-12">
+          <Row>
+            <Col className="col-12">
               {/* {this.renderElements(0)} */}
               <AutoSizer>
                 {
@@ -126,8 +121,8 @@ class WebClient extends PureComponent {
                   }
                 }
               </AutoSizer>
-            </BootstrapCol>
-          </BootstrapRow>
+            </Col>
+          </Row>
         </Container>
 
       </div>
@@ -136,16 +131,20 @@ class WebClient extends PureComponent {
 
   renderElements(width) {
     return this.state.elements.map((element) => {
-      if (!element)
-        return <Alert color="warning">Transmission error.</Alert>
-      else if (element.div) {
+      if (!element) {
+        const msg = 'Transmission error.'
+        return <Alert color="warning" style={{width}}>{msg}</Alert>;
+      } else if (element.div) {
         return <Div element={element.div} width={width}/>;
       } else if (element.dataFrame) {
         return <DataFrame element={element.dataFrame} width={width}/>;
       } else if (element.chart) {
         return <Chart element={element.chart} width={width}/>;
+      } else if (element.imgs) {
+        return <ImageList imgs={element.imgs} width={width}/>;
       } else {
-        return <Alert color="warning">WTF is "{element.type}"?!</Alert>
+        const msg = `Cannot parse type "${element.type}". WTF?!`
+        return <Alert color="warning" style={{width}}>{msg}</Alert>;
       }
     }).map((element, indx) => (
       <div className="element-container" key={indx}>{element}</div>

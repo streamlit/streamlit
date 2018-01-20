@@ -1,0 +1,26 @@
+.printf-container .image-container {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.printf-container .image-container img {
+  border: 1px solid black;
+}
+
+.printf-container .caption {
+  font-family: "Roboto Mono", monospace;
+  font-size: 8pt;
+  text-align: center;
+  margin-top: 5px;
+}
+
+/* <div style={{width}} className="image-list-container">
+  {imgs.imgs.map((img, indx) => (
+    <span key={indx}>
+      <img
+        style={{width: imgs.width ? imgs.width : undefined}}
+        src={`data:image/png;base64,${img.base_64Png}`}
+        alt={indx}
+      />
+      <div class="caption"> {img.caption} </div>
+    </span> */

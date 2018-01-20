@@ -1,41 +1,32 @@
 #### Todo
 
 - Start implementing the rest of the messages.
-  - "info"     : prints out df.info() on a DataFrame-like object
-  - "img"      : prints an image out
-  - "auto"     : figures out the
   - "progress" : prints out a progress bar (for a 0<num<1)
-- Implement images really nicely.
-- Test how it goes on a keras example
-- See if I need to add the fancier delta for charts.
-- Rename it from tiny-notebook to printf
-- Rename notebook everywhere to printf.
-- Figure out how to make an installer with pip
-- Give it a nice favicon.
-- Get the name printf.com.
+  - "auto"     : figures out the
+- Clean up some names in the code.
+  - Make the `DataFrame` prop into `df`
+  - make the `Chart` prop into `chart`
+- Create some great examples
+  - Speed test recapitulates previous demo.
+    - See if I need to add the fancier delta for charts.
+  - Test how it goes on a keras example
+- Clean things up.
+  - Rename it from tiny-notebook to printf
+  - Rename notebook everywhere to printf.
+  - Clean up Lenna.png and the examples.
+  - Figure out how to make an installer with pip
+  - Give it a nice favicon.
 - Make a presentation to show how this will all work.
-- make the awesomest library ever
 
 #### After the Demo
 
+- Get the name printf.com.
 - Fix the problem where you have to sleep for another second.
-
-#### How charts might work.
-
-```
-chart = printf.Chart(data, type='LineChart')
-chart.cartesianGrid(strokeDasharray="3 3")
-chart.xAxis(datakey="name")
-printf(chart)
-```
+- "info"     : prints out df.info() on a DataFrame-like object
 
 #### More things to play with and try
 
 - Reimplement core logic in Redux
-- start playing around with protobufs
-- Follow the docker tutorial
-- Install node within docker
-- Enable DataFrame to parse int arrays.
 - Fix resizing bug with the table dimensions.
 - Put in properties for CHART_COMPONENTS
 - Fix up charts.
@@ -43,6 +34,9 @@ printf(chart)
   - Fix `radial_bar_chart`
   - Get `pie_chart` to work.. put dataframes in the components.   
 - Fix the problem when you resize a table.
+- Follow the docker tutorial
+- Install node within docker
+- make the awesomest library ever
 
 #### Protobuf Messages
 

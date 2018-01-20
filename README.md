@@ -18,3 +18,6 @@ A stateless alternative to Jupyter notebooks for machine learning and data scien
   - `pip install protobuf`
   - `npm install -g protobufjs`
   - Allows us to communicate the messages quickly.
+- `pillow`
+  - `pip install pillow`
+  - Allows us to manipulate images.

@@ -1,7 +1,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import pandas as pd
-from tiny_notebook import protobuf, data_frame_proto
+from tiny_notebook import protobuf, data_frame_proto, image_proto
 
 class DeltaGenerator:
     """
@@ -25,6 +25,7 @@ class DeltaGenerator:
             self._id = id
 
     def text(self, text, classes='fixed-width'):
+        text = str(text)
         def set_text(element):
             element.div.text = text
             element.div.classes = classes
@@ -71,6 +72,19 @@ class DeltaGenerator:
         def set_chart(element):
             chart.marshall(element.chart)
         return self._new_element(set_chart)
+
+    def img(self, imgs, caption=None, width=0):
+        """Displays an image or horizontal array of images.
+
+        imgs     - a monochrom image of shape (w,h) or (w,h,1)
+                   OR a color image of shape (w,h,3)
+                   OR an array of such images
+        caption  - string caption, or string array for multiple images
+        width    - Image width. 0 means use original width.
+        """
+        def set_images(element):
+            image_proto.marshall_images(imgs, caption, width, element.imgs)
+        return self._new_element(set_images)
 
     def _new_element(self, set_element):
         """

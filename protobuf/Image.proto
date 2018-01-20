@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// An image which can be displayed on the screen.
+message Image {
+  string base_64_png = 1;
+  string caption = 2;
+}
+
+// A set of images.
+message ImageList {
+  repeated Image imgs = 1;
+
+  // The width of each image.
+  uint32 width = 2;
+}
