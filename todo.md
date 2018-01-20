@@ -1,9 +1,6 @@
 #### Todo
 
 - Start implementing the rest of the messages.
-  - 'dataframe':
-    - see what other types I need to a raw numpy array
-    - check in.. dataFrames complete!!
   - 'chart'
     - Create dataframe data model (proto)
     - Create the chart proto datamodel
@@ -13,6 +10,8 @@
   - "auto"     : figures out the
 - "progress" : prints out a progress bar (for a 0<num<1)
 - Implement images really nicely.
+- Test how it goes on a keras example
+- See if I need to add the fancier delta for charts.
 - Rename it from tiny-notebook to printf
 - Rename notebook everywhere to printf.
 - Make it work with pip.
@@ -37,7 +36,7 @@ printf(chart)
 
 - Reimplement core logic in Redux
 - start playing around with protobufs
-- Get rid of AutoSizer from Chart.js and use the recharts version.
+- Get rid of AutoSizer from Chart.js and use the charts version.
 - Follow the docker tutorial
 - Install node within docker
 - Figure out how to make an installer with pip

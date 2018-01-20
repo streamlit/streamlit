@@ -12,7 +12,7 @@
     "react-scripts": "1.0.17",
     "react-virtualized": "^9.16.1",
     "reactstrap": "^5.0.0-alpha.4",
-    "recharts": "^1.0.0-beta.9"
+    "charts": "^1.0.0-beta.9"
   },
   "scripts": {
     "start": "react-scripts start",

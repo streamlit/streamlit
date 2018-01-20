@@ -2,3 +2,4 @@
 to create and interact with printed elements."""
 
 from .Notebook import Notebook
+from .Chart import Chart

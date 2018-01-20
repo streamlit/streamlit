@@ -64,6 +64,14 @@ class DeltaGenerator:
             data_frame_io.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
 
+    def chart(self, chart):
+        """
+        Implements this chart.
+        """
+        def set_chart(element):
+            chart.marshall(element.chart)
+        return self._new_element(set_chart)
+
     def _new_element(self, set_element):
         """
         Creates a new element delta, sets its value with set_element,

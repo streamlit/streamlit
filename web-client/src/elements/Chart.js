@@ -6,9 +6,9 @@ import {
   Legend,
   XAxis,
   YAxis
-} from 'recharts';
+} from 'charts';
 
-// Todo: Get rid of this and use the recharts version.
+// Todo: Get rid of this and use the charts version.
 import { AutoSizer } from 'react-virtualized';
 
 // Represents a chart with some data

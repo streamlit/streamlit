@@ -1,5 +1,21 @@
 syntax = "proto3";
 
+import "DataFrame.proto";
+
 message Chart {
-  string name = 1;
+  string type = 1;
+  DataFrame data = 2;
+  uint32 width = 3;
+  uint32 height = 4;
+  repeated ChartComponent components = 5;
+}
+
+message ChartComponent {
+  string type = 1;
+  repeated ChartProperty props = 2;
+}
+
+message ChartProperty {
+  string key = 1;
+  string value = 2;
 }
