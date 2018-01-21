@@ -1,6 +1,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import pandas as pd
+import numpy as np
 from tiny_notebook import protobuf, data_frame_proto, image_proto
 from tiny_notebook.Chart import Chart
 
@@ -79,7 +80,7 @@ class DeltaGenerator:
                 self.dataframe(arg)
             elif isinstance(arg, figure_like_types):
                 flush_buffer()
-                self.plot(arg)
+                self.chart(arg)
             else:
                 string_buffer.append(str(arg))
         flush_buffer()

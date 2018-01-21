@@ -2,6 +2,10 @@
 
 - Start implementing the rest of the messages.
   - "auto"     : figures out the
+- Think about the
+  - objectives of the Demo
+  - flow of the Demo
+  - list out final features needed for the demo
 - Create some great examples
   - Speed test recapitulates previous demo.
     - See if I need to add the fancier delta for charts.
