@@ -45,7 +45,6 @@ message PlainIndex {
 message RangeIndex {
   int64 start = 1;
   int64 stop = 2;
-  int64 step = 3;
 
   //// Not yet implemented:
   // string name = 4;

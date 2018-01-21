@@ -4,6 +4,8 @@ Provides DeltaQueue, a data structure for storing a bunch of deltas.
 Whenever possible, deltas are combined.
 """
 
+from tiny_notebook import data_frame_proto
+
 class DeltaQueue:
     """Accumulates a bunch of deltas."""
 
@@ -44,6 +46,9 @@ class DeltaQueue:
             return delta2
         elif delta2.WhichOneof('type') == 'new_element':
             return delta2
+        elif delta2.WhichOneof('type') == 'add_rows':
+            data_frame_proto.add_rows(delta1, delta2)
+            return delta1
 
         print('delta1')
         print(delta1)

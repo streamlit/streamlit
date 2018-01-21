@@ -156,6 +156,17 @@ class DeltaGenerator:
             element.progress.value = value
         return self._new_element(set_progress)
 
+    def add_rows(self, df):
+        assert not self._generate_new_ids, \
+            'Only existing elements can add_rows.'
+        if type(df) != pd.DataFrame:
+            df = pd.DataFrame(df)
+        delta = protobuf.Delta()
+        delta.id = self._id
+        data_frame_proto.marshall_data_frame(df, delta.add_rows)
+        self._queue(delta)
+        return self
+
     def _new_element(self, set_element):
         """
         Creates a new element delta, sets its value with set_element,

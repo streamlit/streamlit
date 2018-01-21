@@ -19,7 +19,7 @@ LAUNCH_BROWSER_SCRIPT = \
     './web-client/node_modules/react-dev-utils/openChrome.applescript ' \
     'http://localhost:3000/'
 SHUTDOWN_DELAY_SECS = 1.0
-THROTTLE_SECS = 0.01
+THROTTLE_SECS = 0.5 # 0.01
 
 class Notebook:
     def __init__(self):

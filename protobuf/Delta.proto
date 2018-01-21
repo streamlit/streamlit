@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "Element.proto";
+import "DataFrame.proto";
 
 // A change to an element.
 message Delta {
@@ -10,7 +11,7 @@ message Delta {
   // There are two kinds of supported deltas.
   oneof type {
     Element new_element = 2;
-    // DataFrame add_rows = 3;
+    DataFrame add_rows = 3;
   }
 }
 

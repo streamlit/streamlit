@@ -21,8 +21,14 @@ const DataFrame = ({element, width}) => {
     const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(element.index);
     const [headerRows, dataColsCheck] = indexGetLevelsAndLength(element.columns);
     const [dataRows, dataCols] = tableGetRowsAndCols(element.data);
-    if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck))
-      throw new Error("Dataframe dimensions don't align.")
+    if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
+      console.log('rows:', dataRows, dataRowsCheck)
+      console.log('cols:', dataCols, dataColsCheck)
+      console.log(element)
+      throw new Error("Dataframe dimensions don't align: " +
+        `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+        `cols(${dataCols} != ${dataColsCheck})`)
+    }
     const cols = headerCols + dataCols;
     const rows = headerRows + dataRows;
 

@@ -13,31 +13,43 @@ with Notebook() as write:
     write("Now we're going to stream some random data to the client.")
     start_time = time.time()
 
-    # First create a chart.
-    chart_data = pd.DataFrame(columns=['pv', 'uv'])
-    def line_chart(chart_data):
-        line_chart = Chart(chart_data, 'line_chart')
-        line_chart.x_axis()
-        line_chart.y_axis()
-        line_chart.cartesian_grid(stroke_dasharray='3 3')
-        line_chart.tooltip()
-        line_chart.legend()
-        line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
-        line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
-        return line_chart
-    chart = write.chart(line_chart(chart_data))
+    import string
+    alphabet_table = pd.DataFrame(columns=['letters'])
+    table = write.dataframe(alphabet_table)
+    for i in range(26):
+        some_letters = string.ascii_lowercase[:i]
+        new_row = pd.DataFrame([some_letters], columns=['letters'], index=[i])
+        table.add_rows(new_row)
 
-    animation_seconds, iters, add_per_iter = 5, 100, 25
-    for i in range(iters):
-        new_data = pd.DataFrame(np.random.randn(add_per_iter, 2), columns=['pv', 'uv'])
-        chart_data = pd.concat([chart_data, new_data])
-        chart.chart(line_chart(chart_data))
-        time.sleep(animation_seconds / iters)
+    # # First create a chart.
+    # chart_data = pd.DataFrame(columns=['pv', 'uv'])
+    # def line_chart(chart_data):
+    #     line_chart = Chart(chart_data, 'line_chart')
+    #     line_chart.x_axis()
+    #     line_chart.y_axis()
+    #     line_chart.cartesian_grid(stroke_dasharray='3 3')
+    #     line_chart.tooltip()
+    #     line_chart.legend()
+    #     line_chart.line(type='monotone', data_key='pv', stroke='#8884d8', dot="false")
+    #     line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d', dot="false")
+    #     return line_chart
+    # table = write.dataframe(chart_data)
+    # # chart = write.chart(line_chart(chart_data))
+    #
+    # animation_seconds, iters, add_per_iter = 5, 100, 25
+    # for i in range(iters):
+    #     new_data = pd.DataFrame(np.random.randn(add_per_iter, 2),
+    #         columns=['pv', 'uv'])
+    #     # chart.add_rows(new_data)
+    #     chart_data = pd.concat([chart_data, new_data])
+    #     # chart.chart(line_chart(chart_data))
+    #     table(chart_data)
+    #     time.sleep(animation_seconds / iters)
 
-    # Write out the summary
-    write('Summary', fmt='header', level=5)
-    elapsed = time.time() - start_time
-    write('Added', (iters * add_per_iter), 'elements in', elapsed, 'seconds.')
+    # # Write out the summary
+    # write('Summary', fmt='header', level=5)
+    # elapsed = time.time() - start_time
+    # write('Added', (iters * add_per_iter), 'elements in', elapsed, 'seconds.')
 
     # # Arrays
     # write('Numpy Arrays', fmt='header', level=3)

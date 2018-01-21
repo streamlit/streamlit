@@ -30,9 +30,9 @@ export function indexGetLevelsAndLength(index) {
     levels = 1;
     length = anyArrayLength(index.plainIndex.data)
   } else if (index.rangeIndex) {
-    const {start, stop, step} = index.rangeIndex;
+    const {start, stop} = index.rangeIndex;
     levels = 1;
-    length = Math.floor((stop - start) / step);
+    length = stop - start;
   } else if (index.multiIndex) {
     levels = index.multiIndex.labels.length;
     if (levels === 0)

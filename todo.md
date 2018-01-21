@@ -5,6 +5,7 @@
     - Three really nice demos.
       - Speed Test
         - add_rows
+          - reset `THROTTLE_SECS`
           - add to the proto
           - update in compose
           - update on the client side
