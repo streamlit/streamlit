@@ -67,7 +67,7 @@ class WebClient extends PureComponent {
     reader.onloadend = () => {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
-      const deltaList = DeltaList.decode(result)
+      const deltaList = DeltaList.decode(result);
       console.log('Received a message and am applying...')
       console.log(deltaList)
       console.log('Protobuf Length:', reader.result.byteLength);
