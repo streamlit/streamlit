@@ -49,4 +49,4 @@ class DeltaQueue:
         print(delta1)
         print('delta2')
         print(delta2)
-        raise RuntimeError('Need to implement the compose code.')
+        raise NotImplementedError('Need to implement the compose code.')

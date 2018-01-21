@@ -4,6 +4,12 @@
   - **I want Lukas to appreciate the full power of logging as s company.**
     - Three really nice demos.
       - Speed Test
+        - add_rows
+          - add to the proto
+          - update in compose
+          - update on the client side
+          - test with a printed dataframe
+          - test on a graph
       - Keras Test
     - ONE OF
       - really beautiful slides about what's possible when this becomes a first
