@@ -133,7 +133,3 @@ with Notebook() as write:
     for percent in [100, 75, 50, 25, 0]:
         write(f'{percent}% progress:')
         write.progress(percent)
-
-
-print('Sleeping for another second...')
-time.sleep(1)

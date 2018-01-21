@@ -55,17 +55,8 @@ class Notebook:
         self._stop()
         print("Sent out the stop")
 
-        # # A small delay to flush anything left.
-        # time.sleep(Notebook._OPEN_WEBPAGE_SECS)
-        #
-        # # Delay server shutdown if we haven't transmitted everything yet
-        # if not (self._received_GET and self._transmitted_final_state()):
-        #     print(f'Sleeping for {Notebook._FINAL_SHUTDOWN_SECS} '
-        #         'seconds to flush all elements.')
-        #     time.sleep(Notebook._FINAL_SHUTDOWN_SECS)
-        # self._keep_running = False
-        # self._httpd.server_close()
-        # print('Closed down server.')
+        # We should rewrite the queue to no longer need this.
+        time.sleep(SHUTDOWN_DELAY_SECS)
 
     def _launch_server(self):
         """Launches the server and runs an asyncio loop forever."""
@@ -127,7 +118,7 @@ class Notebook:
                 lambda: setattr(self, '_server_running', False))
 
             # After a short delay, hard-stop the server loop.
-            self._server_loop.call_later(SHUTDOWN_DELAY_SECS,
+            self._server_loop.call_later(SHUTDOWN_DELAY_SECS / 2,
                 self._server_loop.stop)
 
         # Code to stop the thread must be run in the server loop.
