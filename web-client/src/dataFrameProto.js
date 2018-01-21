@@ -58,7 +58,7 @@ export function indexGet(index, level, i) {
   } else if (index.rangeIndex) {
     if (level !== 0)
       throw new Error(`Attempting to access level ${level} of a rangeIndex.`)
-    return index.rangeIndex.start + i * index.rangeIndex.step;
+    return index.rangeIndex.start + i;
   } else if (index.multiIndex) {
     const levels = index.multiIndex.levels[level]
     const labels = index.multiIndex.labels[level]
