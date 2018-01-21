@@ -10,7 +10,7 @@ import {
   Progress,
   Row,
 } from 'reactstrap';
-import { List } from 'immutable';
+import { List, fromJS } from 'immutable';
 
 // Display Elements
 import DataFrame from './elements/DataFrame'
@@ -69,11 +69,15 @@ class WebClient extends PureComponent {
       const result = new Uint8Array(reader.result);
       const deltaList = DeltaList.decode(result);
       console.log('Received a message and am applying...')
-      console.log(deltaList)
+      console.log(deltaList);
+      console.log('WHAT IF ITS IMMUTABLE?!?!');
+      const immutableDeltaList =
+        fromJS(DeltaList.toObject(deltaList, {defaults: true}));
+      console.log(immutableDeltaList);
+      console.log(deltaList.deltas)
+      console.log(immutableDeltaList.deltas)
       console.log('Protobuf Length:', reader.result.byteLength);
       console.log('JSON Length:', JSON.stringify(deltaList).length);
-      console.log('Applying')
-      console.log(deltaList)
       this.applyDeltas(deltaList);
     }
   }
