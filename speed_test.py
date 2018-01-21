@@ -11,35 +11,33 @@ with Notebook() as write:
     # Title.
     write('Speed Test', fmt='header', level=1)
     write("Now we're going to stream some random data to the client.")
-    intro = write.text('Some intro text')
-    write('This is the intro', intro)
     start_time = time.time()
 
-    # # First create a chart.
-    # chart_data = pd.DataFrame(columns=['pv', 'uv'])
-    # line_chart = Chart(chart_data, 'line_chart')
-    # line_chart.x_axis()
-    # line_chart.y_axis()
-    # line_chart.cartesian_grid(stroke_dasharray='3 3')
-    # line_chart.tooltip()
-    # line_chart.legend()
-    # line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
-    # line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
-    # chart = write(line_chart)
+    # First create a chart.
+    chart_data = pd.DataFrame(columns=['pv', 'uv'])
+    def line_chart(chart_data):
+        line_chart = Chart(chart_data, 'line_chart')
+        line_chart.x_axis()
+        line_chart.y_axis()
+        line_chart.cartesian_grid(stroke_dasharray='3 3')
+        line_chart.tooltip()
+        line_chart.legend()
+        line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
+        line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
+        return line_chart
+    chart = write.chart(line_chart(chart_data))
 
-    elements_to_add = 1000
-    for i in range(10):
-        # new_data = pd.DataFrame(np.random.randn(1, 2), columns=['pv', 'uv'],
-        #     index=[i])
-        # chart_data = pd.concat([chart_data, new_data])
-        # # write('iteration', i, chart_data)
-        # chart(chart_data)
-        intro('This is some intro text. Iteration: ' + str(i))
+    animation_seconds, iters, add_per_iter = 5, 100, 25
+    for i in range(iters):
+        new_data = pd.DataFrame(np.random.randn(add_per_iter, 2), columns=['pv', 'uv'])
+        chart_data = pd.concat([chart_data, new_data])
+        chart.chart(line_chart(chart_data))
+        time.sleep(animation_seconds / iters)
 
     # Write out the summary
     write('Summary', fmt='header', level=5)
     elapsed = time.time() - start_time
-    write('Added', elements_to_add, 'elements in', elapsed, 'seconds.')
+    write('Added', (iters * add_per_iter), 'elements in', elapsed, 'seconds.')
 
     # # Arrays
     # write('Numpy Arrays', fmt='header', level=3)

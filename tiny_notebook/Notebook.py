@@ -22,7 +22,7 @@ SHUTDOWN_DELAY_SECS = 1.0
 THROTTLE_SECS = 0.01
 
 class Notebook:
-    def __init__(self, debug_mode=False):
+    def __init__(self):
         # Create objects for the server.
         self._server_loop = asyncio.new_event_loop()
         self._server_running = False
@@ -30,12 +30,6 @@ class Notebook:
         # Here is where we can create text
         self._delta_queues = [DeltaQueue()]
         self._delta_generator = DeltaGenerator(self._add_delta)
-
-        # Enable more logging in debug mode.
-        if debug_mode:
-            import logging
-            logging.getLogger('asyncio').setLevel(logging.WARNING)
-            self._server_loop.set_debug()
 
     def __enter__(self):
         # start the webserver
@@ -86,17 +80,7 @@ class Notebook:
         """Distributes this delta into all queues."""
         # Distribute the delta into every queue. The first queue
         # is special: it's the master queue from which all others derive.
-
-        # debug - begin
-        print(f'Adding a delta to queues: {delta.id}')
-        # debug - end
-
         async def async_add_delta():
-            # debug - begin
-            print(f'Asynchronously adding delta to queues: {delta.id}')
-            print(f'Number of queues: {len(self._delta_queues)}')
-            # debug - end
-
             for queue in self._delta_queues:
                 queue.add_delta(delta)
 
@@ -115,12 +99,6 @@ class Notebook:
             async def send_deltas():
                 deltas = queue.get_deltas()
                 if deltas:
-
-                    # # debug - begin
-                    # print('These are the deltas I got:')
-                    # print(deltas)
-                    # # debug - end
-
                     delta_list = protobuf.DeltaList()
                     delta_list.deltas.extend(deltas)
                     await websocket.send(delta_list.SerializeToString())

@@ -31,6 +31,7 @@
   - make the `Chart` prop into `chart`
 - Fix the problem where you have to sleep for another second.
 - "info"     : prints out df.info() on a DataFrame-like object
+- Fix the bug in .x_axis(type='number')
 
 #### More things to play with and try
 
