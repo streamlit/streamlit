@@ -22,8 +22,8 @@ with Notebook() as write:
         table.add_rows(new_row)
         # print('adding row:')
         # print(new_row)
+        time.sleep(0.1)
 
-    import time
     time.sleep(2.0)
 
     # # First create a chart.
