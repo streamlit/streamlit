@@ -22,7 +22,7 @@ SHUTDOWN_DELAY_SECS = 1.0
 THROTTLE_SECS = 0.01
 
 class Notebook:
-    def __init__(self):
+    def __init__(self, debug_mode=False):
         # Create objects for the server.
         self._server_loop = asyncio.new_event_loop()
         self._server_running = False
@@ -30,6 +30,12 @@ class Notebook:
         # Here is where we can create text
         self._delta_queues = [DeltaQueue()]
         self._delta_generator = DeltaGenerator(self._add_delta)
+
+        # Enable more logging in debug mode.
+        if debug_mode:
+            import logging
+            logging.getLogger('asyncio').setLevel(logging.WARNING)
+            self._server_loop.set_debug()
 
     def __enter__(self):
         # start the webserver
@@ -80,12 +86,23 @@ class Notebook:
         """Distributes this delta into all queues."""
         # Distribute the delta into every queue. The first queue
         # is special: it's the master queue from which all others derive.
+
+        # debug - begin
+        print(f'Adding a delta to queues: {delta.id}')
+        # debug - end
+
         async def async_add_delta():
+            # debug - begin
+            print(f'Asynchronously adding delta to queues: {delta.id}')
+            print(f'Number of queues: {len(self._delta_queues)}')
+            # debug - end
+
             for queue in self._delta_queues:
                 queue.add_delta(delta)
 
         # All code touching an queue must be run in the server even loop.
-        asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
+        # asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
+        self._enqueue_coroutine(async_add_delta)
 
     def _get_connection_handler(self):
         """Handles a websocket connection."""
@@ -128,4 +145,16 @@ class Notebook:
                 self._server_loop.stop)
 
         # Code to stop the thread must be run in the server loop.
-        asyncio.run_coroutine_threadsafe(async_stop(), self._server_loop)
+        # asyncio.run_coroutine_threadsafe(async_stop(), self._server_loop)
+        self._enqueue_coroutine(async_stop)
+
+    def _enqueue_coroutine(self, coroutine):
+        async def wrapped_coroutine():
+            try:
+                await coroutine()
+            except:
+                print(f'Got exception in {coroutine}.')
+                traceback.print_exc()
+                import sys
+                sys.exit(-1)
+        asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._server_loop)

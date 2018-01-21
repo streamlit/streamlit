@@ -28,7 +28,7 @@ with Notebook() as write:
     # chart = write(line_chart)
 
     elements_to_add = 1000
-    for i in range(100):
+    for i in range(10):
         # new_data = pd.DataFrame(np.random.randn(1, 2), columns=['pv', 'uv'],
         #     index=[i])
         # chart_data = pd.concat([chart_data, new_data])

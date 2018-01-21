@@ -28,7 +28,7 @@ class DeltaQueue:
 
         # Store the index if necessary.
         if (delta.id in self._id_map):
-            index = self._id_map(delta.id)
+            index = self._id_map[delta.id]
         else:
             index = len(self._deltas)
             self._id_map[delta.id] = index
@@ -41,8 +41,20 @@ class DeltaQueue:
         #     print(self._deltas)
         # # debug - end
 
+        # debug - begin
+        print(f'About to enqueue {delta.id}.')
+        print(self._id_map)
+        print([type(delta) for delta in self._deltas])
+        # debug - end
+
         # Combine the previous and new delta.
         self._deltas[index] = self.compose(self._deltas[index], delta)
+
+        # debug - begin
+        print(f'Just enqueued {delta.id}.')
+        print(self._id_map)
+        print([type(delta) for delta in self._deltas])
+        # debug - end
 
         # # debug - begin
         # if got_fancy_delta:
@@ -54,8 +66,20 @@ class DeltaQueue:
     def get_deltas(self):
         """Returns a list of deltas in a DeltaList message
         and clears this queue."""
+
+        # debug - begin
+        print('Clearing out the deltas:')
+        print([type(delta) for delta in self._deltas])
+        # debug - end
+
         deltas = self._deltas
         self._empty()
+
+        # debug - begin
+        print('Just cleared out the deltas:')
+        print([type(delta) for delta in self._deltas])
+        # debug - end
+
         return deltas
 
     def _empty(self):
@@ -66,7 +90,9 @@ class DeltaQueue:
     @staticmethod
     def compose(delta1, delta2):
         """Combines the two given deltas into one."""
-        if (delta1 == None):
+        if delta1 == None:
+            return delta2
+        elif delta2.WhichOneof('type') == 'new_element':
             return delta2
 
         print('delta1')
