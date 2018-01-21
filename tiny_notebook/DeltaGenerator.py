@@ -2,6 +2,7 @@
 
 import pandas as pd
 from tiny_notebook import protobuf, data_frame_proto, image_proto
+from tiny_notebook.Chart import Chart
 
 class DeltaGenerator:
     """
@@ -23,6 +24,65 @@ class DeltaGenerator:
         else:
             self._generate_new_ids = False
             self._id = id
+
+    def __call__(self, *args, fmt='autp', **kwargs):
+        """Writes it's arguments to notebook pages.
+
+        with Notebook() as print:
+            print('A Test', fmt='header')
+            print('Hello world.')
+            print('This is an alert', fmt='alert')
+            print('This is a dataframe', pd.DataFrame([1, 2, 3]))
+
+        This also works:
+
+        with Notebook() as print:
+            print.header('A Test')
+            print('Hello world.')
+            print.alert('This is an alert')
+            print('This is a dataframe')
+            print.dataframe(pd.DataFrame([1, 2, 3]))
+
+        Supported types are:
+
+            - printf.Charts
+            - Pandas-DataFrame-like objects: DataFame, Series, and numpy.Array
+            - String-like objects: By default, objects are cast to strings.
+
+        The optional `fmt` argument can take on several values:
+
+            - "auto"     : figures out the
+            - "alert"    : formats the string as an alert
+            - "header"   : formats the string as a header
+            - "info"     : prints out df.info() on a DataFrame-like object
+            - "img"      : prints an image out
+            - "progress" : prints out a progress bar (for a 0<num<1)
+        """
+        # Dispatch based on the 'fmt' argument.
+        supported_formats = ['text', 'alert', 'header', 'header', 'dataframe',
+            'chart', 'img', 'progress']
+        if fmt in supported_formats:
+            assert len(args) == 1, f'Format "{fmt}" requires only one argument.'
+            return getattr(self, fmt)(args[0], **kwargs)
+
+        # Otherwise, dispatch based on type.
+        dataframe_like_types = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
+        figure_like_types = (Chart,)
+        string_buffer = []
+        def flush_buffer():
+            if string_buffer:
+                self.text(' '.join(string_buffer))
+                string_buffer[:] = []
+        for arg in args:
+            if isinstance(arg, dataframe_like_types):
+                flush_buffer()
+                self.dataframe(arg)
+            elif isinstance(arg, figure_like_types):
+                flush_buffer()
+                self.plot(arg)
+            else:
+                string_buffer.append(str(arg))
+        flush_buffer()
 
     def text(self, text, classes='fixed-width'):
         text = str(text)
@@ -53,7 +113,7 @@ class DeltaGenerator:
         assert 1 <= level <= 6, 'Level must be between 1 and 6.'
         return self.text(text, classes=f'h{level}')
 
-    def data_frame(self, pandas_df):
+    def dataframe(self, pandas_df):
         """
         Renders a dataframe to the client.
 
