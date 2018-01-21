@@ -147,10 +147,9 @@ class WebClient extends PureComponent {
       } else {
         const msg = `Cannot parse type "${element.type}". WTF?!`
         return <Alert color="warning" style={{width}}>{msg}</Alert>;
-      }
-    }).push(
+    }}).push(
       <div style={{width}} className="footer"/>
-    ). map((element, indx) => (
+    ).map((element, indx) => (
       <div className="element-container" key={indx}>{element}</div>
     ))
   }

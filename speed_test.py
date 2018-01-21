@@ -17,9 +17,14 @@ with Notebook() as write:
     alphabet_table = pd.DataFrame(columns=['letters'])
     table = write.dataframe(alphabet_table)
     for i in range(26):
-        some_letters = string.ascii_lowercase[:i]
+        some_letters = string.ascii_lowercase.strip()[:i+1]
         new_row = pd.DataFrame([some_letters], columns=['letters'], index=[i])
         table.add_rows(new_row)
+        # print('adding row:')
+        # print(new_row)
+
+    import time
+    time.sleep(2.0)
 
     # # First create a chart.
     # chart_data = pd.DataFrame(columns=['pv', 'uv'])

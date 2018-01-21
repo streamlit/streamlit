@@ -79,12 +79,6 @@ def add_rows(delta1, delta2):
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         concat_any_array(col1, col2)
 
-    # debug - begin
-    print('Finished add_rows')
-    print(df1)
-    print(df2)
-    # debug - end
-
 def concat_index(index1, index2):
     """Merges elements from index2 into index1."""
     # Special case if index1 is empty.
@@ -104,7 +98,7 @@ def concat_index(index1, index2):
     elif type1 == 'multi_index':
         raise NotImplementedError('Cannot yet concatenate MultiIndices.')
     elif type1 == 'int_64_index':
-        index1.int_64_index.data.extend(index2.int_64_index.data)
+        index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
 
 def concat_any_array(any_array_1, any_array_2):
     """Merges elements from any_array_2 into any_array_1."""
