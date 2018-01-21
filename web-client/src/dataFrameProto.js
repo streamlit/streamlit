@@ -38,6 +38,9 @@ export function indexGetLevelsAndLength(index) {
     if (levels === 0)
       return [0, 0];
     length = index.multiIndex.labels[0].data.length;
+  } else if (index.int_64Index) {
+    levels = 1;
+    length = index.int_64Index.data.data.length;
   } else {
     throw new Error(`Index type "${index.type}" not understood.`)
   }
@@ -60,6 +63,10 @@ export function indexGet(index, level, i) {
     const levels = index.multiIndex.levels[level]
     const labels = index.multiIndex.labels[level]
     return indexGet(levels, 0, labels.data[i]);
+  } else if (index.int_64Index) {
+    if (level !== 0)
+      throw new Error(`Attempting to access level ${level} of ${index.type}.`)
+    return index.int_64Index.data.data[i]
   } else {
     throw new Error(`Index type "${index.type}" not understood.`)
   }

@@ -34,6 +34,8 @@ def marshall_index(pandas_index, proto_index):
         proto_index.range_index.start = pandas_index.min()
         proto_index.range_index.stop = pandas_index.max() + 1
         proto_index.range_index.step = 1
+    elif type(pandas_index) == pd.Int64Index:
+        proto_index.int_64_index.data.data.extend(pandas_index)
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
 

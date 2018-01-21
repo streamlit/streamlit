@@ -14,7 +14,7 @@ const ImageList = ({imgs, width}) => (
           src={`data:image/png;base64,${img.base_64Png}`}
           alt={indx}
         />
-        <div class="caption"> {img.caption} </div>
+        <div className="caption"> {img.caption} </div>
       </div>
     ))}
   </div>

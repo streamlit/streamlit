@@ -23,7 +23,7 @@ message Index {
     // DatetimeIndex date_time_index = 6;
     // TimedeltaIndex time_delta_index = 7;
     // PeriodIndex period_index = 8;
-    // Int64Index int_64_index = 9;
+    Int64Index int_64_index = 9;
     // UInt64Index uint_64_index = 10;
     // Float64Index float_64_index = 11;
   }
@@ -40,8 +40,8 @@ message PlainIndex {
   // bool tupleize_cols = 5;
 }
 
-// Range index
-// See https://pandas.pydata.org/pandas-docs/stable/generated/pandas.RangeIndex.html
+// Range index. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.RangeIndex.html
 message RangeIndex {
   int64 start = 1;
   int64 stop = 2;
@@ -52,8 +52,8 @@ message RangeIndex {
   // bool copy = 5;
 }
 
-// A multi-level, or hierarchical, Index
-// See https://pandas.pydata.org/pandas-docs/stable/generated/pandas.MultiIndex.html#pandas.MultiIndex
+// A multi-level, or hierarchical, Index. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.MultiIndex.html
 message MultiIndex {
   repeated Index levels = 1;
   repeated UInt32Array labels = 2;
@@ -65,6 +65,12 @@ message MultiIndex {
   // bool verify_integrity = 6;
 }
 
+// See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
+message Int64Index {
+  Int64Array data = 1;
+}
+
 message StringArray {
   repeated string data = 1;
 }
@@ -74,7 +80,11 @@ message DoubleArray {
 }
 
 message Int32Array {
-  repeated sint32 data = 1;
+  repeated int32 data = 1;
+}
+
+message Int64Array {
+  repeated int64 data = 1;
 }
 
 message UInt32Array {

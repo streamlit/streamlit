@@ -178,6 +178,13 @@ class DeltaGenerator:
         delta.id = id
         set_element(delta.new_element)
 
+        # # debug - begin
+        # if (generator == self):
+        #     print('CREATING A REPLACEMENT DELTA')
+        #     print(delta)
+        #     raise RuntimeError('replacement delta')
+        # # debug - end
+
         # Call the queue and return the new element.
         self._queue(delta)
         return generator

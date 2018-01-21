@@ -98,6 +98,12 @@ class Notebook:
             async def send_deltas():
                 deltas = queue.get_deltas()
                 if deltas:
+
+                    # # debug - begin
+                    # print('These are the deltas I got:')
+                    # print(deltas)
+                    # # debug - end
+
                     delta_list = protobuf.DeltaList()
                     delta_list.deltas.extend(deltas)
                     await websocket.send(delta_list.SerializeToString())

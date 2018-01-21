@@ -26,15 +26,15 @@ const DataFrame = ({element, width}) => {
     const cols = headerCols + dataCols;
     const rows = headerRows + dataRows;
 
-    // Debug - begin
-    console.log('Rendering this DataFrame');
-    console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-    console.log('width', width);
-    console.log('headerRows', headerRows);
-    console.log('headerCols', headerCols);
-    console.log('dataRows', dataRows);
-    console.log('dataCols', dataCols);
-    // Debug - end
+    // // Debug - begin
+    // console.log('Rendering this DataFrame');
+    // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
+    // console.log('width', width);
+    // console.log('headerRows', headerRows);
+    // console.log('headerCols', headerCols);
+    // console.log('dataRows', dataRows);
+    // console.log('dataCols', dataCols);
+    // // Debug - end
 
     // Rendering constants.
     const rowHeight = 25;
@@ -172,15 +172,11 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
   // Grow the cells to fill the array width.
   const sum = (array) => array.reduce((a, b) => a + b, 0);
   const totalWidth = sum(colWidthArray);
-  console.log(`totalWidth (before): ${totalWidth} > ${width}`)
-  console.log(colWidthArray)
   if (totalWidth < width) {
     for (let i = headerCols ; i < cols ; i++) {
       colWidthArray[i] += (width - totalWidth) / (cols - headerCols);
     }
   }
-  console.log(`totalWidth (after): ${sum(colWidthArray)} > ${width}`)
-  console.log(colWidthArray)
 
   // Package up return values.
   const headerWidth = sum(colWidthArray.slice(0, headerCols));
