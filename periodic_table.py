@@ -69,31 +69,31 @@ with Notebook() as write:
     composed_chart.area(type='monotone', data_key='uv', fill='#8884d8')
     write(composed_chart)
 
-    # # DataFrames
-    # write('Pandas DataFrames', fmt='header', level=3)
-    # arrays = [
-    #     np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
-    #     np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
-    # df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-    #     columns=['A', 'B', 'C', 'D'])
-    # write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
+    # DataFrames
+    write('Pandas DataFrames', fmt='header', level=3)
+    arrays = [
+        np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
+        np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
+    df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
+        columns=['A', 'B', 'C', 'D'])
+    write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
-    # # Alerts
-    # write('Alerts', fmt='header', level=3)
-    # write.alert('This is a "success" alert.', type='success')
-    # write.alert('This is an "info" alert.', type='info')
-    # write.alert('This is a "warning" alert.', type='warning')
-    # write.alert('This is a "danger" alert.', type='danger')
-    #
-    # # Headers
-    # write('Headers', fmt='header', level=3)
-    # write.header('Level 1', level=1)
-    # write.header('Level 2', level=2)
-    # write.header('Level 3', level=3)
-    # write.header('Level 4', level=4)
-    # write.header('Level 5', level=5)
-    # write.header('Level 6', level=6)
-    #
+    # Alerts
+    write('Alerts', fmt='header', level=3)
+    write.alert('This is a "success" alert.', type='success')
+    write.alert('This is an "info" alert.', type='info')
+    write.alert('This is a "warning" alert.', type='warning')
+    write.alert('This is a "danger" alert.', type='danger')
+
+    # Headers
+    write('Headers', fmt='header', level=3)
+    write.header('Level 1', level=1)
+    write.header('Level 2', level=2)
+    write.header('Level 3', level=3)
+    write.header('Level 4', level=4)
+    write.header('Level 5', level=5)
+    write.header('Level 6', level=6)
+
     # # Images
     # write('Images', fmt='header', level=3)
     # img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
