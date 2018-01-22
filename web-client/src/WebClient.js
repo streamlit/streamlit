@@ -90,17 +90,11 @@ class WebClient extends PureComponent {
   applyDeltas(deltaList) {
     this.setState(({elements}) => {
       for (const delta of deltaList.get('deltas')) {
-        const [type, id] = [delta.get('type'), delta.get('id')];
-        let newElement;
-        if (type === 'newElement') {
-          newElement = delta.get('newElement');
-        } else if (type === 'addRows') {
-          newElement = addRows(elements.get(id), delta.get('addRows'))
-          throw new Error('Testing add rows');
-        } else {
-          throw new Error(`Cannot parse delta type "${type}".`)
-        }
-        elements = elements.set(id, newElement);
+        const id = delta.get('id');
+        elements = elements.set(id, dispatchOneOf(delta, 'type', {
+          newElement: (newElement) => newElement,
+          addRows: (newRows) => addRows(elements.get(id), newRows),
+        }));
       }
       return {elements};
     });
@@ -162,34 +156,5 @@ class WebClient extends PureComponent {
     ))
   }
 }
-
-//   renderElements(width) {
-//     return this.state.elements.map((element) => {
-//       if (!element) {
-//         const msg = 'Transmission error.'
-//         return <Alert color="warning" style={{width}}>{msg}</Alert>;
-//       } else if (element.get('div')) {
-//         return <Div element={element.get('div')} width={width}/>;
-//       } else if (element.get('dataFrame')) {
-//         return <DataFrame df={element.get('dataFrame')} width={width}/>;
-//       } else if (element.get('chart')) {
-//         return <Chart chart={element.get('chart')} width={width}/>;
-//       } else if (element.get('imgs')) {
-//         return <ImageList imgs={element.get('imgs')} width={width}/>;
-//       } else if (element.get('progress')) {
-//         return <Progress
-//           value={element.getIn(['progress', 'value'])}
-//           style={{width}}
-//         />;
-//       } else {
-//         const msg = `Cannot parse type "${element.get('type')}". WTF?!`
-//         return <Alert color="warning" style={{width}}>{msg}</Alert>;
-//     }}).push(
-//       <div style={{width}} className="footer"/>
-//     ).map((element, indx) => (
-//       <div className="element-container" key={indx}>{element}</div>
-//     ))
-//   }
-// }
 
 export default WebClient;

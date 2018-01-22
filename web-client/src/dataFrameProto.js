@@ -2,6 +2,8 @@
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
+ import { dispatchOneOf, updateOneOf } from './immutableProto';
+
 /**
  * Returns [rows, cols] for this table.
  */
@@ -25,51 +27,32 @@ export function tableGet(table, columnIndex, rowIndex) {
  * latter is 1 (or >1 for MultiIndex).
  */
 export function indexGetLevelsAndLength(index) {
-  let levels, length;
-  if (index.get('plainIndex')) {
-    levels = 1;
-    length = anyArrayLength(index.getIn(['plainIndex', 'data']))
-  } else if (index.get('rangeIndex')) {
-    const {start, stop} = index.get('rangeIndex').toJS();
-    levels = 1;
-    length = stop - start;
-  } else if (index.get('multiIndex')) {
-    levels = index.getIn(['multiIndex', 'labels']).size;
-    if (levels === 0)
-      return [0, 0];
-    length = index.getIn(['multiIndex', 'labels', 0, 'data']).size;
-  } else if (index.get('int_64Index')) {
-    levels = 1;
-    length = index.getIn(['int_64Index', 'data', 'data']).size;
-  } else {
-    throw new Error(`Index type "${index.get('type')}" not understood.`)
-  }
-  return [levels, length];
+  return dispatchOneOf(index, 'type', {
+    plainIndex: (idx) => [1, anyArrayLength(idx.get('data'))],
+    rangeIndex: (idx) => [1, idx.get('stop') - idx.get('start')],
+    multiIndex: (idx) => (idx.get('labels').size === 0 ? [0, 0] :
+      [idx.get('labels').size, idx.getIn(['labels', 0, 'data']).size]),
+    int_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
+  });
 }
 
 /**
  * Returns the ith index value of the given level.
  */
 export function indexGet(index, level, i) {
-  if (index.get('plainIndex')) {
-    if (level !== 0)
-      throw new Error(`Attempting to access level ${level} of a plainIndex.`);
-    return anyArrayGet(index.getIn(['plainIndex', 'data']), i);
-  } else if (index.get('rangeIndex')) {
-    if (level !== 0)
-      throw new Error(`Attempting to access level ${level} of a rangeIndex.`)
-    return index.getIn(['rangeIndex', 'start']) + i;
-  } else if (index.get('multiIndex')) {
-    const levels = index.getIn(['multiIndex', 'levels', level]);
-    const labels = index.getIn(['multiIndex', 'labels', level]);
-    return indexGet(levels, 0, labels.getIn(['data', i]));
-  } else if (index.get('int_64Index')) {
-    if (level !== 0)
-      throw new Error(`Attempting to access level ${level} of ${index.get('type')}.`)
-    return index.getIn(['int_64Index', 'data', 'data', i])
-  } else {
-    throw new Error(`Index type "${index.get('type')}" not understood.`)
-  }
+  const type = index.get('type');
+  if ((type !== 'multiIndex') && (level !== 0))
+    throw new Error(`Attempting to access level ${level} of a ${type}.`);
+  return dispatchOneOf(index, 'type', {
+    plainIndex: (idx) => anyArrayGet(idx.get('data'), i),
+    rangeIndex: (idx) => idx.get('start') + i,
+    multiIndex: (idx) => {
+      const levels = idx.getIn(['levels', level]);
+      const labels = idx.getIn(['labels', level]);
+      return indexGet(levels, 0, labels.getIn(['data', i]));
+    },
+    int_64Index: (idx) => idx.getIn(['data', 'data', i]),
+  });
 }
 
 /**
@@ -90,11 +73,12 @@ function anyArrayGet(anyArray, i) {
  * Returns the data array of an protobuf.AnyArray.
  */
 function anyArrayData(anyArray) {
-  return (
-    anyArray.get('strings') ||
-    anyArray.get('doubles') ||
-    anyArray.get('int32s')
-  ).get('data')
+  const getData = (obj) => obj.get('data')
+  return dispatchOneOf(anyArray, 'type', {
+    strings: getData,
+    doubles: getData,
+    int32s: getData
+  });
 }
 
 /**
@@ -113,25 +97,23 @@ function concatIndex(index1, index2) {
   if (indexLen(index1) === 0)
       return index2;
 
-  // Otherwise, dispatch based on type.
+  // Otherwise, make sure the types match.
   const type1 = index1.get('type');
   const type2 = index2.get('type');
   if (type1 !== type2)
     throw new Error(`Cannot concatenate ${type1} with ${type2}.`)
-  if (type1 === 'plainIndex') {
-    return index1.updateIn(['plainIndex', 'data'], (data) => (
-      concatAnyArray(data, index2.getIn(['plainIndex', 'data']))));
-  } else if (type1 === 'rangeIndex') {
-    return index1.updateIn(['rangeIndex', 'stop'], (stop) => (
-      stop + indexLen(index2)));
-  } else if (type1 === 'multiIndex') {
-    throw new Error('Cannot yet concatenate multiIndices.')
-  } else if (type1 === 'int_64_index') {
-    throw new Error('I need to implement this.')
-    // index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
-  } else {
-    throw new Error(`Cannot concatenate "${type1}" indices.`);
-  }
+
+  // ...and dispatch based on type.
+  return updateOneOf(index1, 'type', {
+    plainIndex: (idx) => idx.update('data', (data) => (
+      concatAnyArray(data, index2.getIn(['plainIndex', 'data'])))),
+    rangeIndex: (idx) => idx.update('stop', (stop) => (
+      stop + indexLen(index2))),
+    // multiIndex: <not supported>,
+    int_64Index: (idx) => {
+      throw new Error('Need to implement concatIndex for int_64Index');
+    }
+  });
 }
 
 /**
@@ -181,3 +163,5 @@ function indexLen(index) {
 function anyArrayLen(anyArray) {
   return anyArray.getIn([anyArray.get('type'), 'data']).size;
 }
+
+// prediction: this will become line 165
