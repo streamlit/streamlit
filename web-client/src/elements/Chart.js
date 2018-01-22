@@ -72,45 +72,45 @@ const COMPONENTS = {
 }
 
 // Represents a chart with some data
-function Chart({element, width}) {
+function Chart({chart, width}) {
   // Default height is 200 if not specified.
   const chartXOffset = 35;
   const chartDims = {
-    width: (element.width || width) + chartXOffset,
-    height: element.height || 200,
+    width: (chart.get('width') || width) + chartXOffset,
+    height: chart.get('height') || 200,
   }
 
   // Convert the data into a format that Recharts understands.
-  const dataFrame = element.data;
+  const dataFrame = chart.get('data');
   const data = [];
-  const [rows, cols] = tableGetRowsAndCols(dataFrame.data);
+  const [rows, cols] = tableGetRowsAndCols(dataFrame.get('data'));
   for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
     let rowData = {};
     for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
-      rowData[indexGet(dataFrame.columns, 0, colIndex)] =
-        tableGet(dataFrame.data, colIndex, rowIndex);
+      rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
+        tableGet(dataFrame.get('data'), colIndex, rowIndex);
     }
     data.push(rowData)
   }
 
   // Parse out the chart props into an object.
   const chart_props = {};
-  for (const chartProperty of element.props)
-    chart_props[chartProperty.key] = chartProperty.value;
+  for (const chartProperty of chart.get('props'))
+    chart_props[chartProperty.get('key')] = chartProperty.get('value');
 
   return (
     <div style={chartDims}>
       <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
         {
           React.createElement(
-            COMPONENTS[element.type], {...chartDims, data, ...chart_props},
-            ...element.components.map((component) => {
+            COMPONENTS[chart.get('type')], {...chartDims, data, ...chart_props},
+            ...chart.get('components').map((component) => {
                 const component_props = {};
-                for (const chartProperty of component.props)
-                  component_props[chartProperty.key] = chartProperty.value;
+                for (const chartProperty of component.get('props'))
+                  component_props[chartProperty.get('key')] =
+                    chartProperty.get('value');
                 return React.createElement(
-                  COMPONENTS[component.type],
-                  component_props);
+                  COMPONENTS[component.get('type')], component_props);
             })
           )
         }

@@ -69,67 +69,67 @@ with Notebook() as write:
     composed_chart.area(type='monotone', data_key='uv', fill='#8884d8')
     write(composed_chart)
 
-    # DataFrames
-    write('Pandas DataFrames', fmt='header', level=3)
-    arrays = [
-        np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
-        np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
-    df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-        columns=['A', 'B', 'C', 'D'])
-    write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
+    # # DataFrames
+    # write('Pandas DataFrames', fmt='header', level=3)
+    # arrays = [
+    #     np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
+    #     np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
+    # df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
+    #     columns=['A', 'B', 'C', 'D'])
+    # write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
-    # Alerts
-    write('Alerts', fmt='header', level=3)
-    write.alert('This is a "success" alert.', type='success')
-    write.alert('This is an "info" alert.', type='info')
-    write.alert('This is a "warning" alert.', type='warning')
-    write.alert('This is a "danger" alert.', type='danger')
-
-    # Headers
-    write('Headers', fmt='header', level=3)
-    write.header('Level 1', level=1)
-    write.header('Level 2', level=2)
-    write.header('Level 3', level=3)
-    write.header('Level 4', level=4)
-    write.header('Level 5', level=5)
-    write.header('Level 6', level=6)
-
-    # Images
-    write('Images', fmt='header', level=3)
-    img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
-    img_bytes = urllib.request.urlopen(img_url).read()
-    img = np.array(Image.open(io.BytesIO(img_bytes)))
-    write(img, fmt='img', caption="225px", width=225)
-    write(img, fmt='img', caption="175px", width=175)
-    write(img, fmt='img', caption="125px", width=125)
-    channels = [np.array(img), np.array(img), np.array(img)]
-    channels[0][:,:,1:] = 0
-    channels[1][:,:,0::2] = 0
-    channels[2][:,:,:-1] = 0
-    write.img(channels, caption=["Red", "Green", "Blue"], width=125)
-
-    # Text
-    write('Text', fmt='header', level=3)
-
-    write.header('Character Wrapping', level=5)
-    write(
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do ' +
-        'eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ' +
-        'ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut ' +
-        'aliquip ex ea commodo consequat. Duis aute irure dolor in ' +
-        'reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla ' +
-        'pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
-        'culpa qui officia deserunt mollit anim id est laborum.');
-
-    write.header('Space preservation', level=5)
-    write(
-        '...    0 leading spaces\n' +
-        ' ...   1 leading space\n' +
-        '  ...  2 leading spaces\n' +
-        '   ... 3 leading spaces');
-
-    # Progress
-    write('Progress Bars', fmt='header', level=3)
-    for percent in [100, 75, 50, 25, 0]:
-        write(f'{percent}% progress:')
-        write.progress(percent)
+    # # Alerts
+    # write('Alerts', fmt='header', level=3)
+    # write.alert('This is a "success" alert.', type='success')
+    # write.alert('This is an "info" alert.', type='info')
+    # write.alert('This is a "warning" alert.', type='warning')
+    # write.alert('This is a "danger" alert.', type='danger')
+    #
+    # # Headers
+    # write('Headers', fmt='header', level=3)
+    # write.header('Level 1', level=1)
+    # write.header('Level 2', level=2)
+    # write.header('Level 3', level=3)
+    # write.header('Level 4', level=4)
+    # write.header('Level 5', level=5)
+    # write.header('Level 6', level=6)
+    #
+    # # Images
+    # write('Images', fmt='header', level=3)
+    # img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
+    # img_bytes = urllib.request.urlopen(img_url).read()
+    # img = np.array(Image.open(io.BytesIO(img_bytes)))
+    # write(img, fmt='img', caption="225px", width=225)
+    # write(img, fmt='img', caption="175px", width=175)
+    # write(img, fmt='img', caption="125px", width=125)
+    # channels = [np.array(img), np.array(img), np.array(img)]
+    # channels[0][:,:,1:] = 0
+    # channels[1][:,:,0::2] = 0
+    # channels[2][:,:,:-1] = 0
+    # write.img(channels, caption=["Red", "Green", "Blue"], width=125)
+    #
+    # # Text
+    # write('Text', fmt='header', level=3)
+    #
+    # write.header('Character Wrapping', level=5)
+    # write(
+    #     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do ' +
+    #     'eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ' +
+    #     'ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut ' +
+    #     'aliquip ex ea commodo consequat. Duis aute irure dolor in ' +
+    #     'reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla ' +
+    #     'pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
+    #     'culpa qui officia deserunt mollit anim id est laborum.');
+    #
+    # write.header('Space preservation', level=5)
+    # write(
+    #     '...    0 leading spaces\n' +
+    #     ' ...   1 leading space\n' +
+    #     '  ...  2 leading spaces\n' +
+    #     '   ... 3 leading spaces');
+    #
+    # # Progress
+    # write('Progress Bars', fmt='header', level=3)
+    # for percent in [100, 75, 50, 25, 0]:
+    #     write(f'{percent}% progress:')
+    #     write.progress(percent)
