@@ -10,17 +10,20 @@ import {
   Progress,
   Row,
 } from 'reactstrap';
-import { /*List,*/ fromJS } from 'immutable';
+
 
 // Display Elements
-import DataFrame from './elements/DataFrame'
-import Div from './elements/Div'
-import Chart from './elements/Chart'
-import ImageList from './elements/ImageList'
+import DataFrame from './elements/DataFrame';
+import Div from './elements/Div';
+import Chart from './elements/Chart';
+import ImageList from './elements/ImageList';
 
 // Other local imports.
-import PersistentWebsocket from './PersistentWebsocket'
-import { DeltaList } from './protobuf/printf'
+import PersistentWebsocket from './PersistentWebsocket';
+import { DeltaList } from './protobuf/printf';
+import { addRows } from './dataFrameProto';
+import { toImmutableProto, dispatchOneOf } from './immutableProto';
+import { fromJS } from 'immutable';
 
 import './WebClient.css';
 
@@ -68,14 +71,15 @@ class WebClient extends PureComponent {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
       const deltaListProto = DeltaList.decode(result);
+
+      // debug - begin
       console.log('Received a message and am applying...')
       console.log(deltaListProto);
-      const deltaList = fromJS(DeltaList.toObject(deltaListProto, {
-        defaults: true,
-        oneofs: true,
-      }));
       console.log('Protobuf Length:', reader.result.byteLength);
       console.log('JSON Length:', JSON.stringify(deltaListProto).length);
+      // debug - end
+
+      const deltaList = toImmutableProto(DeltaList, deltaListProto);
       this.applyDeltas(deltaList);
     }
   }
@@ -85,14 +89,18 @@ class WebClient extends PureComponent {
    */
   applyDeltas(deltaList) {
     this.setState(({elements}) => {
-      console.log('Updating the state elements.')
       for (const delta of deltaList.get('deltas')) {
-        const type = delta.get('type')
+        const [type, id] = [delta.get('type'), delta.get('id')];
+        let newElement;
         if (type === 'newElement') {
-          elements = elements.set(delta.get('id'), delta.get('newElement'));
+          newElement = delta.get('newElement');
+        } else if (type === 'addRows') {
+          newElement = addRows(elements.get(id), delta.get('addRows'))
+          throw new Error('Testing add rows');
         } else {
           throw new Error(`Cannot parse delta type "${type}".`)
         }
+        elements = elements.set(id, newElement);
       }
       return {elements};
     });
@@ -134,31 +142,54 @@ class WebClient extends PureComponent {
 
   renderElements(width) {
     return this.state.elements.map((element) => {
-      if (!element) {
-        const msg = 'Transmission error.'
-        return <Alert color="warning" style={{width}}>{msg}</Alert>;
-      } else if (element.get('div')) {
-        return <Div element={element.get('div')} width={width}/>;
-      } else if (element.get('dataFrame')) {
-        return <DataFrame df={element.get('dataFrame')} width={width}/>;
-      } else if (element.get('chart')) {
-        return <Chart chart={element.get('chart')} width={width}/>;
-      } else if (element.get('imgs')) {
-        return <ImageList imgs={element.get('imgs')} width={width}/>;
-      } else if (element.get('progress')) {
-        return <Progress
-          value={element.getIn(['progress', 'value'])}
-          style={{width}}
-        />;
-      } else {
-        const msg = `Cannot parse type "${element.get('type')}". WTF?!`
-        return <Alert color="warning" style={{width}}>{msg}</Alert>;
-    }}).push(
+      try {
+        if (!element)
+          throw new Error('Transmission error.')
+        return dispatchOneOf(element, 'type', {
+          div: (div) => <Div element={div} width={width}/>,
+          dataFrame: (df) => <DataFrame df={df} width={width}/>,
+          chart: (chart) => <Chart chart={chart} width={width}/>,
+          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
+          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
+        });
+      } catch (err) {
+        return <Alert color="warning" style={{width}}>{err.message}</Alert>;
+      }
+    }).push(
       <div style={{width}} className="footer"/>
     ).map((element, indx) => (
       <div className="element-container" key={indx}>{element}</div>
     ))
   }
 }
+
+//   renderElements(width) {
+//     return this.state.elements.map((element) => {
+//       if (!element) {
+//         const msg = 'Transmission error.'
+//         return <Alert color="warning" style={{width}}>{msg}</Alert>;
+//       } else if (element.get('div')) {
+//         return <Div element={element.get('div')} width={width}/>;
+//       } else if (element.get('dataFrame')) {
+//         return <DataFrame df={element.get('dataFrame')} width={width}/>;
+//       } else if (element.get('chart')) {
+//         return <Chart chart={element.get('chart')} width={width}/>;
+//       } else if (element.get('imgs')) {
+//         return <ImageList imgs={element.get('imgs')} width={width}/>;
+//       } else if (element.get('progress')) {
+//         return <Progress
+//           value={element.getIn(['progress', 'value'])}
+//           style={{width}}
+//         />;
+//       } else {
+//         const msg = `Cannot parse type "${element.get('type')}". WTF?!`
+//         return <Alert color="warning" style={{width}}>{msg}</Alert>;
+//     }}).push(
+//       <div style={{width}} className="footer"/>
+//     ).map((element, indx) => (
+//       <div className="element-container" key={indx}>{element}</div>
+//     ))
+//   }
+// }
 
 export default WebClient;

@@ -99,6 +99,8 @@ def concat_index(index1, index2):
         raise NotImplementedError('Cannot yet concatenate MultiIndices.')
     elif type1 == 'int_64_index':
         index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
+    else:
+        raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
 
 def concat_any_array(any_array_1, any_array_2):
     """Merges elements from any_array_2 into any_array_1."""

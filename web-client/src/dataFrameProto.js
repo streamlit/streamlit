@@ -96,3 +96,88 @@ function anyArrayData(anyArray) {
     anyArray.get('int32s')
   ).get('data')
 }
+
+/**
+ * Concatenates delta1 and delta2 together, returning a new Delta.
+ */
+export function addRows(element, newRows) {
+  return getDataFrame(element)
+    .update('index', (index) => concatIndex(index, newRows.get('index')));
+}
+
+/**
+ * Concatenates the indices and returns a new index.
+ */
+function concatIndex(index1, index2) {
+  // Special case if index1 is empty.
+  if (indexLen(index1) === 0)
+      return index2;
+
+  // Otherwise, dispatch based on type.
+  const type1 = index1.get('type');
+  const type2 = index2.get('type');
+  if (type1 !== type2)
+    throw new Error(`Cannot concatenate ${type1} with ${type2}.`)
+  if (type1 === 'plainIndex') {
+    return index1.updateIn(['plainIndex', 'data'], (data) => (
+      concatAnyArray(data, index2.getIn(['plainIndex', 'data']))));
+  } else if (type1 === 'rangeIndex') {
+    return index1.updateIn(['rangeIndex', 'stop'], (stop) => (
+      stop + indexLen(index2)));
+  } else if (type1 === 'multiIndex') {
+    throw new Error('Cannot yet concatenate multiIndices.')
+  } else if (type1 === 'int_64_index') {
+    throw new Error('I need to implement this.')
+    // index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
+  } else {
+    throw new Error(`Cannot concatenate "${type1}" indices.`);
+  }
+}
+
+/**
+ * Concatenates both anyArrays, returning the result.
+ */
+function concatAnyArray(anyArray1, anyArray2) {
+  throw new Error('Need to implement.');
+}
+    // """Merges elements from any_array_2 into any_array_1."""
+    // type1 = any_array_1.WhichOneof('type')
+    // type2 = any_array_2.WhichOneof('type')
+    // assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+    // getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
+
+/**
+ * Extracts the dataframe from an element.
+ */
+function getDataFrame(element) {
+  return element.get('dataFrame')
+
+  // type = delta.WhichOneof('type')
+  // if type == 'new_element':
+  //     return delta.new_element.data_frame
+  // elif type == 'add_rows':
+  //     return delta.add_rows
+  // else:
+  //     raise RuntimeError(f'Cannot extract DataFrame from {type}.')
+}
+
+/**
+ * Returns the number of elements in an index.
+ */
+function indexLen(index) {
+  // return dispatchOneOf(index, 'type', {
+  //   plainIndex:  (idx) => ( anyArrayLen(idx.get('data')) ),
+  //   rangeIndex:  (idx) => ( idx.get('stop') - idx.get('start') ),
+  //   multiIndex:  (idx) => ( idx.get('labels').size === 0 ? 0 :
+  //                           idx.getIn(['labels', 0]).size ),
+  //   int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
+  // });
+  throw new Error('Must implement.')
+}
+
+/**
+ * Returns the length of an anyArray
+ */
+function anyArrayLen(anyArray) {
+  return anyArray.getIn([anyArray.get('type'), 'data']).size;
+}

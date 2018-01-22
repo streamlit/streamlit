@@ -2,6 +2,10 @@
 
 - objectives
   - **I want Lukas to appreciate the full power of logging as s company.**
+    - move things to
+      - create `util.js`
+      - `dispatchOneOf`
+      - `updateOneOf`
     - Three really nice demos.
       - Speed Test
         - add_rows
@@ -27,6 +31,8 @@
 
 #### Todo After the Demo
 
+- Fix out of order arrivals on the javascript side
+- Put add_rows into the periodic table test
 - Fix the problem with calling __call__ on multiple values
 - Clean things up.
   - Rename it from tiny-notebook to printf
