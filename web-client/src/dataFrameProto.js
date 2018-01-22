@@ -5,13 +5,13 @@
 import { dispatchOneOf, updateOneOf } from './immutableProto';
 
 /**
- * Returns [rows, cols] for this table.
+ * Returns [rows, cls] for this table.
  */
 export function tableGetRowsAndCols(table) {
   const cols = table.get('cols').size;
   if (cols === 0)
     return [0, 0];
-  const rows = anyArrayLength(table.getIn(['cols', 0]));
+  const rows = anyArrayLen(table.getIn(['cols', 0]));
   return [rows, cols];
 }
 
@@ -28,7 +28,7 @@ export function tableGet(table, columnIndex, rowIndex) {
  */
 export function indexGetLevelsAndLength(index) {
   return dispatchOneOf(index, 'type', {
-    plainIndex: (idx) => [1, anyArrayLength(idx.get('data'))],
+    plainIndex: (idx) => [1, anyArrayLen(idx.get('data'))],
     rangeIndex: (idx) => [1, idx.get('stop') - idx.get('start')],
     multiIndex: (idx) => (idx.get('labels').size === 0 ? [0, 0] :
       [idx.get('labels').size, idx.getIn(['labels', 0, 'data']).size]),
@@ -58,7 +58,7 @@ export function indexGet(index, level, i) {
 /**
  * Returns the length of an AnyArray.
  */
-function anyArrayLength(anyArray) {
+function anyArrayLen(anyArray) {
   return anyArrayData(anyArray).size
 }
 
@@ -85,8 +85,22 @@ function anyArrayData(anyArray) {
  * Concatenates delta1 and delta2 together, returning a new Delta.
  */
 export function addRows(element, newRows) {
-  return getDataFrame(element)
-    .update('index', (index) => concatIndex(index, newRows.get('index')));
+  const newDataFrame = getDataFrame(element)
+    .update('index', (index) => {
+      // Concatenate the indices.
+      return concatIndex(index, newRows.get('index'))})
+    .updateIn(['data', 'cols'], (cols) => {
+      // Concatenate the columns, one by one.
+        console.log('about to update the columns')
+        console.log(cols.toJS())
+        const rv = cols.zipWith((col1, col2) => concatAnyArray(col1, col2),
+          newRows.getIn(['data', 'cols']));
+        console.log('return value')
+        console.log(rv.toJS());
+        return rv;
+        // throw new Error('Let us see what is going on here.');
+      });
+  return setDataFrame(element, newDataFrame);
 }
 
 /**
@@ -119,13 +133,19 @@ function concatIndex(index1, index2) {
  * Concatenates both anyArrays, returning the result.
  */
 function concatAnyArray(anyArray1, anyArray2) {
-  throw new Error('Need to implement.');
+  console.log('concatAnyArray')
+  console.log(anyArray1.toJS());
+  console.log(anyArray2.toJS());
+  const type1 = anyArray1.get('type');
+  const type2 = anyArray2.get('type');
+  if (type1 !== type2)
+    throw new Error(`Cannot concatenate ${type1} and ${type2}.`)
+  // console.log(anyArray1.updateIn([type1, 'data'], (array) => {
+  //   return array.concat(anyArray2.getIn([type2, 'data']))
+  // }).toJS());
+  return anyArray1.updateIn([type1, 'data'], (array) =>
+    array.concat(anyArray2.getIn([type2, 'data'])));
 }
-    // """Merges elements from any_array_2 into any_array_1."""
-    // type1 = any_array_1.WhichOneof('type')
-    // type2 = any_array_2.WhichOneof('type')
-    // assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
-    // getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 /**
  * Extracts the dataframe from an element.
@@ -134,6 +154,16 @@ function getDataFrame(element) {
   return dispatchOneOf(element, 'type', {
     dataFrame: (df) => df,
     chart: (chart) => chart.get('data'),
+  });
+}
+
+/**
+ * Sets the dataframe of this element. Returning a new element.
+ */
+function setDataFrame(element, df) {
+  return updateOneOf(element, 'type', {
+    dataFrame: () => df,
+    chart: (chart) => chart.update('data', df),
   });
 }
 
@@ -148,11 +178,4 @@ function indexLen(index) {
                             idx.getIn(['labels', 0]).size ),
     int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
   });
-}
-
-/**
- * Returns the length of an anyArray
- */
-function anyArrayLen(anyArray) {
-  return anyArray.getIn([anyArray.get('type'), 'data']).size;
 }

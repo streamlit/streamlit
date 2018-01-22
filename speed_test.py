@@ -18,6 +18,7 @@ with Notebook() as write:
     table = write.dataframe(alphabet_table)
     for i in range(26):
         some_letters = string.ascii_lowercase.strip()[:i+1]
+        some_letters = string.ascii_lowercase.strip()[:i+1]
         new_row = pd.DataFrame([some_letters], columns=['letters'], index=[i])
         table.add_rows(new_row)
         # print('adding row:')
