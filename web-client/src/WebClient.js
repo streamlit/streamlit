@@ -10,7 +10,7 @@ import {
   Progress,
   Row,
 } from 'reactstrap';
-import { List, fromJS } from 'immutable';
+import { /*List,*/ fromJS } from 'immutable';
 
 // Display Elements
 import DataFrame from './elements/DataFrame'
@@ -30,7 +30,7 @@ class WebClient extends PureComponent {
 
     // Initially the state reflects that no data has been received.
     this.state = {
-      elements: List([{
+      elements: fromJS([{
         type: 'div',
         div: {
           text: 'No data received.',
@@ -71,14 +71,16 @@ class WebClient extends PureComponent {
       console.log('Received a message and am applying...')
       console.log(deltaList);
       console.log('WHAT IF ITS IMMUTABLE?!?!');
-      const immutableDeltaList =
-        fromJS(DeltaList.toObject(deltaList, {defaults: true}));
+      const immutableDeltaList = fromJS(DeltaList.toObject(deltaList, {
+        defaults: true,
+        oneofs: true,
+      }));
       console.log(immutableDeltaList);
       console.log(deltaList.deltas)
-      console.log(immutableDeltaList.deltas)
+      console.log(immutableDeltaList.getIn(['deltas']))
       console.log('Protobuf Length:', reader.result.byteLength);
       console.log('JSON Length:', JSON.stringify(deltaList).length);
-      this.applyDeltas(deltaList);
+      this.applyDeltas(immutableDeltaList);
     }
   }
 
@@ -88,11 +90,12 @@ class WebClient extends PureComponent {
   applyDeltas(deltaList) {
     this.setState(({elements}) => {
       console.log('Updating the state elements.')
-      for (const delta of deltaList.deltas) {
-        if (delta.type === 'newElement') {
-          elements = elements.set(delta.id, delta.newElement);
+      for (const delta of deltaList.get('deltas')) {
+        const type = delta.get('type')
+        if (type === 'newElement') {
+          elements = elements.set(delta.get('id'), delta.get('newElement'));
         } else {
-          throw new Error(`Cannot parse delta type "${delta.type}".`)
+          throw new Error(`Cannot parse delta type "${type}".`)
         }
       }
       return {elements};
@@ -135,21 +138,26 @@ class WebClient extends PureComponent {
 
   renderElements(width) {
     return this.state.elements.map((element) => {
+      console.log('about to render this element')
+      console.log(element)
       if (!element) {
         const msg = 'Transmission error.'
         return <Alert color="warning" style={{width}}>{msg}</Alert>;
-      } else if (element.div) {
-        return <Div element={element.div} width={width}/>;
-      } else if (element.dataFrame) {
-        return <DataFrame element={element.dataFrame} width={width}/>;
-      } else if (element.chart) {
-        return <Chart element={element.chart} width={width}/>;
-      } else if (element.imgs) {
-        return <ImageList imgs={element.imgs} width={width}/>;
-      } else if (element.progress) {
-        return <Progress value={element.progress.value} style={{width}}/>
+      } else if (element.get('div')) {
+        return <Div element={element.get('div')} width={width}/>;
+      } else if (element.get('dataFrame')) {
+        return <DataFrame element={element.get('dataFrame')} width={width}/>;
+      } else if (element.get('chart')) {
+        return <Chart element={element.get('chart')} width={width}/>;
+      } else if (element.get('imgs')) {
+        return <ImageList imgs={element.get('imgs')} width={width}/>;
+      } else if (element.get('progress')) {
+        return <Progress
+          value={element.getIn(['progress', 'value'])}
+          style={{width}}
+        />;
       } else {
-        const msg = `Cannot parse type "${element.type}". WTF?!`
+        const msg = `Cannot parse type "${element.get('type')}". WTF?!`
         return <Alert color="warning" style={{width}}>{msg}</Alert>;
     }}).push(
       <div style={{width}} className="footer"/>

@@ -5,6 +5,8 @@
     - Three really nice demos.
       - Speed Test
         - add_rows
+          - move things to immutable
+            - clean up `handleMessage`
           - reset `THROTTLE_SECS`
           - add to the proto
           - update in compose

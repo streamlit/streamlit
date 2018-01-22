@@ -6,10 +6,10 @@
  * Returns [rows, cols] for this table.
  */
 export function tableGetRowsAndCols(table) {
-  const cols = table.cols.length;
+  const cols = table.get('cols').size;
   if (cols === 0)
     return [0, 0];
-  const rows = anyArrayLength(table.cols[0]);
+  const rows = anyArrayLength(table.getIn(['cols', 0]));
   return [rows, cols];
 }
 
@@ -17,7 +17,7 @@ export function tableGetRowsAndCols(table) {
  * Returns the given element from the table.
  */
 export function tableGet(table, columnIndex, rowIndex) {
-   return anyArrayGet(table.cols[columnIndex], rowIndex);
+   return anyArrayGet(table.getIn(['cols', columnIndex]), rowIndex);
 }
 
 /**
@@ -26,23 +26,23 @@ export function tableGet(table, columnIndex, rowIndex) {
  */
 export function indexGetLevelsAndLength(index) {
   let levels, length;
-  if (index.plainIndex) {
+  if (index.get('plainIndex')) {
     levels = 1;
-    length = anyArrayLength(index.plainIndex.data)
-  } else if (index.rangeIndex) {
-    const {start, stop} = index.rangeIndex;
+    length = anyArrayLength(index.getIn(['plainIndex', 'data']))
+  } else if (index.get('rangeIndex')) {
+    const {start, stop} = index.get('rangeIndex').toJS();
     levels = 1;
     length = stop - start;
-  } else if (index.multiIndex) {
-    levels = index.multiIndex.labels.length;
+  } else if (index.get('multiIndex')) {
+    levels = index.getIn(['multiIndex', 'labels']).size;
     if (levels === 0)
       return [0, 0];
-    length = index.multiIndex.labels[0].data.length;
-  } else if (index.int_64Index) {
+    length = index.getIn(['multiIndex', 'labels', 0, 'data']).size;
+  } else if (index.get('int_64Index')) {
     levels = 1;
-    length = index.int_64Index.data.data.length;
+    length = index.getIn(['int_64Index', 'data', 'data']).size;
   } else {
-    throw new Error(`Index type "${index.type}" not understood.`)
+    throw new Error(`Index type "${index.get('type')}" not understood.`)
   }
   return [levels, length];
 }
@@ -51,24 +51,24 @@ export function indexGetLevelsAndLength(index) {
  * Returns the ith index value of the given level.
  */
 export function indexGet(index, level, i) {
-  if (index.plainIndex) {
+  if (index.get('plainIndex')) {
     if (level !== 0)
-      throw new Error(`Attempting to access level ${level} of a plainIndex.`)
-    return anyArrayGet(index.plainIndex.data, i)
-  } else if (index.rangeIndex) {
+      throw new Error(`Attempting to access level ${level} of a plainIndex.`);
+    return anyArrayGet(index.getIn(['plainIndex', 'data']), i);
+  } else if (index.get('rangeIndex')) {
     if (level !== 0)
       throw new Error(`Attempting to access level ${level} of a rangeIndex.`)
-    return index.rangeIndex.start + i;
-  } else if (index.multiIndex) {
-    const levels = index.multiIndex.levels[level]
-    const labels = index.multiIndex.labels[level]
-    return indexGet(levels, 0, labels.data[i]);
-  } else if (index.int_64Index) {
+    return index.getIn(['rangeIndex', 'start']) + i;
+  } else if (index.get('multiIndex')) {
+    const levels = index.getIn(['multiIndex', 'levels', level]);
+    const labels = index.getIn(['multiIndex', 'labels', level]);
+    return indexGet(levels, 0, labels.getIn(['data', i]));
+  } else if (index.get('int_64Index')) {
     if (level !== 0)
-      throw new Error(`Attempting to access level ${level} of ${index.type}.`)
-    return index.int_64Index.data.data[i]
+      throw new Error(`Attempting to access level ${level} of ${index.get('type')}.`)
+    return index.getIn(['int_64Index', 'data', 'data', i])
   } else {
-    throw new Error(`Index type "${index.type}" not understood.`)
+    throw new Error(`Index type "${index.get('type')}" not understood.`)
   }
 }
 
@@ -76,14 +76,14 @@ export function indexGet(index, level, i) {
  * Returns the length of an AnyArray.
  */
 function anyArrayLength(anyArray) {
-  return anyArrayData(anyArray).length
+  return anyArrayData(anyArray).size
 }
 
 /**
  * Returns the ith element of this AnyArray.
  */
 function anyArrayGet(anyArray, i) {
-  return anyArrayData(anyArray)[i];
+  return anyArrayData(anyArray).get(i);
 }
 
 /**
@@ -91,8 +91,8 @@ function anyArrayGet(anyArray, i) {
  */
 function anyArrayData(anyArray) {
   return (
-    anyArray.strings ||
-    anyArray.doubles ||
-    anyArray.int32s
-  ).data
+    anyArray.get('strings') ||
+    anyArray.get('doubles') ||
+    anyArray.get('int32s')
+  ).get('data')
 }
