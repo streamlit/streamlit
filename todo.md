@@ -2,21 +2,9 @@
 
 - objectives
   - **I want Lukas to appreciate the full power of logging as s company.**
-    - move things to
-      - create `util.js`
-      - `dispatchOneOf`
-      - `updateOneOf`
     - Three really nice demos.
       - Speed Test
-        - add_rows
-          - move things to immutable
-            - clean up `handleMessage`
-          - reset `THROTTLE_SECS`
-          - add to the proto
-          - update in compose
-          - update on the client side
-          - test with a printed dataframe
-          - test on a graph
+      - See if it works with a graph too.
       - Keras Test
     - ONE OF
       - really beautiful slides about what's possible when this becomes a first
@@ -47,6 +35,9 @@
 - Fix the problem where you have to sleep for another second.
 - "info"     : prints out df.info() on a DataFrame-like object
 - Fix the bug in .x_axis(type='number')
+- Fix the column width bug:
+  - https://github.com/bvaughn/react-virtualized/issues/546
+  - https://github.com/bvaughn/react-virtualized/blob/master/docs/MultiGrid.md
 
 #### More things to play with and try
 

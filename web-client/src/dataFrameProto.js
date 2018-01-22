@@ -86,20 +86,12 @@ function anyArrayData(anyArray) {
  */
 export function addRows(element, newRows) {
   const newDataFrame = getDataFrame(element)
-    .update('index', (index) => {
-      // Concatenate the indices.
-      return concatIndex(index, newRows.get('index'))})
-    .updateIn(['data', 'cols'], (cols) => {
-      // Concatenate the columns, one by one.
-        console.log('about to update the columns')
-        console.log(cols.toJS())
-        const rv = cols.zipWith((col1, col2) => concatAnyArray(col1, col2),
-          newRows.getIn(['data', 'cols']));
-        console.log('return value')
-        console.log(rv.toJS());
-        return rv;
-        // throw new Error('Let us see what is going on here.');
-      });
+    .update('index', (index) => (
+      concatIndex(index, newRows.get('index'))))
+    .updateIn(['data', 'cols'], (cols) => (
+        cols.zipWith((col1, col2) => concatAnyArray(col1, col2),
+          newRows.getIn(['data', 'cols']))
+      ));
   return setDataFrame(element, newDataFrame);
 }
 

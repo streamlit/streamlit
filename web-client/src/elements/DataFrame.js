@@ -19,18 +19,7 @@ import './DataFrame.css';
 /**
  * Functional element representing a DataFrame.
  */
-// class DataFrame extends PureComponent {
-//   constructor(props) {
-//     super(props);
-//
-//     // Bind the callback.
-//     this._setMultiGridRef = this._setMultiGridRef.bind(this);
-//   }
-//
-//   _setMultiGridRef(multiGrid) {
-//     this._multiGrid = multiGrid;
-//   }
-// }
+
 const DataFrame = ({df, width}) => {
   try {
     // Calculate the dimensions of this array.
@@ -45,15 +34,10 @@ const DataFrame = ({df, width}) => {
     const cols = headerCols + dataCols;
     const rows = headerRows + dataRows;
 
-    // // Debug - begin
-    // console.log('Rendering this DataFrame');
-    // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-    // console.log('width', width);
-    // console.log('headerRows', headerRows);
-    // console.log('headerCols', headerCols);
-    // console.log('dataRows', dataRows);
-    // console.log('dataCols', dataCols);
-    // // Debug - end
+    // Debug - begin
+    console.log('Rendering this DataFrame');
+    console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
+    // Debug - end
 
     // Rendering constants.
     const rowHeight = 25;

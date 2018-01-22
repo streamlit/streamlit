@@ -73,14 +73,6 @@ class WebClient extends PureComponent {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
       const deltaListProto = DeltaList.decode(result);
-
-      // debug - begin
-      console.log('Received a message and am applying...')
-      console.log(deltaListProto);
-      console.log('Protobuf Length:', reader.result.byteLength);
-      console.log('JSON Length:', JSON.stringify(deltaListProto).length);
-      // debug - end
-
       const deltaList = toImmutableProto(DeltaList, deltaListProto);
       this.applyDeltas(deltaList);
     }
@@ -90,9 +82,11 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
+    // debug - begin
     console.log('applying deltas')
     console.log(deltaList.toJS())
-    console.log(this.state.elements.toJS())
+    // debug - end
+
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
         elements.update(delta.get('id'), (element) =>

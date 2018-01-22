@@ -21,8 +21,6 @@ with Notebook() as write:
         some_letters = string.ascii_lowercase.strip()[:i+1]
         new_row = pd.DataFrame([some_letters], columns=['letters'], index=[i])
         table.add_rows(new_row)
-        # print('adding row:')
-        # print(new_row)
         time.sleep(0.1)
 
     time.sleep(2.0)
