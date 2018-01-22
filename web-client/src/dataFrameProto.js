@@ -2,7 +2,7 @@
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
- import { dispatchOneOf, updateOneOf } from './immutableProto';
+import { dispatchOneOf, updateOneOf } from './immutableProto';
 
 /**
  * Returns [rows, cols] for this table.
@@ -110,9 +110,8 @@ function concatIndex(index1, index2) {
     rangeIndex: (idx) => idx.update('stop', (stop) => (
       stop + indexLen(index2))),
     // multiIndex: <not supported>,
-    int_64Index: (idx) => {
-      throw new Error('Need to implement concatIndex for int_64Index');
-    }
+    int_64Index: (idx) => idx.updateIn(['data', 'data'], (data) => (
+        data.concat(index2.getIn(['int_64Index', 'data', 'data'])))),
   });
 }
 
@@ -132,29 +131,23 @@ function concatAnyArray(anyArray1, anyArray2) {
  * Extracts the dataframe from an element.
  */
 function getDataFrame(element) {
-  return element.get('dataFrame')
-
-  // type = delta.WhichOneof('type')
-  // if type == 'new_element':
-  //     return delta.new_element.data_frame
-  // elif type == 'add_rows':
-  //     return delta.add_rows
-  // else:
-  //     raise RuntimeError(f'Cannot extract DataFrame from {type}.')
+  return dispatchOneOf(element, 'type', {
+    dataFrame: (df) => df,
+    chart: (chart) => chart.get('data'),
+  });
 }
 
 /**
  * Returns the number of elements in an index.
  */
 function indexLen(index) {
-  // return dispatchOneOf(index, 'type', {
-  //   plainIndex:  (idx) => ( anyArrayLen(idx.get('data')) ),
-  //   rangeIndex:  (idx) => ( idx.get('stop') - idx.get('start') ),
-  //   multiIndex:  (idx) => ( idx.get('labels').size === 0 ? 0 :
-  //                           idx.getIn(['labels', 0]).size ),
-  //   int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
-  // });
-  throw new Error('Must implement.')
+  return dispatchOneOf(index, 'type', {
+    plainIndex:  (idx) => ( anyArrayLen(idx.get('data')) ),
+    rangeIndex:  (idx) => ( idx.get('stop') - idx.get('start') ),
+    multiIndex:  (idx) => ( idx.get('labels').size === 0 ? 0 :
+                            idx.getIn(['labels', 0]).size ),
+    int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
+  });
 }
 
 /**
@@ -163,5 +156,3 @@ function indexLen(index) {
 function anyArrayLen(anyArray) {
   return anyArray.getIn([anyArray.get('type'), 'data']).size;
 }
-
-// prediction: this will become line 165
