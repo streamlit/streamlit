@@ -146,7 +146,7 @@ class WebClient extends PureComponent {
       } else if (element.get('div')) {
         return <Div element={element.get('div')} width={width}/>;
       } else if (element.get('dataFrame')) {
-        return <DataFrame element={element.get('dataFrame')} width={width}/>;
+        return <DataFrame df={element.get('dataFrame')} width={width}/>;
       } else if (element.get('chart')) {
         return <Chart element={element.get('chart')} width={width}/>;
       } else if (element.get('imgs')) {

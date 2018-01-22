@@ -15,12 +15,12 @@ import './DataFrame.css';
 /**
  * Functional element representing a DataFrame.
  */
-const DataFrame = ({element, width}) => {
+const DataFrame = ({df, width}) => {
   try {
     // Calculate the dimensions of this array.
-    const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(element.index);
-    const [headerRows, dataColsCheck] = indexGetLevelsAndLength(element.columns);
-    const [dataRows, dataCols] = tableGetRowsAndCols(element.data);
+    const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
+    const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
+    const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
     if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
       throw new Error("Dataframe dimensions don't align: " +
         `rows(${dataRows} != ${dataRowsCheck}) OR ` +
@@ -46,7 +46,7 @@ const DataFrame = ({element, width}) => {
     const height = Math.min(rows * rowHeight, 300) + border;
 
     // Get the cell renderer.
-    const cellContents = getCellContents(element, headerRows, headerCols);
+    const cellContents = getCellContents(df, headerRows, headerCols);
     const cellRenderer = getCellRenderer(cellContents);
     const {columnWidth, headerWidth} =
     getWidths(cols, rows, headerCols, width - border, cellContents);
@@ -98,7 +98,7 @@ const DataFrame = ({element, width}) => {
  * headerRows - the number of frozen rows
  * headerCols - the number of frozen columns
  */
-function getCellContents(element, headerRows, headerCols) {
+function getCellContents(df, headerRows, headerCols) {
   return (columnIndex, rowIndex) => {
     // All table elements have class 'dataframe'.
     let classes = 'dataframe';
@@ -110,18 +110,18 @@ function getCellContents(element, headerRows, headerCols) {
         classes += ' corner'
       else {
         classes += ' col-header';
-        contents = indexGet(element.index,
+        contents = indexGet(df.get('index'),
           columnIndex, rowIndex - headerRows);
       }
     } else {
       if (rowIndex < headerRows) {
         classes += ' row-header';
-        contents = indexGet(element.columns,
+        contents = indexGet(df.get('columns'),
           rowIndex, columnIndex - headerCols);
       }
       else {
         classes += ' data'
-        contents = tableGet(element.data,
+        contents = tableGet(df.get('data'),
             columnIndex - headerCols, rowIndex - headerRows)
       }
     }
