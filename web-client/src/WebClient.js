@@ -67,20 +67,16 @@ class WebClient extends PureComponent {
     reader.onloadend = () => {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
-      const deltaList = DeltaList.decode(result);
+      const deltaListProto = DeltaList.decode(result);
       console.log('Received a message and am applying...')
-      console.log(deltaList);
-      console.log('WHAT IF ITS IMMUTABLE?!?!');
-      const immutableDeltaList = fromJS(DeltaList.toObject(deltaList, {
+      console.log(deltaListProto);
+      const deltaList = fromJS(DeltaList.toObject(deltaListProto, {
         defaults: true,
         oneofs: true,
       }));
-      console.log(immutableDeltaList);
-      console.log(deltaList.deltas)
-      console.log(immutableDeltaList.getIn(['deltas']))
       console.log('Protobuf Length:', reader.result.byteLength);
-      console.log('JSON Length:', JSON.stringify(deltaList).length);
-      this.applyDeltas(immutableDeltaList);
+      console.log('JSON Length:', JSON.stringify(deltaListProto).length);
+      this.applyDeltas(deltaList);
     }
   }
 
@@ -138,8 +134,6 @@ class WebClient extends PureComponent {
 
   renderElements(width) {
     return this.state.elements.map((element) => {
-      console.log('about to render this element')
-      console.log(element)
       if (!element) {
         const msg = 'Transmission error.'
         return <Alert color="warning" style={{width}}>{msg}</Alert>;
