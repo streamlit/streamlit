@@ -108,28 +108,28 @@ with Notebook() as write:
     channels[2][:,:,:-1] = 0
     write.img(channels, caption=["Red", "Green", "Blue"], width=125)
 
-    # # Text
-    # write('Text', fmt='header', level=3)
-    #
-    # write.header('Character Wrapping', level=5)
-    # write(
-    #     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do ' +
-    #     'eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ' +
-    #     'ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut ' +
-    #     'aliquip ex ea commodo consequat. Duis aute irure dolor in ' +
-    #     'reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla ' +
-    #     'pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
-    #     'culpa qui officia deserunt mollit anim id est laborum.');
-    #
-    # write.header('Space preservation', level=5)
-    # write(
-    #     '...    0 leading spaces\n' +
-    #     ' ...   1 leading space\n' +
-    #     '  ...  2 leading spaces\n' +
-    #     '   ... 3 leading spaces');
-    #
-    # # Progress
-    # write('Progress Bars', fmt='header', level=3)
-    # for percent in [100, 75, 50, 25, 0]:
-    #     write(f'{percent}% progress:')
-    #     write.progress(percent)
+    # Text
+    write('Text', fmt='header', level=3)
+
+    write.header('Character Wrapping', level=5)
+    write(
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do ' +
+        'eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ' +
+        'ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut ' +
+        'aliquip ex ea commodo consequat. Duis aute irure dolor in ' +
+        'reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla ' +
+        'pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
+        'culpa qui officia deserunt mollit anim id est laborum.');
+
+    write.header('Space preservation', level=5)
+    write(
+        '...    0 leading spaces\n' +
+        ' ...   1 leading space\n' +
+        '  ...  2 leading spaces\n' +
+        '   ... 3 leading spaces');
+
+    # Progress
+    write('Progress Bars', fmt='header', level=3)
+    for percent in [100, 75, 50, 25, 0]:
+        write(f'{percent}% progress:')
+        write.progress(percent)
