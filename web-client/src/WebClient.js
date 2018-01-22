@@ -91,14 +91,13 @@ class WebClient extends PureComponent {
    */
   applyDeltas(deltaList) {
     this.setState(({elements}) => ({
-      elements: deltaList.get('deltas').reduce((elements, delta) => {
-        const id = delta.get('id');
-        return elements.set(id, dispatchOneOf(delta, 'type', {
-          newElement: (newElement) => newElement,
-          addRows: (newRows) => addRows(elements.get(id), newRows),
-        }));
-      }, elements)
-    })); 
+      elements: deltaList.get('deltas').reduce((elements, delta) => (
+        elements.update(delta.get('id'), (element) =>
+          dispatchOneOf(delta, 'type', {
+            newElement: (newElement) => newElement,
+            addRows: (newRows) => addRows(element, newRows),
+        }))), elements)
+    }));
   }
 
   render() {
