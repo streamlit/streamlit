@@ -2,19 +2,35 @@
  * Component display a Pandas Dataframe.
  */
 
-import React from 'react';
+import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
 
-import { indexGetLevelsAndLength, tableGetRowsAndCols, indexGet, tableGet }
-  from '../dataFrameProto';
+import {
+  indexGetLevelsAndLength,
+  tableGetRowsAndCols,
+  indexGet,
+  tableGet
+} from '../dataFrameProto';
 
 import './DataFrame.css';
 
 /**
  * Functional element representing a DataFrame.
  */
+// class DataFrame extends PureComponent {
+//   constructor(props) {
+//     super(props);
+//
+//     // Bind the callback.
+//     this._setMultiGridRef = this._setMultiGridRef.bind(this);
+//   }
+//
+//   _setMultiGridRef(multiGrid) {
+//     this._multiGrid = multiGrid;
+//   }
+// }
 const DataFrame = ({df, width}) => {
   try {
     // Calculate the dimensions of this array.
