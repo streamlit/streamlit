@@ -7,14 +7,14 @@ import './ImageList.css';
  */
 const ImageList = ({imgs, width}) => (
   <div style={{width}}>
-    {imgs.imgs.map((img, indx) => (
+    {imgs.get('imgs').map((img, indx) => (
       <div className="image-container" key={indx}>
         <img
-          style={{width: imgs.width ? imgs.width : undefined}}
-          src={`data:image/png;base64,${img.base_64Png}`}
+          style={{width: imgs.get('width') ? imgs.get('width') : undefined}}
+          src={`data:image/png;base64,${img.get('base_64Png')}`}
           alt={indx}
         />
-        <div className="caption"> {img.caption} </div>
+        <div className="caption"> {img.get('caption')} </div>
       </div>
     ))}
   </div>

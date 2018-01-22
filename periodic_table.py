@@ -94,20 +94,20 @@ with Notebook() as write:
     write.header('Level 5', level=5)
     write.header('Level 6', level=6)
 
-    # # Images
-    # write('Images', fmt='header', level=3)
-    # img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
-    # img_bytes = urllib.request.urlopen(img_url).read()
-    # img = np.array(Image.open(io.BytesIO(img_bytes)))
-    # write(img, fmt='img', caption="225px", width=225)
-    # write(img, fmt='img', caption="175px", width=175)
-    # write(img, fmt='img', caption="125px", width=125)
-    # channels = [np.array(img), np.array(img), np.array(img)]
-    # channels[0][:,:,1:] = 0
-    # channels[1][:,:,0::2] = 0
-    # channels[2][:,:,:-1] = 0
-    # write.img(channels, caption=["Red", "Green", "Blue"], width=125)
-    #
+    # Images
+    write('Images', fmt='header', level=3)
+    img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
+    img_bytes = urllib.request.urlopen(img_url).read()
+    img = np.array(Image.open(io.BytesIO(img_bytes)))
+    write(img, fmt='img', caption="225px", width=225)
+    write(img, fmt='img', caption="175px", width=175)
+    write(img, fmt='img', caption="125px", width=125)
+    channels = [np.array(img), np.array(img), np.array(img)]
+    channels[0][:,:,1:] = 0
+    channels[1][:,:,0::2] = 0
+    channels[2][:,:,:-1] = 0
+    write.img(channels, caption=["Red", "Green", "Blue"], width=125)
+
     # # Text
     # write('Text', fmt='header', level=3)
     #
