@@ -2,7 +2,7 @@
  * Component display a Pandas Dataframe.
  */
 
-import React from 'react';
+import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
@@ -22,82 +22,90 @@ import './DataFrame.css';
 
 // let prev_df, prev_width = [null, null];
 
-const DataFrame = ({df, width}) => {
-  try {
-    // Calculate the dimensions of this array.
-    const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
-    const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
-    const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
-    if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
-      throw new Error("Dataframe dimensions don't align: " +
-        `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-        `cols(${dataCols} != ${dataColsCheck})`)
-    }
-    const cols = headerCols + dataCols;
-    const rows = headerRows + dataRows;
+class DataFrame extends PureComponent {
+  render() {
+    try {
+      // Get the properties.
+      const {df, width} = this.props;
 
-    // // Debug - begin
-    // console.log('Rendering this DataFrame');
-    // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-    // console.log(`Are thigns valid? df:${df === prev_df} width:${width === prev_width}`)
-    // console.log(`Just checking the df:${df === df}`)
-    // console.log(df ? df.toJS() : 'undefined df')
-    // console.log(prev_df ? prev_df.toJS() : 'undefined prev_df')
-    // prev_df = df;
-    // prev_width = width;
-    // // Debug - end
+      // Calculate the dimensions of this array.
+      const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
+      const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
+      const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
+      if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
+        throw new Error("Dataframe dimensions don't align: " +
+          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+          `cols(${dataCols} != ${dataColsCheck})`)
+      }
+      const cols = headerCols + dataCols;
+      const rows = headerRows + dataRows;
 
-    // Rendering constants.
-    const rowHeight = 25;
-    const headerHeight = rowHeight * headerRows;
-    const border = 3;
-    const height = Math.min(rows * rowHeight, 300) + border;
+      // // Debug - begin
+      // console.log('Rendering this DataFrame');
+      // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
+      // console.log(`Are thigns valid? df:${df === prev_df} width:${width === prev_width}`)
+      // console.log(`Just checking the df:${df === df}`)
+      // console.log(df ? df.toJS() : 'undefined df')
+      // console.log(prev_df ? prev_df.toJS() : 'undefined prev_df')
+      // prev_df = df;
+      // prev_width = width;
+      // // Debug - end
 
-    // Get the cell renderer.
-    const cellContents = getCellContents(df, headerRows, headerCols);
-    const cellRenderer = getCellRenderer(cellContents);
-    const {columnWidth, headerWidth} =
-    getWidths(cols, rows, headerCols, width - border, cellContents);
+      // Rendering constants.
+      const rowHeight = 25;
+      const headerHeight = rowHeight * headerRows;
+      const border = 3;
+      const height = Math.min(rows * rowHeight, 300) + border;
 
-    // Put it all together.
-    return (
-      <div style={{width, height}}>
-        <div style={{width, height, position: 'absolute'}}
-          className="dataframe-container">
-            <MultiGrid
-              className="dataFrame"
-              cellRenderer={cellRenderer}
-              fixedColumnCount={headerCols}
-              fixedRowCount={headerRows}
-              columnWidth={columnWidth}
-              columnCount={cols}
-              enableFixedColumnScroll
-              enableFixedRowScroll
-              height={height - border}
-              rowHeight={rowHeight}
-              rowCount={rows}
-              width={width - border}
-            />
-            <div className="fixup fixup-top-right" style={{
-              width: border,
-              height: headerHeight,
-            }}/>
-            <div className="fixup fixup-bottom-left" style={{
-              width: headerWidth,
-              height: border,
-            }}/>
+      // Get the cell renderer.
+      const cellContents = getCellContents(df, headerRows, headerCols);
+      const cellRenderer = getCellRenderer(cellContents);
+      const {columnWidth, headerWidth} =
+      getWidths(cols, rows, headerCols, width - border, cellContents);
+
+      // Put it all together.
+      return (
+        <div style={{width, height}}>
+          <div style={{width, height, position: 'absolute'}}
+            className="dataframe-container">
+              <MultiGrid
+                className="dataFrame"
+                cellRenderer={cellRenderer}
+                fixedColumnCount={headerCols}
+                fixedRowCount={headerRows}
+                columnWidth={columnWidth}
+                columnCount={cols}
+                enableFixedColumnScroll
+                enableFixedRowScroll
+                height={height - border}
+                rowHeight={rowHeight}
+                rowCount={rows}
+                width={width - border}
+              />
+              <div className="fixup fixup-top-right" style={{
+                width: border,
+                height: headerHeight,
+              }}/>
+              <div className="fixup fixup-bottom-left" style={{
+                width: headerWidth,
+                height: border,
+              }}/>
+          </div>
         </div>
-      </div>
-    );
-  } catch (e) {
-    console.log(e.stack);
-    return (
-      <Alert color="danger">
-        <strong>{e.name}</strong>: {e.message}
-      </Alert>
-    );
+      );
+    } catch (e) {
+      console.log(e.stack);
+      return (
+        <Alert color="danger">
+          <strong>{e.name}</strong>: {e.message}
+        </Alert>
+      );
+    }
   }
 }
+// const DataFrame = ({df, width}) => {
+//
+// }
 
 /**
  * Returns a function which can render each cell.
