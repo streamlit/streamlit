@@ -68,7 +68,7 @@ def marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
     else:
-        raise RuntimeError(f'Dtype {array.dtype} not understood.')
+        raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
 
 def add_rows(delta1, delta2):
     """Adds the rows from the DataFrame in delta2 to the DataFrame in delta1."""

@@ -15,10 +15,10 @@
   - **I want lukas to think I'm a great coder.**
     - rename tiny_notebook to printf
     - Pip install method
-    - Get the name printf.com.
 
 #### Todo After the Demo
 
+- Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
 - Fix the problem with calling __call__ on multiple values
@@ -54,18 +54,3 @@
 - Follow the docker tutorial
 - Install node within docker
 - make the awesomest library ever
-
-#### Protobuf Messages
-
-- Text
-- Chart
-- Image
-- Dataframe
-
-- Update
-  - id
-  - element
-
-- AddRows
-  - id
-  - rows
