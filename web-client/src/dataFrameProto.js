@@ -125,16 +125,15 @@ function concatIndex(index1, index2) {
  * Concatenates both anyArrays, returning the result.
  */
 function concatAnyArray(anyArray1, anyArray2) {
-  console.log('concatAnyArray')
-  console.log(anyArray1.toJS());
-  console.log(anyArray2.toJS());
+  // console.log('concatAnyArray')
+  // console.log(anyArray1.toJS());
+  // console.log(anyArray2.toJS());
+
   const type1 = anyArray1.get('type');
   const type2 = anyArray2.get('type');
   if (type1 !== type2)
     throw new Error(`Cannot concatenate ${type1} and ${type2}.`)
-  // console.log(anyArray1.updateIn([type1, 'data'], (array) => {
-  //   return array.concat(anyArray2.getIn([type2, 'data']))
-  // }).toJS());
+
   return anyArray1.updateIn([type1, 'data'], (array) =>
     array.concat(anyArray2.getIn([type2, 'data'])));
 }
@@ -155,7 +154,7 @@ function getDataFrame(element) {
 function setDataFrame(element, df) {
   return updateOneOf(element, 'type', {
     dataFrame: () => df,
-    chart: (chart) => chart.update('data', df),
+    chart: (chart) => chart.set('data', df),
   });
 }
 

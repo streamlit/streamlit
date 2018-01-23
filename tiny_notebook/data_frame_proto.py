@@ -75,6 +75,17 @@ def add_rows(delta1, delta2):
     df1 = get_data_frame(delta1)
     df2 = get_data_frame(delta2)
 
+    # print('ADDING ROWS')
+    # print(delta1.WhichOneof('type'))
+    # print(delta2.WhichOneof('type'))
+    # print('df1', id(df1), df1 == None)
+    # print('df2', id(df2), df2 == None)
+    # print('df1.index', id(df1.index), df1.index == None, df1.index.WhichOneof('type'))
+    # print('df2.index', id(df2.index), df2.index == None, df2.index.WhichOneof('type'))
+    # print(delta1);
+    # print('HERE IS DF1')
+    # print(df1)
+
     concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         concat_any_array(col1, col2)
@@ -90,6 +101,7 @@ def concat_index(index1, index2):
     type1 = index1.WhichOneof('type')
     type2 = index2.WhichOneof('type')
     assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+
     if type1 == 'plain_index':
         concat_any_array(index1.plain_index.data, index2.plain_index.data)
     elif type1 == 'range_index':
@@ -104,6 +116,11 @@ def concat_index(index1, index2):
 
 def concat_any_array(any_array_1, any_array_2):
     """Merges elements from any_array_2 into any_array_1."""
+    # Special case if any_array_1 is empty
+    if any_array_len(any_array_1) == 0:
+        any_array_1.CopyFrom(any_array_2)
+        return
+
     type1 = any_array_1.WhichOneof('type')
     type2 = any_array_2.WhichOneof('type')
     assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
@@ -111,13 +128,17 @@ def concat_any_array(any_array_1, any_array_2):
 
 def get_data_frame(delta):
     """Extracts the dataframe from a delta."""
-    type = delta.WhichOneof('type')
-    if type == 'new_element':
-        return delta.new_element.data_frame
-    elif type == 'add_rows':
+    delta_type = delta.WhichOneof('type')
+    if delta_type == 'new_element':
+        element_type = delta.new_element.WhichOneof('type')
+        if element_type == 'data_frame':
+            return delta.new_element.data_frame
+        elif element_type == 'chart':
+            return delta.new_element.chart.data
+    elif delta_type == 'add_rows':
         return delta.add_rows
     else:
-        raise RuntimeError(f'Cannot extract DataFrame from {type}.')
+        raise RuntimeError(f'Cannot extract DataFrame from {delta_type}.')
 
 def index_len(index):
     """Returns the number of elements in an index."""

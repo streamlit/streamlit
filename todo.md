@@ -36,6 +36,8 @@
 - "info"     : prints out df.info() on a DataFrame-like object
 - Fix the bug in .x_axis(type='number')
 - Fix the column width bug:
+  - First use `shouldComponentUpdate` to decrease render calls on dataframes.
+  - Then use the following to force updates of the underlying grid.
   - https://github.com/bvaughn/react-virtualized/issues/546
   - https://github.com/bvaughn/react-virtualized/blob/master/docs/MultiGrid.md
 

@@ -2,7 +2,7 @@
  * Component display a Pandas Dataframe.
  */
 
-import React, { PureComponent } from 'react';
+import React from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
@@ -20,6 +20,8 @@ import './DataFrame.css';
  * Functional element representing a DataFrame.
  */
 
+// let prev_df, prev_width = [null, null];
+
 const DataFrame = ({df, width}) => {
   try {
     // Calculate the dimensions of this array.
@@ -34,10 +36,16 @@ const DataFrame = ({df, width}) => {
     const cols = headerCols + dataCols;
     const rows = headerRows + dataRows;
 
-    // Debug - begin
-    console.log('Rendering this DataFrame');
-    console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-    // Debug - end
+    // // Debug - begin
+    // console.log('Rendering this DataFrame');
+    // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
+    // console.log(`Are thigns valid? df:${df === prev_df} width:${width === prev_width}`)
+    // console.log(`Just checking the df:${df === df}`)
+    // console.log(df ? df.toJS() : 'undefined df')
+    // console.log(prev_df ? prev_df.toJS() : 'undefined prev_df')
+    // prev_df = df;
+    // prev_width = width;
+    // // Debug - end
 
     // Rendering constants.
     const rowHeight = 25;

@@ -74,7 +74,7 @@ const COMPONENTS = {
 // Represents a chart with some data
 function Chart({chart, width}) {
   // Default height is 200 if not specified.
-  const chartXOffset = 35;
+  const chartXOffset = 0; // 35;
   const chartDims = {
     width: (chart.get('width') || width) + chartXOffset,
     height: chart.get('height') || 200,
@@ -94,9 +94,9 @@ function Chart({chart, width}) {
   }
 
   // Parse out the chart props into an object.
-  const chart_props = {};
-  for (const chartProperty of chart.get('props'))
-    chart_props[chartProperty.get('key')] = chartProperty.get('value');
+  const chart_props = extractProps(chart);
+  // for (const chartProperty of chart.get('props'))
+  //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
 
   return (
     <div style={chartDims}>
@@ -105,10 +105,7 @@ function Chart({chart, width}) {
           React.createElement(
             COMPONENTS[chart.get('type')], {...chartDims, data, ...chart_props},
             ...chart.get('components').map((component) => {
-                const component_props = {};
-                for (const chartProperty of component.get('props'))
-                  component_props[chartProperty.get('key')] =
-                    chartProperty.get('value');
+                const component_props = extractProps(component);
                 return React.createElement(
                   COMPONENTS[component.get('type')], component_props);
             })
@@ -117,6 +114,19 @@ function Chart({chart, width}) {
       </div>
     </div>
   );
+}
+
+function extractProps(elt) {
+  const props = {}
+  for (const prop of elt.get('props')) {
+    let value = prop.get('value');
+    if (value === 'true')
+      value = true;
+    else if (value === 'false')
+      value = false;
+    props[prop.get('key')] = value;
+  }
+  return props;
 }
 
 export default Chart;

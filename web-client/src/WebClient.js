@@ -118,7 +118,7 @@ class WebClient extends PureComponent {
               <AutoSizer>
                 {
                   ({width}) => {
-                    console.log('Rendering with width:', width);
+                    // console.log('Rendering with width:', width);
                     return this.renderElements(width)
                   }
                 }
