@@ -82,7 +82,7 @@ with Notebook() as print:
     y_train = np_utils.to_categorical(y_train)
     y_test = np_utils.to_categorical(y_test)
     num_classes = y_test.shape[1]
-    # print(y_train[indices])
+    print(y_train[indices])
 
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
