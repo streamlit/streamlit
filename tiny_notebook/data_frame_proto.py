@@ -63,8 +63,10 @@ def marshall_any_array(pandas_array, proto_array):
     assert len(pandas_array.shape) == 1, 'Array must be 1D.'
 
     # Perform type-conversion based on the array dtype.
-    if pandas_array.dtype == np.float64:
+    if issubclass(pandas_array.dtype.type, np.floating):
         proto_array.doubles.data.extend(pandas_array)
+    elif issubclass(pandas_array.dtype.type, np.integer):
+        proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
     else:

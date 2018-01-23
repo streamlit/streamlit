@@ -1,6 +1,8 @@
 #### Demo
 
 - objectives
+  - Need to make all the main components into pure components. See if that fixes some things.
+  
   - **I want Lukas to appreciate the full power of logging as s company.**
     - Three really nice demos.
       - Speed Test

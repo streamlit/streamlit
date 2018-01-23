@@ -77,7 +77,7 @@ function anyArrayData(anyArray) {
   return dispatchOneOf(anyArray, 'type', {
     strings: getData,
     doubles: getData,
-    int32s: getData
+    int64s: getData
   });
 }
 

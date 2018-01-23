@@ -48,7 +48,8 @@ def convert_to_3_color_channels(imgs):
         return imgs
     elif imgs.shape[-1] == 1:
         imgs = np.array([imgs, imgs, imgs])
-        return imgs.reshape((3,) + imgs.shape[:-1]).transpose((1, 2, 3, 0))
+        print('Now created imags with shape', imgs.shape)
+        return imgs.reshape(imgs.shape[:-1]).transpose((1, 2, 3, 0))
     else:
         return np.array([imgs, imgs, imgs]).transpose((1, 2, 3, 0))
 
@@ -63,7 +64,7 @@ def convert_imgs_to_list(imgs):
 
 def convert_captions_to_list(captions, n_imgs):
     """Canonicalize the caption format and ensure one caption per image."""
-    if captions == None:
+    if captions is None:
         captions = [''] * n_imgs
     elif type(captions) == str:
         captions = [captions] * n_imgs

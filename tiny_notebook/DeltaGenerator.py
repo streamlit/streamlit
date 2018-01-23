@@ -104,7 +104,7 @@ class DeltaGenerator:
             f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
         return self.text(text, classes=f'alert alert-{type}')
 
-    def header(self, text, level=1):
+    def header(self, text, level=3):
         """
         Creates a header element.
 

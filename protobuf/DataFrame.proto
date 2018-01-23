@@ -78,10 +78,6 @@ message DoubleArray {
   repeated double data = 1;
 }
 
-message Int32Array {
-  repeated int32 data = 1;
-}
-
 message Int64Array {
   repeated int64 data = 1;
 }
@@ -94,7 +90,7 @@ message AnyArray {
   oneof type {
     StringArray strings = 1;
     DoubleArray doubles = 2;
-    Int32Array int32s = 3;
+    Int64Array int64s = 3;
   }
 }
 
