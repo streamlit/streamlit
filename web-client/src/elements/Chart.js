@@ -131,13 +131,24 @@ class Chart extends PureComponent {
 }
 
 function extractProps(elt) {
+  function tryParseFloat(s) {
+    s = s.trim()
+    const f = parseFloat(s)
+    return isNaN(f) ? s : f;
+  }
+
   const props = {}
   for (const prop of elt.get('props')) {
     let value = prop.get('value');
+
+    // Do a little special-casing here. This is a hack which has to be fixed.
     if (value === 'true')
       value = true;
     else if (value === 'false')
       value = false;
+    else if (prop.get('key') === 'domain') {
+      value = prop.get('value').split(',').map((x) => tryParseFloat(x))
+    }
     props[prop.get('key')] = value;
   }
   return props;

@@ -82,10 +82,10 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // debug - begin
-    console.log('applying deltas')
-    console.log(deltaList.toJS())
-    // debug - end
+    // // debug - begin
+    // console.log('applying deltas')
+    // console.log(deltaList.toJS())
+    // // debug - end
 
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (

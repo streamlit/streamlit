@@ -125,9 +125,9 @@ function concatIndex(index1, index2) {
  * Concatenates both anyArrays, returning the result.
  */
 function concatAnyArray(anyArray1, anyArray2) {
-  // console.log('concatAnyArray')
-  // console.log(anyArray1.toJS());
-  // console.log(anyArray2.toJS());
+  // Special case if the left array is empty.
+  if (anyArrayLen(anyArray1) === 0)
+    return anyArray2;
 
   const type1 = anyArray1.get('type');
   const type2 = anyArray2.get('type');

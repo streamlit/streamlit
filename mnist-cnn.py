@@ -6,52 +6,68 @@ from keras.utils import np_utils
 from keras.optimizers import SGD
 import numpy as np
 import pandas as pd
-
-# import wandb
-# from wandb.wandb_keras import WandbKerasCallback
-#
-# run = wandb.init()
-# config = run.config
+import math
 
 from tiny_notebook import Notebook, Chart
 
 class PritnfCallback(keras.callbacks.Callback):
-    def __init__(self, print):
+    def __init__(self, x_test, print):
+        self._x_test = x_test
         self._print = print
 
     def on_train_begin(self, logs=None):
-        self._print.header('Training Log', level=3)
+        self._print.header('Summary', level=2)
+        self._summary_chart = self._create_chart('area', 300)
+        self._summary_stats = self._print.text(f'{"epoch":>8s} :  0')
+        self._print.header('Training Log', level=2)
 
     def on_epoch_begin(self, epoch, logs=None):
-        self._print.header(f'Epoch {epoch}')
-        self._data = pd.DataFrame(columns=['batch', 'loss', 'acc'])
-        # self._epoch_graph = print.alert('No info yet.')
-        self._epoch_summary = print.alert('No info yet.')
-
-            # write('Line Chart', fmt='header', level=4)
-            # line_chart = Chart(chart_data, 'line_chart')
-            # line_chart.x_axis()
-            # line_chart.y_axis()
-            # line_chart.cartesian_grid(stroke_dasharray='3 3')
-            # line_chart.tooltip()
-            # line_chart.legend()
-            # line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
-            # line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
-            # write(line_chart)
-
-    # def on_batch_begin(self, batch, logs=None):
-    #     self._print('on_batch_begin', batch, logs)
+        self._epoch = epoch
+        self._print.header(f'Epoch {epoch}', level=3)
+        self._epoch_chart = self._create_chart('line')
+        self._epoch_progress = self._print.alert('No progress yet.')
+        self._epoch_summary = self._print.alert('No stats yet.')
 
     def on_batch_end(self, batch, logs=None):
-        # self._epoch_graph(self._data)
-        self._epoch_summary('on_batch_end', batch, logs)
-        # self._data.append([batch, logs['loss'], logs['acc']])
+        rows = pd.DataFrame([[logs['loss'], logs['acc']]],
+            columns=['loss', 'acc'])
+        if batch % 10 == 0:
+            self._epoch_chart.add_rows(rows)
+        if batch % 100 == 99:
+            self._summary_chart.add_rows(rows)
+        percent_complete = logs['batch'] * logs['size'] /\
+            self.params['samples']
+        self._epoch_progress.progress(math.ceil(percent_complete * 100))
+        self._epoch_summary(
+            f"loss: {logs['loss']:>7.5f} | acc: {logs['acc']:>7.5f}")
 
     def on_epoch_end(self, epoch, logs=None):
-        self._print('on_epoch_end', epoch, logs)
+        self._print.header('Summary', level=5)
+        indices = np.random.choice(len(self._x_test), 36)
+        test_data = self._x_test[indices]
+        prediction = np.argmax(self.model.predict(test_data), axis=1)
+        self._print.img(test_data, caption=prediction)
+        summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
+        self._print(summary)
+        self._summary_stats(f'{"epoch":>8s} :  {epoch}\n{summary}')
 
-    def on_train_end(self, logs=None):
-        self._print('on_train_end', logs)
+
+    def _create_chart(self, type='line', height=0):
+        empty_data = pd.DataFrame(columns=['loss', 'acc'])
+        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart.y_axis(type='number',
+            y_axis_id="loss_axis", allow_data_overflow="true")
+        epoch_chart.y_axis(type='number', orientation='right',
+            y_axis_id="acc_axis", allow_data_overflow="true")
+        epoch_chart.cartesian_grid(stroke_dasharray='3 3')
+        epoch_chart.legend()
+        getattr(epoch_chart, type)(type='monotone', data_key='loss',
+            stroke='rgb(44,125,246)', fill='rgb(44,125,246)',
+            dot="false", y_axis_id='loss_axis')
+        getattr(epoch_chart, type)(type='monotone', data_key='acc',
+            stroke='#82ca9d', fill='#82ca9d',
+            dot="false", y_axis_id='acc_axis')
+        return self._print.chart(epoch_chart)
 
 with Notebook() as print:
     print.header('MNIST CNN', level=1)
@@ -70,19 +86,10 @@ with Notebook() as print:
     x_train = x_train.reshape(x_train.shape[0], img_width, img_height, 1)
     x_test = x_test.reshape(x_test.shape[0], img_width, img_height, 1)
 
-    print.header('Input Data', level=3)
-    print('x_train', x_train.shape)
-    print('y_train', y_train.shape)
-    print('x_test', x_train.shape)
-    print('y_test', y_train.shape)
-    indices = np.random.choice(len(x_train), 36)
-    print.img(x_train[indices], caption=y_train[indices])
-
     # one hot encode outputs
     y_train = np_utils.to_categorical(y_train)
     y_test = np_utils.to_categorical(y_test)
     num_classes = y_test.shape[1]
-    print(y_train[indices])
 
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
@@ -90,7 +97,7 @@ with Notebook() as print:
 
     model = Sequential()
     layer_1_size = 10
-    epochs = 10
+    epochs = 5
 
     model.add(Conv2D(10, (5, 5), input_shape=(img_width, img_height,1), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -104,6 +111,8 @@ with Notebook() as print:
     model.compile(loss='categorical_crossentropy', optimizer=sgd,
         metrics=['accuracy'])
     model.fit(x_train, y_train, validation_data=(x_test, y_test),
-        epochs=epochs, callbacks=[PritnfCallback(print)])
+        epochs=epochs, callbacks=[PritnfCallback(x_test, print)])
 
-    model.save("convnet.h5")
+    print.alert('Finished training!', type='success')
+
+    # model.save("convnet.h5")

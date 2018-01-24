@@ -50,7 +50,7 @@ with Notebook() as write:
     write('Bar Chart', fmt='header', level=4)
     bar_chart = Chart(chart_data[:10], 'bar_chart')
     bar_chart.x_axis()
-    bar_chart.y_axis()
+    bar_chart.y_axis(domain="-2,2")
     bar_chart.cartesian_grid(stroke_dasharray='3 3')
     bar_chart.tooltip()
     bar_chart.legend()
