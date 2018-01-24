@@ -26,7 +26,3 @@ class ImageList extends PureComponent {
 }
 
 export default ImageList;
-
-// # style = 'style="border: ;"'
-// # img_html = f'<img {style} src="data:image/png;base64,{img_base64}">'
-// # self.add_html(img_html)
