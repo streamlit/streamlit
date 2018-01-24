@@ -5,31 +5,71 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 import numpy as np
+import pandas as pd
 import os
+import math
 
 from tiny_notebook import Notebook, Chart
 
-class PritnfCallback(keras.callbacks.Callback):
-    def __init__(self, print):
+class MyCallback(keras.callbacks.Callback):
+    def __init__(self, x_test, print):
+        self._x_test = x_test
         self._print = print
 
+    def on_train_begin(self, logs=None):
+        self._print.header('Summary', level=2)
+        self._summary_chart = self._create_chart('area', 300)
+        self._summary_stats = self._print.text(f'{"epoch":>8s} :  0')
+        self._print.header('Training Log', level=2)
+
     def on_epoch_begin(self, epoch, logs=None):
-        self._print('on_epoch_begin', epoch, logs)
-
-    def on_epoch_end(self, epoch, logs=None):
-        self._print('on_epoch_end', epoch, logs)
-
-    def on_batch_begin(self, batch, logs=None):
-        self._print('on_batch_begin', batch, logs)
+        self._epoch = epoch
+        self._print.header(f'Epoch {epoch}', level=3)
+        self._epoch_chart = self._create_chart('line')
+        self._epoch_progress = self._print.alert('No progress yet.')
+        self._epoch_summary = self._print.alert('No stats yet.')
 
     def on_batch_end(self, batch, logs=None):
-        self._print('on_batch_end', batch, logs)
+        rows = pd.DataFrame([[logs['loss'], logs['acc']]],
+            columns=['loss', 'acc'])
+        if batch % 10 == 0:
+            self._epoch_chart.add_rows(rows)
+        if batch % 100 == 99:
+            self._summary_chart.add_rows(rows)
+        percent_complete = logs['batch'] * logs['size'] /\
+            self.params['samples']
+        self._epoch_progress.progress(math.ceil(percent_complete * 100))
+        self._epoch_summary(
+            f"loss: {logs['loss']:>7.5f} | acc: {logs['acc']:>7.5f}")
 
-    def on_train_begin(self, logs=None):
-        self._print('on_train_begin', logs)
+    def on_epoch_end(self, epoch, logs=None):
+        self._print.header('Summary', level=5)
+        categories = np.array(['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog',
+            'frog', 'horse', 'ship', 'truck'])
+        indices = np.random.choice(len(self._x_test), 36)
+        test_data = self._x_test[indices]
+        prediction = np.argmax(self.model.predict(test_data), axis=1)
+        self._print.img(test_data, caption=categories[prediction], width=117)
+        summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
+        self._print(summary)
+        self._summary_stats(f'{"epoch":>8s} :  {epoch}\n{summary}')
 
-    def on_train_end(self, logs=None):
-        self._print('on_train_end', logs)
+    def _create_chart(self, type='line', height=0):
+        empty_data = pd.DataFrame(columns=['loss', 'acc'])
+        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart.y_axis(type='number',
+            y_axis_id="loss_axis", allow_data_overflow="true")
+        epoch_chart.y_axis(type='number', orientation='right',
+            y_axis_id="acc_axis", allow_data_overflow="true")
+        epoch_chart.cartesian_grid(stroke_dasharray='3 3')
+        epoch_chart.legend()
+        getattr(epoch_chart, type)(type='monotone', data_key='loss',
+            stroke='rgb(44,125,246)', fill='rgb(44,125,246)',
+            dot="false", y_axis_id='loss_axis')
+        getattr(epoch_chart, type)(type='monotone', data_key='acc',
+            stroke='#82ca9d', fill='#82ca9d',
+            dot="false", y_axis_id='acc_axis')
+        return self._print.chart(epoch_chart)
 
 with Notebook() as print:
     print('CIFAR CNN', fmt='header', level=1)
@@ -39,23 +79,11 @@ with Notebook() as print:
     model_name = 'keras_cifar10_trained_model.h5'
 
     # The data, shuffled and split between train and test sets:
-    print('Data Statistics', fmt='header', level=3)
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    print('x_train shape:', x_train.shape)
-    print('y_train shape:', y_train.shape)
-    print('x_test shape:', x_test.shape)
-    print('y_test shape:', y_test.shape)
-    print('y_train example:', list(map(int, y_train[:10])))
-
-    print.header('x_train', level=4)
-    indices = np.random.choice(len(x_train), size=12)
-    print.img(x_train[indices], caption=y_train[indices], width=117)
 
     # Convert class vectors to binary class matrices.
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
-    print.header('categorical')
-    print(y_train[:20])
 
     model = Sequential()
     model.add(Conv2D(32, (3, 3), padding='same',
@@ -88,7 +116,7 @@ with Notebook() as print:
       batch_size=30,
       epochs=100,
       validation_data=(x_test, y_test),
-      callbacks=[PritnfCallback(print)],
+      callbacks=[MyCallback(x_test, print)],
       shuffle=True)
 
 

@@ -10,7 +10,7 @@ import math
 
 from tiny_notebook import Notebook, Chart
 
-class PritnfCallback(keras.callbacks.Callback):
+class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test, print):
         self._x_test = x_test
         self._print = print
@@ -111,7 +111,7 @@ with Notebook() as print:
     model.compile(loss='categorical_crossentropy', optimizer=sgd,
         metrics=['accuracy'])
     model.fit(x_train, y_train, validation_data=(x_test, y_test),
-        epochs=epochs, callbacks=[PritnfCallback(x_test, print)])
+        epochs=epochs, callbacks=[MyCallback(x_test, print)])
 
     print.alert('Finished training!', type='success')
 
