@@ -1,15 +1,16 @@
-#### Demo
+#### Presentation
 
-- objectives
-  - Need to make all the main components into pure components. See if that -
-    - Div.js
-    - ImageList.js
+- Post-facto analytics
+  - Screen showing the running jobs:
+    Sorted by date
+  - Click on that screen, it opens up.
+  - As the user mouses down, some possible icons appear next to the items.
+  - Clicking on one of those items shows possible other options.
+
+#### Demo
 
   - **I want Lukas to appreciate the full power of logging as s company.**
     - Three really nice demos.
-      - Speed Test
-      - See if it works with a graph too.
-      - Keras Test
     - ONE OF
       - really beautiful slides about what's possible when this becomes a first
         class citizen in the logging world
