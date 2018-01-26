@@ -41,6 +41,7 @@ def display_field(field, clip_at, name=None, loc=None, width=160):
 def enforce_boundaries(dens, vels):
     vel = np.array(vels)
     vels[0,0,:] = vels[1,:,0] = 0.0
+    print('enforcing boundaries:', type(dens))
     dens[:,0] = 0.0
     return dens, vels
 
@@ -85,7 +86,7 @@ def enforce_divergence_free(vels):
         new_pressure[ :  ,1:  ] += pressure[  :  , :-1]
         new_pressure /= factor
         pressure = new_pressure
-        # maximum_div = max_div(vels - grad(pressure))
+        maximum_div = max_div(vels - grad(pressure))
         # new_row = pd.DataFrame([maximum_div], columns=['div'])
         # div_chart.add_rows(new_row)
 
@@ -173,8 +174,11 @@ with Notebook() as print:
 
 
     print.header('Statistics', level=2)
-    width, height = 100,100
+    width, height = 200,200
+    dt = 0.5
+    heat_coef = 0.5
     print(f'Grid domain: {width}x{height}')
+    print(f'dt : {dt}\nheat_coef : {heat_coef}')
 
     # create some random velocity fields
     vels = np.random.randn(2, width, height)
@@ -191,8 +195,8 @@ with Notebook() as print:
 
     # start doing some physics - call
     print.header('Simulation Log', level=2)
-    dt = 0.5
-    heat_coef = 0.5
+
+    total_density = np.sum(dens)
     for timestep in range(100):
         print.header(f'Timestep: {timestep}', level=3)
         print('dens stats:', np.min(dens), np.max(dens), np.sum(dens))
@@ -201,6 +205,7 @@ with Notebook() as print:
         dens, vels = enforce_boundaries(dens, vels)
         display_field(vels, 3.0, 'vels')
         dens = advect(dens, [0.5, 0.5], vels, dt)
+        dens = dens / np.sum(dens) * total_density
         new_vels = np.zeros(vels.shape)
         new_vels[0,:] = advect(vels[0], [0.0, 0.5], vels, dt)
         new_vels[1,:] = advect(vels[1], [0.5, 0.0], vels, dt)

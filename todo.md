@@ -1,26 +1,3 @@
-#### Presentation
-
-- Post-facto analytics
-  - Screen showing the running jobs:
-    Sorted by date
-  - Click on that screen, it opens up.
-  - As the user mouses down, some possible icons appear next to the items.
-  - Clicking on one of those items shows possible other options.
-
-#### Demo
-
-  - **I want Lukas to appreciate the full power of logging as s company.**
-    - Three really nice demos.
-    - ONE OF
-      - really beautiful slides about what's possible when this becomes a first
-        class citizen in the logging world
-      - The ability to do a save into an Amazon Store
-        - Maybe first a janky version storing to a local file.
-        - Use Aamazon Parse to store a separate version.
-  - **I want lukas to think I'm a great coder.**
-    - rename tiny_notebook to printf
-    - Pip install method
-
 #### Todo After the Demo
 
 - Get the name printf.com.
