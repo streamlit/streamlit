@@ -1,5 +1,26 @@
+#### Vetting Various Web Frameworks
+
+- Frameworks
+  - Django / Heroku
+  - Meteor
+  - Node / Express?
+- Questions
+  - Can I read / write to the database?
+  - Can I read / write json to the database?
+  - Can I create a websocket connection to the client?
+  - Can I create a websocket connection to the server?
+- Todo
+  - Go through each framework answering these questions
+  - Then answer: what would the architecture look like with that thing?
+  - Requirements:
+    - Can see "realtime" updates both locally and through the web
+    - Can see a list of previous simulations.
+    - Google / Github Login
+- Then create an awesome client!
+
 #### Todo After the Demo
 
+- Fix the image parsing bug.
 - Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
