@@ -1,28 +1,50 @@
-#### Vetting Various Web Frameworks
+#### New Layout for the code
 
-- Framework
-  - Express
-  - Flask / aiohttp ??
-  - These are gross
-    - Meteor
-    - Django / Heroku - gross
-- Questions / Tasks
-  - **Can I read / write to the database?**
-    - Make each visit write to the visits document.
-  - **Can I read / write json to the database?**
-  - **Can I create a websocket connection to the client?**
-  - **Can I create a websocket connection to the server?**
-- Todo
-  - Go through each framework answering these questions
-  - Then answer: what would the architecture look like with that thing?
-  - Requirements:
-    - Can see "realtime" updates both locally and through the web
-    - Can see a list of previous simulations.
-    - Google / Github Login
-  - Follow-on Tasks
-    - Express
-      - Figure out how I can use Babel
-- Then create an awesome client!
+- test to see if we can subtree in specific folders from another repository
+  - create test-local
+    - three folders
+  - create test-server
+    - its own fold
+  - subtree in the two folders from test-
+    - commit in test-local propagates back to server
+    - commit in server is localized
+    - commit test-local commit in server propagates back to client
+  - is it possible to check this thing out again and it all works?
+  - now, create a disaggregated branch in the real code
+    - see if I can get the client working with disaggregated structure
+    - move everything to the new structure
+    - start working on the client for real!
+- go back to master and make a new branch disaggregated
+
+##### Transposing the Layout:
+
+local/
+  client/
+  server/
+shared/
+  client/
+  server/
+  protobuf/
+cloud/
+  client/
+  server/
+
+#### Implementing The Server
+
+- **Path to the server:** Running the client locally with `save=True` writes to the server.
+  - make a unified
+  - save=True option in Notebook
+  - opens a connection on the server.. sends a UID for the session
+  - begins writing to the server
+  - server simply prints out the size of everything that is being sent
+    - *Verify:* What happens if we send bigger and bigger payloads?
+    -
+  - server has admin page
+  - server allows me to see its contents
+  - *NOTE:* Move shared python things to a shared package.
+- **Path back from the server:** Can look up previous results statically on the server.
+- **Bidirectional path:** Running with `save=True`
+- Get the server up and running on Amazon.
 
 #### Todo After the Demo
 
