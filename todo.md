@@ -1,31 +1,3 @@
-#### New Layout for the code
-
-- test to see if we can subtree in specific folders from another repository
-  - is it possible to check this thing out again and it all works?
-  - now, create a disaggregated branch in the real code
-    - see if I can get the client working with disaggregated structure
-      - move everything into the new structure
-      - keep testing with periodic-table
-      - do we need `make init` ... I think not
-      - then move the final thing
-    - move everything to the new structure
-- after the streamlet-shared is split out
-  - add a repository to the shared/client/package.json
-- go back to master and make a new branch disaggregated
-
-##### Transposing the Layout:
-
-local/
-  client/
-  server/
-shared/
-  client/
-  server/
-  protobuf/
-cloud/
-  client/
-  server/
-
 #### Implementing The Server
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
@@ -84,3 +56,16 @@ cloud/
 - Follow the docker tutorial
 - Install node within docker
 - make the awesomest library ever
+
+#### Disaggregated File Layout
+
+- `local/`
+  - `client/`
+  - `server/`
+- `shared/`
+  - `client/`
+  - `server/`
+  - `protobuf/`
+- `cloud/`
+  - `client/`
+  - `server/`
