@@ -1,0 +1,46 @@
+  532  git add a/a.txt b/b.txt c/c.txt 
+  533  git commit -am "Added three test files and folders."
+  534  git push
+  537  git clone git@github.com:treuille/test-server.git
+  543  git add d/d.txt e/e.txt 
+  544  git commit -am "Added some dummy files."
+  545  git push
+  546  git remote add local git@github.com:treuille/test-local.git
+  547  git remote
+  548  git help subtree add
+  549  git help subtree
+  550  git subtree
+  551  git config core.sparseCheckout
+  552  git remote
+  553  git checkout -b local
+  554  git pull local
+  555  git pull local master
+  557  git checkout master
+  558  git branch
+  559  git branch -d local
+  560  git branch
+  562  git subtree add --prefix=local/ local master
+  572  git add a/a2.txt 
+  573  git commit -am "Added another file to the a subdirectory."
+  574  git push
+  585  git fetch local/master
+  586  git fetch local
+  587  git merge -s subtree --squash local/master
+  591  git remteo
+  592  git remote
+  596  git add d/d2.txt 
+  597  git commit -am "Added a second file in d directory."
+  598  git push
+  599  git ci
+  600  git help ci
+  605  git add e/e2.txt 
+  606  git add local/a/a3.txt 
+  607  git commit -am "Add both some local and global commits."
+  608  git push
+  609  git subtree push -P local local master
+  610  git pull local master
+  614  git subtree push -P local local master
+  622  git pull
+  624  history | tail -n 50 | grep git
+  625  history | tail -n 100 | grep git
+  626  history | tail -n 100 | grep git > ../git-commands.txt
