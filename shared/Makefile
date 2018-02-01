@@ -13,7 +13,7 @@ JS_LIB_PATH = client/lib
 # Files for the protobuf libraries.
 PROTOBUF_SRC_FILES = protobuf/*.proto
 PROTOBUF_BUNDLE_JS = client/lib/protobuf/streamlet.js
-# protobuf_bundle_python = tiny_notebook/protobuf/Element_pb2.py
+PROTOBUF_BUNDLE_PYTHON = server/protobuf/Element_pb2.py
 
 #####################
 # USAGE INFORMATION #
@@ -52,12 +52,12 @@ js-lib: $(JS_SRC_FILES)
 		client/src/ client/lib/
 
 # Makes all the generate protobuf codes.
-protobuf-lib: $(PROTOBUF_BUNDLE_JS) # $(protobuf_bundle_python)
+protobuf-lib: $(PROTOBUF_BUNDLE_JS) $(PROTOBUF_BUNDLE_PYTHON)
 
-# # Python javascript implementation uses protoc.
-# $(protobuf_bundle_python): $(PROTOBUF_SRC_FILES)
-# 	protoc --proto_path=protobuf $(PROTOBUF_SRC_FILES) \
-# 		--python_out=tiny_notebook/protobuf
+# Python javascript implementation uses protoc.
+$(PROTOBUF_BUNDLE_PYTHON): $(PROTOBUF_SRC_FILES)
+	protoc --proto_path=protobuf $(PROTOBUF_SRC_FILES) \
+		--python_out=server/protobuf
 
 # Javascript protobuf implementation uses pbjs.
 $(PROTOBUF_BUNDLE_JS): $(PROTOBUF_SRC_FILES)

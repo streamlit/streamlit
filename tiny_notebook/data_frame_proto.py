@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from tiny_notebook import protobuf
+# from tiny_notebook import protobuf
 
 def marshall_data_frame(pandas_df, proto_df):
     """
