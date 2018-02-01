@@ -27,13 +27,17 @@ loc:
 
 # Initializes the repository. DO THIS AFTER CHECKING OUT!
 init:
-	# See: https://docs.npmjs.com/cli/link
-	echo 'Creating a global link to streamlet-shared.'
-	pushd shared/client/
-	npm link
+	# Put in a link from the client to the shared libraries.
+	pushd web-client/node_modules
+	ln -sv ../../shared/client streamlet_shared
 	popd
-
-	echo 'Locally linking web-client to streamlet-shared.'
-	pushd web-client/
-	npm link streamlet-shared
-	popd
+	# # See: https://docs.npmjs.com/cli/link
+	# echo 'Creating a global link to streamlet-shared.'
+	# pushd shared/client/
+	# npm link
+	# popd
+  #
+	# echo 'Locally linking web-client to streamlet-shared.'
+	# pushd web-client/
+	# npm link streamlet-shared
+	# popd

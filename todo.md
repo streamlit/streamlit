@@ -4,6 +4,8 @@
   - is it possible to check this thing out again and it all works?
   - now, create a disaggregated branch in the real code
     - see if I can get the client working with disaggregated structure
+      - see if I can do a *symbolic link* right out of node_modules
+        - IF THAT WORKS: Check the symbolic link directly into the repo.
       - test periodic-table
       - try the npm link method
         - rerun init and see if it still works
@@ -15,6 +17,7 @@
 - after the streamlet-shared is split out
   - add a repository to the shared/client/package.json
 - go back to master and make a new branch disaggregated
+
 
 ##### Transposing the Layout:
 
@@ -49,6 +52,7 @@ cloud/
 #### Todo After the Demo
 
 - Fix the image parsing bug.
+- Make sure that symbolic links are preserved when we a clean checkout of the repo.
 - Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
@@ -74,6 +78,7 @@ cloud/
 
 #### More things to play with and try
 
+- Put in `balloons()` function.
 - Reimplement core logic in Redux
 - Fix resizing bug with the table dimensions.
 - Put in properties for CHART_COMPONENTS

@@ -1,0 +1,26 @@
+{
+  "name": "streamlet-shared",
+  "version": "1.0.0",
+  "description": "Javascript and CSS modules shared across all streamlet projects.",
+  "main": "index.js",
+  "scripts": {
+    "build": "babel src -d lib",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "streamlet",
+    "shared",
+    "log",
+    "logs",
+    "logging",
+    "datascience",
+    "deeplearning"
+  ],
+  "author": "Adrien Treuille",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
+    "babel-preset-env": "^1.6.1"
+  }
+}
