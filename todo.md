@@ -5,9 +5,18 @@
   - now, create a disaggregated branch in the real code
     - see if I can get the client working with disaggregated structure
       - move everything into the new structure
-      - see if I can do a *symbolic link* right out of node_modules
-      - make the repo private so that I can start working on the sever
-      - IF THAT WORKS: Check the symbolic link directly into the repo.
+        - local/client/src/dataFrameProto.js
+        - local/client/src/immutableProto.js
+        - local/client/src/PersistentWebsocket.js
+        - local/client/src/elements/DataFrame.js
+        - local/client/src/elements/Chart.js
+        - local/client/src/elements/ImageList.css
+        - local/client/src/elements/DataFrame.css
+        - local/client/src/elements/ImageList.js
+      - figure out what I'm going to do with these
+        - local/client/src/protobuf
+        - local/client/src/protobuf/printf.js
+        - local/client/src/protobuf/.gitkeep
       - move over shared objects one by one
       - keep testing with periodic-table
       - do we need `make init` ... I think not

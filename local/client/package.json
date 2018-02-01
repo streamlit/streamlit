@@ -1,5 +1,5 @@
 {
-  "name": "streamlet-client",
+  "name": "streamlet-local-client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

@@ -22,8 +22,9 @@ import ImageList from './elements/ImageList';
 // Other local imports.
 import PersistentWebsocket from './PersistentWebsocket';
 import { DeltaList } from './protobuf/printf';
-import { addRows } from './dataFrameProto';
-import { toImmutableProto, dispatchOneOf } from './immutableProto';
+import { addRows } from 'streamlet-shared/lib/dataFrameProto';
+import { toImmutableProto, dispatchOneOf }
+  from 'streamlet-shared/lib/immutableProto';
 import { fromJS } from 'immutable';
 
 import './WebClient.css';

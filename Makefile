@@ -27,6 +27,7 @@ help:
 	@echo "help                    - Print this help message.             "
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
 	@echo "clean                   - Remove all js libs.                  "
+	@echo "streamlet-shared        - Build shared streamlet JS libs.      "
 	@echo "protobuf-libs           - The protobuf libraries.              "
 	@echo "                                                               "
 
