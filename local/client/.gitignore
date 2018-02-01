@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+!/node_modules/streamlet-shared
 
 # testing
 /coverage

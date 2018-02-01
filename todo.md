@@ -4,20 +4,18 @@
   - is it possible to check this thing out again and it all works?
   - now, create a disaggregated branch in the real code
     - see if I can get the client working with disaggregated structure
+      - move everything into the new structure
       - see if I can do a *symbolic link* right out of node_modules
-        - IF THAT WORKS: Check the symbolic link directly into the repo.
-      - test periodic-table
-      - try the npm link method
-        - rerun init and see if it still works
-          - aka is `make init` idempotent?
+      - make the repo private so that I can start working on the sever
+      - IF THAT WORKS: Check the symbolic link directly into the repo.
       - move over shared objects one by one
       - keep testing with periodic-table
+      - do we need `make init` ... I think not
       - then move the final thing
     - move everything to the new structure
 - after the streamlet-shared is split out
   - add a repository to the shared/client/package.json
 - go back to master and make a new branch disaggregated
-
 
 ##### Transposing the Layout:
 
