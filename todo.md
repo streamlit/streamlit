@@ -5,13 +5,9 @@
   - now, create a disaggregated branch in the real code
     - see if I can get the client working with disaggregated structure
       - move everything into the new structure
-        - local/client/src/dataFrameProto.js
-        - local/client/src/immutableProto.js
-        - local/client/src/PersistentWebsocket.js
-        - local/client/src/elements/DataFrame.js
-        - local/client/src/elements/Chart.js
-        - local/client/src/elements/ImageList.css
         - local/client/src/elements/DataFrame.css
+        - local/client/src/elements/DataFrame.js
+        - local/client/src/elements/ImageList.css
         - local/client/src/elements/ImageList.js
       - figure out what I'm going to do with these
         - local/client/src/protobuf

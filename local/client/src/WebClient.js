@@ -14,7 +14,7 @@ import {
 } from 'reactstrap';
 
 // Display Elements
-import DataFrame from './elements/DataFrame';
+import DataFrame from 'streamlet-shared/lib/elements/DataFrame';
 import Div from 'streamlet-shared/lib/elements/Div';
 import Chart from 'streamlet-shared/lib/elements/Chart';
 import ImageList from './elements/ImageList';
