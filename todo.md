@@ -7,7 +7,6 @@
   - begins writing to the server
   - server simply prints out the size of everything that is being sent
     - *Verify:* What happens if we send bigger and bigger payloads?
-    -
   - server has admin page
   - server allows me to see its contents
   - *NOTE:* Move shared python things to a shared package.
