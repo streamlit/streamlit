@@ -16,11 +16,11 @@ import {
 // Display Elements
 import DataFrame from './elements/DataFrame';
 import Div from 'streamlet-shared/lib/elements/Div';
-import Chart from './elements/Chart';
+import Chart from 'streamlet-shared/lib/elements/Chart';
 import ImageList from './elements/ImageList';
 
 // Other local imports.
-import PersistentWebsocket from './PersistentWebsocket';
+import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
 import { DeltaList } from './protobuf/printf';
 import { addRows } from 'streamlet-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
