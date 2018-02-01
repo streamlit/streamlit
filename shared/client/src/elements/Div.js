@@ -17,7 +17,7 @@ class Div extends PureComponent {
           <div key={indx}>
             {
               // Replace spaces with unicode nonbreaking spaces.
-              line /*.replace(/ /g, '\u2007')*/
+              'abcdef' + line /*.replace(/ /g, '\u2007')*/
             }
           </div>
         ))}

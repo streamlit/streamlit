@@ -24,3 +24,16 @@ loc:
 		-iname '*.py' -or -iname '*.js' -or -iname '*.proto' | \
 		egrep -v "(_pb2)|(printf\.js)|(registerServiceWorker)" | \
 		xargs wc
+
+# Initializes the repository. DO THIS AFTER CHECKING OUT!
+init:
+	# See: https://docs.npmjs.com/cli/link
+	echo 'Creating a global link to streamlet-shared.'
+	pushd shared/client/
+	npm link
+	popd
+
+	echo 'Locally linking web-client to streamlet-shared.'
+	pushd web-client/
+	npm link streamlet-shared
+	popd

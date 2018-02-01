@@ -1,19 +1,19 @@
 #### New Layout for the code
 
 - test to see if we can subtree in specific folders from another repository
-  - create test-local
-    - three folders
-  - create test-server
-    - its own fold
-  - subtree in the two folders from test-
-    - commit in test-local propagates back to server
-    - commit in server is localized
-    - commit test-local commit in server propagates back to client
   - is it possible to check this thing out again and it all works?
   - now, create a disaggregated branch in the real code
     - see if I can get the client working with disaggregated structure
+      - test periodic-table
+      - try the npm link method
+        - rerun init and see if it still works
+          - aka is `make init` idempotent?
+      - move over shared objects one by one
+      - keep testing with periodic-table
+      - then move the final thing
     - move everything to the new structure
-    - start working on the client for real!
+- after the streamlet-shared is split out
+  - add a repository to the shared/client/package.json
 - go back to master and make a new branch disaggregated
 
 ##### Transposing the Layout:

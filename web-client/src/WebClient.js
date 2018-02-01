@@ -13,7 +13,6 @@ import {
   Row,
 } from 'reactstrap';
 
-
 // Display Elements
 import DataFrame from './elements/DataFrame';
 import Div from './elements/Div';
@@ -28,6 +27,8 @@ import { toImmutableProto, dispatchOneOf } from './immutableProto';
 import { fromJS } from 'immutable';
 
 import './WebClient.css';
+
+const version = 'delete this lin ';
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -137,6 +138,7 @@ class WebClient extends PureComponent {
         if (!element)
           throw new Error('Transmission error.')
         return dispatchOneOf(element, 'type', {
+          // div: (div) => <div>A div.</div>,
           div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
