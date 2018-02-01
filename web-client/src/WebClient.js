@@ -15,7 +15,6 @@ import {
 
 // Display Elements
 import DataFrame from './elements/DataFrame';
-// import Div from './elements/Div';
 import Div from 'streamlet-shared/lib/elements/Div';
 import Chart from './elements/Chart';
 import ImageList from './elements/ImageList';
