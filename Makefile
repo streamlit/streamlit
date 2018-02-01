@@ -9,9 +9,7 @@
 # JS_SRC_FILES = $(shell find $(JS_SRC_PATH) -iname '*.js' -or -iname '*.css')
 # JS_LIB_PATH = client/lib
 
-protobuf_sources = protobuf/*.proto
-protobuf_bundle_js = web-client/src/protobuf/printf.js
-protobuf_bundle_python = tiny_notebook/protobuf/Element_pb2.py
+
 
 #####################
 # USAGE INFORMATION #
@@ -28,35 +26,19 @@ help:
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
 	@echo "clean                   - Remove all js libs.                  "
 	@echo "streamlet-shared        - Build shared streamlet JS libs.      "
-	@echo "protobuf-libs           - The protobuf libraries.              "
+	@echo "protobuf-lib           - The protobuf libraries.              "
 	@echo "                                                               "
 
 ###################
 # OTHER FUNCTIONS #
 ###################
 
-all: protobuf-libs streamlet-shared
+all:
+	pushd	shared ; make all ; popd
 
 # Cleans out generated files.
 clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
-
-# Make the shared javascript library.
-streamlet-shared:
-	pushd	shared ; make streamlet-shared-js-lib ; popd
-
-# Makes all the generate protobuf codes.
-protobuf-libs: $(protobuf_bundle_python) $(protobuf_bundle_js)
-
-# Python javascript implementation uses protoc.
-$(protobuf_bundle_python): $(protobuf_sources)
-	protoc --proto_path=protobuf $(protobuf_sources) \
-		--python_out=tiny_notebook/protobuf
-
-# Javascript protobuf implementation uses pbjs.
-$(protobuf_bundle_js): $(protobuf_sources)
-	pbjs $(protobuf_sources) -t static-module -w es6 > $(protobuf_bundle_js)
-
 
 # # Counts the number of lines of code in the project
 # loc:

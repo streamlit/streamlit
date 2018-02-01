@@ -21,7 +21,7 @@ import ImageList from 'streamlet-shared/lib/elements/ImageList';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
-import { DeltaList } from './protobuf/printf';
+import { DeltaList } from 'streamlet-shared/lib/protobuf/streamlet';
 import { addRows } from 'streamlet-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
   from 'streamlet-shared/lib/immutableProto';

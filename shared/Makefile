@@ -5,9 +5,15 @@
 # BUILD VARIABLES #
 ###################
 
+# Files for the javascript library.
 JS_SRC_PATH = client/src
 JS_SRC_FILES = $(shell find $(JS_SRC_PATH) -iname '*.js' -or -iname '*.css')
 JS_LIB_PATH = client/lib
+
+# Files for the protobuf libraries.
+PROTOBUF_SRC_FILES = protobuf/*.proto
+PROTOBUF_BUNDLE_JS = client/lib/protobuf/streamlet.js
+# protobuf_bundle_python = tiny_notebook/protobuf/Element_pb2.py
 
 #####################
 # USAGE INFORMATION #
@@ -23,23 +29,36 @@ help:
 	@echo "help                    - Print this help message.        "
 	@echo "all                     - Build all JS and Python libs.   "
 	@echo "clean                   - Remove all js libs.             "
-	@echo "streamlet-shared-js-lib - The shared javascript library.  "
+	@echo "js-lib                  - The shared javascript library.  "
+	@echo "protobuf-lib            - The shared javascript library.  "
 	@echo "                                                          "
 
 ###################
 # OTHER FUNCTIONS #
 ###################
 
-all: streamlet-shared-js-lib
+all: js-lib protobuf-lib
 
 clean:
 	rm -rfv $(JS_LIB_PATH)
 
 # Make the javascript library
-streamlet-shared-js-lib: $(JS_SRC_FILES)
+js-lib: $(JS_SRC_FILES)
 	# Compile javascript files.
 	npm --prefix=client/ run build
 
 	# Copy over .css files.
 	rsync -arvm --include="*/" --include="*.css" --exclude="*" \
 		client/src/ client/lib/
+
+# Makes all the generate protobuf codes.
+protobuf-lib: $(PROTOBUF_BUNDLE_JS) # $(protobuf_bundle_python)
+
+# # Python javascript implementation uses protoc.
+# $(protobuf_bundle_python): $(PROTOBUF_SRC_FILES)
+# 	protoc --proto_path=protobuf $(PROTOBUF_SRC_FILES) \
+# 		--python_out=tiny_notebook/protobuf
+
+# Javascript protobuf implementation uses pbjs.
+$(PROTOBUF_BUNDLE_JS): $(PROTOBUF_SRC_FILES)
+	pbjs $(PROTOBUF_SRC_FILES) -t static-module -w es6 > $(PROTOBUF_BUNDLE_JS)
