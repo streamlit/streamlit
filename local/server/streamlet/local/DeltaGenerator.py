@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 
 from streamlet.shared import protobuf
-from streamlet import data_frame_proto, image_proto
-from streamlet.Chart import Chart
+from streamlet.local import data_frame_proto, image_proto
+from streamlet.local.Chart import Chart
 
 class DeltaGenerator:
     """

@@ -10,8 +10,8 @@ import websockets
 import time
 
 from streamlet.shared import protobuf
-from streamlet.DeltaQueue import DeltaQueue
-from streamlet.DeltaGenerator import DeltaGenerator
+from streamlet.local.DeltaQueue import DeltaQueue
+from streamlet.local.DeltaGenerator import DeltaGenerator
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
