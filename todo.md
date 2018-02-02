@@ -1,7 +1,10 @@
 #### Implementing The Server
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
-  - make a unified
+  - move `tiny_notebook` into `local/server`
+  - make sure the periodic table still works
+  - make a unified config
+  - make the server load the unified config
   - save=True option in Notebook
   - opens a connection on the server.. sends a UID for the session
   - begins writing to the server

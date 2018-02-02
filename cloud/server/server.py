@@ -1,15 +1,15 @@
 """This is a webserver for the printf project."""
 
-#################
-# Config Values #
-#################
-
-import yaml
-
-PORT = 8080
-CONFIG_PATH = '/Users/adrien/Desktop/tiny-notebook/web-server/config.yaml'
-with open(CONFIG_PATH) as config:
-    config = yaml.load(config)
+# #################
+# # Config Values #
+# #################
+#
+# import yaml
+#
+# PORT = 8080
+# CONFIG_PATH = '/Users/adrien/Desktop/tiny-notebook/web-server/config.yaml'
+# with open(CONFIG_PATH) as config:
+#     config = yaml.load(config)
 
 ##################
 # Database Stuff #

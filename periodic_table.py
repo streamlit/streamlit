@@ -1,12 +1,15 @@
 """Test scripts to see if the server is working."""
 
-from tiny_notebook import Notebook, Chart
 import pandas as pd
 import numpy as np
 from PIL import Image
 import urllib, io
+import sys
 
-import time # debug
+sys.path.append('local/server')
+print('About to do th import', sys.path)
+from streamlet import Notebook, Chart
+print('Finished the import.')
 
 with Notebook() as write:
     # Title.
