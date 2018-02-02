@@ -1,9 +1,10 @@
 {
-  "name": "web-client",
+  "name": "streamlet-local-client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0-beta.3",
+    "charts": "^1.0.0-beta.9",
     "immutable": "^3.8.2",
     "numeral": "^2.0.6",
     "protobufjs": "^6.8.4",
@@ -12,7 +13,7 @@
     "react-scripts": "1.0.17",
     "react-virtualized": "^9.16.1",
     "reactstrap": "^5.0.0-alpha.4",
-    "charts": "^1.0.0-beta.9"
+    "recharts": "^1.0.0-beta.10"
   },
   "scripts": {
     "start": "react-scripts start",

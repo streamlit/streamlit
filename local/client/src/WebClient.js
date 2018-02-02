@@ -13,18 +13,18 @@ import {
   Row,
 } from 'reactstrap';
 
-
 // Display Elements
-import DataFrame from './elements/DataFrame';
-import Div from './elements/Div';
-import Chart from './elements/Chart';
-import ImageList from './elements/ImageList';
+import DataFrame from 'streamlet-shared/lib/elements/DataFrame';
+import Div from 'streamlet-shared/lib/elements/Div';
+import Chart from 'streamlet-shared/lib/elements/Chart';
+import ImageList from 'streamlet-shared/lib/elements/ImageList';
 
 // Other local imports.
-import PersistentWebsocket from './PersistentWebsocket';
-import { DeltaList } from './protobuf/printf';
-import { addRows } from './dataFrameProto';
-import { toImmutableProto, dispatchOneOf } from './immutableProto';
+import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
+import { DeltaList } from 'streamlet-shared/lib/protobuf/streamlet';
+import { addRows } from 'streamlet-shared/lib/dataFrameProto';
+import { toImmutableProto, dispatchOneOf }
+  from 'streamlet-shared/lib/immutableProto';
 import { fromJS } from 'immutable';
 
 import './WebClient.css';
@@ -37,6 +37,7 @@ class WebClient extends PureComponent {
     this.state = {
       elements: fromJS([{
         type: 'div',
+        version: '123',
         div: {
           text: 'No data received.',
           classes: 'alert alert-info',
@@ -137,6 +138,7 @@ class WebClient extends PureComponent {
         if (!element)
           throw new Error('Transmission error.')
         return dispatchOneOf(element, 'type', {
+          // div: (div) => <div>A div.</div>,
           div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,

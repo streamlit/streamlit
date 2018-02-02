@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
-import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
+import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlet-shared/lib/dataFrameProto';
 
 import * as recharts from 'recharts';
 const COMPONENTS = {

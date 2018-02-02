@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image
 import urllib, io
 
-
 import time # debug
 
 with Notebook() as write:

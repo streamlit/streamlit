@@ -1,34 +1,3 @@
-#### New Layout for the code
-
-- test to see if we can subtree in specific folders from another repository
-  - is it possible to check this thing out again and it all works?
-  - now, create a disaggregated branch in the real code
-    - see if I can get the client working with disaggregated structure
-      - test periodic-table
-      - try the npm link method
-        - rerun init and see if it still works
-          - aka is `make init` idempotent?
-      - move over shared objects one by one
-      - keep testing with periodic-table
-      - then move the final thing
-    - move everything to the new structure
-- after the streamlet-shared is split out
-  - add a repository to the shared/client/package.json
-- go back to master and make a new branch disaggregated
-
-##### Transposing the Layout:
-
-local/
-  client/
-  server/
-shared/
-  client/
-  server/
-  protobuf/
-cloud/
-  client/
-  server/
-
 #### Implementing The Server
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
@@ -38,7 +7,6 @@ cloud/
   - begins writing to the server
   - server simply prints out the size of everything that is being sent
     - *Verify:* What happens if we send bigger and bigger payloads?
-    -
   - server has admin page
   - server allows me to see its contents
   - *NOTE:* Move shared python things to a shared package.
@@ -49,6 +17,7 @@ cloud/
 #### Todo After the Demo
 
 - Fix the image parsing bug.
+- Make sure that symbolic links are preserved when we a clean checkout of the repo.
 - Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
@@ -74,6 +43,7 @@ cloud/
 
 #### More things to play with and try
 
+- Put in `balloons()` function.
 - Reimplement core logic in Redux
 - Fix resizing bug with the table dimensions.
 - Put in properties for CHART_COMPONENTS
@@ -85,3 +55,16 @@ cloud/
 - Follow the docker tutorial
 - Install node within docker
 - make the awesomest library ever
+
+#### Disaggregated File Layout
+
+- `local/`
+  - `client/`
+  - `server/`
+- `shared/`
+  - `client/`
+  - `server/`
+  - `protobuf/`
+- `cloud/`
+  - `client/`
+  - `server/`

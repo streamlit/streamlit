@@ -1,6 +1,13 @@
 # tiny-notebook
 A stateless alternative to Jupyter notebooks for machine learning and data science.
 
+## To Initialize the Respository
+
+Run:
+```
+make init
+```
+
 ## Dependencies
 
 *Note that these assume you have MacOS, and have only been tested on this platform.*
@@ -21,3 +28,9 @@ A stateless alternative to Jupyter notebooks for machine learning and data scien
 - `pillow`
   - `pip install pillow`
   - Allows us to manipulate images.
+- `aiohttp`
+  - `pip install aiohttp`
+  - Allows us to run http connections.
+- `motor`
+  - `pip install motor`
+  - Allows us to connect to the Mongo database.
