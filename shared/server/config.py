@@ -2,6 +2,7 @@
 
 import yaml
 
+__CONFIG_PATH = 'config.yaml'
 __GLOBAL_CONFIG = {}
 
 def get_config(build_type):
@@ -11,15 +12,8 @@ def get_config(build_type):
     development - For local development builds.
     production  - <not implemented>
     """
-    def to_obj(x):
-        """Converts a dict to an object."""
-        obj = Object()
-        for key, value in x.items():
-            setattr(obj, key, to_obj(value))
-
     assert build_type in ['development'], 'Build type not understood.'
     if not __GLOBAL_CONFIG:
-        with open('config.yaml') as config_file:
-            for build_type_key, build_config in yaml.load(config_file).items():
-                __GLOBAL_CONFIG[build_type_key] = to_obj(build_config)
+        with open(__CONFIG_PATH) as config_file:
+            __GLOBAL_CONFIG.update(yaml.load(config_file))
     return __GLOBAL_CONFIG[build_type]

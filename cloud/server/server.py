@@ -1,15 +1,9 @@
-"""This is a webserver for the printf project."""
+"""This is a webserver for the streamlet project."""
 
-# #################
-# # Config Values #
-# #################
-#
-# import yaml
-#
-# PORT = 8080
-# CONFIG_PATH = '/Users/adrien/Desktop/tiny-notebook/web-server/config.yaml'
-# with open(CONFIG_PATH) as config:
-#     config = yaml.load(config)
+import sys
+
+sys.path.append('cloud/server')
+import streamlet.shared.config
 
 ##################
 # Database Stuff #
@@ -76,9 +70,18 @@ async def index(request):
     """Handler for the main index calls."""
     return web.Response(text='Hello printf!')
 
-app = web.Application()
-app.on_startup.append(init_database(config['mongodb']))
-app.on_cleanup.append(close_database())
-app.router.add_get('/', index)
-web.run_app(app, port=PORT)
-print(f'Started webserver at port {PORT}.')
+def main():
+    config = streamlet.shared.config.get_config('development')
+    port = config['cloud']['port']
+    assert set(config.keys()).issuperset(('mongodb', 'cloud')), \
+        "config.yaml must include `mongodb` and `cloud` sections."
+    app = web.Application()
+    app.on_startup.append(init_database(config['mongodb']))
+    app.on_cleanup.append(close_database())
+    app.router.add_get('/', index)
+    print(f"Starting webserver at port {port}.")
+    web.run_app(app, port=port)
+    print('Closed webserver.')
+
+if __name__ == '__main__':
+    main()
