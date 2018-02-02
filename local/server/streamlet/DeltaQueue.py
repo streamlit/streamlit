@@ -4,7 +4,7 @@ Provides DeltaQueue, a data structure for storing a bunch of deltas.
 Whenever possible, deltas are combined.
 """
 
-from tiny_notebook import data_frame_proto
+from streamlet import data_frame_proto
 
 class DeltaQueue:
     """Accumulates a bunch of deltas."""

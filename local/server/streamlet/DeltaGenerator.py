@@ -2,9 +2,10 @@
 
 import pandas as pd
 import numpy as np
-# from tiny_notebook import data_frame_proto, image_proto
-from tiny_notebook import protobuf, data_frame_proto, image_proto
-from tiny_notebook.Chart import Chart
+
+from streamlet.shared import protobuf
+from streamlet import data_frame_proto, image_proto
+from streamlet.Chart import Chart
 
 class DeltaGenerator:
     """

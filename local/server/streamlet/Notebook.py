@@ -9,9 +9,9 @@ import traceback
 import websockets
 import time
 
-from tiny_notebook import protobuf
-from tiny_notebook.DeltaQueue import DeltaQueue
-from tiny_notebook.DeltaGenerator import DeltaGenerator
+from streamlet.shared import protobuf
+from streamlet.DeltaQueue import DeltaQueue
+from streamlet.DeltaGenerator import DeltaGenerator
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \

@@ -7,9 +7,12 @@ import urllib, io
 import sys
 
 sys.path.append('local/server')
-print('About to do th import', sys.path)
 from streamlet import Notebook, Chart
-print('Finished the import.')
+
+# print('About to do th import', sys.path)
+# print('Finished the import.')
+# print('Exiting.')
+# sys.exit(-1)
 
 with Notebook() as write:
     # Title.
