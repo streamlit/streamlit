@@ -40,6 +40,7 @@ clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
 
 init:
+	cd shared ; make init
 	cd local/client ; npm install
 
 # # Counts the number of lines of code in the project

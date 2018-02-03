@@ -21,23 +21,27 @@ PROTOBUF_BUNDLE_PYTHON = server/protobuf/Element_pb2.py
 
 help:
 	@echo "Usage:"
-	@echo "                                                          "
-	@echo "  make <cmd>                                              "
-	@echo "                                                          "
-	@echo "Where <cmd> is one of:                                    "
-	@echo "                                                          "
-	@echo "help                    - Print this help message.        "
-	@echo "all                     - Build all JS and Python libs.   "
-	@echo "clean                   - Remove all js libs.             "
-	@echo "js-lib                  - The shared javascript library.  "
-	@echo "protobuf-lib            - The shared javascript library.  "
-	@echo "                                                          "
+	@echo "                                                               "
+	@echo "  make <cmd>                                                   "
+	@echo "                                                               "
+	@echo "Where <cmd> is one of:                                         "
+	@echo "                                                               "
+	@echo "help                    - Print this help message.             "
+	@echo "all                     - Build all JS and Python libs.        "
+	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
+	@echo "clean                   - Remove all js libs.                  "
+	@echo "js-lib                  - The shared javascript library.       "
+	@echo "protobuf-lib            - The shared javascript library.       "
+	@echo "                                                               "
 
 ###################
 # OTHER FUNCTIONS #
 ###################
 
 all: js-lib protobuf-lib
+
+init:
+	cd client ; npm install
 
 clean:
 	rm -rfv $(JS_LIB_PATH)
