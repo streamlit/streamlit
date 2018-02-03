@@ -12,6 +12,8 @@ import time
 from streamlet.shared import protobuf
 from streamlet.local.DeltaQueue import DeltaQueue
 from streamlet.local.DeltaGenerator import DeltaGenerator
+from streamlet.local import config as local_config
+from streamlet.shared import config as shared_config
 
 WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
@@ -22,7 +24,12 @@ SHUTDOWN_DELAY_SECS = 1.0
 THROTTLE_SECS = 0.01
 
 class Notebook:
-    def __init__(self):
+    def __init__(self, save=False):
+        """
+        Creates a new notebook object.
+
+        save - stream the notebook to the streamlet.io server for storage
+        """
         # Create objects for the server.
         self._server_loop = asyncio.new_event_loop()
         self._server_running = False
@@ -31,9 +38,16 @@ class Notebook:
         self._delta_queues = [DeltaQueue()]
         self._delta_generator = DeltaGenerator(self._add_delta)
 
+        # Remember whether or not we want to write to the server.
+        self._save_to_cloud = save
+
     def __enter__(self):
         # start the webserver
         self._launch_server()
+
+        # Connect to streamlet.io if necessary.
+        if self._save_to_cloud:
+            self._connect_to_cloud()
 
         # launch the webbrowser
         os.system(LAUNCH_BROWSER_SCRIPT)
@@ -123,8 +137,24 @@ class Notebook:
                 self._server_loop.stop)
 
         # Code to stop the thread must be run in the server loop.
-        # asyncio.run_coroutine_threadsafe(async_stop(), self._server_loop)
         self._enqueue_coroutine(async_stop)
+
+    def _connect_to_cloud(self):
+        async def async_connect_to_cloud():
+            cloud_config = shared_config.get_config('development')['cloud']
+            cloud_host = cloud_config['server']
+            cloud_port = cloud_config['port']
+            local_id = local_config.get_local_id()
+            uri = f'https://{cloud_host}:{cloud_port}/api/new/{local_id}'
+            print('Connecting to', uri)
+            async with websockets.connect(uri) as websocket:
+                await websocket.send('Hello world.')
+            print('Sent hello world.')
+            import sys
+            sys.exit(-1)
+
+        # Code to connect to the cloud must be done in a separate thread.
+        self._enqueue_coroutine(async_connect_to_cloud)
 
     def _enqueue_coroutine(self, coroutine):
         async def wrapped_coroutine():

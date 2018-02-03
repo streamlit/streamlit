@@ -70,6 +70,11 @@ async def index(request):
     """Handler for the main index calls."""
     return web.Response(text='Hello printf!')
 
+async def new_stream(request):
+    """Handle a new stream."""
+    local_id = request.match_info.get('local_id')
+    print(f"Got a connection with local id {local_id}.")
+
 def main():
     config = streamlet.shared.config.get_config('development')
     port = config['cloud']['port']
@@ -79,6 +84,7 @@ def main():
     app.on_startup.append(init_database(config['mongodb']))
     app.on_cleanup.append(close_database())
     app.router.add_get('/', index)
+    app.router.add_get('/api/new/{local_id}', new_stream)
     print(f"Starting webserver at port {port}.")
     web.run_app(app, port=port)
     print('Closed webserver.')
