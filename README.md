@@ -1,9 +1,13 @@
 # tiny-notebook
 A stateless alternative to Jupyter notebooks for machine learning and data science.
 
-## To Initialize the Respository
+## Installation Instructions
 
-Run:
+Check it out:
+```
+git clone git@github.com:treuille/streamlet-cloud.git
+```
+Establish a local environment.
 ```
 make init
 ```
