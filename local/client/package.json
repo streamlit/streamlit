@@ -4,7 +4,6 @@
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0-beta.3",
-    "charts": "^1.0.0-beta.9",
     "immutable": "^3.8.2",
     "numeral": "^2.0.6",
     "protobufjs": "^6.8.4",

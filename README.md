@@ -10,7 +10,11 @@ First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-
 git clone git@github.com:treuille/streamlet-cloud.git
 ```
 
-#### 2. Install `pyenv` and `pyenv-virtualenv`
+#### 2. Install `npm`
+
+No instructions at present. Please feel free to add your own.
+
+#### 3. Install `pyenv` and `pyenv-virtualenv`
 
 ###### On MacOS
 
@@ -21,13 +25,19 @@ brew install pyenv-virtualenv
 ###### On Linux
 Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
 
-#### 3. Establish a Local Python Environment
+#### 4. Establish a Local Python Environment
 
 Create a virtualenv environment called `streamlet`:
 ```
 pyenv install 3.6.3
 pyenv virtualenv 3.6.3 streamlet
 pyenv local streamlet
+```
+
+#### 5. Initialize the Repository
+
+```
+make init
 ```
 
 ## Dependencies

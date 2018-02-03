@@ -25,6 +25,7 @@ help:
 	@echo "help                    - Print this help message.             "
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
 	@echo "clean                   - Remove all js libs.                  "
+	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
 	@echo "                                                               "
 
 ###################
@@ -37,6 +38,9 @@ all:
 # Cleans out generated files.
 clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
+
+init:
+	pushd local/client ; npm install ; popd
 
 # # Counts the number of lines of code in the project
 # loc:
