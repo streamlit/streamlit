@@ -25,7 +25,18 @@ brew install pyenv-virtualenv
 ###### On Linux
 Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
 
-#### 4. Establish a Local Python Environment
+#### 4. Install `pyenv` and `pyenv-virtualenv`
+
+###### On MacOS
+```
+brew install protobuf
+```
+###### On Linux
+```
+sudo apt-get install protobuf-compiler
+```
+
+#### 5. Establish a Local Python Environment
 
 Create a virtualenv environment called `streamlet`:
 ```
@@ -34,7 +45,7 @@ pyenv virtualenv 3.6.3 streamlet
 pyenv local streamlet
 ```
 
-#### 5. Initialize the Repository
+#### 6. Initialize the Repository
 
 ```
 make init
