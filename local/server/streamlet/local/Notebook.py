@@ -140,6 +140,7 @@ class Notebook:
         self._enqueue_coroutine(async_stop)
 
     def _connect_to_cloud(self):
+        raise NotImplementedError('Still implementing _connect_to_cloud.')
         async def async_connect_to_cloud():
             cloud_config = shared_config.get_config('development')['cloud']
             cloud_host = cloud_config['server']
