@@ -38,6 +38,7 @@ pyenv local streamlet
 
 ```
 make init
+make all
 ```
 
 ## Dependencies

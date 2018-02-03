@@ -33,14 +33,14 @@ help:
 ###################
 
 all:
-	pushd	shared ; make all ; popd
+	cd shared ; make all
 
 # Cleans out generated files.
 clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
 
 init:
-	pushd local/client ; npm install ; popd
+	cd local/client ; npm install
 
 # # Counts the number of lines of code in the project
 # loc:
