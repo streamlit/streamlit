@@ -40,9 +40,12 @@ clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
 
 init:
-	npm install -g pbjs
+	pip install pandas Pillow protobuf PyYAML websockets
+	npm install -g protobufjs
 	cd shared ; make init
 	cd local/client ; npm install
+	ln -sv ../../../shared/client local/client/node_modules/streamlet-shared
+
 
 # # Counts the number of lines of code in the project
 # loc:
