@@ -1,24 +1,27 @@
 # tiny-notebook
 A stateless alternative to Jupyter notebooks for machine learning and data science.
 
-## Installation Instructions
+## Installation
 
-#### Checkout the Repository
+##### 1. Checkout the Repository
 
 First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/). Then, checkout the respository:
 ```
 git clone git@github.com:treuille/streamlet-cloud.git
 ```
 
-#### Establish a Local Python Environment
+##### 2. Establish a Local Python Environment
 
-First install `pipenv` with `brew install pipenv` (on MacOS) or just [follow these instructions](https://github.com/pyenv/pyenv-installer).
+First install `pyenv` and `pyenv-virtualenv`.
+
+###### On MacOS
+
 ```
-pip install virtualenvwrapper
-pip install virtualenv
-pip install pyenv-virtualenv
-pip install pipenv
+brew install pyenv
+brew install pyenv-virtualenv
 ```
+###### On Linux
+Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
 
 ## Dependencies
 
