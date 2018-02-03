@@ -105,7 +105,7 @@ class WebClient extends PureComponent {
           <NavbarBrand href="/">Printf</NavbarBrand>
           <NavItem>
             <PersistentWebsocket
-              uri="ws://localhost:8315/"
+              uri="ws://localhost:8665/websocket"
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
               persist={false}

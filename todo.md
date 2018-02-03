@@ -1,7 +1,6 @@
 #### Implementing The Server
 
-- Fix the image parsing bug.
-  - Put a full set of test cases into the periodic table
+- Move to aiohttp on the client.
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
   - save=True option in Notebook
   - aiohttp local server

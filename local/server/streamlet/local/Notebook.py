@@ -6,7 +6,8 @@ import copy
 import os
 import threading
 import traceback
-import websockets
+from aiohttp import web
+# import websockets
 import time
 
 from streamlet.shared import protobuf
@@ -15,7 +16,6 @@ from streamlet.local.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared import config as shared_config
 
-WEBSOCKET_PORT = 8315
 LAUNCH_BROWSER_SCRIPT = \
     'osascript ' \
     './local/client/node_modules/react-dev-utils/openChrome.applescript ' \
@@ -79,11 +79,15 @@ class Notebook:
             self._server_running = True
             asyncio.set_event_loop(self._server_loop)
             handler = self._get_connection_handler()
-            start_server = websockets.serve(handler, '', WEBSOCKET_PORT)
+            port = shared_config.get_config('development')['local']['port']
+            print(f'Launching on port {port}')
+            app = web.Application()
+            app.router.add_get('/websocket', handler)
             try:
-                self._server_loop.run_until_complete(start_server)
+                # self._server_loop.run_until_complete(start_server)
                 print('Starting the server loop...')
-                self._server_loop.run_forever()
+                web.run_app(app, port=port, loop=self._server_loop, handle_signals=False)
+                # self._server_loop.run_forever()
             finally:
                 print('About to close the loop.')
                 self._server_loop.close()
@@ -104,7 +108,11 @@ class Notebook:
 
     def _get_connection_handler(self):
         """Handles a websocket connection."""
-        async def async_handle_connection(websocket, path):
+        async def async_handle_connection(request):
+            # Create a websocket connection.
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+
             # Creates a new queue for this connection.
             queue = copy.deepcopy(self._delta_queues[0])
             self._delta_queues.append(queue)
@@ -115,13 +123,15 @@ class Notebook:
                 if deltas:
                     delta_list = protobuf.DeltaList()
                     delta_list.deltas.extend(deltas)
-                    await websocket.send(delta_list.SerializeToString())
+                    await ws.send_bytes(delta_list.SerializeToString())
             while self._server_running:
                 await send_deltas()
                 await asyncio.sleep(THROTTLE_SECS)
             await send_deltas()
 
             print('Naturally finished handle connection.')
+            return ws
+
         return async_handle_connection
 
     def _stop(self):
