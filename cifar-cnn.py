@@ -1,15 +1,17 @@
-import keras
 from keras.datasets import cifar10
-from keras.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
-import numpy as np
-import pandas as pd
-import os
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.models import Sequential
+from keras.preprocessing.image import ImageDataGenerator
+import keras
 import math
+import numpy as np
+import os
+import pandas as pd
+import sys
 
-from tiny_notebook import Notebook, Chart
+sys.path.append('local/server')
+from streamlet import Notebook, Chart
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test, print):

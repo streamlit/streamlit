@@ -14,7 +14,7 @@ class Div extends PureComponent {
     return (
       <div className={element.get('classes')} style={{width}}>
         {element.get('text').replace('\r', '').split('\n').map((line, indx) => (
-          <div key={indx}> { line } </div>
+          <div key={indx}>{line}</div>
         ))}
       </div>
     );

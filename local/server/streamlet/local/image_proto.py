@@ -47,7 +47,7 @@ def convert_to_3_color_channels(imgs):
     if imgs.shape[-1] == 3:
         return imgs
     elif imgs.shape[-1] == 1:
-        return convert_to_3_color_channels(imgs.shape[:-1])
+        return convert_to_3_color_channels(imgs.reshape(imgs.shape[:-1]))
     else:
         imgs = np.array([imgs, imgs, imgs])
         if len(imgs.shape) == 3:

@@ -99,19 +99,22 @@ with Notebook() as write:
     write.header('Level 5', level=5)
     write.header('Level 6', level=6)
 
-    # Images
+    # Images - We test all 6 possible file formats.
     write('Images', fmt='header', level=3)
-    img_url = 'https://upload.wikimedia.org/wikipedia/en/2/24/Lenna.png'
+    img_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
     img_bytes = urllib.request.urlopen(img_url).read()
     img = np.array(Image.open(io.BytesIO(img_bytes)))
-    write(img, fmt='img', caption="225px", width=225)
-    write(img, fmt='img', caption="175px", width=175)
-    write(img, fmt='img', caption="125px", width=125)
-    channels = [np.array(img), np.array(img), np.array(img)]
-    channels[0][:,:,1:] = 0
-    channels[1][:,:,0::2] = 0
-    channels[2][:,:,:-1] = 0
-    write.img(channels, caption=["Red", "Green", "Blue"], width=125)
+    grayscale = np.average(img, axis=2).astype(np.uint8)
+    grayscale2 = grayscale.reshape(grayscale.shape + (1,))
+    channels = img.transpose((2, 0, 1))
+    channels2 = channels.reshape(channels.shape + (1,))
+    channels_caption = ['Red', 'Green', 'Blue']
+    write(img, fmt='img', caption="375px", width=375)         #    (w, h, 3)
+    write([img], fmt='img', caption="225px", width=225)       # (n, w, h, 3)
+    write(grayscale, fmt='img', caption="175px", width=175)   #    (w, h)
+    write(grayscale2, fmt='img', caption="125px", width=125)  #    (w, h, 1)
+    write.img(channels, caption=channels_caption, width=125)  # (n, w, h)
+    write.img(channels2, caption=channels_caption, width=75)  # (n, w, h, 1)
 
     # Text
     write('Text', fmt='header', level=3)

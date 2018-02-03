@@ -1,5 +1,7 @@
 #### Implementing The Server
 
+- Fix the image parsing bug.
+  - Put a full set of test cases into the periodic table
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
   - save=True option in Notebook
   - aiohttp local server
@@ -20,7 +22,7 @@
 
 #### Todo After the Demo
 
-- Fix the image parsing bug.
+
 - Make sure that symbolic links are preserved when we a clean checkout of the repo.
 - Get the name printf.com.
 - Fix out of order arrivals on the javascript side
