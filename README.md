@@ -23,7 +23,7 @@ Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/m
 
 #### 3. Establish a Local Python Environment
 
-Create a virtualev environment called `streamlet`:
+Create a virtualenv environment called `streamlet`:
 ```
 pyenv install 3.6.3
 pyenv virtualenv 3.6.3 streamlet
