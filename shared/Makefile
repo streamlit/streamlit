@@ -65,4 +65,5 @@ $(PROTOBUF_BUNDLE_PYTHON): $(PROTOBUF_SRC_FILES)
 
 # Javascript protobuf implementation uses pbjs.
 $(PROTOBUF_BUNDLE_JS): $(PROTOBUF_SRC_FILES)
+	mkdir -pv $(shell dirname $(PROTOBUF_BUNDLE_JS))
 	pbjs $(PROTOBUF_SRC_FILES) -t static-module -w es6 > $(PROTOBUF_BUNDLE_JS)
