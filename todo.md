@@ -2,6 +2,11 @@
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
   - save=True option in Notebook
+  - aiohttp local server
+    - temporarily add `RuntimeError` in `save=True` code.
+    - create a separate branch
+    - move websockets to http
+    - merge the branch back
   - opens a connection on the server.. sends a UID for the session
   - begins writing to the server
   - server simply prints out the size of everything that is being sent

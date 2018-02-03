@@ -3,13 +3,16 @@ A stateless alternative to Jupyter notebooks for machine learning and data scien
 
 ## Installation Instructions
 
-Check it out:
+First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/). Then check out the repository:
 ```
 git clone git@github.com:treuille/streamlet-cloud.git
 ```
 Establish a local environment.
 ```
-make init
+pip install pyenv
+pip install virtualenv
+pip install pyenv-virtualenv
+pip install pipenv
 ```
 
 ## Dependencies
