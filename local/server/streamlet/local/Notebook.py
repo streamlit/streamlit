@@ -7,7 +7,6 @@ import os
 import threading
 import traceback
 from aiohttp import web
-# import websockets
 import time
 
 from streamlet.shared import protobuf
