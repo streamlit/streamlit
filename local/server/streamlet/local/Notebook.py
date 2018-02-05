@@ -78,7 +78,7 @@ class Notebook:
             self._server_running = True
             asyncio.set_event_loop(self._server_loop)
             handler = self._get_connection_handler()
-            port = shared_config.get_config('development')['local']['port']
+            port = shared_config.get_config()['local']['port']
             print(f'Launching on port {port}')
             app = web.Application()
             app.router.add_get('/websocket', handler)
@@ -151,7 +151,7 @@ class Notebook:
     def _connect_to_cloud(self):
         raise NotImplementedError('Still implementing _connect_to_cloud.')
         async def async_connect_to_cloud():
-            cloud_config = shared_config.get_config('development')['cloud']
+            cloud_config = shared_config.get_config()['cloud']
             cloud_host = cloud_config['server']
             cloud_port = cloud_config['port']
             local_id = local_config.get_local_id()

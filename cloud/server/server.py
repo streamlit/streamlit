@@ -76,7 +76,7 @@ async def new_stream(request):
     print(f"Got a connection with local id {local_id}.")
 
 def main():
-    config = streamlet.shared.config.get_config('development')
+    config = streamlet.shared.config.get_config()
     port = config['cloud']['port']
     assert set(config.keys()).issuperset(('mongodb', 'cloud')), \
         "config.yaml must include `mongodb` and `cloud` sections."
