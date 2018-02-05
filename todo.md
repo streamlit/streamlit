@@ -1,13 +1,6 @@
 #### Implementing The Server
 
-- Move to aiohttp on the client.
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
-  - save=True option in Notebook
-  - aiohttp local server
-    - temporarily add `RuntimeError` in `save=True` code.
-    - create a separate branch
-    - move websockets to http
-    - merge the branch back
   - opens a connection on the server.. sends a UID for the session
   - begins writing to the server
   - server simply prints out the size of everything that is being sent
@@ -20,7 +13,6 @@
 - Get the server up and running on Amazon.
 
 #### Todo After the Demo
-
 
 - Make sure that symbolic links are preserved when we a clean checkout of the repo.
 - Get the name printf.com.

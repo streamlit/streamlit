@@ -53,7 +53,6 @@ class MyCallback(keras.callbacks.Callback):
         self._print(summary)
         self._summary_stats(f'{"epoch":>8s} :  {epoch}\n{summary}')
 
-
     def _create_chart(self, type='line', height=0):
         empty_data = pd.DataFrame(columns=['loss', 'acc'])
         epoch_chart = Chart(empty_data, f'{type}_chart', height=height)

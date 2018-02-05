@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
-from tiny_notebook import Notebook, Chart
 import math
+import sys
+
+sys.path.append('local/server')
+from streamlet import Notebook, Chart
 
 def print_vel_stats(vel):
     stats = (
