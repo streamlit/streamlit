@@ -1,11 +1,7 @@
 #### Implementing The Server
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
-  - put in a 16MB / 14MB(?) limit?
-  - opens a connection on the server.. sends a UID for the session
-  - begins writing to the server
-  - server simply prints out the size of everything that is being sent
-    - *Verify:* What happens if we send bigger and bigger payloads?
+  - move things over to a message protocol
   - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents
