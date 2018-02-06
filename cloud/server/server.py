@@ -13,6 +13,7 @@ import traceback
 import sys
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
+from streamlet.shared import protobuf
 
 def handle_coroutine_exceptions(coroutine):
     async def wrapped(*args, **kwargs):
@@ -65,40 +66,31 @@ def close_database():
 ####################
 
 from aiohttp import web, WSMsgType
+from streamlet.cloud.BinaryWebsocketHandler import BinaryWebsocketHandler
 
 async def index(request):
     """Handler for the main index calls."""
     return web.Response(text='Hello printf!')
 
-async def new_stream(request):
-    """Handle a new stream."""
-    local_id = request.match_info.get('local_id')
-    print(f"Got a connection with local id {local_id}.")
+class StreamletWebsocketHandler(BinaryWebsocketHandler):
+    async def on_open(self, request):
+        """Called when the stream is opened."""
+        local_id = request.match_info.get('local_id')
+        print(f"Got a connection with local id {local_id}.")
 
-    ws = web.WebSocketResponse()
-    await ws.prepare(request)
-    async for msg in ws:
-        if msg.type == WSMsgType.TEXT:
-            print(f'Received TEXT message "{msg.data}". Error.')
-        elif msg.type == WSMsgType.CLOSED_FRAME:
-            print('Received CLOSED_FRAME message. WTF?!')
-        elif msg.type == WSMsgType.BINARY:
-            print(f'Received BINARY message type={type(msg.data)} len={len(msg.data)//1024}k.')
-        elif msg.type == WSMsgType.PING:
-            print(f'Received PING message "{msg.data}". Error.')
-        elif msg.type == WSMsgType.PONG:
-            print(f'Received PONG message "{msg.data}". Double Error.')
-        elif msg.type == WSMsgType.CLOSE:
-            print('Recieved close. Closing the connection.')
-            ws.close()
-            print('Closed the connection.')
-        elif msg.type == aiohttp.WSMsgType.ERROR:
-            print('ws connection closed with exception %s' %
-                  ws.exception())
+    async def on_message(self, data):
+        """Called everytime a message is received."""
+        print('Received BINARY message '
+            f'type={type(data)} '
+            f'len={len(data)//1024}k.')
+        delta_list = protobuf.DeltaList()
+        delta_list.ParseFromString(data)
+        print(f'Got a delta_list with {len(delta_list.deltas)} deltas.')
+        for delta in delta_list.deltas:
+            print(f'Delta {delta.id} is {len(delta.SerializeToString())/1024}k.')
 
-    print('websocket connection closed')
-
-    return ws
+    async def on_close(self):
+        print('Closing the connection.')
 
 def main():
     config = streamlet.shared.config.get_config()
@@ -109,7 +101,8 @@ def main():
     app.on_startup.append(init_database(config['mongodb']))
     app.on_cleanup.append(close_database())
     app.router.add_get('/', index)
-    app.router.add_get('/api/new/{local_id}', new_stream)
+    app.router.add_get('/api/new/{local_id}',
+        StreamletWebsocketHandler.get_handler())
     print(f"Starting webserver at port {port}.")
     web.run_app(app, port=port)
     print('Closed webserver.')

@@ -1,6 +1,7 @@
 #### Implementing The Server
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
+  - put in a 16MB / 14MB(?) limit?
   - opens a connection on the server.. sends a UID for the session
   - begins writing to the server
   - server simply prints out the size of everything that is being sent
@@ -15,15 +16,11 @@
 #### Todo After the Demo
 
 - Make sure that symbolic links are preserved when we a clean checkout of the repo.
-- Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
 - Fix the problem with calling __call__ on multiple values
 - Clean things up.
-  - Rename it from tiny-notebook to printf
-  - Rename notebook everywhere to printf.
   - Figure out how to make an installer with pip
-  - Give it a nice favicon. (maybe the connect icon?)
 - Get rid of DeltaList and just send Deltas
 - Switch to `enqueue` and `dequeue` for the DeltaQueue
 - Clean up some names in the code.
@@ -37,6 +34,11 @@
   - Then use the following to force updates of the underlying grid.
   - https://github.com/bvaughn/react-virtualized/issues/546
   - https://github.com/bvaughn/react-virtualized/blob/master/docs/MultiGrid.md
+- Get rid of 14 MB limit
+
+### Things That We Need from Ben
+
+- a favicon
 
 #### More things to play with and try
 

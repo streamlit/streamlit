@@ -144,26 +144,10 @@ class Notebook:
             uri = f'htts://{cloud_host}:{cloud_port}/api/new/{local_id}'
             print('Connecting to', uri) # debug
 
-            # Send data as it becomes availab.e
+            # Transmit data through this websocket.
             async with ClientSession().ws_connect(uri) as ws:
-                # Sends data from this connection
                 await self._async_transmit_through_websocket(ws)
                 print('Naturally finished handle connection.')
-            #     ws.send_str('hello world')
-            #     # async for msg in ws:
-            #     #     if msg.type == aiohttp.WSMsgType.TEXT:
-            #     #         if msg.data == 'close cmd':
-            #     #             await ws.close()
-            #     #             break
-            #     #         else:
-            #     #             await ws.send_str(msg.data + '/answer')
-            #     #     elif msg.type == aiohttp.WSMsgType.CLOSED:
-            #     #         break
-            #     #     elif msg.type == aiohttp.WSMsgType.ERROR:
-            #     #         break
-            # print('Sent hello world.')
-            # import sys
-            # sys.exit(-1)
 
         # Code to connect to the cloud must be done in a separate thread.
         self._enqueue_coroutine(async_connect_to_cloud)

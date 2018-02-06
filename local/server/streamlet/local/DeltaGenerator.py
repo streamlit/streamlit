@@ -7,6 +7,8 @@ from streamlet.shared import protobuf
 from streamlet.local import data_frame_proto, image_proto
 from streamlet.local.Chart import Chart
 
+MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
+
 class DeltaGenerator:
     """
     Creates delta messages. If id is set to none, then an id is created for each
@@ -177,27 +179,24 @@ class DeltaGenerator:
 
         set_element - Function which sets the feilds for a protobuf.Element
         """
-        # Figure out if we need to create a new ID for this element.
-        if self._generate_new_ids:
-            id = self._next_id
-            generator = DeltaGenerator(self._queue, id)
-            self._next_id += 1
-        else:
-            id = self._id
-            generator = self
-
         # Create a delta message.
         delta = protobuf.Delta()
-        delta.id = id
         set_element(delta.new_element)
 
-        # # debug - begin
-        # if (generator == self):
-        #     print('CREATING A REPLACEMENT DELTA')
-        #     print(delta)
-        #     raise RuntimeError('replacement delta')
-        # # debug - end
+        # Make sure that the element isn't too big.
+        if len(delta.new_element.SerializeToString()) > MAX_DELTA_BYTES:
+            alert_msg = 'Cannot transmit element larger than %s MB.' % \
+                (MAX_DELTA_BYTES // (1024 ** 2))
+            return self.alert(alert_msg)
 
-        # Call the queue and return the new element.
+        # Figure out if we need to create a new ID for this element.
+        if self._generate_new_ids:
+            delta.id = self._next_id
+            generator = DeltaGenerator(self._queue, delta.id)
+            self._next_id += 1
+        else:
+            delta.id = self._id
+            generator = self
+
         self._queue(delta)
         return generator
