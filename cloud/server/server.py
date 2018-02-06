@@ -80,6 +80,8 @@ async def new_stream(request):
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
             print(f'Received TEXT message "{msg.data}". Error.')
+        elif msg.type == WSMsgType.CLOSED_FRAME:
+            print('Received CLOSED_FRAME message. WTF?!')
         elif msg.type == WSMsgType.BINARY:
             print(f'Received BINARY message type={type(msg.data)} len={len(msg.data)//1024}k.')
         elif msg.type == WSMsgType.PING:
@@ -90,8 +92,6 @@ async def new_stream(request):
             print('Recieved close. Closing the connection.')
             ws.close()
             print('Closed the connection.')
-        elif msg.type == WSMsgType.CLOSED_FRAME:
-            print('Received CLOSED_FRAME message. WTF?!')
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print('ws connection closed with exception %s' %
                   ws.exception())
