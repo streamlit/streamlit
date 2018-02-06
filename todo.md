@@ -1,7 +1,12 @@
 #### Implementing The Server
 
+- **Side Projects**
+  - No shared
+  - Switch to message format
+    - get rid of on_message, instead wrap the iterator in a binary iterator
+    - switch the existing client code to this format_list
+    - change the server api to receive a message token
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
-  - move things over to a message protocol
   - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents
@@ -53,13 +58,13 @@
 
 #### Disaggregated File Layout
 
-- `local/`
-  - `client/`
-  - `server/`
-- `shared/`
-  - `client/`
-  - `server/`
-  - `protobuf/`
+- `local/` *The locally running open source client and server.*
+  - `client/` *The local React client.*
+    - `.gitignore`
+    - `package.json`
+  - `server/` *The tiny server which streams local data.*
+    - `.gitignore`
+  - `protobuf/` *Used to communicate between client and server.*
 - `cloud/`
   - `client/`
   - `server/`
