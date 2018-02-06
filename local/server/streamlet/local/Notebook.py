@@ -6,21 +6,20 @@ import copy
 import os
 import threading
 import traceback
-from aiohttp import web
+from aiohttp import web, ClientSession
 import time
 
 from streamlet.shared import protobuf
 from streamlet.local.DeltaQueue import DeltaQueue
 from streamlet.local.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
-from streamlet.shared import config as shared_config
+from streamlet.shared.config import get_config as get_shared_config
 
 LAUNCH_BROWSER_SCRIPT = \
     'osascript ' \
     './local/client/node_modules/react-dev-utils/openChrome.applescript ' \
     'http://localhost:3000/'
 SHUTDOWN_DELAY_SECS = 1.0
-THROTTLE_SECS = 0.01
 
 class Notebook:
     def __init__(self, save=False):
@@ -78,7 +77,7 @@ class Notebook:
             self._server_running = True
             asyncio.set_event_loop(self._server_loop)
             handler = self._get_connection_handler()
-            port = shared_config.get_config()['local']['port']
+            port = get_shared_config()['local']['port']
             print(f'Launching on port {port}')
             app = web.Application()
             app.router.add_get('/websocket', handler)
@@ -112,21 +111,8 @@ class Notebook:
             ws = web.WebSocketResponse()
             await ws.prepare(request)
 
-            # Creates a new queue for this connection.
-            queue = copy.deepcopy(self._delta_queues[0])
-            self._delta_queues.append(queue)
-
-            # Go into an endless loop.
-            async def send_deltas():
-                deltas = queue.get_deltas()
-                if deltas:
-                    delta_list = protobuf.DeltaList()
-                    delta_list.deltas.extend(deltas)
-                    await ws.send_bytes(delta_list.SerializeToString())
-            while self._server_running:
-                await send_deltas()
-                await asyncio.sleep(THROTTLE_SECS)
-            await send_deltas()
+            # Sends data from this connection
+            await self._async_transmit_through_websocket(ws)
 
             print('Naturally finished handle connection.')
             return ws
@@ -138,7 +124,8 @@ class Notebook:
         # Stops the server loop.
         async def async_stop():
             # First, gracefully stop connections with _server_running = False.
-            self._server_loop.call_later(THROTTLE_SECS * 2,
+            throttleSecs = get_shared_config()['local']['throttleSecs']
+            self._server_loop.call_later(throttleSecs * 2,
                 lambda: setattr(self, '_server_running', False))
 
             # After a short delay, hard-stop the server loop.
@@ -149,19 +136,34 @@ class Notebook:
         self._enqueue_coroutine(async_stop)
 
     def _connect_to_cloud(self):
-        raise NotImplementedError('Still implementing _connect_to_cloud.')
         async def async_connect_to_cloud():
-            cloud_config = shared_config.get_config()['cloud']
-            cloud_host = cloud_config['server']
-            cloud_port = cloud_config['port']
+            # Create a connection URI.
+            cloud_host = get_shared_config()['cloud']['server']
+            cloud_port = get_shared_config()['cloud']['port']
             local_id = local_config.get_local_id()
-            uri = f'https://{cloud_host}:{cloud_port}/api/new/{local_id}'
-            print('Connecting to', uri)
-            async with websockets.connect(uri) as websocket:
-                await websocket.send('Hello world.')
-            print('Sent hello world.')
-            import sys
-            sys.exit(-1)
+            uri = f'htts://{cloud_host}:{cloud_port}/api/new/{local_id}'
+            print('Connecting to', uri) # debug
+
+            # Send data as it becomes availab.e
+            async with ClientSession().ws_connect(uri) as ws:
+                # Sends data from this connection
+                await self._async_transmit_through_websocket(ws)
+                print('Naturally finished handle connection.')
+            #     ws.send_str('hello world')
+            #     # async for msg in ws:
+            #     #     if msg.type == aiohttp.WSMsgType.TEXT:
+            #     #         if msg.data == 'close cmd':
+            #     #             await ws.close()
+            #     #             break
+            #     #         else:
+            #     #             await ws.send_str(msg.data + '/answer')
+            #     #     elif msg.type == aiohttp.WSMsgType.CLOSED:
+            #     #         break
+            #     #     elif msg.type == aiohttp.WSMsgType.ERROR:
+            #     #         break
+            # print('Sent hello world.')
+            # import sys
+            # sys.exit(-1)
 
         # Code to connect to the cloud must be done in a separate thread.
         self._enqueue_coroutine(async_connect_to_cloud)
@@ -176,3 +178,23 @@ class Notebook:
                 import sys
                 sys.exit(-1)
         asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._server_loop)
+
+    async def _async_transmit_through_websocket(self, ws):
+        """Sends queue data across the websocket as it becomes available.
+        Only returns after self._server_running becomes false."""
+        # Create a new queue.
+        queue = copy.deepcopy(self._delta_queues[0])
+        self._delta_queues.append(queue)
+
+        # Send queue data over the wire until _server_running becomes False.
+        throttleSecs = get_shared_config()['local']['throttleSecs']
+        async def send_deltas():
+            deltas = queue.get_deltas()
+            if deltas:
+                delta_list = protobuf.DeltaList()
+                delta_list.deltas.extend(deltas)
+                await ws.send_bytes(delta_list.SerializeToString())
+        while self._server_running:
+            await send_deltas()
+            await asyncio.sleep(throttleSecs)
+        await send_deltas()

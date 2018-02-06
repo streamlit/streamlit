@@ -54,6 +54,6 @@ def reload_config():
     return __LOCAL_CONFIG
 
 def get_local_id():
-    if 'localId' not in __LOCAL_CONFIG:
+    if 'localId' not in get_config():
         append_to_config('localId', uuid.uuid4(), 'Auto-generated local ID.')
     return uuid.UUID(str(__LOCAL_CONFIG['localId']))

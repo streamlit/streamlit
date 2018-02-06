@@ -40,7 +40,7 @@ clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
 
 init:
-	pip install pandas Pillow protobuf PyYAML aiohttp
+	pip install pandas Pillow protobuf PyYAML aiohttp, motor
 	npm install -g protobufjs
 	cd shared ; make init
 	cd local/client ; npm install

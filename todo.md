@@ -5,9 +5,9 @@
   - begins writing to the server
   - server simply prints out the size of everything that is being sent
     - *Verify:* What happens if we send bigger and bigger payloads?
+  - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents
-  - *NOTE:* Move shared python things to a shared package.
 - **Path back from the server:** Can look up previous results statically on the server.
 - **Bidirectional path:** Running with `save=True`
 - Get the server up and running on Amazon.
