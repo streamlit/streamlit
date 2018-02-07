@@ -76,7 +76,8 @@ class StreamletWebsocketHandler(BinaryWebsocketHandler):
     async def on_open(self, request):
         """Called when the stream is opened."""
         local_id = request.match_info.get('local_id')
-        print(f"Got a connection with local id {local_id}.")
+        notebook_id = request.match_info.get('notebook_id')
+        print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
 
     async def on_message(self, data):
         """Called everytime a message is received."""
@@ -101,7 +102,7 @@ def main():
     app.on_startup.append(init_database(config['mongodb']))
     app.on_cleanup.append(close_database())
     app.router.add_get('/', index)
-    app.router.add_get('/api/new/{local_id}',
+    app.router.add_get('/api/new/{local_id}/{notebook_id}',
         StreamletWebsocketHandler.get_handler())
     print(f"Starting webserver at port {port}.")
     web.run_app(app, port=port)

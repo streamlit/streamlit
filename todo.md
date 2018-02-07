@@ -1,6 +1,16 @@
+#### Drago's Suggestion
+
+- the ability to overlay the charts
+- the ability to make one the baseline and compute all as deltas
+- how can I convince them to switch away from tensorboard
+  - they handle checkpoints
+  - store the history and know that it
+  - continue an existing experiment from the checkpoints
+
 #### Implementing The Server
 
-- **Path to the server:** Running the client locally with `save=True` writes to the server.
+- **Path to the server:** Running the client locally with `save=True` writes to the server
+  - update the local_id
   - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents

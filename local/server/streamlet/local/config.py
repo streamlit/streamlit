@@ -1,7 +1,7 @@
 """Loads the local config file."""
 
-import uuid
 import yaml
+import bson
 
 __LOCAL_CONFIG_PATH = '.streamlet.yaml'
 __LOCAL_CONFIG = {}
@@ -45,15 +45,21 @@ def append_to_config(key, value, comment=None):
 
 def reload_config():
     """Reloads the config file."""
-    __LOCAL_CONFIG.clear()
+    config = __LOCAL_CONFIG
+    config.clear()
     try:
         with open(__LOCAL_CONFIG_PATH) as config_stream:
-            __LOCAL_CONFIG.update(yaml.load(config_stream))
+            config.update(yaml.load(config_stream))
+
+            # Add types where necessary.
+            if 'localId' in config:
+                config['localId'] = bson.ObjectId(config['localId'])
     except FileNotFoundError:
         pass
     return __LOCAL_CONFIG
 
 def get_local_id():
     if 'localId' not in get_config():
-        append_to_config('localId', uuid.uuid4(), 'Auto-generated local ID.')
-    return uuid.UUID(str(__LOCAL_CONFIG['localId']))
+        append_to_config('localId', bson.ObjectId().binary.hex(),
+            'Auto-generated local ID.')
+    return __LOCAL_CONFIG['localId']

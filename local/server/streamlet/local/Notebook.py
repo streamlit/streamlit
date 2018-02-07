@@ -1,13 +1,14 @@
 """A Notebook Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
+from aiohttp import web, ClientSession
 import asyncio
+import bson
 import copy
 import os
 import threading
-import traceback
-from aiohttp import web, ClientSession
 import time
+import traceback
 
 from streamlet.shared import protobuf
 from streamlet.local.DeltaQueue import DeltaQueue
@@ -38,6 +39,9 @@ class Notebook:
 
         # Remember whether or not we want to write to the server.
         self._save_to_cloud = save
+
+        # Create an ID for this Notebook
+        self._notebook_id = bson.ObjectId()
 
     def __enter__(self):
         # start the webserver
@@ -84,7 +88,8 @@ class Notebook:
             try:
                 # self._server_loop.run_until_complete(start_server)
                 print('Starting the server loop...')
-                web.run_app(app, port=port, loop=self._server_loop, handle_signals=False)
+                web.run_app(app, port=port, loop=self._server_loop,
+                    handle_signals=False)
                 # self._server_loop.run_forever()
             finally:
                 print('About to close the loop.')
@@ -138,10 +143,11 @@ class Notebook:
     def _connect_to_cloud(self):
         async def async_connect_to_cloud():
             # Create a connection URI.
-            cloud_host = get_shared_config()['cloud']['server']
-            cloud_port = get_shared_config()['cloud']['port']
+            server = get_shared_config()['cloud']['server']
+            port = get_shared_config()['cloud']['port']
             local_id = local_config.get_local_id()
-            uri = f'htts://{cloud_host}:{cloud_port}/api/new/{local_id}'
+            notebook_id = self._notebook_id
+            uri = f'htts://{server}:{port}/api/new/{local_id}/{notebook_id}'
             print('Connecting to', uri) # debug
 
             # Transmit data through this websocket.
