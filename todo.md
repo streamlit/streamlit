@@ -1,11 +1,5 @@
 #### Implementing The Server
 
-- **Side Projects**
-  - No shared
-  - Switch to message format
-    - get rid of on_message, instead wrap the iterator in a binary iterator
-    - switch the existing client code to this format_list
-    - change the server api to receive a message token
 - **Path to the server:** Running the client locally with `save=True` writes to the server.
   - start actually saving some data on the server
   - server has admin page
@@ -16,6 +10,10 @@
 
 #### Todo After the Demo
 
+- Switch to message format
+  - switch the existing client code to this format_list
+  - get rid of on_message, instead wrap the iterator in a binary iterator
+  - change the server api to receive a message token
 - Make sure that symbolic links are preserved when we a clean checkout of the repo.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
