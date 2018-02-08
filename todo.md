@@ -9,8 +9,20 @@
 
 #### Implementing The Server
 
+- **What do we need for the current demo.**
+  - Server runs while the simulation is happening.
+  - Server saves the run after the simulation is done.
+  - Ability to see the run after it's done.
+  - Page to see parallel runs from the past.
+  - Nice to haves:
+    - Move the server to Google cloud?
+    - Rename it streamlet.io.
+    - Run it in a docker container
+  - OPTIONAL: `clear-recent` server endpoint
+
 - **Path to the server:** Running the client locally with `save=True` writes to the server
-  - update the local_id
+  - make up a class to encapsulate the server
+  - work on a long-running one first
   - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents

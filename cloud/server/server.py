@@ -66,32 +66,29 @@ def close_database():
 ####################
 
 from aiohttp import web, WSMsgType
-from streamlet.cloud.BinaryWebsocketHandler import BinaryWebsocketHandler
+from streamlet.cloud.delta_proto import delta_list_iter
 
 async def index(request):
     """Handler for the main index calls."""
     return web.Response(text='Hello printf!')
 
-class StreamletWebsocketHandler(BinaryWebsocketHandler):
-    async def on_open(self, request):
-        """Called when the stream is opened."""
-        local_id = request.match_info.get('local_id')
-        notebook_id = request.match_info.get('notebook_id')
-        print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
+async def new_stream_handler(request):
+    # Parse out the control information.
+    local_id = request.match_info.get('local_id')
+    notebook_id = request.match_info.get('notebook_id')
+    print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
 
-    async def on_message(self, data):
-        """Called everytime a message is received."""
-        print('Received BINARY message '
-            f'type={type(data)} '
-            f'len={len(data)//1024}k.')
-        delta_list = protobuf.DeltaList()
-        delta_list.ParseFromString(data)
+    # Establishe the websocket.
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    async for delta_list in delta_list_iter(ws):
         print(f'Got a delta_list with {len(delta_list.deltas)} deltas.')
         for delta in delta_list.deltas:
             print(f'Delta {delta.id} is {len(delta.SerializeToString())/1024}k.')
 
-    async def on_close(self):
-        print('Closing the connection.')
+    print('Closing the connection.')
+    return ws
 
 def main():
     config = streamlet.shared.config.get_config()
@@ -102,8 +99,7 @@ def main():
     app.on_startup.append(init_database(config['mongodb']))
     app.on_cleanup.append(close_database())
     app.router.add_get('/', index)
-    app.router.add_get('/api/new/{local_id}/{notebook_id}',
-        StreamletWebsocketHandler.get_handler())
+    app.router.add_get('/api/new/{local_id}/{notebook_id}', new_stream_handler)
     print(f"Starting webserver at port {port}.")
     web.run_app(app, port=port)
     print('Closed webserver.')
