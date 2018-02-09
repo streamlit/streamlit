@@ -11,7 +11,7 @@ import time
 import traceback
 
 from streamlet.shared import protobuf
-from streamlet.local.DeltaQueue import DeltaQueue
+# from streamlet.local.DeltaQueue import DeltaQueue
 from streamlet.local.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
@@ -39,6 +39,10 @@ class Notebook:
     def __enter__(self):
         # start the webserver
         self._launch_server()
+
+        # wait until self._delta_generator is defined.
+        while not hasattr(self, '_delta_generator'):
+            time.sleep(0.001)
 
         # Connect to streamlet.io if necessary.
         if self._save_to_cloud:
@@ -80,7 +84,10 @@ class Notebook:
                 with Switchboard().stream_to(self._notebook_id) as stream_to:
                     # Create the delta_generator
                     def add_delta(delta):
-                        self._server_loop.call_soon_threadsafe(stream_to, delta)
+                        delta_list = protobuf.DeltaList()
+                        delta_list.deltas.extend([delta])
+                        self._server_loop.call_soon_threadsafe(stream_to,
+                            delta_list)
                     self._delta_generator = DeltaGenerator(add_delta)
 
                     # Set up the webserver.
@@ -90,6 +97,7 @@ class Notebook:
 
                     # Actually start the server.
                     self._server_running = True
+                    port = get_shared_config()['local']['port']
                     web.run_app(app, port=port, loop=self._server_loop,
                         handle_signals=False)
             finally:
@@ -98,17 +106,17 @@ class Notebook:
 
         threading.Thread(target=run_server, daemon=True).start()
 
-    def _add_delta(self, delta):
-        """Distributes this delta into all queues."""
-        # Distribute the delta into every queue. The first queue
-        # is special: it's the master queue from which all others derive.
-        async def async_add_delta():
-            for queue in self._delta_queues:
-                queue.add_delta(delta)
-
-        # All code touching an queue must be run in the server even loop.
-        # asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
-        self._enqueue_coroutine(async_add_delta)
+    # def _add_delta(self, delta):
+    #     """Distributes this delta into all queues."""
+    #     # Distribute the delta into every queue. The first queue
+    #     # is special: it's the master queue from which all others derive.
+    #     async def async_add_delta():
+    #         for queue in self._delta_queues:
+    #             queue.add_delta(delta)
+    #
+    #     # All code touching an queue must be run in the server even loop.
+    #     # asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
+    #     self._enqueue_coroutine(async_add_delta)
 
     def _get_connection_handler(self):
         """Handles a websocket connection."""
@@ -174,6 +182,7 @@ class Notebook:
     async def _async_transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available.
         Only returns after self._server_running becomes false."""
+        raise NotImplementedError('Need to rethink this with Switchboards.')
         # Create a new queue.
         queue = copy.deepcopy(self._delta_queues[0])
         self._delta_queues.append(queue)
