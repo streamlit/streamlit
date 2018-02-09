@@ -6,6 +6,7 @@ import asyncio
 import bson
 import contextlib
 import os
+import sys
 import threading
 import time
 import traceback
@@ -36,6 +37,8 @@ class Notebook:
 
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
+        if self._save_to_cloud:
+            print(f'See this notebook at http://localhost:3000/nb/{self._notebook_id}')
 
         # Create an event loop for the local _server_running
         self._loop = asyncio.new_event_loop()

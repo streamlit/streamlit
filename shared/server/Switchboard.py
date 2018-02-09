@@ -12,7 +12,7 @@ class Switchboard:
     """Contains a set of NotebookQueues and manages thier incoming, outgoing
     connections."""
 
-    def __init__(self, loop):
+    def __init__(self, loop, remove_master_queues=True):
         """Constructor.
 
         loop - The even loop. All interactions with the queues in the
@@ -28,6 +28,9 @@ class Switchboard:
         # IMPORTANT: From this point of execution on, all interactions with the
         # queues (_master_queues and _queues) happens through this event loop.
         self._loop = loop
+
+        # Big hack!!
+        self._remove_master_queues = remove_master_queues
 
     @contextlib.contextmanager
     def stream_to(self, notebook_id):
@@ -61,7 +64,8 @@ class Switchboard:
                 self._queues[notebook_id].remove(queue)
                 if len(self._queues[notebook_id]) == 0:
                     del self._queues[notebook_id]
-            self._loop.call_soon_threadsafe(async_remove_master_queue)
+            if self._remove_master_queues:
+                self._loop.call_soon_threadsafe(async_remove_master_queue)
 
     async def stream_from(self, notebook_id):
         """
@@ -98,22 +102,6 @@ class Switchboard:
             if len(self._queues[notebook_id]) == 0:
                 del self._queues[notebook_id]
 
-        # raise NotImplementedError('Need to rethink this with Switchboards.')
-        # # Create a new queue.
-
-        # self._delta_queues.append(queue)
-        #
-        # # Send queue data over the wire until _server_running becomes False.
-        #
-        # async def send_deltas():
-        #
-        #
-        #
-        # while self._server_running:
-        #     await send_deltas()
-        #
-        # await send_deltas()
-
     def _add_deltas_func(self, notebook_id):
         """Returns a function which takes a set of deltas and add them to all
         queues associated with this notebook_id."""
@@ -124,44 +112,3 @@ class Switchboard:
                         queue(delta)
             self._loop.call_soon_threadsafe(async_add_deltas)
         return add_deltas
-
-# class Consumer:
-#     """Created by a call to Switchboard.stream_to. Able to stream in messages
-#     from an asychronous producer."""
-#
-#     def __init__(self, notebook_id):
-#         """Constructor."""
-#         self._notebook_id = notebook_id
-#         self._stream_open = False
-#         pass
-#
-#     def __enter__(self):
-#         print('Consumer.__enter__')
-#         self._stream_open = True
-#         return self
-#
-#     def __exit__(self, exc_type, exc_val, exc_tb):
-#         print('Consumer.__exit__')
-#         self._stream_open = False
-#
-#     def __call__(self, delta_list):
-#
-#         assert self._stream_open, 'Cannot consume from closed stream.'
-
-class Producer:
-    """Created by a call to Switchboard.stream_from. Represents an iterator
-    over a set of delta_lists."""
-
-    def __init__(self):
-        """Constructor."""
-        print('Producer.constructor')
-        pass
-
-    def __enter__(self):
-        print('Producer.__enter__')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        print('Producer.__exit__')
-
-    def __aiter__(self):
-        print('Producer.__aiter__')

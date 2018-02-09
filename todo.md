@@ -1,7 +1,12 @@
 #### Current daemon
 
 - Server runs while the simulation is happening.
-  - the server maintains it's own switchboard
+  - live getter through the managerie
+    - the server serves local pages directly though a hard-linked path
+    - the client looks at the URL to get variables
+      - if it sees nothing, then do the local client
+      - if it sees nb/{id} then connect to the server to get that ID
+      - if it sees x/ the connect to the server to get the X
   - software database layer behind the server's menagerie
   - cross queue
 - get the realtime demo working
@@ -29,7 +34,6 @@
   - local development
   - do the save=True and write end-to-end
   -
-
 #### Drago's Suggestion
 
 - the ability to overlay the charts
@@ -54,6 +58,7 @@
 #### Todo After the Demo
 
 - Switch to message format
+  - the server responds with its own version of the message
   - switch the existing client code to this format_list
   - get rid of on_message, instead wrap the iterator in a binary iterator
   - change the server api to receive a message token

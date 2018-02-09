@@ -70,7 +70,7 @@ class MyCallback(keras.callbacks.Callback):
             dot="false", y_axis_id='acc_axis')
         return self._print.chart(epoch_chart)
 
-with Notebook() as print:
+with Notebook(save=False) as print:
     print.header('MNIST CNN', level=1)
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
