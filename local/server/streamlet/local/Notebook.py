@@ -74,7 +74,6 @@ class Notebook:
             finally:
                 print('About to close the loop.')
                 self._loop.close()
-            print('About to close the stream_to protocol.')
 
         threading.Thread(target=run_server, daemon=False).start()
 
@@ -173,9 +172,7 @@ class Notebook:
 
                 # Yield the DeltaGenerator as the write function.
                 try:
-                    print('Yielding the delta generator.')
                     yield delta_generator
-                    print('Done yielding the delta generator.')
                 except:
                     exc_type, exc_val, tb = sys.exc_info()
                     tb_list = traceback.format_list(traceback.extract_tb(tb))

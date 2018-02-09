@@ -1,13 +1,8 @@
 #### Current daemon
 
 - Server runs while the simulation is happening.
-  - generalize to Switchboard
-    - complete the current end-to-end with regular queues
-    - get the realtime demo working
-    - get the save-to-server demo working
-    - remove DeltaList
-    - implement CrossQueues
-  - Adapt Queue so that it fits into Switchboard
+- get the realtime demo working
+- get the save-to-server demo working
 - Server saves the run after the simulation is done.
 - Ability to see the run after it's done.
 - Page to see parallel runs from the past.
@@ -15,6 +10,8 @@
   - Move the server to Google cloud?
   - Rename it streamlet.io.
   - Run it in a docker container
+  - remove DeltaList
+  - implement CrossQueues
 - OPTIONAL: `clear-recent` server endpoin
 
 #### Matt's Suggestions
