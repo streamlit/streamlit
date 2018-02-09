@@ -3,9 +3,9 @@
 - Server runs while the simulation is happening.
   - generalize to Switchboard
     - complete the current end-to-end with regular queues
-    - remove DeltaList
     - get the realtime demo working
     - get the save-to-server demo working
+    - remove DeltaList
     - implement CrossQueues
   - Adapt Queue so that it fits into Switchboard
 - Server saves the run after the simulation is done.
