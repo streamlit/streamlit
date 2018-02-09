@@ -93,7 +93,6 @@ class Notebook:
                 app.router.add_get('/websocket', handler)
 
                 # Actually start the server.
-                self._server_running = True
                 try:
                     web.run_app(app, port=get_shared_config('local.port'),
                         loop=self._loop, handle_signals=False)
@@ -135,11 +134,6 @@ class Notebook:
         """Stops the server loop."""
         # Stops the server loop.
         async def async_stop():
-            # First, gracefully stop connections with _server_running = False.
-            throttleSecs = get_shared_config()['local']['throttleSecs']
-            self._loop.call_later(throttleSecs * 2,
-                lambda: setattr(self, '_server_running', False))
-
             # After a short delay, hard-stop the server loop.
             self._loop.call_later(SHUTDOWN_DELAY_SECS / 2,
                 self._loop.stop)
@@ -178,8 +172,7 @@ class Notebook:
         asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._loop)
 
     async def _async_transmit_through_websocket(self, ws):
-        """Sends queue data across the websocket as it becomes available.
-        Only returns after self._server_running becomes false."""
+        """Sends queue data across the websocket as it becomes available."""
         delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
         async for delta_list in delta_list_aiter:
             await ws.send_bytes(delta_list.SerializeToString())
