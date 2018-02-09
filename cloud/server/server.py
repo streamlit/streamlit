@@ -3,7 +3,7 @@
 import sys
 
 sys.path.append('cloud/server')
-import streamlet.shared.config
+from streamlet.cloud.Server import Server
 
 # ##################
 # # Database Stuff #
@@ -66,7 +66,8 @@ import streamlet.shared.config
 ####################
 
 def main():
-    pass
+    server = Server()
+    server.run_app()
 
 if __name__ == '__main__':
     main()
