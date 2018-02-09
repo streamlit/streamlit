@@ -5,12 +5,16 @@ import yaml
 __CONFIG_PATH = 'config.yaml'
 __GLOBAL_CONFIG = None
 
-def get_config():
+def get_config(path=''):
     """
-    Returns a configuration object for the build type which is one of:
+    Returns a configuration object. You can drill down into the object
+    by specifying a path as arguments. So, for example:
 
-    development - For local development builds.
-    production  - <not implemented>
+    get_config('local.throttleSecs')
+
+    is equivalent to:
+
+    get_config()['local']['throttleSecs']
     """
     global __GLOBAL_CONFIG
     if __GLOBAL_CONFIG:
@@ -19,4 +23,8 @@ def get_config():
         print('Loading config file.')
         with open(__CONFIG_PATH) as config_file:
             __GLOBAL_CONFIG = yaml.load(config_file)
-    return __GLOBAL_CONFIG
+    config = __GLOBAL_CONFIG
+    for key in path.split('.'):
+        if key:
+            config = config[key]
+    return config
