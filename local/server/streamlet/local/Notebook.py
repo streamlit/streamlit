@@ -70,7 +70,9 @@ class Notebook:
         print("Sent out the stop")
 
         # We should rewrite the queue to no longer need this.
+        print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
         time.sleep(SHUTDOWN_DELAY_SECS)
+        print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
 
     def _launch_server(self):
         """Launches the server and runs an asyncio loop forever."""
@@ -94,26 +96,16 @@ class Notebook:
 
                 # Actually start the server.
                 try:
+                    print('About to do run_app')
                     web.run_app(app, port=get_shared_config('local.port'),
                         loop=self._loop, handle_signals=False)
+                    print('Finished run_app.')
                 finally:
                     print('About to close the loop.')
                     self._loop.close()
                 print('About to close the stream_to protocol.')
 
-        threading.Thread(target=run_server, daemon=True).start()
-
-    # def _add_delta(self, delta):
-    #     """Distributes this delta into all queues."""
-    #     # Distribute the delta into every queue. The first queue
-    #     # is special: it's the master queue from which all others derive.
-    #     async def async_add_delta():
-    #         for queue in self._delta_queues:
-    #             queue.add_delta(delta)
-    #
-    #     # All code touching an queue must be run in the server even loop.
-    #     # asyncio.run_coroutine_threadsafe(async_add_delta(), self._loop)
-    #     self._enqueue_coroutine(async_add_delta)
+        threading.Thread(target=run_server, daemon=False).start()
 
     def _get_connection_handler(self):
         """Handles a websocket connection."""
@@ -133,13 +125,15 @@ class Notebook:
     def _stop(self):
         """Stops the server loop."""
         # Stops the server loop.
-        async def async_stop():
-            # After a short delay, hard-stop the server loop.
-            self._loop.call_later(SHUTDOWN_DELAY_SECS / 2,
-                self._loop.stop)
+        self._loop.call_later(SHUTDOWN_DELAY_SECS / 2, self._loop.stop)
 
-        # Code to stop the thread must be run in the server loop.
-        self._enqueue_coroutine(async_stop)
+        # async def async_stop():
+        #     # After a short delay, hard-stop the server loop.
+        #
+        #
+        #
+        # # Code to stop the thread must be run in the server loop.
+        # self._enqueue_coroutine(async_stop)
 
     def _connect_to_cloud(self):
         async def async_connect_to_cloud():
