@@ -4,14 +4,12 @@ write objects out to a wbpage."""
 from aiohttp import web, ClientSession
 import asyncio
 import bson
-import copy
 import os
 import threading
 import time
 import traceback
 
 from streamlet.shared import protobuf
-# from streamlet.local.DeltaQueue import DeltaQueue
 from streamlet.local.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
@@ -32,6 +30,9 @@ class Notebook:
         """
         # Remember whether or not we want to write to the server.
         self._save_to_cloud = save
+
+        # Where we send delta queue data to
+        self._switchboard = Switchboard()
 
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
@@ -75,34 +76,31 @@ class Notebook:
         """Launches the server and runs an asyncio loop forever."""
         def run_server():
             # Create an event loop for this thread.
-            self._server_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._server_loop)
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
 
-            # Run the server in this event loop.
-            try:
-                # Create a delta_generator tied to this menagerie.
-                with Switchboard().stream_to(self._notebook_id) as stream_to:
-                    # Create the delta_generator
-                    def add_delta(delta):
-                        delta_list = protobuf.DeltaList()
-                        delta_list.deltas.extend([delta])
-                        self._server_loop.call_soon_threadsafe(stream_to,
-                            delta_list)
-                    self._delta_generator = DeltaGenerator(add_delta)
+            with self._switchboard.stream_to(self._notebook_id) as stream:
+                # Create the delta_generator
+                def add_delta(delta):
+                    delta_list = protobuf.DeltaList()
+                    delta_list.deltas.extend([delta])
+                    self._loop.call_soon_threadsafe(stream, delta_list)
+                self._delta_generator = DeltaGenerator(add_delta)
 
-                    # Set up the webserver.
-                    handler = self._get_connection_handler()
-                    app = web.Application()
-                    app.router.add_get('/websocket', handler)
+                # Set up the webserver.
+                handler = self._get_connection_handler()
+                app = web.Application()
+                app.router.add_get('/websocket', handler)
 
-                    # Actually start the server.
-                    self._server_running = True
-                    port = get_shared_config()['local']['port']
-                    web.run_app(app, port=port, loop=self._server_loop,
-                        handle_signals=False)
-            finally:
-                print('About to close the loop.')
-                self._server_loop.close()
+                # Actually start the server.
+                self._server_running = True
+                try:
+                    web.run_app(app, port=get_shared_config('local.port'),
+                        loop=self._loop, handle_signals=False)
+                finally:
+                    print('About to close the loop.')
+                    self._loop.close()
+                print('About to close the stream_to protocol.')
 
         threading.Thread(target=run_server, daemon=True).start()
 
@@ -115,7 +113,7 @@ class Notebook:
     #             queue.add_delta(delta)
     #
     #     # All code touching an queue must be run in the server even loop.
-    #     # asyncio.run_coroutine_threadsafe(async_add_delta(), self._server_loop)
+    #     # asyncio.run_coroutine_threadsafe(async_add_delta(), self._loop)
     #     self._enqueue_coroutine(async_add_delta)
 
     def _get_connection_handler(self):
@@ -139,12 +137,12 @@ class Notebook:
         async def async_stop():
             # First, gracefully stop connections with _server_running = False.
             throttleSecs = get_shared_config()['local']['throttleSecs']
-            self._server_loop.call_later(throttleSecs * 2,
+            self._loop.call_later(throttleSecs * 2,
                 lambda: setattr(self, '_server_running', False))
 
             # After a short delay, hard-stop the server loop.
-            self._server_loop.call_later(SHUTDOWN_DELAY_SECS / 2,
-                self._server_loop.stop)
+            self._loop.call_later(SHUTDOWN_DELAY_SECS / 2,
+                self._loop.stop)
 
         # Code to stop the thread must be run in the server loop.
         self._enqueue_coroutine(async_stop)
@@ -177,25 +175,11 @@ class Notebook:
                 traceback.print_exc()
                 import sys
                 sys.exit(-1)
-        asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._server_loop)
+        asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._loop)
 
     async def _async_transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available.
         Only returns after self._server_running becomes false."""
-        raise NotImplementedError('Need to rethink this with Switchboards.')
-        # Create a new queue.
-        queue = copy.deepcopy(self._delta_queues[0])
-        self._delta_queues.append(queue)
-
-        # Send queue data over the wire until _server_running becomes False.
-        throttleSecs = get_shared_config()['local']['throttleSecs']
-        async def send_deltas():
-            deltas = queue.get_deltas()
-            if deltas:
-                delta_list = protobuf.DeltaList()
-                delta_list.deltas.extend(deltas)
-                await ws.send_bytes(delta_list.SerializeToString())
-        while self._server_running:
-            await send_deltas()
-            await asyncio.sleep(throttleSecs)
-        await send_deltas()
+        delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
+        async for delta_list in delta_list_aiter:
+            await ws.send_bytes(delta_list.SerializeToString())

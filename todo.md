@@ -6,7 +6,6 @@
     - remove DeltaList
     - get the realtime demo working
     - get the save-to-server demo working
-    - generalize DeltaQueue to take (notebook_id, delta)
     - implement CrossQueues
   - Adapt Queue so that it fits into Switchboard
 - Server saves the run after the simulation is done.
@@ -65,7 +64,7 @@
 - Clean things up.
   - Figure out how to make an installer with pip
 - Get rid of DeltaList and just send Deltas
-- Switch to `enqueue` and `dequeue` for the DeltaQueue
+- Switch to `enqueue` and `dequeue` for the NotebookQueue
 - Clean up some names in the code.
   - Make the `DataFrame` prop into `df`
   - make the `Chart` prop into `chart`

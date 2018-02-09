@@ -1,11 +1,15 @@
 """Package for the Switchboard class, which contains and manages
-a set of DeltaQueues."""
+a set of NotebookQueues."""
 
+import asyncio
 import contextlib
-from streamlet.shared.DeltaQueue import DeltaQueue
+
+from streamlet.shared import protobuf
+from streamlet.shared.config import get_config as get_shared_config
+from streamlet.shared.NotebookQueue import NotebookQueue
 
 class Switchboard:
-    """Contains a set of DeltaQueues and manages thier incoming, outgoing
+    """Contains a set of NotebookQueues and manages thier incoming, outgoing
     connections."""
 
     def __init__(self):
@@ -17,6 +21,7 @@ class Switchboard:
         # This is the set of all queues, both master and not.
         self._queues = {}
 
+    @contextlib.contextmanager
     def stream_to(self, notebook_id):
         """Returns an asyncrhonous consumer with which we can stream data to
         this menagerie:
@@ -28,35 +33,68 @@ class Switchboard:
         """
         # This context manager ensures that a master queue exists as long as
         # this stream is open.
-        @contextlib.contextmanager
-        def delta_list_consumer():
-            try:
-                # Before the stream opens, create the master queue.
-                queue = DeltaQueue()
-                self._master_queues[notebook_id] = queue
-                self._queues.setdefault(notebook_id, []).append(queue)
+        try:
+            # Before the stream opens, create the master queue.
+            queue = NotebookQueue()
+            self._master_queues[notebook_id] = queue
+            self._queues.setdefault(notebook_id, []).append(queue)
 
-                # Now yield a method to add deltas to this master queue.
-                yield self._add_deltas_func(notebook_id)
+            # Now yield a method to add deltas to this master queue.
+            yield self._add_deltas_func(notebook_id)
 
-            finally:
-                # The stream is closed so we remove references to queue.
-                del self._master_queues[notebook_id]
-                self._queues[notebook_id].remove(queue)
-                if len(self._queues[notebook_id]) == 0:
-                    del self._queues[notebook_id]
-        return delta_list_consumer()
+        finally:
+            # The stream is closed so we remove references to queue.
+            del self._master_queues[notebook_id]
+            self._queues[notebook_id].remove(queue)
+            if len(self._queues[notebook_id]) == 0:
+                del self._queues[notebook_id]
 
-    def stream_from(self, notebook_id):
+    async def stream_from(self, notebook_id):
         """Returns a producer (i.e. iterator) from which we can stream data
         from this menagerie:
 
-        with menagerie.stream_from(notebook_id) as producer:
-            async for delta_list in producer:
+        async for delta_list in menagerie.stream_from(notebook_id):
+            delta_list in producer:
                 ...
         """
-        print('Switchboard stream_from')
-        return Producer()
+        # Before the stream opens, create the slave queue.
+        assert notebook_id in self._master_queues, \
+            f'Cannot stream from {notebook_id} without a master queue.'
+        queue = self._master_queues[notebook_id].clone()
+        self._queues.setdefault(notebook_id, []).append(queue)
+
+        try:
+            # This generator's lifetime is bound by our master queue.
+            throttleSecs = get_shared_config('local.throttleSecs')
+            while notebook_id in self._master_queues:
+                deltas = queue.get_deltas()
+                if deltas:
+                    delta_list = protobuf.DeltaList()
+                    delta_list.deltas.extend(deltas)
+                    yield delta_list
+                await asyncio.sleep(throttleSecs)
+            print(f'Master queue is gone, shutting down the slave queue for {notebook_id}.')
+        finally:
+            # The stream is closed so we remove references to queue.
+            self._queues[notebook_id].remove(queue)
+            if len(self._queues[notebook_id]) == 0:
+                del self._queues[notebook_id]
+
+        # raise NotImplementedError('Need to rethink this with Switchboards.')
+        # # Create a new queue.
+
+        # self._delta_queues.append(queue)
+        #
+        # # Send queue data over the wire until _server_running becomes False.
+        #
+        # async def send_deltas():
+        #
+        #
+        #
+        # while self._server_running:
+        #     await send_deltas()
+        #
+        # await send_deltas()
 
     def _add_deltas_func(self, notebook_id):
         """Returns a function which takes a set of deltas and add them to all
@@ -65,7 +103,7 @@ class Switchboard:
             print(f'Adding {len(delta_list.deltas)} deltas to {notebook_id}.')
             for delta in delta_list.deltas:
                 for queue in self._queues[notebook_id]:
-                    queue.add_delta(delta)
+                    queue(delta)
         return add_deltas
 
 # class Consumer:
