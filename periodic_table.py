@@ -1,4 +1,4 @@
-"""Test scripts to see if the server is working."""
+"""Example of everything that's possible in streamlet."""
 
 import pandas as pd
 import numpy as np

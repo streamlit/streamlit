@@ -1,3 +1,30 @@
+#### Current daemon
+
+- Server runs while the simulation is happening.
+  - generalize to Menagerie
+  - Adapt Queue so that it fits into Menagerie
+- Server saves the run after the simulation is done.
+- Ability to see the run after it's done.
+- Page to see parallel runs from the past.
+- Nice to haves:
+  - Move the server to Google cloud?
+  - Rename it streamlet.io.
+  - Run it in a docker container
+- OPTIONAL: `clear-recent` server endpoin
+
+#### Matt's Suggestions
+
+- interested in mirroring the data
+- downsampling the data
+- ability to do a "10 minute dashboard"
+- ability to zoom in on a graph (and make it big)
+- shared cursor across multiple graphs
+- panel view
+- MVP
+  - local development
+  - do the save=True and write end-to-end
+  -
+
 #### Drago's Suggestion
 
 - the ability to overlay the charts
@@ -8,17 +35,6 @@
   - continue an existing experiment from the checkpoints
 
 #### Implementing The Server
-
-- **What do we need for the current demo.**
-  - Server runs while the simulation is happening.
-  - Server saves the run after the simulation is done.
-  - Ability to see the run after it's done.
-  - Page to see parallel runs from the past.
-  - Nice to haves:
-    - Move the server to Google cloud?
-    - Rename it streamlet.io.
-    - Run it in a docker container
-  - OPTIONAL: `clear-recent` server endpoint
 
 - **Path to the server:** Running the client locally with `save=True` writes to the server
   - make up a class to encapsulate the server
