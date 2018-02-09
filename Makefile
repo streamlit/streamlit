@@ -47,12 +47,11 @@ init:
 	ln -sv ../../../shared/client local/client/node_modules/streamlet-shared
 
 
-# # Counts the number of lines of code in the project
-# loc:
-# 	find tiny_notebook web-client/src protobuf \
-# 		-iname '*.py' -or -iname '*.js' -or -iname '*.proto' | \
-# 		egrep -v "(_pb2)|(printf\.js)|(registerServiceWorker)" | \
-# 		xargs wc
+# Counts the number of lines of code in the project
+loc:
+	find . -iname '*.py' -or -iname '*.js'  | \
+		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)" | \
+		xargs wc
 
 # # Initializes the repository. DO THIS AFTER CHECKING OUT!
 # init:

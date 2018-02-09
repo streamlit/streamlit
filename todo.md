@@ -1,6 +1,10 @@
 #### Current daemon
 
 - Server runs while the simulation is happening.
+  - break server into separate class
+  - the server maintains it's own menagerie
+  - software database layer behind the server's menagerie
+  - cross queue
 - get the realtime demo working
 - get the save-to-server demo working
 - Server saves the run after the simulation is done.

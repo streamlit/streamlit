@@ -9,7 +9,7 @@ import sys
 sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
-with Notebook(save=False) as write:
+with Notebook(save=True) as write:
     # Title.
     write('Period Table of the Elements', fmt='header', level=1)
     write('This notebook shows some of the awesome elements of printf.')
