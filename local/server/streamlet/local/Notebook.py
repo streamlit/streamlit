@@ -15,6 +15,7 @@ from streamlet.local.DeltaQueue import DeltaQueue
 from streamlet.local.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
+from streamlet.shared.Switchboard import Switchboard
 
 LAUNCH_BROWSER_SCRIPT = \
     'osascript ' \
@@ -29,14 +30,6 @@ class Notebook:
 
         save - stream the notebook to the streamlet.io server for storage
         """
-        # Create objects for the server.
-        self._server_loop = asyncio.new_event_loop()
-        self._server_running = False
-
-        # Here is where we can create text
-        self._delta_queues = [DeltaQueue()]
-        self._delta_generator = DeltaGenerator(self._add_delta)
-
         # Remember whether or not we want to write to the server.
         self._save_to_cloud = save
 
@@ -77,20 +70,28 @@ class Notebook:
     def _launch_server(self):
         """Launches the server and runs an asyncio loop forever."""
         def run_server():
-            print("Starting server in separate thread.")
-            self._server_running = True
+            # Create an event loop for this thread.
+            self._server_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._server_loop)
-            handler = self._get_connection_handler()
-            port = get_shared_config()['local']['port']
-            print(f'Launching on port {port}')
-            app = web.Application()
-            app.router.add_get('/websocket', handler)
+
+            # Run the server in this event loop.
             try:
-                # self._server_loop.run_until_complete(start_server)
-                print('Starting the server loop...')
-                web.run_app(app, port=port, loop=self._server_loop,
-                    handle_signals=False)
-                # self._server_loop.run_forever()
+                # Create a delta_generator tied to this menagerie.
+                with Switchboard().stream_to(self._notebook_id) as stream_to:
+                    # Create the delta_generator
+                    def add_delta(delta):
+                        self._server_loop.call_soon_threadsafe(stream_to, delta)
+                    self._delta_generator = DeltaGenerator(add_delta)
+
+                    # Set up the webserver.
+                    handler = self._get_connection_handler()
+                    app = web.Application()
+                    app.router.add_get('/websocket', handler)
+
+                    # Actually start the server.
+                    self._server_running = True
+                    web.run_app(app, port=port, loop=self._server_loop,
+                        handle_signals=False)
             finally:
                 print('About to close the loop.')
                 self._server_loop.close()
@@ -159,6 +160,7 @@ class Notebook:
         self._enqueue_coroutine(async_connect_to_cloud)
 
     def _enqueue_coroutine(self, coroutine):
+        """Runs a coroutine in the server loop."""
         async def wrapped_coroutine():
             try:
                 await coroutine()

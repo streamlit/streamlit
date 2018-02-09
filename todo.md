@@ -1,8 +1,8 @@
 #### Current daemon
 
 - Server runs while the simulation is happening.
-  - generalize to Menagerie
-  - Adapt Queue so that it fits into Menagerie
+  - generalize to Switchboard
+  - Adapt Queue so that it fits into Switchboard
 - Server saves the run after the simulation is done.
 - Ability to see the run after it's done.
 - Page to see parallel runs from the past.
