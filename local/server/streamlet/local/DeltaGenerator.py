@@ -3,9 +3,10 @@
 import pandas as pd
 import numpy as np
 
-from streamlet.shared import protobuf
-from streamlet.local import data_frame_proto, image_proto
+from streamlet.local import image_proto
 from streamlet.local.Chart import Chart
+from streamlet.shared import data_frame_proto
+from streamlet.shared import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 

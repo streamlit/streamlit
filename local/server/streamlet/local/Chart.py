@@ -38,7 +38,7 @@ line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d',
 import re
 import pandas as pd
 
-from streamlet.local import data_frame_proto
+from streamlet.shared import data_frame_proto
 
 class Chart:
     def __init__(self, data, type, width=0, height=0, **props):

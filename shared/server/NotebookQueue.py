@@ -5,7 +5,7 @@ Whenever possible, deltas are combined.
 """
 
 import copy
-from streamlet.local import data_frame_proto
+from streamlet.shared import data_frame_proto
 
 class NotebookQueue:
     """Accumulates a bunch of deltas."""
