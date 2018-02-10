@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 
-from streamlet.local import image_proto
+from streamlet.shared import image_proto
 from streamlet.local.Chart import Chart
 from streamlet.shared import data_frame_proto
 from streamlet.shared import protobuf

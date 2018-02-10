@@ -2,7 +2,6 @@
 
 - Server runs while the simulation is happening.
   - live getter through the managerie
-    - the server serves local pages directly though a hard-linked path
     - the client looks at the URL to get variables
       - if it sees nothing, then do the local client
       - if it sees nb/{id} then connect to the server to get that ID

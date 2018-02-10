@@ -19,6 +19,8 @@ class Server:
             self._new_stream_handler)
         self._app.router.add_get('/api/get/{notebook_id}',
             self._get_notebook_handler)
+        self._app.router.add_get('/api/getx/',
+            self._cross_handler)
 
         # The switchboard maintains "live" notebooks, that is, those with
         # open connections.
@@ -60,6 +62,22 @@ class Server:
         await ws.prepare(request)
 
         async for delta_list in self._switchboard.stream_from(notebook_id):
+            await ws.send_bytes(delta_list.SerializeToString())
+
+        # with self._switchboard.stream_to(notebook_id) as add_deltas:
+        #     async for delta_list in delta_list_iter(ws):
+        #         print(f'Got a delta_list with {len(delta_list.deltas)} deltas.')
+        #         add_deltas(delta_list)
+
+        print('Closing the connection.')
+        return ws
+
+    async def _cross_handler(self, request):
+        # Establishe the websocket.
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+
+        async for delta_list in self._switchboard.cross_stream():
             await ws.send_bytes(delta_list.SerializeToString())
 
         # with self._switchboard.stream_to(notebook_id) as add_deltas:

@@ -12,7 +12,7 @@ import time
 import traceback
 
 from streamlet.shared import protobuf
-from streamlet.local.DeltaGenerator import DeltaGenerator
+from streamlet.shared.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.Switchboard import Switchboard
