@@ -153,6 +153,7 @@ class WebClient extends PureComponent {
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
+          // imgs: (imgs) => <div>Here are some images.</div>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
         });
       } catch (err) {
