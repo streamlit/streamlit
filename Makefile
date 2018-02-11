@@ -24,6 +24,7 @@ help:
 	@echo "                                                               "
 	@echo "help                    - Print this help message.             "
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
+	@echo "js-lib                  - The shared javascript library.       "
 	@echo "clean                   - Remove all js libs.                  "
 	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
 	@echo "                                                               "
@@ -35,24 +36,26 @@ help:
 all:
 	cd shared ; make all
 
+js-lib:
+	cd shared ; make js-lib
+
 # Cleans out generated files.
 clean:
 	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
 
 init:
-	pip install pandas Pillow protobuf PyYAML aiohttp
+	pip install pandas Pillow protobuf PyYAML aiohttp motor
 	npm install -g protobufjs
 	cd shared ; make init
 	cd local/client ; npm install
 	ln -sv ../../../shared/client local/client/node_modules/streamlet-shared
 
 
-# # Counts the number of lines of code in the project
-# loc:
-# 	find tiny_notebook web-client/src protobuf \
-# 		-iname '*.py' -or -iname '*.js' -or -iname '*.proto' | \
-# 		egrep -v "(_pb2)|(printf\.js)|(registerServiceWorker)" | \
-# 		xargs wc
+# Counts the number of lines of code in the project
+loc:
+	find . -iname '*.py' -or -iname '*.js'  | \
+		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)" | \
+		xargs wc
 
 # # Initializes the repository. DO THIS AFTER CHECKING OUT!
 # init:

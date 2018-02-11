@@ -3,17 +3,28 @@
 import yaml
 
 __CONFIG_PATH = 'config.yaml'
-__GLOBAL_CONFIG = {}
+__GLOBAL_CONFIG = None
 
-def get_config(build_type):
+def get_config(path=''):
     """
-    Returns a configuration object for the build type which is one of:
+    Returns a configuration object. You can drill down into the object
+    by specifying a path as arguments. So, for example:
 
-    development - For local development builds.
-    production  - <not implemented>
+    get_config('local.throttleSecs')
+
+    is equivalent to:
+
+    get_config()['local']['throttleSecs']
     """
-    assert build_type in ['development'], 'Build type not understood.'
+    global __GLOBAL_CONFIG
+    if __GLOBAL_CONFIG:
+        print('Using cached config file.')
     if not __GLOBAL_CONFIG:
+        print('Loading config file.')
         with open(__CONFIG_PATH) as config_file:
-            __GLOBAL_CONFIG.update(yaml.load(config_file))
-    return __GLOBAL_CONFIG[build_type]
+            __GLOBAL_CONFIG = yaml.load(config_file)
+    config = __GLOBAL_CONFIG
+    for key in path.split('.'):
+        if key:
+            config = config[key]
+    return config

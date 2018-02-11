@@ -1,31 +1,74 @@
+#### Current daemon
+
+- Server runs while the simulation is happening.
+  - live getter through the managerie
+    - the client looks at the URL to get variables
+      - if it sees nothing, then do the local client
+      - if it sees nb/{id} then connect to the server to get that ID
+      - if it sees x/ the connect to the server to get the X
+  - software database layer behind the server's menagerie
+  - cross queue
+- get the realtime demo working
+- get the save-to-server demo working
+- Server saves the run after the simulation is done.
+- Ability to see the run after it's done.
+- Page to see parallel runs from the past.
+- Nice to haves:
+  - Move the server to Google cloud?
+  - Rename it streamlet.io.
+  - Run it in a docker container
+  - remove DeltaList
+  - implement CrossQueues
+- OPTIONAL: `clear-recent` server endpoin
+
+#### Matt's Suggestions
+
+- interested in mirroring the data
+- downsampling the data
+- ability to do a "10 minute dashboard"
+- ability to zoom in on a graph (and make it big)
+- shared cursor across multiple graphs
+- panel view
+- MVP
+  - local development
+  - do the save=True and write end-to-end
+  -
+#### Drago's Suggestion
+
+- the ability to overlay the charts
+- the ability to make one the baseline and compute all as deltas
+- how can I convince them to switch away from tensorboard
+  - they handle checkpoints
+  - store the history and know that it
+  - continue an existing experiment from the checkpoints
+
 #### Implementing The Server
 
-- **Path to the server:** Running the client locally with `save=True` writes to the server.
-  - opens a connection on the server.. sends a UID for the session
-  - begins writing to the server
-  - server simply prints out the size of everything that is being sent
-    - *Verify:* What happens if we send bigger and bigger payloads?
+- **Path to the server:** Running the client locally with `save=True` writes to the server
+  - make up a class to encapsulate the server
+  - work on a long-running one first
+  - start actually saving some data on the server
   - server has admin page
   - server allows me to see its contents
-  - *NOTE:* Move shared python things to a shared package.
 - **Path back from the server:** Can look up previous results statically on the server.
 - **Bidirectional path:** Running with `save=True`
 - Get the server up and running on Amazon.
 
 #### Todo After the Demo
 
+- Switch to message format
+  - the server responds with its own version of the message
+  - switch the existing client code to this format_list
+  - get rid of on_message, instead wrap the iterator in a binary iterator
+  - change the server api to receive a message token
 - Make sure that symbolic links are preserved when we a clean checkout of the repo.
-- Get the name printf.com.
 - Fix out of order arrivals on the javascript side
 - Put add_rows into the periodic table test
 - Fix the problem with calling __call__ on multiple values
 - Clean things up.
-  - Rename it from tiny-notebook to printf
-  - Rename notebook everywhere to printf.
   - Figure out how to make an installer with pip
-  - Give it a nice favicon. (maybe the connect icon?)
 - Get rid of DeltaList and just send Deltas
-- Switch to `enqueue` and `dequeue` for the DeltaQueue
+- Switch to `enqueue` and `dequeue` for the NotebookQueue
 - Clean up some names in the code.
   - Make the `DataFrame` prop into `df`
   - make the `Chart` prop into `chart`
@@ -37,6 +80,11 @@
   - Then use the following to force updates of the underlying grid.
   - https://github.com/bvaughn/react-virtualized/issues/546
   - https://github.com/bvaughn/react-virtualized/blob/master/docs/MultiGrid.md
+- Get rid of 14 MB limit
+
+### Things That We Need from Ben
+
+- a favicon
 
 #### More things to play with and try
 
@@ -55,13 +103,13 @@
 
 #### Disaggregated File Layout
 
-- `local/`
-  - `client/`
-  - `server/`
-- `shared/`
-  - `client/`
-  - `server/`
-  - `protobuf/`
+- `local/` *The locally running open source client and server.*
+  - `client/` *The local React client.*
+    - `.gitignore`
+    - `package.json`
+  - `server/` *The tiny server which streams local data.*
+    - `.gitignore`
+  - `protobuf/` *Used to communicate between client and server.*
 - `cloud/`
   - `client/`
   - `server/`

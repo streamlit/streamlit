@@ -48,7 +48,7 @@ class MyCallback(keras.callbacks.Callback):
         indices = np.random.choice(len(self._x_test), 36)
         test_data = self._x_test[indices]
         prediction = np.argmax(self.model.predict(test_data), axis=1)
-        self._print.img(test_data, caption=prediction)
+        self._print.img(1.0 - test_data, caption=prediction)
         summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
         self._print(summary)
         self._summary_stats(f'{"epoch":>8s} :  {epoch}\n{summary}')

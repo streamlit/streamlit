@@ -1,4 +1,4 @@
-"""Test scripts to see if the server is working."""
+"""Example of everything that's possible in streamlet."""
 
 import pandas as pd
 import numpy as np
@@ -8,11 +8,6 @@ import sys
 
 sys.path.append('local/server')
 from streamlet import Notebook, Chart
-
-# print('About to do th import', sys.path)
-# print('Finished the import.')
-# print('Exiting.')
-# sys.exit(-1)
 
 with Notebook() as write:
     # Title.

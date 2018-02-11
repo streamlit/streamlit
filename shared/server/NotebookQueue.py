@@ -1,20 +1,21 @@
 
 """
-Provides DeltaQueue, a data structure for storing a bunch of deltas.
+A queue of deltas associated with a particular Notebook.
 Whenever possible, deltas are combined.
 """
 
-from streamlet.local import data_frame_proto
+import copy
+from streamlet.shared import data_frame_proto
 
-class DeltaQueue:
+class NotebookQueue:
     """Accumulates a bunch of deltas."""
 
     def __init__(self):
         """Constructor."""
         self._empty()
 
-    def add_delta(self, delta):
-        """Accumulates this delta into the list."""
+    def __call__(self, delta):
+        """Adds a delta into this queue."""
         # Store the index if necessary.
         if (delta.id in self._id_map):
             index = self._id_map[delta.id]
@@ -33,6 +34,10 @@ class DeltaQueue:
         self._empty()
 
         return deltas
+
+    def clone(self):
+        """Returns a clone of this NotebookQueue."""
+        return copy.deepcopy(self)
 
     def _empty(self):
         """Returns this Accumulator to an empty state."""
