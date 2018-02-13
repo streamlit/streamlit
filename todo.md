@@ -1,3 +1,11 @@
+#### Total Refactor
+
+- Write down the API that I want the programmer to see.
+- Think about a basic structure which makes this possible.
+- Is it possible to fit the list of all notebooks and tags into this structure?
+  - Entities and references.
+- Come up with a transition plan to this structure.
+
 #### Current daemon
 
 - Server runs while the simulation is happening.
