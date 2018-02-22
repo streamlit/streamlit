@@ -56,3 +56,11 @@
   bottom: 0px;
   left: 0px;
 }
+
+.printf-container .table-top-right {
+  overflow-x: hidden !important;
+}
+
+.printf-container .table-bottom-left {
+  overflow-y: hidden !important;
+}

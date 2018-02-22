@@ -81,6 +81,8 @@ class DataFrame extends PureComponent {
                 rowHeight={rowHeight}
                 rowCount={rows}
                 width={width - border}
+                classNameBottomLeftGrid='table-bottom-left'
+                classNameTopRightGrid='table-top-right'
               />
               <div className="fixup fixup-top-right" style={{
                 width: border,
