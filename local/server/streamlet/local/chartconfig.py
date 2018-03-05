@@ -125,9 +125,6 @@ class ValueCycler:
 # of the chart's DataFrame by index (rather than by name).
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        #('x_axis', {
-        #    'data_key': ColumnAtIndex(0),
-        #}),
         ForEachColumn(('line', {
             'type': 'monotone',
             'data_key': ColumnAtCurrentIndex(),
