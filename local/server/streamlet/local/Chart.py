@@ -48,9 +48,13 @@ Or, in builder notation:
 
 Or, with syntax sugar type-specific builders:
 
-    LineChart(width=600, height=300).x_axis(data_key='name')
+    LineChart(data, width=600, height=300).x_axis(data_key='name')
     # These sugary builders already have all sorts of defaults set
     # so usually there's no need to call any additional methods on them :)
+
+    LineChart(data, width=600, height=300)
+    # You don't even need to specify data keys. These are selected automatically
+    # for your from the data.
 """
 
 import pandas as pd
