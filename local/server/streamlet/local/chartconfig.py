@@ -84,18 +84,35 @@ DEFAULT_COMPONENTS = {
     )),
 }
 
-class ColumnAtCurrentIndex:
-    pass
-
 class ColumnAtIndex:
+    """
+    This is used to specify that a certain property should point to whichever
+    column is at this index.
+    """
     def __init__(self, index):
         self.index = index
 
 class ForEachColumn:
+    """
+    This is used to include a certain property as many times as there are
+    columns in the dataset.
+    """
     def __init__(self, prop):
         self.prop = prop
 
+class ColumnAtCurrentIndex:
+    """
+    This is used within a ForEachColumn to specify that a certain property
+    should point to the column that the ForEachColumn is cycling through right
+    now.
+    """
+    pass
+
 class ValueCycler:
+    """
+    This is used within a ForEachColumn to specify values that should be cycled
+    through, as we iterate through the columns.
+    """
     def __init__(self, *items):
         self._items = items
 
