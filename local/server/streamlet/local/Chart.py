@@ -251,8 +251,8 @@ def register_component(component_name, implemented):
 
     setattr(Chart, component_name, append_component_method)
 
-# Add syntax-sugar builder methods to the Chart class, to allow us to do things
-# like Chart.foo(data) instead of Chart(data, 'foo').
+# Add syntax-sugar builder functions to this module, to allow us to do things
+# like FooChart(data) instead of Chart(data, 'foo_chart').
 for chart_type in CHART_TYPES:
     register_type_builder(chart_type)
 
