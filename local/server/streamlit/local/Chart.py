@@ -130,12 +130,12 @@ class Chart:
     def _append_missing_data_components(self):
         """Appends all required data components that have not been specified.
 
-        Required axes are specified in the REQUIRED_COMPONENTS dict, which
-        points each chart type to a tuple of all components that are required
-        for that chart. Required components themselves are either normal tuples
-        or a repeated tuple (specified via ForEachColumn), and their children
-        can use special identifiers such as ColumnAtIndex, ColumnAtCurrentIndex,
-        and ValueCycler.
+        This uses the REQUIRED_COMPONENTS dict, which points each chart type to
+        a tuple of all components that are required for that chart. Required
+        components themselves are either normal tuples or a repeated tuple
+        (specified via ForEachColumn), and their children can use special
+        identifiers such as ColumnAtIndex, ColumnAtCurrentIndex, and
+        ValueCycler.
         """
         missing_required_components = REQUIRED_COMPONENTS.get(self._type, None)
 
