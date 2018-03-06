@@ -121,8 +121,8 @@ class ValueCycler:
 
 # A dict mapping each chart type to a tuple with all components that are
 # required for that chart type. The components themselves are expressed here as
-# 2-tuples. Finally, you can use the ColumnAtIndex class to point to any column
-# of the chart's DataFrame by index (rather than by name).
+# 2-tuples. Here you can use special types ColumnAtIndex, ColumnAtCurrentIndex,
+# ForEachColumn, and ValueCycler.
 REQUIRED_COMPONENTS = {
     'line_chart': (
         ForEachColumn(('line', {
