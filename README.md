@@ -25,6 +25,8 @@ brew install pyenv-virtualenv
 ###### On Linux
 Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
 
+Also make sure you have [these packages](https://github.com/pyenv/pyenv/wiki/Common-build-problems).
+
 #### 4. Install `pyenv` and `pyenv-virtualenv`
 
 ###### On MacOS
@@ -69,6 +71,8 @@ make all
   - `pip install protobuf`
   - `npm install -g protobufjs`
   - Allows us to communicate the messages quickly.
+  - On Linux, you may have to run `sudo pbjs` so PBJS can finish its
+    installation.
 - `pillow`
   - `pip install pillow`
   - Allows us to manipulate images.
@@ -78,3 +82,9 @@ make all
 - `motor`
   - `pip install motor`
   - Allows us to connect to the Mongo database.
+
+For the examples:
+- `pandas`
+  - `pip install pandas`
+- `yaml`
+  - `pip install pyyaml`

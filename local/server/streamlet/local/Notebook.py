@@ -65,14 +65,14 @@ class Notebook:
 
             # Set up the webserver.
             handler = self._get_connection_handler()
-            app = web.Application()
+            app = web.Application(loop=self._loop)
             app.router.add_get('/websocket', handler)
 
             # Actually start the server.
             try:
                 print('About to do run_app')
                 web.run_app(app, port=get_shared_config('local.port'),
-                    loop=self._loop, handle_signals=False)
+                    handle_signals=False)
                 print('Finished run_app.')
             finally:
                 print('About to close the loop.')

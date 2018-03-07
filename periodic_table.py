@@ -7,7 +7,7 @@ import urllib, io
 import sys
 
 sys.path.append('local/server')
-from streamlet import Notebook, Chart
+from streamlet import Notebook, Chart, LineChart
 
 with Notebook() as write:
     # Title.
@@ -23,51 +23,50 @@ with Notebook() as write:
     chart_data = \
         pd.DataFrame(np.random.randn(20, 2), columns=['pv', 'uv'])
 
-    write('Line Chart', fmt='header', level=4)
-    line_chart = Chart(chart_data, 'line_chart')
-    line_chart.x_axis()
-    line_chart.y_axis()
-    line_chart.cartesian_grid(stroke_dasharray='3 3')
-    line_chart.tooltip()
-    line_chart.legend()
-    line_chart.line(type='monotone', data_key='pv', stroke='#8884d8')
-    line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d')
-    write(line_chart)
+    write('Line Chart (simple API)', fmt='header', level=4)
+    write(LineChart(chart_data))
+
+    write('Line Chart (detailed API)', fmt='header', level=4)
+    write(Chart(chart_data, 'line_chart')
+        .x_axis()
+        .y_axis()
+        .cartesian_grid(stroke_dasharray='3 3')
+        .tooltip()
+        .legend()
+        .line(type='monotone', data_key='pv', stroke='#8884d8')
+        .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
     write('Area Chart', fmt='header', level=4)
-    area_chart = Chart(chart_data, 'area_chart')
-    area_chart.x_axis()
-    area_chart.y_axis()
-    area_chart.cartesian_grid(stroke_dasharray='3 3')
-    area_chart.tooltip()
-    area_chart.legend()
-    area_chart.area(type='monotone', data_key='pv',
-        stroke='#82ca9d', fill='#82ca9d')
-    area_chart.area(type='monotone', data_key='uv',
-        stroke='#8884d8', fill='#8884d8')
-    write(area_chart)
+    write(Chart(chart_data, 'area_chart')
+        .x_axis()
+        .y_axis()
+        .cartesian_grid(stroke_dasharray='3 3')
+        .tooltip()
+        .legend()
+        .area(type='monotone', data_key='pv',
+            stroke='#82ca9d', fill='#82ca9d')
+        .area(type='monotone', data_key='uv',
+            stroke='#8884d8', fill='#8884d8'))
 
     write('Bar Chart', fmt='header', level=4)
-    bar_chart = Chart(chart_data[:10], 'bar_chart')
-    bar_chart.x_axis()
-    bar_chart.y_axis(domain="-2,2")
-    bar_chart.cartesian_grid(stroke_dasharray='3 3')
-    bar_chart.tooltip()
-    bar_chart.legend()
-    bar_chart.bar(data_key='pv', fill='#82ca9d')
-    bar_chart.bar(data_key='uv', fill='#8884d8')
-    write(bar_chart)
+    write(Chart(chart_data[:10], 'bar_chart')
+        .x_axis()
+        .y_axis(domain="-2,2")
+        .cartesian_grid(stroke_dasharray='3 3')
+        .tooltip()
+        .legend()
+        .bar(data_key='pv', fill='#82ca9d')
+        .bar(data_key='uv', fill='#8884d8'))
 
     write('Composed Chart', fmt='header', level=4)
-    composed_chart = Chart(chart_data, 'composed_chart')
-    composed_chart.x_axis()
-    composed_chart.y_axis()
-    composed_chart.cartesian_grid(stroke_dasharray='3 3')
-    composed_chart.tooltip()
-    composed_chart.legend()
-    composed_chart.bar(data_key='pv', fill='#82ca9d')
-    composed_chart.area(type='monotone', data_key='uv', fill='#8884d8')
-    write(composed_chart)
+    write(Chart(chart_data, 'composed_chart')
+        .x_axis()
+        .y_axis()
+        .cartesian_grid(stroke_dasharray='3 3')
+        .tooltip()
+        .legend()
+        .bar(data_key='pv', fill='#82ca9d')
+        .area(type='monotone', data_key='uv', fill='#8884d8'))
 
     # DataFrames
     write('Pandas DataFrames', fmt='header', level=3)
