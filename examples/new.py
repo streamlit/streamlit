@@ -15,7 +15,7 @@ with Notebook() as write:
     my_array = np.random.randn(100, 100)
     write('my array', my_array)
 
-    progress = write.progress(0)
-    for i in range(100):
-        progress.progress(i)
-        time.sleep(0.1)
+    # progress = write.progress(0)
+    # for i in range(100):
+    #     progress.progress(i)
+    #     time.sleep(0.1)

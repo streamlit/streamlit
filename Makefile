@@ -33,6 +33,8 @@ help:
 
 all:
 	cd shared ; make all
+	cd local/client ; npm run build
+# data stored in /Users/adrien/Desktop/streamlet-cloud/local/client/build
 
 js-lib:
 	cd shared ; make js-lib

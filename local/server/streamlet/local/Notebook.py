@@ -67,6 +67,8 @@ class Notebook:
             handler = self._get_connection_handler()
             app = web.Application(loop=self._loop)
             app.router.add_get('/websocket', handler)
+            app.router.add_static('/', 
+                path=(os.path.split(__file__)[0] + '/../../../client/build'))
 
             # Actually start the server.
             try:
