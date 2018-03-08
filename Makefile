@@ -5,11 +5,9 @@
 # BUILD VARIABLES #
 ###################
 
-# JS_SRC_PATH = client/src
+STREAMLET_SHARED_LOCAL_LIB = local/client/node_modules/streamlet-shared
 # JS_SRC_FILES = $(shell find $(JS_SRC_PATH) -iname '*.js' -or -iname '*.css')
 # JS_LIB_PATH = client/lib
-
-
 
 #####################
 # USAGE INFORMATION #
@@ -41,15 +39,15 @@ js-lib:
 
 # Cleans out generated files.
 clean:
-	rm -fv $(protobuf_bundle_js) tiny_notebook/protobuf/*_pb2.py
+	cd shared; make clean
 
-init:
+init: $(STREAMLET_SHARED_LOCAL_LIB)
 	pip install pandas Pillow protobuf PyYAML aiohttp motor
-	npm install -g protobufjs
 	cd shared ; make init
 	cd local/client ; npm install
-	ln -sv ../../../shared/client local/client/node_modules/streamlet-shared
 
+$(STREAMLET_SHARED_LOCAL_LIB):
+	ln -sv ../../../shared/client $(STREAMLET_SHARED_LOCAL_LIB)
 
 # Counts the number of lines of code in the project
 loc:
