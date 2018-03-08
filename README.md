@@ -1,4 +1,5 @@
-# tiny-notebook
+# Streamlit
+
 A stateless alternative to Jupyter notebooks for machine learning and data science.
 
 ## Installation
@@ -12,7 +13,15 @@ git clone git@github.com:treuille/streamlet-cloud.git
 
 #### 2. Install `npm`
 
+###### MacOS
+
 No instructions at present. Please feel free to add your own.
+
+###### On Debian-based Linux
+
+```
+sudo apt install npm
+```
 
 #### 3. Install `pyenv` and `pyenv-virtualenv`
 
@@ -27,7 +36,7 @@ Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/m
 
 Also make sure you have [these packages](https://github.com/pyenv/pyenv/wiki/Common-build-problems).
 
-#### 4. Install `pyenv` and `pyenv-virtualenv`
+#### 4. Install hte `protobuf` compiler
 
 ###### On MacOS
 ```
