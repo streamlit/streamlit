@@ -9,11 +9,15 @@ import random
 sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
-with Notebook() as write:
+with Notebook(local=False) as write:
     write.header('My awesome program', level=3)
-    write('hello world')
+    write('hello my little world. I love you!')
     my_array = np.random.randn(100, 100)
     write('my array', my_array)
+
+    print('About to sleep for 10 seconds.')
+    time.sleep(10.0)
+    print('Slept for 10 seconds.')
 
     # progress = write.progress(0)
     # for i in range(100):
