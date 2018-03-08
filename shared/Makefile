@@ -14,6 +14,7 @@ JS_LIB_PATH = client/lib
 PROTOBUF_SRC_FILES = protobuf/*.proto
 PROTOBUF_BUNDLE_JS = client/lib/protobuf/streamlet.js
 PROTOBUF_BUNDLE_PYTHON = server/protobuf/Element_pb2.py
+PROTOBUF_COMPILER_JS = client/node_modules/protobufjs/bin/pbjs
 
 #####################
 # USAGE INFORMATION #
@@ -67,5 +68,5 @@ $(PROTOBUF_BUNDLE_PYTHON): $(PROTOBUF_SRC_FILES)
 $(PROTOBUF_BUNDLE_JS): $(PROTOBUF_SRC_FILES)
 	mkdir -pv $(shell dirname $(PROTOBUF_BUNDLE_JS))
 	#client/node_modules/.bin/pbjs $(PROTOBUF_SRC_FILES) -t static-module > $(PROTOBUF_BUNDLE_JS)
-	client/node_modules/protobufjs/bin/pbjs $(PROTOBUF_SRC_FILES) -t static-module > $(PROTOBUF_BUNDLE_JS)
+	$(PROTOBUF_COMPILER_JS) $(PROTOBUF_SRC_FILES) -t static-module > $(PROTOBUF_BUNDLE_JS)
 	# client/node_modules/.bin/pbjs $(PROTOBUF_SRC_FILES) --js $(PROTOBUF_BUNDLE_JS)
