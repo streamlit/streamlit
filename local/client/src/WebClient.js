@@ -60,7 +60,7 @@ class WebClient extends PureComponent {
    * Callback when we establish a websocket connection.
    */
   handleReconnect() {
-    console.log('CONNECTED TO THE SERVER');
+    console.log('RECONNECTED TO THE SERVER');
   }
 
   /**
@@ -106,7 +106,7 @@ class WebClient extends PureComponent {
       uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
     else if (window.location.pathname === '/x')
       uri = 'ws://localhost:8554/api/getx/'
-    console.log(`For path=${window.location.pathname} uri=${uri}`)
+    // console.log(`For path=${window.location.pathname} uri=${uri}`)
 
     // Return the tree
     return (
@@ -118,7 +118,7 @@ class WebClient extends PureComponent {
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
-              persist={false}
+              persist={true}
             />
           </NavItem>
         </Navbar>
