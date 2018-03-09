@@ -37,7 +37,6 @@ class WebClient extends PureComponent {
     this.state = {
       elements: fromJS([{
         type: 'div',
-        version: '123',
         div: {
           text: 'No data received.',
           classes: 'alert alert-info',
@@ -61,6 +60,16 @@ class WebClient extends PureComponent {
    */
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
+    // Initially the state reflects that no data has been received.
+    this.setState({
+      elements: fromJS([{
+        type: 'div',
+        div: {
+          text: 'Established connection.',
+          classes: 'alert alert-warning',
+        }
+      }]),
+    });
   }
 
   /**

@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import traceback
+import webbrowser
 
 from streamlet.shared import protobuf
 from streamlet.shared.DeltaGenerator import DeltaGenerator
@@ -21,7 +22,8 @@ LAUNCH_BROWSER_SCRIPT = \
     'osascript ' \
     './local/client/node_modules/react-dev-utils/openChrome.applescript ' \
     'http://localhost:3000/'
-SHUTDOWN_DELAY_SECS = 1.0
+SHUTDOWN_DELAY_SECS = 4.0
+LAUNCH_BROWSER_DELAY_SECS = 3.0
 
 class Notebook:
     def __init__(self, local=True, save=False):
@@ -49,6 +51,9 @@ class Notebook:
         # This is the context manager for "with Notebook() as write:"
         self._context_manager = self._get_context_manager()
 
+        # If this doesn't happen quickly enough then we open a browser window.
+        self._received_connection = False
+
     def __enter__(self):
         """Opens up the context for this notebook so that the user can write."""
         return self._context_manager.__enter__()
@@ -67,7 +72,7 @@ class Notebook:
             handler = self._get_connection_handler()
             app = web.Application(loop=self._loop)
             app.router.add_get('/websocket', handler)
-            app.router.add_static('/', 
+            static_route = app.router.add_static('/',
                 path=(os.path.split(__file__)[0] + '/../../../client/build'))
 
             # Actually start the server.
@@ -89,26 +94,14 @@ class Notebook:
             ws = web.WebSocketResponse()
             await ws.prepare(request)
 
+            # Remember that we've got a connection so we don't open a browser.
+            self._received_connection = True
+
             # Sends data from this connection
             await self._async_transmit_through_websocket(ws)
-
-            print('Naturally finished handle connection.')
             return ws
 
         return async_handle_connection
-
-    def _stop(self):
-        """Stops the server loop."""
-        # Stops the server loop.
-        pass
-
-        # async def async_stop():
-        #     # After a short delay, hard-stop the server loop.
-        #
-        #
-        #
-        # # Code to stop the thread must be run in the server loop.
-        # self._enqueue_coroutine(async_stop)
 
     def _connect_to_cloud(self):
         async def async_connect_to_cloud():
@@ -131,6 +124,7 @@ class Notebook:
 
     async def _async_transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
+        print(f'About to stream from {self._notebook_id}')
         delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
         async for delta_list in delta_list_aiter:
             await ws.send_bytes(delta_list.SerializeToString())
@@ -168,8 +162,11 @@ class Notebook:
 
                 # Start the local webserver.
                 self._launch_server()
+                print(f'Launched server: _display_locally={self._display_locally}')
                 if self._display_locally:
-                    os.system(LAUNCH_BROWSER_SCRIPT)
+                    self._loop.call_later(LAUNCH_BROWSER_DELAY_SECS,
+                        self._open_browser_if_necessary)
+                    # os.system(LAUNCH_BROWSER_SCRIPT)
 
                 # Connect to streamlet.io if necessary.
                 if self._save_to_cloud:
@@ -203,3 +200,14 @@ class Notebook:
             # time.sleep(SHUTDOWN_DELAY_SECS)
             # print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
             print('Exiting _get_context_manager()')
+
+    def _open_browser_if_necessary(self):
+        """This is called after a timeout and it opens a browser window if
+        enough time has gone by and we haven't gotten a connection."""
+        print('Entered _open_browser_if_necessary')
+        if not self._received_connection:
+            print('Opening the local connection.')
+            host = get_shared_config('local.server')
+            port = get_shared_config('local.port')
+            webbrowser.open(f'http://{host}:{port}/index.html')
+            print(f'opening http://{host}:{port}/index.html')
