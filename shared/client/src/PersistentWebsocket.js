@@ -7,7 +7,7 @@ import React, { PureComponent } from 'react';
 import { UncontrolledTooltip } from 'reactstrap';
 
 const NORMAL_CLOSURE = 1000;
-const RECONNECT_TIMEOUT = 500.0;
+const RECONNECT_TIMEOUT = 200.0;
 const DISCONNECTED_STATE = 'disconnected';
 const CONNECTED_STATE = 'connected';
 const ERROR_STATE = 'error'
