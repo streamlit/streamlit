@@ -1,0 +1,21 @@
+# These settings are for a development build.
+
+# Configuration for the cloud server.
+cloud:
+  server: localhost
+  port: 8554
+
+# Configuration for the local server.
+local:
+  throttleSecs: 0.01
+
+# Configuration of the proxy server
+proxy:
+  server: localhost
+  port: 9667
+
+  # How many seconds the proxy waits for the connection before timing out.
+  waitForConnectionSecs: 3.0
+
+  # Whether to use the node development server.
+  useNode: true
