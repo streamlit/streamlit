@@ -26,21 +26,19 @@ SHUTDOWN_DELAY_SECS = 4.0
 LAUNCH_BROWSER_DELAY_SECS = 3.0
 
 class Notebook:
-    def __init__(self, local=True, save=False):
+    def __init__(self, save=False):
         """
         Creates a new notebook object.
 
-        local - Display the stream locally.
         save  - Stream the notebook to the astreamlet.io server for storage.
         """
         # These flags determine where the data is sent
-        self._display_locally = local
         self._save_to_cloud = save
 
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
-        if self._save_to_cloud:
-            print(f'See this notebook at http://localhost:3000/nb/{self._notebook_id}')
+        # if self._save_to_cloud:
+        #     print(f'See this notebook at http://localhost:3000/nb/{self._notebook_id}')
 
         # Create an event loop for the local _server_running
         self._loop = asyncio.new_event_loop()
@@ -152,26 +150,29 @@ class Notebook:
         print('Entering _get_context_manager()')
         try:
             with self._switchboard.stream_to(self._notebook_id) as stream_to:
+                print('In the stream_to block.')
+
                 # Create the DeltaGenerator
                 def add_delta(delta):
-                    delta_list = protobuf.DeltaList()
-                    delta_list.deltas.extend([delta])
-                    stream_to(delta_list)
+                    print('Adding delta', delta.WhichOneof('type'))
+                    # delta_list = protobuf.DeltaList()
+                    # delta_list.deltas.extend([delta])
+                    # stream_to(delta_list)
                 delta_generator = DeltaGenerator(add_delta)
                 print('Created a DeltaGenerator with asynchronous add_delta.')
-
-                # Start the local webserver.
-                self._launch_server()
-                print(f'Launched server: _display_locally={self._display_locally}')
-                if self._display_locally:
-                    self._loop.call_later(LAUNCH_BROWSER_DELAY_SECS,
-                        self._open_browser_if_necessary)
-                    # os.system(LAUNCH_BROWSER_SCRIPT)
-
-                # Connect to streamlet.io if necessary.
-                if self._save_to_cloud:
-                    self._connect_to_cloud()
-
+    #
+    #             # Start the local webserver.
+    #             self._launch_server()
+    #             print(f'Launched server: _display_locally={self._display_locally}')
+    #             if self._display_locally:
+    #                 self._loop.call_later(LAUNCH_BROWSER_DELAY_SECS,
+    #                     self._open_browser_if_necessary)
+    #                 # os.system(LAUNCH_BROWSER_SCRIPT)
+    #
+    #             # Connect to streamlet.io if necessary.
+    #             if self._save_to_cloud:
+    #                 self._connect_to_cloud()
+    #
                 # Yield the DeltaGenerator as the write function.
                 try:
                     yield delta_generator
@@ -180,34 +181,34 @@ class Notebook:
                     tb_list = traceback.format_list(traceback.extract_tb(tb))
                     tb_list.append(f'{exc_type.__name__}: {exc_val}')
                     delta_generator.alert('\n'.join(tb_list))
-
-                # Give the client a little time to connect.
-                if self._display_locally:
-                    time.sleep(SHUTDOWN_DELAY_SECS)
-
+    #
+    #             # Give the client a little time to connect.
+    #             if self._display_locally:
+    #                 time.sleep(SHUTDOWN_DELAY_SECS)
+    #
         finally:
             # Close the local webserver.
             print('Dispatching asynchronous stop to the loop.')
-            def stop_loop():
-                print('Calling stop on loop.')
-                self._loop.stop()
-                print('Called stop on loop.')
-            self._loop.call_later(SHUTDOWN_DELAY_SECS / 2, stop_loop)
-            print('Dispatched asynchronous stop to the loop.')
-
-            # # We should rewrite the queue to no longer need this.
-            # print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
-            # time.sleep(SHUTDOWN_DELAY_SECS)
-            # print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
-            print('Exiting _get_context_manager()')
-
-    def _open_browser_if_necessary(self):
-        """This is called after a timeout and it opens a browser window if
-        enough time has gone by and we haven't gotten a connection."""
-        print('Entered _open_browser_if_necessary')
-        if not self._received_connection:
-            print('Opening the local connection.')
-            host = get_shared_config('local.server')
-            port = get_shared_config('local.port')
-            webbrowser.open(f'http://{host}:{port}/index.html')
-            print(f'opening http://{host}:{port}/index.html')
+    #         def stop_loop():
+    #             print('Calling stop on loop.')
+    #             self._loop.stop()
+    #             print('Called stop on loop.')
+    #         self._loop.call_later(SHUTDOWN_DELAY_SECS / 2, stop_loop)
+    #         print('Dispatched asynchronous stop to the loop.')
+    #
+    #         # # We should rewrite the queue to no longer need this.
+    #         # print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
+    #         # time.sleep(SHUTDOWN_DELAY_SECS)
+    #         # print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
+    #         print('Exiting _get_context_manager()')
+    #
+    # def _open_browser_if_necessary(self):
+    #     """This is called after a timeout and it opens a browser window if
+    #     enough time has gone by and we haven't gotten a connection."""
+    #     print('Entered _open_browser_if_necessary')
+    #     if not self._received_connection:
+    #         print('Opening the local connection.')
+    #         host = get_shared_config('local.server')
+    #         port = get_shared_config('local.port')
+    #         webbrowser.open(f'http://{host}:{port}/index.html')
+    #         print(f'opening http://{host}:{port}/index.html')

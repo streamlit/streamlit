@@ -103,48 +103,6 @@ class Switchboard:
             if len(self._queues[notebook_id]) == 0:
                 del self._queues[notebook_id]
 
-    async def cross_stream(self):
-        # Helper
-        def to_delta_list(deltas):
-            delta_list = protobuf.DeltaList()
-            delta_list.deltas.extend(deltas)
-            return delta_list
-
-        # Create a pseudo delta delta list
-        notebook = NotebookQueue()
-        write = DeltaGenerator(notebook)
-        stubs = {}
-        for indx, notebook_id in enumerate(self._master_queues):
-            write(indx, str(notebook_id))
-
-        yield to_delta_list(notebook.get_deltas())
-
-        # # Guard that this is running in the right loop.
-        # assert asyncio.get_event_loop() == self._loop
-        #
-        # # Clone the master queue to create this child queue.
-        # assert notebook_id in self._master_queues, \
-        #     f'Cannot stream from {notebook_id} without a master queue.'
-        # queue = self._master_queues[notebook_id].clone()
-        # self._queues.setdefault(notebook_id, []).append(queue)
-        #
-        # try:
-        #     # This generator's lifetime is bound by our master queue.
-        #     throttleSecs = get_shared_config('local.throttleSecs')
-        #     while notebook_id in self._master_queues:
-        #         deltas = queue.get_deltas()
-        #         if deltas:
-        #             delta_list = protobuf.DeltaList()
-        #             delta_list.deltas.extend(deltas)
-        #             yield delta_list
-        #         await asyncio.sleep(throttleSecs)
-        #     print(f'Master queue is gone, shutting down the slave queue for {notebook_id}.')
-        # finally:
-        #     # The stream is closed so we remove references to queue.
-        #     self._queues[notebook_id].remove(queue)
-        #     if len(self._queues[notebook_id]) == 0:
-        #         del self._queues[notebook_id]
-
     def _add_deltas_func(self, notebook_id):
         """Returns a function which takes a set of deltas and add them to all
         queues associated with this notebook_id."""
