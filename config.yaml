@@ -15,7 +15,8 @@ proxy:
   port: 9667
 
   # How many seconds the proxy waits for the connection before timing out.
-  waitForConnectionSecs: 3.0
+  # waitForConnectionSecs: 3.0
+  waitForConnectionSecs: 10.0
 
   # Whether to use the node development server.
   useNode: true
