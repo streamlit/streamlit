@@ -20,13 +20,25 @@ class Proxy:
     def __init__(self):
         # Set up the server.
         self._app = web.Application()
+        self._app.router.add_routes([
+            # Incoming endpoint to create a new notebook.
+            web.get('/new/{local_id}/{notebook_id}', self._new_stream_handler),
 
-        # Web browsers connect to this endpoint to stream notebook data.
-        self._app.router.add_get('/client', self._client_handler)
+            # Outgoing endpoint to get the latest notebook.
+            web.get('/latest', self._latest_handler)
+        ])
 
+        # # Outgoing endpoint to get a notebook.
+        # self._app.router.add_get('/get/{local_id}/{notebook_id}',
+        #     self._new_stream_handler)
+
+        # TODO: Move this into the route table above.
         # Serve up all the local pages here.
         static_route = self._app.router.add_static('/',
             path=(os.path.split(__file__)[0] + '/../../../client/build'))
+
+        # Counter for the number of incoming connections.
+        self._n_inbound_connections = 0
 
         # Launch startup scripts.
         self._launch_browser_on_startup()
@@ -59,23 +71,39 @@ class Proxy:
         """Closes the server if we haven't received a connection in a certain
         amount of time."""
         # Init the state for the timeout
-        self._received_connection = False
         timeout_secs = float(get_shared_config('proxy.waitForConnectionSecs'))
         loop = asyncio.get_event_loop()
 
         # Enqueue the timeout in the event loop.
         def close_server_if_necessary():
-            if not self._received_connection:
+            if self._n_inbound_connections < 1:
                 print('Timeout reached. Closing proxy server.')
                 loop.stop()
             else:
                 print('Got a connection, not timing out.')
         loop.call_later(timeout_secs, close_server_if_necessary)
 
-    async def _client_handler(self, request):
+    async def _new_stream_handler(self, request):
+        # Parse out the control information.
+        local_id = request.match_info.get('local_id')
+        notebook_id = request.match_info.get('notebook_id')
+        print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
+    
+        # Establishe the websocket.
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+
+        with self._switchboard.stream_to(notebook_id) as add_deltas:
+            async for delta_list in delta_list_iter(ws):
+                add_deltas(delta_list)
+
+        print('Closing the connection.')
+        return ws
+
+    async def _latest_handler(self, request):
         """This is what the web client connects to."""
-        # Remember that we got a connection to prevent timeout.
-        self._received_connection = True
+        # Indicate that we got this connection
+        self._n_inbound_connections += 1
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
@@ -89,22 +117,7 @@ class Proxy:
 
         return ws
 
-    # async def _new_stream_handler(self, request):
-    #     # Parse out the control information.
-    #     local_id = request.match_info.get('local_id')
-    #     notebook_id = request.match_info.get('notebook_id')
-    #     print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
-    #
-    #     # Establishe the websocket.
-    #     ws = web.WebSocketResponse()
-    #     await ws.prepare(request)
-    #
-    #     with self._switchboard.stream_to(notebook_id) as add_deltas:
-    #         async for delta_list in delta_list_iter(ws):
-    #             add_deltas(delta_list)
-    #
-    #     print('Closing the connection.')
-    #     return ws
+
     #
     # async def _get_notebook_handler(self, request):
     #     # Parse out control information.

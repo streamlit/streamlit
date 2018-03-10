@@ -109,13 +109,13 @@ class WebClient extends PureComponent {
 
   render() {
     // Compute the websocket URI based on the pathname.
-    let uri = "ws://localhost:9665/websocket" // default
-    const get_notebook = /nb\/(.*)/.exec(window.location.pathname)
-    if (get_notebook)
-      uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
-    else if (window.location.pathname === '/x')
-      uri = 'ws://localhost:8554/api/getx/'
-    // console.log(`For path=${window.location.pathname} uri=${uri}`)
+    let uri = "ws://localhost:9667/latest" // default
+    // const get_notebook = /nb\/(.*)/.exec(window.location.pathname)
+    // if (get_notebook)
+    //   uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
+    // else if (window.location.pathname === '/x')
+    //   uri = 'ws://localhost:8554/api/getx/'
+    // // console.log(`For path=${window.location.pathname} uri=${uri}`)
 
     // Return the tree
     return (
@@ -127,7 +127,7 @@ class WebClient extends PureComponent {
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
-              persist={true}
+              persist={false}
             />
           </NavItem>
         </Navbar>
