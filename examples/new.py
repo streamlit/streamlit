@@ -9,13 +9,7 @@ import random
 sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
-with Notebook() as write:
-    write.header('My awesome program', level=3)
-    write('hello world')
-    my_array = np.random.randn(100, 100)
-    write('my array', my_array)
-
-    progress = write.progress(0)
-    for i in range(100):
-        progress.progress(i)
-        time.sleep(0.1)
+with Notebook() as print:
+    print('hello world')
+    my_array = np.random.randn(200, 200)
+    print('my array', my_array)
