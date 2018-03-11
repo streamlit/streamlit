@@ -6,7 +6,7 @@ so does this server.
 """
 
 from aiohttp import web, WSMsgType
-# from streamlet.cloud.delta_proto import delta_list_iter
+from streamlet.shared.delta_proto import delta_list_iter
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.Switchboard import Switchboard
 
@@ -94,9 +94,12 @@ class Proxy:
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        with self._switchboard.stream_to(notebook_id) as add_deltas:
-            async for delta_list in delta_list_iter(ws):
-                add_deltas(delta_list)
+        async for delta_list in delta_list_iter(ws):
+            print('Received a delta list in the proxy.')
+
+        # with self._switchboard.stream_to(notebook_id) as add_deltas:
+        #     async for delta_list in delta_list_iter(ws):
+        #         add_deltas(delta_list)
 
         print('Closing the connection.')
         return ws

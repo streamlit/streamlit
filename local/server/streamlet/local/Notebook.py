@@ -19,7 +19,7 @@ import threading
 
 # from streamlet.shared import protobuf
 from streamlet.shared.DeltaGenerator import DeltaGenerator
-# from streamlet.local import config as local_config
+from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
 # from streamlet.shared.Switchboard import Switchboard
 
@@ -70,17 +70,17 @@ class Notebook:
         """Tries to establish a connection to the proxy (launching the
         proxy if necessary). Then, pumps deltas through the connection."""
         # Create a connection URI.
-        # server = get_shared_config('proxy.server')
-        # port = get_shared_config('proxy.port')
-        # local_id = local_config.get_local_id()
-        # notebook_id = self._notebook_id
-        # uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
-        uri = 'http://nothing:6666'
+        server = get_shared_config('proxy.server')
+        port = get_shared_config('proxy.port')
+        local_id = local_config.get_local_id()
+        notebook_id = self._notebook_id
+        uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
         print('Connecting to', uri) # debug
 
+        # Try to connect twice to the websocket
         session = ClientSession(loop=loop)
         try:
-            # Transmit data through this websocket.
+            # Try to connect to the proxy for the first time.
             try:
                 async with session.ws_connect(uri) as ws:
                     print('Got a websocket', ws)
