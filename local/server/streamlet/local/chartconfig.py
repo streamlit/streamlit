@@ -68,22 +68,6 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
-def to_component_list(comp_tuples):
-    return [ChartComponent(k, v) for (k, v) in comp_tuples]
-
-# A dict mapping each chart type to a dict of all components that should be set
-# by default for that chart. These defaults only apply to the type-specific
-# builder functions (e.g. LineChart rather than Chart(foo, 'line_chart').
-DEFAULT_COMPONENTS = {
-    'line_chart': to_component_list((
-        ('x_axis', {}),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': '3 3'}),
-        ('tooltip', {}),
-        ('legend', {}),
-    )),
-}
-
 class ColumnAtIndex:
     """
     This is used to specify that a certain property should point to whichever
@@ -108,6 +92,13 @@ class ColumnAtCurrentIndex:
     """
     pass
 
+class IndexColumn:
+    """
+    This is used to specify that a certain property should point to the index of
+    the dataframe.
+    """
+    pass
+
 class ValueCycler:
     """
     This is used within a ForEachColumn to specify values that should be cycled
@@ -125,6 +116,13 @@ class ValueCycler:
 # ForEachColumn, and ValueCycler.
 REQUIRED_COMPONENTS = {
     'line_chart': (
+        ('x_axis', {
+            'data_key': IndexColumn(),
+        }),
+        ('y_axis', {}),
+        ('cartesian_grid', {'stroke_dasharray': '3 3'}),
+        ('tooltip', {}),
+        ('legend', {}),
         ForEachColumn(('line', {
             'type': 'monotone',
             'data_key': ColumnAtCurrentIndex(),
