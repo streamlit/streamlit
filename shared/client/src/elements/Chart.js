@@ -72,6 +72,15 @@ const COMPONENTS = {
   // Sector         <- not implemented
 }
 
+/** Column name used to designate the dataframe index. */
+const INDEX_COLUMN_DESIGNATOR = '::index';
+
+/** Types of dataframe-indices that are supported. */
+const SUPPORTED_INDEX_TYPES = new Set([
+  'int_64Index', 'uint_64Index', 'float_64Index',
+  // TODO(tvst): 'range_index', etc.
+]);
+
 class Chart extends PureComponent {
   render() {
     try {
@@ -87,11 +96,22 @@ class Chart extends PureComponent {
       const dataFrame = chart.get('data');
       const data = [];
       const [rows, cols] = tableGetRowsAndCols(dataFrame.get('data'));
+
+      const indexType = dataFrame.get('index').get('type');
+      const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType);
+
       for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
         let rowData = {};
+
+        if (hasSupportedIndex) {
+          rowData[INDEX_COLUMN_DESIGNATOR] =
+              dataFrame.get('index').get(indexType)
+                  .get('data').get('data').get(rowIndex);
+        }
+
         for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
           rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
-            tableGet(dataFrame.get('data'), colIndex, rowIndex);
+              tableGet(dataFrame.get('data'), colIndex, rowIndex);
         }
         data.push(rowData)
       }
@@ -142,11 +162,11 @@ function extractProps(elt) {
     let value = prop.get('value');
 
     // Do a little special-casing here. This is a hack which has to be fixed.
-    if (value === 'true')
+    if (value === 'true') {
       value = true;
-    else if (value === 'false')
+    } else if (value === 'false') {
       value = false;
-    else if (prop.get('key') === 'domain') {
+    } else if (prop.get('key') === 'domain') {
       value = prop.get('value').split(',').map((x) => tryParseFloat(x))
     }
     props[prop.get('key')] = value;
