@@ -17,10 +17,7 @@ def get_config(path=''):
     get_config()['local']['throttleSecs']
     """
     global __GLOBAL_CONFIG
-    if __GLOBAL_CONFIG:
-        print('Using cached config file.')
     if not __GLOBAL_CONFIG:
-        print('Loading config file.')
         with open(__CONFIG_PATH) as config_file:
             __GLOBAL_CONFIG = yaml.load(config_file)
     config = __GLOBAL_CONFIG

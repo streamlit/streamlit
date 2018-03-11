@@ -9,6 +9,9 @@ cloud:
 local:
   throttleSecs: 0.01
 
+  # How long to wait for the proxy server to start up.
+  waitForProxySecs: 1.0
+
 # Configuration of the proxy server
 proxy:
   server: localhost
@@ -16,7 +19,7 @@ proxy:
 
   # How many seconds the proxy waits for the connection before timing out.
   # waitForConnectionSecs: 3.0
-  waitForConnectionSecs: 10.0
+  waitForConnectionSecs: 60.0
 
   # Whether to use the node development server.
   useNode: true

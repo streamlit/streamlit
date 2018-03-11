@@ -53,6 +53,7 @@ class Proxy:
         """Runs the web app."""
         port = get_shared_config('proxy.port')
         web.run_app(self._app, port=port)
+        print('THE EVENT LOOP STOPPED NATURALLY!!!')
 
     def _launch_browser_on_startup(self):
         """Launches a web browser to connect to the proxy."""
@@ -71,7 +72,7 @@ class Proxy:
         """Closes the server if we haven't received a connection in a certain
         amount of time."""
         # Init the state for the timeout
-        timeout_secs = float(get_shared_config('proxy.waitForConnectionSecs'))
+        timeout_secs = get_shared_config('proxy.waitForConnectionSecs')
         loop = asyncio.get_event_loop()
 
         # Enqueue the timeout in the event loop.
@@ -88,7 +89,7 @@ class Proxy:
         local_id = request.match_info.get('local_id')
         notebook_id = request.match_info.get('notebook_id')
         print(f"Got a connection with local_id={local_id} and notebook_id={notebook_id}.")
-    
+
         # Establishe the websocket.
         ws = web.WebSocketResponse()
         await ws.prepare(request)
@@ -105,18 +106,28 @@ class Proxy:
         # Indicate that we got this connection
         self._n_inbound_connections += 1
 
-        # Establishe the websocket.
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
+        try:
+            # Establishe the websocket.
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
 
-        print('got a client websocket connection.')
+            print('got a client websocket connection.')
+            msg = await ws.receive()
+            if msg.type != WSMsgType.CLOSE:
+                print('Unknown message type:', msg.type)
+            print('The connection closed naturally.')
 
-        # with self._switchboard.stream_to(notebook_id) as add_deltas:
-        #     async for delta_list in delta_list_iter(ws):
-        #         add_deltas(delta_list)
+            # with self._switchboard.stream_to(notebook_id) as add_deltas:
+            #     async for delta_list in delta_list_iter(ws):
+            #         add_deltas(delta_list)
 
-        return ws
+            return ws
 
+        # Close the server if there are no more connections.
+        finally:
+            self._n_inbound_connections -= 1
+            if self._n_inbound_connections < 1:
+                asyncio.get_event_loop().stop()
 
     #
     # async def _get_notebook_handler(self, request):
