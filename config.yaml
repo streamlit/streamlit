@@ -10,7 +10,7 @@ local:
   throttleSecs: 0.01
 
   # How long to wait for the proxy server to start up.
-  waitForProxySecs: 1.0
+  waitForProxySecs: 2.0
 
 # Configuration of the proxy server
 proxy:
@@ -18,8 +18,7 @@ proxy:
   port: 9667
 
   # How many seconds the proxy waits for the connection before timing out.
-  # waitForConnectionSecs: 3.0
-  waitForConnectionSecs: 60.0
+  waitForConnectionSecs: 10.0
 
   # Whether to use the node development server.
   useNode: true

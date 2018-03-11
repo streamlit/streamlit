@@ -6,7 +6,7 @@ from aiohttp import web, ClientSession
 import asyncio
 import bson
 import contextlib
-import os
+import subprocess
 # import sys
 import threading
 # import time
@@ -18,9 +18,10 @@ import threading
 # sys.exit(-1)
 
 # from streamlet.shared import protobuf
-from streamlet.shared.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
+from streamlet.shared.DeltaGenerator import DeltaGenerator
+from streamlet.shared.NotebookQueue import NotebookQueue
 # from streamlet.shared.Switchboard import Switchboard
 
 # LAUNCH_BROWSER_SCRIPT = \
@@ -40,11 +41,11 @@ class Notebook:
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
 
-        # # Create an event loop for the local _server_running
-        # self._
+        # Queue to store deltas as they flow across.
+        self._queue = NotebookQueue()
 
         # Set to false when the connection should close.
-        self._keep_connection_open = True
+        self._connection_open = True
 
         # This is the context manager for "with Notebook() as write:"
         self._context_manager = self._get_context_manager()
@@ -58,13 +59,16 @@ class Notebook:
         self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
     def _connect_to_proxy(self):
-        """Opens a connection to the server in a separate thread."""
+        """Opens a connection to the server in a separate thread. Returns
+        the event loop for that thread."""
+        loop = asyncio.new_event_loop()
         def connection_thread():
-            loop = asyncio.new_event_loop()
             # asyncio.set_event_loop(loop)
             loop.run_until_complete(self._attempt_connection(loop))
             loop.close()
+            print('THE LOCAL THREAD CLOSED NATURALLY!')
         threading.Thread(target=connection_thread, daemon=False).start()
+        return loop
 
     async def _attempt_connection(self, loop):
         """Tries to establish a connection to the proxy (launching the
@@ -130,11 +134,14 @@ class Notebook:
 
     async def _launch_proxy(self):
         """Launches the proxy server."""
-        print('about to launch the proxy in a separate process')
+        print('about to launch the proxy in a separate process', __file__)
+        import os
         os.system('./proxy &')
+        # subprocess.Popen('proxy')
         print('launched the proxy in a separate process.')
         print('sleeping while waiting for the proxy', get_shared_config('local.waitForProxySecs'))
-        asyncio.sleep(get_shared_config('local.waitForProxySecs'))
+        await asyncio.sleep(get_shared_config('local.waitForProxySecs'))
+        print('Finished sleeping.')
 
     # def _get_connection_handler(self):
     #     """Handles a websocket connection."""
@@ -163,9 +170,20 @@ class Notebook:
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         print(f'About to stream from {self._notebook_id} through {ws}')
+        async def flush_queue():
+            deltas = self._queue.get_deltas()
+            if deltas:
+                delta_list = protobuf.DeltaList()
+                delta_list.deltas.extend(deltas)
+                await ws.send_bytes(delta_list.SerializeToString())
+        while self._connection_open:
+            await flush_queue()
+            await asyncio.sleep(get_shared_config('local.throttleSecs'))
+        await flush_queue()
+        print('Naturally finished transmitting through the websocket.')
         # delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
         # async for delta_list in delta_list_aiter:
-        #     await ws.send_bytes(delta_list.SerializeToString())
+        #
 
     # def _enqueue_coroutine(self, coroutine):
     #     """Runs a coroutine in the server loop."""
@@ -190,7 +208,7 @@ class Notebook:
         print('Entering _get_context_manager()')
         try:
             # Open a connection to the proxy.
-            self._connect_to_proxy()
+            loop = self._connect_to_proxy()
 
             # Create the DeltaGenerator
             def add_delta(delta):
@@ -229,13 +247,9 @@ class Notebook:
         finally:
             # Close the local webserver.
             print('Dispatching asynchronous stop to the loop.')
-    #         def stop_loop():
-    #             print('Calling stop on loop.')
-    #             self._loop.stop()
-    #             print('Called stop on loop.')
-    #         self._loop.call_later(SHUTDOWN_DELAY_SECS / 2, stop_loop)
-    #         print('Dispatched asynchronous stop to the loop.')
-    #
+            loop.call_soon_threadsafe(setattr, self, '_connection_open', False)
+            print('Dispatched asynchronous stop to the loop.')
+
     #         # # We should rewrite the queue to no longer need this.
     #         # print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
     #         # time.sleep(SHUTDOWN_DELAY_SECS)
