@@ -127,6 +127,7 @@ REQUIRED_COMPONENTS = {
             'type': 'monotone',
             'data_key': ColumnAtCurrentIndex(),
             'stroke': ValueCycler('#8884d8', '#82ca9d'),
+            'dot': 'false',
         })),
     ),
 }
