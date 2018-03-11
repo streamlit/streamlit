@@ -15,6 +15,6 @@ with Notebook() as print:
     # for i in range(100):
     #     print('i', i)
     # print('Finished the loop')
-    #
+
     # an_array = np.random.randn(200, 200)
     # print(an_array)
