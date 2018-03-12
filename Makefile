@@ -42,7 +42,7 @@ clean:
 	cd shared; make clean
 
 init: $(STREAMLET_SHARED_LOCAL_LIB)
-	pip install pandas Pillow protobuf PyYAML aiohttp motor
+	pip install -r requirements.txt
 	cd shared ; make init
 	cd local/client ; npm install
 
