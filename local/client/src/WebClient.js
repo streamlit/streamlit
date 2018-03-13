@@ -18,6 +18,7 @@ import DataFrame from 'streamlet-shared/lib/elements/DataFrame';
 import Div from 'streamlet-shared/lib/elements/Div';
 import Chart from 'streamlet-shared/lib/elements/Chart';
 import ImageList from 'streamlet-shared/lib/elements/ImageList';
+import Text from 'streamlet-shared/lib/elements/Text';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
@@ -155,6 +156,7 @@ class WebClient extends PureComponent {
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           // imgs: (imgs) => <div>Here are some images.</div>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
+          text: (text) => <Text element={text} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

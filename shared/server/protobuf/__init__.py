@@ -16,6 +16,7 @@ from Div_pb2 import Div
 from Element_pb2 import Element
 from Delta_pb2 import Delta, DeltaList
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
+from Text_pb2 import Text
 
 # Clear out all temporary variables.
 sys.path.pop()

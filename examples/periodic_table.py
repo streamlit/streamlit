@@ -130,6 +130,23 @@ with Notebook() as write:
         '  ...  2 leading spaces\n' +
         '   ... 3 leading spaces');
 
+    write('Markdown', fmt='header', level=3)
+    write.markdown("""
+Markdown allows for adding markup to plain text with intuitive
+and minimal syntax. For example:
+
+- to *emphasize* a word simply surround it with `*`
+- headings are prefixed with `#`, where the count indicates the level
+- lists like these have each item prefixed with `-`
+
+```python
+  # it's even possible to display code
+  for i in range(0, 10):
+    print(i)
+```
+    """)
+
+
     # Progress
     write('Progress Bars', fmt='header', level=3)
     for percent in [100, 75, 50, 25, 0]:
