@@ -41,10 +41,10 @@ class NotebookQueue:
         queue afterwards."""
         deltas = self.get_deltas()
         if deltas:
-            delta_list = protobuf.DeltaList()
-            delta_list.deltas.extend(deltas)
-            print(f'Sending {len(delta_list.deltas)} delta(s) across the wire.')
-            await ws.send_bytes(delta_list.SerializeToString())
+            msg = protobuf.StreamlitMsg()
+            msg.delta_list.deltas.extend(deltas)
+            print(f'Sending {len(msg.delta_list.deltas)} delta(s) across the wire.')
+            await ws.send_bytes(msg.SerializeToString())
 
     def clone(self):
         """Returns a clone of this NotebookQueue."""

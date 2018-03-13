@@ -11,8 +11,10 @@ import os
 import webbrowser
 
 from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.delta_proto import delta_list_iter
 from streamlet.shared.NotebookQueue import NotebookQueue
+from streamlet.shared.object_id_proto import unmarshall_object_id
+from streamlet.shared.streamlit_msg_proto import new_notebook_msg
+from streamlet.shared.streamlit_msg_proto import streamlit_msg_iter
 
 class Proxy:
     """The main base class for the streamlet server."""
@@ -47,6 +49,7 @@ class Proxy:
         # The queue will be instantiated each time we see a new incoming
         # connection.
         self._queue = None
+        self._notebook_id = None
 
     def run_app(self):
         """Runs the web app."""
@@ -94,15 +97,25 @@ class Proxy:
         await ws.prepare(request)
 
         # Instantiate a new queue and stream data into it.
-        self._queue = NotebookQueue()
-        async for delta_list in delta_list_iter(ws):
-            for delta in delta_list.deltas:
-                print('In _new_stream_handler, adding a delta to the queue.')
-                self._queue(delta)
+        async for msg in streamlit_msg_iter(ws):
+            msg_type = msg.WhichOneof('type')
+            print(f'RECEIVED A MESSAGE: {msg_type}')
+            if msg_type == 'new_notebook':
+                self._queue = NotebookQueue()
+                self._notebook_id = unmarshall_object_id(msg.new_notebook)
+            elif msg_type == 'delta_list':
+                assert self._queue != None, \
+                    'Received delta_list message before new_notebook '\
+                    'message, violating the protocol.'
+                for delta in msg.delta_list.deltas:
+                    print('In _new_stream_handler, adding a delta to the queue.')
+                    self._queue(delta)
+            else:
+                raise RuntimeError(f'Cannot parse message type: {msg_type}')
         #     print('Received a delta list in the proxy.')
         #
         # # with self._switchboard.stream_to(notebook_id) as add_deltas:
-        # #     async for delta_list in delta_list_iter(ws):
+        # #     async for delta_list in streamlit_msg_iter(ws):
         # #         add_deltas(delta_list)
 
         print('Closing the connection in _new_stream_handler.')
@@ -120,16 +133,17 @@ class Proxy:
             await ws.prepare(request)
 
             print('got a client websocket connection.')
-            current_queue = self._queue
+            current_notebook_id = self._notebook_id
             while True:
                 # See if the queue has changed.
-                if id(self._queue) != id(current_queue):
-                    print('We got a new queue!')
-                    current_queue = self._queue
+                if self._notebook_id != current_notebook_id:
+                    current_notebook_id = self._notebook_id
+                    print('We got a new queue!', current_notebook_id)
+                    await new_notebook_msg(current_notebook_id, ws)
 
                 # See if we got any new deltas and send them across the wire.
-                if current_queue != None:
-                    await current_queue.flush_deltas(ws)
+                if current_notebook_id != None:
+                    await self._queue.flush_deltas(ws)
 
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
@@ -144,7 +158,7 @@ class Proxy:
             print('The connection closed naturally.')
 
             # with self._switchboard.stream_to(notebook_id) as add_deltas:
-            #     async for delta_list in delta_list_iter(ws):
+            #     async for delta_list in streamlit_msg_iter(ws):
             #         add_deltas(delta_list)
 
             return ws
@@ -168,7 +182,7 @@ class Proxy:
     #         await ws.send_bytes(delta_list.SerializeToString())
     #
     #     # with self._switchboard.stream_to(notebook_id) as add_deltas:
-    #     #     async for delta_list in delta_list_iter(ws):
+    #     #     async for delta_list in streamlit_msg_iter(ws):
     #     #         print(f'Got a delta_list with {len(delta_list.deltas)} deltas.')
     #     #         add_deltas(delta_list)
     #
