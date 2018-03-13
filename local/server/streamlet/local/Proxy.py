@@ -6,13 +6,13 @@ so does this server.
 """
 
 from aiohttp import web, WSMsgType
-from streamlet.shared.delta_proto import delta_list_iter
-from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.Switchboard import Switchboard
-
 import asyncio
 import os
 import webbrowser
+
+from streamlet.shared.config import get_config as get_shared_config
+from streamlet.shared.delta_proto import delta_list_iter
+from streamlet.shared.NotebookQueue import NotebookQueue
 
 class Proxy:
     """The main base class for the streamlet server."""
@@ -44,10 +44,9 @@ class Proxy:
         self._launch_browser_on_startup()
         self._close_server_on_connection_timeout()
 
-        # # The switchboard maintains "live" notebooks, that is, those with
-        # # open connections.
-        # self._switchboard = Switchboard(asyncio.get_event_loop(),
-        #     remove_master_queues=False)
+        # The queue will be instantiated each time we see a new incoming
+        # connection.
+        self._queue = None
 
     def run_app(self):
         """Runs the web app."""
@@ -94,20 +93,26 @@ class Proxy:
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
+        # Instantiate a new queue and stream data into it.
+        self._queue = NotebookQueue()
         async for delta_list in delta_list_iter(ws):
-            print('Received a delta list in the proxy.')
+            for delta in delta_list.deltas:
+                print('In _new_stream_handler, adding a delta to the queue.')
+                self._queue(delta)
+        #     print('Received a delta list in the proxy.')
+        #
+        # # with self._switchboard.stream_to(notebook_id) as add_deltas:
+        # #     async for delta_list in delta_list_iter(ws):
+        # #         add_deltas(delta_list)
 
-        # with self._switchboard.stream_to(notebook_id) as add_deltas:
-        #     async for delta_list in delta_list_iter(ws):
-        #         add_deltas(delta_list)
-
-        print('Closing the connection.')
+        print('Closing the connection in _new_stream_handler.')
         return ws
 
     async def _latest_handler(self, request):
         """This is what the web client connects to."""
         # Indicate that we got this connection
         self._n_inbound_connections += 1
+        throttle_secs = get_shared_config('local.throttleSecs')
 
         try:
             # Establishe the websocket.
@@ -115,9 +120,27 @@ class Proxy:
             await ws.prepare(request)
 
             print('got a client websocket connection.')
-            msg = await ws.receive()
-            if msg.type != WSMsgType.CLOSE:
-                print('Unknown message type:', msg.type)
+            current_queue = self._queue
+            while True:
+                # See if the queue has changed.
+                if id(self._queue) != id(current_queue):
+                    print('We got a new queue!')
+                    current_queue = self._queue
+
+                # See if we got any new deltas and send them across the wire.
+                if current_queue != None:
+                    await current_queue.flush_deltas(ws)
+
+                # Watch for a CLOSE method as we sleep for throttle_secs.
+                try:
+                    msg = await ws.receive(timeout=throttle_secs)
+                    if msg.type != WSMsgType.CLOSE:
+                        print('Unknown message type:', msg.type)
+                    print('Received close message. Breaking out of loop.')
+                    break
+                except asyncio.TimeoutError:
+                    pass
+
             print('The connection closed naturally.')
 
             # with self._switchboard.stream_to(notebook_id) as add_deltas:

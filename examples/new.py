@@ -10,7 +10,9 @@ sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 with Notebook() as print:
-    print('Hello world.')
+    print('Hello world 5.')
+    print('Hello world 6.')
+    # print('Hello world 2.')
     # print('Starting the loop')
     # for i in range(100):
     #     print('i', i)

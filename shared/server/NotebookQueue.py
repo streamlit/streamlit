@@ -5,7 +5,9 @@ Whenever possible, deltas are combined.
 """
 
 import copy
+
 from streamlet.shared import data_frame_proto
+from streamlet.shared import protobuf
 
 class NotebookQueue:
     """Accumulates a bunch of deltas."""
@@ -28,12 +30,21 @@ class NotebookQueue:
         self._deltas[index] = self.compose(self._deltas[index], delta)
 
     def get_deltas(self):
-        """Returns a list of deltas in a DeltaList message
-        and clears this queue."""
+        """Returns a list of deltas and clears this queue."""
         deltas = self._deltas
         self._empty()
 
         return deltas
+
+    async def flush_deltas(self, ws):
+        """Sends the deltas across the websocket in a DeltaList, clearing the
+        queue afterwards."""
+        deltas = self.get_deltas()
+        if deltas:
+            delta_list = protobuf.DeltaList()
+            delta_list.deltas.extend(deltas)
+            print(f'Sending {len(delta_list.deltas)} delta(s) across the wire.')
+            await ws.send_bytes(delta_list.SerializeToString())
 
     def clone(self):
         """Returns a clone of this NotebookQueue."""
