@@ -23,6 +23,7 @@ help:
 	@echo "help                    - Print this help message.             "
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
 	@echo "js-lib                  - The shared javascript library.       "
+	@echo "protobuf-lib            - The protobuf libraries.              "
 	@echo "clean                   - Remove all js libs.                  "
 	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
 	@echo "                                                               "
@@ -38,6 +39,9 @@ all:
 
 js-lib:
 	cd shared ; make js-lib
+
+protobuf-lib:
+	cd shared ; make protobuf-lib
 
 # Cleans out generated files.
 clean:
