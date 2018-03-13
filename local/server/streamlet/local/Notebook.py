@@ -7,28 +7,14 @@ import asyncio
 import bson
 import contextlib
 import subprocess
-# import sys
+import sys
 import threading
-# import time
-# import traceback
-# import webbrowser
-
-# print('version', aiohttp.__version__)
-# import sys
-# sys.exit(-1)
+import traceback
 
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.DeltaGenerator import DeltaGenerator
 from streamlet.shared.NotebookQueue import NotebookQueue
-# from streamlet.shared.Switchboard import Switchboard
-
-# LAUNCH_BROWSER_SCRIPT = \
-#     'osascript ' \
-#     './local/client/node_modules/react-dev-utils/openChrome.applescript ' \
-#     'http://localhost:3000/'
-# SHUTDOWN_DELAY_SECS = 4.0
-# LAUNCH_BROWSER_DELAY_SECS = 3.0
 
 class Notebook:
     def __init__(self, save=False):
