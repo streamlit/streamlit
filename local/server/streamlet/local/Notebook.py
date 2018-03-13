@@ -15,6 +15,7 @@ from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.DeltaGenerator import DeltaGenerator
 from streamlet.shared.NotebookQueue import NotebookQueue
+from streamlet.shared.streamlit_msg_proto import new_notebook_msg
 
 class Notebook:
     def __init__(self, save=False):
@@ -99,24 +100,6 @@ class Notebook:
             # Closing the session.
             await session.close()
 
-            # # Set up the webserver.
-            # handler = self._get_connection_handler()
-            # app = web.Application(loop=self._loop)
-            # app.router.add_get('/websocket', handler)
-            # static_route = app.router.add_static('/',
-            #     path=(os.path.split(__file__)[0] + '/../../../client/build'))
-            #
-            # # Actually start the server.
-            # try:
-            #     print('About to do run_app')
-            #     web.run_app(app, port=get_shared_config('local.port'),
-            #         handle_signals=False)
-            #     print('Finished run_app.')
-            # finally:
-            #     print('About to close the loop.')
-            #     self._loop.close()
-
-
     async def _launch_proxy(self):
         """Launches the proxy server."""
         print('about to launch the proxy in a separate process', __file__)
@@ -144,17 +127,14 @@ class Notebook:
     #
     #     return async_handle_connection
 
-    # def _connect_to_cloud(self):
-    #     async def async_connect_to_cloud():
 
-    #
-    #     # Code to connect to the cloud must be done in a separate thread.
-    #     self._enqueue_coroutine(async_connect_to_cloud)
-    #
-    #
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
+        # Send the header information across.
         print(f'About to stream from {self._notebook_id} through {ws}')
+        await new_notebook_msg(self._notebook_id, ws)
+
+        # Send other information across.
         throttle_secs = get_shared_config('local.throttleSecs')
         while self._connection_open:
             await self._queue.flush_deltas(ws)
@@ -162,9 +142,6 @@ class Notebook:
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_deltas(ws)
         print('Naturally finished transmitting through the websocket.')
-        # delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
-        # async for delta_list in delta_list_aiter:
-        #
 
     # def _enqueue_coroutine(self, coroutine):
     #     """Runs a coroutine in the server loop."""
