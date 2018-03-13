@@ -17,7 +17,6 @@ import threading
 # import sys
 # sys.exit(-1)
 
-# from streamlet.shared import protobuf
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.DeltaGenerator import DeltaGenerator
@@ -170,16 +169,12 @@ class Notebook:
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         print(f'About to stream from {self._notebook_id} through {ws}')
-        async def flush_queue():
-            deltas = self._queue.get_deltas()
-            if deltas:
-                delta_list = protobuf.DeltaList()
-                delta_list.deltas.extend(deltas)
-                await ws.send_bytes(delta_list.SerializeToString())
+        throttle_secs = get_shared_config('local.throttleSecs')
         while self._connection_open:
-            await flush_queue()
-            await asyncio.sleep(get_shared_config('local.throttleSecs'))
-        await flush_queue()
+            await self._queue.flush_deltas(ws)
+            print('Just sent deltas through _transmit_through_websocket.')
+            await asyncio.sleep(throttle_secs)
+        await self._queue.flush_deltas(ws)
         print('Naturally finished transmitting through the websocket.')
         # delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
         # async for delta_list in delta_list_aiter:
@@ -211,12 +206,8 @@ class Notebook:
             loop = self._connect_to_proxy()
 
             # Create the DeltaGenerator
-            def add_delta(delta):
-                print('Adding delta', delta.WhichOneof('type'))
-                # delta_list = protobuf.DeltaList()
-                # delta_list.deltas.extend([delta])
-                # stream_to(delta_list)
-            delta_generator = DeltaGenerator(add_delta)
+            enqueue_delta = lambda d: loop.call_soon_threadsafe(self._queue, d)
+            delta_generator = DeltaGenerator(enqueue_delta)
             print('Created a DeltaGenerator with asynchronous add_delta.')
 #
 #             # Start the local webserver.
