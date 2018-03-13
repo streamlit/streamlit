@@ -12,20 +12,11 @@ import './Text.css';
 class Text extends PureComponent {
   render() {
     const {element, width} = this.props;
-    switch (element.get('format')) {
-      case 1: // markdown
-        return (
-          <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={element.get('body')} />
-          </div>
-        );
-      default:
-        return (
-          <div className="plain-text-container" style={{width}}>
-            {element.get('body')}
-          </div>
-        );
-    }
+    return (
+      <div className="text-container" style={{width}}>
+        <ReactMarkdown source={element.get('body')} />
+      </div>
+    );
   }
 }
 

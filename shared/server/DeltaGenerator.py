@@ -169,7 +169,6 @@ class DeltaGenerator:
         """
         def set_body(element):
             element.text.body = body
-            element.text.format = protobuf.Text.MARKDOWN
         return self._new_element(set_body)
 
     def add_rows(self, df):
