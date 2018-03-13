@@ -1,8 +1,16 @@
 syntax = "proto3";
 
-// Plain or formatted text
+// Formatted text
 message Text {
 
   // Content to display.
   string body = 1;
+
+  // Content format
+  enum Format {
+    PLAIN = 0;
+    MARKDOWN = 1;
+    JSON = 2;
+  }
+  Format format = 2;
 }

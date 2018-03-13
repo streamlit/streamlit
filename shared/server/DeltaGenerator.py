@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import json
 
 from streamlet.shared import image_proto
 from streamlet.local.Chart import Chart
@@ -64,10 +65,11 @@ class DeltaGenerator:
             - "img"      : prints an image out
             - "progress" : prints out a progress bar (for a 0<num<1)
             - "markdown" : prints out as Markdown-formatted text
+            - "json" : prints out as JSON-formatted text
         """
         # Dispatch based on the 'fmt' argument.
         supported_formats = ['text', 'alert', 'header', 'header', 'dataframe',
-            'chart', 'img', 'progress', 'markdown']
+            'chart', 'img', 'progress', 'markdown', 'json']
         if fmt in supported_formats:
             assert len(args) == 1, f'Format "{fmt}" requires only one argument.'
             return getattr(self, fmt)(args[0], **kwargs)
@@ -169,6 +171,17 @@ class DeltaGenerator:
         """
         def set_body(element):
             element.text.body = body
+            element.text.format = protobuf.Text.MARKDOWN
+        return self._new_element(set_body)
+
+    def json(self, body):
+        """Diplay Markdown-formatted text.
+
+        body - Plain text of Markdown format
+        """
+        def set_body(element):
+            element.text.body = (body if isinstance(body, str) else json.dumps(body))
+            element.text.format = protobuf.Text.JSON
         return self._new_element(set_body)
 
     def add_rows(self, df):

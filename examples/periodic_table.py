@@ -146,6 +146,8 @@ and minimal syntax. For example:
 ```
     """)
 
+    write('JSON', fmt='header', level=3)
+    write.json('{"object":{"array":[1,true,"3"]}}')
 
     # Progress
     write('Progress Bars', fmt='header', level=3)
