@@ -3,3 +3,4 @@ config.yaml
 .\streamlet.yaml
 customers.md
 npm-debug.log
+config-secrets.yaml

@@ -11,5 +11,5 @@ from streamlet import Notebook, Chart
 
 with Notebook() as print:
     print('hello world')
-    my_array = np.random.randn(200, 200)
-    print('my array', my_array)
+    an_array = np.random.randn(200, 200)
+    print(an_array)
