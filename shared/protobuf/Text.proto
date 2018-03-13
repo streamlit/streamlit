@@ -5,11 +5,4 @@ message Text {
 
   // Content to display.
   string body = 1;
-
-  // Content format
-  enum Format {
-    PLAIN = 0;
-    MARKDOWN = 1;
-  }
-  Format format = 2;
 }
