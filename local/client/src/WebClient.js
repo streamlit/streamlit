@@ -22,7 +22,7 @@ import Text from 'streamlet-shared/lib/elements/Text';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
-import { DeltaList } from 'streamlet-shared/lib/protobuf/streamlet';
+import { StreamlitMsg } from 'streamlet-shared/lib/protobuf/streamlet';
 import { addRows } from 'streamlet-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
   from 'streamlet-shared/lib/immutableProto';
@@ -83,9 +83,20 @@ class WebClient extends PureComponent {
     reader.onloadend = () => {
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
-      const deltaListProto = DeltaList.decode(result);
-      const deltaList = toImmutableProto(DeltaList, deltaListProto);
-      this.applyDeltas(deltaList);
+      const msgProto = StreamlitMsg.decode(result)
+      const msg = toImmutableProto(StreamlitMsg, msgProto);
+      dispatchOneOf(msg, 'type', {
+        newNotebook: (id) => {
+          console.log('new notebook')
+          console.log(id.get('firstPart'))
+          console.log(id.get('firstPart'))
+        },
+        deltaList: (deltaList) => {
+          console.log('delta list')
+          console.log(deltaList)
+          // this.applyDeltas(deltaList);
+        }
+      });
     }
   }
 
@@ -137,12 +148,7 @@ class WebClient extends PureComponent {
             <Col className="col-12">
               {/* {this.renderElements(0)} */}
               <AutoSizer>
-                {
-                  ({width}) => {
-                    // console.log('Rendering with width:', width);
-                    return this.renderElements(width)
-                  }
-                }
+                { ({width}) => this.renderElements(width) }
               </AutoSizer>
             </Col>
           </Row>
@@ -158,12 +164,10 @@ class WebClient extends PureComponent {
         if (!element)
           throw new Error('Transmission error.')
         return dispatchOneOf(element, 'type', {
-          // div: (div) => <div>A div.</div>,
           div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          // imgs: (imgs) => <div>Here are some images.</div>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
         });
