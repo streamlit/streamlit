@@ -8,6 +8,8 @@ cloud:
 # Configuration for the local server.
 local:
   throttleSecs: 0.01
+  # server: localhost
+  # port: 9665
 
   # How long to wait for the proxy server to start up.
   waitForProxySecs: 2.0
