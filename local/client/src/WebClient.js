@@ -62,12 +62,23 @@ class WebClient extends PureComponent {
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
+    this.resetState('Established connection.', 'warning')
+  }
+
+  /**
+   * Resets the state of client to an empty notebook containing a single
+   * element which is an alert of the given type.
+   *
+   * msg       - The message to display
+   * alertType - One of 'success' 'info' 'warning' 'danger'.
+   */
+  resetState(msg, alertType) {
     this.setState({
       elements: fromJS([{
         type: 'div',
         div: {
-          text: 'Established connection.',
-          classes: 'alert alert-warning',
+          text: msg,
+          classes: `alert alert-${alertType}`,
         }
       }]),
     });
@@ -87,12 +98,10 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newNotebook: (id) => {
-          console.log('new notebook', id)
+          this.resetState(`Recieving data for notebook ${id}.`, 'info')
         },
         deltaList: (deltaList) => {
-          console.log('delta list')
-          console.log(deltaList)
-          // this.applyDeltas(deltaList);
+          this.applyDeltas(deltaList);
         }
       });
     }

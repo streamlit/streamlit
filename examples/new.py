@@ -18,5 +18,11 @@ with Notebook() as print:
     #     print('i', i)
     # print('Finished the loop')
 
-    # an_array = np.random.randn(200, 200)
-    # print(an_array)
+    an_array = np.random.randn(200, 200)
+    print(an_array)
+    print(an_array.shape)
+
+    my_progress = print.progress(0)
+    for i in range(100):
+        my_progress.progress(i+1)
+        time.sleep(0.05)

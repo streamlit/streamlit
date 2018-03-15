@@ -138,7 +138,6 @@ class Notebook:
         throttle_secs = get_shared_config('local.throttleSecs')
         while self._connection_open:
             await self._queue.flush_deltas(ws)
-            print('Just sent deltas through _transmit_through_websocket.')
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_deltas(ws)
         print('Naturally finished transmitting through the websocket.')
