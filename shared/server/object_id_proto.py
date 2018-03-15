@@ -12,3 +12,4 @@ def marshall_object_id(object_id, proto_object_id):
     """Converts the BSON.ObjectId to a protobuf.ObjectId."""
     proto_object_id.first_part, proto_object_id.second_part = \
         struct.unpack('!LQ', object_id.binary)
+    print(f'Converted {object_id} to ({proto_object_id.first_part}, {proto_object_id.second_part})', )
