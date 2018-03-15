@@ -22,6 +22,7 @@ import Text from 'streamlet-shared/lib/elements/Text';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
+import { getObjectIdString } from 'streamlet-shared/lib/objectIdProto';
 import { StreamlitMsg } from 'streamlet-shared/lib/protobuf/streamlet';
 import { addRows } from 'streamlet-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
@@ -89,7 +90,9 @@ class WebClient extends PureComponent {
         newNotebook: (id) => {
           console.log('new notebook')
           console.log(id.get('firstPart'))
-          console.log(id.get('firstPart'))
+          console.log(id.get('secondPart'))
+          console.log(getObjectIdString)
+          console.log(getObjectIdString(id))
         },
         deltaList: (deltaList) => {
           console.log('delta list')
