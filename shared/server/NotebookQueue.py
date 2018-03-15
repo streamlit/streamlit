@@ -43,7 +43,6 @@ class NotebookQueue:
         if deltas:
             msg = protobuf.StreamlitMsg()
             msg.delta_list.deltas.extend(deltas)
-            print(f'Sending {len(msg.delta_list.deltas)} delta(s) across the wire.')
             await ws.send_bytes(msg.SerializeToString())
 
     def clone(self):
