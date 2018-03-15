@@ -21,11 +21,12 @@ help:
 	@echo "Where <cmd> is one of:                                         "
 	@echo "                                                               "
 	@echo "help                    - Print this help message.             "
+	@echo "clean                   - Remove all js libs.                  "
+	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
 	@echo "all                     - Build JS Python, and Protobuf libs.  "
 	@echo "js-lib                  - The shared javascript library.       "
 	@echo "protobuf-lib            - The protobuf libraries.              "
-	@echo "clean                   - Remove all js libs.                  "
-	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
+	@echo "production              - Create a production build.           "
 	@echo "                                                               "
 
 ###################
@@ -34,6 +35,8 @@ help:
 
 all:
 	cd shared ; make all
+
+production: all
 	cd local/client ; npm run build
 # data stored in /Users/adrien/Desktop/streamlet-cloud/local/client/build
 
@@ -47,13 +50,12 @@ protobuf-lib:
 clean:
 	cd shared; make clean
 
-init: $(STREAMLET_SHARED_LOCAL_LIB)
+init:
 	pip install pandas Pillow protobuf PyYAML aiohttp motor
 	cd shared ; make init
 	cd local/client ; npm install
-
-$(STREAMLET_SHARED_LOCAL_LIB):
 	ln -sv ../../../shared/client $(STREAMLET_SHARED_LOCAL_LIB)
+
 
 # Counts the number of lines of code in the project
 loc:
