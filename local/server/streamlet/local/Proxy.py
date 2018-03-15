@@ -12,7 +12,6 @@ import webbrowser
 
 from streamlet.shared.config import get_config as get_shared_config
 from streamlet.shared.NotebookQueue import NotebookQueue
-from streamlet.shared.object_id_proto import unmarshall_object_id
 from streamlet.shared.streamlit_msg_proto import new_notebook_msg
 from streamlet.shared.streamlit_msg_proto import streamlit_msg_iter
 
@@ -102,7 +101,7 @@ class Proxy:
             print(f'RECEIVED A MESSAGE: {msg_type}')
             if msg_type == 'new_notebook':
                 self._queue = NotebookQueue()
-                self._notebook_id = unmarshall_object_id(msg.new_notebook)
+                self._notebook_id = msg.new_notebook
             elif msg_type == 'delta_list':
                 assert self._queue != None, \
                     'Received delta_list message before new_notebook '\
