@@ -1,5 +1,5 @@
 
-.printf-container .markdown-text-container code {
+.printf-container .text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 85%;
@@ -7,11 +7,11 @@
   border-radius: 3px;
 }
 
-.printf-container .markdown-text-container pre {
+.printf-container .text-container pre {
   border: 1px solid #ccc;
 }
 
-.printf-container .markdown-text-container pre>code {
+.printf-container .text-container pre>code {
   padding: 0;
   margin: 0;
   font-size: 100%;
@@ -21,7 +21,7 @@
   border: 0;
 }
 
-.printf-container .markdown-text-container pre code {
+.printf-container .text-container pre code {
   display: inline;
   max-width: auto;
   padding: 0;
@@ -33,23 +33,23 @@
   border: 0;
 }
 
-.printf-container .markdown-text-container blockquote {
+.printf-container .text-container blockquote {
   color: #666;
   margin: 0;
   padding-left: 3em;
   border-left: 0.5em #eee solid;
 }
 
-.printf-container .markdown-text-container tr {
+.printf-container .text-container tr {
   border-top: 1px solid #c6cbd1;
   background: #fff;
 }
 
-.printf-container .markdown-text-container th, td {
+.printf-container .text-container th, td {
   padding: 6px 13px;
   border: 1px solid #dfe2e5;
 }
 
-.printf-container .markdown-text-container table tr:nth-child(2n) {
+.printf-container .text-container table tr:nth-child(2n) {
   background: #f6f8fa;
 }
