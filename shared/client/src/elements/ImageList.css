@@ -1,13 +1,13 @@
-.printf-container .image-container {
+.streamlit-container .image-container {
   display: inline-block;
   margin-right: 10px;
 }
 
-.printf-container .image-container img {
+.streamlit-container .image-container img {
   border: 1px solid #eee;
 }
 
-.printf-container .caption {
+.streamlit-container .caption {
   font-family: "Roboto Mono", monospace;
   font-size: 8pt;
   text-align: center;

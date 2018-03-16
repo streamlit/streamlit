@@ -52,7 +52,7 @@ class DeltaGenerator:
 
         Supported types are:
 
-            - printf.Charts
+            - streamlit.Charts
             - Pandas-DataFrame-like objects: DataFame, Series, and numpy.Array
             - String-like objects: By default, objects are cast to strings.
 

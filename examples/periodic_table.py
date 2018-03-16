@@ -11,7 +11,7 @@ from streamlet import Notebook, Chart, LineChart
 with Notebook() as write:
     # Title.
     write('Period Table of the Elements', fmt='header', level=1)
-    write('This notebook shows some of the awesome elements of printf.')
+    write('This notebook shows some of the awesome elements of streamlit.')
 
     # Arrays
     write('Numpy Arrays', fmt='header', level=3)

@@ -1,5 +1,5 @@
 
-.printf-container .markdown-text-container code {
+.streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 85%;
@@ -7,11 +7,11 @@
   border-radius: 3px;
 }
 
-.printf-container .markdown-text-container pre {
+.streamlit-container .markdown-text-container pre {
   border: 1px solid #ccc;
 }
 
-.printf-container .markdown-text-container pre>code {
+.streamlit-container .markdown-text-container pre>code {
   padding: 0;
   margin: 0;
   font-size: 100%;
@@ -21,7 +21,7 @@
   border: 0;
 }
 
-.printf-container .markdown-text-container pre code {
+.streamlit-container .markdown-text-container pre code {
   display: inline;
   max-width: auto;
   padding: 0;
@@ -33,35 +33,35 @@
   border: 0;
 }
 
-.printf-container .markdown-text-container blockquote {
+.streamlit-container .markdown-text-container blockquote {
   color: #666;
   margin: 0;
   padding-left: 3em;
   border-left: 0.5em #eee solid;
 }
 
-.printf-container .markdown-text-container tr {
+.streamlit-container .markdown-text-container tr {
   border-top: 1px solid #c6cbd1;
   background: #fff;
 }
 
-.printf-container .markdown-text-container th, td {
+.streamlit-container .markdown-text-container th, td {
   padding: 6px 13px;
   border: 1px solid #dfe2e5;
 }
 
-.printf-container .markdown-text-container table tr:nth-child(2n) {
+.streamlit-container .markdown-text-container table tr:nth-child(2n) {
   background: #f6f8fa;
 }
 
-.printf-container .json-text-container span.error {
+.streamlit-container .json-text-container span.error {
   padding: 0.2em 0.4em;
   margin: 0;
   background-color: #eee;
   border-radius: 3px;
 }
 
-.printf-container .json-text-container pre.error {
+.streamlit-container .json-text-container pre.error {
   padding: 5px;
   white-space: pre-wrap;
   word-wrap: break-word;

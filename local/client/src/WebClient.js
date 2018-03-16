@@ -140,7 +140,7 @@ class WebClient extends PureComponent {
     return (
       <div>
         <Navbar color='dark' className="fixed-top">
-          <NavbarBrand href="/">Printf</NavbarBrand>
+          <NavbarBrand href="/">Streamlit</NavbarBrand>
           <NavItem>
             <PersistentWebsocket
               uri={uri}
@@ -150,7 +150,7 @@ class WebClient extends PureComponent {
             />
           </NavItem>
         </Navbar>
-        <Container className="printf-container">
+        <Container className="streamlit-container">
           <Row>
             <Col className="col-12">
               {/* {this.renderElements(0)} */}
