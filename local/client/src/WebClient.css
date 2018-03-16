@@ -2,15 +2,15 @@
   color: white;
 }
 
-.printf-container {
+.streamlit-container {
   margin-top: 80px;
 }
 
-.printf-container .element-container {
+.streamlit-container .element-container {
   display: inline-block;
   margin-bottom: 15px;
 }
 
-.printf-container .footer {
+.streamlit-container .footer {
   height: 25px;
 }

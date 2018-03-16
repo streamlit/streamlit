@@ -1,11 +1,11 @@
-# Makefile for the streamlet shared javascript, css, and python libraries.
+# Makefile for the streamlit shared javascript, css, and python libraries.
 # Run `make help` for options, or `make all` to build the library.
 
 ###################
 # BUILD VARIABLES #
 ###################
 
-STREAMLET_SHARED_LOCAL_LIB = local/client/node_modules/streamlet-shared
+STREAMLIT_SHARED_LOCAL_LIB = local/client/node_modules/streamlit-shared
 # JS_SRC_FILES = $(shell find $(JS_SRC_PATH) -iname '*.js' -or -iname '*.css')
 # JS_LIB_PATH = client/lib
 
@@ -38,7 +38,7 @@ all:
 
 production: all
 	cd local/client ; npm run build
-# data stored in /Users/adrien/Desktop/streamlet-cloud/local/client/build
+# data stored in /Users/adrien/Desktop/streamlit-cloud/local/client/build
 
 js-lib:
 	cd shared ; make js-lib
@@ -54,7 +54,7 @@ init:
 	pip install -r requirements.txt
 	cd shared ; make init
 	cd local/client ; npm install
-	test -e $(STREAMLET_SHARED_LOCAL_LIB) || ln -sv ../../../shared/client $(STREAMLET_SHARED_LOCAL_LIB)
+	test -e $(STREAMLIT_SHARED_LOCAL_LIB) || ln -sv ../../../shared/client $(STREAMLIT_SHARED_LOCAL_LIB)
 	@echo Please add `pwd`/local/server to your PYTHONPATH.
 
 # Counts the number of lines of code in the project

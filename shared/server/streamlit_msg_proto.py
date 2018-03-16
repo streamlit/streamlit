@@ -1,5 +1,5 @@
 import aiohttp
-from streamlet.shared import protobuf
+from streamlit.shared import protobuf
 
 async def new_notebook_msg(notebook_id, ws):
     """Sends a message indicating a new notebook across the websocket wire.

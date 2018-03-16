@@ -1,9 +1,9 @@
-"""This is a webserver for the streamlet project."""
+"""This is a webserver for the streamlit project."""
 
 import sys
 
 sys.path.append('cloud/server')
-from streamlet.cloud.Server import Server
+from streamlit.cloud.Server import Server
 
 # ##################
 # # Database Stuff #
@@ -13,7 +13,7 @@ from streamlet.cloud.Server import Server
 # import sys
 # import asyncio
 # from motor.motor_asyncio import AsyncIOMotorClient
-# from streamlet.shared import protobuf
+# from streamlit.shared import protobuf
 #
 # def handle_coroutine_exceptions(coroutine):
 #     async def wrapped(*args, **kwargs):

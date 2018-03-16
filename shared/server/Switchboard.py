@@ -4,10 +4,10 @@ a set of NotebookQueues."""
 import asyncio
 import contextlib
 
-from streamlet.shared import protobuf
-from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.NotebookQueue import NotebookQueue
-from streamlet.shared.DeltaGenerator import DeltaGenerator
+from streamlit.shared import protobuf
+from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared.NotebookQueue import NotebookQueue
+from streamlit.shared.DeltaGenerator import DeltaGenerator
 
 class Switchboard:
     """Contains a set of NotebookQueues and manages thier incoming, outgoing

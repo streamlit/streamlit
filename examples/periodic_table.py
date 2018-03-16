@@ -1,4 +1,4 @@
-"""Example of everything that's possible in streamlet."""
+"""Example of everything that's possible in streamlit."""
 
 import pandas as pd
 import numpy as np
@@ -6,12 +6,12 @@ from PIL import Image
 import urllib, io
 import sys
 
-from streamlet import Notebook, Chart, LineChart
+from streamlit import Notebook, Chart, LineChart
 
 with Notebook() as write:
     # Title.
     write('Period Table of the Elements', fmt='header', level=1)
-    write('This notebook shows some of the awesome elements of printf.')
+    write('This notebook shows some of the awesome elements of streamlit.')
 
     # Arrays
     write('Numpy Arrays', fmt='header', level=3)

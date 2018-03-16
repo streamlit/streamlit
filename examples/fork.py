@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import sys
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 training_data = Notebook.get('5a7a62c393ff002ab2dad2ff')
 x_train = training_data.get('x_train')

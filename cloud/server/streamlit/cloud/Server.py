@@ -1,13 +1,13 @@
-"""Represents the streamlet.io cloud server."""
+"""Represents the streamlit.io cloud server."""
 
 from aiohttp import web, WSMsgType
-from streamlet.cloud.delta_proto import delta_list_iter
-from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.Switchboard import Switchboard
+from streamlit.cloud.delta_proto import delta_list_iter
+from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared.Switchboard import Switchboard
 import asyncio
 
 class Server:
-    """The main base class for the streamlet server."""
+    """The main base class for the streamlit server."""
 
     def __init__(self):
         # Set up the server.
@@ -34,7 +34,7 @@ class Server:
 
     async def _index_handler(self, request):
         """Handler for the main index calls."""
-        return web.Response(text='Hello printf!')
+        return web.Response(text='Hello streamlit!')
 
     async def _new_stream_handler(self, request):
         # Parse out the control information.

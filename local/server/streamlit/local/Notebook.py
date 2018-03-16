@@ -12,18 +12,18 @@ import sys
 import threading
 import traceback
 
-from streamlet.local import config as local_config
-from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.DeltaGenerator import DeltaGenerator
-from streamlet.shared.NotebookQueue import NotebookQueue
-from streamlet.shared.streamlit_msg_proto import new_notebook_msg
+from streamlit.local import config as local_config
+from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared.DeltaGenerator import DeltaGenerator
+from streamlit.shared.NotebookQueue import NotebookQueue
+from streamlit.shared.streamlit_msg_proto import new_notebook_msg
 
 class Notebook:
     def __init__(self, save=False):
         """
         Creates a new notebook object.
 
-        save  - Stream the notebook to the astreamlet.io server for storage.
+        save  - Stream the notebook to the astreamlit.io server for storage.
         """
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
@@ -94,7 +94,7 @@ class Notebook:
         """Launches the proxy server."""
         print('about to launch the proxy in a separate process', __file__)
         import os
-        os.system('python -m streamlet.local.Proxy &')
+        os.system('python -m streamlit.local.Proxy &')
         print('launched the proxy in a separate process.')
         print('sleeping while waiting for the proxy', get_shared_config('local.waitForProxySecs'))
         await asyncio.sleep(get_shared_config('local.waitForProxySecs'))

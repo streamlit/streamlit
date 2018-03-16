@@ -6,9 +6,10 @@ import sys
 import time
 import random
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 with Notebook() as print:
     print('hello world')
     an_array = np.random.randn(200, 200)
     print(an_array)
+    print(an_array.shape)

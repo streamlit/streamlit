@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import sys
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test, print):

@@ -14,18 +14,18 @@ import {
 } from 'reactstrap';
 
 // Display Elements
-import DataFrame from 'streamlet-shared/lib/elements/DataFrame';
-import Div from 'streamlet-shared/lib/elements/Div';
-import Chart from 'streamlet-shared/lib/elements/Chart';
-import ImageList from 'streamlet-shared/lib/elements/ImageList';
-import Text from 'streamlet-shared/lib/elements/Text';
+import DataFrame from 'streamlit-shared/lib/elements/DataFrame';
+import Div from 'streamlit-shared/lib/elements/Div';
+import Chart from 'streamlit-shared/lib/elements/Chart';
+import ImageList from 'streamlit-shared/lib/elements/ImageList';
+import Text from 'streamlit-shared/lib/elements/Text';
 
 // Other local imports.
-import PersistentWebsocket from 'streamlet-shared/lib/PersistentWebsocket';
-import { StreamlitMsg } from 'streamlet-shared/lib/protobuf/streamlet';
-import { addRows } from 'streamlet-shared/lib/dataFrameProto';
+import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
+import { StreamlitMsg } from 'streamlit-shared/lib/protobuf/streamlit';
+import { addRows } from 'streamlit-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
-  from 'streamlet-shared/lib/immutableProto';
+  from 'streamlit-shared/lib/immutableProto';
 import { fromJS } from 'immutable';
 
 import './WebClient.css';
@@ -140,7 +140,7 @@ class WebClient extends PureComponent {
     return (
       <div>
         <Navbar color='dark' className="fixed-top">
-          <NavbarBrand href="/">Printf</NavbarBrand>
+          <NavbarBrand href="/">Streamlit</NavbarBrand>
           <NavItem>
             <PersistentWebsocket
               uri={uri}
@@ -150,7 +150,7 @@ class WebClient extends PureComponent {
             />
           </NavItem>
         </Navbar>
-        <Container className="printf-container">
+        <Container className="streamlit-container">
           <Row>
             <Col className="col-12">
               {/* {this.renderElements(0)} */}
