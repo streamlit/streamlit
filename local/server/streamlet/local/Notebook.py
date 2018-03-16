@@ -1,50 +1,38 @@
 """A Notebook Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
+import aiohttp
 from aiohttp import web, ClientSession
+from aiohttp.client_exceptions import ClientConnectorError
 import asyncio
 import bson
 import contextlib
-import os
+import subprocess
 import sys
 import threading
-import time
 import traceback
 
-from streamlet.shared import protobuf
-from streamlet.shared.DeltaGenerator import DeltaGenerator
 from streamlet.local import config as local_config
 from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.Switchboard import Switchboard
-
-LAUNCH_BROWSER_SCRIPT = \
-    'osascript ' \
-    './local/client/node_modules/react-dev-utils/openChrome.applescript ' \
-    'http://localhost:3000/'
-SHUTDOWN_DELAY_SECS = 1.0
+from streamlet.shared.DeltaGenerator import DeltaGenerator
+from streamlet.shared.NotebookQueue import NotebookQueue
+from streamlet.shared.streamlit_msg_proto import new_notebook_msg
 
 class Notebook:
-    def __init__(self, local=True, save=False):
+    def __init__(self, save=False):
         """
         Creates a new notebook object.
 
-        local - Display the stream locally.
         save  - Stream the notebook to the astreamlet.io server for storage.
         """
-        # These flags determine where the data is sent
-        self._display_locally = local
-        self._save_to_cloud = save
-
         # Create an ID for this Notebook
         self._notebook_id = bson.ObjectId()
-        if self._save_to_cloud:
-            print(f'See this notebook at http://localhost:3000/nb/{self._notebook_id}')
 
-        # Create an event loop for the local _server_running
-        self._loop = asyncio.new_event_loop()
+        # Queue to store deltas as they flow across.
+        self._queue = NotebookQueue()
 
-        # Where we send delta queue data to
-        self._switchboard = Switchboard(self._loop)
+        # Set to false when the connection should close.
+        self._connection_open = True
 
         # This is the context manager for "with Notebook() as write:"
         self._context_manager = self._get_context_manager()
@@ -57,93 +45,74 @@ class Notebook:
         """Closes down the context for this notebook."""
         self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
-    def _launch_server(self):
-        """Launches the server and runs an asyncio loop forever."""
-        def run_server():
-            # Create an event loop for this thread.
-            asyncio.set_event_loop(self._loop)
+    def _connect_to_proxy(self):
+        """Opens a connection to the server in a separate thread. Returns
+        the event loop for that thread."""
+        loop = asyncio.new_event_loop()
+        def connection_thread():
+            # asyncio.set_event_loop(loop)
+            loop.run_until_complete(self._attempt_connection(loop))
+            loop.close()
+        threading.Thread(target=connection_thread, daemon=False).start()
+        return loop
 
-            # Set up the webserver.
-            handler = self._get_connection_handler()
-            app = web.Application(loop=self._loop)
-            app.router.add_get('/websocket', handler)
+    async def _attempt_connection(self, loop):
+        """Tries to establish a connection to the proxy (launching the
+        proxy if necessary). Then, pumps deltas through the connection."""
+        # Create a connection URI.
+        server = get_shared_config('proxy.server')
+        port = get_shared_config('proxy.port')
+        local_id = local_config.get_local_id()
+        notebook_id = self._notebook_id
+        uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
 
-            # Actually start the server.
+        # Try to connect twice to the websocket
+        session = ClientSession(loop=loop)
+        try:
+            # Try to connect to the proxy for the first time.
             try:
-                print('About to do run_app')
-                web.run_app(app, port=get_shared_config('local.port'),
-                    handle_signals=False)
-                print('Finished run_app.')
-            finally:
-                print('About to close the loop.')
-                self._loop.close()
+                async with session.ws_connect(uri) as ws:
+                    await self._transmit_through_websocket(ws)
+                    return
+            except ClientConnectorError:
+                pass
 
-        threading.Thread(target=run_server, daemon=False).start()
+            # Connecting to the proxy failed, so let's start the proxy manually.
+            await self._launch_proxy()
 
-    def _get_connection_handler(self):
-        """Handles a websocket connection."""
-        async def async_handle_connection(request):
-            # Create a websocket connection.
-            ws = web.WebSocketResponse()
-            await ws.prepare(request)
+            # Try again to transmit data through the proxy
+            try:
+                async with session.ws_connect(uri) as ws:
+                    await self._transmit_through_websocket(ws)
+            except ClientConnectorError:
+                print(f'Failed to attent to connect to {uri}.')
 
-            # Sends data from this connection
-            await self._async_transmit_through_websocket(ws)
+        finally:
+            # Closing the session.
+            await session.close()
 
-            print('Naturally finished handle connection.')
-            return ws
+    async def _launch_proxy(self):
+        """Launches the proxy server."""
+        print('about to launch the proxy in a separate process', __file__)
+        import os
+        os.system('./proxy &')
+        # subprocess.Popen('proxy')
+        print('launched the proxy in a separate process.')
+        print('sleeping while waiting for the proxy', get_shared_config('local.waitForProxySecs'))
+        await asyncio.sleep(get_shared_config('local.waitForProxySecs'))
+        print('Finished sleeping.')
 
-        return async_handle_connection
-
-    def _stop(self):
-        """Stops the server loop."""
-        # Stops the server loop.
-        pass
-
-        # async def async_stop():
-        #     # After a short delay, hard-stop the server loop.
-        #
-        #
-        #
-        # # Code to stop the thread must be run in the server loop.
-        # self._enqueue_coroutine(async_stop)
-
-    def _connect_to_cloud(self):
-        async def async_connect_to_cloud():
-            # Create a connection URI.
-            server = get_shared_config()['cloud']['server']
-            port = get_shared_config()['cloud']['port']
-            local_id = local_config.get_local_id()
-            notebook_id = self._notebook_id
-            uri = f'htts://{server}:{port}/api/new/{local_id}/{notebook_id}'
-            print('Connecting to', uri) # debug
-
-            # Transmit data through this websocket.
-            async with ClientSession().ws_connect(uri) as ws:
-                await self._async_transmit_through_websocket(ws)
-                print('Naturally finished handle connection.')
-
-        # Code to connect to the cloud must be done in a separate thread.
-        self._enqueue_coroutine(async_connect_to_cloud)
-
-
-    async def _async_transmit_through_websocket(self, ws):
+    async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
-        delta_list_aiter = self._switchboard.stream_from(self._notebook_id)
-        async for delta_list in delta_list_aiter:
-            await ws.send_bytes(delta_list.SerializeToString())
+        # Send the header information across.
+        await new_notebook_msg(self._notebook_id, ws)
 
-    def _enqueue_coroutine(self, coroutine):
-        """Runs a coroutine in the server loop."""
-        async def wrapped_coroutine():
-            try:
-                await coroutine()
-            except:
-                print(f'Got exception in {coroutine}.')
-                traceback.print_exc()
-                import sys
-                sys.exit(-1)
-        asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._loop)
+        # Send other information across.
+        throttle_secs = get_shared_config('local.throttleSecs')
+        while self._connection_open:
+            await self._queue.flush_deltas(ws)
+            await asyncio.sleep(throttle_secs)
+        await self._queue.flush_deltas(ws)
 
     @contextlib.contextmanager
     def _get_context_manager(self):
@@ -153,51 +122,23 @@ class Notebook:
         with Notebook() as write:
             ...
         """
-        print('Entering _get_context_manager()')
         try:
-            with self._switchboard.stream_to(self._notebook_id) as stream_to:
-                # Create the DeltaGenerator
-                def add_delta(delta):
-                    delta_list = protobuf.DeltaList()
-                    delta_list.deltas.extend([delta])
-                    stream_to(delta_list)
-                delta_generator = DeltaGenerator(add_delta)
-                print('Created a DeltaGenerator with asynchronous add_delta.')
+            # Open a connection to the proxy.
+            loop = self._connect_to_proxy()
 
-                # Start the local webserver.
-                self._launch_server()
-                if self._display_locally:
-                    os.system(LAUNCH_BROWSER_SCRIPT)
+            # Create the DeltaGenerator
+            enqueue_delta = lambda d: loop.call_soon_threadsafe(self._queue, d)
+            delta_generator = DeltaGenerator(enqueue_delta)
 
-                # Connect to streamlet.io if necessary.
-                if self._save_to_cloud:
-                    self._connect_to_cloud()
-
-                # Yield the DeltaGenerator as the write function.
-                try:
-                    yield delta_generator
-                except:
-                    exc_type, exc_val, tb = sys.exc_info()
-                    tb_list = traceback.format_list(traceback.extract_tb(tb))
-                    tb_list.append(f'{exc_type.__name__}: {exc_val}')
-                    delta_generator.alert('\n'.join(tb_list))
-
-                # Give the client a little time to connect.
-                if self._display_locally:
-                    time.sleep(SHUTDOWN_DELAY_SECS)
+            # Yield the DeltaGenerator as the write function.
+            try:
+                yield delta_generator
+            except:
+                exc_type, exc_val, tb = sys.exc_info()
+                tb_list = traceback.format_list(traceback.extract_tb(tb))
+                tb_list.append(f'{exc_type.__name__}: {exc_val}')
+                delta_generator.alert('\n'.join(tb_list))
 
         finally:
             # Close the local webserver.
-            print('Dispatching asynchronous stop to the loop.')
-            def stop_loop():
-                print('Calling stop on loop.')
-                self._loop.stop()
-                print('Called stop on loop.')
-            self._loop.call_later(SHUTDOWN_DELAY_SECS / 2, stop_loop)
-            print('Dispatched asynchronous stop to the loop.')
-
-            # # We should rewrite the queue to no longer need this.
-            # print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
-            # time.sleep(SHUTDOWN_DELAY_SECS)
-            # print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
-            print('Exiting _get_context_manager()')
+            loop.call_soon_threadsafe(setattr, self, '_connection_open', False)
