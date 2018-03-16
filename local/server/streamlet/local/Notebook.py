@@ -3,6 +3,7 @@ write objects out to a wbpage."""
 
 import aiohttp
 from aiohttp import web, ClientSession
+from aiohttp.client_exceptions import ClientConnectorError
 import asyncio
 import bson
 import contextlib
@@ -52,7 +53,6 @@ class Notebook:
             # asyncio.set_event_loop(loop)
             loop.run_until_complete(self._attempt_connection(loop))
             loop.close()
-            print('THE LOCAL THREAD CLOSED NATURALLY!')
         threading.Thread(target=connection_thread, daemon=False).start()
         return loop
 
@@ -65,7 +65,6 @@ class Notebook:
         local_id = local_config.get_local_id()
         notebook_id = self._notebook_id
         uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
-        print('Connecting to', uri) # debug
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=loop)
@@ -73,14 +72,10 @@ class Notebook:
             # Try to connect to the proxy for the first time.
             try:
                 async with session.ws_connect(uri) as ws:
-                    print('Got a websocket', ws)
                     await self._transmit_through_websocket(ws)
-                    print('Naturally finished handle connection.')
                     return
-            except aiohttp.client_exceptions.ClientConnectorError as err:
-                print(f'Exception connecting to {uri}.')
-                print(f'type: {type(err)}')
-                print(f'message: {str(err)}')
+            except ClientConnectorError:
+                pass
 
             # Connecting to the proxy failed, so let's start the proxy manually.
             await self._launch_proxy()
@@ -88,13 +83,9 @@ class Notebook:
             # Try again to transmit data through the proxy
             try:
                 async with session.ws_connect(uri) as ws:
-                    print('Got a websocket', ws)
                     await self._transmit_through_websocket(ws)
-                    print('Naturally finished handle connection.')
-            except aiohttp.client_exceptions.ClientConnectorError as err:
-                print(f'SECOND Exception connecting to {uri}.')
-                print(f'type: {type(err)}')
-                print(f'message: {str(err)}')
+            except ClientConnectorError:
+                print(f'Failed to attent to connect to {uri}.')
 
         finally:
             # Closing the session.
@@ -111,27 +102,9 @@ class Notebook:
         await asyncio.sleep(get_shared_config('local.waitForProxySecs'))
         print('Finished sleeping.')
 
-    # def _get_connection_handler(self):
-    #     """Handles a websocket connection."""
-    #     async def async_handle_connection(request):
-    #         # Create a websocket connection.
-    #         ws = web.WebSocketResponse()
-    #         await ws.prepare(request)
-    #
-    #         # Remember that we've got a connection so we don't open a browser.
-    #         self._received_connection = True
-    #
-    #         # Sends data from this connection
-    #         await self._transmit_through_websocket(ws)
-    #         return ws
-    #
-    #     return async_handle_connection
-
-
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        print(f'About to stream from {self._notebook_id} through {ws}')
         await new_notebook_msg(self._notebook_id, ws)
 
         # Send other information across.
@@ -140,19 +113,6 @@ class Notebook:
             await self._queue.flush_deltas(ws)
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_deltas(ws)
-        print('Naturally finished transmitting through the websocket.')
-
-    # def _enqueue_coroutine(self, coroutine):
-    #     """Runs a coroutine in the server loop."""
-    #     async def wrapped_coroutine():
-    #         try:
-    #             await coroutine()
-    #         except:
-    #             print(f'Caught exception in {coroutine}.')
-    #             traceback.print_exc()
-    #             import sys
-    #             sys.exit(-1)
-    #     asyncio.run_coroutine_threadsafe(wrapped_coroutine(), self._loop)
 
     @contextlib.contextmanager
     def _get_context_manager(self):
@@ -162,7 +122,6 @@ class Notebook:
         with Notebook() as write:
             ...
         """
-        print('Entering _get_context_manager()')
         try:
             # Open a connection to the proxy.
             loop = self._connect_to_proxy()
@@ -170,20 +129,7 @@ class Notebook:
             # Create the DeltaGenerator
             enqueue_delta = lambda d: loop.call_soon_threadsafe(self._queue, d)
             delta_generator = DeltaGenerator(enqueue_delta)
-            print('Created a DeltaGenerator with asynchronous add_delta.')
-#
-#             # Start the local webserver.
-#             self._launch_server()
-#             print(f'Launched server: _display_locally={self._display_locally}')
-#             if self._display_locally:
-#                 self._loop.call_later(LAUNCH_BROWSER_DELAY_SECS,
-#                     self._open_browser_if_necessary)
-#                 # os.system(LAUNCH_BROWSER_SCRIPT)
-#
-#             # Connect to streamlet.io if necessary.
-#             if self._save_to_cloud:
-#                 self._connect_to_cloud()
-#
+
             # Yield the DeltaGenerator as the write function.
             try:
                 yield delta_generator
@@ -192,30 +138,7 @@ class Notebook:
                 tb_list = traceback.format_list(traceback.extract_tb(tb))
                 tb_list.append(f'{exc_type.__name__}: {exc_val}')
                 delta_generator.alert('\n'.join(tb_list))
-#
-#             # Give the client a little time to connect.
-#             if self._display_locally:
-#                 time.sleep(SHUTDOWN_DELAY_SECS)
-#
+
         finally:
             # Close the local webserver.
-            print('Dispatching asynchronous stop to the loop.')
             loop.call_soon_threadsafe(setattr, self, '_connection_open', False)
-            print('Dispatched asynchronous stop to the loop.')
-
-    #         # # We should rewrite the queue to no longer need this.
-    #         # print(f'About to sleep for {SHUTDOWN_DELAY_SECS} seconds.')
-    #         # time.sleep(SHUTDOWN_DELAY_SECS)
-    #         # print(f'Finished sleeping for {SHUTDOWN_DELAY_SECS} seconds.')
-    #         print('Exiting _get_context_manager()')
-    #
-    # def _open_browser_if_necessary(self):
-    #     """This is called after a timeout and it opens a browser window if
-    #     enough time has gone by and we haven't gotten a connection."""
-    #     print('Entered _open_browser_if_necessary')
-    #     if not self._received_connection:
-    #         print('Opening the local connection.')
-    #         host = get_shared_config('local.server')
-    #         port = get_shared_config('local.port')
-    #         webbrowser.open(f'http://{host}:{port}/index.html')
-    #         print(f'opening http://{host}:{port}/index.html')
