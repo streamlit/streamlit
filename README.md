@@ -8,7 +8,7 @@ A stateless alternative to Jupyter notebooks for machine learning and data scien
 
 First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/). Then, checkout the respository:
 ```
-git clone git@github.com:treuille/streamlet-cloud.git
+git clone git@github.com:treuille/streamlit-cloud.git
 ```
 
 #### 2. Install `npm`
@@ -49,11 +49,11 @@ sudo apt-get install protobuf-compiler
 
 #### 5. Establish a Local Python Environment
 
-Create a virtualenv environment called `streamlet`:
+Create a virtualenv environment called `streamlit`:
 ```
 pyenv install 3.6.3
-pyenv virtualenv 3.6.3 streamlet
-pyenv local streamlet
+pyenv virtualenv 3.6.3 streamlit
+pyenv local streamlit
 ```
 
 #### 6. Initialize the Repository

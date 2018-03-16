@@ -1,9 +1,9 @@
-"""Example of everything that's possible in streamlet."""
+"""Example of everything that's possible in streamlit."""
 
 import sys
 import numpy as np
 
-from streamlet import Notebook, Chart, LineChart
+from streamlit import Notebook, Chart, LineChart
 
 with Notebook() as write:
 

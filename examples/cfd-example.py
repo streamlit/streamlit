@@ -3,7 +3,7 @@ import pandas as pd
 import math
 import sys
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 def print_vel_stats(vel):
     stats = (

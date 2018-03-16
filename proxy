@@ -1,1 +1,1 @@
-PYTHONPATH=local/server python -m streamlet.local.Proxy
+PYTHONPATH=local/server python -m streamlit.local.Proxy
