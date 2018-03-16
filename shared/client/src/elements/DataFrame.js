@@ -12,7 +12,7 @@ import {
   tableGetRowsAndCols,
   indexGet,
   tableGet
-} from 'streamlet-shared/lib/dataFrameProto';
+} from 'streamlit-shared/lib/dataFrameProto';
 
 import './DataFrame.css';
 

@@ -5,7 +5,7 @@ import urllib, io
 import sys
 import time
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 with Notebook() as write:
     # Get the latest notebook and print out information from it.
@@ -26,7 +26,7 @@ with Notebook() as write:
     for notebook in Notebook.ref('mnist:-5'):
         names.append(notebook.get('name/2:'))
         tables.append(notebook.ref('summary/loss'))
-    write(streamlet.concat(tables, columns=names))
+    write(streamlit.concat(tables, columns=names))
 
     # Here is a faster way of overlaying them
     names = Notebook.ref('mnist:-5/name/2:')

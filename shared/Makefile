@@ -1,4 +1,4 @@
-# Makefile for the streamlet shared javascript, css, and python libraries.
+# Makefile for the streamlit shared javascript, css, and python libraries.
 # Run `make help` for options, or `make all` to build the library.
 
 ###################
@@ -12,7 +12,7 @@ JS_LIB_PATH = client/lib
 
 # Files for the protobuf libraries.
 PROTOBUF_SRC_FILES = protobuf/*.proto
-PROTOBUF_BUNDLE_JS = client/lib/protobuf/streamlet.js
+PROTOBUF_BUNDLE_JS = client/lib/protobuf/streamlit.js
 PROTOBUF_BUNDLE_PYTHON = server/protobuf/Element_pb2.py
 PROTOBUF_COMPILER_JS = client/node_modules/protobufjs/bin/pbjs
 

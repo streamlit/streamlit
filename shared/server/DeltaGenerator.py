@@ -5,10 +5,10 @@ import numpy as np
 import json
 import textwrap
 
-from streamlet.shared import image_proto
-from streamlet.local.Chart import Chart
-from streamlet.shared import data_frame_proto
-from streamlet.shared import protobuf
+from streamlit.shared import image_proto
+from streamlit.local.Chart import Chart
+from streamlit.shared import data_frame_proto
+from streamlit.shared import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 

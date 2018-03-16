@@ -6,7 +6,7 @@ import sys
 import time
 import random
 
-from streamlet import Notebook, Chart
+from streamlit import Notebook, Chart
 
 with Notebook() as print:
     print('hello world')

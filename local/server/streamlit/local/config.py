@@ -3,7 +3,7 @@
 import yaml
 import bson
 
-__LOCAL_CONFIG_PATH = '.streamlet.yaml'
+__LOCAL_CONFIG_PATH = '.streamlit.yaml'
 __LOCAL_CONFIG = {}
 
 def get_config():

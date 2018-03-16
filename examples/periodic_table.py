@@ -1,4 +1,4 @@
-"""Example of everything that's possible in streamlet."""
+"""Example of everything that's possible in streamlit."""
 
 import pandas as pd
 import numpy as np
@@ -6,7 +6,7 @@ from PIL import Image
 import urllib, io
 import sys
 
-from streamlet import Notebook, Chart, LineChart
+from streamlit import Notebook, Chart, LineChart
 
 with Notebook() as write:
     # Title.

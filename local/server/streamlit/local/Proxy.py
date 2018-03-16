@@ -10,13 +10,13 @@ import asyncio
 import os
 import webbrowser
 
-from streamlet.shared.config import get_config as get_shared_config
-from streamlet.shared.NotebookQueue import NotebookQueue
-from streamlet.shared.streamlit_msg_proto import new_notebook_msg
-from streamlet.shared.streamlit_msg_proto import streamlit_msg_iter
+from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared.NotebookQueue import NotebookQueue
+from streamlit.shared.streamlit_msg_proto import new_notebook_msg
+from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
 
 class Proxy:
-    """The main base class for the streamlet server."""
+    """The main base class for the streamlit server."""
 
     def __init__(self):
         # Set up the server.
