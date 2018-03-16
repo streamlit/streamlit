@@ -2,7 +2,7 @@
 
 import yaml
 
-__CONFIG_PATH = 'config.yaml'
+__CONFIG_PATH = '/'.join(__file__.split('/')[:-5] + ['config.yaml'])
 __GLOBAL_CONFIG = None
 
 def get_config(path=''):

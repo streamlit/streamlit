@@ -6,7 +6,6 @@ from PIL import Image
 import urllib, io
 import sys
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart, LineChart
 
 with Notebook() as write:

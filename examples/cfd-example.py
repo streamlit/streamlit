@@ -3,7 +3,6 @@ import pandas as pd
 import math
 import sys
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 def print_vel_stats(vel):

@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import sys
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 training_data = Notebook.get('5a7a62c393ff002ab2dad2ff')
