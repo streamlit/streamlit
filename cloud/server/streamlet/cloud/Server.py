@@ -34,7 +34,7 @@ class Server:
 
     async def _index_handler(self, request):
         """Handler for the main index calls."""
-        return web.Response(text='Hello printf!')
+        return web.Response(text='Hello streamlit!')
 
     async def _new_stream_handler(self, request):
         # Parse out the control information.

@@ -1,4 +1,4 @@
-.printf-container {
+.streamlit-container {
   /* Some custom variables we will use throughout the dataframe. */
   --background-color-data-light: white;
   --background-color-data-dark: rgb(245, 245, 247);
@@ -6,11 +6,11 @@
   --background-color-header-dark: rgb(45, 45, 45);
 }
 
-.printf-container .dataframe-container {
+.streamlit-container .dataframe-container {
   box-shadow: inset 0px 0px 5px 1px rgba(0,0,0,0.45);
 }
 
-.printf-container .dataframe {
+.streamlit-container .dataframe {
   font-size: 10pt;
   font-family: "Roboto Mono", monospace;
   text-align: right;
@@ -18,49 +18,49 @@
   /* border: 1px solid red; */
 }
 
-.printf-container .dataframe.row-header {
+.streamlit-container .dataframe.row-header {
   background-color: var(--background-color-header-dark);
   color: #ccc;
   z-index: 1;
 }
 
-.printf-container .dataframe.col-header,.dataframe.corner {
+.streamlit-container .dataframe.col-header,.dataframe.corner {
   background-color: var(--background-color-header-dark);
   color: #ccc;
   z-index: 1;
 }
 
-.printf-container .dataframe.data.even {
+.streamlit-container .dataframe.data.even {
   background-color: var(--background-color-data-dark);
 }
 
-.printf-container .dataframe.data.odd {
+.streamlit-container .dataframe.data.odd {
   background-color: var(--background-color-data-light);
 }
 
-.printf-container .dataframe.col-header.odd {
+.streamlit-container .dataframe.col-header.odd {
   background-color: var(--background-color-header-light);
 }
 
-.printf-container .fixup {
+.streamlit-container .fixup {
   position: absolute;
   background-color: var(--background-color-header-dark);
 }
 
-.printf-container .fixup-top-right {
+.streamlit-container .fixup-top-right {
   top: 0px;
   right: 0px;
 }
 
-.printf-container .fixup-bottom-left {
+.streamlit-container .fixup-bottom-left {
   bottom: 0px;
   left: 0px;
 }
 
-.printf-container .table-top-right {
+.streamlit-container .table-top-right {
   overflow-x: hidden !important;
 }
 
-.printf-container .table-bottom-left {
+.streamlit-container .table-bottom-left {
   overflow-y: hidden !important;
 }

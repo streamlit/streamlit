@@ -23,4 +23,4 @@ proxy:
   waitForConnectionSecs: 10.0
 
   # Whether to use the node development server.
-  useNode: false
+  useNode: true
