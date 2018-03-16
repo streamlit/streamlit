@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import json
+import textwrap
 
 from streamlet.shared import image_proto
 from streamlet.local.Chart import Chart
@@ -170,7 +171,7 @@ class DeltaGenerator:
         body - Plain text of Markdown format
         """
         def set_body(element):
-            element.text.body = body
+            element.text.body = textwrap.dedent(body).strip()
             element.text.format = protobuf.Text.MARKDOWN
         return self._new_element(set_body)
 
