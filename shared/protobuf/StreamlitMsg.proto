@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "Delta.proto";
+
+// A message across a stream.
+message StreamlitMsg {
+  oneof type {
+    string new_notebook = 1;
+    DeltaList delta_list = 2;
+  }
+}

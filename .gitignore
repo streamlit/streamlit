@@ -1,5 +1,6 @@
 .python-version
-.\streamlet.yaml
+.streamlet.yaml
 customers.md
 npm-debug.log
 config-secrets.yaml
+.streamlet.yaml

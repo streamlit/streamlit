@@ -32,7 +32,7 @@ help:
 	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
 	@echo "clean                   - Remove all js libs.                  "
 	@echo "js-lib                  - The shared javascript library.       "
-	@echo "protobuf-lib            - The shared javascript library.       "
+	@echo "protobuf-lib            - The protobuf libraries.              "
 	@echo "                                                               "
 
 ###################
