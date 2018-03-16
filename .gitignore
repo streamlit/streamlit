@@ -1,5 +1,4 @@
 .python-version
-config.yaml
 .\streamlet.yaml
 customers.md
 npm-debug.log
