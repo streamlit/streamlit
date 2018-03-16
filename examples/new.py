@@ -6,7 +6,6 @@ import sys
 import time
 import random
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 with Notebook() as print:

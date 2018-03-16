@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import sys
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 class MyCallback(keras.callbacks.Callback):

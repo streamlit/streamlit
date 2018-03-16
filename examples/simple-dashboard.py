@@ -5,7 +5,6 @@ import urllib, io
 import sys
 import time
 
-sys.path.append('local/server')
 from streamlet import Notebook, Chart
 
 with Notebook() as write:

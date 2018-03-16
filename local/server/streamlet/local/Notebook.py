@@ -50,7 +50,6 @@ class Notebook:
         the event loop for that thread."""
         loop = asyncio.new_event_loop()
         def connection_thread():
-            # asyncio.set_event_loop(loop)
             loop.run_until_complete(self._attempt_connection(loop))
             loop.close()
         threading.Thread(target=connection_thread, daemon=False).start()
@@ -95,8 +94,7 @@ class Notebook:
         """Launches the proxy server."""
         print('about to launch the proxy in a separate process', __file__)
         import os
-        os.system('./proxy &')
-        # subprocess.Popen('proxy')
+        os.system('python -m streamlet.local.Proxy &')
         print('launched the proxy in a separate process.')
         print('sleeping while waiting for the proxy', get_shared_config('local.waitForProxySecs'))
         await asyncio.sleep(get_shared_config('local.waitForProxySecs'))
