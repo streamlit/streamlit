@@ -104,8 +104,7 @@ class Proxy:
                 self._notebook_id = msg.new_notebook
             elif msg_type == 'delta_list':
                 assert self._queue != None, \
-                    'Received delta_list message before new_notebook '\
-                    'message, violating the protocol.'
+                    'The protocol prohibits delta_list before new_notebook.'
                 for delta in msg.delta_list.deltas:
                     print('In _new_stream_handler, adding a delta to the queue.')
                     self._queue(delta)
@@ -126,11 +125,11 @@ class Proxy:
         self._n_inbound_connections += 1
         throttle_secs = get_shared_config('local.throttleSecs')
 
-        try:
-            # Establishe the websocket.
-            ws = web.WebSocketResponse()
-            await ws.prepare(request)
+        # Establishe the websocket.
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
 
+        try:
             print('got a client websocket connection.')
             current_notebook_id = self._notebook_id
             while True:
@@ -160,13 +159,13 @@ class Proxy:
             #     async for delta_list in streamlit_msg_iter(ws):
             #         add_deltas(delta_list)
 
-            return ws
-
         # Close the server if there are no more connections.
         finally:
             self._n_inbound_connections -= 1
             if self._n_inbound_connections < 1:
                 asyncio.get_event_loop().stop()
+
+        return ws
 
     #
     # async def _get_notebook_handler(self, request):
