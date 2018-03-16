@@ -131,18 +131,18 @@ with Notebook() as write:
 
     write('Markdown', fmt='header', level=3)
     write.markdown("""
-Markdown allows for adding markup to plain text with intuitive
-and minimal syntax. For example:
+        Markdown allows for adding markup to plain text with intuitive
+        and minimal syntax. For example:
 
-- to *emphasize* a word simply surround it with `*`
-- headings are prefixed with `#`, where the count indicates the level
-- lists like these have each item prefixed with `-`
+        - to *emphasize* a word simply surround it with `*`
+        - headings are prefixed with `#`, where the count indicates the level
+        - lists like these have each item prefixed with `-`
 
-```python
-  # it's even possible to display code
-  for i in range(0, 10):
-    print(i)
-```
+        ```python
+          # it's even possible to display code
+          for i in range(0, 10):
+            print(i)
+        ```
     """)
 
     write('JSON', fmt='header', level=3)
