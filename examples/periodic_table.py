@@ -147,7 +147,10 @@ and minimal syntax. For example:
     """)
 
     write('JSON', fmt='header', level=3)
+    write('You can pass a JSON string.')
     write.json('{"object":{"array":[1,true,"3"]}}')
+    write('Or an object directly:')
+    write.json({'hello': 'world'})
 
     # Progress
     write('Progress Bars', fmt='header', level=3)
