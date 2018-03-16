@@ -50,7 +50,7 @@ class Proxy:
         """Runs the web app."""
         port = get_shared_config('proxy.port')
         web.run_app(self._app, port=port)
-        print('Closing down the Streamlit proxy server.')
+        # print('Closing down the Streamlit proxy server.')
 
     def _launch_browser_on_startup(self):
         """Launches a web browser to connect to the proxy."""
