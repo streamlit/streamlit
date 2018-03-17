@@ -61,6 +61,7 @@ pyenv local streamlit
 ```
 make init
 make all
+make production
 ```
 
 ## Dependencies
