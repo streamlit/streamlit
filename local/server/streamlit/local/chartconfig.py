@@ -68,6 +68,14 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
+class ForEachColumn:
+    """
+    This is used to include a certain component as many times as there are
+    columns in the dataset.
+    """
+    def __init__(self, comp):
+        self.comp = comp
+
 class ColumnAtIndex:
     """
     This is used to specify that a certain property should point to whichever
@@ -75,14 +83,6 @@ class ColumnAtIndex:
     """
     def __init__(self, index):
         self.index = index
-
-class ForEachColumn:
-    """
-    This is used to include a certain property as many times as there are
-    columns in the dataset.
-    """
-    def __init__(self, prop):
-        self.prop = prop
 
 class ColumnAtCurrentIndex:
     """
@@ -110,21 +110,33 @@ class ValueCycler:
     def get(self, index):
         return self._items[index % len(self._items)]
 
-def color_cycler():
+class ColorCycler(ValueCycler):
     """
     Cycles some pretty colors.
     """
-    return ValueCycler(
-        '#e41a1c',
-        '#377eb8',
-        '#4daf4a',
-        '#984ea3',
-        '#ff7f00',
-        '#ffff33',
-        '#a65628',
-        '#f781bf')
+    def __init__(self):
+        super().__init__(
+            '#e41a1c',
+            '#377eb8',
+            '#4daf4a',
+            '#984ea3',
+            '#ff7f00',
+            '#ffff33',
+            '#a65628',
+            '#f781bf')
 
 DASH_STR = '3 3'
+
+
+BASIC_REQUIRED_COMPONENTS = (
+    ('x_axis', {
+        'data_key': IndexColumn(),
+    }),
+    ('y_axis', {}),
+    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
+    ('tooltip', {}),
+    ('legend', {}),
+)
 
 
 # A dict mapping each chart type to a tuple with all components that are
@@ -133,59 +145,37 @@ DASH_STR = '3 3'
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        ('x_axis', {
-            'data_key': IndexColumn(),
-        }),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
-        ('tooltip', {}),
-        ('legend', {}),
+        *BASIC_REQUIRED_COMPONENTS,
         ForEachColumn(('line', {
             'data_key': ColumnAtCurrentIndex(),
             'dot': 'false',
-            'stroke': color_cycler(),
+            'stroke': ColorCycler(),
             'type': 'linear',
+            'is_animation_active': 'false',
         })),
     ),
 
     'area_chart': (
-        ('x_axis', {
-            'data_key': IndexColumn(),
-        }),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
-        ('tooltip', {}),
-        ('legend', {}),
+        *BASIC_REQUIRED_COMPONENTS,
         ForEachColumn(('area', {
             'data_key': ColumnAtCurrentIndex(),
-            'fill': color_cycler(),
-            'stroke': color_cycler(),
+            'fill': ColorCycler(),
+            'stroke': ColorCycler(),
             'type': 'linear',
+            'is_animation_active': 'false',
         })),
     ),
 
     'bar_chart': (
-        ('x_axis', {
-            'data_key': IndexColumn(),
-        }),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
-        ('tooltip', {}),
-        ('legend', {}),
+        *BASIC_REQUIRED_COMPONENTS,
         ForEachColumn(('bar', {
             'data_key': ColumnAtCurrentIndex(),
-            'fill': color_cycler(),
+            'fill': ColorCycler(),
+            'is_animation_active': 'false',
         })),
     ),
 
     'composed_chart': (
-        ('x_axis', {
-            'data_key': IndexColumn(),
-        }),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
-        ('tooltip', {}),
-        ('legend', {}),
+        *BASIC_REQUIRED_COMPONENTS,
     ),
-
 }

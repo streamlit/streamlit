@@ -135,21 +135,21 @@ class Chart:
         identifiers such as ColumnAtIndex, ColumnAtCurrentIndex, and
         ValueCycler.
         """
-        missing_required_components = REQUIRED_COMPONENTS.get(self._type, None)
+        required_components = REQUIRED_COMPONENTS.get(self._type, None)
 
-        if missing_required_components is None:
+        if required_components is None:
             return
 
         existing_component_names = set(c.type for c in self._components)
 
-        for missing_required_component in missing_required_components:
+        for required_component in required_components:
 
-            if type(missing_required_component) is ForEachColumn:
+            if isinstance(required_component, ForEachColumn):
                 numRepeats = len(self._data.columns)
-                comp_name, comp_value = missing_required_component.prop
+                comp_name, comp_value = required_component.comp
             else:
                 numRepeats = 1
-                comp_name, comp_value = missing_required_component
+                comp_name, comp_value = required_component
 
             if comp_name in existing_component_names:
                 continue
@@ -178,16 +178,16 @@ class Chart:
             currCycle -- an integer. For repeated fields (denoted via
             ForEachColumn) this is the number of the current column.
         """
-        if type(value) is ColumnAtIndex:
+        if isinstance(value, ColumnAtIndex):
             i = value.index
 
-        elif type(value) is ColumnAtCurrentIndex:
+        elif isinstance(value, ColumnAtCurrentIndex):
             i = currCycle
 
-        elif type(value) is IndexColumn:
+        elif isinstance(value, IndexColumn):
             return INDEX_COLUMN_DESIGNATOR
 
-        elif type(value) is ValueCycler:
+        elif isinstance(value, ValueCycler):
             return value.get(currCycle)
 
         else:
