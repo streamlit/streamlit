@@ -20,22 +20,27 @@ with Notebook() as write:
 
     # Charts.
     write('Charts', fmt='header', level=3)
-    chart_data = \
-        pd.DataFrame(np.random.randn(20, 2), columns=['pv', 'uv'])
+    chart_data = pd.DataFrame(
+        np.random.randn(20, 5),
+        columns=['pv', 'uv', 'a', 'b', 'c']
+    )
 
-    write('Line Chart (simple API)', fmt='header', level=4)
+    write('Line Chart', fmt='header', level=4)
     write(LineChart(chart_data))
-
-    write('Line Chart (detailed API)', fmt='header', level=4)
-    write(Chart(chart_data, 'line_chart')
-        .line(type='monotone', data_key='pv', stroke='#8884d8')
-        .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
     write('Area Chart', fmt='header', level=4)
     write(AreaChart(chart_data))
 
     write('Bar Chart', fmt='header', level=4)
-    write(BarChart(chart_data[:10]))
+    write(BarChart(chart_data[['pv', 'uv']].iloc[:10]))
+
+    # Customized charts.
+    write('Customized charts', fmt='header', level=3)
+
+    write('Customized Line Chart', fmt='header', level=4)
+    write(Chart(chart_data, 'line_chart')
+        .line(type='monotone', data_key='pv', stroke='#8884d8')
+        .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
     write('Composed Chart', fmt='header', level=4)
     write(Chart(chart_data, 'composed_chart')
