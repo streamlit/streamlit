@@ -6,7 +6,8 @@ from PIL import Image
 import urllib, io
 import sys
 
-from streamlit import Notebook, Chart, LineChart
+sys.path.append('local/server')
+from streamlit import Notebook, Chart, LineChart, AreaChart, BarChart
 
 with Notebook() as write:
     # Title.
@@ -27,35 +28,14 @@ with Notebook() as write:
 
     write('Line Chart (detailed API)', fmt='header', level=4)
     write(Chart(chart_data, 'line_chart')
-        .x_axis()
-        .y_axis()
-        .cartesian_grid(stroke_dasharray='3 3')
-        .tooltip()
-        .legend()
         .line(type='monotone', data_key='pv', stroke='#8884d8')
         .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
     write('Area Chart', fmt='header', level=4)
-    write(Chart(chart_data, 'area_chart')
-        .x_axis()
-        .y_axis()
-        .cartesian_grid(stroke_dasharray='3 3')
-        .tooltip()
-        .legend()
-        .area(type='monotone', data_key='pv',
-            stroke='#82ca9d', fill='#82ca9d')
-        .area(type='monotone', data_key='uv',
-            stroke='#8884d8', fill='#8884d8'))
+    write(AreaChart(chart_data))
 
     write('Bar Chart', fmt='header', level=4)
-    write(Chart(chart_data[:10], 'bar_chart')
-        .x_axis()
-        .y_axis(domain="-2,2")
-        .cartesian_grid(stroke_dasharray='3 3')
-        .tooltip()
-        .legend()
-        .bar(data_key='pv', fill='#82ca9d')
-        .bar(data_key='uv', fill='#8884d8'))
+    write(BarChart(chart_data[:10]))
 
     write('Composed Chart', fmt='header', level=4)
     write(Chart(chart_data, 'composed_chart')
