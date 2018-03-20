@@ -27,6 +27,7 @@ help:
 	@echo "js-lib                  - The shared javascript library.       "
 	@echo "protobuf-lib            - The protobuf libraries.              "
 	@echo "production              - Create a production build.           "
+	@echo "package                 - Package up the python distribution.  "
 	@echo "                                                               "
 
 ###################
@@ -50,6 +51,9 @@ protobuf-lib:
 clean:
 	cd shared; make clean
 
+	# Clean up the distribution folder.
+	rm -rfv dist/streamlit/*
+
 init:
 	pip install -r requirements.txt
 	cd shared ; make init
@@ -62,3 +66,9 @@ loc:
 	find . -iname '*.py' -or -iname '*.js'  | \
 		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)" | \
 		xargs wc
+
+# Makes a distribution for PIP installation.
+package:
+	rsync -avL --exclude="__pycache__" local/server/streamlit dist/
+	rsync -av local/client/build dist/
+	cp -v config.yaml requirements.txt dist/

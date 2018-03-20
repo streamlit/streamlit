@@ -13,7 +13,7 @@ import threading
 import traceback
 
 from streamlit.local import config as local_config
-from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared import config
 from streamlit.shared.DeltaGenerator import DeltaGenerator
 from streamlit.shared.NotebookQueue import NotebookQueue
 from streamlit.shared.streamlit_msg_proto import new_notebook_msg
@@ -59,8 +59,8 @@ class Notebook:
         """Tries to establish a connection to the proxy (launching the
         proxy if necessary). Then, pumps deltas through the connection."""
         # Create a connection URI.
-        server = get_shared_config('proxy.server')
-        port = get_shared_config('proxy.port')
+        server = config.get_option('proxy.server')
+        port = config.get_option('proxy.port')
         local_id = local_config.get_local_id()
         notebook_id = self._notebook_id
         uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
@@ -96,8 +96,8 @@ class Notebook:
         import os
         os.system('python -m streamlit.local.Proxy &')
         print('launched the proxy in a separate process.')
-        print('sleeping while waiting for the proxy', get_shared_config('local.waitForProxySecs'))
-        await asyncio.sleep(get_shared_config('local.waitForProxySecs'))
+        print('sleeping while waiting for the proxy', config.get_option('local.waitForProxySecs'))
+        await asyncio.sleep(config.get_option('local.waitForProxySecs'))
         print('Finished sleeping.')
 
     async def _transmit_through_websocket(self, ws):
@@ -106,7 +106,7 @@ class Notebook:
         await new_notebook_msg(self._notebook_id, ws)
 
         # Send other information across.
-        throttle_secs = get_shared_config('local.throttleSecs')
+        throttle_secs = config.get_option('local.throttleSecs')
         while self._connection_open:
             await self._queue.flush_deltas(ws)
             await asyncio.sleep(throttle_secs)
