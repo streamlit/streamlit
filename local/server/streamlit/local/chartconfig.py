@@ -68,21 +68,13 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
-def to_component_list(comp_tuples):
-    return [ChartComponent(k, v) for (k, v) in comp_tuples]
-
-# A dict mapping each chart type to a dict of all components that should be set
-# by default for that chart. These defaults only apply to the type-specific
-# builder functions (e.g. LineChart rather than Chart(foo, 'line_chart').
-DEFAULT_COMPONENTS = {
-    'line_chart': to_component_list((
-        ('x_axis', {}),
-        ('y_axis', {}),
-        ('cartesian_grid', {'stroke_dasharray': '3 3'}),
-        ('tooltip', {}),
-        ('legend', {}),
-    )),
-}
+class ForEachColumn:
+    """
+    This is used to include a certain component as many times as there are
+    columns in the dataset.
+    """
+    def __init__(self, comp):
+        self.comp = comp
 
 class ColumnAtIndex:
     """
@@ -92,19 +84,18 @@ class ColumnAtIndex:
     def __init__(self, index):
         self.index = index
 
-class ForEachColumn:
-    """
-    This is used to include a certain property as many times as there are
-    columns in the dataset.
-    """
-    def __init__(self, prop):
-        self.prop = prop
-
 class ColumnAtCurrentIndex:
     """
     This is used within a ForEachColumn to specify that a certain property
     should point to the column that the ForEachColumn is cycling through right
     now.
+    """
+    pass
+
+class IndexColumn:
+    """
+    This is used to specify that a certain property should point to the index of
+    the dataframe.
     """
     pass
 
@@ -119,17 +110,72 @@ class ValueCycler:
     def get(self, index):
         return self._items[index % len(self._items)]
 
+class ColorCycler(ValueCycler):
+    """
+    Cycles some pretty colors.
+    """
+    def __init__(self):
+        super().__init__(
+            '#e41a1c',
+            '#377eb8',
+            '#4daf4a',
+            '#984ea3',
+            '#ff7f00',
+            '#ffff33',
+            '#a65628',
+            '#f781bf')
+
+DASH_STR = '3 3'
+
+
+BASIC_REQUIRED_COMPONENTS = (
+    ('x_axis', {
+        'data_key': IndexColumn(),
+    }),
+    ('y_axis', {}),
+    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
+    ('tooltip', {}),
+    ('legend', {}),
+)
+
+
 # A dict mapping each chart type to a tuple with all components that are
 # required for that chart type. The components themselves are expressed here as
-# 2-tuples. Finally, you can use the ColumnAtIndex class to point to any column
-# of the chart's DataFrame by index (rather than by name).
+# 2-tuples. Here you can use special types ColumnAtIndex, ColumnAtCurrentIndex,
+# ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
+        *BASIC_REQUIRED_COMPONENTS,
         ForEachColumn(('line', {
-            'type': 'monotone',
             'data_key': ColumnAtCurrentIndex(),
-            'stroke': ValueCycler('#8884d8', '#82ca9d'),
             'dot': 'false',
+            'stroke': ColorCycler(),
+            'type': 'linear',
+            'is_animation_active': 'false',
         })),
+    ),
+
+    'area_chart': (
+        *BASIC_REQUIRED_COMPONENTS,
+        ForEachColumn(('area', {
+            'data_key': ColumnAtCurrentIndex(),
+            'fill': ColorCycler(),
+            'stroke': ColorCycler(),
+            'type': 'linear',
+            'is_animation_active': 'false',
+        })),
+    ),
+
+    'bar_chart': (
+        *BASIC_REQUIRED_COMPONENTS,
+        ForEachColumn(('bar', {
+            'data_key': ColumnAtCurrentIndex(),
+            'fill': ColorCycler(),
+            'is_animation_active': 'false',
+        })),
+    ),
+
+    'composed_chart': (
+        *BASIC_REQUIRED_COMPONENTS,
     ),
 }
