@@ -105,8 +105,7 @@ class Chart extends PureComponent {
 
         if (hasSupportedIndex) {
           rowData[INDEX_COLUMN_DESIGNATOR] =
-              dataFrame.get('index').get(indexType)
-                  .get('data').get('data').get(rowIndex);
+              indexGet(dataFrame.get('index'), 0, rowIndex);
         }
 
         for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
