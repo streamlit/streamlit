@@ -75,7 +75,7 @@ const COMPONENTS = {
 /** Column name used to designate the dataframe index. */
 const INDEX_COLUMN_DESIGNATOR = '::index';
 
-/** Types of dataframe-indices that are supported. */
+/** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
   'int_64Index', 'uint_64Index', 'float_64Index',
   // TODO(tvst): 'range_index', etc.
