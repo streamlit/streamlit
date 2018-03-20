@@ -66,6 +66,9 @@ from streamlit.shared import data_frame_proto
 
 current_module = __import__(__name__)
 
+# Column name used to designate the dataframe index.
+INDEX_COLUMN_DESIGNATOR = '::index'
+
 class Chart:
     def __init__(self, data, type, width=0, height=0, **kwargs):
         """Constructs a chart object.
@@ -83,20 +86,15 @@ class Chart:
             height -- a number with the chart height. Defaults to 0, which means
             "the default height" rather than actually 0px.
 
-            kwargs -- keyword arguments of two types: (1) properties to be added
-            to the ReChart's top-level element; (2) a special 'components'
-            keyword that should point to an array of default ChartComponents to
-            use, if desired.
+            kwargs -- keyword arguments containng properties to be added to the
+            ReChart's top-level element
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
         self._type = type
         self._width = width
         self._height = height
-        self._components = (
-            kwargs.pop('components', [])
-            or []  # In case kwargs['components'] is None.
-        )
+        self._components = []
         self._props = [(str(k), str(v)) for (k,v) in kwargs.items()]
 
     def append_component(self, component_name, props):
@@ -130,28 +128,28 @@ class Chart:
     def _append_missing_data_components(self):
         """Appends all required data components that have not been specified.
 
-        Required axes are specified in the REQUIRED_COMPONENTS dict, which
-        points each chart type to a tuple of all components that are required
-        for that chart. Required components themselves are either normal tuples
-        or a repeated tuple (specified via ForEachColumn), and their children
-        can use special identifiers such as ColumnAtIndex, ColumnAtCurrentIndex,
-        and ValueCycler.
+        This uses the REQUIRED_COMPONENTS dict, which points each chart type to
+        a tuple of all components that are required for that chart. Required
+        components themselves are either normal tuples or a repeated tuple
+        (specified via ForEachColumn), and their children can use special
+        identifiers such as ColumnAtIndex, ColumnAtCurrentIndex, and
+        ValueCycler.
         """
-        missing_required_components = REQUIRED_COMPONENTS.get(self._type, None)
+        required_components = REQUIRED_COMPONENTS.get(self._type, None)
 
-        if missing_required_components is None:
+        if required_components is None:
             return
 
         existing_component_names = set(c.type for c in self._components)
 
-        for missing_required_component in missing_required_components:
+        for required_component in required_components:
 
-            if type(missing_required_component) is ForEachColumn:
+            if isinstance(required_component, ForEachColumn):
                 numRepeats = len(self._data.columns)
-                comp_name, comp_value = missing_required_component.prop
+                comp_name, comp_value = required_component.comp
             else:
                 numRepeats = 1
-                comp_name, comp_value = missing_required_component
+                comp_name, comp_value = required_component
 
             if comp_name in existing_component_names:
                 continue
@@ -169,7 +167,7 @@ class Chart:
                     self.append_component(comp_name, props)
 
     def _materializeValue(self, value, currCycle):
-        """Replaces ColumnAtIndex with a column name if needed.
+        """Replaces ColumnAtIndex, etc, with a column name if needed.
 
         Args:
             value -- anything. If value is a ColumnAtIndex or
@@ -180,22 +178,25 @@ class Chart:
             currCycle -- an integer. For repeated fields (denoted via
             ForEachColumn) this is the number of the current column.
         """
-        if type(value) is ColumnAtIndex:
-            index = value.index
+        if isinstance(value, ColumnAtIndex):
+            i = value.index
 
-        elif type(value) is ColumnAtCurrentIndex:
-            index = currCycle
+        elif isinstance(value, ColumnAtCurrentIndex):
+            i = currCycle
 
-        elif type(value) is ValueCycler:
+        elif isinstance(value, IndexColumn):
+            return INDEX_COLUMN_DESIGNATOR
+
+        elif isinstance(value, ValueCycler):
             return value.get(currCycle)
 
         else:
             return value
 
-        if index >= len(self._data.columns):
-            raise IndexError('Index {} out of bounds'.format(index))
+        if i >= len(self._data.columns):
+            raise IndexError('Index {} out of bounds'.format(i))
 
-        return self._data.columns[index]
+        return self._data.columns[i]
 
 
 def register_type_builder(chart_type, short_name=None):
@@ -215,9 +216,7 @@ def register_type_builder(chart_type, short_name=None):
 
     def type_builder(data, **kwargs):
         kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
-        components = DEFAULT_COMPONENTS.get(chart_type_snake, {})
-        return Chart(data, type=chart_type_snake,
-                     components=components, **kwargs)
+        return Chart(data, type=chart_type_snake, **kwargs)
 
     setattr(current_module, short_name or chart_type, type_builder)
 
