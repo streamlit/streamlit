@@ -10,7 +10,7 @@ import asyncio
 import os
 import webbrowser
 
-from streamlit.shared.config import get_config as get_shared_config
+from streamlit.shared import config
 from streamlit.shared.NotebookQueue import NotebookQueue
 from streamlit.shared.streamlit_msg_proto import new_notebook_msg
 from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
@@ -29,10 +29,14 @@ class Proxy:
             web.get('/latest', self._latest_handler)
         ])
 
-        # TODO: Move this into the route table above.
-        # Serve up all the local pages here.
-        static_route = self._app.router.add_static('/',
-            path=(os.path.split(__file__)[0] + '/../../../client/build'))
+        # If we're not using the node development server, then the proxy
+        # will serve up the development pages.
+        if not config.get_option('proxy.useNode'):
+            static_path = config.get_path('proxy.staticRoot')
+            self._app.router.add_static('/', path=static_path)
+            print('using static route:', static_path)
+            # import sys
+            # sys.exit(-1)
 
         # Counter for the number of incoming connections.
         self._n_inbound_connections = 0
@@ -48,18 +52,18 @@ class Proxy:
 
     def run_app(self):
         """Runs the web app."""
-        port = get_shared_config('proxy.port')
+        port = config.get_option('proxy.port')
         web.run_app(self._app, port=port)
         # print('Closing down the Streamlit proxy server.')
 
     def _launch_browser_on_startup(self):
         """Launches a web browser to connect to the proxy."""
         async def async_launch_broswer(app):
-            if get_shared_config('proxy.useNode'):
+            if config.get_option('proxy.useNode'):
                 host, port = 'localhost', '3000'
             else:
-                host = get_shared_config('proxy.server')
-                port = get_shared_config('proxy.port')
+                host = config.get_option('proxy.server')
+                port = config.get_option('proxy.port')
             url = f'http://{host}:{port}/index.html'
             webbrowser.open(url)
         self._app.on_startup.append(async_launch_broswer)
@@ -68,7 +72,7 @@ class Proxy:
         """Closes the server if we haven't received a connection in a certain
         amount of time."""
         # Init the state for the timeout
-        timeout_secs = get_shared_config('proxy.waitForConnectionSecs')
+        timeout_secs = config.get_option('proxy.waitForConnectionSecs')
         loop = asyncio.get_event_loop()
 
         # Enqueue the timeout in the event loop.
@@ -105,7 +109,7 @@ class Proxy:
         """This is what the web client connects to."""
         # Indicate that we got this connection
         self._n_inbound_connections += 1
-        throttle_secs = get_shared_config('local.throttleSecs')
+        throttle_secs = config.get_option('local.throttleSecs')
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
