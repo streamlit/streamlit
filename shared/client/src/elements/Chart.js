@@ -3,6 +3,9 @@ import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit-shared/lib/dataFrameProto';
 
 import * as recharts from 'recharts';
+
+import './Chart.css';
+
 const COMPONENTS = {
   ////////////
   // Charts //

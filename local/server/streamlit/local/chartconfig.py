@@ -129,11 +129,11 @@ DASH_STR = '3 3'
 
 
 BASIC_REQUIRED_COMPONENTS = (
+    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
     ('x_axis', {
         'data_key': IndexColumn(),
     }),
     ('y_axis', {}),
-    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
     ('tooltip', {}),
     ('legend', {}),
 )
