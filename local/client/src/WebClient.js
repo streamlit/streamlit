@@ -139,8 +139,8 @@ class WebClient extends PureComponent {
     // Return the tree
     return (
       <div>
-        <Navbar color='dark' className="fixed-top">
-          <NavbarBrand href="/">Streamlit</NavbarBrand>
+        <Navbar className="fixed-top">
+          <NavbarBrand href="#">Streamlit</NavbarBrand>
           <NavItem>
             <PersistentWebsocket
               uri={uri}
@@ -151,8 +151,8 @@ class WebClient extends PureComponent {
           </NavItem>
         </Navbar>
         <Container className="streamlit-container">
-          <Row>
-            <Col className="col-12">
+          <Row className="justify-content-center">
+            <Col className="col-8">
               {/* {this.renderElements(0)} */}
               <AutoSizer>
                 { ({width}) => this.renderElements(width) }
