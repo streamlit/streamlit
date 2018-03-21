@@ -12,124 +12,123 @@ const DISCONNECTED_STATE = 'disconnected';
 const CONNECTED_STATE = 'connected';
 const ERROR_STATE = 'error'
 
- /**
-  * Implements a persistent websocket connection.
-  * Displays itself as an icon indicating the connection type.
-  */
- class PersistentWebsocket extends PureComponent {
-   /**
-    * Constructor.
-    */
-   constructor(props) {
-     super(props);
-     this.state = {
-       state: DISCONNECTED_STATE,
-     };
+import './PersistentWebsocket.css';
 
-     // Bind all callbacks
-     this.openWebsocket = this.openWebsocket.bind(this);
-   }
+/**
+ * Implements a persistent websocket connection.
+ * Displays itself as an icon indicating the connection type.
+ */
+class PersistentWebsocket extends PureComponent {
+  /**
+   * Constructor.
+   */
+  constructor(props) {
+    super(props);
+    this.state = {
+      state: DISCONNECTED_STATE,
+    };
 
-   /**
-    * Upon mount, creates a new persistent websocket connection.
-    */
-   componentDidMount() {
-     this.openWebsocket();
-   }
+    // Bind all callbacks
+    this.openWebsocket = this.openWebsocket.bind(this);
+  }
 
-   /**
-    * When unmounting, close the websocket connection.
-    */
-   componentWillUnmount() {
-     this.closeWebsocket();
-   }
+  /**
+   * Upon mount, creates a new persistent websocket connection.
+   */
+  componentDidMount() {
+    this.openWebsocket();
+  }
 
-   openWebsocket() {
-     // Prevent double-opening a websocket.
-     if (this.websocket) {
-       this.setState({
-         state: ERROR_STATE,
-         errorMsg: 'Cannot reopen an existing websocket.'
-       })
-       return;
-     }
+  /**
+   * When unmounting, close the websocket connection.
+   */
+  componentWillUnmount() {
+    this.closeWebsocket();
+  }
 
-     // Create a new websocket.
-     this.websocket = new WebSocket(this.props.uri);
+  openWebsocket() {
+    // Prevent double-opening a websocket.
+    if (this.websocket) {
+      this.setState({
+        state: ERROR_STATE,
+        errorMsg: 'Cannot reopen an existing websocket.'
+      })
+      return;
+    }
 
-     // Set various event handler for the websocket.
-     this.websocket.onopen = () => {
-       this.setState({state: CONNECTED_STATE});
-       if (this.props.onReconnect) {
-         this.props.onReconnect();
-       }
-     };
+    // Create a new websocket.
+    this.websocket = new WebSocket(this.props.uri);
 
-     this.websocket.onmessage = ({data}) => {
-       if (this.props.onMessage) {
-          this.props.onMessage(data);
-        }
-      };
+    // Set various event handler for the websocket.
+    this.websocket.onopen = () => {
+      this.setState({state: CONNECTED_STATE});
+      if (this.props.onReconnect) {
+        this.props.onReconnect();
+      }
+    };
 
-      this.websocket.onclose = () => {
-        if (this.state.state !== ERROR_STATE)
-          this.setState({state: DISCONNECTED_STATE})
-        this.closeWebsocket();
-        if (this.props.persist)
-          setTimeout(this.openWebsocket, RECONNECT_TIMEOUT);
-      };
+    this.websocket.onmessage = ({data}) => {
+      if (this.props.onMessage) {
+        this.props.onMessage(data);
+      }
+    };
 
-      this.websocket.onerror = (event) => {
-        this.setState({
-          state: ERROR_STATE,
-          errorMsg: 'Error Connecting:' + this.props.uri
-        });
-      };
-   }
+    this.websocket.onclose = () => {
+      if (this.state.state !== ERROR_STATE)
+        this.setState({state: DISCONNECTED_STATE})
+      this.closeWebsocket();
+      if (this.props.persist)
+        setTimeout(this.openWebsocket, RECONNECT_TIMEOUT);
+    };
 
-   /**
-    * Closes any open websockets.
-    */
-   closeWebsocket() {
-     if (this.websocket) {
-       this.websocket.close(NORMAL_CLOSURE);
-     }
-     this.websocket = undefined;
-   }
+    this.websocket.onerror = (event) => {
+      this.setState({
+        state: ERROR_STATE,
+        errorMsg: 'Error Connecting:' + this.props.uri
+      });
+    };
+  }
 
-   render() {
-     // Configure icon and tooltip based on current state.
-     const {state, errorMsg} = this.state;
-     let iconName, tooltipText;
-     if (state === DISCONNECTED_STATE) {
-       iconName = 'link-broken'
-       tooltipText = 'Disconnected.'
-     } else if (state === CONNECTED_STATE) {
-       iconName = 'link-intact';
-       tooltipText = `Connected: ${this.props.uri}`;
-     } else if (state === ERROR_STATE) {
-       iconName = 'warning';
-       tooltipText = errorMsg;
-     } else {
-       iconName = 'warning';
-       tooltipText = `Unknown state: "${state}"`;
-     }
+  /**
+   * Closes any open websockets.
+   */
+  closeWebsocket() {
+    if (this.websocket) {
+      this.websocket.close(NORMAL_CLOSURE);
+    }
+    this.websocket = undefined;
+  }
 
-     // Return the visual representation,
-     return (
-       <span>
-         <svg id="websocket-icon" viewBox="0 0 8 8" width="1em">
-           <use
-             xlinkHref={'open-iconic.min.svg#' + iconName}
-             style={{'fill':'#fff'}}
-           />
-         </svg>
-         <UncontrolledTooltip placement="bottom" target="websocket-icon">
-           {tooltipText}
-         </UncontrolledTooltip>
-       </span>
-     )
-   };
- };
+  render() {
+    // Configure icon and tooltip based on current state.
+    const {state, errorMsg} = this.state;
+    let iconName, tooltipText;
+    if (state === DISCONNECTED_STATE) {
+      iconName = 'ban'
+      tooltipText = 'Disconnected.'
+    } else if (state === CONNECTED_STATE) {
+      iconName = 'bolt';
+      tooltipText = `Connected: ${this.props.uri}`;
+    } else if (state === ERROR_STATE) {
+      iconName = 'warning';
+      tooltipText = errorMsg;
+    } else {
+      iconName = 'warning';
+      tooltipText = `Unknown state: "${state}"`;
+    }
+
+    // Return the visual representation,
+    return (
+      <span>
+      <svg id="websocket-icon" viewBox="0 0 8 8" width="1em">
+      <use xlinkHref={'open-iconic.min.svg#' + iconName} />
+      </svg>
+      <UncontrolledTooltip placement="bottom" target="websocket-icon">
+      {tooltipText}
+      </UncontrolledTooltip>
+      </span>
+    )
+  };
+};
 
 export default PersistentWebsocket;

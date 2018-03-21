@@ -1,20 +1,26 @@
+.streamlit-container .markdown-text-container {
+  font-family: 'IBM Plex Serif', serif;
+}
 
 .streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
-  font-size: 85%;
-  background-color: rgba(27,31,35,0.05);
+  font-size: 0.8rem;
+  background-color: #E6E9EE;
   border-radius: 3px;
 }
 
 .streamlit-container .markdown-text-container pre {
-  border: 1px solid #ccc;
+  border: 1px solid #E6E9EE;
+  border-radius: 3px;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
 }
 
 .streamlit-container .markdown-text-container pre>code {
   padding: 0;
   margin: 0;
-  font-size: 100%;
+  font-size: 1rem;
   word-break: normal;
   white-space: pre;
   background: transparent;
@@ -34,10 +40,10 @@
 }
 
 .streamlit-container .markdown-text-container blockquote {
-  color: #666;
   margin: 0;
-  padding-left: 3em;
-  border-left: 0.5em #eee solid;
+  border-left: 0.5em #E6E9EE solid;
+  padding: 1rem 0 1rem 1rem;
+  margin: 0 0 1rem 0;
 }
 
 .streamlit-container .markdown-text-container tr {
@@ -47,17 +53,17 @@
 
 .streamlit-container .markdown-text-container th, td {
   padding: 6px 13px;
-  border: 1px solid #dfe2e5;
+  border: 1px solid #E6E9EE;
 }
 
 .streamlit-container .markdown-text-container table tr:nth-child(2n) {
-  background: #f6f8fa;
+  background: #f6f9fa;
 }
 
 .streamlit-container .json-text-container span.error {
   padding: 0.2em 0.4em;
   margin: 0;
-  background-color: #eee;
+  background-color: #E6E9EE;
   border-radius: 3px;
 }
 
@@ -66,4 +72,3 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
-

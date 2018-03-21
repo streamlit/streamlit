@@ -8,8 +8,8 @@
 }
 
 .streamlit-container .caption {
-  font-family: "Roboto Mono", monospace;
-  font-size: 8pt;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
   text-align: center;
   margin-top: 5px;
 }

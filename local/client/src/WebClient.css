@@ -1,5 +1,85 @@
+/**
+ * Palette:
+ * - Dark charcoal: #101620
+ * - Medium charcoal: #364056
+ * - Light charcoal: #768096
+ * - Light cloud: #E6E9EE
+ * - Accent red: #F63366
+ * - Accent yellow: #FFFD80
+ */
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #101620;
+  font-size: 17px;
+}
+
+a,
+a:visited {
+  color: #F63366;
+}
+
+a:hover,
+a:active {
+  color: #F63366;
+  text-decoration: underline;
+}
+
+h1, .h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin-top: 1.5rem;
+}
+
+h2, .h2 {
+  font-weight: 300;
+  font-size: 2.0rem;
+}
+
+h3, .h3 {
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin-top: 1rem;
+}
+
+h4, .h4 {
+  font-weight: 500;
+  font-size: 1.25rem;
+  margin-top: 0.25rem;
+}
+
+h5, .h5 {
+  font-weight: 300;
+  font-size: 1.25rem;
+  margin-top: 0.25rem;
+}
+
+h6, .h6 {
+  font-weight: 300;
+  font-size: 1rem;
+  text-transform: uppercase;
+  margin-top: 0;
+}
+
+.navbar {
+  border-top: 2px solid #FFFD80;
+  border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
+}
+
 .navbar-brand {
-  color: white;
+  color: #101620;
+  font-weight: 700;
+  background: white;
+  box-shadow: 0 0 10px white;
+  padding: 0 1rem;
+  margin-left: -1rem;
+}
+
+.navbar-brand:hover {
+  color: #F63366;
+}
+
+.nav-item {
+  list-style: none;
 }
 
 .streamlit-container {

@@ -10,38 +10,38 @@ from streamlit import Notebook, Chart, LineChart, AreaChart, BarChart
 
 with Notebook() as write:
     # Title.
-    write('Period Table of the Elements', fmt='header', level=1)
-    write('This notebook shows some of the awesome elements of streamlit.')
+    write('Periodic Table of the Elements', fmt='header', level=1)
+    write('This notebook shows some of the awesome elements of Streamlit.')
 
     # Arrays
-    write('Numpy Arrays', fmt='header', level=3)
+    write('Numpy Arrays', fmt='header', level=2)
     write(np.random.randn(100, 100))
 
     # Charts.
-    write('Charts', fmt='header', level=3)
+    write('Charts', fmt='header', level=2)
     chart_data = pd.DataFrame(
         np.random.randn(20, 5),
         columns=['pv', 'uv', 'a', 'b', 'c']
     )
 
-    write('Line Chart', fmt='header', level=4)
+    write('Line Chart', fmt='header', level=3)
     write(LineChart(chart_data))
 
-    write('Area Chart', fmt='header', level=4)
+    write('Area Chart', fmt='header', level=3)
     write(AreaChart(chart_data))
 
-    write('Bar Chart', fmt='header', level=4)
+    write('Bar Chart', fmt='header', level=3)
     write(BarChart(chart_data[['pv', 'uv']].iloc[:10]))
 
     # Customized charts.
-    write('Customized charts', fmt='header', level=3)
+    write('Customized charts', fmt='header', level=2)
 
-    write('Customized Line Chart', fmt='header', level=4)
+    write('Customized Line Chart', fmt='header', level=3)
     write(Chart(chart_data, 'line_chart')
         .line(type='monotone', data_key='pv', stroke='#8884d8')
         .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
-    write('Composed Chart', fmt='header', level=4)
+    write('Composed Chart', fmt='header', level=3)
     write(Chart(chart_data, 'composed_chart')
         .x_axis()
         .y_axis()
@@ -52,7 +52,7 @@ with Notebook() as write:
         .area(type='monotone', data_key='uv', fill='#8884d8'))
 
     # DataFrames
-    write('Pandas DataFrames', fmt='header', level=3)
+    write('Pandas DataFrames', fmt='header', level=2)
     arrays = [
         np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
         np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
@@ -61,14 +61,14 @@ with Notebook() as write:
     write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
     # Alerts
-    write('Alerts', fmt='header', level=3)
+    write('Alerts', fmt='header', level=2)
     write.alert('This is a "success" alert.', type='success')
     write.alert('This is an "info" alert.', type='info')
     write.alert('This is a "warning" alert.', type='warning')
     write.alert('This is a "danger" alert.', type='danger')
 
     # Headers
-    write('Headers', fmt='header', level=3)
+    write('Headers', fmt='header', level=2)
     write.header('Level 1', level=1)
     write.header('Level 2', level=2)
     write.header('Level 3', level=3)
@@ -77,7 +77,7 @@ with Notebook() as write:
     write.header('Level 6', level=6)
 
     # Images - We test all 6 possible file formats.
-    write('Images', fmt='header', level=3)
+    write('Images', fmt='header', level=2)
     img_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
     img_bytes = urllib.request.urlopen(img_url).read()
     img = np.array(Image.open(io.BytesIO(img_bytes)))
@@ -94,7 +94,7 @@ with Notebook() as write:
     write.img(channels2, caption=channels_caption, width=75)  # (n, w, h, 1)
 
     # Text
-    write('Text', fmt='header', level=3)
+    write('Text', fmt='header', level=2)
 
     write.header('Character Wrapping', level=5)
     write(
@@ -113,7 +113,7 @@ with Notebook() as write:
         '  ...  2 leading spaces\n' +
         '   ... 3 leading spaces');
 
-    write('Markdown', fmt='header', level=3)
+    write('Markdown', fmt='header', level=2)
     write.markdown("""
         Markdown allows for adding markup to plain text with intuitive
         and minimal syntax. For example:
@@ -129,14 +129,14 @@ with Notebook() as write:
         ```
     """)
 
-    write('JSON', fmt='header', level=3)
+    write('JSON', fmt='header', level=2)
     write('You can pass a JSON string.')
     write.json('{"object":{"array":[1,true,"3"]}}')
     write('Or an object directly:')
     write.json({'hello': 'world'})
 
     # Progress
-    write('Progress Bars', fmt='header', level=3)
+    write('Progress Bars', fmt='header', level=2)
     for percent in [100, 75, 50, 25, 0]:
         write(f'{percent}% progress:')
         write.progress(percent)
