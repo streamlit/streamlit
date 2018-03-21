@@ -27,12 +27,13 @@ a:active {
 h1, .h1 {
   font-weight: 700;
   font-size: 2.5rem;
-  margin-top: 1.5rem;
+  margin-top: 2.5rem;
 }
 
 h2, .h2 {
   font-weight: 300;
   font-size: 2.0rem;
+  margin-top: 1rem;
 }
 
 h3, .h3 {
