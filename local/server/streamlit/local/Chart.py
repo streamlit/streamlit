@@ -54,7 +54,7 @@ Or, with syntax sugar type-specific builders:
 
     LineChart(data, width=600, height=300)
     # You don't even need to specify data keys. These are selected automatically
-    # for your from the data.
+    # for you from the data.
 """
 
 import pandas as pd
@@ -199,18 +199,15 @@ class Chart:
         return self._data.columns[i]
 
 
-def register_type_builder(chart_type, short_name=None):
+def register_type_builder(chart_type):
     """Adds a builder function to this module, to build specific chart types.
 
     These sugary builders also set up some nice defaults from the
     DEFAULT_COMPONENTS dict, that can be overriden after the instance is built.
 
     Args:
-        chart_type -- A string with the snake-case name of the chart type to add.
-
-        short_name -- If desired, a string containing the name of the class method
-        to be added. This is used to add methods like foo() for annoying-to-type
-        chart types such as 'foo_chart' (instead of foo_chart()).
+        chart_type -- A string with the upper-camel-case name of the chart type
+        to add.
     """
     chart_type_snake = to_snake_case(chart_type)
 
@@ -218,7 +215,7 @@ def register_type_builder(chart_type, short_name=None):
         kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
         return Chart(data, type=chart_type_snake, **kwargs)
 
-    setattr(current_module, short_name or chart_type, type_builder)
+    setattr(current_module, chart_type, type_builder)
 
 def register_component(component_name, implemented):
     """Adds a method to the Chart class, to set the given component.

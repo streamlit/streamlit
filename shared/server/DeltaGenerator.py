@@ -7,10 +7,36 @@ import textwrap
 
 from streamlit.shared import image_proto
 from streamlit.local.Chart import Chart
+from streamlit.local.chartconfig import CHART_TYPES
+from streamlit.local.caseconverters import to_snake_case
 from streamlit.shared import data_frame_proto
 from streamlit.shared import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
+
+# Dispatch based on the 'fmt' argument.
+SUPPORTED_FORMATS = [
+    'alert',
+    'chart',
+    'dataframe',
+    'header',
+    'img',
+    'json',
+    'markdown',
+    'progress',
+    'text',
+]
+
+DATAFRAME_LIKE_TYPES = (
+    pd.DataFrame,
+    pd.Series,
+    pd.Index,
+    np.ndarray,
+)
+
+FIGURE_LIKE_TYPES = (
+    Chart,
+)
 
 class DeltaGenerator:
     """
@@ -59,7 +85,7 @@ class DeltaGenerator:
 
         The optional `fmt` argument can take on several values:
 
-            - "auto"     : figures out the
+            - "auto"     : figures out the format
             - "alert"    : formats the string as an alert
             - "header"   : formats the string as a header
             - "info"     : prints out df.info() on a DataFrame-like object
@@ -68,30 +94,28 @@ class DeltaGenerator:
             - "markdown" : prints out as Markdown-formatted text
             - "json" : prints out as JSON-formatted text
         """
-        # Dispatch based on the 'fmt' argument.
-        supported_formats = ['text', 'alert', 'header', 'header', 'dataframe',
-            'chart', 'img', 'progress', 'markdown', 'json']
-        if fmt in supported_formats:
+        if fmt in SUPPORTED_FORMATS:
             assert len(args) == 1, f'Format "{fmt}" requires only one argument.'
             return getattr(self, fmt)(args[0], **kwargs)
 
         # Otherwise, dispatch based on type.
-        dataframe_like_types = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
-        figure_like_types = (Chart,)
+
         string_buffer = []
         def flush_buffer():
             if string_buffer:
                 self.text(' '.join(string_buffer))
                 string_buffer[:] = []
+
         for arg in args:
-            if isinstance(arg, dataframe_like_types):
+            if isinstance(arg, DATAFRAME_LIKE_TYPES):
                 flush_buffer()
                 self.dataframe(arg)
-            elif isinstance(arg, figure_like_types):
+            elif isinstance(arg, FIGURE_LIKE_TYPES):
                 flush_buffer()
                 self.chart(arg)
             else:
                 string_buffer.append(str(arg))
+
         flush_buffer()
 
     def text(self, text, classes='fixed-width'):
@@ -136,8 +160,7 @@ class DeltaGenerator:
         return self._new_element(set_data_frame)
 
     def chart(self, chart):
-        """
-        Implements this chart.
+        """Displays a chart.
         """
         def set_chart(element):
             chart.marshall(element.chart)
@@ -225,3 +248,19 @@ class DeltaGenerator:
 
         self._queue(delta)
         return generator
+
+def register_chart_method(chart_type):
+    """Adds a chart-building method to DeltaGenerator for a specific chart type.
+
+    Args:
+        chart_type -- A string with the snake-case name of the chart type to
+        add.
+    """
+    def chart_method(self, data, **kwargs):
+        return self.chart(Chart(data, type=chart_type, **kwargs))
+
+    setattr(DeltaGenerator, chart_type, chart_method)
+
+# Add chart-building methods to DeltaGenerator
+for chart_type in CHART_TYPES:
+    register_chart_method(to_snake_case(chart_type))
