@@ -2,6 +2,10 @@
   font-family: 'IBM Plex Serif', serif;
 }
 
+.streamlit-container .markdown-text-container p {
+  margin: 0;
+}
+
 .streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
@@ -71,4 +75,9 @@
   padding: 5px;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.streamlit-container .react-json-view {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px;
 }
