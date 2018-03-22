@@ -25,40 +25,46 @@ a:active {
 }
 
 h1, .h1 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 2.5rem;
-  margin-top: 2.5rem;
+  margin: 2.5rem 0 0 0;
 }
 
 h2, .h2 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 2.0rem;
-  margin-top: 1rem;
+  margin: 1rem 0 0 0;
 }
 
 h3, .h3 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 1.5rem;
-  margin-top: 1rem;
+  margin: 1rem 0 0 0;
 }
 
 h4, .h4 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   font-size: 1.25rem;
-  margin-top: 0.25rem;
+  margin: 0.25rem 0 0 0;
 }
 
 h5, .h5 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 1.25rem;
-  margin-top: 0.25rem;
+  margin: 0.25rem 0 0 0;
 }
 
 h6, .h6 {
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 1rem;
   text-transform: uppercase;
-  margin-top: 0;
+  margin: 0;
 }
 
 .navbar {
@@ -89,7 +95,7 @@ h6, .h6 {
 
 .streamlit-container .element-container {
   display: inline-block;
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 
 .streamlit-container .footer {

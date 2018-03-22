@@ -14,7 +14,9 @@ import './Text.css';
 class Text extends PureComponent {
   render() {
     const {element, width} = this.props;
+
     switch (element.get('format')) {
+
       case 1: // Text.Format["markdown"]
         return (
           <div className="markdown-text-container" style={{width}}>
@@ -22,6 +24,7 @@ class Text extends PureComponent {
           </div>
         );
         break;
+
       case 2: // Text.Format["json"]
         const body = element.get('body')
         let bodyObject = undefined;
@@ -35,17 +38,30 @@ class Text extends PureComponent {
             <div className="json-text-container" style={{width}}>
               <Alert color="danger" style={{width}}>
                 <strong>Invalid JSON format:</strong> {e.message} ({line})
-                <pre className="error"><code>{body.substr(0, pos)}<span className="error">{body[pos]}</span>{body.substr(pos + 1)}</code></pre>
+                <pre className="error">
+                  <code>
+                    {body.substr(0, pos)}
+                    <span className="error">{body[pos]}</span>
+                    {body.substr(pos + 1)}
+                  </code>
+                </pre>
               </Alert>
             </div>
           );
         }
         return (
           <div className="json-text-container" style={{width}}>
-            <ReactJson src={bodyObject} displayDataTypes={false} displayObjectSize={false} name={false} />
+            <ReactJson
+                src={bodyObject}
+                displayDataTypes={false}
+                displayObjectSize={false}
+                name={false}
+                style={{font: ""}}  // Unset so we can style via a CSS file.
+                />
           </div>
         );
         break;
+
       default:
         return (
           <Alert color="danger" style={{width}}>
