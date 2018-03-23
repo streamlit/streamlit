@@ -6,7 +6,7 @@ from PIL import Image
 import urllib, io
 import sys
 
-from streamlit import Notebook, Chart, LineChart, AreaChart, BarChart
+from streamlit import Notebook, Chart
 
 with Notebook() as write:
     # Title.
@@ -25,13 +25,13 @@ with Notebook() as write:
     )
 
     write('Line Chart', fmt='header', level=4)
-    write(LineChart(chart_data))
+    write.line_chart(chart_data)
 
     write('Area Chart', fmt='header', level=4)
-    write(AreaChart(chart_data))
+    write.area_chart(chart_data)
 
     write('Bar Chart', fmt='header', level=4)
-    write(BarChart(chart_data[['pv', 'uv']].iloc[:10]))
+    write.bar_chart(chart_data[['pv', 'uv']].iloc[:10])
 
     # Customized charts.
     write('Customized charts', fmt='header', level=3)
@@ -49,7 +49,7 @@ with Notebook() as write:
         .tooltip()
         .legend()
         .bar(data_key='pv', fill='#82ca9d')
-        .area(type='monotone', data_key='uv', fill='#8884d8'))
+        .area(type='monotone', data_key='uv', fill='#8884d8', stroke='#8884d8'))
 
     # DataFrames
     write('Pandas DataFrames', fmt='header', level=3)
