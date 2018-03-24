@@ -39,7 +39,7 @@ class WebClient extends PureComponent {
       elements: fromJS([{
         type: 'div',
         div: {
-          text: 'No data received.',
+          text: 'Ready to receive data',
           classes: 'alert alert-info',
         }
       }]),
