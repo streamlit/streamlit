@@ -154,6 +154,8 @@ function getCellContents(df, headerRows, headerCols) {
     // Format floating point numbers nicely.
     if (isFloat(contents))
       contents = numeral(contents).format('0,0.0000');
+    else if (isDate(contents))
+      contents = contents.toISOString().replace('.000Z', 'Z').replace('00:00:00Z', 'Z');
     else
       contents = contents.toString();
 
@@ -211,6 +213,13 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
  */
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
+}
+
+/**
+ * Returns true if this number is a date.
+ */
+function isDate(n) {
+    return n instanceof Date
 }
 
 export default DataFrame;

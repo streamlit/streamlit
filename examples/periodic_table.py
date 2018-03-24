@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import urllib, io
 import sys
+from datetime import datetime
 
 from streamlit import Notebook, Chart
 
@@ -57,7 +58,7 @@ with Notebook() as write:
         np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
         np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-        columns=['A', 'B', 'C', 'D'])
+        columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
     write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
     # Alerts

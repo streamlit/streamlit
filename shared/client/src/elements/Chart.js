@@ -77,7 +77,7 @@ const INDEX_COLUMN_DESIGNATOR = '::index';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'int_64Index', 'uint_64Index', 'float_64Index',
+  'int_64Index', 'uint_64Index', 'float_64Index', 'dateTimeIndex',
   // TODO(tvst): 'range_index', etc.
 ]);
 

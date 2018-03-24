@@ -33,6 +33,7 @@ export function indexGetLevelsAndLength(index) {
     multiIndex: (idx) => (idx.get('labels').size === 0 ? [0, 0] :
       [idx.get('labels').size, idx.getIn(['labels', 0, 'data']).size]),
     int_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
+    dateTimeIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
   });
 }
 
@@ -52,6 +53,7 @@ export function indexGet(index, level, i) {
       return indexGet(levels, 0, labels.getIn(['data', i]));
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
+    dateTimeIndex: (idx) => new Date(idx.getIn(['data', 'data', i]) / 1e6),
   });
 }
 
@@ -118,6 +120,8 @@ function concatIndex(index1, index2) {
     // multiIndex: <not supported>,
     int_64Index: (idx) => idx.updateIn(['data', 'data'], (data) => (
         data.concat(index2.getIn(['int_64Index', 'data', 'data'])))),
+    dateTimeIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
+        data.concat(index2.getIn(['dateTimeIndex', 'data', 'data'])))),
   });
 }
 
@@ -168,5 +172,6 @@ function indexLen(index) {
     multiIndex:  (idx) => ( idx.get('labels').size === 0 ? 0 :
                             idx.getIn(['labels', 0]).size ),
     int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
+    dateTimeIndex: (idx) => ( idx.getIn(['data', 'data']).size ),
   });
 }

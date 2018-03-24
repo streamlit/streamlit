@@ -35,6 +35,8 @@ def marshall_index(pandas_index, proto_index):
         proto_index.range_index.stop = pandas_index.max() + 1
     elif type(pandas_index) == pd.Int64Index:
         proto_index.int_64_index.data.data.extend(pandas_index)
+    elif type(pandas_index) == pd.DatetimeIndex:
+        proto_index.date_time_index.data.data.extend(pandas_index.astype(np.int64))
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
 
@@ -71,6 +73,8 @@ def marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
+    elif issubclass(pandas_array.dtype.type, np.datetime64):
+        proto_array.int64s.data.extend(pandas_array.astype(np.int64))
     else:
         raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
 
@@ -115,6 +119,8 @@ def concat_index(index1, index2):
         raise NotImplementedError('Cannot yet concatenate MultiIndices.')
     elif type1 == 'int_64_index':
         index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
+    elif type1 == 'date_time_index':
+        index1.date_time_index.data.data.extend(index2.date_time_index.data.data)
     else:
         raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
 
@@ -158,6 +164,8 @@ def index_len(index):
             return len(index.multi_index.labels[0])
     elif index_type == 'int_64_index':
         return len(index.int_64_index.data.data)
+    elif index_type == 'date_time_index':
+        return len(index.date_time_index.data.data)
 
 def any_array_len(any_array):
     """Returns the length of an any_array."""
