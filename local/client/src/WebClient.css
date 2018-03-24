@@ -100,3 +100,11 @@ h6, .h6 {
 .streamlit-container .footer {
   height: 25px;
 }
+
+.progress {
+  background-color: #E6E9EE;
+}
+
+.progress-bar {
+  background-color: #F63366;
+}
