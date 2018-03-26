@@ -68,7 +68,13 @@ function anyArrayLen(anyArray) {
  * Returns the ith element of this AnyArray.
  */
 function anyArrayGet(anyArray, i) {
-  return anyArrayData(anyArray).get(i);
+  const getData = (obj) => obj.get('data').get(i)
+  return dispatchOneOf(anyArray, 'type', {
+    strings: getData,
+    doubles: getData,
+    int64s: getData,
+    datetimes: (obj) => new Date(obj.get('data').get(i) / 1e6),
+  });
 }
 
 /**
@@ -79,7 +85,8 @@ function anyArrayData(anyArray) {
   return dispatchOneOf(anyArray, 'type', {
     strings: getData,
     doubles: getData,
-    int64s: getData
+    int64s: getData,
+    datetimes: getData,
   });
 }
 

@@ -97,6 +97,7 @@ message AnyArray {
     StringArray strings = 1;
     DoubleArray doubles = 2;
     Int64Array int64s = 3;
+    Int64Array datetimes = 4;
   }
 }
 

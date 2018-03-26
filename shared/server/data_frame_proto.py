@@ -74,7 +74,7 @@ def marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
     elif issubclass(pandas_array.dtype.type, np.datetime64):
-        proto_array.int64s.data.extend(pandas_array.astype(np.int64))
+        proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
         raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
 
