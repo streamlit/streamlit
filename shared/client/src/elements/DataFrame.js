@@ -6,6 +6,7 @@ import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
+import format from '../format';
 
 import {
   indexGetLevelsAndLength,
@@ -155,7 +156,7 @@ function getCellContents(df, headerRows, headerCols) {
     if (isFloat(contents))
       contents = numeral(contents).format('0,0.0000');
     else if (isDate(contents))
-      contents = contents.toISOString().replace('.000Z', 'Z').replace('00:00:00Z', 'Z');
+      contents = format.dateToString(contents);
     else
       contents = contents.toString();
 
