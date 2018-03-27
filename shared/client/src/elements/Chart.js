@@ -77,7 +77,7 @@ const INDEX_COLUMN_DESIGNATOR = '::index';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'int_64Index', 'uint_64Index', 'float_64Index',
+  'int_64Index', 'uint_64Index', 'float_64Index', 'dateTimeIndex',
   // TODO(tvst): 'range_index', etc.
 ]);
 
@@ -100,12 +100,24 @@ class Chart extends PureComponent {
       const indexType = dataFrame.get('index').get('type');
       const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType);
 
+      // transform to number, e.g. to support Date
+      let indexTransform = undefined
+      // transform to human readable tick, e.g. to support Date
+      let tickFormatter = undefined
+      if (indexType === 'dateTimeIndex') {
+        indexTransform = date => date.getTime()
+        tickFormatter = epochMillis => new Date(epochMillis).toISOString().replace('.000Z', 'Z').replace('00:00:00Z', 'Z')
+      }
+
       for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
         let rowData = {};
 
         if (hasSupportedIndex) {
           rowData[INDEX_COLUMN_DESIGNATOR] =
               indexGet(dataFrame.get('index'), 0, rowIndex);
+          if (indexTransform) {
+            rowData[INDEX_COLUMN_DESIGNATOR] = indexTransform(rowData[INDEX_COLUMN_DESIGNATOR])
+          }
         }
 
         for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
@@ -129,6 +141,10 @@ class Chart extends PureComponent {
                   {...chartDims, data, ...chart_props},
                   ...chart.get('components').map((component) => {
                     const component_props = extractProps(component);
+                    const isXAxis = component.get('type') === 'XAxis'
+                    if (isXAxis && tickFormatter) {
+                      component_props['tickFormatter'] = tickFormatter;
+                    }
                     return React.createElement(
                       COMPONENTS[component.get('type')], component_props);
                   }
