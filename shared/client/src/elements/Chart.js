@@ -77,7 +77,7 @@ const INDEX_COLUMN_DESIGNATOR = '::index';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'int_64Index', 'uint_64Index', 'float_64Index', 'dateTimeIndex',
+  'int_64Index', 'uint_64Index', 'float_64Index', 'datetimeIndex',
   // TODO(tvst): 'range_index', etc.
 ]);
 
@@ -104,7 +104,7 @@ class Chart extends PureComponent {
       let indexTransform = undefined
       // transform to human readable tick, e.g. to support Date
       let tickFormatter = undefined
-      if (indexType === 'dateTimeIndex') {
+      if (indexType === 'datetimeIndex') {
         indexTransform = date => date.getTime()
         tickFormatter = epochMillis => new Date(epochMillis).toISOString().replace('.000Z', 'Z').replace('00:00:00Z', 'Z')
       }
