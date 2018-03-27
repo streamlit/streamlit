@@ -55,7 +55,7 @@ with Notebook() as write:
     write('Datetime Indices', fmt='header', level=4)
     date_range = pd.date_range('1/2/2011', periods=60, freq='AS')
     ts = pd.Series(np.random.randn(len(date_range)), index=date_range)
-    write(Chart(ts, 'line_chart').x_axis(data_key='::index'))
+    write.line_chart(ts)
 
     # DataFrames
     write('Pandas DataFrames', fmt='header', level=3)
