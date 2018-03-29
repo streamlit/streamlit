@@ -18,6 +18,13 @@
   z-index: 1;
 }
 
+.streamlit-container .dataframe.row-header,
+.dataframe.corner {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .streamlit-container .fixup {
   position: absolute;
 }
