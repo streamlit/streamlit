@@ -1,6 +1,7 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit-shared/lib/dataFrameProto';
+import format  from '../format';
 
 import * as recharts from 'recharts';
 const COMPONENTS = {
@@ -106,7 +107,7 @@ class Chart extends PureComponent {
       let tickFormatter = undefined
       if (indexType === 'datetimeIndex') {
         indexTransform = date => date.getTime()
-        tickFormatter = epochMillis => new Date(epochMillis).toISOString().replace('.000Z', 'Z').replace('00:00:00Z', 'Z')
+        tickFormatter = millis => format.dateToString(new Date(millis));
       }
 
       for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
