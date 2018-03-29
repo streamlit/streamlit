@@ -2,7 +2,8 @@
  * Palette:
  * - Black: #101620
  * - Gray: #768096
- * - Light gray: #E6E9EE
+ * - Light gray: #E6E9EF
+ * - Ultralight gray: #F0F3F9
  * - Accent red: #F63366
  * - Accent yellow: #FFFD80
  * - Accent blue: #2979E9
@@ -103,7 +104,7 @@ h6, .h6 {
 }
 
 .progress {
-  background-color: #E6E9EE;
+  background-color: #E6E9EF;
 }
 
 .progress-bar {
