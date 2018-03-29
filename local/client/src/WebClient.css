@@ -5,6 +5,7 @@
  * - Light gray: #E6E9EE
  * - Accent red: #F63366
  * - Accent yellow: #FFFD80
+ * - Accent blue: #2979E9
  */
 body {
   font-family: 'IBM Plex Sans', sans-serif;
@@ -106,5 +107,5 @@ h6, .h6 {
 }
 
 .progress-bar {
-  background-color: #F63366;
+  background-color: #2979E9;
 }
