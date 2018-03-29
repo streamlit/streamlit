@@ -98,7 +98,7 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newNotebook: (id) => {
-          this.resetState(`Recieving data for notebook ${id}.`, 'info')
+          this.resetState(`Receiving data for notebook ${id}.`, 'info')
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
