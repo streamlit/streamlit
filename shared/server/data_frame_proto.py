@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import tzlocal
 # from tiny_notebook import protobuf
 
 def marshall_data_frame(pandas_df, proto_df):
@@ -36,6 +37,9 @@ def marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.Int64Index:
         proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.DatetimeIndex:
+        if pandas_index.tz is None:
+            current_zone = tzlocal.get_localzone()
+            pandas_index = pandas_index.tz_localize(current_zone)
         proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
@@ -74,6 +78,9 @@ def marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
     elif issubclass(pandas_array.dtype.type, np.datetime64):
+        current_zone = tzlocal.get_localzone()
+        localize = lambda date: (current_zone.localize(date, is_dst=None) if date.tzinfo is None else d)
+        pandas_array = pandas_array.apply(localize)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
         raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
