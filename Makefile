@@ -28,6 +28,7 @@ help:
 	@echo "protobuf-lib            - The protobuf libraries.              "
 	@echo "production              - Create a production build.           "
 	@echo "package                 - Package up the python distribution.  "
+	@echo "distribute              - Upload the package to PyPy           "
 	@echo "                                                               "
 
 ###################
@@ -72,3 +73,9 @@ package:
 	rsync -avL --exclude="__pycache__" local/server/streamlit dist/
 	rsync -av local/client/build dist/
 	cp -v config.yaml requirements.txt dist/
+
+# Distributes the package to PyPi
+distribute:
+	cd dist ; python setup.py sdist
+	cd dist ; python setup.py bdist_wheel
+	cd dist ; twine upload dist/*
