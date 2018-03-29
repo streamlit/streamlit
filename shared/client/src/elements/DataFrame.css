@@ -3,21 +3,17 @@
   font-family: 'IBM Plex Mono', monospace;
   text-align: right;
   padding: 0.5rem;
+  line-height: 1;
 }
 
 .streamlit-container .dataframe-container {
   border: 1px solid #E6E9EE;
 }
 
-.streamlit-container .dataframe.row-header {
-  color: #F63366;
-  color: #768096;
-  z-index: 1;
-}
-
+.streamlit-container .dataframe.row-header,
 .streamlit-container .dataframe.col-header,
 .dataframe.corner {
-  color: #F63366;
+  background-color: #F0F3F9;
   color: #768096;
   z-index: 1;
 }
