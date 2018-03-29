@@ -41,6 +41,8 @@ def marshall_index(pandas_index, proto_index):
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
         proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
+    elif type(pandas_index) == pd.TimedeltaIndex:
+        proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
 
@@ -71,6 +73,8 @@ def marshall_any_array(pandas_array, proto_array):
     # Perform type-conversion based on the array dtype.
     if issubclass(pandas_array.dtype.type, np.floating):
         proto_array.doubles.data.extend(pandas_array)
+    elif issubclass(pandas_array.dtype.type, np.timedelta64):
+        proto_array.timedeltas.data.extend(pandas_array.astype(np.int64))
     elif issubclass(pandas_array.dtype.type, np.integer):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.bool:
@@ -128,6 +132,8 @@ def concat_index(index1, index2):
         index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
     elif type1 == 'datetime_index':
         index1.datetime_index.data.data.extend(index2.datetime_index.data.data)
+    elif type1 == 'timedelta_index':
+        index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
     else:
         raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
 
@@ -173,6 +179,8 @@ def index_len(index):
         return len(index.int_64_index.data.data)
     elif index_type == 'datetime_index':
         return len(index.datetime_index.data.data)
+    elif index_type == 'timedelta_index':
+        return len(index.timedelta_index.data.data)
 
 def any_array_len(any_array):
     """Returns the length of an any_array."""

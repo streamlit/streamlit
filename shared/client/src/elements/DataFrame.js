@@ -6,7 +6,7 @@ import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import numeral from 'numeral';
-import format from '../format';
+import { format, Duration } from '../format';
 
 import {
   indexGetLevelsAndLength,
@@ -155,8 +155,10 @@ function getCellContents(df, headerRows, headerCols) {
     // Format floating point numbers nicely.
     if (isFloat(contents))
       contents = numeral(contents).format('0,0.0000');
-    else if (isDate(contents))
+    else if (contents instanceof Date)
       contents = format.dateToString(contents);
+    else if (contents instanceof Duration)
+      contents = format.durationToString(contents);
     else
       contents = contents.toString();
 
@@ -214,13 +216,6 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
  */
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
-}
-
-/**
- * Returns true if this number is a date.
- */
-function isDate(n) {
-    return n instanceof Date
 }
 
 export default DataFrame;
