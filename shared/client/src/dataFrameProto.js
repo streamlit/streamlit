@@ -3,6 +3,7 @@
  */
 
 import { dispatchOneOf, updateOneOf } from './immutableProto';
+import format from './format';
 
 /**
  * Returns [rows, cls] for this table.
@@ -53,7 +54,7 @@ export function indexGet(index, level, i) {
       return indexGet(levels, 0, labels.getIn(['data', i]));
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
-    datetimeIndex: (idx) => new Date(idx.getIn(['data', 'data', i]) / 1e6),
+    datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
   });
 }
 
@@ -73,7 +74,7 @@ function anyArrayGet(anyArray, i) {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj) => new Date(obj.get('data').get(i) / 1e6),
+    datetimes: obj => format.nanosToDate(getData(obj)),
   });
 }
 

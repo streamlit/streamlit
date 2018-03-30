@@ -53,7 +53,7 @@ with Notebook() as write:
         .area(type='monotone', data_key='uv', fill='#8884d8', stroke='#8884d8'))
 
     write('Datetime Indices', fmt='header', level=4)
-    date_range = pd.date_range('1/2/2011', periods=60, freq='AS')
+    date_range = pd.date_range('1/2/2011', periods=60, freq='D')
     ts = pd.Series(np.random.randn(len(date_range)), index=date_range)
     write.line_chart(ts)
 
