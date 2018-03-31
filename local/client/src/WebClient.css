@@ -68,26 +68,34 @@ h6, .h6 {
   margin: 0;
 }
 
-.navbar {
+header {
   border-top: 2px solid #FFFD80;
   border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
+  position: fixed;
+  height: 2px;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.navbar-brand {
-  color: #101620;
+a.brand {
   font-weight: 700;
-  background: white;
-  box-shadow: 0 0 10px white;
-  padding: 0 1rem;
-  margin-left: -1rem;
+  position: absolute;
+  top: 0.5rem;
+  left: 1rem;
+  line-height: 1.5;
+  color: #101620;
 }
 
-.navbar-brand:hover {
+a.brand:hover {
   color: #F63366;
 }
 
-.nav-item {
-  list-style: none;
+.connection-status {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
 }
 
 .streamlit-container {
@@ -109,4 +117,10 @@ h6, .h6 {
 
 .progress-bar {
   background-color: #2979E9;
+}
+
+@media (max-width: 768px) {
+  header {
+    position: absolute;
+  }
 }

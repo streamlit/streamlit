@@ -6,9 +6,6 @@ import {
   Alert,
   Col,
   Container,
-  Navbar,
-  NavItem,
-  NavbarBrand,
   Progress,
   Row,
 } from 'reactstrap';
@@ -139,17 +136,17 @@ class WebClient extends PureComponent {
     // Return the tree
     return (
       <div>
-        <Navbar className="fixed-top">
-          <NavbarBrand href="#">Streamlit</NavbarBrand>
-          <NavItem>
+        <header>
+          <a class="brand" href="/">Streamlit</a>
+          <div class="connection-status">
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
               persist={false}
             />
-          </NavItem>
-        </Navbar>
+          </div>
+        </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
