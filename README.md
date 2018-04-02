@@ -66,12 +66,15 @@ make production
 
 ## How to publish a new version of the code to `PyPi`
 
-- The current version is `0.2`
+- The current version is `0.3`
 - Update the version in the following locations:
   - `readme.md`
   - `dist/setup.py`
   - `local/client/package.json`
   - `shared/client/package.json`
+  - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
+    - `config.py` : set the `proxy.port`
+    - `local/client/src/WebClient.js` : set the line containing `ws://localhost/...`
   - *Not needed, I think:*
     - `local/client/package-lock.json`
     - `shared/client/package-lock.json`
@@ -81,18 +84,53 @@ make init
 make all
 ```
 - Test that everything is running properly with `periodic_table.py`
+- Run the following commands:
+```
+make production
+make package
+```
 - Go into a temp directory (parallel to `streamlet-cloud`) and execute the following:
 ```
 pip install --upgrade ../streamlet-cloud/dist
 cp ../streamlet-cloud/examples/periodic_table.py ./
 python periodic_table.py
 ```
-- Go into the `dist` directory and execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
+- Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
 ```
-make dist
+make distribute
 ```
 - Final test that everything is running properly with `periodic_table.py` **and** `mnist_demo.py`
 - Create and push a branch for this version.
+
+## Release Notes
+
+#### v0.3
+April 2, 2018
+
+```
+We are thrilled to announce the v0.3 of Streamlit. To upgrade, please run:
+
+  pip install --upgrade streamlit
+
+New features include:
+
+1. A beautiful new UI designed by Thiago Teixeira.
+
+2. Support for datetime and timedelta Pandas types.
+
+3. A new simplified charting API. Please use:
+
+     write.line_chart
+     write.area_chart
+     write.bar_chart
+
+   You can see more examples in periodic_table.py.
+
+4. Fixed a bug when displaying DataFrames with multiple columns having
+   the same name.
+```
+
+## Development Dependencies *(Deprecated)*
 
 *Note that these assume you have MacOS, and have only been tested on this platform.*
 

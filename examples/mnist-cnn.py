@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import sys
 
+sys.path.append('/Users/adrien/Desktop/streamlet-cloud/local/server')
 from streamlit import Notebook, Chart
 
 class MyCallback(keras.callbacks.Callback):

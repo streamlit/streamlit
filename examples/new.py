@@ -10,7 +10,6 @@ sys.path.append('/Users/adrien/Desktop/streamlet-cloud/local/server')
 from streamlit import Notebook, Chart
 
 with Notebook() as write:
-    write('hello world zzz')
-    an_array = np.random.randn(200, 2)
+    write('hello world')
+    an_array = np.random.randn(200, 200)
     write(an_array)
-    write.line_chart(an_array)

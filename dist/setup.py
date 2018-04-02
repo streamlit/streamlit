@@ -17,7 +17,7 @@ def all_files(path):
 
 setuptools.setup(
     name='streamlit',
-    version='0.2',
+    version='0.3',
     description='Streaming Data Science',
     url='https://github.com/treuille/streamlet-cloud',
     author='Adrien Treuille',
