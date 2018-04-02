@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit-shared/lib/dataFrameProto';
-import format  from '../format';
+import { format } from '../format';
 
 import * as recharts from 'recharts';
 const COMPONENTS = {
@@ -78,7 +78,7 @@ const INDEX_COLUMN_DESIGNATOR = '::index';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'int_64Index', 'uint_64Index', 'float_64Index', 'datetimeIndex',
+  'int_64Index', 'uint_64Index', 'float_64Index', 'datetimeIndex', 'timedeltaIndex',
   // TODO(tvst): 'range_index', etc.
 ]);
 
@@ -105,9 +105,15 @@ class Chart extends PureComponent {
       let indexTransform = undefined
       // transform to human readable tick, e.g. to support Date
       let tickFormatter = undefined
-      if (indexType === 'datetimeIndex') {
-        indexTransform = date => date.getTime()
-        tickFormatter = millis => format.dateToString(new Date(millis));
+      switch (indexType) {
+        case 'datetimeIndex':
+          indexTransform = date => date.getTime()
+          tickFormatter = millis => format.dateToString(new Date(millis));
+          break;
+        case 'datetimeIndex':
+          indexTransform = date => date.getTime()
+          tickFormatter = millis => format.durationToString(new Duration(millis));
+          break;
       }
 
       for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {

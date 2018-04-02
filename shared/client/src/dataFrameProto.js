@@ -3,7 +3,7 @@
  */
 
 import { dispatchOneOf, updateOneOf } from './immutableProto';
-import format from './format';
+import { format } from './format';
 
 /**
  * Returns [rows, cls] for this table.
@@ -35,6 +35,7 @@ export function indexGetLevelsAndLength(index) {
       [idx.get('labels').size, idx.getIn(['labels', 0, 'data']).size]),
     int_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
     datetimeIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
+    timedeltaIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
   });
 }
 
@@ -55,6 +56,7 @@ export function indexGet(index, level, i) {
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
     datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
+    timedeltaIndex: (idx) => format.nanosToDuration(idx.getIn(['data', 'data', i])),
   });
 }
 
@@ -75,6 +77,7 @@ function anyArrayGet(anyArray, i) {
     doubles: getData,
     int64s: getData,
     datetimes: obj => format.nanosToDate(getData(obj)),
+    timedeltas: obj => format.nanosToDuration(getData(obj)),
   });
 }
 
@@ -88,6 +91,7 @@ function anyArrayData(anyArray) {
     doubles: getData,
     int64s: getData,
     datetimes: getData,
+    timedeltas: getData,
   });
 }
 
@@ -130,6 +134,8 @@ function concatIndex(index1, index2) {
         data.concat(index2.getIn(['int_64Index', 'data', 'data'])))),
     datetimeIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
         data.concat(index2.getIn(['datetimeIndex', 'data', 'data'])))),
+    timedeltaIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
+        data.concat(index2.getIn(['timedeltaIndex', 'data', 'data'])))),
   });
 }
 
@@ -181,5 +187,6 @@ function indexLen(index) {
                             idx.getIn(['labels', 0]).size ),
     int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
     datetimeIndex: (idx) => ( idx.getIn(['data', 'data']).size ),
+    timedeltaIndex: (idx) => ( idx.getIn(['data', 'data']).size ),
   });
 }

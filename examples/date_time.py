@@ -20,3 +20,9 @@ with Notebook() as write:
     rng = np.vectorize(lambda x: datetime(2012, 5, x))(np.random.randint(1, 30, size=len(rng)))
     ts = pd.Series(rng, index=list(range(len(rng))))
     write(ts)
+
+    write("# Timedelta", fmt='markdown')
+    datetime64_series = pd.date_range('1/1/2018', periods=72, freq='H')
+    timedelta_series = pd.to_timedelta(datetime64_series - datetime64_series[0])
+    write(timedelta_series)
+
