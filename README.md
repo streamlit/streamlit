@@ -68,6 +68,7 @@ make production
 
 - The current version is `0.2`
 - Update the version in the following locations:
+  - `readme.md`
   - `dist/setup.py`
   - `local/client/package.json`
   - `shared/client/package.json`
