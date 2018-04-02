@@ -4,3 +4,4 @@ customers.md
 npm-debug.log
 config-secrets.yaml
 .streamlit.yaml
+.DS_Store
