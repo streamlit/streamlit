@@ -64,7 +64,34 @@ make all
 make production
 ```
 
-## Dependencies
+## How to publish a new version of the code to `PyPi`
+
+- The current version is `0.2`
+- Update the version in the following locations:
+  - `dist/setup.py`
+  - `local/client/package.json`
+  - `shared/client/package.json`
+  - *Not needed, I think:*
+    - `local/client/package-lock.json`
+    - `shared/client/package-lock.json`
+- Run the following commands:
+```
+make init
+make all
+```
+- Test that everything is running properly with `periodic_table.py`
+- Go into a temp directory (parallel to `streamlet-cloud`) and execute the following:
+```
+pip install --upgrade ../streamlet-cloud/dist
+cp ../streamlet-cloud/examples/periodic_table.py ./
+python periodic_table.py
+```
+- Go into the `dist` directory and execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
+```
+make dist
+```
+- Final test that everything is running properly with `periodic_table.py` **and** `mnist_demo.py`
+- Create and push a branch for this version.
 
 *Note that these assume you have MacOS, and have only been tested on this platform.*
 

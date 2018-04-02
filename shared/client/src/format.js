@@ -3,10 +3,26 @@
  */
 
 import moment from 'moment';
+import momentDurationFormat from 'moment-duration-format';
+momentDurationFormat(moment)
+
+class Duration {
+  constructor(millis) {
+    this.millis = millis
+  }
+
+  getTime() {
+    return this.millis
+  }
+}
 
 class Format {
   nanosToDate(nanos) {
     return new Date(nanos / 1e6);
+  }
+
+  nanosToDuration(nanos) {
+    return new Duration(nanos / 1e6);
   }
 
   dateToString(date) {
@@ -17,7 +33,11 @@ class Format {
     }
     return m.format(format);
   }
+
+  durationToString(duration) {
+    return moment.duration(duration.getTime()).format();
+  }
 };
 
 const format = new Format();
-export default format;
+export { Duration, format }

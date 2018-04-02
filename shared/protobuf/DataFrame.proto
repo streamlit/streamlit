@@ -21,7 +21,7 @@ message Index {
     MultiIndex multi_index = 4;
     // IntervalIndex interval_index = 5;
     DatetimeIndex datetime_index = 6;
-    // TimedeltaIndex time_delta_index = 7;
+    TimedeltaIndex timedelta_index = 7;
     // PeriodIndex period_index = 8;
     Int64Index int_64_index = 9;
     // UInt64Index uint_64_index = 10;
@@ -76,6 +76,12 @@ message DatetimeIndex {
   Int64Array data = 1;
 }
 
+// A time interval represented internally as nano second epoch int64. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.TimedeltaIndex.html
+message TimedeltaIndex {
+  Int64Array data = 1;
+}
+
 message StringArray {
   repeated string data = 1;
 }
@@ -98,6 +104,7 @@ message AnyArray {
     DoubleArray doubles = 2;
     Int64Array int64s = 3;
     Int64Array datetimes = 4;
+    Int64Array timedeltas = 5;
   }
 }
 
