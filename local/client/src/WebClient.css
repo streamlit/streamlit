@@ -1,5 +1,101 @@
-.navbar-brand {
-  color: white;
+/**
+ * Palette:
+ * - Black: #101620
+ * - Gray: #768096
+ * - Light gray: #E6E9EF
+ * - Ultralight gray: #F0F3F9
+ * - Accent red: #F63366
+ * - Accent yellow: #FFFD80
+ * - Accent blue: #2979E9
+ */
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #101620;
+  font-size: 17px;
+}
+
+a,
+a:visited {
+  color: #F63366;
+}
+
+a:hover,
+a:active {
+  color: #F63366;
+  text-decoration: underline;
+}
+
+h1, .h1 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin: 2.5rem 0 0 0;
+}
+
+h2, .h2 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: 2.0rem;
+  margin: 1rem 0 0 0;
+}
+
+h3, .h3 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin: 1rem 0 0 0;
+}
+
+h4, .h4 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0 0;
+}
+
+h5, .h5 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0 0;
+}
+
+h6, .h6 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: 1rem;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+header {
+  border-top: 2px solid #FFFD80;
+  border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
+  position: fixed;
+  height: 2px;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+a.brand {
+  font-weight: 700;
+  position: absolute;
+  top: 0.5rem;
+  left: 1rem;
+  line-height: 1.5;
+  color: #101620;
+}
+
+a.brand:hover {
+  color: #F63366;
+}
+
+.connection-status {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
 }
 
 .streamlit-container {
@@ -8,9 +104,23 @@
 
 .streamlit-container .element-container {
   display: inline-block;
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 
 .streamlit-container .footer {
   height: 25px;
+}
+
+.progress {
+  background-color: #E6E9EF;
+}
+
+.progress-bar {
+  background-color: #2979E9;
+}
+
+@media (max-width: 768px) {
+  header {
+    position: absolute;
+  }
 }

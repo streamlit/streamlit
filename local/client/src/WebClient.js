@@ -6,9 +6,6 @@ import {
   Alert,
   Col,
   Container,
-  Navbar,
-  NavItem,
-  NavbarBrand,
   Progress,
   Row,
 } from 'reactstrap';
@@ -39,7 +36,7 @@ class WebClient extends PureComponent {
       elements: fromJS([{
         type: 'div',
         div: {
-          text: 'No data received.',
+          text: 'Ready to receive data',
           classes: 'alert alert-info',
         }
       }]),
@@ -98,7 +95,7 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newNotebook: (id) => {
-          this.resetState(`Recieving data for notebook ${id}.`, 'info')
+          this.resetState(`Receiving data for notebook ${id}.`, 'info')
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -139,20 +136,20 @@ class WebClient extends PureComponent {
     // Return the tree
     return (
       <div>
-        <Navbar color='dark' className="fixed-top">
-          <NavbarBrand href="/">Streamlit</NavbarBrand>
-          <NavItem>
+        <header>
+          <a class="brand" href="/">Streamlit</a>
+          <div class="connection-status">
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
               persist={false}
             />
-          </NavItem>
-        </Navbar>
+          </div>
+        </header>
         <Container className="streamlit-container">
-          <Row>
-            <Col className="col-12">
+          <Row className="justify-content-center">
+            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
               {/* {this.renderElements(0)} */}
               <AutoSizer>
                 { ({width}) => this.renderElements(width) }

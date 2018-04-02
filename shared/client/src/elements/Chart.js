@@ -4,6 +4,9 @@ import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit-shared/lib/da
 import { format } from '../format';
 
 import * as recharts from 'recharts';
+
+import './Chart.css';
+
 const COMPONENTS = {
   ////////////
   // Charts //

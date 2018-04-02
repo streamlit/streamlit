@@ -1,4 +1,5 @@
 .streamlit-container .fixed-width {
-  font-family: "Roboto Mono", monospace;
+  font-family: 'IBM Plex Mono', monospace;
   white-space: pre-wrap;
+  font-size: 1rem;
 }
