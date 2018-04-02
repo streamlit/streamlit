@@ -12,7 +12,8 @@ def marshall_data_frame(pandas_df, proto_df):
     pandas_df - Panda.DataFrame (input)
     proto_df  - Protobuf.DataFrame (output)
     """
-    pandas_df_data = (pandas_df[col] for col in pandas_df.columns)
+    pandas_df_data = (pandas_df.iloc[:,col]
+        for col in range(len(pandas_df.columns)))
     marshall_table(pandas_df_data, proto_df.data)
     marshall_index(pandas_df.columns, proto_df.columns)
     marshall_index(pandas_df.index, proto_df.index)
@@ -54,6 +55,12 @@ def marshall_table(pandas_table, proto_table):
     proto_table  - Protobuf.Table (output)
     """
     for pandas_array in pandas_table:
+        if len(pandas_array.shape) != 1:
+            print('Something super weird is happening.')
+            print(type(pandas_table))
+            print(pandas_table)
+            print(type(pandas_array))
+            print(pandas_array)
         marshall_any_array(pandas_array, proto_table.cols.add())
 
 def marshall_any_array(pandas_array, proto_array):
@@ -68,6 +75,12 @@ def marshall_any_array(pandas_array, proto_array):
         pandas_array = np.array(pandas_array)
 
     # Only works on 1D arrays.
+    if len(pandas_array.shape) != 1:
+        print('Lets try to marshall this array.')
+        print(pandas_array.shape)
+        print(pandas_array)
+        import sys
+        sys.exit(-1)
     assert len(pandas_array.shape) == 1, 'Array must be 1D.'
 
     # Perform type-conversion based on the array dtype.

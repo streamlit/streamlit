@@ -21,7 +21,7 @@ message Index {
     MultiIndex multi_index = 4;
     // IntervalIndex interval_index = 5;
     DatetimeIndex datetime_index = 6;
-    TimedeltaIndex time_delta_index = 7;
+    TimedeltaIndex timedelta_index = 7;
     // PeriodIndex period_index = 8;
     Int64Index int_64_index = 9;
     // UInt64Index uint_64_index = 10;
