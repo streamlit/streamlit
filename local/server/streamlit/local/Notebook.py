@@ -12,7 +12,7 @@ import sys
 import threading
 import traceback
 
-from streamlit.local import config as local_config
+from streamlit.local.util import get_local_id
 from streamlit.shared import config
 from streamlit.shared.DeltaGenerator import DeltaGenerator
 from streamlit.shared.NotebookQueue import NotebookQueue
@@ -61,7 +61,7 @@ class Notebook:
         # Create a connection URI.
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
-        local_id = local_config.get_local_id()
+        local_id = get_local_id()
         notebook_id = self._notebook_id
         uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
 

@@ -1,35 +1,59 @@
 """A library of useful utilities."""
 
+import pickle
+import hashlib
+import dis
+import io
+
+from streamlit.local.util import streamlit_read, streamlit_write
+
 def memoize(func):
 	"""A function decorator which enables the function to cache its
 	input/output behavior to disk."""
-	import pickle
 
-	def hash(obj):
-		"""Returns the md5 hash of any object."""
-		import hashlib
-		hasher = hashlib.new('md5')
-		hasher.update(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
-		return hasher.hexdigest()
+	CACHE_PATH = '.streamlit'
+
+	# def hash(obj):
+	# 	"""Returns the md5 hash of any object."""
+	#
+
+	# 	hasher.update((obj, pickle.HIGHEST_PROTOCOL))
+	# 	return hasher.hexdigest()
 
 	def wrapped_func(*argc, **argv):
 		"""This function wrapper will only call the underlying function in
 		the case of a cache miss. Cached objects are stored in the cache/
 		directory."""
 
-		# this is the hash key
-		hash_args = (func.__name__, func.__doc__, argc, argv)
-		hash_key = hash(hash_args)
+		# Calculate the filename hash.
+		hasher = hashlib.new('md5')
+		print('hexdigest 0', hasher.hexdigest())
+		hasher.update(pickle.dumps((
+			argc, argv, list(dis.get_instructions(func))),
+			pickle.HIGHEST_PROTOCOL))
+		print('hexdigest 1', hasher.hexdigest())
+		path = f'cache/f{hasher.hexdigest()}.pickle'
+		print('cached filename', path)
+		# # hasher.update(pickle.dumps(argv, pickle.HIGHEST_PROTOCOL))
+		# # print('hexdigest 2', hasher.hexdigest())
+		# # stream = io.StringIO()
+		# #
+		# # print('hexdigest 3', hasher.hexdigest())
+		# import sys
+		# sys.exit(-1)
+		# hash_args = (func.__name__, func.__doc__, argc, argv)
+		# hash_key = hash(hash_args)
 
-		# load the file (hit) or compute the function (miss)
-		file_name = 'cache/%s_%s.hash' % (func.__name__, hash_key)
+		# Load the file (hit) or compute the function (miss)
 		try:
-			rv = pickle.load(open(file_name, 'rb'))
-			print('%s (HIT)' % file_name)
-		except IOError:
-			print('%s (MISS)' % file_name)
+			with streamlit_read(path, binary=True) as input:
+				rv = pickle.load(input)
+				print('%s (HIT)' % path)
+		except FileNotFoundError:
 			rv = func(*argc, **argv)
-			pickle.dump(rv, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL)
+			with streamlit_write(path, binary=True) as output:
+				pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
+			print('%s (MISS)' % path)
 		return rv
 
 	# make this a well-behaved decorator by preserving important function attributes

@@ -6,18 +6,25 @@ import sys
 import time
 import random
 
-sys.path.append('/Users/adrien/Desktop/streamlet-cloud/local/server')
-from streamlit import Notebook, Chart
-import streamlit
+from streamlit import Notebook, Chart, memoize
+import streamlit.local.util as util
 
-@streamlit.memoize
+@memoize
 def long_running_identity(x):
-    time.sleep(10)
+    time.sleep(3)
     return x
 
 with Notebook() as write:
     write('hello world')
-    an_array = np.random.randn(200, 200)
-    write(an_array)
-    write.alert('About to run a long-running function.')
-    write('result:', long_running_identity(1234))
+    write('123', long_running_identity(1234))
+
+# import os
+
+#
+# with Notebook() as write:
+#     write('hello world')
+#     an_array = np.random.randn(200, 200)
+#     write(an_array)
+#     write.alert('About to run a long-running function.')
+#     write('result:', long_running_identity(12345))
+#     write('pwd', os.getcwd())
