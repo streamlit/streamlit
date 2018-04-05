@@ -3,5 +3,7 @@
 customers.md
 npm-debug.log
 config-secrets.yaml
-.streamlit.yaml
+.streamlit.yaml # get rid of this eventually
+.streamlit
 .DS_Store
+cache
