@@ -11,8 +11,8 @@ import streamlit.local.util as util
 
 @memoize
 def long_running_identity(x):
-    time.sleep(3)
-    return x
+    time.sleep(2)
+    return x * 2
 
 with Notebook() as write:
     write('hello world')

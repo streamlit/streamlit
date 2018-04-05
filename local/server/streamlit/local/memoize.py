@@ -1,11 +1,14 @@
 """A library of useful utilities."""
 
-import pickle
-import hashlib
 import dis
+import hashlib
 import io
+import os
+import pickle
+import shutil
 
 from streamlit.local.util import streamlit_read, streamlit_write
+from streamlit.local.util import __STREAMLIT_LOCAL_ROOT as local_root
 
 def memoize(func):
 	"""A function decorator which enables the function to cache its
@@ -27,33 +30,21 @@ def memoize(func):
 
 		# Calculate the filename hash.
 		hasher = hashlib.new('md5')
-		print('hexdigest 0', hasher.hexdigest())
 		hasher.update(pickle.dumps((
 			argc, argv, list(dis.get_instructions(func))),
 			pickle.HIGHEST_PROTOCOL))
-		print('hexdigest 1', hasher.hexdigest())
 		path = f'cache/f{hasher.hexdigest()}.pickle'
-		print('cached filename', path)
-		# # hasher.update(pickle.dumps(argv, pickle.HIGHEST_PROTOCOL))
-		# # print('hexdigest 2', hasher.hexdigest())
-		# # stream = io.StringIO()
-		# #
-		# # print('hexdigest 3', hasher.hexdigest())
-		# import sys
-		# sys.exit(-1)
-		# hash_args = (func.__name__, func.__doc__, argc, argv)
-		# hash_key = hash(hash_args)
 
 		# Load the file (hit) or compute the function (miss)
 		try:
 			with streamlit_read(path, binary=True) as input:
 				rv = pickle.load(input)
-				print('%s (HIT)' % path)
+				# print('%s (HIT)' % path)
 		except FileNotFoundError:
 			rv = func(*argc, **argv)
 			with streamlit_write(path, binary=True) as output:
 				pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-			print('%s (MISS)' % path)
+			# print('%s (MISS)' % path)
 		return rv
 
 	# make this a well-behaved decorator by preserving important function attributes
@@ -66,6 +57,16 @@ def memoize(func):
 
 	# return the funciton which wraps our function
 	return wrapped_func
+
+def clear_cache(verbose=False):
+	"""Clears the memoization cache."""
+	cache_path = os.path.join(local_root, 'cache')
+	if os.path.isdir(cache_path):
+		shutil.rmtree(cache_path)
+		if verbose:
+			print(f'Cleared {cache_path} directory.')
+	elif verbose:
+		print(f'Cannot clear {cache_path} directory.')
 
 # def readable_time(seconds):
 # 	"""Converts a number of seconds into a human readable amount."""
