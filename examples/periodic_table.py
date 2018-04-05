@@ -7,12 +7,12 @@ import urllib, io
 import sys
 from datetime import datetime
 
-from streamlit import Notebook, Chart
+from streamlit import Report, Chart
 
-with Notebook() as write:
+with Report() as write:
     # Title.
     write('Periodic Table of the Elements', fmt='header', level=1)
-    write('This notebook shows some of the awesome elements of Streamlit.')
+    write('This report shows some of the awesome elements of Streamlit.')
 
     # Arrays
     write('Numpy Arrays', fmt='header', level=2)

@@ -10,7 +10,7 @@ import pandas as pd
 import sys
 
 sys.path.append('/Users/adrien/Desktop/streamlet-cloud/local/server')
-from streamlit import Notebook, Chart
+from streamlit import Report, Chart
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test, print):
@@ -70,7 +70,7 @@ class MyCallback(keras.callbacks.Callback):
             dot="false", y_axis_id='acc_axis')
         return self._print.chart(epoch_chart)
 
-with Notebook() as print:
+with Report() as print:
     print.header('MNIST CNN', level=1)
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()

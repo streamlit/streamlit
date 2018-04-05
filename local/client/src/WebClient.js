@@ -63,7 +63,7 @@ class WebClient extends PureComponent {
   }
 
   /**
-   * Resets the state of client to an empty notebook containing a single
+   * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
    *
    * msg       - The message to display
@@ -94,8 +94,8 @@ class WebClient extends PureComponent {
       const msgProto = StreamlitMsg.decode(result)
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
-        newNotebook: (id) => {
-          this.resetState(`Receiving data for notebook ${id}.`, 'info')
+        newReport: (id) => {
+          this.resetState(`Receiving data for report ${id}.`, 'info')
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -126,9 +126,9 @@ class WebClient extends PureComponent {
   render() {
     // Compute the websocket URI based on the pathname.
     let uri = "ws://localhost:5005/latest" // default
-    // const get_notebook = /nb\/(.*)/.exec(window.location.pathname)
-    // if (get_notebook)
-    //   uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
+    // const get_report = /nb\/(.*)/.exec(window.location.pathname)
+    // if (get_report)
+    //   uri = `ws://localhost:8554/api/get/${get_report[1]}`
     // else if (window.location.pathname === '/x')
     //   uri = 'ws://localhost:8554/api/getx/'
     // // console.log(`For path=${window.location.pathname} uri=${uri}`)

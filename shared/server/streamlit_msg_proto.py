@@ -1,15 +1,15 @@
 import aiohttp
 from streamlit.shared import protobuf
 
-async def new_notebook_msg(notebook_id, ws):
-    """Sends a message indicating a new notebook across the websocket wire.
+async def new_report_msg(report_id, ws):
+    """Sends a message indicating a new report across the websocket wire.
 
-    notebook_id - the BSON ObjectId of the new notebook
+    report_id - the BSON ObjectId of the new report
     ws          - the websocket
     """
     msg = protobuf.StreamlitMsg()
-    msg.new_notebook = str(notebook_id)
-    # object_id_proto.marshall_object_id(notebook_id, msg.new_notebook)
+    msg.new_report = str(report_id)
+    # object_id_proto.marshall_object_id(report_id, msg.new_report)
     await ws.send_bytes(msg.SerializeToString())
 
 async def streamlit_msg_iter(ws):

@@ -60,9 +60,9 @@ class DeltaGenerator:
             self._id = id
 
     def __call__(self, *args, fmt='autp', **kwargs):
-        """Writes it's arguments to notebook pages.
+        """Writes it's arguments to report pages.
 
-        with Notebook() as print:
+        with Report() as print:
             print('A Test', fmt='header')
             print('Hello world.')
             print('This is an alert', fmt='alert')
@@ -70,7 +70,7 @@ class DeltaGenerator:
 
         This also works:
 
-        with Notebook() as print:
+        with Report() as print:
             print.header('A Test')
             print('Hello world.')
             print.alert('This is an alert')

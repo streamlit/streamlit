@@ -1,4 +1,4 @@
-"""A Notebook Object which exposes a print method which can be used to
+"""A Report Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
 import aiohttp
@@ -15,34 +15,34 @@ import traceback
 from streamlit.local.util import get_local_id
 from streamlit.shared import config
 from streamlit.shared.DeltaGenerator import DeltaGenerator
-from streamlit.shared.NotebookQueue import NotebookQueue
-from streamlit.shared.streamlit_msg_proto import new_notebook_msg
+from streamlit.shared.ReportQueue import ReportQueue
+from streamlit.shared.streamlit_msg_proto import new_report_msg
 
-class Notebook:
+class Report:
     def __init__(self, save=False):
         """
-        Creates a new notebook object.
+        Creates a new report object.
 
-        save  - Stream the notebook to the astreamlit.io server for storage.
+        save  - Stream the report to the streamlit.io server for storage.
         """
-        # Create an ID for this Notebook
-        self._notebook_id = bson.ObjectId()
+        # Create an ID for this Report
+        self._report_id = bson.ObjectId()
 
         # Queue to store deltas as they flow across.
-        self._queue = NotebookQueue()
+        self._queue = ReportQueue()
 
         # Set to false when the connection should close.
         self._connection_open = True
 
-        # This is the context manager for "with Notebook() as write:"
+        # This is the context manager for "with Report() as write:"
         self._context_manager = self._get_context_manager()
 
     def __enter__(self):
-        """Opens up the context for this notebook so that the user can write."""
+        """Opens up the context for this report so that the user can write."""
         return self._context_manager.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Closes down the context for this notebook."""
+        """Closes down the context for this report."""
         self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
     def _connect_to_proxy(self):
@@ -62,8 +62,8 @@ class Notebook:
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
         local_id = get_local_id()
-        notebook_id = self._notebook_id
-        uri = f'http://{server}:{port}/new/{local_id}/{notebook_id}'
+        report_id = self._report_id
+        uri = f'http://{server}:{port}/new/{local_id}/{report_id}'
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=loop)
@@ -96,14 +96,15 @@ class Notebook:
         import os
         os.system('python -m streamlit.local.Proxy &')
         print('launched the proxy in a separate process.')
-        print('sleeping while waiting for the proxy', config.get_option('local.waitForProxySecs'))
+        print('sleeping while waiting for the proxy',
+            config.get_option('local.waitForProxySecs'))
         await asyncio.sleep(config.get_option('local.waitForProxySecs'))
         print('Finished sleeping.')
 
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        await new_notebook_msg(self._notebook_id, ws)
+        await new_report_msg(self._report_id, ws)
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
@@ -114,10 +115,10 @@ class Notebook:
 
     @contextlib.contextmanager
     def _get_context_manager(self):
-        """Returns a context manager for this Notebook which will be invoked
+        """Returns a context manager for this Report which will be invoked
         when we say:
 
-        with Notebook() as write:
+        with Report() as write:
             ...
         """
         try:

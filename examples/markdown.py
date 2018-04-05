@@ -2,9 +2,9 @@
 
 import sys
 
-from streamlit import Notebook, Chart, LineChart
+from streamlit import Report, Chart, LineChart
 
-with Notebook() as write:
+with Report() as write:
 
     write("# Markdown Example", fmt='markdown')
 

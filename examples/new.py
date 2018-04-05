@@ -7,18 +7,18 @@ import time
 import random
 
 import streamlit
-from streamlit import Notebook
+from streamlit import Report
 
 @streamlit.cache
 def long_running_identity(x):
     time.sleep(2)
     return x * 2
 
-with Notebook() as write:
+with Report() as write:
     write('hello world')
     write('123', long_running_identity('123456'))
 
-# with Notebook() as write:
+# with Report() as write:
 #     write('hello world')
 #     an_array = np.random.randn(200, 200)
 #     write(an_array)
