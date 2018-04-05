@@ -10,7 +10,7 @@ import shutil
 from streamlit.local.util import streamlit_read, streamlit_write
 from streamlit.local.util import __STREAMLIT_LOCAL_ROOT as local_root
 
-def memoize(func):
+def cache(func):
 	"""A function decorator which enables the function to cache its
 	input/output behavior to disk."""
 

@@ -2,6 +2,7 @@
 
 import sys
 import textwrap
+import streamlit.local.caching
 
 def print_usage():
     """Prints a help message."""
@@ -18,8 +19,7 @@ def print_usage():
     print(textwrap.dedent(usage).strip())
 
 def clear_cache():
-    from streamlit.local.memoize import clear_cache
-    clear_cache(True)
+    streamlit.local.caching.clear_cache(True)
 
 def main():
     # Dispatch based on the given command.

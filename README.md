@@ -66,14 +66,15 @@ make production
 
 ## How to publish a new version of the code to `PyPi`
 
-- The current version is `0.3`
+- The current version is `0.5.0`
+- Write new release notes.
 - Update the version in the following locations:
   - `readme.md`
   - `dist/setup.py`
   - `local/client/package.json`
   - `shared/client/package.json`
   - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
-    - `config.py` : set the `proxy.port`
+    - `config.yaml` : set the `proxy.port`
     - `local/client/src/WebClient.js` : set the line containing `ws://localhost/...`
   - *Not needed, I think:*
     - `local/client/package-lock.json`
@@ -83,7 +84,10 @@ make production
 make init
 make all
 ```
-- Test that everything is running properly with `periodic_table.py`
+- Test that everything is running properly with:
+```
+PYTHONPATH=local/server python examples/periodic_table.py
+```
 - Run the following commands:
 ```
 make production
@@ -94,6 +98,7 @@ make package
 pip install --upgrade ../streamlet-cloud/dist
 cp ../streamlet-cloud/examples/periodic_table.py ./
 python periodic_table.py
+python -m streamlit clear_cache
 ```
 - Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
 ```
@@ -103,6 +108,43 @@ make distribute
 - Create and push a branch for this version.
 
 ## Release Notes
+
+#### v0.5
+April 4, 2018
+
+```
+We are thrilled to announce the v0.5 of Streamlit. To upgrade, please run:
+
+  pip install --upgrade streamlit
+
+The major new feature in this version is caching! This allows you to quickly
+run your script over and over by saving the results of long computations:
+
+  import streamlit
+
+  @streamlit.cache
+  def long_running_computation(*args, **kwargs):
+    ...
+
+  result = long_running_computation(...)
+
+Your first call to long_running_computation could be slow, but future calls
+with the same arguments will return almost instantaneously.
+
+NOTE: Make sure your cached functions depend only on their inputs! For
+example, don't cache calls to API endpoints that may give changing results. If
+you get into trouble, you can clear the cache on the command line as follows:
+
+  python -m streamlit clear_cache
+
+We look forward to hearing how you use this powerful feature!
+```
+
+#### v0.4
+April 4, 2018
+```
+This version has a bug in it and should be skipped.
+```
 
 #### v0.3
 April 2, 2018

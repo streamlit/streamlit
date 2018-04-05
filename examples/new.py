@@ -6,19 +6,17 @@ import sys
 import time
 import random
 
-from streamlit import Notebook, Chart, memoize
-import streamlit.local.util as util
+import streamlit
+from streamlit import Notebook
 
-@memoize
+@streamlit.cache
 def long_running_identity(x):
     time.sleep(2)
     return x * 2
 
 with Notebook() as write:
     write('hello world')
-    write('123', long_running_identity(1234))
-
-# import os
+    write('123', long_running_identity('123456'))
 
 # with Notebook() as write:
 #     write('hello world')

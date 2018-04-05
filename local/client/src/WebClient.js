@@ -125,7 +125,7 @@ class WebClient extends PureComponent {
 
   render() {
     // Compute the websocket URI based on the pathname.
-    let uri = "ws://localhost:5003/latest" // default
+    let uri = "ws://localhost:5005/latest" // default
     // const get_notebook = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_notebook)
     //   uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
