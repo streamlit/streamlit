@@ -7,16 +7,22 @@ import time
 import random
 
 import streamlit
-from streamlit import Report
 
 @streamlit.cache
 def long_running_identity(x):
     time.sleep(2)
     return x * 2
 
-with Report() as write:
-    write('hello world')
-    write('123', long_running_identity('123456'))
+print('hello world')
+report = streamlit.Report()
+print('Created a report', report)
+try:
+    print('Opening this report')
+    report.register()
+    report.get_delta_generator()('hello world')
+finally:
+    print('Closing this report')
+    report.unregister()
 
 # with Report() as write:
 #     write('hello world')
