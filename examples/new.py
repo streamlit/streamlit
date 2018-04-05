@@ -20,7 +20,6 @@ with Notebook() as write:
 
 # import os
 
-#
 # with Notebook() as write:
 #     write('hello world')
 #     an_array = np.random.randn(200, 200)
