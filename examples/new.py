@@ -6,11 +6,12 @@ import sys
 import time
 import random
 
-import streamlit
+from streamlit import io, cache
 
-@streamlit.cache
+
+@cache
 def long_running_identity(x):
-    time.sleep(2)
+    time.sleep(10)
     return x * 2
 
 # import streamlit.local.connection
@@ -18,14 +19,10 @@ def long_running_identity(x):
 # delta_generator('hello, my little world!!!')
 # print('Got the delta_generator', delta_generator)
 
-from streamlit import io
-print(io)
-print(dir(io))
-print(io.hello())
-print(help(io.hello))
-io.goodbye()
-io.fancy_()
-io.fancy__()
+
+io.text('Hello world. This is really working!!')
+io.text('Holy fuck. This works really nicely.')
+io.text('Holy fuck. This works really nicely. ' + str(long_running_identity(123)))
 
 # print('hello world')
 # report = streamlit.Report()

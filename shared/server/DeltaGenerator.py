@@ -38,6 +38,17 @@ FIGURE_LIKE_TYPES = (
     Chart,
 )
 
+EXPORT_TO_IO_FLAG = '__export_to_io__'
+
+def _export_to_io(method):
+    """Flag this DeltaGenerator method to be exported to the streamlit.io
+    package. This should be the outermost decorator, i.e. before all others."""
+    setattr(method, EXPORT_TO_IO_FLAG, True)
+    return method
+
+# def _create_element(method):
+#     """Turns a function which
+
 class DeltaGenerator:
     """
     Creates delta messages. If id is set to none, then an id is created for each
@@ -49,7 +60,7 @@ class DeltaGenerator:
         Constructor.
 
         queue - callback when delta is generated
-        id          - id for deltas, or None to create a new generator each time
+        id    - id for deltas, or None to create a new generator each time
         """
         self._queue = queue
         if id == None:
@@ -118,7 +129,9 @@ class DeltaGenerator:
 
         flush_buffer()
 
+    @_export_to_io
     def text(self, text, classes='fixed-width'):
+        """Writes fixed width text to the console."""
         text = str(text)
         def set_text(element):
             element.div.text = text
