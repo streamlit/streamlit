@@ -1,13 +1,11 @@
 """A Report Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
-import aiohttp
 from aiohttp import web, ClientSession
 from aiohttp.client_exceptions import ClientConnectorError
+
 import asyncio
 import bson
-# import contextlib
-import subprocess
 import sys
 import threading
 import traceback
@@ -18,18 +16,43 @@ from streamlit.shared.DeltaGenerator import DeltaGenerator
 from streamlit.shared.ReportQueue import ReportQueue
 from streamlit.shared.streamlit_msg_proto import new_report_msg
 
-# This is a stack of open reports.
-__report_stack = []
+def _assert_singleton(method):
+    """Asserts that this method is called on the singleton instance of
+    Connection."""
+    def inner(self, *args, **kwargs):
+        assert self == Connection._connection, \
+            f'Can only call {method.__name__}() on the singleton Connection.'
+        return method(self, *args, **kwargs)
+    inner.__name__ = method.__name__
+    inner.__doc__ = method.__doc__
+    return inner
 
-class Report:
-    """This encapsulates a single Report which contains data which it sent to
-    the Streamlit server."""
+def _assert_singleton_async(method):
+    """Asserts that this coroutine is called on the singleton instance of
+    Connection."""
+    async def inner(self, *args, **kwargs):
+        assert self == Connection._connection, \
+            f'Can only call {method.__name__}() on the singleton Connection.'
+        return await method(self, *args, **kwargs)
+    inner.__name__ = method.__name__
+    inner.__doc__ = method.__doc__
+    return inner
 
-    def __init__(self, save=False):
+def get_delta_generator():
+    """Gets the DeltaGenerator for the singleton Connection instance,
+    establishing that connection if necessary."""
+    return Connection.get_connection().get_delta_generator()
+
+class Connection:
+    """This encapsulates a single connection the to the server for a single
+    report."""
+
+    # This is the singleton connection object.
+    _connection = None
+
+    def __init__(self):
         """
-        Creates a new report object.
-
-        save  - Stream the report to the streamlit.io server for storage.
+        Creates a new connection to the server.
         """
         # Create an ID for this Report
         self._report_id = bson.ObjectId()
@@ -38,10 +61,7 @@ class Report:
         self._queue = ReportQueue()
 
         # Set to false when the connection should close.
-        self._connection_open = True
-
-        # # This is the context manager for "with Report() as write:"
-        # self._context_manager = self._get_context_manager()
+        self._is_open = True
 
         # This is the event loop to talk with the serverself.
         self._loop = asyncio.new_event_loop()
@@ -49,18 +69,30 @@ class Report:
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
 
-    def register(self):
-        """Registers this report as the currently open Report and opens
-        a connection with the server."""
-        print('Registering the Report... so OPENING the connection.')
-        self._connect_to_proxy()
+    @classmethod
+    def get_connection(cls):
+        """Returns the singleton Connection object, instantiating one if
+        necessary."""
+        # Instantiate the singleton connection if necessary.
+        if cls._connection == None:
+            print('Instantiating the singleton connection.')
+            # Create the new connection.
+            cls._connection = Connection()
+            cls._connection._connect_to_proxy()
 
-    def unregister(self):
-        """Closes the server connection and unregisters this report."""
-        print('Unregistering the Report... so closing the connection.')
-        self._loop.call_soon_threadsafe(setattr, self,
-            '_connection_open', False)
+            # When the current thread closes, then close down the connection.
+            current_thread = threading.current_thread()
+            def cleanup_on_exit():
+                current_thread.join()
+                print('The parent thread has closed. CLEANING UP')
+                cls._connection._loop.call_soon_threadsafe(setattr,
+                    cls._connection, '_is_open', False)
+            threading.Thread(target=cleanup_on_exit, daemon=False).start()
 
+        # Now that we're sure to have a connection, return it.
+        return cls._connection
+
+    @_assert_singleton
     def get_delta_generator(self):
         """Returns the DeltaGenerator for this report. This is the object
         that allows you to dispatch toplevel deltas to the Report, e.g.
@@ -75,18 +107,23 @@ class Report:
     #     """Closes down the context for this report."""
     #     self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
+    @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
         self._loop.call_soon_threadsafe(self._queue, delta)
 
+    @_assert_singleton
     def _connect_to_proxy(self):
         """Opens a connection to the server in a separate thread. Returns
         the event loop for that thread."""
         def connection_thread():
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
+            print('Naturally closed the connection.')
+            Connection._connection = None
         threading.Thread(target=connection_thread, daemon=False).start()
 
+    @_assert_singleton_async
     async def _attempt_connection(self):
         """Tries to establish a connection to the proxy (launching the
         proxy if necessary). Then, pumps deltas through the connection."""
@@ -122,6 +159,7 @@ class Report:
             # Closing the session.
             await session.close()
 
+    @_assert_singleton_async
     async def _launch_proxy(self):
         """Launches the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
@@ -133,6 +171,7 @@ class Report:
         await asyncio.sleep(wait_for_proxy_secs)
         print('Finished sleeping.')
 
+    @_assert_singleton_async
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
@@ -140,7 +179,7 @@ class Report:
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
-        while self._connection_open:
+        while self._is_open:
             await self._queue.flush_deltas(ws)
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_deltas(ws)
