@@ -11,6 +11,14 @@ from streamlit import io
 
 io.text('This report shows some of the awesome elements of Streamlit.')
 
+io.text("Let's display some help text.")
+io.help(io.help)
+io.text("Let's display some help text for np.array")
+io.help(np.array)
+io.text("Let's display some help text for print")
+io.help(print)
+io.help(pd.DataFrame)
+
 # with Report() as write:
 #     # Title.
 #     write('Periodic Table of the Elements', fmt='header', level=1)

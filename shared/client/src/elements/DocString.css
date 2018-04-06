@@ -1,0 +1,32 @@
+.streamlit-container .doc-containter {
+  background-color: #eeeeee;
+  padding: 10px;
+  /* font-family: 'IBM Plex Mono', monospace; */
+}
+
+.streamlit-container .doc-header {
+  margin-bottom: 0.5em;
+}
+
+.streamlit-container .doc-module {
+  color: #444444;
+  font-size: 0.8em;
+}
+
+.streamlit-container .doc-name {
+  font-weight: bold;
+
+}
+
+.streamlit-container .doc-containter .doc-html p {
+  color: red;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: pre-wrap;
+  font-size: 0.6em;
+}
+
+.streamlit-container .doc-containter .doc-string {
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: pre-wrap;
+  font-size: 0.6em;
+}

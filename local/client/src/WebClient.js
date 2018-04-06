@@ -16,6 +16,7 @@ import Div from 'streamlit-shared/lib/elements/Div';
 import Chart from 'streamlit-shared/lib/elements/Chart';
 import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
+import DocString from 'streamlit-shared/lib/elements/DocString';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -137,8 +138,8 @@ class WebClient extends PureComponent {
     return (
       <div>
         <header>
-          <a class="brand" href="/">Streamlit</a>
-          <div class="connection-status">
+          <a className="brand" href="/">Streamlit</a>
+          <div className="connection-status">
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
@@ -167,6 +168,7 @@ class WebClient extends PureComponent {
       try {
         if (!element)
           throw new Error('Transmission error.')
+          console.log('type is', element.get('type'))
         return dispatchOneOf(element, 'type', {
           div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
@@ -174,6 +176,7 @@ class WebClient extends PureComponent {
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
+          docString: (docString) => <DocString element={docString} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

@@ -5,3 +5,4 @@ PyYAML
 aiohttp
 motor
 tzlocal
+docutils

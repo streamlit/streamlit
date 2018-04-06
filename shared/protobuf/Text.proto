@@ -8,8 +8,13 @@ message Text {
 
   // Content format
   enum Format {
+    // Plain, fixed width text.
     PLAIN = 0;
+
+    // Markdown.
     MARKDOWN = 1;
+
+    // A JSON object. Stored as a string.
     JSON = 2;
   }
   Format format = 2;

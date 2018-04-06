@@ -1,11 +1,12 @@
 syntax = "proto3";
 
-import "Div.proto";
+import "Text.proto";
+import "Div.proto"; // <- DEPRECATE THIS
 import "DataFrame.proto";
 import "Chart.proto";
 import "Image.proto";
 import "Progress.proto";
-import "Text.proto";
+import "DocString.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -18,5 +19,6 @@ message Element {
     ImageList imgs = 4;
     Progress progress = 5;
     Text text = 6;
+    DocString doc_string = 7;
   }
 }

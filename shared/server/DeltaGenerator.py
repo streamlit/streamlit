@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 import json
 import textwrap
+import docutils.utils
+
+from docutils.core import publish_parts as doc_convert
 
 from streamlit.shared import image_proto
 from streamlit.local.Chart import Chart
@@ -46,8 +49,26 @@ def _export_to_io(method):
     setattr(method, EXPORT_TO_IO_FLAG, True)
     return method
 
-# def _create_element(method):
-#     """Turns a function which
+def _create_element(method):
+    """Allows you to easily create a method which creates a new element deltaself.
+
+    Converts a method of the with arguments (self, element, ...) into a method
+    with arguments (self, ...). Thus, the intantiation of the element proto
+    object and creation of the element are handled automaticallyself.
+
+    Args:
+        method: A DeltaGenerator method with arguments (self, element, ...)
+
+    Returns:
+        A new DeltaGenerator method with arguments (self, ...)
+    """
+    def wrapped_method(self, *args, **kwargs):
+        def create_element(element):
+            method(self, element, *args, **kwargs)
+        return self._new_element(create_element)
+    wrapped_method.__name__ = method.__name__
+    wrapped_method.__doc__ = method.__doc__
+    return wrapped_method
 
 class DeltaGenerator:
     """
@@ -137,6 +158,36 @@ class DeltaGenerator:
             element.div.text = text
             element.div.classes = classes
         return self._new_element(set_text)
+
+    @_export_to_io
+    @_create_element
+    def help(self, element, obj):
+        """Displays the doc string for this object, nicely formatted.
+
+        Displays the doc string for this object. If the doc string is
+        represented as ReStructuredText, then it will be converted to
+        Markdown on the client before display.
+
+        Args:
+            obj: The object to display.
+
+        Returns:
+            A DeltaGenerator object which allows you to overwrite this element.
+
+        Example:
+            To learn how the io.write function works, call::
+
+              io.help(io.write)
+        """
+        element.doc_string.name = obj.__name__
+        element.doc_string.module = obj.__module__
+        try:
+            element.doc_string.doc_html = \
+                doc_convert(source=obj.__doc__, writer_name='html')['fragment'].replace('\n', ' ')
+            import re
+            # print(re.escape(doc_convert(source=obj.__doc__, writer_name='html')['fragment'].replace('\n', ' ')))
+        except docutils.utils.SystemMessage:
+            element.doc_string.doc_string = obj.__doc__
 
     @_export_to_io
     def alert(self, text, type='danger'):
