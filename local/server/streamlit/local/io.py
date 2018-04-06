@@ -15,9 +15,8 @@ for name in dir(DeltaGenerator):
         # We introduce this level of indirection to wrap 'method' in a closure.
         def wrap_method(method):
             def wrapped_method(*args, **kwargs):
-                method(get_delta_generator(), *args, **kwargs)
+                return method(get_delta_generator(), *args, **kwargs)
             wrapped_method.__name__ = method.__name__
             wrapped_method.__doc__ = method.__doc__
             return wrapped_method
         setattr(sys.modules[__name__], method.__name__, wrap_method(method))
- 

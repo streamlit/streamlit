@@ -23,6 +23,11 @@ def long_running_identity(x):
 io.text('Hello world. This is really working!!')
 io.text('Holy fuck. This works really nicely.')
 io.text('Holy fuck. This works really nicely. ' + str(long_running_identity(123)))
+my_bar = io.progress(0)
+for i in range(101):
+    my_bar.progress(i)
+    time.sleep(0.1)
+
 
 # print('hello world')
 # report = streamlit.Report()

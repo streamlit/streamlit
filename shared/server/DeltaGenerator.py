@@ -138,6 +138,7 @@ class DeltaGenerator:
             element.div.classes = classes
         return self._new_element(set_text)
 
+    @_export_to_io
     def alert(self, text, type='danger'):
         """
         Creates an alert element.
@@ -150,6 +151,7 @@ class DeltaGenerator:
             f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
         return self.text(text, classes=f'alert alert-{type}')
 
+    @_export_to_io
     def header(self, text, level=3):
         """
         Creates a header element.
@@ -160,6 +162,7 @@ class DeltaGenerator:
         assert 1 <= level <= 6, 'Level must be between 1 and 6.'
         return self.text(text, classes=f'h{level}')
 
+    @_export_to_io
     def dataframe(self, pandas_df):
         """
         Renders a dataframe to the client.
@@ -172,6 +175,7 @@ class DeltaGenerator:
             data_frame_proto.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
 
+    @_export_to_io
     def chart(self, chart):
         """Displays a chart.
         """
@@ -179,6 +183,7 @@ class DeltaGenerator:
             chart.marshall(element.chart)
         return self._new_element(set_chart)
 
+    @_export_to_io
     def img(self, imgs, caption=None, width=0):
         """Displays an image or horizontal array of images.
 
@@ -192,6 +197,7 @@ class DeltaGenerator:
             image_proto.marshall_images(imgs, caption, width, element.imgs)
         return self._new_element(set_images)
 
+    @_export_to_io
     def progress(self, value):
         """Diplay a progress bar.
 
@@ -201,6 +207,7 @@ class DeltaGenerator:
             element.progress.value = value
         return self._new_element(set_progress)
 
+    @_export_to_io
     def markdown(self, body):
         """Diplay Markdown-formatted text.
 
@@ -211,10 +218,11 @@ class DeltaGenerator:
             element.text.format = protobuf.Text.MARKDOWN
         return self._new_element(set_body)
 
+    @_export_to_io
     def json(self, body):
-        """Diplay Markdown-formatted text.
+        """Write JSON.
 
-        body - Plain text of Markdown format
+        body - either a JSON object or a string
         """
         def set_body(element):
             element.text.body = (body if isinstance(body, str) else json.dumps(body))
@@ -269,6 +277,7 @@ def register_chart_method(chart_type):
         chart_type -- A string with the snake-case name of the chart type to
         add.
     """
+    @_export_to_io
     def chart_method(self, data, **kwargs):
         return self.chart(Chart(data, type=chart_type, **kwargs))
 
