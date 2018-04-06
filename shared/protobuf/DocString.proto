@@ -9,13 +9,6 @@ message DocString {
   // The module of the object
   string module = 2;
 
-  // HTML encoding of the doc string.
-  oneof doc {
-    // The doc string as html.
-    string doc_html = 3;
-
-    // Fallback: The doc string a string.
-    string doc_string = 4;
-  }
-
+  // The doc string a string.
+  string doc_string = 3;
 }

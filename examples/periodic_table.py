@@ -18,6 +18,7 @@ io.help(np.array)
 io.text("Let's display some help text for print")
 io.help(print)
 io.help(pd.DataFrame)
+io.help(io)
 
 # with Report() as write:
 #     # Title.

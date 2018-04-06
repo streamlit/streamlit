@@ -4,9 +4,6 @@ import pandas as pd
 import numpy as np
 import json
 import textwrap
-import docutils.utils
-
-from docutils.core import publish_parts as doc_convert
 
 from streamlit.shared import image_proto
 from streamlit.local.Chart import Chart
@@ -180,14 +177,11 @@ class DeltaGenerator:
               io.help(io.write)
         """
         element.doc_string.name = obj.__name__
-        element.doc_string.module = obj.__module__
         try:
-            element.doc_string.doc_html = \
-                doc_convert(source=obj.__doc__, writer_name='html')['fragment'].replace('\n', ' ')
-            import re
-            # print(re.escape(doc_convert(source=obj.__doc__, writer_name='html')['fragment'].replace('\n', ' ')))
-        except docutils.utils.SystemMessage:
-            element.doc_string.doc_string = obj.__doc__
+            element.doc_string.module = obj.__module__
+        except AttributeError:
+            pass
+        element.doc_string.doc_string = obj.__doc__
 
     @_export_to_io
     def alert(self, text, type='danger'):

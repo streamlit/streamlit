@@ -15,14 +15,6 @@
 
 .streamlit-container .doc-name {
   font-weight: bold;
-
-}
-
-.streamlit-container .doc-containter .doc-html p {
-  color: red;
-  font-family: 'IBM Plex Mono', monospace;
-  white-space: pre-wrap;
-  font-size: 0.6em;
 }
 
 .streamlit-container .doc-containter .doc-string {

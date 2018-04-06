@@ -12,21 +12,20 @@ class DocString extends PureComponent {
   render() {
     const {element, width} = this.props;
     const name = element.get('name');
-    const module = element.get('module');
-    const doc = dispatchOneOf(element, 'doc', {
-      docHtml: (docHtml) => <div className="doc-html"
-          dangerouslySetInnerHTML={{__html: docHtml}}/>,
-      docString: (docString) => <div className="doc-string">{docString}</div>,
-    });
+    const docString = element.get('docString');
 
-    const docHtml = element.get('docHtml');
+    // The module string may be blank so there's a bit more logic here.
+    let moduleHtml = '';
+    const module = element.get('module');
+    if (module)
+      moduleHtml = <span className="doc-module">{module}.</span>
     return (
       <div className="doc-containter" style={{width}}>
         <div className="doc-header">
-          <span className="doc-module">{module}.</span>
+          {moduleHtml}
           <span className="doc-name">{name}</span>
         </div>
-        {doc}
+        <div className="doc-string">{docString}</div>
       </div>
     );
   }
