@@ -13,10 +13,19 @@ def long_running_identity(x):
     time.sleep(2)
     return x * 2
 
-import streamlit.local.connection
-delta_generator = streamlit.local.connection.get_delta_generator()
-delta_generator('hello, my little world')
-print('Got the delta_generator', delta_generator)
+# import streamlit.local.connection
+# delta_generator = streamlit.local.connection.get_delta_generator()
+# delta_generator('hello, my little world!!!')
+# print('Got the delta_generator', delta_generator)
+
+from streamlit import io
+print(io)
+print(dir(io))
+print(io.hello())
+print(help(io.hello))
+io.goodbye()
+io.fancy_()
+io.fancy__()
 
 # print('hello world')
 # report = streamlit.Report()
