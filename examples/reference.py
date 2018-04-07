@@ -1,15 +1,15 @@
 #!./streamlit_run
 
 """Example of everything that's possible in streamlit."""
-#
-# import pandas as pd
+
 # import numpy as np
 # from PIL import Image
 # import urllib, io
 # import sys
-# from datetime import datetime
 
 import inspect
+import numpy as np
+import pandas as pd
 import textwrap
 
 from streamlit import io
@@ -17,22 +17,51 @@ from streamlit import io
 def render(func):
     """Displays the function body as a code block, the executes the function."""
     source = inspect.getsource(func)
+    if source.strip().startswith('render(lambda'):
+        source = source[:-2]
     source = textwrap.dedent(source[source.find(':')+1:]).strip()
     io.markdown(f'```\n{source}\n```')
     func()
 
 io.title('Streamlit Help')
 
-io.header('Printing Text')
+io.header('Basic Usage')
 
-io.subheader('Hello World')
-io.write(
-    'The simplest streamlit function is `io.write`. Markdown is the default:')
+io.write("The simplest streamlit function is `io.write`.")
 @render
 def write_example():
     from streamlit import io
     io.write('Hello, *world!*')
-io.alert("Still need to implement io.write('hello', 'world')")
+io.write("Markdown is the default. "
+    + " You can also pass in comma-separated values.")
+render(lambda: io.write("2 + 2 = ", 4))
+
+io.subheader('Numpy Arrays')
+@render
+def numpy_example():
+    import numpy as np
+    a_random_array = np.random.randn(200, 200)
+    io.write('A numpy array:', a_random_array)
+
+io.subheader('Pandas DataFrames')
+@render
+def dataframe_example():
+    import pandas as pd
+    from datetime import datetime
+    arrays = [
+        np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
+        np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
+    df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
+        columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
+    io.write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
+
+io.subheader('Getting Help')
+io.write('Passing functions and modules into `io.write()` prints help.')
+@render
+def help_example():
+    import sys
+    io.write(sys)
+    io.write(sys.exit)
 
 io.subheader('Headers')
 io.write('Streamlit suppports three header types: ' +
@@ -111,12 +140,7 @@ io.markdown('Hello *world*')
 # #
 # #     # DataFrames
 # #     write('Pandas DataFrames', fmt='header', level=2)
-# #     arrays = [
-# #         np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
-# #         np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
-# #     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-# #         columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
-# #     write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
+
 # #
 # #     # Alerts
 # #     write('Alerts', fmt='header', level=2)

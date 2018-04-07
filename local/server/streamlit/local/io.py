@@ -1,11 +1,15 @@
 """This package contains all functions which the user can use to
 create new elements in a Report."""
 
+import numpy as np
+import pandas as pd
 import sys
 import types
 
-from streamlit.shared.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
+from streamlit.local.Chart import Chart
 from streamlit.local.connection import get_delta_generator
+from streamlit.local.util import escape_markdown
+from streamlit.shared.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
@@ -75,12 +79,21 @@ def write(*args):
     Note that overwriting is only possible when write is passed a single
     argument.
     """
-    return markdown(*args) # debug
+    DATAFRAME_LIKE_TYPES = (
+        pd.DataFrame,
+        pd.Series,
+        pd.Index,
+        np.ndarray,
+    )
+
+    FIGURE_LIKE_TYPES = (
+        Chart,
+    )
     # return markdown(*args)
     string_buffer = []
     def flush_buffer():
         if string_buffer:
-            self.text(' '.join(string_buffer))
+            markdown(' '.join(string_buffer))
             string_buffer[:] = []
 
     for arg in args:
@@ -88,17 +101,17 @@ def write(*args):
             string_buffer.append(arg)
         elif isinstance(arg, DATAFRAME_LIKE_TYPES):
             flush_buffer()
-            self.dataframe(arg)
+            dataframe(arg)
         elif isinstance(arg, Exception):
             flush_buffer()
-            self.error(str(arg))
+            exception(arg)
         elif callable(arg) or isinstance(arg, types.ModuleType):
             flush_buffer()
-            self.help(arg)
+            help(arg)
         elif isinstance(arg, FIGURE_LIKE_TYPES):
             flush_buffer()
-            self.chart(arg)
+            chart(arg)
         else:
-            string_buffer.append(str(arg))
+            string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
     flush_buffer()
