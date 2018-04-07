@@ -21,10 +21,10 @@
   margin: 0 0 1rem 0;
 }
 
-.streamlit-container .markdown-text-container pre>code {
+.streamlit-container .markdown-text-container pre > code {
   padding: 0;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.8rem;
   word-break: normal;
   white-space: pre;
   background: transparent;
