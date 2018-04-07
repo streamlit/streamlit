@@ -25,6 +25,9 @@ message Text {
 
     // Corresponds to the <h3> tag.
     SUB_HEADER = 5;
+
+    //
+    ALERT_DANGER = 6;
   }
   Format format = 2;
 }

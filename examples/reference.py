@@ -43,6 +43,8 @@ def header_example():
     io.header('Header')
     io.subheader('Subheader')
 
+io.markdown('Hello *world*')
+
 # header_example()
 # io.text(type(header_example)))
 

@@ -163,16 +163,19 @@ class DeltaGenerator:
         represented as ReStructuredText, then it will be converted to
         Markdown on the client before display.
 
-        Args:
-            obj: The object to display.
+        Args
+        ----
+        obj: Object
+            The object to display.
 
-        Returns:
-            A DeltaGenerator object which allows you to overwrite this element.
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
 
-        Example:
-            To learn how the io.write function works, call::
-
-              io.help(io.write)
+        Example
+        -------
+        To learn how the io.write function works, call::
+            io.help(io.write)
         """
         element.doc_string.name = obj.__name__
         try:
@@ -251,15 +254,21 @@ class DeltaGenerator:
         return self._new_element(set_progress)
 
     @_export_to_io
-    def markdown(self, body):
-        """Diplay Markdown-formatted text.
+    @_create_element
+    def markdown(self, element, body):
+        """Displays the string, formatted as markdown.
 
-        body - Plain text of Markdown format
+        Args
+        ----
+        string : string
+            The string to display as markdown.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
         """
-        def set_body(element):
-            element.text.body = textwrap.dedent(body).strip()
-            element.text.format = protobuf.Text.MARKDOWN
-        return self._new_element(set_body)
+        element.text.body = textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
 
     @_export_to_io
     def json(self, body):
