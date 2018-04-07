@@ -27,17 +27,6 @@ SUPPORTED_FORMATS = [
     'text',
 ]
 
-DATAFRAME_LIKE_TYPES = (
-    pd.DataFrame,
-    pd.Series,
-    pd.Index,
-    np.ndarray,
-)
-
-FIGURE_LIKE_TYPES = (
-    Chart,
-)
-
 EXPORT_TO_IO_FLAG = '__export_to_io__'
 
 def _export_to_io(method):
