@@ -25,6 +25,7 @@ io.title('Streamlit Help')
 
 io.header('Printing Text')
 
+
 io.subheader('Hello World')
 io.write(
     'The simplest streamlit function is `io.write`. Markdown is the default:')
@@ -33,10 +34,6 @@ def write_example():
     from streamlit import io
     io.write('Hello, *world!*')
 
-io.error("This is an error message")
-io.warning("This is a warning message")
-io.info("This is an info log")
-io.success("This is a success message")
 
 io.subheader('Headers')
 io.write('Streamlit suppports three header types: ' +
@@ -49,6 +46,15 @@ def header_example():
 
 io.markdown('Hello *world*')
 
+
+io.subheader('Alert boxes')
+
+@render
+def alert_examples():
+    io.error("This is an error message")
+    io.warning("This is a warning message")
+    io.info("This is an info message")
+    io.success("This is a success message")
 
 io.header('JSON')
 
