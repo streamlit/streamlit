@@ -74,6 +74,29 @@ def header_example():
 
 io.markdown('Hello *world*')
 
+
+io.subheader('Alert boxes')
+
+@render
+def alert_examples():
+    io.error("This is an error message")
+    io.warning("This is a warning message")
+    io.info("This is an info message")
+    io.success("This is a success message")
+
+io.header('JSON')
+
+@render
+def json_example_1():
+    io.json({'hello': 'world'})
+
+@render
+def json_example_2():
+    io.json('{"object":{"array":[1,true,"3"]}}')
+
+
+
+
 # header_example()
 # io.text(type(header_example)))
 

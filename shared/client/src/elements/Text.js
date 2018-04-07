@@ -38,6 +38,42 @@ class Text extends PureComponent {
           </div>
         );
 
+      // A JSON object. Stored as a string.
+      case TextProto.Format.JSON:
+        let bodyObject = undefined;
+        try {
+          bodyObject = JSON.parse(body)
+        } catch (e) {
+          const pos = parseInt(e.message.replace(/[^0-9]/g, ''))
+          const split = body.substr(0, pos).split('\n')
+          const line = `${split.length}:${split[split.length - 1].length + 1}`
+          return (
+            <div className="json-text-container" style={{width}}>
+              <Alert color="danger" style={{width}}>
+                <strong>Invalid JSON format:</strong> {e.message} ({line})
+                <pre className="error">
+                  <code>
+                    {body.substr(0, pos)}
+                    <span className="error">{body[pos]}</span>
+                    {body.substr(pos + 1)}
+                  </code>
+                </pre>
+              </Alert>
+            </div>
+          );
+        }
+        return (
+          <div className="json-text-container" style={{width}}>
+            <ReactJson
+              src={bodyObject}
+              displayDataTypes={false}
+              displayObjectSize={false}
+              name={false}
+              style={{font: ""}}  // Unset so we can style via a CSS file.
+            />
+          </div>
+        );
+
       case TextProto.Format.TITLE:
       case TextProto.Format.HEADER:
       case TextProto.Format.SUB_HEADER:
@@ -52,6 +88,34 @@ class Text extends PureComponent {
           </div>
         );
 
+      case TextProto.Format.ERROR:
+        return (
+          <div className="alert alert-danger" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.WARNING:
+        return (
+          <div className="alert alert-warning" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.INFO:
+        return (
+          <div className="alert alert-info" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.SUCCESS:
+        return (
+          <div className="alert alert-success" style={{width}}>
+            {body}
+          </div>
+        );
+
       // Default
       default:
         return (
@@ -60,59 +124,6 @@ class Text extends PureComponent {
           </Alert>
         );
     }
-
-    // // A JSON object. Stored as a string.
-    // case TextProto.Format.JSON:
-    //   let bodyObject = undefined;
-    //   try {
-    //     bodyObject = JSON.parse(body)
-    //   } catch (e) {
-    //     const pos = parseInt(e.message.replace(/[^0-9]/g, ''))
-    //     const split = body.substr(0, pos).split('\n')
-    //     const line = `${split.length}:${split[split.length - 1].length + 1}`
-    //     return (
-    //       <div className="json-text-container" style={{width}}>
-    //         <Alert color="danger" style={{width}}>
-    //           <strong>Invalid JSON format:</strong> {e.message} ({line})
-    //           <pre className="error">
-    //             <code>
-    //               {body.substr(0, pos)}
-    //               <span className="error">{body[pos]}</span>
-    //               {body.substr(pos + 1)}
-    //             </code>
-    //           </pre>
-    //         </Alert>
-    //       </div>
-    //     );
-    //   }
-    //   return (
-    //     <div className="json-text-container" style={{width}}>
-    //       <ReactJson
-    //         src={bodyObject}
-    //         displayDataTypes={false}
-    //         displayObjectSize={false}
-    //         name={false}
-    //         style={{font: ""}}  // Unset so we can style via a CSS file.
-    //       />
-    //     </div>
-    //   );
-    //
-    //
-    // else if (format === TextProto.Format.HEADER) {
-    //   return (
-    //     <div class="h2" style={{width}}>
-    //       {body}
-    //     </div>
-    //   );
-    // }
-    //
-    // else if (format === TextProto.Format.SUB_HEADER) {
-    //   return (
-    //     <div class="h3" style={{width}}>
-    //       {body}
-    //     </div>
-    //   );
-    // }
   }
 }
 export default Text;
