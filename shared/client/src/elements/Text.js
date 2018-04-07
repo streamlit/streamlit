@@ -52,6 +52,34 @@ class Text extends PureComponent {
           </div>
         );
 
+      case TextProto.Format.ERROR:
+        return (
+          <div className="alert alert-danger" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.WARNING:
+        return (
+          <div className="alert alert-warning" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.INFO:
+        return (
+          <div className="alert alert-info" style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.SUCCESS:
+        return (
+          <div className="alert alert-success" style={{width}}>
+            {body}
+          </div>
+        );
+
       // Default
       default:
         return (

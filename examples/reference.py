@@ -32,7 +32,11 @@ io.write(
 def write_example():
     from streamlit import io
     io.write('Hello, *world!*')
-io.alert("Still need to implement io.write('hello', 'world')")
+
+io.error("This is an error message")
+io.warning("This is a warning message")
+io.info("This is an info log")
+io.success("This is a success message")
 
 io.subheader('Headers')
 io.write('Streamlit suppports three header types: ' +

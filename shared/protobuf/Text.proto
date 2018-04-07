@@ -26,8 +26,17 @@ message Text {
     // Corresponds to the <h3> tag.
     SUB_HEADER = 5;
 
-    //
-    ALERT_DANGER = 6;
+    // Shows an error message.
+    ERROR = 6;
+
+    // Shows a warning message.
+    WARNING = 7;
+
+    // Shows an info log.
+    INFO = 8;
+
+    // Shows a success message.
+    SUCCESS = 9;
   }
   Format format = 2;
 }

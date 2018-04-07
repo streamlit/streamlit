@@ -185,28 +185,60 @@ class DeltaGenerator:
         element.doc_string.doc_string = obj.__doc__
 
     @_export_to_io
-    def alert(self, text, type='danger'):
+    @_create_element
+    def error(self, element, body):
         """
-        Creates an alert element.
+        Creates an element with showing an error string.
 
-        text - The text to display. Can include newlines.
-        type - 'success' | 'info' | 'warning' | 'danger' (default)
+        Args
+        ----
+        body: str
+            The text to display. Can include newlines.
         """
-        ALLOWED_TYPES = ['success', 'info', 'warning', 'danger']
-        assert type in ALLOWED_TYPES, \
-            f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
-        return self.text(text, classes=f'alert alert-{type}')
+        element.text.body = body
+        element.text.format = protobuf.Text.ERROR
 
-    # @_export_to_io
-    # def header(self, text, level=3):
-    #     """
-    #     Creates a header element.
-    #
-    #     text  - The text to display. Can include newlines.
-    #     level - 1 (largest text) through 6 (smallest text)
-    #     """
-    #     assert 1 <= level <= 6, 'Level must be between 1 and 6.'
-    #     return self.text(text, classes=f'h{level}')
+    @_export_to_io
+    @_create_element
+    def warning(self, element, body):
+        """
+        Creates an element with showing an warning string.
+
+        Args
+        ----
+        body: str
+            The text to display. Can include newlines.
+        """
+        element.text.body = body
+        element.text.format = protobuf.Text.WARNING
+
+    @_export_to_io
+    @_create_element
+    def info(self, element, body):
+        """
+        Creates an element with showing an info string.
+
+        Args
+        ----
+        body: str
+            The text to display. Can include newlines.
+        """
+        element.text.body = body
+        element.text.format = protobuf.Text.INFO
+
+    @_export_to_io
+    @_create_element
+    def success(self, element, body):
+        """
+        Creates an element with showing an success string.
+
+        Args
+        ----
+        body: str
+            The text to display. Can include newlines.
+        """
+        element.text.body = body
+        element.text.format = protobuf.Text.SUCCESS
 
     @_export_to_io
     def dataframe(self, pandas_df):
