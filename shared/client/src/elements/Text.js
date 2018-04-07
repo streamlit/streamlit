@@ -6,6 +6,7 @@ import React, { PureComponent} from 'react';
 import ReactMarkdown from 'react-markdown';
 import ReactJson from 'react-json-view';
 import { Alert }  from 'reactstrap';
+import { Text as TextProto } from 'streamlit-shared/lib/protobuf/streamlit';
 import './Text.css';
 
  /**
@@ -14,54 +15,44 @@ import './Text.css';
 class Text extends PureComponent {
   render() {
     const {element, width} = this.props;
+    const body = element.get('body');
+    const format = element.get('format');
 
-    switch (element.get('format')) {
+    switch (format) {
+      // Plain, fixed width text.
+      case TextProto.Format.PLAIN:
+        return (
+          <div>
+            <div>PLAIN not implemented ({body})</div>
+            {body.replace('\r', '').split('\n').map((line, indx) => (
+              <div key={indx}>{line}</div>
+            ))}
+          </div>
+        );
 
-      case 1: // Text.Format["markdown"]
+      // Markdown.
+      case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={element.get('body')} />
+            <ReactMarkdown source={body} />
           </div>
         );
-        break;
 
-      case 2: // Text.Format["json"]
-        const body = element.get('body')
-        let bodyObject = undefined;
-        try {
-          bodyObject = JSON.parse(body)
-        } catch (e) {
-          const pos = parseInt(e.message.replace(/[^0-9]/g, ''))
-          const split = body.substr(0, pos).split('\n')
-          const line = `${split.length}:${split[split.length - 1].length + 1}`
-          return (
-            <div className="json-text-container" style={{width}}>
-              <Alert color="danger" style={{width}}>
-                <strong>Invalid JSON format:</strong> {e.message} ({line})
-                <pre className="error">
-                  <code>
-                    {body.substr(0, pos)}
-                    <span className="error">{body[pos]}</span>
-                    {body.substr(pos + 1)}
-                  </code>
-                </pre>
-              </Alert>
-            </div>
-          );
-        }
+      case TextProto.Format.TITLE:
+      case TextProto.Format.HEADER:
+      case TextProto.Format.SUB_HEADER:
+        const className = {
+          [TextProto.Format.TITLE]: 'h1',
+          [TextProto.Format.HEADER]: 'h2',
+          [TextProto.Format.SUB_HEADER]: 'h3',
+        }[format]
         return (
-          <div className="json-text-container" style={{width}}>
-            <ReactJson
-                src={bodyObject}
-                displayDataTypes={false}
-                displayObjectSize={false}
-                name={false}
-                style={{font: ""}}  // Unset so we can style via a CSS file.
-                />
+          <div className={className} style={{width}}>
+            {body}
           </div>
         );
-        break;
 
+      // Default
       default:
         return (
           <Alert color="danger" style={{width}}>
@@ -69,7 +60,59 @@ class Text extends PureComponent {
           </Alert>
         );
     }
+
+    // // A JSON object. Stored as a string.
+    // case TextProto.Format.JSON:
+    //   let bodyObject = undefined;
+    //   try {
+    //     bodyObject = JSON.parse(body)
+    //   } catch (e) {
+    //     const pos = parseInt(e.message.replace(/[^0-9]/g, ''))
+    //     const split = body.substr(0, pos).split('\n')
+    //     const line = `${split.length}:${split[split.length - 1].length + 1}`
+    //     return (
+    //       <div className="json-text-container" style={{width}}>
+    //         <Alert color="danger" style={{width}}>
+    //           <strong>Invalid JSON format:</strong> {e.message} ({line})
+    //           <pre className="error">
+    //             <code>
+    //               {body.substr(0, pos)}
+    //               <span className="error">{body[pos]}</span>
+    //               {body.substr(pos + 1)}
+    //             </code>
+    //           </pre>
+    //         </Alert>
+    //       </div>
+    //     );
+    //   }
+    //   return (
+    //     <div className="json-text-container" style={{width}}>
+    //       <ReactJson
+    //         src={bodyObject}
+    //         displayDataTypes={false}
+    //         displayObjectSize={false}
+    //         name={false}
+    //         style={{font: ""}}  // Unset so we can style via a CSS file.
+    //       />
+    //     </div>
+    //   );
+    //
+    //
+    // else if (format === TextProto.Format.HEADER) {
+    //   return (
+    //     <div class="h2" style={{width}}>
+    //       {body}
+    //     </div>
+    //   );
+    // }
+    //
+    // else if (format === TextProto.Format.SUB_HEADER) {
+    //   return (
+    //     <div class="h3" style={{width}}>
+    //       {body}
+    //     </div>
+    //   );
+    // }
   }
 }
-
 export default Text;

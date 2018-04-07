@@ -42,7 +42,10 @@ EXPORT_TO_IO_FLAG = '__export_to_io__'
 
 def _export_to_io(method):
     """Flag this DeltaGenerator method to be exported to the streamlit.io
-    package. This should be the outermost decorator, i.e. before all others."""
+    package.
+
+    This should be the outermost decorator, i.e. before all others.
+    """
     setattr(method, EXPORT_TO_IO_FLAG, True)
     return method
 
@@ -53,11 +56,13 @@ def _create_element(method):
     with arguments (self, ...). Thus, the intantiation of the element proto
     object and creation of the element are handled automaticallyself.
 
-    Args:
-        method: A DeltaGenerator method with arguments (self, element, ...)
+    Args
+    ----
+    method: A DeltaGenerator method with arguments (self, element, ...)
 
-    Returns:
-        A new DeltaGenerator method with arguments (self, ...)
+    Returns
+    -------
+    A new DeltaGenerator method with arguments (self, ...)
     """
     def wrapped_method(self, *args, **kwargs):
         def create_element(element):
@@ -88,64 +93,57 @@ class DeltaGenerator:
             self._generate_new_ids = False
             self._id = id
 
-    def __call__(self, *args, fmt='autp', **kwargs):
-        """Writes it's arguments to report pages.
 
-        with Report() as print:
-            print('A Test', fmt='header')
-            print('Hello world.')
-            print('This is an alert', fmt='alert')
-            print('This is a dataframe', pd.DataFrame([1, 2, 3]))
+    @_export_to_io
+    @_create_element
+    def title(self, element, string):
+        """Displays the string as a title (h1) header.
 
-        This also works:
+        Args
+        ----
+        string : string
+            The string to display.
 
-        with Report() as print:
-            print.header('A Test')
-            print('Hello world.')
-            print.alert('This is an alert')
-            print('This is a dataframe')
-            print.dataframe(pd.DataFrame([1, 2, 3]))
-
-        Supported types are:
-
-            - streamlit.Charts
-            - Pandas-DataFrame-like objects: DataFame, Series, and numpy.Array
-            - String-like objects: By default, objects are cast to strings.
-
-        The optional `fmt` argument can take on several values:
-
-            - "auto"     : figures out the format
-            - "alert"    : formats the string as an alert
-            - "header"   : formats the string as a header
-            - "info"     : prints out df.info() on a DataFrame-like object
-            - "img"      : prints an image out
-            - "progress" : prints out a progress bar (for a 0<num<1)
-            - "markdown" : prints out as Markdown-formatted text
-            - "json" : prints out as JSON-formatted text
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
         """
-        if fmt in SUPPORTED_FORMATS:
-            assert len(args) == 1, f'Format "{fmt}" requires only one argument.'
-            return getattr(self, fmt)(args[0], **kwargs)
+        element.text.body = string
+        element.text.format = protobuf.Text.TITLE
 
-        # Otherwise, dispatch based on type.
+    @_export_to_io
+    @_create_element
+    def header(self, element, string):
+        """Displays the string as a h2 header.
 
-        string_buffer = []
-        def flush_buffer():
-            if string_buffer:
-                self.text(' '.join(string_buffer))
-                string_buffer[:] = []
+        Args
+        ----
+        string : string
+            The string to display.
 
-        for arg in args:
-            if isinstance(arg, DATAFRAME_LIKE_TYPES):
-                flush_buffer()
-                self.dataframe(arg)
-            elif isinstance(arg, FIGURE_LIKE_TYPES):
-                flush_buffer()
-                self.chart(arg)
-            else:
-                string_buffer.append(str(arg))
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+        """
+        element.text.body = string
+        element.text.format = protobuf.Text.HEADER
 
-        flush_buffer()
+    @_export_to_io
+    @_create_element
+    def subheader(self, element, string):
+        """Displays the string as a h3 header.
+
+        Args
+        ----
+        string : string
+            The string to display.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+        """
+        element.text.body = string
+        element.text.format = protobuf.Text.SUB_HEADER
 
     @_export_to_io
     def text(self, text, classes='fixed-width'):
@@ -196,16 +194,16 @@ class DeltaGenerator:
             f'Alert type must be one of {{{", ".join(ALLOWED_TYPES)}}}.'
         return self.text(text, classes=f'alert alert-{type}')
 
-    @_export_to_io
-    def header(self, text, level=3):
-        """
-        Creates a header element.
-
-        text  - The text to display. Can include newlines.
-        level - 1 (largest text) through 6 (smallest text)
-        """
-        assert 1 <= level <= 6, 'Level must be between 1 and 6.'
-        return self.text(text, classes=f'h{level}')
+    # @_export_to_io
+    # def header(self, text, level=3):
+    #     """
+    #     Creates a header element.
+    #
+    #     text  - The text to display. Can include newlines.
+    #     level - 1 (largest text) through 6 (smallest text)
+    #     """
+    #     assert 1 <= level <= 6, 'Level must be between 1 and 6.'
+    #     return self.text(text, classes=f'h{level}')
 
     @_export_to_io
     def dataframe(self, pandas_df):

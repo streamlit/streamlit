@@ -19,6 +19,8 @@ class DocString extends PureComponent {
     const module = element.get('module');
     if (module)
       moduleHtml = <span className="doc-module">{module}.</span>
+
+    // Put it all together into a nice little html view.
     return (
       <div className="doc-containter" style={{width}}>
         <div className="doc-header">

@@ -1,3 +1,5 @@
+#!./streamlit_run
+
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -10,24 +12,21 @@ from streamlit import io, cache
 
 
 @cache
-def long_running_identity(x):
-    time.sleep(10)
-    return x * 2
+def fibo(x):
+    io.write(f'Compputing fibo({x}).')
+    if x <= 1:
+        return 1
+    else:
+        return fibo(x - 1) + fibo(x-2)
 
 # import streamlit.local.connection
 # delta_generator = streamlit.local.connection.get_delta_generator()
 # delta_generator('hello, my little world!!!')
 # print('Got the delta_generator', delta_generator)
 
-
-io.text('Hello world. This is really working!!')
-io.text('Holy fuck. This works really nicely.')
-io.text('Holy fuck. This works really nicely. ' + str(long_running_identity(123)))
-my_bar = io.progress(0)
-for i in range(101):
-    my_bar.progress(i)
-    time.sleep(0.1)
-
+io.text('The answer is: ')
+io.text(str(fibo(10)))
+io.text(str(fibo(10)))
 
 # print('hello world')
 # report = streamlit.Report()
@@ -45,5 +44,5 @@ for i in range(101):
 # #     an_array = np.random.randn(200, 200)
 # #     write(an_array)
 # #     write.alert('About to run a long-running function.')
-# #     write('result:', long_running_identity(12345))
+# #     write('result:', long_running_double(12345))
 # #     write('pwd', os.getcwd())
