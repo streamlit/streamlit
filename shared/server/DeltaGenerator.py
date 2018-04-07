@@ -303,15 +303,18 @@ class DeltaGenerator:
         element.text.format = protobuf.Text.MARKDOWN
 
     @_export_to_io
-    def json(self, body):
-        """Write JSON.
+    @_create_element
+    def json(self, element, body):
+        """Displays the object as a pretty JSON string.
 
-        body - either a JSON object or a string
+        Args
+        ----
+        object : object
+            The object to stringify. All referenced objects should have JSON counterpart.
+            If object is a string, we assume it is already JSON formatted.
         """
-        def set_body(element):
-            element.text.body = (body if isinstance(body, str) else json.dumps(body))
-            element.text.format = protobuf.Text.JSON
-        return self._new_element(set_body)
+        element.text.body = (body if isinstance(body, str) else json.dumps(body))
+        element.text.format = protobuf.Text.JSON
 
     def add_rows(self, df):
         assert not self._generate_new_ids, \
