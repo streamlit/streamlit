@@ -63,7 +63,14 @@ def help_example():
     import sys
     io.write(sys.exit)
 
-io.subheader('Headers')
+io.header('Progress Bars')
+@render
+def progress_example():
+    for percent in [100, 75, 50, 25, 0]:
+        io.write(f'{percent}% progress:')
+        io.progress(percent)
+
+io.header('Headers')
 io.write('Streamlit suppports three header types: ' +
     '`title`, `header`, and `subheader`:')
 @render
@@ -74,9 +81,7 @@ def header_example():
 
 io.markdown('Hello *world*')
 
-
-io.subheader('Alert boxes')
-
+io.header('Alert boxes')
 @render
 def alert_examples():
     io.error("This is an error message")
@@ -85,17 +90,23 @@ def alert_examples():
     io.success("This is a success message")
 
 io.header('JSON')
-
 @render
 def json_example_1():
     io.json({'hello': 'world'})
-
 @render
 def json_example_2():
     io.json('{"object":{"array":[1,true,"3"]}}')
 
-
-
+io.header('Animation')
+io.write('Every `streamlit.io` method (except `io.write`) returns a handle '
+    + 'which can be used for animation.')
+@render
+def progress_animation_example():
+    import time
+    my_bar = io.progress(0)
+    for percent_complete in range(100):
+        my_bar.progress(percent_complete + 1)
+        time.sleep(0.1)
 
 # header_example()
 # io.text(type(header_example)))
@@ -241,7 +252,3 @@ def json_example_2():
 # #     write.json({'hello': 'world'})
 # #
 # #     # Progress
-# #     write('Progress Bars', fmt='header', level=2)
-# #     for percent in [100, 75, 50, 25, 0]:
-# #         write(f'{percent}% progress:')
-# #         write.progress(percent)

@@ -265,14 +265,28 @@ class DeltaGenerator:
         return self._new_element(set_images)
 
     @_export_to_io
-    def progress(self, value):
-        """Diplay a progress bar.
+    @_create_element
+    def progress(self, element, value):
+        """Displays the string as a h3 header.
 
-        value - Should be between 0 and 100
+        Args
+        ----
+        value : int
+            The percentage complete: 0 <= value <= 100
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+
+        Examples
+        --------
+        Here is an example of a progress bar increasing over time::
+            import time
+            my_bar = io.progress(0)
+            for percent_complete in range(100):
+                my_bar.progress(percent_complete + 1)
         """
-        def set_progress(element):
-            element.progress.value = value
-        return self._new_element(set_progress)
+        element.progress.value = value
 
     @_export_to_io
     @_create_element
