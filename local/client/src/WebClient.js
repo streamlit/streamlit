@@ -16,6 +16,7 @@ import Chart from 'streamlit-shared/lib/elements/Chart';
 import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
+import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -172,6 +173,8 @@ class WebClient extends PureComponent {
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
           docString: (docString) => <DocString element={docString} width={width}/>,
+          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          empty: (empty) => undefined,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

@@ -1,9 +1,10 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-import pandas as pd
-import numpy as np
 import json
+import numpy as np
+import pandas as pd
 import textwrap
+import traceback
 
 from streamlit.shared import image_proto
 from streamlit.local.Chart import Chart
@@ -183,6 +184,21 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
+    def exception(self, element, exception):
+        """
+        Prints this exception to the Report.
+
+        Args
+        ----
+        exception: Exception
+            The exception to display.
+        """
+        tb = traceback.extract_tb(exception.__traceback__)
+        element.exception.type = type(exception).__name__
+        element.exception.stack_trace.extend(traceback.format_list(tb))
+
+    @_export_to_io
+    @_create_element
     def error(self, element, body):
         """
         Creates an element with showing an error string.
@@ -344,6 +360,14 @@ class DeltaGenerator:
         """
         element.text.body = (body if isinstance(body, str) else json.dumps(body))
         element.text.format = protobuf.Text.JSON
+
+    @_export_to_io
+    @_create_element
+    def empty(self, element):
+        """Adds an element that will not be rendered.
+        """
+        # NOTE: protobuf needs something to be set
+        element.empty.unused = True
 
     def add_rows(self, df):
         assert not self._generate_new_ids, \

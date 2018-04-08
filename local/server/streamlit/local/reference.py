@@ -33,7 +33,7 @@ def render(func):
     func()
 
 
-io.title('Streamlit Quick Reference')
+io.title('Streamlit quick reference')
 
 io.header('The basics')
 
@@ -202,6 +202,18 @@ io.header('Help')
 render(lambda: io.help(io))
 render(lambda: io.help(io.help))
 render(lambda: io.help(io.json))
+
+
+io.header('Placeholders')
+
+io.write('Placeholders allow you to draw items out of order. For example:')
+
+@render
+def empty_example():
+    io.text('A')
+    placeholder = io.empty()
+    io.text('C')
+    placeholder.text('B')
 
 
 io.header('Animation')
