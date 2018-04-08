@@ -22,11 +22,8 @@ class Text extends PureComponent {
       // Plain, fixed width text.
       case TextProto.Format.PLAIN:
         return (
-          <div>
-            <div>PLAIN not implemented ({body})</div>
-            {body.replace('\r', '').split('\n').map((line, indx) => (
-              <div key={indx}>{line}</div>
-            ))}
+          <div className="fixed-width" style={{width}}>
+            {body}
           </div>
         );
 

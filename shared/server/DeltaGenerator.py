@@ -82,7 +82,6 @@ class DeltaGenerator:
             self._generate_new_ids = False
             self._id = id
 
-
     @_export_to_io
     @_create_element
     def title(self, element, string):
@@ -135,13 +134,17 @@ class DeltaGenerator:
         element.text.format = protobuf.Text.SUB_HEADER
 
     @_export_to_io
-    def text(self, text, classes='fixed-width'):
-        """Writes fixed width text to the console."""
-        text = str(text)
-        def set_text(element):
-            element.div.text = text
-            element.div.classes = classes
-        return self._new_element(set_text)
+    @_create_element
+    def text(self, element, body):
+        """Writes fixed width text.
+
+        Args
+        ----
+        body : string
+            The string to display.
+        """
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.PLAIN
 
     @_export_to_io
     @_create_element

@@ -1,3 +1,13 @@
+.streamlit-container .fixed-width {
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: pre-wrap;
+  font-size: 1rem;
+}
+
+.streamlit-container .markdown-text-container p {
+  margin: 0 0 1rem 0;
+}
+
 .streamlit-container .markdown-text-container {
   font-family: 'IBM Plex Serif', serif;
 }
@@ -9,7 +19,6 @@
 .streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
-  font-size: 0.8rem;
   background-color: #E6E9EE;
   border-radius: 3px;
 }
