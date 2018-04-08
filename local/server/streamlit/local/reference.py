@@ -33,9 +33,9 @@ def render(func):
     func()
 
 
-io.title('Streamlit quick reference')
+io.title('Streamlit Quick Reference')
 
-io.header('The basics')
+io.header('The Basics')
 
 @render
 def write_example():
@@ -199,14 +199,11 @@ def progress_example():
 
 io.header('Help')
 
-render(lambda: io.help(io))
-render(lambda: io.help(io.help))
-render(lambda: io.help(io.json))
+render(lambda: io.help(io.write))
 
+io.header('Out-of-Order Writing')
 
-io.header('Placeholders')
-
-io.write('Placeholders allow you to draw items out of order. For example:')
+io.write('Placeholders allow you to draw items out-of-order. For example:')
 
 @render
 def empty_example():
@@ -215,6 +212,14 @@ def empty_example():
     io.text('C')
     placeholder.text('B')
 
+
+io.header('Exceptions')
+@render
+def exception_example():
+    try:
+        raise RuntimeError('An exception')
+    except Exception as e:
+        io.exception(e)
 
 io.header('Animation')
 io.write(

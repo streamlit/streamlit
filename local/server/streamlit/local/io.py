@@ -64,20 +64,6 @@ def write(*args):
         write('Hello, *World!*')
         write('1 + 1 = ', 2)
         write('This is a DataFrame', data_frame, 'No, really!!')
-
-    This is an example of overwriting things::
-
-        write('My answer is:')
-        my_answer = write('No.')
-        my_answer.write('Yes!')
-
-    which writes::
-
-        My answer is:
-        Yes!
-
-    Note that overwriting is only possible when write is passed a single
-    argument.
     """
     DATAFRAME_LIKE_TYPES = (
         pd.DataFrame,
