@@ -1,7 +1,6 @@
 syntax = "proto3";
 
 import "Text.proto";
-import "Div.proto"; // <- DEPRECATE THIS
 import "DataFrame.proto";
 import "Chart.proto";
 import "Image.proto";
@@ -14,7 +13,6 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Div div = 1;
     DataFrame data_frame = 2;
     Chart chart = 3;
     ImageList imgs = 4;
