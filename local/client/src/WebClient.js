@@ -179,6 +179,7 @@ class WebClient extends PureComponent {
           text: (text) => <Text element={text} width={width}/>,
           docString: (docString) => <DocString element={docString} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          empty: (empty) => undefined,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

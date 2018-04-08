@@ -1,20 +1,19 @@
 syntax = "proto3";
 
 import "Text.proto";
-import "Div.proto"; // <- DEPRECATE THIS
 import "DataFrame.proto";
 import "Chart.proto";
 import "Image.proto";
 import "Progress.proto";
 import "DocString.proto";
 import "Exception.proto";
+import "Empty.proto";
 
 // An element which can be displayed on the screen.
 message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Div div = 1;
     DataFrame data_frame = 2;
     Chart chart = 3;
     ImageList imgs = 4;
@@ -22,5 +21,6 @@ message Element {
     Text text = 6;
     DocString doc_string = 7;
     Exception exception = 8;
+    Empty empty = 9;
   }
 }
