@@ -69,7 +69,7 @@ def write(*args):
 
         write('My answer is:')
         my_answer = write('No.')
-        my_asnwer.write('Yes!')
+        my_answer.write('Yes!')
 
     which writes::
 
