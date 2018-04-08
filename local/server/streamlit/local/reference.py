@@ -178,6 +178,16 @@ def image_example():
     io.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
 
+io.header('Placeholders')
+
+@render
+def empty_example():
+    io.text('A')
+    placeholder = io.empty()
+    io.text('C')
+    placeholder.text('B')
+
+
 io.header('Animation')
 io.write('Every `streamlit.io` method (except `io.write`) returns a handle '
     + 'which can be used for animation.')

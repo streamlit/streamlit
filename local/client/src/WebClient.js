@@ -177,6 +177,7 @@ class WebClient extends PureComponent {
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
           docString: (docString) => <DocString element={docString} width={width}/>,
+          empty: (empty) => undefined,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

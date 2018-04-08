@@ -345,6 +345,14 @@ class DeltaGenerator:
         element.text.body = (body if isinstance(body, str) else json.dumps(body))
         element.text.format = protobuf.Text.JSON
 
+    @_export_to_io
+    @_create_element
+    def empty(self, element):
+        """Adds an element that will not be rendered.
+        """
+        # NOTE: protobuf needs something to be set
+        element.empty.unused = True
+
     def add_rows(self, df):
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
