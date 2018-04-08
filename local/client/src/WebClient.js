@@ -151,8 +151,7 @@ class WebClient extends PureComponent {
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
-              {/* {this.renderElements(0)} */}
-              <AutoSizer>
+              <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
             </Col>
