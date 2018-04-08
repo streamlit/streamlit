@@ -86,16 +86,15 @@ def alert_examples():
 
 io.header('JSON')
 
-@render
-def json_example_1():
-    io.json({'hello': 'world'})
+render(lambda: io.json({'hello': 'world'}))
 
-@render
-def json_example_2():
-    io.json('{"object":{"array":[1,true,"3"]}}')
+render(lambda: io.json('{"object":{"array":[1,true,"3"]}}'))
 
+io.header('Help')
 
-
+render(lambda: io.help(io))
+render(lambda: io.help(io.help))
+render(lambda: io.help(io.json))
 
 # header_example()
 # io.text(type(header_example)))

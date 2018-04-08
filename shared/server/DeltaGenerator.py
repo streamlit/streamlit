@@ -166,12 +166,17 @@ class DeltaGenerator:
         To learn how the io.write function works, call::
             io.help(io.write)
         """
+        if not hasattr(obj, '__name__'):
+            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
         element.doc_string.name = obj.__name__
         try:
             element.doc_string.module = obj.__module__
         except AttributeError:
             pass
-        element.doc_string.doc_string = obj.__doc__
+        doc_string = obj.__doc__
+        if doc_string is None:
+            doc_string = f'No docs available.'
+        element.doc_string.doc_string = doc_string
 
     @_export_to_io
     @_create_element
