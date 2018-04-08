@@ -86,32 +86,40 @@ def write(*args):
         np.ndarray,
     )
 
+    HELP_TYPES = (
+        types.FunctionType,
+        types.ModuleType,
+    )
+
     FIGURE_LIKE_TYPES = (
         Chart,
     )
     # return markdown(*args)
-    string_buffer = []
-    def flush_buffer():
-        if string_buffer:
-            markdown(' '.join(string_buffer))
-            string_buffer[:] = []
+    try:
+        string_buffer = []
+        def flush_buffer():
+            if string_buffer:
+                markdown(' '.join(string_buffer))
+                string_buffer[:] = []
 
-    for arg in args:
-        if type(arg) == str:
-            string_buffer.append(arg)
-        elif isinstance(arg, DATAFRAME_LIKE_TYPES):
-            flush_buffer()
-            dataframe(arg)
-        elif isinstance(arg, Exception):
-            flush_buffer()
-            exception(arg)
-        elif callable(arg) or isinstance(arg, types.ModuleType):
-            flush_buffer()
-            help(arg)
-        elif isinstance(arg, FIGURE_LIKE_TYPES):
-            flush_buffer()
-            chart(arg)
-        else:
-            string_buffer.append('`%s`' % escape_markdown(str(arg)))
+        for arg in args:
+            if type(arg) == str:
+                string_buffer.append(arg)
+            elif isinstance(arg, DATAFRAME_LIKE_TYPES):
+                flush_buffer()
+                dataframe(arg)
+            elif isinstance(arg, Exception):
+                flush_buffer()
+                exception(arg)
+            elif isinstance(arg, HELP_TYPES):
+                flush_buffer()
+                help(arg)
+            elif isinstance(arg, FIGURE_LIKE_TYPES):
+                flush_buffer()
+                chart(arg)
+            else:
+                string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
-    flush_buffer()
+        flush_buffer()
+    except Exception as e:
+        exception(e)

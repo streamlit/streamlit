@@ -31,4 +31,4 @@ def b():
 try:
     a()
 except Exception as e:
-    io.exception(e)
+    io.write('We got an exception:', e)

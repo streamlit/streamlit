@@ -172,7 +172,7 @@ class WebClient extends PureComponent {
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
-          docString: (docString) => <DocString element={docString} width={width}/>,
+          docString: (doc) => <DocString element={doc} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
         });

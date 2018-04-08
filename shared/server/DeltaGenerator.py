@@ -16,19 +16,6 @@ from streamlit.shared import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 
-# Dispatch based on the 'fmt' argument.
-SUPPORTED_FORMATS = [
-    'alert',
-    'chart',
-    'dataframe',
-    'header',
-    'img',
-    'json',
-    'markdown',
-    'progress',
-    'text',
-]
-
 EXPORT_TO_IO_FLAG = '__export_to_io__'
 
 def _export_to_io(method):
@@ -179,9 +166,9 @@ class DeltaGenerator:
         except AttributeError:
             pass
         doc_string = obj.__doc__
-        if doc_string is None:
+        if type(doc_string) is not str:
             doc_string = f'No docs available.'
-        element.doc_string.doc_string = remove_indent(doc_string)
+        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
 
     @_export_to_io
     @_create_element
