@@ -25,7 +25,7 @@ for name in dir(DeltaGenerator):
             wrapped_method.__name__ = method.__name__
             wrapped_method.__doc__ = method.__doc__
             return wrapped_method
-        setattr(sys.modules[__name__], method.__name__, wrap_method(method))
+        setattr(sys.modules[__name__], name, wrap_method(method))
 
 def write(*args):
     """Writes its arguments to the Report.
