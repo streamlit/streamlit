@@ -43,9 +43,12 @@ def _create_element(method):
     A new DeltaGenerator method with arguments (self, ...)
     """
     def wrapped_method(self, *args, **kwargs):
-        def create_element(element):
-            method(self, element, *args, **kwargs)
-        return self._new_element(create_element)
+        try:
+            def create_element(element):
+                method(self, element, *args, **kwargs)
+            return self._new_element(create_element)
+        except Exception as e:
+            self.exception(e)
     wrapped_method.__name__ = method.__name__
     wrapped_method.__doc__ = method.__doc__
     return wrapped_method

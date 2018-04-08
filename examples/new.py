@@ -22,13 +22,16 @@ from streamlit import io, cache
 # old_hook = sys.excepthook
 # sys.excepthook = hook
 
-def a():
-    b()
+io.text('Here is some text.')
+io.text('Here is some text.')
 
-def b():
-    raise RuntimeError('This is a test.')
-
-try:
-    a()
-except Exception as e:
-    io.write('We got an exception:', e)
+# def a():
+#     b()
+#
+# def b():
+#     raise RuntimeError('This is a test.')
+#
+# try:
+#     a()
+# except Exception as e:
+#     io.write('We got an exception:', e)
