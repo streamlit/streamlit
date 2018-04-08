@@ -1,9 +1,10 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-import pandas as pd
-import numpy as np
 import json
+import numpy as np
+import pandas as pd
 import textwrap
+import traceback
 
 from streamlit.shared import image_proto
 from streamlit.local.Chart import Chart
@@ -180,6 +181,21 @@ class DeltaGenerator:
         if doc_string is None:
             doc_string = f'No docs available.'
         element.doc_string.doc_string = doc_string
+
+    @_export_to_io
+    @_create_element
+    def exception(self, element, exception):
+        """
+        Prints this exception to the Report.
+
+        Args
+        ----
+        exception: Exception
+            The exception to display.
+        """
+        tb = traceback.extract_tb(exception.__traceback__)
+        element.exception.type = type(exception).__name__
+        element.exception.stack_trace.extend(traceback.format_list(tb))
 
     @_export_to_io
     @_create_element

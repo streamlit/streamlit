@@ -7,21 +7,20 @@ import urllib, io
 import sys
 import time
 import random
-import traceback
 
 from streamlit import io, cache
 
-def hook(exctype, value, tb):
-    sys.excepthook = old_hook
-    io.text(exctype.__name__)
-    # io.json(dir(value))
-    # io.write(value)
-    # print(list(traceback))
-    # io.help(type(traceback))
-    # io.text(traceback.extract_stack(traceback.extract_tb(tb)))
-    io.json(traceback.format_list(traceback.extract_tb(tb)))
-old_hook = sys.excepthook
-sys.excepthook = hook
+# def hook(exctype, value, tb):
+#     sys.excepthook = old_hook
+#     io.text(exctype.__name__)
+#     # io.json(dir(value))
+#     # io.write(value)
+#     # print(list(traceback))
+#     # io.help(type(traceback))
+#     # io.text(traceback.extract_stack(traceback.extract_tb(tb)))
+#     io.json(traceback.format_list(traceback.extract_tb(tb)))
+# old_hook = sys.excepthook
+# sys.excepthook = hook
 
 def a():
     b()
@@ -29,4 +28,7 @@ def a():
 def b():
     raise RuntimeError('This is a test.')
 
-a()
+try:
+    a()
+except Exception as e:
+    io.exception(e)
