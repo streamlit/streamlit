@@ -70,6 +70,15 @@ def progress_example():
         io.write(f'{percent}% progress:')
         io.progress(percent)
 
+io.header('Preformatted text')
+io.write('You can write preformatted text if you\'re old school like that:')
+
+@render
+def text_example():
+    io.text('This is some preformatted text!\n'
+            '             ~~~~~~~~~~~~      \n'
+            'So cool!')
+
 io.header('Headers')
 io.write('Streamlit suppports three header types: ' +
     '`title`, `header`, and `subheader`:')
