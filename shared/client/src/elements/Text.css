@@ -4,12 +4,9 @@
   font-size: 1rem;
 }
 
-.streamlit-container .markdown-text-container p {
-  margin: 0 0 1rem 0;
-}
-
 .streamlit-container .markdown-text-container {
   font-family: 'IBM Plex Serif', serif;
+  margin-bottom: -1rem;
 }
 
 .streamlit-container .markdown-text-container p {
@@ -19,7 +16,7 @@
 .streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
-  background-color: #E6E9EE;
+  border: 1px solid #E6E9EE;
   border-radius: 3px;
 }
 
@@ -31,25 +28,18 @@
 }
 
 .streamlit-container .markdown-text-container pre > code {
-  padding: 0;
-  margin: 0;
-  font-size: 0.8rem;
-  word-break: normal;
-  white-space: pre;
   background: transparent;
   border: 0;
-}
-
-.streamlit-container .markdown-text-container pre code {
   display: inline;
-  max-width: auto;
-  padding: 0;
-  margin: 0;
-  overflow: visible;
+  font-size: 0.8rem;
   line-height: inherit;
+  margin: 0;
+  max-width: auto;
+  overflow: visible;
+  padding: 0;
+  white-space: pre;
+  word-break: normal;
   word-wrap: normal;
-  background-color: transparent;
-  border: 0;
 }
 
 .streamlit-container .markdown-text-container blockquote {
@@ -89,4 +79,8 @@
 .streamlit-container .react-json-view {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 15px;
+}
+
+.streamlit-container .alert {
+  margin: 0;
 }

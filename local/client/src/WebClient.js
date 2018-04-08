@@ -12,7 +12,6 @@ import {
 
 // Display Elements
 import DataFrame from 'streamlit-shared/lib/elements/DataFrame';
-import Div from 'streamlit-shared/lib/elements/Div';
 import Chart from 'streamlit-shared/lib/elements/Chart';
 import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
@@ -35,10 +34,10 @@ class WebClient extends PureComponent {
     // Initially the state reflects that no data has been received.
     this.state = {
       elements: fromJS([{
-        type: 'div',
-        div: {
-          text: 'Ready to receive data',
-          classes: 'alert alert-info',
+        type: 'text',
+        text: {
+          format: 8,  // info
+          body: 'Ready to receive data',
         }
       }]),
     };
@@ -60,23 +59,23 @@ class WebClient extends PureComponent {
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', 'warning')
+    this.resetState('Established connection.', /* warning */ 7);
   }
 
   /**
    * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
    *
-   * msg       - The message to display
-   * alertType - One of 'success' 'info' 'warning' 'danger'.
+   * msg    - The message to display
+   * format - One of the accepted formats from Text.proto.
    */
-  resetState(msg, alertType) {
+  resetState(msg, format) {
     this.setState({
       elements: fromJS([{
-        type: 'div',
-        div: {
-          text: msg,
-          classes: `alert alert-${alertType}`,
+        type: 'text',
+        text: {
+          format: format,
+          body: msg,
         }
       }]),
     });
@@ -96,7 +95,7 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newReport: (id) => {
-          this.resetState(`Receiving data for report ${id}.`, 'info')
+          this.resetState(`Receiving data for report ${id}.`, /* info */ 8);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -165,11 +164,8 @@ class WebClient extends PureComponent {
   renderElements(width) {
     return this.state.elements.map((element) => {
       try {
-        if (!element)
-          throw new Error('Transmission error.')
-          console.log('type is', element.get('type'))
+        if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
-          div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,

@@ -1,16 +1,15 @@
 .streamlit-container .doc-containter {
   background-color: #F0F3F9;
-  padding: 1rem;
-  /* font-family: 'IBM Plex Mono', monospace; */
+  padding: 0.5rem 1rem;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .streamlit-container .doc-header {
-  margin-bottom: 0.5em;
+  margin-bottom: 0.5rem;
 }
 
 .streamlit-container .doc-module {
   color: #444444;
-  font-size: 0.8em;
 }
 
 .streamlit-container .doc-name {
@@ -18,7 +17,6 @@
 }
 
 .streamlit-container .doc-containter .doc-string {
-  font-family: 'IBM Plex Mono', monospace;
   white-space: pre-wrap;
-  font-size: 0.6em;
+  font-size: 0.8rem;
 }
