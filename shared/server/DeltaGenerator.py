@@ -259,6 +259,24 @@ class DeltaGenerator:
         return self._new_element(set_chart)
 
     @_export_to_io
+    @_create_element
+    def image(self, element, image, caption=None, width=0):
+        """Displays an image.
+
+        Args
+        ----
+        image: image or array
+            Monochrome image of shape (w,h) or (w,h,1)
+            OR a color image of shape (w,h,3)
+        caption:
+            String caption
+        width:
+            Image width. 0 means use original width.
+        """
+        image_proto.marshall_images(image, caption, width, element.imgs)
+
+    # TODO: remove `img()`, now replaced by `image()`
+    @_export_to_io
     def img(self, imgs, caption=None, width=0):
         """Displays an image or horizontal array of images.
 

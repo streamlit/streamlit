@@ -3,8 +3,10 @@
 """Example of everything that's possible in streamlit."""
 
 # import numpy as np
-# from PIL import Image
-# import urllib, io
+from PIL import Image
+import urllib
+from io import BytesIO
+
 # import sys
 
 import inspect
@@ -109,6 +111,20 @@ io.header('Help')
 render(lambda: io.help(io))
 render(lambda: io.help(io.help))
 render(lambda: io.help(io.json))
+
+
+io.header('Image')
+
+image_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
+image_bytes = urllib.request.urlopen(image_url).read()
+@render
+def image_example():
+    image = Image.open(BytesIO(image_bytes))
+    io.image(image, caption="Sunset", width=400)
+    array = np.array(image).transpose((2, 0, 1))
+    channels = array.reshape(array.shape + (1,))
+    io.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
+
 
 io.header('Animation')
 io.write('Every `streamlit.io` method (except `io.write`) returns a handle '
