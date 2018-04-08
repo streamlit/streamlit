@@ -58,58 +58,6 @@ def dataframe_example():
         columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
     io.write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
-io.header('Charts')
-
-io.write('First let\'s prepare some data...')
-
-chart_data = pd.DataFrame(
-    np.random.randn(20, 5),
-    columns=['pv', 'uv', 'a', 'b', 'c']
-)
-
-io.markdown(f'```\n' + '''
-chart_data = pd.DataFrame(
-    np.random.randn(20, 5),
-    columns=['pv', 'uv', 'a', 'b', 'c']
-)\n```''')
-
-io.subheader('Line Chart')
-
-io.write('To plot the data above as a line chart, just do:')
-
-@render
-def chart_example1():
-    io.line_chart(chart_data)
-
-io.write('As you can see, each column in the dataframe becomes a different '
-         'line. Also, values on the _x_ axis are the dataframe\'s indices. '
-         'Which means we can customize them this way:')
-
-@render
-def chart_example2():
-    chart_data2 = pd.DataFrame(
-        np.random.randn(20, 2),
-        columns=['stock 1', 'stock 2'],
-        index=pd.date_range('1/2/2011', periods=20, freq='M')
-    )
-
-    io.line_chart(chart_data2)
-
-io.subheader('Area Chart')
-
-@render
-def chart_example3():
-    io.area_chart(chart_data)
-
-io.subheader('Bar Chart')
-
-@render
-def chart_example3():
-    io.bar_chart(chart_data[['pv', 'uv']].iloc[:10])
-
-io.write('For the bar chart above, we trimmed the data to the first 10 rows '
-         'using Pandas\'s normal `iloc` syntax.')
-
 io.header('Inline Documentation')
 io.write('Passing functions and modules into `io.write()` prints help.')
 @render
