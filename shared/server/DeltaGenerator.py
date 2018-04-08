@@ -1,6 +1,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import json
+import math
 import numpy as np
 import pandas as pd
 import textwrap
@@ -180,7 +181,7 @@ class DeltaGenerator:
         doc_string = obj.__doc__
         if doc_string is None:
             doc_string = f'No docs available.'
-        element.doc_string.doc_string = doc_string
+        element.doc_string.doc_string = remove_indent(doc_string)
 
     @_export_to_io
     @_create_element
@@ -409,6 +410,53 @@ class DeltaGenerator:
 
         self._queue(delta)
         return generator
+
+def remove_indent(text):
+    """Removes whitespace indentations from the given text
+
+    This code is from https://www.python.org/dev/peps/pep-0257/.
+
+    Args
+    ----
+    text : string
+        The input text
+
+    Returns
+    -------
+    The text without indentation.
+    """
+    if not text:
+        return ''
+
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = text.expandtabs().splitlines()
+
+    # Determine minimum indentation (first line doesn't count):
+    indent = math.inf
+
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+
+    if indent < math.inf:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+
+    # Return a single string:
+    return '\n'.join(trimmed)
+
 
 def register_chart_method(chart_type):
     """Adds a chart-building method to DeltaGenerator for a specific chart type.
