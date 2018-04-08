@@ -19,7 +19,8 @@ def render(func):
     source = inspect.getsource(func)
     if source.strip().startswith('render(lambda'):
         source = source[:-2]
-    source = textwrap.dedent(source[source.find(':')+1:]).strip()
+    source = source[source.find(':')+1:]
+    source = textwrap.dedent(source).strip()
     io.markdown(f'```\n{source}\n```')
     func()
 
@@ -36,14 +37,14 @@ io.write("Markdown is the default. "
     + " You can also pass in comma-separated values.")
 render(lambda: io.write("2 + 2 = ", 4))
 
-io.subheader('Numpy Arrays')
+io.header('Numpy Arrays')
 @render
 def numpy_example():
     import numpy as np
     a_random_array = np.random.randn(200, 200)
     io.write('A numpy array:', a_random_array)
 
-io.subheader('Pandas DataFrames')
+io.header('Pandas DataFrames')
 @render
 def dataframe_example():
     import pandas as pd
@@ -55,12 +56,11 @@ def dataframe_example():
         columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
     io.write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
-io.subheader('Getting Help')
+io.header('Inline Documentation')
 io.write('Passing functions and modules into `io.write()` prints help.')
 @render
 def help_example():
     import sys
-    io.write(sys)
     io.write(sys.exit)
 
 io.subheader('Headers')
