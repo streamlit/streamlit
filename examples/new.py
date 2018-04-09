@@ -23,6 +23,7 @@ from streamlit import io, cache
 # sys.excepthook = hook
 
 io.text('Here is some text.')
+raise RuntimeError('This was raised after the text was written.')
 io.text('Here is some text.')
 
 # def a():
