@@ -21,12 +21,12 @@ from PIL import Image
 import urllib, io
 import sys
 
-from streamlit import Notebook, Chart, LineChart, AreaChart, BarChart
+from streamlit import Report, Chart, LineChart, AreaChart, BarChart
 
-with Notebook() as write:
+with Report() as write:
     # Title.
     write('Period Table of the Elements', fmt='header', level=1)
-    write('This notebook shows some of the awesome elements of streamlit.')
+    write('This report shows some of the awesome elements of streamlit.')
 
     # Arrays
     write('Numpy Arrays', fmt='header', level=3)
@@ -167,7 +167,7 @@ import numpy as np
 import pandas as pd
 import sys
 
-from streamlit import Notebook, Chart
+from streamlit import Report, Chart
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test, print):
@@ -227,7 +227,7 @@ class MyCallback(keras.callbacks.Callback):
             dot="false", y_axis_id='acc_axis')
         return self._print.chart(epoch_chart)
 
-with Notebook() as print:
+with Report() as print:
     print.header('MNIST CNN', level=1)
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()

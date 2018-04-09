@@ -8,9 +8,35 @@ message Text {
 
   // Content format
   enum Format {
+    // Plain, fixed width text.
     PLAIN = 0;
+
+    // Markdown.
     MARKDOWN = 1;
+
+    // A JSON object. Stored as a string.
     JSON = 2;
+
+    // Corresponds to the <h1> tag.
+    TITLE = 3;
+
+    // Corresponds to the <h2> tag.
+    HEADER = 4;
+
+    // Corresponds to the <h3> tag.
+    SUB_HEADER = 5;
+
+    // Shows an error message.
+    ERROR = 6;
+
+    // Shows a warning message.
+    WARNING = 7;
+
+    // Shows an info log.
+    INFO = 8;
+
+    // Shows a success message.
+    SUCCESS = 9;
   }
   Format format = 2;
 }

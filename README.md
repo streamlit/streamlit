@@ -1,6 +1,6 @@
 # Streamlit
 
-A stateless alternative to Jupyter notebooks for machine learning and data science.
+A stateless alternative to Jupyter reports for machine learning and data science.
 
 ## Installation
 

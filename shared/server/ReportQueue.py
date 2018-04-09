@@ -1,6 +1,6 @@
 
 """
-A queue of deltas associated with a particular Notebook.
+A queue of deltas associated with a particular Report.
 Whenever possible, deltas are combined.
 """
 
@@ -9,7 +9,7 @@ import copy
 from streamlit.shared import data_frame_proto
 from streamlit.shared import protobuf
 
-class NotebookQueue:
+class ReportQueue:
     """Accumulates a bunch of deltas."""
 
     def __init__(self):
@@ -46,7 +46,7 @@ class NotebookQueue:
             await ws.send_bytes(msg.SerializeToString())
 
     def clone(self):
-        """Returns a clone of this NotebookQueue."""
+        """Returns a clone of this ReportQueue."""
         return copy.deepcopy(self)
 
     def _empty(self):

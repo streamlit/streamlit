@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// Formatted text
+message DocString {
+
+  // The name of the object.
+  string name = 1;
+
+  // The module of the object
+  string module = 2;
+
+  // The doc string a string.
+  string doc_string = 3;
+}

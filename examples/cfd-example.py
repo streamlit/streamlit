@@ -3,7 +3,7 @@ import pandas as pd
 import math
 import sys
 
-from streamlit import Notebook, Chart
+from streamlit import Report, Chart
 
 def print_vel_stats(vel):
     stats = (
@@ -168,7 +168,7 @@ def interpolate_fast(coords, field, offset):
     ])
     return (corners * coefs).sum(axis=0)
 
-with Notebook() as print:
+with Report() as print:
     print.header('CFD Example', level=1)
 
     print.header('Simulation', level=2)

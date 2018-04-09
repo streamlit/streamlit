@@ -7,6 +7,7 @@ import os
 import pickle
 import shutil
 
+from streamlit.local import io
 from streamlit.local.util import streamlit_read, streamlit_write
 from streamlit.local.util import __STREAMLIT_LOCAL_ROOT as local_root
 
@@ -16,36 +17,38 @@ def cache(func):
 
 	CACHE_PATH = '.streamlit'
 
-	# def hash(obj):
-	# 	"""Returns the md5 hash of any object."""
-	#
-
-	# 	hasher.update((obj, pickle.HIGHEST_PROTOCOL))
-	# 	return hasher.hexdigest()
-
 	def wrapped_func(*argc, **argv):
 		"""This function wrapper will only call the underlying function in
 		the case of a cache miss. Cached objects are stored in the cache/
 		directory."""
-
-		# Calculate the filename hash.
-		hasher = hashlib.new('md5')
-		hasher.update(pickle.dumps((
-			argc, argv, list(dis.get_instructions(func))),
-			pickle.HIGHEST_PROTOCOL))
-		path = f'cache/f{hasher.hexdigest()}.pickle'
-
-		# Load the file (hit) or compute the function (miss)
+		# Come up with a message to display when computing the cached function.
 		try:
-			with streamlit_read(path, binary=True) as input:
-				rv = pickle.load(input)
-				# print('%s (HIT)' % path)
-		except FileNotFoundError:
-			rv = func(*argc, **argv)
-			with streamlit_write(path, binary=True) as output:
-				pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-			# print('%s (MISS)' % path)
-		return rv
+			args = [str(arg)[:10] for arg in argc] + \
+				[f'{k}={str(v)[:10]}' for (k,v) in argv]
+			message = f'Caching:\n{func.__name__}({", ".join(args)}).'
+		except:
+			message = f'Caching:\n{func.__name__}()'
+
+		# Temporarily display this message while computing this function.
+		with io.spinner(message):
+			# Calculate the filename hash.
+			hasher = hashlib.new('md5')
+			hasher.update(pickle.dumps((
+				argc, argv, list(dis.get_instructions(func))),
+				pickle.HIGHEST_PROTOCOL))
+			path = f'cache/f{hasher.hexdigest()}.pickle'
+
+			# Load the file (hit) or compute the function (miss)
+			try:
+				with streamlit_read(path, binary=True) as input:
+					rv = pickle.load(input)
+					# print('%s (HIT)' % path)
+			except FileNotFoundError:
+				rv = func(*argc, **argv)
+				with streamlit_write(path, binary=True) as output:
+					pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
+				# print('%s (MISS)' % path)
+			return rv
 
 	# make this a well-behaved decorator by preserving important function attributes
 	try:
@@ -68,22 +71,6 @@ def clear_cache(verbose=False):
 	elif verbose:
 		print(f'Cannot clear {cache_path} directory.')
 
-# def readable_time(seconds):
-# 	"""Converts a number of seconds into a human readable amount."""
-# 	seconds = int(seconds)
-# 	minutes, seconds = seconds / 60, seconds % 60
-# 	hours  , minutes = minutes / 60, minutes % 60
-# 	days   , hours   = hours   / 24, hours   % 24
-#
-# 	if days != 0:
-# 		return '%id %ih %im %is' % (days, hours, minutes, seconds)
-# 	elif hours != 0:
-# 		return '%ih %im %is' % (hours, minutes, seconds)
-# 	elif minutes != 0:
-# 		return '%im %is' % (minutes, seconds)
-# 	else:
-# 		return '%is' % (seconds)
-#
 # def timed_iter(iterator, length=None, interval=60.0):
 # 	"""Takes an iterator and returns an iterator which prints out
 # 	estimated time remaining each interval seconds.

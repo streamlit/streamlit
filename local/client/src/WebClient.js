@@ -12,10 +12,11 @@ import {
 
 // Display Elements
 import DataFrame from 'streamlit-shared/lib/elements/DataFrame';
-import Div from 'streamlit-shared/lib/elements/Div';
 import Chart from 'streamlit-shared/lib/elements/Chart';
 import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
+import DocString from 'streamlit-shared/lib/elements/DocString';
+import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -34,10 +35,10 @@ class WebClient extends PureComponent {
     // Initially the state reflects that no data has been received.
     this.state = {
       elements: fromJS([{
-        type: 'div',
-        div: {
-          text: 'Ready to receive data',
-          classes: 'alert alert-info',
+        type: 'text',
+        text: {
+          format: 8,  // info
+          body: 'Ready to receive data',
         }
       }]),
     };
@@ -59,23 +60,23 @@ class WebClient extends PureComponent {
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', 'warning')
+    this.resetState('Established connection.', /* warning */ 7);
   }
 
   /**
-   * Resets the state of client to an empty notebook containing a single
+   * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
    *
-   * msg       - The message to display
-   * alertType - One of 'success' 'info' 'warning' 'danger'.
+   * msg    - The message to display
+   * format - One of the accepted formats from Text.proto.
    */
-  resetState(msg, alertType) {
+  resetState(msg, format) {
     this.setState({
       elements: fromJS([{
-        type: 'div',
-        div: {
-          text: msg,
-          classes: `alert alert-${alertType}`,
+        type: 'text',
+        text: {
+          format: format,
+          body: msg,
         }
       }]),
     });
@@ -94,8 +95,8 @@ class WebClient extends PureComponent {
       const msgProto = StreamlitMsg.decode(result)
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
-        newNotebook: (id) => {
-          this.resetState(`Receiving data for notebook ${id}.`, 'info')
+        newReport: (id) => {
+          this.resetState(`Receiving data for report ${id}.`, /* info */ 8);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -126,9 +127,9 @@ class WebClient extends PureComponent {
   render() {
     // Compute the websocket URI based on the pathname.
     let uri = "ws://localhost:5005/latest" // default
-    // const get_notebook = /nb\/(.*)/.exec(window.location.pathname)
-    // if (get_notebook)
-    //   uri = `ws://localhost:8554/api/get/${get_notebook[1]}`
+    // const get_report = /nb\/(.*)/.exec(window.location.pathname)
+    // if (get_report)
+    //   uri = `ws://localhost:8554/api/get/${get_report[1]}`
     // else if (window.location.pathname === '/x')
     //   uri = 'ws://localhost:8554/api/getx/'
     // // console.log(`For path=${window.location.pathname} uri=${uri}`)
@@ -137,8 +138,8 @@ class WebClient extends PureComponent {
     return (
       <div>
         <header>
-          <a class="brand" href="/">Streamlit</a>
-          <div class="connection-status">
+          <a className="brand" href="/">Streamlit</a>
+          <div className="connection-status">
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
@@ -150,8 +151,7 @@ class WebClient extends PureComponent {
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
-              {/* {this.renderElements(0)} */}
-              <AutoSizer>
+              <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
             </Col>
@@ -165,24 +165,26 @@ class WebClient extends PureComponent {
   renderElements(width) {
     return this.state.elements.map((element) => {
       try {
-        if (!element)
-          throw new Error('Transmission error.')
+        if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
-          div: (div) => <Div element={div} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
+          docString: (doc) => <DocString element={doc} width={width}/>,
+          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          empty: (empty) => undefined,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;
       }
     }).push(
       <div style={{width}} className="footer"/>
-    ).map((element, indx) => (
-      <div className="element-container" key={indx}>{element}</div>
-    ))
+    ).map((element, indx) => {
+      if (element)
+        return <div className="element-container" key={indx}>{element}</div>
+    })
   }
 }
 

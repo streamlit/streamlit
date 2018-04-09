@@ -11,8 +11,8 @@ import os
 import webbrowser
 
 from streamlit.shared import config
-from streamlit.shared.NotebookQueue import NotebookQueue
-from streamlit.shared.streamlit_msg_proto import new_notebook_msg
+from streamlit.shared.ReportQueue import ReportQueue
+from streamlit.shared.streamlit_msg_proto import new_report_msg
 from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
 
 class Proxy:
@@ -22,10 +22,10 @@ class Proxy:
         # Set up the server.
         self._app = web.Application()
         self._app.router.add_routes([
-            # Incoming endpoint to create a new notebook.
-            web.get('/new/{local_id}/{notebook_id}', self._new_stream_handler),
+            # Incoming endpoint to create a new report.
+            web.get('/new/{local_id}/{report_id}', self._new_stream_handler),
 
-            # Outgoing endpoint to get the latest notebook.
+            # Outgoing endpoint to get the latest report.
             web.get('/latest', self._latest_handler)
         ])
 
@@ -48,7 +48,7 @@ class Proxy:
         # The queue will be instantiated each time we see a new incoming
         # connection.
         self._queue = None
-        self._notebook_id = None
+        self._report_id = None
 
     def run_app(self):
         """Runs the web app."""
@@ -84,7 +84,7 @@ class Proxy:
     async def _new_stream_handler(self, request):
         # Parse out the control information.
         local_id = request.match_info.get('local_id')
-        notebook_id = request.match_info.get('notebook_id')
+        report_id = request.match_info.get('report_id')
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
@@ -93,12 +93,12 @@ class Proxy:
         # Instantiate a new queue and stream data into it.
         async for msg in streamlit_msg_iter(ws):
             msg_type = msg.WhichOneof('type')
-            if msg_type == 'new_notebook':
-                self._queue = NotebookQueue()
-                self._notebook_id = msg.new_notebook
+            if msg_type == 'new_report':
+                self._queue = ReportQueue()
+                self._report_id = msg.new_report
             elif msg_type == 'delta_list':
                 assert self._queue != None, \
-                    'The protocol prohibits delta_list before new_notebook.'
+                    'The protocol prohibits delta_list before new_report.'
                 for delta in msg.delta_list.deltas:
                     self._queue(delta)
             else:
@@ -116,15 +116,15 @@ class Proxy:
         await ws.prepare(request)
 
         try:
-            current_notebook_id = self._notebook_id
+            current_report_id = self._report_id
             while True:
                 # See if the queue has changed.
-                if self._notebook_id != current_notebook_id:
-                    current_notebook_id = self._notebook_id
-                    await new_notebook_msg(current_notebook_id, ws)
+                if self._report_id != current_report_id:
+                    current_report_id = self._report_id
+                    await new_report_msg(current_report_id, ws)
 
                 # See if we got any new deltas and send them across the wire.
-                if current_notebook_id != None:
+                if current_report_id != None:
                     await self._queue.flush_deltas(ws)
 
                 # Watch for a CLOSE method as we sleep for throttle_secs.

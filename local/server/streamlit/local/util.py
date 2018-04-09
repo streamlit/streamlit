@@ -90,6 +90,29 @@ def streamlit_write(path, binary=False):
     with open(path, mode) as handle:
         yield handle
 
+def escape_markdown(raw_string):
+    """Returns a new string which escapes all markdown metacharacters.
+
+    Args
+    ----
+    raw_string : string
+        A string, possibly with markdown metacharacters, e.g. "1 * 2"
+
+    Returns
+    -------
+    A string with all metacharacters escaped.
+
+    Examples
+    --------
+    ::
+        escape_markdown("1 * 2") -> "1 \* 2"
+    """
+    metacharacters = ['\\', '*', '-', '=', '`', '!', '#', '|']
+    result = raw_string
+    for character in metacharacters:
+        result = result.replace(character, '\\' + character)
+    return result
+
 # def __get_config():
 #     """Gets the local config file."""
 #     if not __LOCAL_CONFIG:

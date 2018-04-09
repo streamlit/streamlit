@@ -12,6 +12,12 @@ body {
   font-family: 'IBM Plex Sans', sans-serif;
   color: #101620;
   font-size: 17px;
+  line-height: 1.6;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
 }
 
 a,
@@ -32,21 +38,25 @@ h1, .h1 {
   margin: 2.5rem 0 0 0;
 }
 
+h1:first-child, .h1:first-child {
+  margin-top: 0;
+}
+
 h2, .h2 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 2.0rem;
-  margin: 1rem 0 0 0;
+  margin: 3rem 0 0 0;
 }
 
-h3, .h3 {
+/* h3, .h3 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 1.5rem;
   margin: 1rem 0 0 0;
-}
+} */
 
-h4, .h4 {
+h3, .h3 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   font-size: 1.25rem;

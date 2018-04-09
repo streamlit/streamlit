@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+// A python empty.
+message Empty {
+  bool unused = 1;
+}

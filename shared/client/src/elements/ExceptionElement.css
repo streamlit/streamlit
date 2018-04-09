@@ -1,0 +1,23 @@
+.streamlit-container .exception {
+  /* height: 400px; */
+  /* background-color: #F0F3F9;
+  padding: 0.5rem 1rem;*/
+}
+
+.streamlit-container .exception .message {
+  /* padding-bottom: 0.5rem; */
+  margin-bottom: 0.5rem;
+  /* border-bottom: 1px solid #E6E9EF; */
+  /* font-weight: bold; */
+}
+
+.streamlit-container .exception .stack-trace {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  margin-left: 1.0rem;
+  margin-right: 1.0rem;
+}
+
+.streamlit-container .exception .stack-trace .row {
+  margin-top: 0.5rem;
+}

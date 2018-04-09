@@ -6,6 +6,7 @@ import React, { PureComponent} from 'react';
 import ReactMarkdown from 'react-markdown';
 import ReactJson from 'react-json-view';
 import { Alert }  from 'reactstrap';
+import { Text as TextProto } from 'streamlit-shared/lib/protobuf/streamlit';
 import './Text.css';
 
  /**
@@ -14,19 +15,28 @@ import './Text.css';
 class Text extends PureComponent {
   render() {
     const {element, width} = this.props;
+    const body = element.get('body');
+    const format = element.get('format');
 
-    switch (element.get('format')) {
-
-      case 1: // Text.Format["markdown"]
+    switch (format) {
+      // Plain, fixed width text.
+      case TextProto.Format.PLAIN:
         return (
-          <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={element.get('body')} />
+          <div className="fixed-width" style={{width}}>
+            {body}
           </div>
         );
-        break;
 
-      case 2: // Text.Format["json"]
-        const body = element.get('body')
+      // Markdown.
+      case TextProto.Format.MARKDOWN:
+        return (
+          <div className="markdown-text-container" style={{width}}>
+            <ReactMarkdown source={body} />
+          </div>
+        );
+
+      // A JSON object. Stored as a string.
+      case TextProto.Format.JSON:
         let bodyObject = undefined;
         try {
           bodyObject = JSON.parse(body)
@@ -52,16 +62,46 @@ class Text extends PureComponent {
         return (
           <div className="json-text-container" style={{width}}>
             <ReactJson
-                src={bodyObject}
-                displayDataTypes={false}
-                displayObjectSize={false}
-                name={false}
-                style={{font: ""}}  // Unset so we can style via a CSS file.
-                />
+              src={bodyObject}
+              displayDataTypes={false}
+              displayObjectSize={false}
+              name={false}
+              style={{font: ""}}  // Unset so we can style via a CSS file.
+            />
           </div>
         );
-        break;
 
+      case TextProto.Format.TITLE:
+      case TextProto.Format.HEADER:
+      case TextProto.Format.SUB_HEADER:
+        const className = {
+          [TextProto.Format.TITLE]: 'h1',
+          [TextProto.Format.HEADER]: 'h2',
+          [TextProto.Format.SUB_HEADER]: 'h3',
+        }[format]
+        return (
+          <div className={className} style={{width}}>
+            {body}
+          </div>
+        );
+
+      case TextProto.Format.ERROR:
+      case TextProto.Format.WARNING:
+      case TextProto.Format.INFO:
+      case TextProto.Format.SUCCESS:
+        const alertType = {
+          [TextProto.Format.ERROR]: 'alert-danger',
+          [TextProto.Format.WARNING]: 'alert-warning',
+          [TextProto.Format.INFO]: 'alert-info',
+          [TextProto.Format.SUCCESS]: 'alert-success',
+        }[format];
+        return (
+          <div className={`alert ${alertType}`} style={{width}}>
+            {body}
+          </div>
+        );
+
+      // Default
       default:
         return (
           <Alert color="danger" style={{width}}>
@@ -71,5 +111,4 @@ class Text extends PureComponent {
     }
   }
 }
-
 export default Text;

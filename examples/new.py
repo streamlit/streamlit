@@ -1,3 +1,5 @@
+#!./streamlit_run
+
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -6,22 +8,19 @@ import sys
 import time
 import random
 
-import streamlit
-from streamlit import Notebook
+from streamlit import io, cache
 
-@streamlit.cache
-def long_running_identity(x):
-    time.sleep(2)
-    return x * 2
+@cache
+def tester(x):
+    io.write(f'computing `tester({x})`')
+    if bool(random.randint(0,1)):
+        raise RuntimeError('Exception at ' + str(x))
+    return x
 
-with Notebook() as write:
-    write('hello world')
-    write('123', long_running_identity('123456'))
-
-# with Notebook() as write:
-#     write('hello world')
-#     an_array = np.random.randn(200, 200)
-#     write(an_array)
-#     write.alert('About to run a long-running function.')
-#     write('result:', long_running_identity(12345))
-#     write('pwd', os.getcwd())
+for i in range(10):
+    for j in range(3):
+        io.write(f'i={i} j={j}')
+        try:
+            io.write(tester(i))
+        except Exception as e:
+            io.exception(e)
