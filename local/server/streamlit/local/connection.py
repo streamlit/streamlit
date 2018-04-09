@@ -99,14 +99,6 @@ class Connection:
         adding new elements."""
         return self._delta_generator
 
-    # def __enter__(self):
-    #     """Opens up the context for this report so that the user can write."""
-    #     return self._context_manager.__enter__()
-    #
-    # def __exit__(self, exc_type, exc_val, exc_tb):
-    #     """Closes down the context for this report."""
-    #     self._context_manager.__exit__(exc_type, exc_val, exc_tb)
-
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
@@ -183,31 +175,3 @@ class Connection:
             await self._queue.flush_deltas(ws)
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_deltas(ws)
-
-    # @contextlib.contextmanager
-    # def _get_context_manager(self):
-    #     """Returns a context manager for this Report which will be invoked
-    #     when we say:
-    #
-    #     with Report() as write:
-    #         ...
-    #     """
-    #     try:
-    #         # Open a connection to the proxy.
-    #         loop = self._connect_to_proxy()
-    #
-    #         # Create the DeltaGenerator
-    #         enqueue_delta = lambda d:
-    #
-    #
-    #         # Yield the DeltaGenerator as the write function.
-    #         try:
-    #             yield delta_generator
-    #         except:
-    #             exc_type, exc_val, tb = sys.exc_info()
-    #             tb_list = traceback.format_list(traceback.extract_tb(tb))
-    #             tb_list.append(f'{exc_type.__name__}: {exc_val}')
-    #             delta_generator.alert('\n'.join(tb_list))
-    #
-    #     finally:
-    #         # Close the local webserver.

@@ -86,29 +86,17 @@ class Text extends PureComponent {
         );
 
       case TextProto.Format.ERROR:
-        return (
-          <div className="alert alert-danger" style={{width}}>
-            {body}
-          </div>
-        );
-
       case TextProto.Format.WARNING:
-        return (
-          <div className="alert alert-warning" style={{width}}>
-            {body}
-          </div>
-        );
-
       case TextProto.Format.INFO:
-        return (
-          <div className="alert alert-info" style={{width}}>
-            {body}
-          </div>
-        );
-
       case TextProto.Format.SUCCESS:
+        const alertType = {
+          [TextProto.Format.ERROR]: 'alert-danger',
+          [TextProto.Format.WARNING]: 'alert-warning',
+          [TextProto.Format.INFO]: 'alert-info',
+          [TextProto.Format.SUCCESS]: 'alert-success',
+        }[format];
         return (
-          <div className="alert alert-success" style={{width}}>
+          <div className={`alert ${alertType}`} style={{width}}>
             {body}
           </div>
         );

@@ -22,17 +22,8 @@ from streamlit import io, cache
 # old_hook = sys.excepthook
 # sys.excepthook = hook
 
-io.text('Here is some text.')
-raise RuntimeError('This was raised after the text was written.')
-io.text('Here is some text.')
+# io.text('Here is some text.')
+# raise RuntimeError('This was raised after the text was written.')
+# io.text('Here is some text.')
 
-# def a():
-#     b()
-#
-# def b():
-#     raise RuntimeError('This is a test.')
-#
-# try:
-#     a()
-# except Exception as e:
-#     io.write('We got an exception:', e)
+io.json("{")
