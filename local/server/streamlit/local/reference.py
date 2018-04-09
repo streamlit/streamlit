@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import textwrap
 
+import streamlit
 from streamlit import io
 
 def render(func):
@@ -201,7 +202,7 @@ def display_reference():
 
     io.header('Help')
 
-    render(lambda: io.help(io.write))
+    render(lambda: io.help(dir))
 
     io.header('Out-of-Order Writing')
 
@@ -222,6 +223,32 @@ def display_reference():
             raise RuntimeError('An exception')
         except Exception as e:
             io.exception(e)
+
+    io.header('Lengthy Computations')
+    io.write("""
+        If you're repeatedly running length computations, try caching the
+        solution.
+
+        ```python
+        @streamlit.cache
+        def lengthy_computation(...):
+            ...
+
+        # This runs quickly.
+        answer = lengthy_computation(...)
+        ```
+        **Note**: Using `streamlit.cache` requires that the function output
+        depend only on its input arguments.
+    """)
+    io.subheader('Spinners')
+    io.write('A visual way of showing long computation is with a spinner:')
+    lengthy_computation = lambda: None # noop for demsontration purposes
+    @render
+    def spinner_example():
+        with io.spinner('Computing something time consuming...'):
+            lengthy_computation()
+            import time
+            time.sleep(5)
 
     io.header('Animation')
     io.write(
