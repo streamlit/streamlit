@@ -217,6 +217,7 @@ def display_reference():
 
 
     io.header('Exceptions')
+    io.write('You can print out exceptions using `io.exception()`:')
     @render
     def exception_example():
         try:
@@ -237,8 +238,9 @@ def display_reference():
         # This runs quickly.
         answer = lengthy_computation(...)
         ```
-        **Note**: Using `streamlit.cache` requires that the function output
-        depend only on its input arguments.
+        **Note**: `@streamlit.cache` requires that the function output
+        depends *only* on its input arguments. For example, you can cache
+        calls to API endpoints, but only do so if the data you get won't change.
     """)
     io.subheader('Spinners')
     io.write('A visual way of showing long computation is with a spinner:')

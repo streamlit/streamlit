@@ -10,23 +10,17 @@ import random
 
 from streamlit import io, cache
 
-# def hook(exctype, value, tb):
-#     sys.excepthook = old_hook
-#     io.text(exctype.__name__)
-#     # io.json(dir(value))
-#     # io.write(value)
-#     # print(list(traceback))
-#     # io.help(type(traceback))
-#     # io.text(traceback.extract_stack(traceback.extract_tb(tb)))
-#     io.json(traceback.format_list(traceback.extract_tb(tb)))
-# old_hook = sys.excepthook
-# sys.excepthook = hook
+@cache
+def tester(x):
+    io.write(f'computing `tester({x})`')
+    if bool(random.randint(0,1)):
+        raise RuntimeError('Exception at ' + str(x))
+    return x
 
-# io.text('Here is some text.')
-# raise RuntimeError('This was raised after the text was written.')
-# io.text('Here is some text.')
-
-with io.spinner('Doing something for a long time...'):
-    io.write('Hello world.')
-    time.sleep(5)
-io.success('Done')
+for i in range(10):
+    for j in range(3):
+        io.write(f'i={i} j={j}')
+        try:
+            io.write(tester(i))
+        except Exception as e:
+            io.exception(e)
