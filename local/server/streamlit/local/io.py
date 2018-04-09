@@ -1,6 +1,7 @@
 """This package contains all functions which the user can use to
 create new elements in a Report."""
 
+import contextlib
 import numpy as np
 import pandas as pd
 import sys
@@ -109,3 +110,26 @@ def write(*args):
         flush_buffer()
     except Exception as e:
         exception(e)
+
+@contextlib.contextmanager
+def spinner(text):
+    """Temporarily displays a message while executing a block of code.
+
+    Args
+    ----
+    text : string
+        A message to display while executing that block
+
+    Examples
+    --------
+    ::
+
+        with io.spinner('Wait for it...'):
+            time.sleep(5)
+        io.success('Done!')
+    """
+    try:
+        message = warning(text)
+        yield
+    finally:
+        message.empty()

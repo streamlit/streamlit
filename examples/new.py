@@ -26,12 +26,7 @@ from streamlit import io, cache
 # raise RuntimeError('This was raised after the text was written.')
 # io.text('Here is some text.')
 
-io.write('Hello world.')
-io.help(sys.excepthook)
-io.write('About to do an exception')
-def a():
-    b()
-def b():
-    io.exception(RuntimeError('Hello world'))
-a()
-io.write('Just called a()')
+with io.spinner('Doing something for a long time...'):
+    io.write('Hello world.')
+    time.sleep(5)
+io.success('Done')

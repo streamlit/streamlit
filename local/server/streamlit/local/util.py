@@ -107,8 +107,7 @@ def escape_markdown(raw_string):
     ::
         escape_markdown("1 * 2") -> "1 \* 2"
     """
-    metacharacters = ['\\', '*', '_', '-', '=', '`', '[', '(', '!',
-        '#', '|']
+    metacharacters = ['\\', '*', '-', '=', '`', '!', '#', '|']
     result = raw_string
     for character in metacharacters:
         result = result.replace(character, '\\' + character)
