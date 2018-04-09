@@ -41,9 +41,10 @@ def display_reference():
     @render
     def write_example():
         from streamlit import io
-        io.write(
-            'The `write` function is Streamlit\'s bread and butter. You can use '
-            'it to write _markdown-formatted_ text in your Streamlit report.')
+        io.write("""
+            The `write` function is Streamlit\'s bread and butter. You can use
+            it to write _markdown-formatted_ text in your Streamlit report.
+        """)
 
     @render
     def write_example2():

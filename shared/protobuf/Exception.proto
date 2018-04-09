@@ -3,9 +3,12 @@ syntax = "proto3";
 // A python exception.
 message Exception {
 
-  // The tupe of the exception.
+  // The type of the exception.
   string type = 1;
 
+  // The exception's message:
+  string message = 2;
+
   // The stack trace to print.
-  repeated string stack_trace = 2;
+  repeated string stack_trace = 3;
 }

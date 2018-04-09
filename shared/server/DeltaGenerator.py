@@ -186,6 +186,7 @@ class DeltaGenerator:
         """
         tb = traceback.extract_tb(exception.__traceback__)
         element.exception.type = type(exception).__name__
+        element.exception.message = str(exception)
         element.exception.stack_trace.extend(traceback.format_list(tb))
 
     @_export_to_io

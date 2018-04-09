@@ -77,20 +77,30 @@ class Connection:
         if cls._connection == None:
             print('Instantiating the singleton connection.')
             # Create the new connection.
-            cls._connection = Connection()
-            cls._connection._connect_to_proxy()
-
-            # When the current thread closes, then close down the connection.
-            current_thread = threading.current_thread()
-            def cleanup_on_exit():
-                current_thread.join()
-                print('The parent thread has closed. CLEANING UP')
-                cls._connection._loop.call_soon_threadsafe(setattr,
-                    cls._connection, '_is_open', False)
-            threading.Thread(target=cleanup_on_exit, daemon=False).start()
+            Connection().register()
 
         # Now that we're sure to have a connection, return it.
         return cls._connection
+
+    def register(self):
+        """Sets up this connection to be the singelton connection."""
+        assert type(self)._connection == None, \
+            'Cannot register two connections'
+        type(self)._connection = self
+        self._connect_to_proxy()
+
+        # When the current thread closes, then close down the connection.
+        current_thread = threading.current_thread()
+        def cleanup_on_exit():
+            current_thread.join()
+            print('The parent thread has closed. CLEANING UP')
+            self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
+        threading.Thread(target=cleanup_on_exit, daemon=False).start()
+
+    @_assert_singleton
+    def unregister(self):
+        """Removes this connection from being the singleton connection."""
+        Connection._connection = None
 
     @_assert_singleton
     def get_delta_generator(self):
@@ -112,7 +122,7 @@ class Connection:
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
             print('Naturally closed the connection.')
-            Connection._connection = None
+            self.unregister()
         threading.Thread(target=connection_thread, daemon=False).start()
 
     @_assert_singleton_async

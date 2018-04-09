@@ -26,4 +26,5 @@ from streamlit import io, cache
 # raise RuntimeError('This was raised after the text was written.')
 # io.text('Here is some text.')
 
-io.json("{")
+io.help(0)
+io.write('Hello world.')
