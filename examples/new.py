@@ -26,5 +26,11 @@ from streamlit import io, cache
 # raise RuntimeError('This was raised after the text was written.')
 # io.text('Here is some text.')
 
-io.help(0)
 io.write('Hello world.')
+io.help(sys.excepthook)
+io.write('About to do an exception')
+def a():
+    b()
+def b():
+    raise RuntimeError('Hello world')
+a()

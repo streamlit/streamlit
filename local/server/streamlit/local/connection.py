@@ -84,16 +84,25 @@ class Connection:
 
     def register(self):
         """Sets up this connection to be the singelton connection."""
+        # Establish this connection and connect to the proxy server.
         assert type(self)._connection == None, \
             'Cannot register two connections'
         type(self)._connection = self
         self._connect_to_proxy()
+
+        # Override the default exception handler.
+        original_excepthook = sys.excepthook
+        def streamlit_excepthook(exc_type, exc_value, exc_tb):
+            self.get_delta_generator().exception(exc_value)
+            original_excepthook(exc_type, exc_value, exc_tb)
+        sys.excepthook = streamlit_excepthook
 
         # When the current thread closes, then close down the connection.
         current_thread = threading.current_thread()
         def cleanup_on_exit():
             current_thread.join()
             print('The parent thread has closed. CLEANING UP')
+            sys.excepthook = original_excepthook
             self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
         threading.Thread(target=cleanup_on_exit, daemon=False).start()
 
