@@ -32,5 +32,6 @@ io.write('About to do an exception')
 def a():
     b()
 def b():
-    raise RuntimeError('Hello world')
+    io.exception(RuntimeError('Hello world'))
 a()
+io.write('Just called a()')

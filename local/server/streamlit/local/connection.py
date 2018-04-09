@@ -6,6 +6,7 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 import asyncio
 import bson
+import os
 import sys
 import threading
 import traceback
@@ -75,7 +76,6 @@ class Connection:
         necessary."""
         # Instantiate the singleton connection if necessary.
         if cls._connection == None:
-            print('Instantiating the singleton connection.')
             # Create the new connection.
             Connection().register()
 
@@ -101,7 +101,6 @@ class Connection:
         current_thread = threading.current_thread()
         def cleanup_on_exit():
             current_thread.join()
-            print('The parent thread has closed. CLEANING UP')
             sys.excepthook = original_excepthook
             self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
         threading.Thread(target=cleanup_on_exit, daemon=False).start()
@@ -130,7 +129,6 @@ class Connection:
         def connection_thread():
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
-            print('Naturally closed the connection.')
             self.unregister()
         threading.Thread(target=connection_thread, daemon=False).start()
 
@@ -174,13 +172,8 @@ class Connection:
     async def _launch_proxy(self):
         """Launches the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
-        print('about to launch the proxy in a separate process', __file__)
-        import os
         os.system('python -m streamlit.local.Proxy &')
-        print('launched the proxy in a separate process.')
-        print('sleeping while waiting for the proxy', wait_for_proxy_secs)
         await asyncio.sleep(wait_for_proxy_secs)
-        print('Finished sleeping.')
 
     @_assert_singleton_async
     async def _transmit_through_websocket(self, ws):
