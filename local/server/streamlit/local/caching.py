@@ -69,7 +69,7 @@ def clear_cache(verbose=False):
 		if verbose:
 			print(f'Cleared {cache_path} directory.')
 	elif verbose:
-		print(f'Cannot clear {cache_path} directory.')
+		print(f'No such directory {cache_path} so nothing to clear. :)')
 
 # def timed_iter(iterator, length=None, interval=60.0):
 # 	"""Takes an iterator and returns an iterator which prints out

@@ -66,7 +66,7 @@ make production
 
 ## How to publish a new version of the code to `PyPi`
 
-- The current version is `0.5.0`
+- The current version is `0.6.0`
 - Write new release notes.
 - Update the version in the following locations:
   - `readme.md`
@@ -86,7 +86,7 @@ make all
 ```
 - Test that everything is running properly with:
 ```
-PYTHONPATH=local/server python examples/periodic_table.py
+./streamlit_run -m streamlit help
 ```
 - Run the following commands:
 ```
@@ -96,8 +96,10 @@ make package
 - Go into a temp directory (parallel to `streamlet-cloud`) and execute the following:
 ```
 pip install --upgrade ../streamlet-cloud/dist
-cp ../streamlet-cloud/examples/periodic_table.py ./
-python periodic_table.py
+python -m streamlit clear_cache
+python -m streamlit clear_cache
+python -m streamlit help
+python -m streamlit help
 python -m streamlit clear_cache
 ```
 - Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
@@ -108,6 +110,71 @@ make distribute
 - Create and push a branch for this version.
 
 ## Release Notes
+
+#### v0.6
+April 9, 2018
+
+```
+We are thrilled to announce the v0.6 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade streamlit
+
+Streamlit now has a built-in help manual! To access it run:
+
+    python -m streamlit help
+
+Other new features include:
+
+1. Streamlit functions are available globally in the `io` package. For example:
+
+    from streamlit import io
+    io.write('Hello world.')
+
+2. Markdown is now the default for write(). Try:
+
+    io.write('*Italics* **Bold** `Fixed-width`')
+    io.text('This is fixed-width text.')
+
+3. We simplified the header functions. Try:
+
+    io.title('A big header.')
+    io.header('A smaller header.')
+    io.subheader('An even smaller header.')
+
+4. We simplified alerts with the following four new functions:
+
+    io.error('OMG!')
+    io.warning('OMG!')
+    io.info('OMG!')
+    io.success('OMG!')
+
+5. You can now pretty-print your own exceptions:
+
+    io.exception(my_exception)
+
+6. You can now get help on any function, class or package using io.help(). For
+   example, for help with with Python's print() function, use:
+
+    io.help(print)
+
+7. We support out-of-order printing with the empty() function. For example,
+   to print the first three letters of the alphabet you can do:
+
+    io.markdown('A')
+    placeholder = io.empty()
+    io.markdown('C')
+    placeholder.markdown('B')
+
+8. Show the user something during a long-running computation as follows:
+
+    with spinner(‘wait for it...'):
+      long_computation()
+
+    (You can also use the @streamlit.cache decorator to speed these up!)
+
+Remember if you get lost, just run `python -m streamlit help`. We look forward
+to hearing how you use these powerful new features!
+```
 
 #### v0.5
 April 4, 2018

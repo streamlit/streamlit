@@ -145,20 +145,26 @@ def display_reference():
 
     io.header('Visualizing data as images')
 
+    @streamlit.cache
+    def read_image(url):
+        return urllib.request.urlopen(url).read()
     image_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
-    image_bytes = urllib.request.urlopen(image_url).read()
+    try:
+        image_bytes = read_image(image_url)
 
-    @render
-    def image_example():
-        image = Image.open(BytesIO(image_bytes))
+        @render
+        def image_example():
+            image = Image.open(BytesIO(image_bytes))
 
-        io.image(image, caption="Sunset", width=400)
+            io.image(image, caption="Sunset", width=400)
 
-        array = np.array(image).transpose((2, 0, 1))
-        channels = array.reshape(array.shape + (1,))
+            array = np.array(image).transpose((2, 0, 1))
+            channels = array.reshape(array.shape + (1,))
 
-        io.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
-
+            io.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
+    except urllib.error.URLError:
+        io.error(f'Unable to load image from {image_url}. '
+            'Is the internet connected?')
 
     io.header('Inserting headers')
 
@@ -249,8 +255,6 @@ def display_reference():
     def spinner_example():
         with io.spinner('Computing something time consuming...'):
             lengthy_computation()
-            import time
-            time.sleep(5)
 
     io.header('Animation')
     io.write(
