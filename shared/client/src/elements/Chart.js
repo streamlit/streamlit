@@ -118,6 +118,8 @@ class Chart extends PureComponent {
           indexTransform = date => date.getTime()
           tickFormatter = millis => format.durationToString(new Duration(millis));
           break;
+        case 'float_64Index':
+          tickFormatter = float => float.toFixed(2);
       }
 
       for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
