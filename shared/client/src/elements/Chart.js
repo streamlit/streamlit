@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit-shared/lib/dataFrameProto';
-import { format } from '../format';
+import { format, Duration } from '../format';
 
 import * as recharts from 'recharts';
 
@@ -108,12 +108,13 @@ class Chart extends PureComponent {
       let indexTransform = undefined
       // transform to human readable tick, e.g. to support Date
       let tickFormatter = undefined
+      console.log(`Chart.render() the indexType is ${indexType}`)
       switch (indexType) {
         case 'datetimeIndex':
           indexTransform = date => date.getTime()
           tickFormatter = millis => format.dateToString(new Date(millis));
           break;
-        case 'datetimeIndex':
+        case 'timedeltaIndex':
           indexTransform = date => date.getTime()
           tickFormatter = millis => format.durationToString(new Duration(millis));
           break;

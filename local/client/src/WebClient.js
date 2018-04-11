@@ -181,9 +181,11 @@ class WebClient extends PureComponent {
       }
     }).push(
       <div style={{width}} className="footer"/>
-    ).map((element, indx) => {
+    ).flatMap((element, indx) => {
       if (element)
-        return <div className="element-container" key={indx}>{element}</div>
+        return [<div className="element-container" key={indx}>{element}</div>]
+      else
+        return []
     })
   }
 }

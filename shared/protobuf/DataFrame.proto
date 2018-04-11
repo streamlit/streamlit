@@ -25,7 +25,7 @@ message Index {
     // PeriodIndex period_index = 8;
     Int64Index int_64_index = 9;
     // UInt64Index uint_64_index = 10;
-    // Float64Index float_64_index = 11;
+    Float64Index float_64_index = 11;
   }
 }
 
@@ -64,12 +64,6 @@ message MultiIndex {
   // bool verify_integrity = 6;
 }
 
-// See:
-// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
-message Int64Index {
-  Int64Array data = 1;
-}
-
 // A date represented internally as nano second epoch int64. See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
 message DatetimeIndex {
@@ -80,6 +74,18 @@ message DatetimeIndex {
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.TimedeltaIndex.html
 message TimedeltaIndex {
   Int64Array data = 1;
+}
+
+// See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
+message Int64Index {
+  Int64Array data = 1;
+}
+
+// See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
+message Float64Index {
+  DoubleArray data = 1;
 }
 
 message StringArray {

@@ -65,7 +65,7 @@ init:
 # Counts the number of lines of code in the project
 loc:
 	find . -iname '*.py' -or -iname '*.js'  | \
-		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)" | \
+		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)|(dist\/)" | \
 		xargs wc
 
 # Makes a distribution for PIP installation.

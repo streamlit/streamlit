@@ -27,16 +27,14 @@ def marshall_index(pandas_index, proto_index):
     """
     if type(pandas_index) == pd.Index:
         marshall_any_array(pandas_index.data, proto_index.plain_index.data)
+    elif type(pandas_index) == pd.RangeIndex:
+        proto_index.range_index.start = pandas_index.min()
+        proto_index.range_index.stop = pandas_index.max() + 1
     elif type(pandas_index) == pd.MultiIndex:
         for level in pandas_index.levels:
             marshall_index(level, proto_index.multi_index.levels.add())
         for label in pandas_index.labels:
             proto_index.multi_index.labels.add().data.extend(label)
-    elif type(pandas_index) == pd.RangeIndex:
-        proto_index.range_index.start = pandas_index.min()
-        proto_index.range_index.stop = pandas_index.max() + 1
-    elif type(pandas_index) == pd.Int64Index:
-        proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.DatetimeIndex:
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
@@ -44,6 +42,10 @@ def marshall_index(pandas_index, proto_index):
         proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.TimedeltaIndex:
         proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
+    elif type(pandas_index) == pd.Int64Index:
+        proto_index.int_64_index.data.data.extend(pandas_index)
+    elif type(pandas_index) == pd.Float64Index:
+        proto_index.float_64_index.data.data.extend(pandas_index)
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
 

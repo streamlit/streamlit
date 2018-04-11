@@ -34,6 +34,7 @@ export function indexGetLevelsAndLength(index) {
     multiIndex: (idx) => (idx.get('labels').size === 0 ? [0, 0] :
       [idx.get('labels').size, idx.getIn(['labels', 0, 'data']).size]),
     int_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
+    float_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
     datetimeIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
     timedeltaIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
   });
@@ -55,6 +56,7 @@ export function indexGet(index, level, i) {
       return indexGet(levels, 0, labels.getIn(['data', i]));
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
+    float_64Index: (idx) => idx.getIn(['data', 'data', i]),
     datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
     timedeltaIndex: (idx) => format.nanosToDuration(idx.getIn(['data', 'data', i])),
   });
@@ -132,6 +134,8 @@ function concatIndex(index1, index2) {
     // multiIndex: <not supported>,
     int_64Index: (idx) => idx.updateIn(['data', 'data'], (data) => (
         data.concat(index2.getIn(['int_64Index', 'data', 'data'])))),
+    float_64Index: (idx) => idx.updateIn(['data', 'data'], (data) => (
+        data.concat(index2.getIn(['float_64Index', 'data', 'data'])))),
     datetimeIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
         data.concat(index2.getIn(['datetimeIndex', 'data', 'data'])))),
     timedeltaIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
@@ -186,6 +190,7 @@ function indexLen(index) {
     multiIndex:  (idx) => ( idx.get('labels').size === 0 ? 0 :
                             idx.getIn(['labels', 0]).size ),
     int_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
+    float_64Index: (idx) => ( idx.getIn(['data', 'data']).size ),
     datetimeIndex: (idx) => ( idx.getIn(['data', 'data']).size ),
     timedeltaIndex: (idx) => ( idx.getIn(['data', 'data']).size ),
   });
