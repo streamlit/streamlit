@@ -12,6 +12,11 @@ from streamlit.local.connection import get_delta_generator
 from streamlit.local.util import escape_markdown
 from streamlit.shared.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
+# Estabish the connection with the server so that any exceptions when parsing
+# the rest of the script will be written to the streamlit server. We do this
+# by calling `get_delta_generator` which implicitly calls the generator.
+get_delta_generator()
+
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
 # singleton connection object (in streamlit.local.connection) and then

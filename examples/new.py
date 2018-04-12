@@ -1,29 +1,41 @@
 #!./streamlit_run
 
-from streamlit import io, cache
-import numpy as np
+from streamlit import io
 import pandas as pd
+import string, random
 
-histogram_ref = 'https://docs.scipy.org/doc/numpy-1.12.0/reference/generated/numpy.histogram.html'
 
-io.write("Here's some fake data, normally distributed.")
-data = np.random.randn(4000)
-freq, bins = np.histogram(data, bins=20)
-# io.write(freq)
-# io.write(bins)
-hist = pd.DataFrame(np.array([freq, bins[:-1]]).T, columns=['freq', 'bins'])
-hist = hist.set_index('bins')
-# hist.index = pd.date_range('1/2/2011', periods=20, freq='M')
-# hist.index = hist.index - hist.index[0]
+import os, datetime
+def time_command(cmd):
+    print(cmd)
+    # return 1.2
+    start_time = datetime.datetime.now()
+    os.system(cmd)
+    end_time = datetime.datetime.now()
+    delta = end_time - start_time
+    return delta.total_seconds()
 
-io.write(hist)
-io.bar_chart(hist)
+#
+#
+# data = []
+# for i in range(100):
+#     index = ''.join(random.choice(string.ascii_lowercase) for i in range(50))
+#     value = random.gauss(0, 1)
+#     data.append((index, value))
+# data = pd.DataFrame(data).set_index(0)
+# io.write(data)
 
-# io.write(freq)
-# io.write(bins)
-# io.write(freq.shape)
-# io.write(bins.shape)
-# # hist = np.array(list(hist))
-# # io.write(hist.dtype)
-# # hist = pd.DataFrame()
-# # io.write(hist)
+print('starting..')
+# time_command(f'./streamlit_run report.py 10')
+data = []
+for indices in range(10, 5100, 100):
+    data.append((indices, time_command(f'./streamlit_run report.py {indices}')))
+import time
+time.sleep(5)
+data = pd.DataFrame(data, columns=['indices', 'seconds']).set_index('indices')
+io.title('How long does it take to send data?')
+io.write(time_command('sleep 1'))
+io.write(data)
+io.line_chart(data)
+
+data = [ ]
