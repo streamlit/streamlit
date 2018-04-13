@@ -60,7 +60,6 @@ init:
 	cd shared ; make init
 	cd local/client ; npm install
 	test -e $(STREAMLIT_SHARED_LOCAL_LIB) || ln -sv ../../../shared/client $(STREAMLIT_SHARED_LOCAL_LIB)
-	@echo Please add `pwd`/local/server to your PYTHONPATH.
 
 # Counts the number of lines of code in the project
 loc:
