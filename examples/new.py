@@ -4,6 +4,7 @@ from streamlit import io
 import pandas as pd
 import string, random
 
+io.write('Hello, World!')
 
 
 # import os, datetime

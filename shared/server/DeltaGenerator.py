@@ -88,7 +88,7 @@ class DeltaGenerator:
         -------
         A DeltaGenerator object which allows you to overwrite this element.
         """
-        element.text.body = string
+        element.text.body = str(string)
         element.text.format = protobuf.Text.TITLE
 
     @_export_to_io
@@ -105,7 +105,7 @@ class DeltaGenerator:
         -------
         A DeltaGenerator object which allows you to overwrite this element.
         """
-        element.text.body = string
+        element.text.body = str(string)
         element.text.format = protobuf.Text.HEADER
 
     @_export_to_io
@@ -122,7 +122,7 @@ class DeltaGenerator:
         -------
         A DeltaGenerator object which allows you to overwrite this element.
         """
-        element.text.body = string
+        element.text.body = str(string)
         element.text.format = protobuf.Text.SUB_HEADER
 
     @_export_to_io
@@ -200,7 +200,7 @@ class DeltaGenerator:
         body: str
             The text to display. Can include newlines.
         """
-        element.text.body = body
+        element.text.body = str(body)
         element.text.format = protobuf.Text.ERROR
 
     @_export_to_io
@@ -214,7 +214,7 @@ class DeltaGenerator:
         body: str
             The text to display. Can include newlines.
         """
-        element.text.body = body
+        element.text.body = str(body)
         element.text.format = protobuf.Text.WARNING
 
     @_export_to_io
@@ -228,7 +228,7 @@ class DeltaGenerator:
         body: str
             The text to display. Can include newlines.
         """
-        element.text.body = body
+        element.text.body = str(body)
         element.text.format = protobuf.Text.INFO
 
     @_export_to_io
@@ -242,7 +242,7 @@ class DeltaGenerator:
         body: str
             The text to display. Can include newlines.
         """
-        element.text.body = body
+        element.text.body = str(body)
         element.text.format = protobuf.Text.SUCCESS
 
     @_export_to_io
