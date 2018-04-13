@@ -12,11 +12,6 @@ from streamlit.local.connection import get_delta_generator
 from streamlit.local.util import escape_markdown
 from streamlit.shared.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
-# Estabish the connection with the server so that any exceptions when parsing
-# the rest of the script will be written to the streamlit server. We do this
-# by calling `get_delta_generator` which implicitly calls the generator.
-get_delta_generator()
-
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
 # singleton connection object (in streamlit.local.connection) and then
@@ -138,3 +133,17 @@ def spinner(text):
         yield
     finally:
         message.empty()
+
+
+# This is a necessary (but not sufficient) condition to establish that this
+# is the proxy process.
+_this_may_be_proxy = sys.argv == ['-m']
+print('_this_may_be_proxy', _this_may_be_proxy)
+
+# In order to log all exceptions etc to the streamlit report after
+# `import streamlit.io` we establish the proxy by calling get_delta_generator().
+# If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
+# skip this step. Overcautiously skipping this step isn't fatal in general as
+# it simply implies that the connection may be established later.
+if not _this_may_be_proxy:
+    get_delta_generator()
