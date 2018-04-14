@@ -3,9 +3,9 @@
 from streamlit import io
 import pandas as pd
 import string, random
+import sys
 
-io.write('Hello, World!')
-
+io.write('Hello world')
 
 # import os, datetime
 # def time_command(cmd):

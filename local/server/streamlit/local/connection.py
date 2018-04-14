@@ -58,6 +58,14 @@ class Connection:
         # Create an ID for this Report
         self._report_id = bson.ObjectId()
 
+        # Create a name for this report.
+        if len(sys.argv) >= 2 and sys.argv[0] == '-m':
+            self._name = sys.argv[1]
+        elif len(sys.argv) >= 1
+            self._name = os.path.split(sys.argv[0])[1]
+        else:
+            self._name = str(self._report_id)
+
         # Queue to store deltas as they flow across.
         self._queue = ReportQueue()
 
