@@ -8,6 +8,7 @@ so does this server.
 from aiohttp import web, WSMsgType
 import asyncio
 import os
+import urllib
 import webbrowser
 
 from streamlit.shared import config
@@ -23,7 +24,7 @@ class Proxy:
         self._app = web.Application()
         self._app.router.add_routes([
             # Incoming endpoint to create a new report.
-            web.get('/new/{local_id}/{report_id}', self._new_stream_handler),
+            web.get('/new/{local_id}/{report_name}', self._local_handler),
 
             # Outgoing endpoint to get the latest report.
             web.get('/latest', self._latest_handler)
@@ -34,22 +35,18 @@ class Proxy:
         if not config.get_option('proxy.useNode'):
             static_path = config.get_path('proxy.staticRoot')
             self._app.router.add_static('/', path=static_path)
-            print('using static route:', static_path)
-            # import sys
-            # sys.exit(-1)
 
         # Counter for the number of incoming connections.
-        self._n_inbound_connections = 0
+        # self._n_inbound_connections = 0
 
         # Launch startup scripts.
-        self._launch_browser_on_startup()
-        self._close_server_on_connection_timeout()
+        # self._launch_browser_on_startup()
+        # self._close_server_on_connection_timeout()
 
-        # The queue will be instantiated each time we see a new incoming
-        # connection.
-        self._queue = None
-        self._report_id = None
-        self._report_name = None
+        # This table from names to ReportConnections stores all the information
+        # about our connections. When the number of connections drops to zero,
+        # then the proxy shuts down.
+        self._connections = {}
 
     def run_app(self):
         """Runs the web app."""
@@ -82,10 +79,17 @@ class Proxy:
                 loop.stop()
         loop.call_later(timeout_secs, close_server_if_necessary)
 
-    async def _new_stream_handler(self, request):
+    async def _local_handler(self, request):
+        """Handles a connection to a "local" instance of Streamlit, i.e.
+        one producing deltas to display on the client."""
         # Parse out the control information.
         local_id = request.match_info.get('local_id')
-        report_id = request.match_info.get('report_id')
+        report_name = urllib.parse.unquote_plus(
+            request.match_info.get('report_name'))
+
+        print(f'Got a connection with UNQUOTED name="{report_name}".')
+        import sys
+        sys.exit(-1)
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
@@ -145,6 +149,20 @@ class Proxy:
                 asyncio.get_event_loop().stop()
 
         return ws
+
+class ReportConnection:
+    """Stores information shared by both local_connections and
+    client_connections related to a particular report."""
+
+    def __init__(self, id):
+        # The unique BSON ID of this Report.
+        self.id = id
+
+        # A master queue for incoming deltas, replicated for each connection.
+        self._master_queue = ReportQueue()
+
+        # Each connection additionally gets its own queue.
+        self._client_queues = []
 
 def main():
     """

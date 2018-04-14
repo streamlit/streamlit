@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 import traceback
+import urllib
 
 from streamlit.local.util import get_local_id
 from streamlit.shared import config
@@ -65,6 +66,7 @@ class Connection:
             self._name = os.path.split(sys.argv[0])[1]
         else:
             self._name = str(self._report_id)
+        self._name += '   $%$%$%'
 
         # Queue to store deltas as they flow across.
         self._queue = ReportQueue()
@@ -148,8 +150,9 @@ class Connection:
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
         local_id = get_local_id()
-        report_id = self._report_id
-        uri = f'http://{server}:{port}/new/{local_id}/{report_id}'
+        report_name = urllib.parse.quote_plus(self._name)
+        uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
+        print('Connecting to URI', uri)
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=self._loop)
