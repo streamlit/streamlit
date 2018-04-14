@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+// A message across a stream.
+message Report {
+  string id = 1;
+  string name = 2;
+}

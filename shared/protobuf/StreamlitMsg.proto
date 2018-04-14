@@ -1,11 +1,12 @@
 syntax = "proto3";
 
 import "Delta.proto";
+import "Report.proto";
 
 // A message across a stream.
 message StreamlitMsg {
   oneof type {
-    string new_report = 1;
+    Report new_report = 1;
     DeltaList delta_list = 2;
   }
 }

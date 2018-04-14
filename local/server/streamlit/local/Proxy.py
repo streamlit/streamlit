@@ -49,6 +49,7 @@ class Proxy:
         # connection.
         self._queue = None
         self._report_id = None
+        self._report_name = None
 
     def run_app(self):
         """Runs the web app."""
@@ -95,7 +96,8 @@ class Proxy:
             msg_type = msg.WhichOneof('type')
             if msg_type == 'new_report':
                 self._queue = ReportQueue()
-                self._report_id = msg.new_report
+                self._report_id = msg.new_report.id
+                self._report_name = msg.new_report.name
             elif msg_type == 'delta_list':
                 assert self._queue != None, \
                     'The protocol prohibits delta_list before new_report.'
@@ -121,7 +123,7 @@ class Proxy:
                 # See if the queue has changed.
                 if self._report_id != current_report_id:
                     current_report_id = self._report_id
-                    await new_report_msg(current_report_id, ws)
+                    await new_report_msg(self._report_id, self._report_name, ws)
 
                 # See if we got any new deltas and send them across the wire.
                 if current_report_id != None:

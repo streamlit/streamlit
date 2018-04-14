@@ -20,7 +20,8 @@ import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
-import { StreamlitMsg } from 'streamlit-shared/lib/protobuf/streamlit';
+import { StreamlitMsg, Text as TextProto }
+  from 'streamlit-shared/lib/protobuf/streamlit';
 import { addRows } from 'streamlit-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
   from 'streamlit-shared/lib/immutableProto';
@@ -60,7 +61,7 @@ class WebClient extends PureComponent {
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', /* warning */ 7);
+    this.resetState('Established connection.', TextProto.Format.WARNING);
   }
 
   /**
@@ -95,8 +96,12 @@ class WebClient extends PureComponent {
       const msgProto = StreamlitMsg.decode(result)
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
-        newReport: (id) => {
-          this.resetState(`Receiving data for report ${id}.`, /* info */ 8);
+        newReport: (report) => {
+          const id = report.get('id')
+          const name = report.get('name')
+          console.log(`newReport id=${id} name="${name}"`); // debug
+          this.resetState(`Receiving data for report ${id} : "${name}".`,
+            TextProto.Format.INFO);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);

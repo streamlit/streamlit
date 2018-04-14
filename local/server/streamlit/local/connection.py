@@ -61,7 +61,7 @@ class Connection:
         # Create a name for this report.
         if len(sys.argv) >= 2 and sys.argv[0] == '-m':
             self._name = sys.argv[1]
-        elif len(sys.argv) >= 1
+        elif len(sys.argv) >= 1:
             self._name = os.path.split(sys.argv[0])[1]
         else:
             self._name = str(self._report_id)
@@ -187,7 +187,7 @@ class Connection:
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        await new_report_msg(self._report_id, ws)
+        await new_report_msg(self._report_id, self._name, ws)
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
