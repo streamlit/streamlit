@@ -60,13 +60,7 @@ class Connection:
         self._report_id = bson.ObjectId()
 
         # Create a name for this report.
-        if len(sys.argv) >= 2 and sys.argv[0] == '-m':
-            self._name = sys.argv[1]
-        elif len(sys.argv) >= 1:
-            self._name = os.path.split(sys.argv[0])[1]
-        else:
-            self._name = str(self._report_id)
-        self._name += '   $%$%$%'
+        self._name = self._create_name()
 
         # Queue to store deltas as they flow across.
         self._queue = ReportQueue()
@@ -127,6 +121,19 @@ class Connection:
         adding new elements."""
         return self._delta_generator
 
+    def _create_name(self):
+        """Creates a name for this report."""
+        if len(sys.argv) >= 2 and sys.argv[0] == '-m':
+            name = sys.argv[1]
+        elif len(sys.argv) >= 1:
+            name = os.path.split(sys.argv[0])[1]
+            if name.endswith('.py'):
+                name = name[:-3]
+        else:
+            name = str(self._report_id)
+        name += ' $%$%$%'
+        return name
+
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
@@ -152,7 +159,7 @@ class Connection:
         local_id = get_local_id()
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
-        print('Connecting to URI', uri)
+        print(f'Connecting to URI: {uri} (report_id={self._report_id})')
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=self._loop)
@@ -190,7 +197,7 @@ class Connection:
     async def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        await new_report_msg(self._report_id, self._name, ws)
+        await new_report_msg(self._report_id, ws)
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
