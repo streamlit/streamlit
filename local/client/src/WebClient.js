@@ -96,11 +96,9 @@ class WebClient extends PureComponent {
       const msgProto = StreamlitMsg.decode(result)
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
-        newReport: (report) => {
-          const id = report.get('id')
-          const name = report.get('name')
-          console.log(`newReport id=${id} name="${name}"`); // debug
-          this.resetState(`Receiving data for report ${id} : "${name}".`,
+        newReport: (id) => {
+          console.log(`newReport id=${id}`); // debug
+          this.resetState(`Receiving data for report ${id}`,
             TextProto.Format.INFO);
         },
         deltaList: (deltaList) => {

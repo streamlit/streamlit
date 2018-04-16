@@ -104,10 +104,11 @@ class Proxy:
             msg_type = msg.WhichOneof('type')
             if msg_type == 'new_report':
                 connection = ReportConnection(msg.new_report)
+                new_name = report_name not in self._connections
                 self._connections[report_name] = connection
-                self._lauch_web_client(report_name)
+                if new_name:
+                    self._lauch_web_client(report_name)
                 print(f'Launched web client with name="{report_name}" and id={msg.new_report}')
-                # raise RuntimeError('Testing stopping things here.')
             elif msg_type == 'delta_list':
                 assert connection != None, \
                     'The protocol prohibits delta_list before new_report.'
@@ -130,38 +131,34 @@ class Proxy:
 
         # Get the report name
         report_name = request.match_info.get('report_name')
-        raise RuntimeError(f'Got incoming websocket connection with name="{report_name}"')
+        # raise RuntimeError(f'Got incoming websocket connection with name="{report_name}"')
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        try:
-            current_report_id = self._report_id
-            while True:
-                # See if the queue has changed.
-                if self._report_id != current_report_id:
-                    current_report_id = self._report_id
-                    await new_report_msg(self._report_id, ws)
+        # Stream the data across.
+        connection, queue = await self._add_queue(report_name, ws)
+        while True:
+            # See if the queue has changed.
+            if connection != self._connections[report_name]:
+                print('GOT A NEW CONNECTION')
+                self._remove_queue(report_name, connection, queue)
+                connection, queue = await self._add_queue(report_name, ws)
 
-                # See if we got any new deltas and send them across the wire.
-                if current_report_id != None:
-                    await self._queue.flush_deltas(ws)
+            # Send any new deltas across the wire.
+            await queue.flush_deltas(ws)
 
-                # Watch for a CLOSE method as we sleep for throttle_secs.
-                try:
-                    msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type != WSMsgType.CLOSE:
-                        print('Unknown message type:', msg.type)
-                    break
-                except asyncio.TimeoutError:
-                    pass
-
-        # Close the server if there are no more connections.
-        finally:
-            self._n_inbound_connections -= 1
-            if self._n_inbound_connections < 1:
-                asyncio.get_event_loop().stop()
+            # Watch for a CLOSE method as we sleep for throttle_secs.
+            try:
+                msg = await ws.receive(timeout=throttle_secs)
+                if msg.type != WSMsgType.CLOSE:
+                    print('Unknown message type:', msg.type)
+                self._remove_queue(report_name, connection, queue)
+                break
+            except asyncio.TimeoutError:
+                pass
+        print('Received the close message for "%s". Now removing the final queue.' % report_name)
 
         return ws
 
@@ -181,6 +178,26 @@ class Proxy:
             port = config.get_option('proxy.port')
         url = f'http://{host}:{port}/report/{name}'
         webbrowser.open(url)
+
+    async def _add_queue(self, report_name, ws):
+        """Adds a queue to the connection for the given report_name."""
+        connection = self._connections[report_name]
+        queue = connection.add_client_queue()
+        print('sending new report with id=', connection.id)
+        await new_report_msg(connection.id, ws)
+        return (connection, queue)
+
+    def _remove_queue(self, report_name, connection, queue):
+        """Removes the queue from the connection, and closes the connection if
+        necessary."""
+        connection.remove_client_queue(queue)
+        is_current = (connection == self._connections[report_name])
+        if is_current and not connection.has_clients():
+            print('Removing the connection with name "%s"' % report_name)
+            del self._connections[report_name]
+            if not self._connections:
+                print('No more connections. Closing down the proxy.')
+                asyncio.get_event_loop().stop()
 
 class ReportConnection:
     """Stores information shared by both local_connections and
@@ -202,6 +219,23 @@ class ReportConnection:
         self._master_queue(delta)
         for queue in self._client_queues:
             queue(delta)
+
+    def add_client_queue(self):
+        """Adds a queue for a new client by cloning the master queue."""
+        new_queue = self._master_queue.clone()
+        self._client_queues.append(new_queue)
+        return new_queue
+
+    def remove_client_queue(self, queue):
+        """Removes the client queue. Returns True iff the client queue list is
+        empty."""
+        print('BEFORE REMOVE', len(self._client_queues))
+        self._client_queues.remove(queue)
+        print('AFTER REMOVE', len(self._client_queues))
+
+    def has_clients(self):
+        """Indicates that there are still clients connected here."""
+        return len(self._client_queues) > 0
 
 def main():
     """
