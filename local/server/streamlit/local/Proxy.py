@@ -203,8 +203,6 @@ class Proxy:
             elif msg_type == 'delta_list':
                 assert connection != None, \
                     'The protocol prohibits `delta_list` before `new_report`.'
-                if not self._is_registered(connection):
-                    break
                 for delta in msg.delta_list.deltas:
                     connection.enqueue(delta)
             else:
@@ -230,7 +228,7 @@ class Proxy:
 
         # Get the report name
         report_name = request.match_info.get('report_name')
-        raise RuntimeError(f'Got incoming websocket connection with name="{report_name}"')
+        # raise RuntimeError(f'Got incoming websocket connection with name="{report_name}"')
 
         # Establishe the websocket.
         ws = web.WebSocketResponse()
@@ -242,7 +240,7 @@ class Proxy:
             # See if the queue has changed.
             if connection != self._connections[report_name]:
                 print('GOT A NEW CONNECTION')
-                self._remove_client(report_name, connection, queue)
+                self._remove_client(connection, queue)
                 connection, queue = await self._add_client(report_name, ws)
 
             # Send any new deltas across the wire.
@@ -253,12 +251,12 @@ class Proxy:
                 msg = await ws.receive(timeout=throttle_secs)
                 if msg.type != WSMsgType.CLOSE:
                     print('Unknown message type:', msg.type)
-                self._remove_client(report_name, connection, queue)
                 break
             except asyncio.TimeoutError:
                 pass
         print('Received the close message for "%s". Now removing the final queue.' % report_name)
 
+        self._remove_client(connection, queue)
         return ws
 
     def _lauch_web_client(self, name):
@@ -285,14 +283,18 @@ class Proxy:
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
+        list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
+        print('(%i connections)' % len(self._connections))
 
     def _deregister(self, connection):
         """Sever the association between this connection and it's name."""
         print(f'DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
         if self._is_registered(connection):
             del self._connections[connection.name]
-            print('Removed the connection with name "%s"' % report_name)
+            print('Removed the connection with name "%s"' % connection.name)
         print(f'FINISHED DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
+        list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
+        print('(%i connections)' % len(self._connections))
 
     def _is_registered(self, connection):
         """Returns true if this connection is registered to its name."""
@@ -314,12 +316,16 @@ class Proxy:
             self._deregister(connection)
         self._potentially_stop_proxy()
 
-    def _potentially_stop_proxy():
+    def _potentially_stop_proxy(self):
         """Checks to see if we have any open connections. If not,
         close the proxy."""
-        raise NotImplementedError('Need to implement _potentially_stop_proxy')
-            #             asyncio.get_event_loop().stop()
-
+        print('TESTING to see if we can stop the proxy...')
+        list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
+        print('(%i connections)' % len(self._connections))
+        if not self._connections:
+            asyncio.get_event_loop().stop()
+        # raise NotImplementedError('Need to implement _potentially_stop_proxy')
+            #
 
 class ProxyConnection:
     """Stores information shared by both local_connections and
