@@ -58,6 +58,4 @@ class ProxyConnection:
     def remove_client_queue(self, queue):
         """Removes the client queue. Returns True iff the client queue list is
         empty."""
-        print('BEFORE REMOVE', len(self._client_queues))
         self._client_queues.remove(queue)
-        print('AFTER REMOVE', len(self._client_queues))
