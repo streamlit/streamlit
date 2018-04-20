@@ -131,7 +131,6 @@ class Connection:
                 name = name[:-3]
         else:
             name = str(self._report_id)
-        name += ' $%$%$%'
         return name
 
     @_assert_singleton

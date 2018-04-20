@@ -3,14 +3,15 @@
 from streamlit import io
 import numpy as np
 import time
+import sys
 
-io.write('Hello world!')
+import contextlib
 
-an_array = np.random.randn(200, 8)
-io.write(an_array)
-io.line_chart(an_array)
+io.help(sys.exc_info)
 
-my_bar = io.progress(0)
-for i in range(1, 101):
-    my_bar.progress(i)
-    time.sleep(0.1)
+# io.line_chart(np.random.randn(100, 3), height=300)
+
+# with streamlit.render():
+#     x = 1
+#     y = 2
+#     io.write(x, y)

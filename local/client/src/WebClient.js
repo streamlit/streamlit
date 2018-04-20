@@ -131,7 +131,7 @@ class WebClient extends PureComponent {
     // Compute the websocket URI based on the pathname.
     const [base, report, reportName] =
       decodeURIComponent(window.location.pathname).split( '/' );
-    console.log(`The path array is "${base}", "${report}", "${reportName}"`)
+    document.title = `${reportName} (Streamlit)`
     let uri = `ws://localhost:5006/stream/${encodeURIComponent(reportName)}`
 
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)

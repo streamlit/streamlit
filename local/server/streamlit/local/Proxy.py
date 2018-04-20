@@ -110,6 +110,7 @@ import asyncio
 import os
 import urllib
 import webbrowser
+import concurrent.futures
 
 from streamlit.shared import config
 from streamlit.shared.ReportQueue import ReportQueue
@@ -119,11 +120,18 @@ from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
     propagates out of the inner coroutine."""
-    async def wrapped_coroutine(*args, **kwargs):
+    async def wrapped_coroutine(proxy, *args, **kwargs):
         try:
-            return await coroutine(*args, **kwargs)
+            return await coroutine(proxy, *args, **kwargs)
         except:
-            asyncio.get_event_loop().stop()
+            print('ABOUT TO STOP LOOP IN EXCEPTION')
+            import sys, traceback
+            ex_type, ex_value, ex_traceback = sys.exc_info()
+            print('ex_type', ex_type, concurrent.futures.CancelledError, ex_type == concurrent.futures.CancelledError)
+            print('ex_value', ex_value)
+            traceback.print_tb(ex_traceback)
+            proxy.stop()
+            # asyncio.get_event_loop().stop()
             raise
     wrapped_coroutine.__name__ = coroutine.__name__
     wrapped_coroutine.__doc__ = coroutine.__doc__
@@ -152,6 +160,9 @@ class Proxy:
             static_path = config.get_path('proxy.staticRoot')
             self._app.router.add_static('/', path=static_path)
 
+        # Avoids an exception by guarding against twice stopping the event loop.
+        self._stopped = False
+
         # This table from names to ProxyConnections stores all the information
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
@@ -162,6 +173,12 @@ class Proxy:
         port = config.get_option('proxy.port')
         web.run_app(self._app, port=port)
         print('Closing down the Streamlit proxy server.')
+
+    def stop(self):
+        """Stops the proxy. Allowing all current handler to exit normally."""
+        if not self._stopped:
+            asyncio.get_event_loop().stop()
+        self._stopped = True
 
     # def _close_server_on_connection_timeout(self):
     #     """Closes the server if we haven't received a connection in a certain
@@ -187,31 +204,37 @@ class Proxy:
 
         print(f'Got a connection with UNQUOTED name="{report_name}".')
 
-        # Establishe the websocket.
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
+        # This is the connection object we will register when we
+        connection = None
 
         # Instantiate a new queue and stream data into it.
-        connection = None
-        async for msg in streamlit_msg_iter(ws):
-            msg_type = msg.WhichOneof('type')
-            if msg_type == 'new_report':
-                report_id = msg.new_report
-                connection = ProxyConnection(report_id, report_name)
-                self._register(connection)
-                print(f'Registered connection name="{report_name}" and id={report_id}')
-            elif msg_type == 'delta_list':
-                assert connection != None, \
-                    'The protocol prohibits `delta_list` before `new_report`.'
-                for delta in msg.delta_list.deltas:
-                    connection.enqueue(delta)
-            else:
-                raise RuntimeError(f'Cannot parse message type: {msg_type}')
+        try:
+            # Establishe the websocket.
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+
+            async for msg in streamlit_msg_iter(ws):
+                msg_type = msg.WhichOneof('type')
+                if msg_type == 'new_report':
+                    assert not connection, 'Cannot send `new_report` twice.'
+                    report_id = msg.new_report
+                    connection = ProxyConnection(report_id, report_name)
+                    self._register(connection)
+                    print(f'Registered connection name="{report_name}" and id={report_id}')
+                elif msg_type == 'delta_list':
+                    assert connection, 'No `delta_list` before `new_report`.'
+                    for delta in msg.delta_list.deltas:
+                        connection.enqueue(delta)
+                else:
+                    raise RuntimeError(f'Cannot parse message type: {msg_type}')
+        except concurrent.futures.CancelledError:
+            print("CancelledError in _local_ws_handler")
+            pass
 
         # Deregister this connection and see if we can close the proxy.
-        connection.finished_local_connection()
-        if connection.has_had_clients() and not connection.has_clients():
-            self._deregister(connection)
+        if connection:
+            connection.finished_local_connection()
+            self._try_to_deregister(connection)
         self._potentially_stop_proxy()
         return ws
 
@@ -228,35 +251,42 @@ class Proxy:
 
         # Get the report name
         report_name = request.match_info.get('report_name')
-        # raise RuntimeError(f'Got incoming websocket connection with name="{report_name}"')
 
-        # Establishe the websocket.
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
+        # Manages our connection to the local client.
+        connection, queue = None, None
 
-        # Stream the data across.
-        connection, queue = await self._add_client(report_name, ws)
-        while True:
-            # See if the queue has changed.
-            if connection != self._connections[report_name]:
-                print('GOT A NEW CONNECTION')
-                self._remove_client(connection, queue)
-                connection, queue = await self._add_client(report_name, ws)
+        try:
+            # Establishe the websocket.
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
 
-            # Send any new deltas across the wire.
-            await queue.flush_deltas(ws)
+            # Stream the data across.
+            connection, queue = await self._add_client(report_name, ws)
+            while True:
+                # See if the queue has changed.
+                if connection != self._connections[report_name]:
+                    print('GOT A NEW CONNECTION')
+                    self._remove_client(connection, queue)
+                    connection, queue = await self._add_client(report_name, ws)
 
-            # Watch for a CLOSE method as we sleep for throttle_secs.
-            try:
-                msg = await ws.receive(timeout=throttle_secs)
-                if msg.type != WSMsgType.CLOSE:
-                    print('Unknown message type:', msg.type)
-                break
-            except asyncio.TimeoutError:
-                pass
-        print('Received the close message for "%s". Now removing the final queue.' % report_name)
+                # Send any new deltas across the wire.
+                await queue.flush_deltas(ws)
 
-        self._remove_client(connection, queue)
+                # Watch for a CLOSE method as we sleep for throttle_secs.
+                try:
+                    msg = await ws.receive(timeout=throttle_secs)
+                    if msg.type != WSMsgType.CLOSE:
+                        print('Unknown message type:', msg.type)
+                    break
+                except asyncio.TimeoutError:
+                    pass
+            print('Received the close message for "%s". Now removing the final queue.' % report_name)
+        except concurrent.futures.CancelledError:
+            print("CancelledError in _client_ws_handler")
+            pass
+
+        if connection != None:
+            self._remove_client(connection, queue)
         return ws
 
     def _lauch_web_client(self, name):
@@ -286,15 +316,28 @@ class Proxy:
         list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
         print('(%i connections)' % len(self._connections))
 
-    def _deregister(self, connection):
-        """Sever the association between this connection and it's name."""
+    def _try_to_deregister(self, connection):
+        """Deregisters this ProxyConnection so long as there aren't any open
+        connection (local or client), and the connection is no longer in its
+        grace period."""
         print(f'DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
-        if self._is_registered(connection):
+        if self._is_registered(connection) and connection.can_be_deregistered():
             del self._connections[connection.name]
             print('Removed the connection with name "%s"' % connection.name)
         print(f'FINISHED DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
         list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
         print('(%i connections)' % len(self._connections))
+
+    # def _try_to_deregister(self, connection, waiting_for_timeout=False):
+    #     """Deregisters this ProxyConnection so long as there aren't any open
+    #     connection (local or client), and the connection is no longer in its
+    #     grace period."""
+    #
+    #     unless there is an open local
+    #     connection or any open client connections. Keeps the ProxyConnection
+    #     open if we're still waiting for a timeout (waiting_for_timeout == True)
+    #     and if we haven't gotten any client connections yet."""
+
 
     def _is_registered(self, connection):
         """Returns true if this connection is registered to its name."""
@@ -312,8 +355,7 @@ class Proxy:
         """Removes the queue from the connection, and closes the connection if
         necessary."""
         connection.remove_client_queue(queue)
-        if not (connection.has_clients() or connection.has_local()):
-            self._deregister(connection)
+        self._try_to_deregister(connection)
         self._potentially_stop_proxy()
 
     def _potentially_stop_proxy(self):
@@ -323,7 +365,9 @@ class Proxy:
         list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
         print('(%i connections)' % len(self._connections))
         if not self._connections:
-            asyncio.get_event_loop().stop()
+            print('NO CONNECTIONS ABOUT TO STOP NATURALLY')
+            self.stop()
+            # asyncio.get_event_loop().stop()
         # raise NotImplementedError('Need to implement _potentially_stop_proxy')
             #
 
@@ -341,8 +385,9 @@ class ProxyConnection:
         # When the local connection ends, this flag becomes false.
         self._has_local = True
 
-        # When we recieve a client connection, this flag becomes true.
-        self._has_had_clients = False
+        # Before recieving connection and the the timeout hits, the connection
+        # is in a "grace period" in which it can't be deregistered.
+        self._in_grace_period = True
 
         # A master queue for incoming deltas, replicated for each connection.
         self._master_queue = ReportQueue()
@@ -354,17 +399,20 @@ class ProxyConnection:
         """Removes the flag indicating an active local connection."""
         self._has_local = False
 
-    def has_local(self):
-        """Returns true if we have an active local connection."""
-        return self._has_local
+    def end_grace_period(self):
+        """Inicates that the grace period is over and the connection can be
+        closed when it no longer has any local or client connections."""
+        self._in_grace_period = False
 
-    def has_had_clients(self):
-        """Returns true if this client has ever had a client connection."""
-        return self._has_had_clients
-
-    def has_clients(self):
-        """Returns true if the connection currently has client connections."""
-        return bool(self._client_queues)
+    def can_be_deregistered(self):
+        """Indicates whether we can deregister this connection."""
+        if self._in_grace_period:
+            return False
+        elif self._has_local:
+            return False
+        elif self._client_queues:
+            return False
+        return True
 
     def enqueue(self, delta):
         """Stores the delta in the master queue and transmits to all clients
@@ -375,9 +423,9 @@ class ProxyConnection:
 
     def add_client_queue(self):
         """Adds a queue for a new client by cloning the master queue."""
+        self.end_grace_period()
         new_queue = self._master_queue.clone()
         self._client_queues.append(new_queue)
-        self._has_had_clients = True
         return new_queue
 
     def remove_client_queue(self, queue):
@@ -386,10 +434,6 @@ class ProxyConnection:
         print('BEFORE REMOVE', len(self._client_queues))
         self._client_queues.remove(queue)
         print('AFTER REMOVE', len(self._client_queues))
-
-    # def has_clients(self):
-    #     """Indicates that there are still clients connected here."""
-    #     return len(self._client_queues) > 0
 
 def main():
     """
