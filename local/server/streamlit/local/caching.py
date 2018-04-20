@@ -33,8 +33,8 @@ def cache(func):
 		with io.spinner(message):
 			# Calculate the filename hash.
 			hasher = hashlib.new('md5')
-			hasher.update(pickle.dumps((
-				argc, argv, list(dis.get_instructions(func))),
+			hasher.update(pickle.dumps([argc, argv] +
+				[str(i) for i in dis.get_instructions(func)],
 				pickle.HIGHEST_PROTOCOL))
 			path = f'cache/f{hasher.hexdigest()}.pickle'
 

@@ -19,6 +19,12 @@
 }
 
 .streamlit-container .dataframe.row-header,
+.streamlit-container .dataframe.col-header,
+.streamlit-container .dataframe.data {
+  overflow: hidden;
+}
+
+.streamlit-container .dataframe.row-header,
 .dataframe.corner {
   align-items: center;
   display: flex;

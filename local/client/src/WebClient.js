@@ -129,7 +129,6 @@ class WebClient extends PureComponent {
 
   render() {
     // Compute the websocket URI based on the pathname.
-    console.log('Got into the render method.')
     const reportName =
       decodeURIComponent(window.location.pathname).split( '/' )[2];
     document.title = `${reportName} (Streamlit)`
