@@ -8,6 +8,10 @@ import sys
 import contextlib
 
 io.help(sys.exc_info)
+io.help(dict)
+io.write(dir(dict))
+io.help(dict.get)
+io.write('None is None', None is None)
 
 # io.line_chart(np.random.randn(100, 3), height=300)
 

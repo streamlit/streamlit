@@ -264,7 +264,7 @@ class Proxy:
             connection, queue = await self._add_client(report_name, ws)
             while True:
                 # See if the queue has changed.
-                if connection != self._connections[report_name]:
+                if connection != self._connections.get(report_name, None):
                     print('GOT A NEW CONNECTION')
                     self._remove_client(connection, queue)
                     connection, queue = await self._add_client(report_name, ws)
@@ -309,24 +309,46 @@ class Proxy:
     def _register(self, connection):
         """Registers this connection under it's name so that client connections
         will connect to it."""
+        # Register the connection and launch a web client if this is a new name.
         new_name = connection.name not in self._connections
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
-        list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
-        print('(%i connections)' % len(self._connections))
+
+        # Clean up the connection we don't get an incoming connection.
+        def connection_timeout():
+            print('IN THE CONNECTION TIMEOUT FOR', connection.id, connection.name)
+            connection.end_grace_period()
+            print('TIMEOUT: Trying to deregsiter:', self._is_registered(connection))
+            self._try_to_deregister(connection)
+            self._potentially_stop_proxy()
+            print('TIMEOUT: Finisehd trying to deregsiter:', self._is_registered(connection))
+        timeout_secs = config.get_option('proxy.waitForConnectionSecs')
+        loop = asyncio.get_event_loop()
+        loop.call_later(timeout_secs, connection_timeout)
+
+        print(f'Finished registering "{connection.name}" (id={connection.id})')
+        self._DEBUG_display_connections()
 
     def _try_to_deregister(self, connection):
         """Deregisters this ProxyConnection so long as there aren't any open
         connection (local or client), and the connection is no longer in its
         grace period."""
-        print(f'DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
+        print(f'DEREGISTERING "{connection.name}" id={connection.id}')
+        self._DEBUG_display_connections()
         if self._is_registered(connection) and connection.can_be_deregistered():
             del self._connections[connection.name]
             print('Removed the connection with name "%s"' % connection.name)
-        print(f'FINISHED DEREGISTERING {connection.name} n_connections={len(self._connections)}.')
-        list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
-        print('(%i connections)' % len(self._connections))
+        print(f'FINISHED DEREGISTERING "{connection.name}" id={connection.id}')
+        self._DEBUG_display_connections()
+        # list(map(print, ['registered connections:'] + [('  - ' + c) for c in self._connections]))
+        # print('(%i connections)' % len(self._connections))
+
+    def _DEBUG_display_connections(self):
+        print(f'\nAll connections ({len(self._connections)}):')
+        for name, connection in self._connections.items():
+            print(f'- {name} : {connection.id} ({len(connection._client_queues)} clients)')
+        print()
 
     # def _try_to_deregister(self, connection, waiting_for_timeout=False):
     #     """Deregisters this ProxyConnection so long as there aren't any open
@@ -341,7 +363,7 @@ class Proxy:
 
     def _is_registered(self, connection):
         """Returns true if this connection is registered to its name."""
-        return self._connections[connection.name] is connection
+        return self._connections.get(connection.name, None) is connection
 
     async def _add_client(self, report_name, ws):
         """Adds a queue to the connection for the given report_name."""
@@ -367,9 +389,6 @@ class Proxy:
         if not self._connections:
             print('NO CONNECTIONS ABOUT TO STOP NATURALLY')
             self.stop()
-            # asyncio.get_event_loop().stop()
-        # raise NotImplementedError('Need to implement _potentially_stop_proxy')
-            #
 
 class ProxyConnection:
     """Stores information shared by both local_connections and
@@ -406,13 +425,8 @@ class ProxyConnection:
 
     def can_be_deregistered(self):
         """Indicates whether we can deregister this connection."""
-        if self._in_grace_period:
-            return False
-        elif self._has_local:
-            return False
-        elif self._client_queues:
-            return False
-        return True
+        has_clients = len(self._client_queues) > 0
+        return not (self._in_grace_period or self._has_local or has_clients)
 
     def enqueue(self, delta):
         """Stores the delta in the master queue and transmits to all clients
