@@ -190,11 +190,10 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
   const charWidth = fontSize * 8 / 10;
   const padding = 14;
   const colWidthArray = Array(cols).fill(0).map((_, colIndex) => (
-    100));
-  //   padding + Math.max(...(Array(rows).fill(0).map((_, rowIndex) => (
-  //     cellContents(colIndex, rowIndex).contents.length * charWidth
-  //   ))))
-  // ));
+    padding + Math.max(...(Array(rows).fill(0).map((_, rowIndex) => (
+      cellContents(colIndex, rowIndex).contents.length * charWidth
+    ))))
+  ));
 
   // Grow the cells to fill the array width.
   const sum = (array) => array.reduce((a, b) => a + b, 0);
