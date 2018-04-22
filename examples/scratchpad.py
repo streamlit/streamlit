@@ -1,33 +1,30 @@
 #!./streamlit_run
 
 from streamlit import io, cache
-import numpy as np
-import pandas as pd
-import time
-import sys
 
 import json
+import numpy as np
+import pandas as pd
+import string
+import sys
+import time
 
-io.write('Hello world.')
-io.write(dir(json))
-io.help(json.load)
-# io.line_chart(np.random.randn(100, 3), height=300)
 
 @cache
 def open_json():
     with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
-        return [json.loads(line) for line in file.readlines()]
+        return [json.loads(line) for line in file.readlines()][:10]
 
-io.write('getting the json')
-data = open_json()
-io.write('got the json')
-io.write(id(data))
-io.write(len(data))
-io.write([type(entry) for entry in data[:10]])
-io.json(data[:10])
-df = pd.DataFrame(data)
-io.write(df)
-# with streamlit.render():
-#     x = 1
-#     y = 2
-#     io.write(x, y)
+io.write(np.random.randn(200, 200))
+# io.write(pd.DataFrame(open_json()))
+# big_array = np.empty((1000, 100), dtype=np.object)
+# for column in range(big_array.shape[1]):
+#     value = string.ascii_lowercase[column % 26] * (column % 51 + 1)
+#     big_array[:,column] = value
+# io.write(big_array, big_array.dtype)
+
+# io.subheader('str_array')
+# str_array = np.array([['abc']])
+# io.write(str_array)
+# io.write(str_array.astype(np.str))
+# io.write(type(str_array.dtype))
