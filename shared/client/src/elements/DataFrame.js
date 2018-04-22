@@ -61,8 +61,9 @@ class DataFrame extends PureComponent {
       // Get the cell renderer.
       const cellContents = getCellContents(df, headerRows, headerCols);
       const cellRenderer = getCellRenderer(cellContents);
-      const {columnWidth, headerWidth} =
-      getWidths(cols, rows, headerCols, width - border, cellContents);
+      const {columnWidth, headerWidth, tableWidth} =
+        getWidths(cols, rows, headerCols, width - border, cellContents);
+      // width = tableWidth + border;
 
       // Put it all together.
       return (
@@ -186,27 +187,40 @@ function getCellRenderer(cellContents) {
  */
 function getWidths(cols, rows, headerCols, width, cellContents) {
   // Calculate column width based on character count alone.
-  const fontSize = 10;
-  const charWidth = fontSize * 8 / 10;
-  const padding = 14;
-  const colWidthArray = Array(cols).fill(0).map((_, colIndex) => (
-    padding + Math.max(...(Array(rows).fill(0).map((_, rowIndex) => (
-      cellContents(colIndex, rowIndex).contents.length * charWidth
-    ))))
-  ));
+   let columnWidth = ({index}) => {
+    const colIndex = index;
+    const fontSize = 10;
+    const charWidth = fontSize * 8 / 10;
+    const padding = 14;
+    const [minWidth, maxWidth] = [25, 400];
 
-  // Grow the cells to fill the array width.
-  const sum = (array) => array.reduce((a, b) => a + b, 0);
-  const totalWidth = sum(colWidthArray);
-  if (totalWidth < width) {
-    for (let i = headerCols ; i < cols ; i++) {
-      colWidthArray[i] += (width - totalWidth) / (cols - headerCols);
+    // Set the colWidth to the maximum width of a colum
+    let colWidth = minWidth;
+    for (var rowIndex = 0 ; rowIndex < rows ; rowIndex++) {
+      const nChars = cellContents(colIndex, rowIndex).contents.length;
+      const cellWidth = nChars * charWidth + padding;
+      if (cellWidth > maxWidth)
+        return maxWidth;
+      else if (cellWidth > colWidth)
+        colWidth = cellWidth;
     }
+    return colWidth;
+  };
+
+  // Increase column with if the table is too narrow.
+  let [tableWidth, headerWidth] = [0,0];
+  for (var colIndex = 0 ; colIndex < cols ; colIndex++) {
+    const colWidth = columnWidth({index: colIndex});
+    tableWidth += colWidth;
+    if (colIndex < headerCols)
+      headerWidth += colWidth;
+    else if (tableWidth >= width)
+      break;
+  }
+  if (tableWidth < width) {
+    columnWidth = () => (width / cols);
   }
 
-  // Package up return values.
-  const headerWidth = sum(colWidthArray.slice(0, headerCols));
-  const columnWidth = ({index}) => (colWidthArray[index]);
   return {columnWidth, headerWidth};
 }
 
