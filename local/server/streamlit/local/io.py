@@ -137,7 +137,7 @@ def spinner(text):
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
-_this_may_be_proxy = sys.argv == ['-m']
+_this_may_be_proxy = sys.argv[0] == '-m'
 
 # In order to log all exceptions etc to the streamlit report after
 # `import streamlit.io` we establish the proxy by calling get_delta_generator().

@@ -384,11 +384,11 @@ class DeltaGenerator:
         delta = protobuf.Delta()
         set_element(delta.new_element)
 
-        # Make sure that the element isn't too big.
-        if len(delta.new_element.SerializeToString()) > MAX_DELTA_BYTES:
-            alert_msg = 'Cannot transmit element larger than %s MB.' % \
-                (MAX_DELTA_BYTES // (1024 ** 2))
-            return self.alert(alert_msg)
+        # # Make sure that the element isn't too big.
+        # if len(delta.new_element.SerializeToString()) > MAX_DELTA_BYTES:
+        #     alert_msg = 'Cannot transmit element larger than %s MB.' % \
+        #         (MAX_DELTA_BYTES // (1024 ** 2))
+        #     return self.error(alert_msg)
 
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:

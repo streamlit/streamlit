@@ -2,9 +2,9 @@
 
 import dis
 import hashlib
-import io
 import os
 import pickle
+import re
 import shutil
 
 from streamlit.local import io
@@ -29,12 +29,18 @@ def cache(func):
 		except:
 			message = f'Caching:\n{func.__name__}()'
 
+		# This
+
 		# Temporarily display this message while computing this function.
 		with io.spinner(message):
+			# Searches for addresses like "object <listcomp> at 0x1052cca50"
+			address = re.compile(r'at\ 0x[0-9a-f]+')
+			instr_to_str = lambda i: address.sub('ADDRESS', str(i))
+
 			# Calculate the filename hash.
 			hasher = hashlib.new('md5')
-			hasher.update(pickle.dumps((
-				argc, argv, list(dis.get_instructions(func))),
+			hasher.update(pickle.dumps([argc, argv] +
+				[instr_to_str(i) for i in dis.get_instructions(func)],
 				pickle.HIGHEST_PROTOCOL))
 			path = f'cache/f{hasher.hexdigest()}.pickle'
 

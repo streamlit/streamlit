@@ -20,7 +20,8 @@ import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
-import { StreamlitMsg } from 'streamlit-shared/lib/protobuf/streamlit';
+import { StreamlitMsg, Text as TextProto }
+  from 'streamlit-shared/lib/protobuf/streamlit';
 import { addRows } from 'streamlit-shared/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
   from 'streamlit-shared/lib/immutableProto';
@@ -60,7 +61,7 @@ class WebClient extends PureComponent {
   handleReconnect() {
     console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', /* warning */ 7);
+    this.resetState('Established connection.', TextProto.Format.WARNING);
   }
 
   /**
@@ -96,7 +97,9 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newReport: (id) => {
-          this.resetState(`Receiving data for report ${id}.`, /* info */ 8);
+          console.log(`newReport id=${id}`); // debug
+          this.resetState(`Receiving data for report ${id}`,
+            TextProto.Format.INFO);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -126,7 +129,11 @@ class WebClient extends PureComponent {
 
   render() {
     // Compute the websocket URI based on the pathname.
-    let uri = "ws://localhost:5006/latest" // default
+    const reportName =
+      decodeURIComponent(window.location.pathname).split( '/' )[2];
+    document.title = `${reportName} (Streamlit)`
+    let uri = `ws://localhost:5006/stream/${encodeURIComponent(reportName)}`
+
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_report)
     //   uri = `ws://localhost:8554/api/get/${get_report[1]}`

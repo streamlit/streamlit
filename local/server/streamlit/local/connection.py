@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 import traceback
+import urllib
 
 from streamlit.local.util import get_local_id
 from streamlit.shared import config
@@ -57,6 +58,9 @@ class Connection:
         """
         # Create an ID for this Report
         self._report_id = bson.ObjectId()
+
+        # Create a name for this report.
+        self._name = self._create_name()
 
         # Queue to store deltas as they flow across.
         self._queue = ReportQueue()
@@ -117,6 +121,20 @@ class Connection:
         adding new elements."""
         return self._delta_generator
 
+    def _create_name(self):
+        """Creates a name for this report."""
+        if len(sys.argv) >= 2 and sys.argv[0] == '-m':
+            name = sys.argv[1]
+        elif len(sys.argv) >= 1:
+            name = os.path.split(sys.argv[0])[1]
+            if name.endswith('.py'):
+                name = name[:-3]
+            if name == '__main__' and len(sys.argv) >= 2:
+                name = sys.argv[1]
+        else:
+            name = str(self._report_id)
+        return name
+
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
@@ -140,8 +158,8 @@ class Connection:
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
         local_id = get_local_id()
-        report_id = self._report_id
-        uri = f'http://{server}:{port}/new/{local_id}/{report_id}'
+        report_name = urllib.parse.quote_plus(self._name)
+        uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=self._loop)
