@@ -150,7 +150,7 @@ def display_reference():
     @streamlit.cache
     def read_image(url):
         return urllib.request.urlopen(url).read()
-    image_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
+    image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'
     try:
         image_bytes = read_image(image_url)
 

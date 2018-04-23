@@ -218,7 +218,10 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
       break;
   }
   if (tableWidth < width) {
-    columnWidth = () => (width / cols);
+    const widthArray = Array.from({length: cols}, (_, colIndex) => (
+      columnWidth({index: colIndex}) + (width - tableWidth) / cols
+    ));
+    columnWidth = ({index}) => widthArray[index];
   }
 
   return {columnWidth, headerWidth};

@@ -66,7 +66,7 @@ make production
 
 ## How to publish a new version of the code to `PyPi`
 
-- The current version is `0.6.0`
+- The current version is `0.7.0`
 - Write new release notes.
 - Update the version in the following locations:
   - `readme.md`
@@ -110,6 +110,77 @@ make distribute
 - Create and push a branch for this version.
 
 ## Release Notes
+
+#### v0.7
+April 23, 2018
+```
+We are thrilled to announce the v0.7 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade streamlit
+
+New features are:
+
+1. Help now opens in a separate tab. So running:
+
+    python -m streamlit help
+
+  Now opens a new tab named help. Very useful to flipping between help and
+  your work!
+
+2. Streamlit now supports running multiple scripts simultaneously. If you have
+   scripts called script_a.py and script_b.py then running:
+
+    python script_a.py
+    python script_b.py
+    
+  will open two separate tabs called "script_a" and "script_b." Of course,
+  updating and rerunning either script will affect only its tab.
+
+2. Markdown is now the default for write(). Try:
+
+    io.write('*Italics* **Bold** `Fixed-width`')
+    io.text('This is fixed-width text.')
+
+3. We simplified the header functions. Try:
+
+    io.title('A big header.')
+    io.header('A smaller header.')
+    io.subheader('An even smaller header.')
+
+4. We simplified alerts with the following four new functions:
+
+    io.error('OMG!')
+    io.warning('OMG!')
+    io.info('OMG!')
+    io.success('OMG!')
+
+5. You can now pretty-print your own exceptions:
+
+    io.exception(my_exception)
+
+6. You can now get help on any function, class or package using io.help(). For
+   example, for help with with Python's print() function, use:
+
+    io.help(print)
+
+7. We support out-of-order printing with the empty() function. For example,
+   to print the first three letters of the alphabet you can do:
+
+    io.markdown('A')
+    placeholder = io.empty()
+    io.markdown('C')
+    placeholder.markdown('B')
+
+8. Show the user something during a long-running computation as follows:
+
+    with spinner(‘wait for it...'):
+      long_computation()
+
+    (You can also use the @streamlit.cache decorator to speed these up!)
+
+Remember if you get lost, just run `python -m streamlit help`. We look forward
+to hearing how you use these powerful new features!
+```
 
 #### v0.6
 April 9, 2018

@@ -69,6 +69,7 @@ loc:
 
 # Makes a distribution for PIP installation.
 package:
+	rm -rfv dist/streamlit dist/build
 	rsync -avL --exclude="__pycache__" local/server/streamlit dist/
 	rsync -av local/client/build dist/
 	cp -v config.yaml requirements.txt dist/

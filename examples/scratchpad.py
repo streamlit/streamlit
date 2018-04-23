@@ -9,25 +9,18 @@ import string
 import sys
 import time
 
-@cache
-def open_json():
-    with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
-        return [json.loads(line) for line in file.readlines()]
+# @cache
+# def open_json():
+#     with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
+#         return [json.loads(line) for line in file.readlines()]
+#
+# json_data = open_json()
+# io.write(pd.DataFrame(json_data))
+# io.json(json_data)
 
-json_data = open_json()
-io.write(pd.DataFrame(json_data))
-io.json(json_data)
-
-# io.bar_chart(list(range(10)))
-
-# big_array = np.empty((1000, 100), dtype=np.object)
-# for column in range(big_array.shape[1]):
-#     value = string.ascii_lowercase[column % 26] * (column % 51 + 1)
-#     big_array[:,column] = value
-# io.write(big_array, big_array.dtype)
-
-# io.subheader('str_array')
-# str_array = np.array([['abc']])
-# io.write(str_array)
-# io.write(str_array.astype(np.str))
-# io.write(type(str_array.dtype))
+data = pd.DataFrame()
+data['labels'] = list(string.ascii_lowercase[:10])
+data['frequencies'] = list(range(10))
+data.set_index('labels', inplace=True)
+io.write(data)
+io.bar_chart(data)
