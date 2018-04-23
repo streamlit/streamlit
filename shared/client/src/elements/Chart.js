@@ -81,8 +81,9 @@ const INDEX_COLUMN_DESIGNATOR = '::index';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'int_64Index', 'uint_64Index', 'float_64Index', 'datetimeIndex', 'timedeltaIndex',
-  // TODO(tvst): 'range_index', etc.
+  'int_64Index', 'uint_64Index', 'float_64Index', 'datetimeIndex',
+  'timedeltaIndex', 'rangeIndex',
+  // TODO(tvst): Support Other index types
 ]);
 
 class Chart extends PureComponent {
