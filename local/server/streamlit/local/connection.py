@@ -123,6 +123,7 @@ class Connection:
 
     def _create_name(self):
         """Creates a name for this report."""
+        name = ''
         if len(sys.argv) >= 2 and sys.argv[0] == '-m':
             name = sys.argv[1]
         elif len(sys.argv) >= 1:
@@ -131,7 +132,7 @@ class Connection:
                 name = name[:-3]
             if name == '__main__' and len(sys.argv) >= 2:
                 name = sys.argv[1]
-        else:
+        if name == '':
             name = str(self._report_id)
         return name
 

@@ -15,7 +15,7 @@ local:
 # Configuration of the proxy server
 proxy:
   server: localhost
-  port: 5007
+  port: 5008
 
   # How many seconds the proxy waits for the connection before timing out.
   waitForConnectionSecs: 10.0
