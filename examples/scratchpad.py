@@ -9,14 +9,27 @@ import string
 import sys
 import time
 
+# @cache
+# def open_json():
+#     with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
+#         return [json.loads(line) for line in file.readlines()][:10]
+#
+# @cache
+# def something_funny():
+#     time.sleep(3.0)
+#     return 123
+#
+# io.write('something_funny:', something_funny())
+# io.write(pd.DataFrame(open_json()))
 
-@cache
-def open_json():
-    with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
-        return [json.loads(line) for line in file.readlines()]
+data = pd.DataFrame()
+data['labels'] = list(string.ascii_lowercase[:10])
+data['frequencies'] = np.array(list(range(10))) * 4
+data.set_index('labels', inplace=True)
+io.write(data)
+io.bar_chart(data)
 
-io.write(np.random.randn(200, 200))
-io.write(pd.DataFrame(open_json()))
+# io.bar_chart(list(range(10)))
 
 # big_array = np.empty((1000, 100), dtype=np.object)
 # for column in range(big_array.shape[1]):

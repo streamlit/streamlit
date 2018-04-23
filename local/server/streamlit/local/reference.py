@@ -13,6 +13,7 @@ import inspect
 import numpy as np
 import pandas as pd
 import textwrap
+import threading
 
 import streamlit
 from streamlit import io
@@ -35,6 +36,7 @@ def render(func):
 
 def display_reference():
     """Displays Streamlit's internal help in the browser."""
+
     io.title('Streamlit Quick Reference')
 
     io.header('The Basics')

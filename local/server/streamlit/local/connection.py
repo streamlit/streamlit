@@ -129,6 +129,8 @@ class Connection:
             name = os.path.split(sys.argv[0])[1]
             if name.endswith('.py'):
                 name = name[:-3]
+            if name == '__main__' and len(sys.argv) >= 2:
+                name = sys.argv[1]
         else:
             name = str(self._report_id)
         return name
@@ -158,7 +160,6 @@ class Connection:
         local_id = get_local_id()
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
-        print(f'Connecting to URI: {uri} (report_id={self._report_id})')
 
         # Try to connect twice to the websocket
         session = ClientSession(loop=self._loop)
