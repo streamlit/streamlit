@@ -9,19 +9,18 @@ import string
 import sys
 import time
 
-# @streamlit.cache
-# def open_json(from_line, to_line):
-#     with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
-#         return [json.loads(line) for line in file.readlines()][from_line:to_line]
-#
-# json_data = open_json(0,100)
-# io.write(pd.DataFrame(json_data))
-
+@cache
+def open_json(from_line):
+    with open('swift-gnss-20180405-180845.sbp.expanded.json') as file:
+        return [json.loads(line) for line in file.readlines()]
 
 timings = pd.DataFrame.from_records([
     {'method': 'no_cache', 'time': 123.0},
     {'method': 'cache',    'time': 345.0},
-])
+]).set_index('method')
+
+io.write(timings)
+io.bar_chart(timings)
 
 # timings.append(
 # io.write(timings)
