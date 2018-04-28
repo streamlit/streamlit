@@ -7,3 +7,4 @@ io.write('Nothing')
 
 with io.echo():
     io.write('This code will be written.')
+    io.write('And this too.')

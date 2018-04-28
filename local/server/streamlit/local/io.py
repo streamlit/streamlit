@@ -148,13 +148,15 @@ def echo():
         import traceback
         write(traceback)
         subheader('Stack')
-        frame = traceback.extract_stack()[0]
-        write(frame)
-        write(dir(frame))
-        write('filename', frame.filename, type(frame.filename))
-        write('line', frame.line, type(frame.line))
-        write('lineno', frame.lineno, type(frame.lineno))
+        start_frame = traceback.extract_stack()[0]
+        filename, start_line = frame.filename, frame.lineno
+        # write(frame)
+        # write(dir(frame))
+        # write('line', frame.line, type(frame.line))
+        # write('lineno', frame.lineno, type(frame.lineno))
         yield
+        frame = traceback.extract_stack()[0]
+        write('**after yield**', frame.filename, frame.lineno)
         write('Finished yield.')
     finally:
         write('Finally')
