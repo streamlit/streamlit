@@ -134,6 +134,30 @@ def spinner(text):
     finally:
         message.empty()
 
+@contextlib.contextmanager
+def echo():
+    """Render the given code, then execute it.
+
+    Example
+    -------
+    ::
+        with io.echo():
+            io.write('This code will be printed')
+    """
+    try:
+        import traceback
+        write(traceback)
+        subheader('Stack')
+        frame = traceback.extract_stack()[0]
+        write(frame)
+        write(dir(frame))
+        write('filename', frame.filename, type(frame.filename))
+        write('line', frame.line, type(frame.line))
+        write('lineno', frame.lineno, type(frame.lineno))
+        yield
+        write('Finished yield.')
+    finally:
+        write('Finally')
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
