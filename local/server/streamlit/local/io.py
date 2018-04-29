@@ -5,6 +5,8 @@ import contextlib
 import numpy as np
 import pandas as pd
 import sys
+import textwrap
+import traceback
 import types
 
 from streamlit.local.Chart import Chart
@@ -144,22 +146,15 @@ def echo():
         with io.echo():
             io.write('This code will be printed')
     """
-    try:
-        import traceback
-        write(traceback)
-        subheader('Stack')
-        start_frame = traceback.extract_stack()[0]
-        filename, start_line = frame.filename, frame.lineno
-        # write(frame)
-        # write(dir(frame))
-        # write('line', frame.line, type(frame.line))
-        # write('lineno', frame.lineno, type(frame.lineno))
-        yield
-        frame = traceback.extract_stack()[0]
-        write('**after yield**', frame.filename, frame.lineno)
-        write('Finished yield.')
-    finally:
-        write('Finally')
+    code = empty()
+    start_frame = traceback.extract_stack()[0]
+    yield
+    end_frame = traceback.extract_stack()[0]
+    assert start_frame.filename == end_frame.filename
+    with open(start_frame.filename) as source_file:
+        lines = slice(start_frame.lineno, end_frame.lineno)
+        source = ''.join(source_file.readlines()[lines])
+        code.markdown(f'```\n{textwrap.dedent(source)}\n```')
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.

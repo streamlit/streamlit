@@ -1,10 +1,8 @@
 #!./streamlit_run
 
 from streamlit import io
-
-io.write('Hello, world!')
-io.write('Nothing')
+import numpy as np
 
 with io.echo():
-    io.write('This code will be written.')
-    io.write('And this too.')
+    table = np.random.randn(200, 200)
+    io.write(table)
