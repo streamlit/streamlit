@@ -14,7 +14,7 @@ def load_data(nrows):
     data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
     return data
 
-nrows = 10
+nrows = 10000
 io.write('Loaded', nrows, 'rows.')
 data = load_data(nrows)
 
@@ -24,7 +24,6 @@ io.write(data)
 # data['hour'] = data['Date/Time'].dt.hour
 # data['day'] = data['Date/Time'].dt.dayofweek
 # io.write('About to write data')
-
 # io.write('Wrote raw data')
 
 io.write('Here is a test!')
