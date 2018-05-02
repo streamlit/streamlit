@@ -41,17 +41,6 @@ class DataFrame extends PureComponent {
       const cols = headerCols + dataCols;
       const rows = headerRows + dataRows;
 
-      // // Debug - begin
-      // console.log('Rendering this DataFrame');
-      // console.log('MAKE SURE THIS DOESNT HAPPEN TOO OFTEN!')
-      // console.log(`Are thigns valid? df:${df === prev_df} width:${width === prev_width}`)
-      // console.log(`Just checking the df:${df === df}`)
-      // console.log(df ? df.toJS() : 'undefined df')
-      // console.log(prev_df ? prev_df.toJS() : 'undefined prev_df')
-      // prev_df = df;
-      // prev_width = width;
-      // // Debug - end
-
       // Rendering constants.
       const rowHeight = 25;
       const headerHeight = rowHeight * headerRows;
@@ -194,9 +183,13 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
     const padding = 14;
     const [minWidth, maxWidth] = [25, 400];
 
-    // Set the colWidth to the maximum width of a colum
+    // Set the colWidth to the maximum width of a column. If more than maxRows
+    // then select maxRows at random to measure.
+    const maxRows = 100;
     let colWidth = minWidth;
-    for (var rowIndex = 0 ; rowIndex < rows ; rowIndex++) {
+    for (var i = 0 ; i < Math.min(rows, maxRows) ; i++) {
+      const rowIndex = rows > maxRows ? Math.floor(Math.random() * rows) : i;
+      console.log(`iter: ${i} rowIndex: ${rowIndex}`);
       const nChars = cellContents(colIndex, rowIndex).contents.length;
       const cellWidth = nChars * charWidth + padding;
       if (cellWidth > maxWidth)
