@@ -42,7 +42,7 @@ class Map extends PureComponent {
           center={position}
           fillColor="red"
           opacity={0.1}
-          radius={60}
+          radius={120}
           stroke={false}
           key={i}
         />);

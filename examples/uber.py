@@ -5,20 +5,22 @@ import pandas as pd
 import numpy as np
 
 io.title('Uber Example')
+DATE_TIME = 'date/time'
 
 @cache
 def load_data(nrows):
-    DATE_TIME = 'date/time'
+
     data = pd.read_csv('uber-raw-data-sep14.csv', nrows=nrows)
     data.rename(str.lower, axis='columns', inplace=True)
     data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
     return data
 
-nrows = 10000
+nrows = 100000
 io.write('Loaded', nrows, 'rows.')
 data = load_data(nrows)
 
 io.header('Raw Data')
+data = data[data[DATE_TIME].dt.hour == 12]
 io.write(data)
 
 # data['hour'] = data['Date/Time'].dt.hour
