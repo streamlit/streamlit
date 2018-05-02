@@ -8,24 +8,27 @@ io.title('Uber Example')
 
 @cache
 def load_data(nrows):
-    DATE_TIME = 'Date/Time'
+    DATE_TIME = 'date/time'
     data = pd.read_csv('uber-raw-data-sep14.csv', nrows=nrows)
+    data.rename(str.lower, axis='columns', inplace=True)
     data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
     return data
 
-# nrows = 100000
-# io.write('Loaded', nrows, 'rows.')
-# data = load_data(nrows)
-#
-# io.header('Raw Data')
+nrows = 10
+io.write('Loaded', nrows, 'rows.')
+data = load_data(nrows)
+
+io.header('Raw Data')
+io.write(data)
+
 # data['hour'] = data['Date/Time'].dt.hour
 # data['day'] = data['Date/Time'].dt.dayofweek
 # io.write('About to write data')
-# io.write(data)
+
 # io.write('Wrote raw data')
 
 io.write('Here is a test!')
-io.map()
+io.map(data)
 
 # io.binned_scatter_chart(data[['hour', 'day']].set_index('hour'))
 # # io.write(data[['hour', 'day']].set_index('hour'))

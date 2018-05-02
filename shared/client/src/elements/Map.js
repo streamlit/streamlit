@@ -18,18 +18,21 @@ class Map extends PureComponent {
       zoom: 13,
     }
 
-    const {width} = this.props;
-    const position = [this.state.lat, this.state.lng];
+    const {map, width} = this.props;
+    console.log('map:', map.toJS())
+
+    const center = [map.get('centerLat'), map.get('centerLon')];
+    const zoom = map.get('zoom');
     return (
-      <LeafletMap style={{width, height: width}} center={position} zoom={this.state.zoom}>
+      <LeafletMap style={{width, height: width}} center={center} zoom={zoom}>
         <TileLayer
           attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={position}>
+        <Marker position={center}>
           <Popup>
             <span>
-              A pretty CSS3 popup. <br /> Easily customizable.
+              This is the center!
             </span>
           </Popup>
         </Marker>
