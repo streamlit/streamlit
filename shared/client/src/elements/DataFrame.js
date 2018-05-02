@@ -189,7 +189,6 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
     let colWidth = minWidth;
     for (var i = 0 ; i < Math.min(rows, maxRows) ; i++) {
       const rowIndex = rows > maxRows ? Math.floor(Math.random() * rows) : i;
-      console.log(`iter: ${i} rowIndex: ${rowIndex}`);
       const nChars = cellContents(colIndex, rowIndex).contents.length;
       const cellWidth = nChars * charWidth + padding;
       if (cellWidth > maxWidth)
