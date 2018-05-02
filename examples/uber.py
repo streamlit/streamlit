@@ -18,13 +18,12 @@ nrows = 100000
 io.write('Loaded', nrows, 'rows.')
 data = load_data(nrows)
 
-with io.echo():
-    io.header('Raw Data')
-    data['hour'] = data['Date/Time'].dt.hour
-    data['day'] = data['Date/Time'].dt.dayofweek
-    io.write('About to write data')
-    io.write(data)
-    io.write('Wrote raw data')
+io.header('Raw Data')
+data['hour'] = data['Date/Time'].dt.hour
+data['day'] = data['Date/Time'].dt.dayofweek
+io.write('About to write data')
+io.write(data)
+io.write('Wrote raw data')
 
 # io.binned_scatter_chart(data[['hour', 'day']].set_index('hour'))
 # # io.write(data[['hour', 'day']].set_index('hour'))
