@@ -17,6 +17,7 @@ import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
 import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
+import Map from 'streamlit-shared/lib/elements/Map';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -182,6 +183,7 @@ class WebClient extends PureComponent {
           docString: (doc) => <DocString element={doc} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
+          map: (map) => <Map map={map} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

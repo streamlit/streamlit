@@ -361,6 +361,19 @@ class DeltaGenerator:
         # NOTE: protobuf needs something to be set
         element.empty.unused = True
 
+    @_export_to_io
+    @_create_element
+    def map(self, element):
+        """Creates a map element.
+
+        Args
+        ----
+        No args for the tie being.
+        """
+        element.map.title = "Map title."
+        points = pd.DataFrame(columns=['lat', 'lon'])
+        data_frame_proto.marshall_data_frame(points, element.map.points)
+
     def add_rows(self, df):
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
