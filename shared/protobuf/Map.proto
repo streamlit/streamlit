@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "DataFrame.proto";
+
+// A map which can be displayed using Leaflet.
+message Map {
+  string title = 1;
+  DataFrame points = 2;
+}
