@@ -17,6 +17,7 @@ import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
 import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
+import Map from 'streamlit-shared/lib/elements/Map';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -92,7 +93,10 @@ class WebClient extends PureComponent {
     // Parse the deltas out and apply them to the state.
     const reader = new FileReader();
     reader.readAsArrayBuffer(blob)
+    const readId = Math.random()
+    console.log('Got readID', readId)
     reader.onloadend = () => {
+      console.log('Finished loading', readId)
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
       const msgProto = StreamlitMsg.decode(result)
@@ -103,7 +107,8 @@ class WebClient extends PureComponent {
           console.log(`newReport id=${id}`); // debug
           setTimeout(() => {
             console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
-            this.clearOldElements();
+            if (id === this.state.reportId)
+              this.clearOldElements();
           }, 3000);
           // this.resetState(`Receiving data for report ${id}`,
           //   TextProto.Format.INFO);
@@ -145,8 +150,10 @@ class WebClient extends PureComponent {
     this.setState(({elements, reportId}) => ({
       elements: elements.map((elt) => {
         if (elt.get('reportId') === reportId) {
+          console.log(`NOT clearing out ${elt.get('type')}`)
           return elt;
         } else {
+          console.log(`clearing out ${elt.get('type')}`)
           return fromJS({
             empty: {unused: true},
             reportId: reportId,
@@ -212,6 +219,7 @@ class WebClient extends PureComponent {
           docString: (doc) => <DocString element={doc} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
+          map: (map) => <Map map={map} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;
