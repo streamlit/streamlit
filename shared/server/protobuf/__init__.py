@@ -12,7 +12,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
 from Chart_pb2 import Chart
-from Div_pb2 import Div
+#from Div_pb2 import Div
 from Element_pb2 import Element
 from Delta_pb2 import Delta, DeltaList
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
