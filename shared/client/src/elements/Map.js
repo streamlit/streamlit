@@ -46,9 +46,7 @@ class Map extends PureComponent {
           stroke={false}
           key={i}
         />);
-        console.log(circles[i]);
       }
-      console.log('circles', circles);
 
       const center = [map.get('centerLat'), map.get('centerLon')];
       const zoom = map.get('zoom');

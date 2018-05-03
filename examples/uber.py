@@ -20,7 +20,7 @@ io.write('Loaded', nrows, 'rows.')
 data = load_data(nrows)
 
 io.header('Raw Data')
-data = data[data[DATE_TIME].dt.hour == 12]
+data = data[data[DATE_TIME].dt.hour == 116]
 io.write(data)
 
 # data['hour'] = data['Date/Time'].dt.hour

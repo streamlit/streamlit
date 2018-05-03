@@ -104,7 +104,8 @@ class WebClient extends PureComponent {
           console.log(`newReport id=${id}`); // debug
           setTimeout(() => {
             console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
-            this.clearOldElements();
+            if (id === this.state.reportId)
+              this.clearOldElements();
           }, 3000);
           // this.resetState(`Receiving data for report ${id}`,
           //   TextProto.Format.INFO);
