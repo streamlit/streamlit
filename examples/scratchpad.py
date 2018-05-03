@@ -6,10 +6,14 @@ import time
 import pandas as pd
 # import shapefile
 
-
 # Uber data_key
-data = pd.read_csv("labels_crowdai.csv")
-io.write(data)
+n_elts = int(time.time() * 10) % 5 + 3
+for i in range(n_elts):
+    io.text('.' * i)
+io.write(n_elts)
+for i in range(n_elts):
+    io.text('.' * i)
+io.success('done')
 
 ### NYC green taxi data
 

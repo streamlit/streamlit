@@ -35,6 +35,7 @@ class WebClient extends PureComponent {
 
     // Initially the state reflects that no data has been received.
     this.state = {
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -73,6 +74,7 @@ class WebClient extends PureComponent {
    */
   resetState(msg, format) {
     this.setState({
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -97,9 +99,10 @@ class WebClient extends PureComponent {
       const msg = toImmutableProto(StreamlitMsg, msgProto);
       dispatchOneOf(msg, 'type', {
         newReport: (id) => {
+          this.setState(() => ({reportId: id}))
           console.log(`newReport id=${id}`); // debug
-          this.resetState(`Receiving data for report ${id}`,
-            TextProto.Format.INFO);
+          // this.resetState(`Receiving data for report ${id}`,
+          //   TextProto.Format.INFO);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
@@ -112,10 +115,9 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // // debug - begin
-    // console.log('applying deltas')
-    // console.log(deltaList.toJS())
-    // // debug - end
+    // debug - begin
+    console.log(`applying deltas to report id ${this.state.reportId}`)
+    // debug - end
 
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (

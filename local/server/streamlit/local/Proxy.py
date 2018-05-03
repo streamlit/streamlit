@@ -7,7 +7,7 @@ objects. A ProxyConnection always has:
     - Zero or more "client" connections to the web client.
 
 Essentially, the ProxyConnection stays open so long as any of those connections
-do. When the final ProxyConnection closes, then the whole proxy does tooself.
+do. When the final ProxyConnection closes, then the whole proxy does too.
 
 To ensure the proxy closes, a short timeout is launched for each connection
 which closes the proxy if no connections were established.
