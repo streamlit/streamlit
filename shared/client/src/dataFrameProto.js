@@ -63,6 +63,20 @@ export function indexGet(index, level, i) {
 }
 
 /**
+ * Returns the numerical index of the column with the specified name within
+ * this table. If no such column exists, returns -1.
+ */
+export function indexGetByName(index, name) {
+  const len = indexLen(index);
+  for (var i = 0 ; i < len ; i++) {
+    console.log(`iter: ${i} comparing "${indexGet(index, 0, i)}" to "${name}".`);
+    if (indexGet(index, 0, i) === name)
+      return i;
+  }
+  return -1;
+}
+
+/**
  * Returns the length of an AnyArray.
  */
 function anyArrayLen(anyArray) {

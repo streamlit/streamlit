@@ -361,6 +361,24 @@ class DeltaGenerator:
         # NOTE: protobuf needs something to be set
         element.empty.unused = True
 
+    @_export_to_io
+    @_create_element
+    def map(self, element, points):
+        """Creates a map element.
+
+        Args
+        ----
+        No args for the tie being.
+        """
+        LAT_LON = ['lat', 'lon']
+        assert set(points.columns) >= set(LAT_LON), \
+            'Map points must contain "lat" and "lon" columns.'
+        element.map.center_lat = points['lat'].mean()
+        element.map.center_lon = points['lon'].mean()
+        element.map.zoom = 13;
+        data_frame_proto.marshall_data_frame(points[LAT_LON],
+            element.map.points)
+
     def add_rows(self, df):
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'

@@ -8,6 +8,7 @@ import "Progress.proto";
 import "DocString.proto";
 import "Exception.proto";
 import "Empty.proto";
+import "Map.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -22,5 +23,6 @@ message Element {
     ImageList imgs = 6;
     DocString doc_string = 7;
     Exception exception = 8;
+    Map map = 9;
   }
 }

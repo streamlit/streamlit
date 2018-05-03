@@ -28,8 +28,8 @@ io.write(data)
 # io.write('About to write data')
 # io.write('Wrote raw data')
 
-# io.write('Here is a test!')
-# io.map(data)
+io.write('Here is a test!')
+io.map(data)
 
 # io.binned_scatter_chart(data[['hour', 'day']].set_index('hour'))
 # # io.write(data[['hour', 'day']].set_index('hour'))
