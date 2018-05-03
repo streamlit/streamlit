@@ -5,30 +5,32 @@ Whenever possible, deltas are combined.
 """
 
 import copy
+import enum
 
 from streamlit.shared import data_frame_proto
 from streamlit.shared import protobuf
 
+class QueueState(enum.Enum):
+    # Indicates that the queue is accepting deltas.
+    OPEN = 0
+
+    # Indicates that the queue will close on the nextz flush.
+    CLOSING = 1
+
+    # Indicates that the queue is now closed.
+    CLOSED = 2
+
 class ReportQueue:
     """Accumulates a bunch of deltas."""
 
-    # Indicates that the queue is accepting deltas.
-    STATE_OPEN = 0
-
-    # Indicates that the queue will close on the nextz flush.
-    STATE_CLOSING = 1
-
-    # Indicates that the queue is now closed.
-    STATE_CLOSED = 2
-
     def __init__(self):
         """Constructor."""
+        self._state = QueueState.OPEN
         self._empty()
-        self._state = ReportQueue.STATE_OPEN
 
     def __call__(self, delta):
         """Adds a delta into this queue."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot add deltas after the queue closes.'
 
         # Store the index if necessary.
@@ -44,7 +46,7 @@ class ReportQueue:
 
     def get_deltas(self):
         """Returns a list of deltas and clears this queue."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot get deltas after the queue closes.'
 
         deltas = self._deltas
@@ -55,7 +57,7 @@ class ReportQueue:
     async def flush_queue(self, ws):
         """Sends the deltas across the websocket in a DeltaList, clearing the
         queue afterwards."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot get deltas after the queue closes.'
 
         # Send any remaining deltas.
@@ -66,28 +68,36 @@ class ReportQueue:
             await ws.send_bytes(msg.SerializeToString())
 
         # Send report_finished method if this queue is closed.
-        if self._state == ReportQueue.STATE_CLOSING:
-            self._state = ReportQueue.STATE_CLOSED
+        if self._state == QueueState.CLOSING:
+            self._state = QueueState.CLOSED
             msg = protobuf.StreamlitMsg()
             msg.report_finished = True
+            print('sending report_finished message for', self)
             await ws.send_bytes(msg.SerializeToString())
+            print('sent report_finished message for', self)
 
     def clone(self):
         """Returns a clone of this ReportQueue."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot clone a closed queue.'
         return copy.deepcopy(self)
 
-    def close():
+    def close(self):
         """Tells the queue to close and send a report_finished message after the
         next flush_queue call and send."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot re-close a queue.'
-        self._state = ReportQueue.CLOSING
+        print('About to do closing queue', self, self._state) # debug
+        self._state = QueueState.CLOSING
+        print('Closing queue', self, self._state) # debug
+
+    def is_closed(self):
+        """Returns true if this queue has been closed."""
+        return self._state == QueueState.CLOSED
 
     def _empty(self):
         """Returns this Accumulator to an empty state."""
-        assert self._state != ReportQueue.STATE_CLOSED, \
+        assert self._state != QueueState.CLOSED, \
             'Cannot empty a closed queue.'
         self._deltas = []
         self._id_map = {}

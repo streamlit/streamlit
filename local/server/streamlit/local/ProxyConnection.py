@@ -31,9 +31,9 @@ class ProxyConnection:
     def finished_local_connection(self):
         """Removes the flag indicating an active local connection."""
         self._has_local = False
-        report_finished_msg = protobuf.StreamlitMsg()
-        report_finished_msg.report_finished = True
-        self.enqueue(report_finished_msg)
+        self._master_queue.close()
+        for queue in self._client_queues:
+            queue.close()
 
     def end_grace_period(self):
         """Inicates that the grace period is over and the connection can be

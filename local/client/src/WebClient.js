@@ -101,11 +101,18 @@ class WebClient extends PureComponent {
         newReport: (id) => {
           this.setState(() => ({reportId: id}))
           console.log(`newReport id=${id}`); // debug
+          setTimeout(() => {
+            console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
+            this.clearOldElements();
+          }, 3000);
           // this.resetState(`Receiving data for report ${id}`,
           //   TextProto.Format.INFO);
         },
         deltaList: (deltaList) => {
           this.applyDeltas(deltaList);
+        },
+        reportFinished: () => {
+          this.clearOldElements();
         }
       });
     }
@@ -127,6 +134,26 @@ class WebClient extends PureComponent {
             newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
         }))), elements)
+    }));
+  }
+
+  /**
+   * Empties out all elements whose reportIds are no longer current.
+   */
+  clearOldElements() {
+    console.log(`Clearing out old elements for reportId ${this.state.reportId}`)
+    this.setState(({elements, reportId}) => ({
+      elements: elements.map((elt) => {
+        if (elt.get('reportId') === reportId) {
+          return elt;
+        } else {
+          return fromJS({
+            empty: {unused: true},
+            reportId: reportId,
+            type: "empty"
+          });
+        }
+      })
     }));
   }
 
