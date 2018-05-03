@@ -150,7 +150,7 @@ class PersistentWebsocket extends PureComponent {
     return (
       <span>
       <svg id="websocket-icon" viewBox="0 0 8 8" width="1em">
-      <use xlinkHref={'open-iconic.min.svg#' + iconName} />
+      <use xlinkHref={'/open-iconic.min.svg#' + iconName} />
       </svg>
       <UncontrolledTooltip placement="bottom" target="websocket-icon">
       {tooltipText}
