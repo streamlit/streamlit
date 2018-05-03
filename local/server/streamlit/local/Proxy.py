@@ -152,7 +152,7 @@ class Proxy:
                     connection, queue = await self._add_client(report_name, ws)
 
                 # Send any new deltas across the wire.
-                await queue.flush_deltas(ws)
+                await queue.flush_queue(ws)
 
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
