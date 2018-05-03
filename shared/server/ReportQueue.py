@@ -12,12 +12,25 @@ from streamlit.shared import protobuf
 class ReportQueue:
     """Accumulates a bunch of deltas."""
 
+    # Indicates that the queue is accepting deltas.
+    STATE_OPEN = 0
+
+    # Indicates that the queue will close on the nextz flush.
+    STATE_CLOSING = 1
+
+    # Indicates that the queue is now closed.
+    STATE_CLOSED = 2
+
     def __init__(self):
         """Constructor."""
         self._empty()
+        self._state = ReportQueue.STATE_OPEN
 
     def __call__(self, delta):
         """Adds a delta into this queue."""
+        assert self._state == ReportQueue.STATE_OPEN, \
+            'Cannot add deltas after the queue closes.'
+
         # Store the index if necessary.
         if (delta.id in self._id_map):
             index = self._id_map[delta.id]
