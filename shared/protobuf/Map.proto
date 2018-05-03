@@ -4,8 +4,5 @@ import "DataFrame.proto";
 
 // A map which can be displayed using Leaflet.
 message Map {
-  float center_lat = 1;
-  float center_lon = 2;
-  uint32 zoom = 3;
-  DataFrame points = 4;
+  DataFrame points = 1;
 }

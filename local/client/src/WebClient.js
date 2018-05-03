@@ -93,7 +93,10 @@ class WebClient extends PureComponent {
     // Parse the deltas out and apply them to the state.
     const reader = new FileReader();
     reader.readAsArrayBuffer(blob)
+    const readId = Math.random()
+    console.log('Got readID', readId)
     reader.onloadend = () => {
+      console.log('Finished loading', readId)
       // Parse out the delta_list.
       const result = new Uint8Array(reader.result);
       const msgProto = StreamlitMsg.decode(result)
@@ -147,8 +150,10 @@ class WebClient extends PureComponent {
     this.setState(({elements, reportId}) => ({
       elements: elements.map((elt) => {
         if (elt.get('reportId') === reportId) {
+          console.log(`NOT clearing out ${elt.get('type')}`)
           return elt;
         } else {
+          console.log(`clearing out ${elt.get('type')}`)
           return fromJS({
             empty: {unused: true},
             reportId: reportId,

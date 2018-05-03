@@ -24,7 +24,13 @@ class Map extends PureComponent {
   render() {
     const {map, width} = this.props;
     try {
-      const points = map.get('points')
+      const points = map.get('points');
+
+      // element.map.center_lat = points['lat'].mean()
+      // element.map.center_lon = points['lon'].mean()
+      // element.map.zoom = 13;
+
+      // NYC -> 40.7831° N, 73.9712° W
 
       // Create an array of circles to display.
       const circles = [];
@@ -48,8 +54,8 @@ class Map extends PureComponent {
         />);
       }
 
-      const center = [map.get('centerLat'), map.get('centerLon')];
-      const zoom = map.get('zoom');
+      const center = [40.7831, -73.9712];
+      const zoom = 13;
       return (
         <LeafletMap style={{width, height: width}} center={center} zoom={zoom}>
           <TileLayer

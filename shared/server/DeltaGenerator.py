@@ -373,9 +373,6 @@ class DeltaGenerator:
         LAT_LON = ['lat', 'lon']
         assert set(points.columns) >= set(LAT_LON), \
             'Map points must contain "lat" and "lon" columns.'
-        element.map.center_lat = points['lat'].mean()
-        element.map.center_lon = points['lon'].mean()
-        element.map.zoom = 13;
         data_frame_proto.marshall_data_frame(points[LAT_LON],
             element.map.points)
 
