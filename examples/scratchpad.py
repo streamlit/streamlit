@@ -8,8 +8,7 @@ import pandas as pd
 
 
 # Uber data_key
-data = pd.read_csv("labels_crowdai.csv")
-io.write(data)
+io.write('hello world')
 
 ### NYC green taxi data
 

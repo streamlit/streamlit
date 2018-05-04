@@ -86,26 +86,19 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(blob) {
-    // Parse the deltas out and apply them to the state.
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(blob)
-    reader.onloadend = () => {
-      // Parse out the delta_list.
-      const result = new Uint8Array(reader.result);
-      const msgProto = StreamlitMsg.decode(result)
-      const msg = toImmutableProto(StreamlitMsg, msgProto);
-      dispatchOneOf(msg, 'type', {
-        newReport: (id) => {
-          console.log(`newReport id=${id}`); // debug
-          this.resetState(`Receiving data for report ${id}`,
-            TextProto.Format.INFO);
-        },
-        deltaList: (deltaList) => {
-          this.applyDeltas(deltaList);
-        }
-      });
-    }
+  handleMessage(msgArray) {
+    const msgProto = StreamlitMsg.decode(msgArray)
+    const msg = toImmutableProto(StreamlitMsg, msgProto);
+    dispatchOneOf(msg, 'type', {
+      newReport: (id) => {
+        console.log(`newReport id=${id}`); // debug
+        this.resetState(`Receiving data for report ${id}`,
+          TextProto.Format.INFO);
+      },
+      deltaList: (deltaList) => {
+        this.applyDeltas(deltaList);
+      }
+    });
   }
 
   /**
