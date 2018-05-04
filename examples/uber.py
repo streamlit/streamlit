@@ -9,7 +9,6 @@ DATE_TIME = 'date/time'
 
 @cache
 def load_data(nrows):
-
     data = pd.read_csv('uber-raw-data-sep14.csv', nrows=nrows)
     data.rename(str.lower, axis='columns', inplace=True)
     data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])

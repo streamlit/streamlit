@@ -61,7 +61,6 @@ class WebClient extends PureComponent {
    * Callback when we establish a websocket connection.
    */
   handleReconnect() {
-    console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
     this.resetState('Established connection.', TextProto.Format.WARNING);
   }
@@ -95,14 +94,10 @@ class WebClient extends PureComponent {
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
         this.setState(() => ({reportId: id}))
-        console.log(`newReport id=${id}`); // debug
         setTimeout(() => {
-          console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
           if (id === this.state.reportId)
             this.clearOldElements();
         }, 3000);
-        // this.resetState(`Receiving data for report ${id}`,
-        //   TextProto.Format.INFO);
       },
       deltaList: (deltaList) => {
         this.applyDeltas(deltaList);
@@ -117,9 +112,9 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // debug - begin
-    console.log(`applying deltas to report id ${this.state.reportId}`)
-    // debug - end
+    // // debug - begin
+    // console.log(`applying deltas to report id ${this.state.reportId}`)
+    // // debug - end
 
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
@@ -136,14 +131,11 @@ class WebClient extends PureComponent {
    * Empties out all elements whose reportIds are no longer current.
    */
   clearOldElements() {
-    console.log(`Clearing out old elements for reportId ${this.state.reportId}`)
     this.setState(({elements, reportId}) => ({
       elements: elements.map((elt) => {
         if (elt.get('reportId') === reportId) {
-          console.log(`NOT clearing out ${elt.get('type')}`)
           return elt;
         } else {
-          console.log(`clearing out ${elt.get('type')}`)
           return fromJS({
             empty: {unused: true},
             reportId: reportId,

@@ -72,9 +72,7 @@ class ReportQueue:
             self._state = QueueState.CLOSED
             msg = protobuf.StreamlitMsg()
             msg.report_finished = True
-            print('sending report_finished message for', self)
             await ws.send_bytes(msg.SerializeToString())
-            print('sent report_finished message for', self)
 
     def clone(self):
         """Returns a clone of this ReportQueue."""
@@ -87,9 +85,7 @@ class ReportQueue:
         next flush_queue call and send."""
         assert self._state != QueueState.CLOSED, \
             'Cannot re-close a queue.'
-        print('About to do closing queue', self, self._state) # debug
         self._state = QueueState.CLOSING
-        print('Closing queue', self, self._state) # debug
 
     def is_closed(self):
         """Returns true if this queue has been closed."""

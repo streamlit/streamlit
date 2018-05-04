@@ -82,23 +82,19 @@ class PersistentWebsocket extends PureComponent {
       if (this.props.onMessage) {
         // Assign this message an index.
         const messageIndex = this.nextMessageIndex;
-        console.log(`received message with index ${messageIndex}`)
         this.nextMessageIndex += 1
 
         // Read in the message data.
         const reader = new FileReader();
         reader.readAsArrayBuffer(data)
         reader.onloadend = () => {
-          console.log(`finished loading message with index ${messageIndex}`)
           this.messageQueue[messageIndex] = new Uint8Array(reader.result);
           while ((this.lastSentMessageIndex + 1) in this.messageQueue) {
             const sendMessageIndex = this.lastSentMessageIndex + 1;
-            console.log(`sending message with index ${sendMessageIndex}`);
             this.props.onMessage(this.messageQueue[sendMessageIndex]);
             delete this.messageQueue[sendMessageIndex];
             this.lastSentMessageIndex = sendMessageIndex;
           }
-          console.log(`finished onloadend lastSentMessageIndex=${this.lastSentMessageIndex} nextMessageIndex=${this.nextMessageIndex}`);
         }
       }
     };
