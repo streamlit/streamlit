@@ -17,6 +17,7 @@ import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
 import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
+// import Map from 'streamlit-shared/lib/elements/Map';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -35,6 +36,7 @@ class WebClient extends PureComponent {
 
     // Initially the state reflects that no data has been received.
     this.state = {
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -73,6 +75,7 @@ class WebClient extends PureComponent {
    */
   resetState(msg, format) {
     this.setState({
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -87,16 +90,25 @@ class WebClient extends PureComponent {
    * Callback when we get a message from the server.
    */
   handleMessage(msgArray) {
-    const msgProto = StreamlitMsg.decode(msgArray)
+    const msgProto = StreamlitMsg.decode(msgArray);
     const msg = toImmutableProto(StreamlitMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
+        this.setState(() => ({reportId: id}))
         console.log(`newReport id=${id}`); // debug
-        this.resetState(`Receiving data for report ${id}`,
-          TextProto.Format.INFO);
+        setTimeout(() => {
+          console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
+          if (id === this.state.reportId)
+            this.clearOldElements();
+        }, 3000);
+        // this.resetState(`Receiving data for report ${id}`,
+        //   TextProto.Format.INFO);
       },
       deltaList: (deltaList) => {
         this.applyDeltas(deltaList);
+      },
+      reportFinished: () => {
+        this.clearOldElements();
       }
     });
   }
@@ -105,18 +117,40 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // // debug - begin
-    // console.log('applying deltas')
-    // console.log(deltaList.toJS())
-    // // debug - end
+    // debug - begin
+    console.log(`applying deltas to report id ${this.state.reportId}`)
+    // debug - end
 
+    const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
         elements.update(delta.get('id'), (element) =>
           dispatchOneOf(delta, 'type', {
-            newElement: (newElement) => newElement,
+            newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
         }))), elements)
+    }));
+  }
+
+  /**
+   * Empties out all elements whose reportIds are no longer current.
+   */
+  clearOldElements() {
+    console.log(`Clearing out old elements for reportId ${this.state.reportId}`)
+    this.setState(({elements, reportId}) => ({
+      elements: elements.map((elt) => {
+        if (elt.get('reportId') === reportId) {
+          console.log(`NOT clearing out ${elt.get('type')}`)
+          return elt;
+        } else {
+          console.log(`clearing out ${elt.get('type')}`)
+          return fromJS({
+            empty: {unused: true},
+            reportId: reportId,
+            type: "empty"
+          });
+        }
+      })
     }));
   }
 
@@ -175,6 +209,7 @@ class WebClient extends PureComponent {
           docString: (doc) => <DocString element={doc} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
+          // map: (map) => <Map map={map} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

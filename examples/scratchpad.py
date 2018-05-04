@@ -6,9 +6,19 @@ import time
 import pandas as pd
 # import shapefile
 
-
 # Uber data_key
-io.write('hello world')
+io.empty()
+my_bar = io.progress(0)
+for i in range(100):
+    my_bar.progress(i + 1)
+    time.sleep(0.1)
+n_elts = int(time.time() * 10) % 5 + 3
+for i in range(n_elts):
+    io.text('.' * i)
+io.write(n_elts)
+for i in range(n_elts):
+    io.text('.' * i)
+io.success('done')
 
 ### NYC green taxi data
 
