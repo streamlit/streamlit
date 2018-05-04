@@ -2,6 +2,7 @@
 client_connections related to a particular report."""
 
 from streamlit.shared.ReportQueue import ReportQueue
+from streamlit.shared import protobuf
 
 class ProxyConnection:
     """Stores information shared by both local_connections and
@@ -30,6 +31,9 @@ class ProxyConnection:
     def finished_local_connection(self):
         """Removes the flag indicating an active local connection."""
         self._has_local = False
+        self._master_queue.close()
+        for queue in self._client_queues:
+            queue.close()
 
     def end_grace_period(self):
         """Inicates that the grace period is over and the connection can be
