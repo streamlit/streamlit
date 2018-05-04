@@ -54,7 +54,23 @@ class Map extends PureComponent {
         />);
       }
 
-      const center = [40.7831, -73.9712];
+      // Compute the center of the map;
+      let center = this.center;
+      if (this.center == undefined) {
+        if (nPoints == 0)
+          center = [37.7749, -122.4194]; // San Francisco
+        else {
+          let sum_lat = 0.0;
+          let sum_lon = 0.0;
+          for (var i = 0 ; i < nPoints ; i++) {
+            sum_lat += tableGet(points.get('data'), lat_col, i);
+            sum_lon += tableGet(points.get('data'), lon_col, i);
+          }
+          center = this.center = [sum_lat / nPoints, sum_lon / nPoints];
+        }
+      }
+
+      // Draw the map.
       const zoom = 13;
       return (
         <LeafletMap style={{width, height: width}} center={center} zoom={zoom}>
