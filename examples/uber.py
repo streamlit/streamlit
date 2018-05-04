@@ -27,7 +27,7 @@ io.subheader(f'Usage at {hour}h')
 io.map(data[data[DATE_TIME].dt.hour == hour])
 
 io.subheader('Raw Data')
-io.write(data[data[DATE_TIME].dt.hour == hour])
+io.write(data)
 
 # io.header('Raw Data')
 
