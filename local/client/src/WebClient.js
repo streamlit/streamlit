@@ -89,38 +89,28 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(blob) {
-    // Parse the deltas out and apply them to the state.
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(blob)
-    const readId = Math.random()
-    console.log('Got readID', readId)
-    reader.onloadend = () => {
-      console.log('Finished loading', readId)
-      // Parse out the delta_list.
-      const result = new Uint8Array(reader.result);
-      const msgProto = StreamlitMsg.decode(result)
-      const msg = toImmutableProto(StreamlitMsg, msgProto);
-      dispatchOneOf(msg, 'type', {
-        newReport: (id) => {
-          this.setState(() => ({reportId: id}))
-          console.log(`newReport id=${id}`); // debug
-          setTimeout(() => {
-            console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
-            if (id === this.state.reportId)
-              this.clearOldElements();
-          }, 3000);
-          // this.resetState(`Receiving data for report ${id}`,
-          //   TextProto.Format.INFO);
-        },
-        deltaList: (deltaList) => {
-          this.applyDeltas(deltaList);
-        },
-        reportFinished: () => {
-          this.clearOldElements();
-        }
-      });
-    }
+  handleMessage(msgArray) {
+    const msgProto = StreamlitMsg.decode(msgArray);
+    const msg = toImmutableProto(StreamlitMsg, msgProto);
+    dispatchOneOf(msg, 'type', {
+      newReport: (id) => {
+        this.setState(() => ({reportId: id}))
+        console.log(`newReport id=${id}`); // debug
+        setTimeout(() => {
+          console.log(`newReport ${id} ${this.state.reportId} 3 seconds up`);
+          if (id === this.state.reportId)
+            this.clearOldElements();
+        }, 3000);
+        // this.resetState(`Receiving data for report ${id}`,
+        //   TextProto.Format.INFO);
+      },
+      deltaList: (deltaList) => {
+        this.applyDeltas(deltaList);
+      },
+      reportFinished: () => {
+        this.clearOldElements();
+      }
+    });
   }
 
   /**

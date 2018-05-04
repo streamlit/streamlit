@@ -181,7 +181,7 @@ class Connection:
                 async with session.ws_connect(uri) as ws:
                     await self._transmit_through_websocket(ws)
             except ClientConnectorError:
-                print(f'Failed to attent to connect to {uri}.')
+                print(f'Failed to connect to {uri}.')
 
         finally:
             # Closing the session.

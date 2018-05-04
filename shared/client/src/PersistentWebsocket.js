@@ -59,6 +59,17 @@ class PersistentWebsocket extends PureComponent {
     // Create a new websocket.
     this.websocket = new WebSocket(this.props.uri);
 
+    // To guarantee packet transmission order, this is the index of the last
+    // sent message.
+    this.lastSentMessageIndex = -1;
+
+    // And this is the index of the next message we recieve.
+    this.nextMessageIndex = 0;
+
+    // This dictionary stores recieved messages that we haven't sent out yet
+    // (because we're still decoding previous messages)
+    this.messageQueue = {}
+
     // Set various event handler for the websocket.
     this.websocket.onopen = () => {
       this.setState({state: CONNECTED_STATE});
@@ -69,7 +80,26 @@ class PersistentWebsocket extends PureComponent {
 
     this.websocket.onmessage = ({data}) => {
       if (this.props.onMessage) {
-        this.props.onMessage(data);
+        // Assign this message an index.
+        const messageIndex = this.nextMessageIndex;
+        console.log(`received message with index ${messageIndex}`)
+        this.nextMessageIndex += 1
+
+        // Read in the message data.
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(data)
+        reader.onloadend = () => {
+          console.log(`finished loading message with index ${messageIndex}`)
+          this.messageQueue[messageIndex] = new Uint8Array(reader.result);
+          while ((this.lastSentMessageIndex + 1) in this.messageQueue) {
+            const sendMessageIndex = this.lastSentMessageIndex + 1;
+            console.log(`sending message with index ${sendMessageIndex}`);
+            this.props.onMessage(this.messageQueue[sendMessageIndex]);
+            delete this.messageQueue[sendMessageIndex];
+            this.lastSentMessageIndex = sendMessageIndex;
+          }
+          console.log(`finished onloadend lastSentMessageIndex=${this.lastSentMessageIndex} nextMessageIndex=${this.nextMessageIndex}`);
+        }
       }
     };
 
@@ -96,7 +126,10 @@ class PersistentWebsocket extends PureComponent {
     if (this.websocket) {
       this.websocket.close(NORMAL_CLOSURE);
     }
-    this.websocket = undefined;
+    delete this.websocket;
+    delete this.lastSentMessageIndex;
+    delete this.nextMessageIndex;
+    delete this.messageQueue;
   }
 
   render() {
