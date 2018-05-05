@@ -79,3 +79,7 @@ distribute:
 	cd dist ; python setup.py sdist
 	cd dist ; python setup.py bdist_wheel
 	cd dist ; twine upload dist/*
+
+.PHONY: local
+local:
+	rsync -av local/client/build/ /tmp/streamlit_local/

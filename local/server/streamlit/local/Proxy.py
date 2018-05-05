@@ -16,6 +16,7 @@ which closes the proxy if no connections were established.
 from aiohttp import web, WSMsgType
 import asyncio
 import os
+import time
 import urllib
 import webbrowser
 import concurrent.futures
@@ -251,7 +252,17 @@ class Proxy:
             print('no handler for command:', command)
 
     def save_cloud(self, _data):
-        print('save_cloud!')
+        keys = list(self._connections)
+        save_dir = '/tmp/streamlit_local/data'
+
+        if not os.path.exists(save_dir):
+            os.makedir(save_dir)
+
+        filename = '{}/{}-{}.data'.format(save_dir, keys[0], time.time())
+        master = self._connections[keys[0]]._master_queue
+        with open(filename, 'wb') as f:
+            f.write(master.get_serialized_deltas())
+        print('Wrote {}'.format(filename))
         return
 
 def main():
