@@ -59,6 +59,20 @@ class PersistentWebsocket extends PureComponent {
     // Create a new websocket.
     this.websocket = new WebSocket(this.props.uri);
 
+    if (this.props.onRegister) {
+      this.props.onRegister(message => {
+        if (!this.websocket) {
+          console.error('unable to send, websocket undefined')
+        } else if (this.websocket.readyState === WebSocket.OPEN) {
+          return this.websocket.send(message)
+        } else if (this.websocket.readyState === WebSocket.CONNECTING) {
+          console.error('unable to send, websocket connecting')
+        } else {
+          console.error('unable to send, websocket closed')
+        }
+      });
+    }
+
     // Set various event handler for the websocket.
     this.websocket.onopen = () => {
       this.setState({state: CONNECTED_STATE});

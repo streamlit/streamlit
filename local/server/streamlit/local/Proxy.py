@@ -157,9 +157,13 @@ class Proxy:
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type != WSMsgType.CLOSE:
+                    if msg.type == WSMsgType.TEXT:
+                        payload = msg.json()
+                        self.handle_payload(payload)
+                    elif msg.type == WSMsgType.CLOSE:
+                        break
+                    else:
                         raise RuntimeError(f'Unknown message type: {msg.type}')
-                    break
                 except asyncio.TimeoutError:
                     pass
         except concurrent.futures.CancelledError:
@@ -234,6 +238,21 @@ class Proxy:
         close the proxy."""
         if not self._connections:
             self.stop()
+
+    def handle_payload(self, payload):
+        command = payload.get('command', None)
+        handler = {
+            'save-cloud': self.save_cloud
+        }.get(command, None)
+        if handler:
+            data = payload.get('data', None)
+            handler(data)
+        else:
+            print('no handler for command:', command)
+
+    def save_cloud(self, _data):
+        print('save_cloud!')
+        return
 
 def main():
     """

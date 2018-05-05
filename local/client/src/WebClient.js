@@ -8,6 +8,7 @@ import {
   Container,
   Progress,
   Row,
+  UncontrolledTooltip,
 } from 'reactstrap';
 
 // Display Elements
@@ -47,6 +48,8 @@ class WebClient extends PureComponent {
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
+    this.handleRegister = this.handleRegister.bind(this);
+    this.sendCommand = this.sendCommand.bind(this);
   }
 
   componentDidMount() {
@@ -108,6 +111,10 @@ class WebClient extends PureComponent {
     }
   }
 
+  handleRegister(sender) {
+    this.setState(_ => ({ sender }))
+  }
+
   /**
    * Applies a list of deltas to the elements.
    */
@@ -125,6 +132,18 @@ class WebClient extends PureComponent {
             addRows: (newRows) => addRows(element, newRows),
         }))), elements)
     }));
+  }
+
+  sendCommand(command, data) {
+    return _ => {
+      console.log({command,data})
+      if (this.state.sender) {
+        const payload = { command, data }
+        this.state.sender(JSON.stringify(payload))
+      } else {
+        console.error('unable to send, no sender assigned')
+      }
+    }
   }
 
   render() {
@@ -147,10 +166,19 @@ class WebClient extends PureComponent {
         <header>
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
+            <span onClick={this.sendCommand('save-cloud')}>
+            <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em">
+            <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+            </svg>
+            <UncontrolledTooltip placement="bottom" target="save-cloud-icon">
+            Save to cloud
+            </UncontrolledTooltip>
+            </span>
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
+              onRegister={this.handleRegister}
               persist={false}
             />
           </div>
