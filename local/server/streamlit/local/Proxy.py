@@ -26,6 +26,8 @@ from streamlit.local.ProxyConnection import ProxyConnection
 from streamlit.shared.streamlit_msg_proto import new_report_msg
 from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
 
+from streamlit import io
+
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
     propagates out of the inner coroutine."""
@@ -256,13 +258,14 @@ class Proxy:
         save_dir = '/tmp/streamlit_local/data'
 
         if not os.path.exists(save_dir):
-            os.makedir(save_dir)
+            os.makedirs(save_dir)
 
         filename = '{}/{}-{}.data'.format(save_dir, keys[0], time.time())
         master = self._connections[keys[0]]._master_queue
         with open(filename, 'wb') as f:
             f.write(master.get_serialized_deltas())
-        print('Wrote {}'.format(filename))
+        link = "http://localhost:8080/?datafile={}".format(os.path.basename(filename))
+        io.write(link)
         return
 
 def main():
