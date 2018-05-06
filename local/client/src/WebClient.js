@@ -18,10 +18,9 @@ import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
 import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
-// import Map from 'streamlit-shared/lib/elements/Map';
 
 // Other local imports.
-import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
+import ProtobufWebsocket from 'streamlit-shared/lib/ProtobufWebsocket';
 import { StreamlitMsg, Text as TextProto }
   from 'streamlit-shared/lib/protobuf/streamlit';
 import { addRows } from 'streamlit-shared/lib/dataFrameProto';
@@ -47,30 +46,41 @@ class WebClient extends PureComponent {
       }]),
     };
 
-    // Bind event handlers.
-    this.handleReconnect = this.handleReconnect.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
-    this.handleRegister = this.handleRegister.bind(this);
-    this.sendCommand = this.sendCommand.bind(this);
+    // Compute the websocket URI based on the pathname.
+    const reportName =
+      decodeURIComponent(window.location.pathname).split( '/' )[2];
+    document.title = `${reportName} (Streamlit)`
+    const uri = `ws://localhost:5008/stream/${encodeURIComponent(reportName)}`
+
+    // Create the websocket connection.
+    this.websocket = new ProtobufWebsocket({
+      uri: uri,
+    })
+    // this.handleReconnect = this.handleReconnect.bind(this);
+    // this.handleMessage = this.handleMessage.bind(this);
+    // this.handleRegister = this.handleRegister.bind(this);
+    // this.sendCommand = this.sendCommand.bind(this);
+    //
+    // //
   }
 
   componentDidMount() {
-      var urlParams = new URLSearchParams(window.location.search);
-      var datafile = urlParams.get('datafile');
-      console.log(datafile);
-      if (datafile) {
-          var callback = (blob) =>  {
-              this.handleMessage(blob);
-          };
-
-          fetch('/data/' + datafile).then(function(response) {
-              return response.arrayBuffer();
-          }).then(function(data) {
-              var uint8 = new Uint8Array(data);
-              var blob = new Blob([uint8]);
-              return blob;
-          }).then(callback);
-      }
+      // var urlParams = new URLSearchParams(window.location.search);
+      // var datafile = urlParams.get('datafile');
+      // console.log(datafile);
+      // if (datafile) {
+      //     var callback = (blob) =>  {
+      //         this.handleMessage(blob);
+      //     };
+      //
+      //     fetch('/data/' + datafile).then(function(response) {
+      //         return response.arrayBuffer();
+      //     }).then(function(data) {
+      //         var uint8 = new Uint8Array(data);
+      //         var blob = new Blob([uint8]);
+      //         return blob;
+      //     }).then(callback);
+      // }
   }
 
   componentWillUnmount() {
@@ -182,11 +192,6 @@ class WebClient extends PureComponent {
   }
 
   render() {
-    // Compute the websocket URI based on the pathname.
-    const reportName =
-      decodeURIComponent(window.location.pathname).split( '/' )[2];
-    document.title = `${reportName} (Streamlit)`
-    let uri = `ws://localhost:5008/stream/${encodeURIComponent(reportName)}`
 
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_report)
@@ -202,20 +207,20 @@ class WebClient extends PureComponent {
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
             <span onClick={this.sendCommand('save-cloud')}>
-            <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em">
-            <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
-            </svg>
-            <UncontrolledTooltip placement="bottom" target="save-cloud-icon">
-            Save to cloud
-            </UncontrolledTooltip>
+              <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em">
+                <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+              </svg>
+              <UncontrolledTooltip placement="bottom" target="save-cloud-icon">
+                Save to cloud
+              </UncontrolledTooltip>
             </span>
-            <PersistentWebsocket
+            {/* <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
               onRegister={this.handleRegister}
               persist={false}
-            />
+            /> */}
           </div>
         </header>
         <Container className="streamlit-container">
