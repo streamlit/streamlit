@@ -22,7 +22,7 @@ hist = np.histogram(data[DATE_TIME].dt.hour, bins=24, range=(0,24))
 counts = pd.DataFrame(hist[0]).set_index(hist[1][:-1])
 io.bar_chart(counts)
 
-hour = 0
+hour = 18
 io.subheader(f'Usage at {hour}h')
 io.map(data[data[DATE_TIME].dt.hour == hour])
 
