@@ -85,9 +85,9 @@ def marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(pandas_array.astype(np.str))
     elif issubclass(pandas_array.dtype.type, np.datetime64):
-        current_zone = tzlocal.get_localzone()
-        localize = lambda date: (current_zone.localize(date, is_dst=None) if date.tzinfo is None else d)
-        pandas_array = pandas_array.apply(localize)
+        if pandas_array.dt.tz is None:
+            current_zone = tzlocal.get_localzone()
+            pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
         raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')

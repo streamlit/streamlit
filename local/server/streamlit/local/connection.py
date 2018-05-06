@@ -203,6 +203,6 @@ class Connection:
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
         while self._is_open:
-            await self._queue.flush_deltas(ws)
+            await self._queue.flush_queue(ws)
             await asyncio.sleep(throttle_secs)
-        await self._queue.flush_deltas(ws)
+        await self._queue.flush_queue(ws)

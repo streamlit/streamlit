@@ -18,6 +18,7 @@ import ImageList from 'streamlit-shared/lib/elements/ImageList';
 import Text from 'streamlit-shared/lib/elements/Text';
 import DocString from 'streamlit-shared/lib/elements/DocString';
 import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
+// import Map from 'streamlit-shared/lib/elements/Map';
 
 // Other local imports.
 import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
@@ -36,6 +37,7 @@ class WebClient extends PureComponent {
 
     // Initially the state reflects that no data has been received.
     this.state = {
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -78,7 +80,6 @@ class WebClient extends PureComponent {
    * Callback when we establish a websocket connection.
    */
   handleReconnect() {
-    console.log('RECONNECTED TO THE SERVER');
     // Initially the state reflects that no data has been received.
     this.resetState('Established connection.', TextProto.Format.WARNING);
   }
@@ -92,6 +93,7 @@ class WebClient extends PureComponent {
    */
   resetState(msg, format) {
     this.setState({
+      reportId: '<null>',
       elements: fromJS([{
         type: 'text',
         text: {
@@ -105,26 +107,24 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(blob) {
-    // Parse the deltas out and apply them to the state.
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(blob)
-    reader.onloadend = () => {
-      // Parse out the delta_list.
-      const result = new Uint8Array(reader.result);
-      const msgProto = StreamlitMsg.decode(result)
-      const msg = toImmutableProto(StreamlitMsg, msgProto);
-      dispatchOneOf(msg, 'type', {
-        newReport: (id) => {
-          console.log(`newReport id=${id}`); // debug
-          this.resetState(`Receiving data for report ${id}`,
-            TextProto.Format.INFO);
-        },
-        deltaList: (deltaList) => {
-          this.applyDeltas(deltaList);
-        }
-      });
-    }
+  handleMessage(msgArray) {
+    const msgProto = StreamlitMsg.decode(msgArray);
+    const msg = toImmutableProto(StreamlitMsg, msgProto);
+    dispatchOneOf(msg, 'type', {
+      newReport: (id) => {
+        this.setState(() => ({reportId: id}))
+        setTimeout(() => {
+          if (id === this.state.reportId)
+            this.clearOldElements();
+        }, 3000);
+      },
+      deltaList: (deltaList) => {
+        this.applyDeltas(deltaList);
+      },
+      reportFinished: () => {
+        this.clearOldElements();
+      }
+    });
   }
 
   handleRegister(sender) {
@@ -136,15 +136,15 @@ class WebClient extends PureComponent {
    */
   applyDeltas(deltaList) {
     // // debug - begin
-    // console.log('applying deltas')
-    // console.log(deltaList.toJS())
+    // console.log(`applying deltas to report id ${this.state.reportId}`)
     // // debug - end
 
+    const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
         elements.update(delta.get('id'), (element) =>
           dispatchOneOf(delta, 'type', {
-            newElement: (newElement) => newElement,
+            newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
         }))), elements)
     }));
@@ -160,6 +160,25 @@ class WebClient extends PureComponent {
         console.error('unable to send, no sender assigned')
       }
     }
+  }
+
+  /**
+   * Empties out all elements whose reportIds are no longer current.
+   */
+  clearOldElements() {
+    this.setState(({elements, reportId}) => ({
+      elements: elements.map((elt) => {
+        if (elt.get('reportId') === reportId) {
+          return elt;
+        } else {
+          return fromJS({
+            empty: {unused: true},
+            reportId: reportId,
+            type: "empty"
+          });
+        }
+      })
+    }));
   }
 
   render() {
@@ -226,6 +245,7 @@ class WebClient extends PureComponent {
           docString: (doc) => <DocString element={doc} width={width}/>,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
+          // map: (map) => <Map map={map} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

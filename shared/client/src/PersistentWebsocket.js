@@ -72,6 +72,17 @@ class PersistentWebsocket extends PureComponent {
         }
       });
     }
+    
+    // To guarantee packet transmission order, this is the index of the last
+    // sent message.
+    this.lastSentMessageIndex = -1;
+
+    // And this is the index of the next message we recieve.
+    this.nextMessageIndex = 0;
+
+    // This dictionary stores recieved messages that we haven't sent out yet
+    // (because we're still decoding previous messages)
+    this.messageQueue = {}
 
     // Set various event handler for the websocket.
     this.websocket.onopen = () => {
@@ -83,7 +94,22 @@ class PersistentWebsocket extends PureComponent {
 
     this.websocket.onmessage = ({data}) => {
       if (this.props.onMessage) {
-        this.props.onMessage(data);
+        // Assign this message an index.
+        const messageIndex = this.nextMessageIndex;
+        this.nextMessageIndex += 1
+
+        // Read in the message data.
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(data)
+        reader.onloadend = () => {
+          this.messageQueue[messageIndex] = new Uint8Array(reader.result);
+          while ((this.lastSentMessageIndex + 1) in this.messageQueue) {
+            const sendMessageIndex = this.lastSentMessageIndex + 1;
+            this.props.onMessage(this.messageQueue[sendMessageIndex]);
+            delete this.messageQueue[sendMessageIndex];
+            this.lastSentMessageIndex = sendMessageIndex;
+          }
+        }
       }
     };
 
@@ -110,7 +136,10 @@ class PersistentWebsocket extends PureComponent {
     if (this.websocket) {
       this.websocket.close(NORMAL_CLOSURE);
     }
-    this.websocket = undefined;
+    delete this.websocket;
+    delete this.lastSentMessageIndex;
+    delete this.nextMessageIndex;
+    delete this.messageQueue;
   }
 
   render() {
