@@ -59,20 +59,20 @@ class PersistentWebsocket extends PureComponent {
     // Create a new websocket.
     this.websocket = new WebSocket(this.props.uri);
 
-    if (this.props.onRegister) {
-      this.props.onRegister(message => {
-        if (!this.websocket) {
-          console.error('unable to send, websocket undefined')
-        } else if (this.websocket.readyState === WebSocket.OPEN) {
-          return this.websocket.send(message)
-        } else if (this.websocket.readyState === WebSocket.CONNECTING) {
-          console.error('unable to send, websocket connecting')
-        } else {
-          console.error('unable to send, websocket closed')
-        }
-      });
-    }
-    
+    // if (this.props.onRegister) {
+    //   this.props.onRegister(message => {
+    //     if (!this.websocket) {
+    //       console.error('unable to send, websocket undefined')
+    //     } else if (this.websocket.readyState === WebSocket.OPEN) {
+    //       return this.websocket.send(message)
+    //     } else if (this.websocket.readyState === WebSocket.CONNECTING) {
+    //       console.error('unable to send, websocket connecting')
+    //     } else {
+    //       console.error('unable to send, websocket closed')
+    //     }
+    //   });
+    // }
+
     // To guarantee packet transmission order, this is the index of the last
     // sent message.
     this.lastSentMessageIndex = -1;
@@ -102,6 +102,11 @@ class PersistentWebsocket extends PureComponent {
         const reader = new FileReader();
         reader.readAsArrayBuffer(data)
         reader.onloadend = () => {
+          if (this.messageQueue === undefined) {
+            console.log("We don't have a message queue. This is bad.")
+            return
+          }
+
           this.messageQueue[messageIndex] = new Uint8Array(reader.result);
           while ((this.lastSentMessageIndex + 1) in this.messageQueue) {
             const sendMessageIndex = this.lastSentMessageIndex + 1;

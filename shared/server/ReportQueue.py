@@ -59,7 +59,7 @@ class ReportQueue:
         msg.delta_list.deltas.extend(self._deltas)
         return msg.SerializeToString()
 
-    async def flush_deltas(self, ws):
+    async def flush_queue(self, ws):
         """Sends the deltas across the websocket in a DeltaList, clearing the
         queue afterwards."""
         assert self._state != QueueState.CLOSED, \
