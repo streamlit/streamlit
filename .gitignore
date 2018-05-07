@@ -1,10 +1,38 @@
-.python-version
-.streamlit.yaml
-customers.md
-npm-debug.log
-config-secrets.yaml
-.streamlit.yaml # get rid of this eventually
-.streamlit
+########################################################################
+# Python - https://github.com/github/gitignore/blob/master/Python.gitignore
+########################################################################
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+########################################################################
+# OSX - https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
+########################################################################
 .DS_Store
-cache
-uber-raw-data-sep14.csv
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+########################################################################
+# node - https://github.com/github/gitignore/blob/master/Node.gitignore
+########################################################################
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
