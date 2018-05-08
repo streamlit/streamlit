@@ -1,5 +1,5 @@
 {
-  "name": "streamlit-local-client",
+  "name": "streamlit-client",
   "version": "0.8.0",
   "private": true,
   "dependencies": {

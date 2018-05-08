@@ -4,7 +4,7 @@
 
 import React, { PureComponent} from 'react';
 import './ExceptionElement.css';
-import { dispatchOneOf } from 'streamlit-shared/lib/immutableProto';
+import { dispatchOneOf } from 'streamlit/lib/immutableProto';
 
  /**
   * Functional element representing formatted text.

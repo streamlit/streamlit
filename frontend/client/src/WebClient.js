@@ -11,21 +11,21 @@ import {
 } from 'reactstrap';
 
 // Display Elements
-import DataFrame from 'streamlit-shared/lib/elements/DataFrame';
-import Chart from 'streamlit-shared/lib/elements/Chart';
-import ImageList from 'streamlit-shared/lib/elements/ImageList';
-import Text from 'streamlit-shared/lib/elements/Text';
-import DocString from 'streamlit-shared/lib/elements/DocString';
-import ExceptionElement from 'streamlit-shared/lib/elements/ExceptionElement';
-import Map from 'streamlit-shared/lib/elements/Map';
+import DataFrame from 'streamlit/lib/elements/DataFrame';
+import Chart from 'streamlit/lib/elements/Chart';
+import ImageList from 'streamlit/lib/elements/ImageList';
+import Text from 'streamlit/lib/elements/Text';
+import DocString from 'streamlit/lib/elements/DocString';
+import ExceptionElement from 'streamlit/lib/elements/ExceptionElement';
+import Map from 'streamlit/lib/elements/Map';
 
 // Other local imports.
-import PersistentWebsocket from 'streamlit-shared/lib/PersistentWebsocket';
+import PersistentWebsocket from 'streamlit/lib/PersistentWebsocket';
 import { StreamlitMsg, Text as TextProto }
-  from 'streamlit-shared/lib/protobuf/streamlit';
-import { addRows } from 'streamlit-shared/lib/dataFrameProto';
+  from 'streamlit/lib/protobuf/streamlit';
+import { addRows } from 'streamlit/lib/dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
-  from 'streamlit-shared/lib/immutableProto';
+  from 'streamlit/lib/immutableProto';
 import { fromJS } from 'immutable';
 
 import './WebClient.css';

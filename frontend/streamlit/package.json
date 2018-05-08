@@ -1,5 +1,5 @@
 {
-  "name": "streamlit-shared",
+  "name": "streamlit",
   "version": "0.8.0",
   "description": "Javascript and CSS modules shared across all streamlit projects.",
   "main": "index.js",

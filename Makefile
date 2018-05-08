@@ -2,7 +2,7 @@
 modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
 .PHONY: all
-all: setup requirements.txt requirements protobuf
+all: setup requirements.txt requirements react-init protobuf
 
 setup:
 	pip install pip-tools
@@ -36,7 +36,21 @@ clean:
 	rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete
 	find . -name __pycache__ -type d -delete
+	(cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/node_modules)
 
 .PHONY: protobuf
 protobuf:
 	protoc --proto_path=streamlit/protobuf streamlit/protobuf/*.proto --python_out=streamlit/protobuf
+	(cd frontend/streamlit; mkdir -p ./lib/protobuf; ./node_modules/protobufjs/bin/pbjs ../../streamlit/protobuf/*.proto -t static-module > ./lib/protobuf/streamlit.js)
+
+.PHONY: react-init
+react-init:
+	(cd frontend/streamlit; npm install)
+	(cd frontend/client; npm install)
+	ln -fs ../../streamlit frontend/client/node_modules/streamlit
+
+.PHONY: react-build
+react-build:
+	rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
+	(cd frontend/streamlit; npm run build)
+	(cd frontend/client; npm run build)
