@@ -1,81 +1,38 @@
-# Makefile for the streamlit shared javascript, css, and python libraries.
-# Run `make help` for options, or `make all` to build the library.
+# Black magic to get module directories
+modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
-###################
-# BUILD VARIABLES #
-###################
+.PHONY: all
+all: setup requirements.txt requirements
 
-STREAMLIT_SHARED_LOCAL_LIB = local/client/node_modules/streamlit-shared
-# JS_SRC_FILES = $(shell find $(JS_SRC_PATH) -iname '*.js' -or -iname '*.css')
-# JS_LIB_PATH = client/lib
+setup:
+	pip install pip-tools
 
-#####################
-# USAGE INFORMATION #
-#####################
+requirements.txt: requirements.in
+	pip-compile requirements.in
 
-help:
-	@echo "Usage:"
-	@echo "                                                               "
-	@echo "  make <cmd>                                                   "
-	@echo "                                                               "
-	@echo "Where <cmd> is one of:                                         "
-	@echo "                                                               "
-	@echo "help                    - Print this help message.             "
-	@echo "clean                   - Remove all js libs.                  "
-	@echo "init                    - Intialize repo (DO AFTER INSTALLING)."
-	@echo "all                     - Build JS Python, and Protobuf libs.  "
-	@echo "js-lib                  - The shared javascript library.       "
-	@echo "protobuf-lib            - The protobuf libraries.              "
-	@echo "production              - Create a production build.           "
-	@echo "package                 - Package up the python distribution.  "
-	@echo "distribute              - Upload the package to PyPy           "
-	@echo "                                                               "
-
-###################
-# OTHER FUNCTIONS #
-###################
-
-all:
-	cd shared ; make all
-
-production: all
-	cd local/client ; npm run build
-# data stored in /Users/adrien/Desktop/streamlit-cloud/local/client/build
-
-js-lib:
-	cd shared ; make js-lib
-
-protobuf-lib:
-	cd shared ; make protobuf-lib
-
-# Cleans out generated files.
-clean:
-	cd shared; make clean
-
-	# Clean up the distribution folder.
-	rm -rfv dist/streamlit/*
-
-init:
+requirements: requirements.txt
 	pip install -r requirements.txt
-	cd shared ; make init
-	cd local/client ; npm install
-	test -e $(STREAMLIT_SHARED_LOCAL_LIB) || ln -sv ../../../shared/client $(STREAMLIT_SHARED_LOCAL_LIB)
 
-# Counts the number of lines of code in the project
-loc:
-	find . -iname '*.py' -or -iname '*.js'  | \
-		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)|(dist\/)" | \
-		xargs wc
+install:
+	python setup.py install
 
-# Makes a distribution for PIP installation.
-package:
-	rm -rfv dist/streamlit dist/build
-	rsync -avL --exclude="__pycache__" local/server/streamlit dist/
-	rsync -av local/client/build dist/
-	cp -v config.yaml requirements.txt dist/
+develop:
+	python setup.py develop
 
-# Distributes the package to PyPi
-distribute:
-	cd dist ; python setup.py sdist
-	cd dist ; python setup.py bdist_wheel
-	cd dist ; twine upload dist/*
+dev:
+	python setup.py egg_info --tag-build=.$(USER) bdist_wheel
+	@echo
+	@echo Dev wheel file in $(shell ls dist/*$(shell python setup.py --version).$(USER)-py27*whl) and install with '"pip install [wheel file]"'
+	@echo
+
+release:
+	python setup.py bdist_wheel
+	@echo wheel file in dist/
+	@echo
+	@echo Release wheel file in $(shell ls dist/*$(shell python setup.py --version)-py27*whl) and install with '"pip install [wheel file]"'
+	@echo
+
+clean:
+	rm -rf build dist  .eggs *.egg-info
+	find . -name '*.pyc' -type f -delete
+	find . -name __pycache__ -type d -delete

@@ -1,0 +1,8 @@
+pandas
+Pillow
+protobuf
+PyYAML
+aiohttp
+motor
+tzlocal
+docutils

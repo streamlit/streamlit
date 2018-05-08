@@ -1,332 +1,277 @@
 # Streamlit
 
-A stateless alternative to Jupyter reports for machine learning and data science.
+This library lets you do realtime data-science. Here is an example of it's use for static data science:
 
 ## Installation
 
-#### 1. Checkout the Repository
-
-First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/). Then, checkout the respository:
+Install with:
+```bash
+pip install streamlit
 ```
-git clone git@github.com:treuille/streamlit-cloud.git
-```
+Currently, streamlit requires Python 3.6.
 
-#### 2. Install `npm`
+## Static Example
 
-###### MacOS
+Copy and paste this example and it should work:
 
-No instructions at present. Please feel free to add your own.
+```python
+import pandas as pd
+import numpy as np
+from PIL import Image
+import urllib, io
+import sys
 
-###### On Debian-based Linux
+from streamlit import Report, Chart, LineChart, AreaChart, BarChart
 
-```
-sudo apt install npm
-```
+with Report() as write:
+    # Title.
+    write('Period Table of the Elements', fmt='header', level=1)
+    write('This report shows some of the awesome elements of streamlit.')
 
-#### 3. Install `pyenv` and `pyenv-virtualenv`
+    # Arrays
+    write('Numpy Arrays', fmt='header', level=3)
+    write(np.random.randn(100, 100))
 
-###### On MacOS
+    # Charts.
+    write('Charts', fmt='header', level=3)
+    chart_data = pd.DataFrame(
+        np.random.randn(20, 5),
+        columns=['pv', 'uv', 'a', 'b', 'c']
+    )
 
-```
-brew install pyenv
-brew install pyenv-virtualenv
-```
-###### On Linux
-Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
+    write('Line Chart', fmt='header', level=4)
+    write(LineChart(chart_data))
 
-Also make sure you have [these packages](https://github.com/pyenv/pyenv/wiki/Common-build-problems).
+    write('Area Chart', fmt='header', level=4)
+    write(AreaChart(chart_data))
 
-#### 4. Install hte `protobuf` compiler
+    write('Bar Chart', fmt='header', level=4)
+    write(BarChart(chart_data[['pv', 'uv']].iloc[:10]))
 
-###### On MacOS
-```
-brew install protobuf
-```
-###### On Linux
-```
-sudo apt-get install protobuf-compiler
-```
+    # Customized charts.
+    write('Customized charts', fmt='header', level=3)
 
-#### 5. Establish a Local Python Environment
+    write('Customized Line Chart', fmt='header', level=4)
+    write(Chart(chart_data, 'line_chart')
+        .line(type='monotone', data_key='pv', stroke='#8884d8')
+        .line(type='monotone', data_key='uv', stroke='#82ca9d'))
 
-Create a virtualenv environment called `streamlit`:
-```
-pyenv install 3.6.3
-pyenv virtualenv 3.6.3 streamlit
-pyenv local streamlit
-```
+    write('Composed Chart', fmt='header', level=4)
+    write(Chart(chart_data, 'composed_chart')
+        .x_axis()
+        .y_axis()
+        .cartesian_grid(stroke_dasharray='3 3')
+        .tooltip()
+        .legend()
+        .bar(data_key='pv', fill='#82ca9d')
+        .area(type='monotone', data_key='uv', fill='#8884d8'))
 
-#### 6. Initialize the Repository
+    # DataFrames
+    write('Pandas DataFrames', fmt='header', level=3)
+    arrays = [
+        np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
+        np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
+    df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
+        columns=['A', 'B', 'C', 'D'])
+    write('Here is a dataframe.', df, 'And here is its transpose.', df.T)
 
-```
-make init
-make all
-make production
-```
+    # Alerts
+    write('Alerts', fmt='header', level=3)
+    write.alert('This is a "success" alert.', type='success')
+    write.alert('This is an "info" alert.', type='info')
+    write.alert('This is a "warning" alert.', type='warning')
+    write.alert('This is a "danger" alert.', type='danger')
 
-## How to publish a new version of the code to `PyPi`
+    # Headers
+    write('Headers', fmt='header', level=3)
+    write.header('Level 1', level=1)
+    write.header('Level 2', level=2)
+    write.header('Level 3', level=3)
+    write.header('Level 4', level=4)
+    write.header('Level 5', level=5)
+    write.header('Level 6', level=6)
 
-- The current version is `0.8.0`
-- Write new release notes.
-- Update the version in the following locations:
-  - `readme.md`
-  - `dist/setup.py`
-  - `local/client/package.json`
-  - `shared/client/package.json`
-  - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
-    - `config.yaml` : set the `proxy.port`
-    - `local/client/src/WebClient.js` : set the line containing `ws://localhost/...`
-  - *Not needed, I think:*
-    - `local/client/package-lock.json`
-    - `shared/client/package-lock.json`
-- Run the following commands:
-```
-make init
-make all
-```
-- Test that everything is running properly with:
-```
-./streamlit_run -m streamlit help
-```
-Then, open an interactive python shell with
-```
-./streamlit_run
-```
-and type in the following commands:
-```
-from streamlit import io
-io.write('Hello, world!')
-```
-Make sure that that is working properly.
-- Run the following commands:
-```
-make production
-make package
-```
-- Go into a temp directory (parallel to `streamlet-cloud`) and execute the following:
-```
-pip install --upgrade ../streamlet-cloud/dist
-python -m streamlit clear_cache
-python -m streamlit clear_cache
-python -m streamlit help
-python -m streamlit help
-python -m streamlit clear_cache
-```
-- Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
-```
-make distribute
-```
-- Final test that everything is running properly with `periodic_table.py` **and** `mnist_demo.py`
-- Create and push a branch for this version.
+    # Images - We test all 6 possible file formats.
+    write('Images', fmt='header', level=3)
+    img_url = 'https://www.psdbox.com/wp-content/uploads/2014/08/HDR-landscape-tutorial-A.jpg'
+    img_bytes = urllib.request.urlopen(img_url).read()
+    img = np.array(Image.open(io.BytesIO(img_bytes)))
+    grayscale = np.average(img, axis=2).astype(np.uint8)
+    grayscale2 = grayscale.reshape(grayscale.shape + (1,))
+    channels = img.transpose((2, 0, 1))
+    channels2 = channels.reshape(channels.shape + (1,))
+    channels_caption = ['Red', 'Green', 'Blue']
+    write(img, fmt='img', caption="375px", width=375)         #    (w, h, 3)
+    write([img], fmt='img', caption="225px", width=225)       # (n, w, h, 3)
+    write(grayscale, fmt='img', caption="175px", width=175)   #    (w, h)
+    write(grayscale2, fmt='img', caption="125px", width=125)  #    (w, h, 1)
+    write.img(channels, caption=channels_caption, width=125)  # (n, w, h)
+    write.img(channels2, caption=channels_caption, width=75)  # (n, w, h, 1)
 
-## Release Notes
+    # Text
+    write('Text', fmt='header', level=3)
 
-#### v0.8
-April 23, 2018
-```
-We are thrilled to announce the v0.8 of Streamlit. To upgrade, please run:
+    write.header('Character Wrapping', level=5)
+    write(
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do ' +
+        'eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ' +
+        'ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut ' +
+        'aliquip ex ea commodo consequat. Duis aute irure dolor in ' +
+        'reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla ' +
+        'pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
+        'culpa qui officia deserunt mollit anim id est laborum.');
 
-    pip install --upgrade streamlit
+    write.header('Space preservation', level=5)
+    write(
+        '...    0 leading spaces\n' +
+        ' ...   1 leading space\n' +
+        '  ...  2 leading spaces\n' +
+        '   ... 3 leading spaces');
 
-New features are:
+    write('Markdown', fmt='header', level=3)
+    write.markdown("""
+        Markdown allows for adding markup to plain text with intuitive
+        and minimal syntax. For example:
 
-1. Help now opens in a separate tab. So running
+        - to *emphasize* a word simply surround it with `*`
+        - headings are prefixed with `#`, where the count indicates the level
+        - lists like these have each item prefixed with `-`
+    """)
 
-    python -m streamlit help
+    write('JSON', fmt='header', level=3)
+    write('You can pass a JSON string.')
+    write.json('{"object":{"array":[1,true,"3"]}}')
+    write('Or an object directly:')
+    write.json({'hello': 'world'})
 
-  opens a new tab named "help." Useful for flipping between help and
-  your work!
-
-2. Bar charts now show category labels correctly.
-
-3. Streamlit now supports running multiple scripts simultaneously. If you have
-   scripts called script_a.py and script_b.py then running:
-
-    python script_a.py
-    python script_b.py
-
-  will open two separate tabs called "script_a" and "script_b." Of course,
-  updating and rerunning either script will affect only its tab.
-
-4. Float64Index is now supported.
-
-5. We have preliminary support for printing reports. Just use your browser's
-   print function.
-
-In addition, we have a couple bug fixes:
-
-1. Non-string input can now be passed into header functions (title(),
-   header(), and subheader()) and notification functions (error(), warning(),
-   info(), and success()). For example, this works:
-
-     io.header(11)
-
-2. Exceptions will be printed to the report even before the first call to an
-   io.* function.
-
-Remember if you get lost, just run `python -m streamlit help`. We look forward
-to hearing how you use these powerful new features!
+    # Progress
+    write('Progress Bars', fmt='header', level=3)
+    for percent in [100, 75, 50, 25, 0]:
+        write(f'{percent}% progress:')
+        write.progress(percent)
 ```
 
-#### v0.6
-April 9, 2018
+## Dynamic Example
 
+Copy and paste this example and it should work:
+
+```python
+from keras.datasets import mnist
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
+from keras.models import Sequential
+from keras.optimizers import SGD
+from keras.utils import np_utils
+import keras
+import math
+import numpy as np
+import pandas as pd
+import sys
+
+from streamlit import Report, Chart
+
+class MyCallback(keras.callbacks.Callback):
+    def __init__(self, x_test, print):
+        self._x_test = x_test
+        self._print = print
+
+    def on_train_begin(self, logs=None):
+        self._print.header('Summary', level=2)
+        self._summary_chart = self._create_chart('area', 300)
+        self._summary_stats = self._print.text(f'{"epoch":>8s} :  0')
+        self._print.header('Training Log', level=2)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self._epoch = epoch
+        self._print.header(f'Epoch {epoch}', level=3)
+        self._epoch_chart = self._create_chart('line')
+        self._epoch_progress = self._print.alert('No progress yet.')
+        self._epoch_summary = self._print.alert('No stats yet.')
+
+    def on_batch_end(self, batch, logs=None):
+        rows = pd.DataFrame([[logs['loss'], logs['acc']]],
+            columns=['loss', 'acc'])
+        if batch % 10 == 0:
+            self._epoch_chart.add_rows(rows)
+        if batch % 100 == 99:
+            self._summary_chart.add_rows(rows)
+        percent_complete = logs['batch'] * logs['size'] /\
+            self.params['samples']
+        self._epoch_progress.progress(math.ceil(percent_complete * 100))
+        self._epoch_summary(
+            f"loss: {logs['loss']:>7.5f} | acc: {logs['acc']:>7.5f}")
+
+    def on_epoch_end(self, epoch, logs=None):
+        self._print.header('Summary', level=5)
+        indices = np.random.choice(len(self._x_test), 36)
+        test_data = self._x_test[indices]
+        prediction = np.argmax(self.model.predict(test_data), axis=1)
+        self._print.img(1.0 - test_data, caption=prediction)
+        summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
+        self._print(summary)
+        self._summary_stats(f'{"epoch":>8s} :  {epoch}\n{summary}')
+
+    def _create_chart(self, type='line', height=0):
+        empty_data = pd.DataFrame(columns=['loss', 'acc'])
+        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart.y_axis(type='number',
+            y_axis_id="loss_axis", allow_data_overflow="true")
+        epoch_chart.y_axis(type='number', orientation='right',
+            y_axis_id="acc_axis", allow_data_overflow="true")
+        epoch_chart.cartesian_grid(stroke_dasharray='3 3')
+        epoch_chart.legend()
+        getattr(epoch_chart, type)(type='monotone', data_key='loss',
+            stroke='rgb(44,125,246)', fill='rgb(44,125,246)',
+            dot="false", y_axis_id='loss_axis')
+        getattr(epoch_chart, type)(type='monotone', data_key='acc',
+            stroke='#82ca9d', fill='#82ca9d',
+            dot="false", y_axis_id='acc_axis')
+        return self._print.chart(epoch_chart)
+
+with Report() as print:
+    print.header('MNIST CNN', level=1)
+
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+    img_width=28
+    img_height=28
+
+    x_train = x_train.astype('float32')
+    x_train /= 255.
+    x_test = x_test.astype('float32')
+    x_test /= 255.
+
+    #reshape input data
+    x_train = x_train.reshape(x_train.shape[0], img_width, img_height, 1)
+    x_test = x_test.reshape(x_test.shape[0], img_width, img_height, 1)
+
+    # one hot encode outputs
+    y_train = np_utils.to_categorical(y_train)
+    y_test = np_utils.to_categorical(y_test)
+    num_classes = y_test.shape[1]
+
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+
+    # build model
+
+    model = Sequential()
+    layer_1_size = 10
+    epochs = 5
+
+    model.add(Conv2D(10, (5, 5), input_shape=(img_width, img_height,1), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    #model.add(Conv2D(config.layer_2_size, (5, 5), input_shape=(img_width, img_height,1), activation='relu'))
+    #model.add(MaxPooling2D(pool_size=(2, 2)))
+    #model.add(Dropout(0.2))
+    model.add(Flatten())
+    model.add(Dense(8, activation='relu'))
+    model.add(Dense(num_classes, activation='softmax'))
+
+    model.compile(loss='categorical_crossentropy', optimizer=sgd,
+        metrics=['accuracy'])
+    model.fit(x_train, y_train, validation_data=(x_test, y_test),
+        epochs=epochs, callbacks=[MyCallback(x_test, print)])
+
+    print.alert('Finished training!', type='success')
+
+    # model.save("convnet.h5")
 ```
-We are thrilled to announce the v0.6 of Streamlit. To upgrade, please run:
-
-    pip install --upgrade streamlit
-
-Streamlit now has a built-in help manual! To access it run:
-
-    python -m streamlit help
-
-Other new features include:
-
-1. Streamlit functions are available globally in the `io` package. For example:
-
-    from streamlit import io
-    io.write('Hello world.')
-
-2. Markdown is now the default for write(). Try:
-
-    io.write('*Italics* **Bold** `Fixed-width`')
-    io.text('This is fixed-width text.')
-
-3. We simplified the header functions. Try:
-
-    io.title('A big header.')
-    io.header('A smaller header.')
-    io.subheader('An even smaller header.')
-
-4. We simplified alerts with the following four new functions:
-
-    io.error('OMG!')
-    io.warning('OMG!')
-    io.info('OMG!')
-    io.success('OMG!')
-
-5. You can now pretty-print your own exceptions:
-
-    io.exception(my_exception)
-
-6. You can now get help on any function, class or package using io.help(). For
-   example, for help with with Python's print() function, use:
-
-    io.help(print)
-
-7. We support out-of-order printing with the empty() function. For example,
-   to print the first three letters of the alphabet you can do:
-
-    io.markdown('A')
-    placeholder = io.empty()
-    io.markdown('C')
-    placeholder.markdown('B')
-
-8. Show the user something during a long-running computation as follows:
-
-    with spinner(‘wait for it...'):
-      long_computation()
-
-    (You can also use the @streamlit.cache decorator to speed these up!)
-
-Remember if you get lost, just run `python -m streamlit help`. We look forward
-to hearing how you use these powerful new features!
-```
-
-#### v0.5
-April 4, 2018
-
-```
-We are thrilled to announce the v0.5 of Streamlit. To upgrade, please run:
-
-  pip install --upgrade streamlit
-
-The major new feature in this version is caching! This allows you to quickly
-run your script over and over by saving the results of long computations:
-
-  import streamlit
-
-  @streamlit.cache
-  def long_running_computation(*args, **kwargs):
-    ...
-
-  result = long_running_computation(...)
-
-Your first call to long_running_computation could be slow, but future calls
-with the same arguments will return almost instantaneously.
-
-NOTE: Make sure your cached functions depend only on their inputs! For
-example, don't cache calls to API endpoints that may give changing results. If
-you get into trouble, you can clear the cache on the command line as follows:
-
-  python -m streamlit clear_cache
-
-We look forward to hearing how you use this powerful feature!
-```
-
-#### v0.4
-April 4, 2018
-```
-This version has a bug in it and should be skipped.
-```
-
-#### v0.3
-April 2, 2018
-
-```
-We are thrilled to announce the v0.3 of Streamlit. To upgrade, please run:
-
-  pip install --upgrade streamlit
-
-New features include:
-
-1. A beautiful new UI designed by Thiago Teixeira.
-
-2. Support for datetime and timedelta Pandas types.
-
-3. A new simplified charting API. Please use:
-
-     write.line_chart
-     write.area_chart
-     write.bar_chart
-
-   You can see more examples in periodic_table.py.
-
-4. Fixed a bug when displaying DataFrames with multiple columns having
-   the same name.
-```
-
-## Development Dependencies *(Deprecated)*
-
-*Note that these assume you have MacOS, and have only been tested on this platform.*
-
-- [Homebrew](brew.sh)
-  - Lets us install lots of other useful things.
-- [NPM](https://www.npmjs.com/)
-  - `brew install npm`
-  - Lets us install `npm` packages.
-- [Create React App](https://github.com/facebookincubator/create-react-app/)
-  - `npm install -g create-react-app`
-  - The application framework for our React SPA.
-- `protobufs` and `[protobufjs](https://www.npmjs.com/package/protobufjs)`
-  - `brew install protobuf`
-  - `pip install protobuf`
-  - `npm install -g protobufjs`
-  - Allows us to communicate the messages quickly.
-  - On Linux, you may have to run `sudo pbjs` so PBJS can finish its
-    installation.
-- `pillow`
-  - `pip install pillow`
-  - Allows us to manipulate images.
-- `aiohttp`
-  - `pip install aiohttp`
-  - Allows us to run http connections.
-- `motor`
-  - `pip install motor`
-  - Allows us to connect to the Mongo database.
-
-For the examples:
-- `pandas`
-  - `pip install pandas`
-- `yaml`
-  - `pip install pyyaml`
