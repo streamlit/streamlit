@@ -2,7 +2,7 @@
 modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
 .PHONY: all
-all: setup requirements.txt requirements
+all: setup requirements.txt requirements protobuf
 
 setup:
 	pip install pip-tools
@@ -36,3 +36,7 @@ clean:
 	rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete
 	find . -name __pycache__ -type d -delete
+
+.PHONY: protobuf
+protobuf:
+	protoc --proto_path=streamlit/protobuf streamlit/protobuf/*.proto --python_out=streamlit/protobuf

@@ -1,1 +1,2 @@
 include README.md
+recursive-include streamlit/protobuf *.proto
