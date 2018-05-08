@@ -20,10 +20,10 @@ import urllib
 import webbrowser
 import concurrent.futures
 
-from streamlit.shared import config
-from streamlit.local.ProxyConnection import ProxyConnection
-from streamlit.shared.streamlit_msg_proto import new_report_msg
-from streamlit.shared.streamlit_msg_proto import streamlit_msg_iter
+from streamlit import config
+from streamlit.ProxyConnection import ProxyConnection
+from streamlit.streamlit_msg_proto import new_report_msg
+from streamlit.streamlit_msg_proto import streamlit_msg_iter
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception

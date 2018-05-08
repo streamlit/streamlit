@@ -62,7 +62,7 @@ import pandas as pd
 from .ChartComponent import ChartComponent
 from .caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
 from .chartconfig import *
-from streamlit.shared import data_frame_proto
+from streamlit import data_frame_proto
 
 current_module = __import__(__name__)
 

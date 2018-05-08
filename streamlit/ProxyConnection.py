@@ -1,8 +1,8 @@
 """Stores information shared by both local_connections and
 client_connections related to a particular report."""
 
-from streamlit.shared.ReportQueue import ReportQueue
-from streamlit.shared import protobuf
+from streamlit.ReportQueue import ReportQueue
+from streamlit import protobuf
 
 class ProxyConnection:
     """Stores information shared by both local_connections and

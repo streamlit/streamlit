@@ -338,3 +338,8 @@ For the examples:
   streamlit/ directory only.  Things that are not under that directory
   that are included ie root level things like `README.md`, will only be
   copied in the source distribution ie `python setup sdist`
+
+* Now all you have to do is run `make`
+* To edit the python code and have it point to the src files use `make develop`
+* To install it in the python environment use `make install`
+* `make release` builds the wheel file.

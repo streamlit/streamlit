@@ -4,10 +4,10 @@ a set of ReportQueues."""
 import asyncio
 import contextlib
 
-from streamlit.shared import protobuf
-from streamlit.shared.config import get_config as get_shared_config
-from streamlit.shared.ReportQueue import ReportQueue
-from streamlit.shared.DeltaGenerator import DeltaGenerator
+from streamlit import protobuf
+from streamlit.config import get_config as get_shared_config
+from streamlit.ReportQueue import ReportQueue
+from streamlit.DeltaGenerator import DeltaGenerator
 
 class Switchboard:
     """Contains a set of ReportQueues and manages thier incoming, outgoing

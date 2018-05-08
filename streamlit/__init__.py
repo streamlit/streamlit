@@ -1,4 +1,4 @@
 # Import some files directly from this module
-from .local.Chart import *
-from .local.caching import cache
-from .local import io
+from streamlit.Chart import *
+from streamlit.caching import cache
+from streamlit import io

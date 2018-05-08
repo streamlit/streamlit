@@ -68,7 +68,7 @@ def streamlit_read(path, binary=False):
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
     r"""
-    Opens a file for writing within the streamlit local path, and
+    Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
         with open_ensuring_path('foo/bar.txt') as bar:

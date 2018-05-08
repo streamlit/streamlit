@@ -36,3 +36,10 @@ yarn-error.log*
 
 # Dependency directories
 node_modules/
+
+########################################################################
+# streamlit
+########################################################################
+.streamlit/
+streamlit/static
+frontend/streamlit/lib

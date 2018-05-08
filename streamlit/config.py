@@ -57,6 +57,7 @@ def get_option(option):
     If it's not found, we assume a development build and look for that config
     file.
     """
+    basedir = os.path.dirname(__file__)
     global __global_config
     if not __global_config:
         try:
@@ -64,9 +65,9 @@ def get_option(option):
             # sys.prefix for config.yaml.
             __global_config = _load_config({
                 'local.root': sys.prefix,
-                'local.config': 'streamlit/config/config.yaml',
+                'local.config': os.path.join(basedir, 'config/config.yaml'),
                 'proxy.useNode': False,
-                'proxy.staticRoot': 'streamlit/proxy_static/',
+                'proxy.staticRoot': os.path.join(basedir, 'static'),
             })
         except FileNotFoundError:
             # If that didn't work, then use the development path.

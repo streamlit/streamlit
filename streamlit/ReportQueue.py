@@ -7,8 +7,8 @@ Whenever possible, deltas are combined.
 import copy
 import enum
 
-from streamlit.shared import data_frame_proto
-from streamlit.shared import protobuf
+from streamlit import data_frame_proto
+from streamlit import protobuf
 
 class QueueState(enum.Enum):
     # Indicates that the queue is accepting deltas.

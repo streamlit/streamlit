@@ -1,5 +1,5 @@
 import aiohttp
-from streamlit.shared import protobuf
+from streamlit import protobuf
 
 async def new_report_msg(report_id, ws):
     """

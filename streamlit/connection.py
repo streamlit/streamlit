@@ -12,11 +12,11 @@ import threading
 import traceback
 import urllib
 
-from streamlit.local.util import get_local_id
-from streamlit.shared import config
-from streamlit.shared.DeltaGenerator import DeltaGenerator
-from streamlit.shared.ReportQueue import ReportQueue
-from streamlit.shared.streamlit_msg_proto import new_report_msg
+from streamlit.util import get_local_id
+from streamlit import config
+from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
+from streamlit.streamlit_msg_proto import new_report_msg
 
 def _assert_singleton(method):
     """Asserts that this method is called on the singleton instance of
@@ -191,7 +191,7 @@ class Connection:
     async def _launch_proxy(self):
         """Launches the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
-        os.system('python -m streamlit.local.Proxy &')
+        os.system('python -m streamlit.Proxy &')
         await asyncio.sleep(wait_for_proxy_secs)
 
     @_assert_singleton_async

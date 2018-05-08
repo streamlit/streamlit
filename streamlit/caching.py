@@ -7,9 +7,9 @@ import pickle
 import re
 import shutil
 
-from streamlit.local import io
-from streamlit.local.util import streamlit_read, streamlit_write
-from streamlit.local.util import __STREAMLIT_LOCAL_ROOT as local_root
+from streamlit import io
+from streamlit.util import streamlit_read, streamlit_write
+from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
 
 def cache(func):
 	"""A function decorator which enables the function to cache its

@@ -2,8 +2,8 @@
 
 import sys
 import textwrap
-import streamlit.local.caching
-import streamlit.local.reference
+import streamlit.caching
+import streamlit.reference
 
 def print_usage():
     """Prints a help message."""
@@ -21,11 +21,11 @@ def print_usage():
     print(textwrap.dedent(usage).strip())
 
 def clear_cache():
-    streamlit.local.caching.clear_cache(True)
+    streamlit.caching.clear_cache(True)
 
 def help():
     print('Showing help page in browser..')
-    streamlit.local.reference.display_reference()
+    streamlit.reference.display_reference()
 
 def main():
     # Dispatch based on the given command.

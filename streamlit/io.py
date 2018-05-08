@@ -9,14 +9,14 @@ import textwrap
 import traceback
 import types
 
-from streamlit.local.Chart import Chart
-from streamlit.local.connection import get_delta_generator
-from streamlit.local.util import escape_markdown
-from streamlit.shared.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
+from streamlit.Chart import Chart
+from streamlit.connection import get_delta_generator
+from streamlit.util import escape_markdown
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
-# singleton connection object (in streamlit.local.connection) and then
+# singleton connection object (in streamlit.connection) and then
 # call the corresponding function on that DeltaGenerator.
 for name in dir(DeltaGenerator):
     method = getattr(DeltaGenerator, name)

@@ -7,12 +7,12 @@ import pandas as pd
 import textwrap
 import traceback
 
-from streamlit.shared import image_proto
-from streamlit.local.Chart import Chart
-from streamlit.local.chartconfig import CHART_TYPES
-from streamlit.local.caseconverters import to_snake_case
-from streamlit.shared import data_frame_proto
-from streamlit.shared import protobuf
+from streamlit import image_proto
+from streamlit.Chart import Chart
+from streamlit.chartconfig import CHART_TYPES
+from streamlit.caseconverters import to_snake_case
+from streamlit import data_frame_proto
+from streamlit import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 
