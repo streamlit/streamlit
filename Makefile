@@ -47,9 +47,11 @@ clean:
 	rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete
 	find . -name __pycache__ -type d -delete
-	(cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/node_modules)
+	find . -name .pytest_cache -exec rm -rf {} \;
+	(cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/coverage streamlit/node_modules)
 	rm -rf streamlit/static
 	find . -name .streamlit -type d -exec rm -rf {} \;
+	rm -rf .coverage*
 
 .PHONY: protobuf
 protobuf:

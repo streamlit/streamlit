@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "babel src -d lib",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "coverage": "jest --coverage"
   },
   "keywords": [
     "streamlit",
@@ -23,6 +24,9 @@
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-plugin-transform-react-jsx": "^6.24.1",
     "babel-preset-env": "^1.6.1",
+    "jest": "^22.4.3",
+    "moment": "^2.22.1",
+    "moment-duration-format": "^2.2.2",
     "protobufjs": "^6.8.6"
   }
 }
