@@ -2,16 +2,27 @@
 modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
 .PHONY: all
-all: setup requirements.txt requirements react-init protobuf react-build release
+all: setup install_requirements.txt requirements.txt requirements react-init protobuf react-build release
 
 setup:
 	pip install pip-tools
 
-requirements.txt: requirements.in
+install_requirements.txt: install_requirements.in
+	pip-compile install_requirements.in
+
+requirements.txt: requirements.in install_requirements.txt
 	pip-compile requirements.in
 
-requirements: requirements.txt
+requirements: requirements.txt install_requirements.txt
 	pip install -r requirements.txt
+
+lint:
+	# linting
+	flake8 $(modules) tests/
+
+test:
+	# testing + code coverage
+	PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
 install:
 	python setup.py install

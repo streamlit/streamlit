@@ -5,7 +5,7 @@ try: # for pip >= 10
 except ImportError: # for pip <= 9.0.3
     from pip.req import parse_requirements
 
-requirements = parse_requirements('requirements.txt', session=False)
+requirements = parse_requirements('install_requirements.txt', session=False)
 
 def readme():
     with open('README.md') as f:

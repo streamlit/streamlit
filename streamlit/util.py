@@ -1,5 +1,6 @@
 """A bunch of useful utilites."""
 
+# flake8: noqa
 import bson
 import contextlib
 import os

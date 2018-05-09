@@ -14,6 +14,11 @@ eggs/
 *.egg-info/
 *.egg
 
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.pytest_cache/
+
 ########################################################################
 # OSX - https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 ########################################################################
