@@ -333,6 +333,28 @@ For the examples:
 
 ## Refactored Notes
 
+### TL;DR
+General development
+* go to branch - `git checkout armando/refactor`
+* make virtualenv using virtualenvwrapper.
+  `$ mkvirtualenv -p /usr/bin/python3.6 streamlit-refactor` or `workon streamlit-refactor`
+* `make` - to npm build, pip install and just generally setup everything.
+* `make develop` - allows python to find streamlit in your code directory.
+
+Python
+* make lint
+* make test
+
+Javascript
+* make js-lint
+* make js-test
+
+This isnt necessary for development but if you want to see where the
+files would go from the 'wheel' file.
+* `make release` - wheel  in dist/ directory.
+* `make install` - python will find streamlit in $VIRTUAL_ENV/lib/python3.6/site-packages/streamlit-*/streamlit
+
+### Unsorted notes.
 * With `MANIFEST.in` when you do a `python setup.py install` or `python
   setup.py bdist_wheel` it will copy things in MANIFEST.in under the
   streamlit/ directory only.  Things that are not under that directory
