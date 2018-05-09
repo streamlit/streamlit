@@ -71,6 +71,14 @@ react-build:
 	(cd frontend/client; npm run build)
 	rsync -av frontend/client/build/ streamlit/static/
 
+js-lint:
+	(cd frontend/streamlit; ./node_modules/.bin/eslint src)
+
+js-test:
+	(cd frontend/streamlit; npm run test)
+	(cd frontend/streamlit; npm run coverage)
+
+
 # Counts the number of lines of code in the project
 loc:
 	find . -iname '*.py' -or -iname '*.js'  | \
