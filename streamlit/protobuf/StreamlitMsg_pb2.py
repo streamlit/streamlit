@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='StreamlitMsg.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x12StreamlitMsg.proto\x1a\x0b\x44\x65lta.proto\"N\n\x0cStreamlitMsg\x12\x14\n\nnew_report\x18\x01 \x01(\tH\x00\x12 \n\ndelta_list\x18\x02 \x01(\x0b\x32\n.DeltaListH\x00\x42\x06\n\x04typeb\x06proto3')
+  serialized_pb=_b('\n\x12StreamlitMsg.proto\x1a\x0b\x44\x65lta.proto\"i\n\x0cStreamlitMsg\x12\x14\n\nnew_report\x18\x01 \x01(\tH\x00\x12 \n\ndelta_list\x18\x02 \x01(\x0b\x32\n.DeltaListH\x00\x12\x19\n\x0freport_finished\x18\x03 \x01(\x08H\x00\x42\x06\n\x04typeb\x06proto3')
   ,
   dependencies=[Delta__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -49,6 +49,13 @@ _STREAMLITMSG = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='report_finished', full_name='StreamlitMsg.report_finished', index=2,
+      number=3, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -65,7 +72,7 @@ _STREAMLITMSG = _descriptor.Descriptor(
       index=0, containing_type=None, fields=[]),
   ],
   serialized_start=35,
-  serialized_end=113,
+  serialized_end=140,
 )
 
 _STREAMLITMSG.fields_by_name['delta_list'].message_type = Delta__pb2._DELTALIST
@@ -75,6 +82,9 @@ _STREAMLITMSG.fields_by_name['new_report'].containing_oneof = _STREAMLITMSG.oneo
 _STREAMLITMSG.oneofs_by_name['type'].fields.append(
   _STREAMLITMSG.fields_by_name['delta_list'])
 _STREAMLITMSG.fields_by_name['delta_list'].containing_oneof = _STREAMLITMSG.oneofs_by_name['type']
+_STREAMLITMSG.oneofs_by_name['type'].fields.append(
+  _STREAMLITMSG.fields_by_name['report_finished'])
+_STREAMLITMSG.fields_by_name['report_finished'].containing_oneof = _STREAMLITMSG.oneofs_by_name['type']
 DESCRIPTOR.message_types_by_name['StreamlitMsg'] = _STREAMLITMSG
 
 StreamlitMsg = _reflection.GeneratedProtocolMessageType('StreamlitMsg', (_message.Message,), dict(

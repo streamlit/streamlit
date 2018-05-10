@@ -14,7 +14,7 @@ import {
   indexGetByName,
   tableGet,
   tableGetRowsAndCols,
-} from 'streamlit-shared/lib/dataFrameProto';
+} from 'streamlit/lib/dataFrameProto';
 // import './ExceptionElement.css';
 
  /**
