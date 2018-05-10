@@ -7,3 +7,4 @@ bson
 # motor
 tzlocal
 docutils
+google-cloud-storage

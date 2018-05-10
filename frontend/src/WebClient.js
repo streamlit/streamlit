@@ -8,6 +8,7 @@ import {
   Container,
   Progress,
   Row,
+//  UncontrolledTooltip,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
 
@@ -50,6 +51,8 @@ class WebClient extends PureComponent {
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
+    this.handleRegister = this.handleRegister.bind(this);
+    this.sendCommand = this.sendCommand.bind(this);
   }
 
   componentDidMount() {
@@ -111,6 +114,10 @@ class WebClient extends PureComponent {
     });
   }
 
+  handleRegister(sender) {
+    this.setState(_ => ({ sender }))
+  }
+
   /**
    * Applies a list of deltas to the elements.
    */
@@ -149,6 +156,18 @@ class WebClient extends PureComponent {
     }));
   }
 
+  sendCommand(command, data) {
+    return _ => {
+      console.log({command,data})
+      if (this.state.sender) {
+        const payload = { command, data }
+        this.state.sender(JSON.stringify(payload))
+      } else {
+        console.error('unable to send, no sender assigned')
+      }    
+    }
+  }
+
   render() {
     // Compute the websocket URI based on the pathname.
     const reportName =
@@ -169,10 +188,14 @@ class WebClient extends PureComponent {
         <header>
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
+            <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em" onClick={this.sendCommand('save-cloud')}>
+            <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+            </svg>
             <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
+              onRegister={this.handleRegister}
               persist={false}
             />
           </div>
