@@ -8,13 +8,20 @@ aiohttp==3.2.1
 async-timeout==3.0.0
 attrs==18.1.0
 bson==0.5.5
-certifi==2018.4.16        # via requests
+cachetools==2.1.0
+certifi==2018.4.16
 chardet==3.0.4
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
 flake8-docstrings==1.3.0
 flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0
+google-api-core==1.1.2
+google-auth==1.4.1
+google-cloud-core==0.28.1
+google-cloud-storage==1.9.0
+google-resumable-media==0.3.1
+googleapis-common-protos==1.5.3
 idna-ssl==1.0.1
 idna==2.6
 mccabe==0.6.1             # via flake8
@@ -27,6 +34,8 @@ pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
 protobuf==3.5.2.post1
 py==1.5.3                 # via pytest
+pyasn1-modules==0.2.1
+pyasn1==0.4.2
 pycodestyle==2.3.1        # via flake8
 pydocstyle==2.1.1         # via flake8-docstrings
 pyflakes==1.6.0           # via flake8
@@ -36,12 +45,13 @@ python-dateutil==2.7.3
 pytz==2018.4
 pyyaml==3.12
 requests-toolbelt==0.8.0  # via twine
-requests==2.18.4          # via requests-toolbelt, twine
+requests==2.18.4
+rsa==3.4.2
 six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.0.2
 tqdm==4.23.3              # via twine
 twine==1.11.0
 tzlocal==1.5.1
-urllib3==1.22             # via requests
+urllib3==1.22
 yarl==1.2.4

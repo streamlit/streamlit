@@ -18,6 +18,8 @@ import asyncio
 import os
 import urllib
 import webbrowser
+import secrets
+from google.cloud import storage
 import concurrent.futures
 
 from streamlit import config
@@ -158,9 +160,13 @@ class Proxy:
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type != WSMsgType.CLOSE:
-                        raise RuntimeError(f'Unknown message type: {msg.type}')
-                    break
+                    if msg.type == WSMsgType.TEXT:
+                        payload = msg.json()
+                        self.handle_payload(payload)
+                    elif msg.type == WSMsgType.CLOSE:
+                        break
+                    else:
+                        print('Unknown message type:', msg.type)
                 except asyncio.TimeoutError:
                     pass
         except concurrent.futures.CancelledError:
@@ -235,6 +241,35 @@ class Proxy:
         close the proxy."""
         if not self._connections:
             self.stop()
+
+    def handle_payload(self, payload):
+        command = payload.get('command', None)
+        handler = {
+            'save-cloud': self.save_cloud
+        }.get(command, None)
+        if handler:
+            data = payload.get('data', None)
+            handler(data)
+        else:
+            print('no handler for command:', command)
+
+    def generate_secure_id(self, length=20):
+        while True:
+            id = secrets.token_urlsafe(length * 10 // 9).replace('_', '').replace('-', '')
+            if len(id) >= length:
+                return id[:length]
+
+    def save_cloud(self, _data):
+        print('save_cloud!')
+        return
+        client = storage.Client()
+        bucket = client.get_bucket('snapshot')
+        uid = self.generate_secure_id()
+        blob = bucket.blob('project/filename.pb')
+        content = self.get_bp()
+        content_type = 'application/x-protobuf'
+        predefined_acl = public-read
+        blob.upload_from_string(content, content_type=content_type, predefined_acl=predefined_acl)
 
 def main():
     """
