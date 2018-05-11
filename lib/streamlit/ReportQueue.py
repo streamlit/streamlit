@@ -54,6 +54,11 @@ class ReportQueue:
 
         return deltas
 
+    def get_serialized_deltas(self):
+        msg = protobuf.StreamlitMsg()
+        msg.delta_list.deltas.extend(self._deltas)
+        return msg.SerializeToString()
+
     async def flush_queue(self, ws):
         """Sends the deltas across the websocket in a DeltaList, clearing the
         queue afterwards."""
