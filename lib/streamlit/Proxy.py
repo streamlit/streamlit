@@ -26,6 +26,7 @@ from streamlit import config
 from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
+from streamlit.cloud import Cloud
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -70,6 +71,9 @@ class Proxy:
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
         self._connections = {}
+
+        # Initialized things that the proxy will need to do cloud things.
+        self._cloud = Cloud()
 
     def run_app(self):
         """Runs the web app."""
@@ -201,6 +205,7 @@ class Proxy:
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
+            self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -260,7 +265,10 @@ class Proxy:
                 return id[:length]
 
     def save_cloud(self, _data):
-        print('save_cloud!')
+        keys = list(self._connections)
+        master = self._connections[keys[0]]._master_queue
+
+        self._cloud.local_save(master.get_serialized_deltas())
         return
         client = storage.Client()
         bucket = client.get_bucket('snapshot')
