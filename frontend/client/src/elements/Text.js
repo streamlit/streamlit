@@ -6,7 +6,7 @@ import React, { PureComponent} from 'react';
 import ReactMarkdown from 'react-markdown';
 import ReactJson from 'react-json-view';
 import { Alert }  from 'reactstrap';
-import { Text as TextProto } from 'streamlit/lib/protobuf/streamlit';
+import { Text as TextProto } from '../protobuf';
 import './Text.css';
 
  /**

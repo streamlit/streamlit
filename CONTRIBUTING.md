@@ -33,9 +33,13 @@ sudo apt-get install protobuf-compiler
 
 #### 4. Initialize the Library
 
-To install the Python and Javascxript libraries, compile the Protobufs, and point `streamlit` into your source tree, run:
+To install the Python and Javascxript libraries, compile the Protobufs, run:
 ```
 make init
+```
+To point `streamlit` into your source tree, run:
+```
+make develop
 ```
 Test this by running:
 ```
@@ -65,11 +69,13 @@ Everything should automatically still work. :)
 You need to run:
 ```
 make protobuf
+```
 
+#### When Change Javascript of Python Dependencies
+
+Rerun:
 ```
 make init
-make all
-make production
 ```
 
 ## How to publish a new version of the code to `PyPi`

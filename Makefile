@@ -3,26 +3,26 @@ modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__i
 
 help:
 	@echo "Streamlit Make Commands:"
-	@echo
 	@echo " init     - Run once to install python and js dependencies."
 	@echo " protobuf - Recompile Protobufs for Python and Javascript."
+	@echo " develop  - Install streamlit pointing to local workspace."
+	@echo " install  - Install streamlit pointing to PYTONPATH."
 	@echo " loc      - Count lines of code."
 
-.PHONY: all
-all: setup requirements react-init protobuf react-build release
+.PHONY: init
+init: setup requirements react-init protobuf # react-build release
 
 setup:
 	pip install pip-tools
 
-install_requirements.txt: install_requirements.in
-	pip-compile install_requirements.in
+lib/install_requirements.txt: lib/install_requirements.in
+	pip-compile lib/install_requirements.in
 
-requirements.txt: requirements.in install_requirements.txt
-	pip-compile requirements.in
+lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
+	pip-compile lib/requirements.in
 
-requirements: requirements.txt install_requirements.txt
-	@echo ACTUALLY RUNNING pip install
-	pip install -r requirements.txt
+requirements: lib/requirements.txt lib/install_requirements.txt
+	pip install -r lib/requirements.txt
 
 lint:
 	# linting
@@ -36,7 +36,7 @@ install:
 	python setup.py install
 
 develop:
-	python setup.py develop
+	cd lib ; python setup.py develop
 
 dev:
 	python setup.py egg_info --tag-build=.$(USER) bdist_wheel sdist
@@ -63,14 +63,14 @@ clean:
 
 .PHONY: protobuf
 protobuf:
-	protoc --proto_path=streamlit/protobuf streamlit/protobuf/*.proto --python_out=streamlit/protobuf
-	cd frontend/streamlit; mkdir -p ./lib/protobuf; ./node_modules/protobufjs/bin/pbjs ../../streamlit/protobuf/*.proto -t static-module > ./lib/protobuf/streamlit.js
+	protoc --proto_path=protobuf protobuf/*.proto --python_out=lib/streamlit/protobuf
+	cd frontend/client; ./node_modules/protobufjs/bin/pbjs ../../protobuf/*.proto -t static-module > ./src/protobuf.js
 
 .PHONY: react-init
 react-init:
-	cd frontend/streamlit; npm install
+	# cd frontend/streamlit; npm install
 	cd frontend/client; npm install
-	ln -fs ../../streamlit frontend/client/node_modules/streamlit
+	# ln -fs ../../streamlit frontend/client/node_modules/streamlit
 
 .PHONY: react-build
 react-build:

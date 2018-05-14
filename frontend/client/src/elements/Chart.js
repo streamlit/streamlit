@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
-import { tableGetRowsAndCols, indexGet, tableGet } from 'streamlit/lib/dataFrameProto';
+import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
 import { format, Duration } from '../format';
 
 import * as recharts from 'recharts';

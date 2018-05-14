@@ -9,24 +9,24 @@ import {
   Progress,
   Row,
 } from 'reactstrap';
+import { fromJS } from 'immutable';
 
 // Display Elements
-import DataFrame from 'streamlit/lib/elements/DataFrame';
-import Chart from 'streamlit/lib/elements/Chart';
-import ImageList from 'streamlit/lib/elements/ImageList';
-import Text from 'streamlit/lib/elements/Text';
-import DocString from 'streamlit/lib/elements/DocString';
-import ExceptionElement from 'streamlit/lib/elements/ExceptionElement';
-import Map from 'streamlit/lib/elements/Map';
+import DataFrame from './elements/DataFrame';
+import Chart from './elements/Chart';
+import ImageList from './elements/ImageList';
+import Text from './elements/Text';
+import DocString from './elements/DocString';
+import ExceptionElement from './elements/ExceptionElement';
+import Map from './elements/Map';
 
 // Other local imports.
-import PersistentWebsocket from 'streamlit/lib/PersistentWebsocket';
+import PersistentWebsocket from './PersistentWebsocket';
 import { StreamlitMsg, Text as TextProto }
-  from 'streamlit/lib/protobuf/streamlit';
-import { addRows } from 'streamlit/lib/dataFrameProto';
+  from './protobuf';
+import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
-  from 'streamlit/lib/immutableProto';
-import { fromJS } from 'immutable';
+  from './immutableProto';
 
 import './WebClient.css';
 

@@ -5,14 +5,13 @@
 
 import React, { PureComponent } from 'react';
 import { UncontrolledTooltip } from 'reactstrap';
+import './PersistentWebsocket.css';
 
 const NORMAL_CLOSURE = 1000;
 const RECONNECT_TIMEOUT = 200.0;
 const DISCONNECTED_STATE = 'disconnected';
 const CONNECTED_STATE = 'connected';
 const ERROR_STATE = 'error'
-
-import './PersistentWebsocket.css';
 
 /**
  * Implements a persistent websocket connection.
