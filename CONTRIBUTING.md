@@ -83,13 +83,12 @@ make init
 - The current version is `0.8.0`
 - Write new release notes.
 - Update the version in the following locations:
-  - `readme.md`
-  - `dist/setup.py`
-  - `local/client/package.json`
-  - `shared/client/package.json`
+  - `CONTRIBUTING.md` (*This file!*)
+  - `lib/setup.py`
+  - `frontend/client/package.json`
   - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
-    - `config.yaml` : set the `proxy.port`
-    - `local/client/src/WebClient.js` : set the line containing `ws://localhost/...`
+    - `lib/streamlit/config/config.yaml` : set the `proxy.port`
+    - `frontend/client/src/WebClient.js` : set the line containing `ws://localhost/...`
   - *Not needed, I think:*
     - `local/client/package-lock.json`
     - `shared/client/package-lock.json`

@@ -6,7 +6,8 @@ help:
 	@echo " init     - Run once to install python and js dependencies."
 	@echo " protobuf - Recompile Protobufs for Python and Javascript."
 	@echo " develop  - Install streamlit pointing to local workspace."
-	@echo " install  - Install streamlit pointing to PYTONPATH."
+	@echo " install  - Install streamlit pointing to PYTHONPATH."
+	@echo " wheel    - Create a wheel file in dist/."
 	@echo " loc      - Count lines of code."
 
 .PHONY: init
@@ -38,13 +39,13 @@ install:
 develop:
 	cd lib ; python setup.py develop
 
-dev:
-	python setup.py egg_info --tag-build=.$(USER) bdist_wheel sdist
-	@echo
-	@echo Dev wheel file in $(shell ls dist/*$(shell python setup.py --version).$(USER)-py27*whl) and install with '"pip install [wheel file]"'
-	@echo
+# dev:
+# 	python setup.py egg_info --tag-build=.$(USER) bdist_wheel sdist
+# 	@echo
+# 	@echo Dev wheel file in $(shell ls dist/*$(shell python setup.py --version).$(USER)-py27*whl) and install with '"pip install [wheel file]"'
+# 	@echo
 
-release:
+wheel:
 	python setup.py bdist_wheel sdist
 	@echo wheel file in dist/
 	@echo
@@ -52,14 +53,15 @@ release:
 	@echo
 
 clean:
-	rm -rf build dist  .eggs *.egg-info
-	find . -name '*.pyc' -type f -delete
-	find . -name __pycache__ -type d -delete
-	find . -name .pytest_cache -exec rm -rf {} \;
-	(cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/coverage streamlit/node_modules)
-	rm -rf streamlit/static
-	find . -name .streamlit -type d -exec rm -rf {} \;
-	rm -rf .coverage*
+	@echo FIXME: This needs to be fixed!
+	# rm -rf build dist  .eggs *.egg-info
+	# find . -name '*.pyc' -type f -delete
+	# find . -name __pycache__ -type d -delete
+	# find . -name .pytest_cache -exec rm -rf {} \;
+	# (cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/coverage streamlit/node_modules)
+	# rm -rf streamlit/static
+	# find . -name .streamlit -type d -exec rm -rf {} \;
+	# rm -rf .coverage*
 
 .PHONY: protobuf
 protobuf:
