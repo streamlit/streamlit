@@ -1,8 +1,15 @@
 # Black magic to get module directories
 modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
+help:
+	@echo "Streamlit Make Commands:"
+	@echo
+	@echo " init     - Run once to install python and js dependencies."
+	@echo " protobuf - Recompile Protobufs for Python and Javascript."
+	@echo " loc      - Count lines of code."
+
 .PHONY: all
-all: setup install_requirements.txt requirements.txt requirements react-init protobuf react-build release
+all: setup requirements react-init protobuf react-build release
 
 setup:
 	pip install pip-tools
@@ -14,6 +21,7 @@ requirements.txt: requirements.in install_requirements.txt
 	pip-compile requirements.in
 
 requirements: requirements.txt install_requirements.txt
+	@echo ACTUALLY RUNNING pip install
 	pip install -r requirements.txt
 
 lint:
@@ -56,19 +64,19 @@ clean:
 .PHONY: protobuf
 protobuf:
 	protoc --proto_path=streamlit/protobuf streamlit/protobuf/*.proto --python_out=streamlit/protobuf
-	(cd frontend/streamlit; mkdir -p ./lib/protobuf; ./node_modules/protobufjs/bin/pbjs ../../streamlit/protobuf/*.proto -t static-module > ./lib/protobuf/streamlit.js)
+	cd frontend/streamlit; mkdir -p ./lib/protobuf; ./node_modules/protobufjs/bin/pbjs ../../streamlit/protobuf/*.proto -t static-module > ./lib/protobuf/streamlit.js
 
 .PHONY: react-init
 react-init:
-	(cd frontend/streamlit; npm install)
-	(cd frontend/client; npm install)
+	cd frontend/streamlit; npm install
+	cd frontend/client; npm install
 	ln -fs ../../streamlit frontend/client/node_modules/streamlit
 
 .PHONY: react-build
 react-build:
 	rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
-	(cd frontend/streamlit; npm run build)
-	(cd frontend/client; npm run build)
+	cd frontend/streamlit; npm run build
+	cd frontend/client; npm run build
 	rsync -av frontend/client/build/ streamlit/static/
 
 js-lint:

@@ -19,6 +19,9 @@ eggs/
 .coverage.*
 .pytest_cache/
 
+# Pyenv Stuff
+.python-version
+
 ########################################################################
 # OSX - https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 ########################################################################

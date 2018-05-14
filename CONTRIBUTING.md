@@ -1,17 +1,10 @@
 # Streamlit
 
-A stateless alternative to Jupyter reports for machine learning and data science.
+A stateless alternative to Jupyter notebooks for machine learning and data science.
 
 ## Installation
 
-#### 1. Checkout the Repository
-
-First [add an SSH key for Github](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/). Then, checkout the respository:
-```
-git clone git@github.com:treuille/streamlit-cloud.git
-```
-
-#### 2. Install `npm`
+#### 1. Install `npm` or `nvm`
 
 ###### MacOS
 
@@ -23,20 +16,11 @@ No instructions at present. Please feel free to add your own.
 sudo apt install npm
 ```
 
-#### 3. Install `pyenv` and `pyenv-virtualenv`
+#### 2. Install Python 3.6 or Later
 
-###### On MacOS
+You may want a [virtual environment](docs/python-virtual-envornment.md).
 
-```
-brew install pyenv
-brew install pyenv-virtualenv
-```
-###### On Linux
-Just [follow these instructions](https://github.com/pyenv/pyenv-installer/blob/master/README.rst).
-
-Also make sure you have [these packages](https://github.com/pyenv/pyenv/wiki/Common-build-problems).
-
-#### 4. Install hte `protobuf` compiler
+#### 3. Install the `protobuf` compiler
 
 ###### On MacOS
 ```
@@ -47,16 +31,40 @@ brew install protobuf
 sudo apt-get install protobuf-compiler
 ```
 
-#### 5. Establish a Local Python Environment
+#### 4. Initialize the Library
 
-Create a virtualenv environment called `streamlit`:
+To install the Python and Javascxript libraries, compile the Protobufs, and point `streamlit` into your source tree, run:
 ```
-pyenv install 3.6.3
-pyenv virtualenv 3.6.3 streamlit
-pyenv local streamlit
+make init
 ```
+Test this by running:
+```
+python -m streamlit
+```
+and you should see a list of commands.
 
-#### 6. Initialize the Repository
+## How to Develop
+
+#### Ordinary Development Cycle
+
+The basic developer workflow is that you run a `react` development server in the
+background which will automatically recompile Javascript and CSS when necessary.
+
+To start the server, open up a new terminal window and run:
+```
+cd frontend/client ; npm start
+```
+Happy coding!
+
+#### When You Change the Python or Javascript Code
+
+Everything should automatically still work. :)
+
+#### When You Update Protobufs
+
+You need to run:
+```
+make protobuf
 
 ```
 make init
