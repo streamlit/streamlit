@@ -56,7 +56,7 @@ background which will automatically recompile Javascript and CSS when necessary.
 
 To start the server, open up a new terminal window and run:
 ```
-cd frontend/client ; npm start
+cd frontend ; npm start
 ```
 Happy coding!
 
@@ -85,13 +85,13 @@ make init
 - Update the version in the following locations:
   - `CONTRIBUTING.md` (*This file!*)
   - `lib/setup.py`
-  - `frontend/client/package.json`
+  - `frontend/package.json`
   - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
     - `lib/streamlit/config/config.yaml` : set the `proxy.port`
-    - `frontend/client/src/WebClient.js` : set the line containing `ws://localhost/...`
+    - `frontend/src/WebClient.js` : set the line containing `ws://localhost/...`
   - *Not needed, I think:*
-    - `local/client/package-lock.json`
-    - `shared/client/package-lock.json`
+    - `local/package-lock.json`
+    - `shared/package-lock.json`
 - Run the following commands:
 ```
 make init

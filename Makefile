@@ -66,20 +66,17 @@ clean:
 .PHONY: protobuf
 protobuf:
 	protoc --proto_path=protobuf protobuf/*.proto --python_out=lib/streamlit/protobuf
-	cd frontend/client; ./node_modules/protobufjs/bin/pbjs ../../protobuf/*.proto -t static-module > ./src/protobuf.js
+	cd frontend/ ; ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./src/protobuf.js
 
 .PHONY: react-init
 react-init:
-	# cd frontend/streamlit; npm install
-	cd frontend/client; npm install
-	# ln -fs ../../streamlit frontend/client/node_modules/streamlit
+	cd frontend/ ; npm install
 
 .PHONY: react-build
 react-build:
 	rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
-	cd frontend/streamlit; npm run build
-	cd frontend/client; npm run build
-	rsync -av frontend/client/build/ streamlit/static/
+	cd frontend/ ; npm run build
+	rsync -av frontend/build/ streamlit/static/
 
 js-lint:
 	(cd frontend/streamlit; ./node_modules/.bin/eslint src)
