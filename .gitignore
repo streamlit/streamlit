@@ -57,3 +57,6 @@ coverage/
 .streamlit/
 streamlit/static
 frontend/client/src/protobuf.js
+
+# Data Files
+**/uber-raw-data-sep14.csv
