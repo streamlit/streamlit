@@ -50,7 +50,7 @@ class DataFrame extends PureComponent {
       // Get the cell renderer.
       const cellContents = getCellContents(df, headerRows, headerCols);
       const cellRenderer = getCellRenderer(cellContents);
-      const {columnWidth, headerWidth, tableWidth} =
+      const {columnWidth, headerWidth} =
         getWidths(cols, rows, headerCols, width - border, cellContents);
       // width = tableWidth + border;
 

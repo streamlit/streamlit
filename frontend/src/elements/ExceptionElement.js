@@ -4,7 +4,6 @@
 
 import React, { PureComponent} from 'react';
 import './ExceptionElement.css';
-import { dispatchOneOf } from '../immutableProto';
 
  /**
   * Functional element representing formatted text.

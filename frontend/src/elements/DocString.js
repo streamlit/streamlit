@@ -4,7 +4,7 @@
 
 import React, { PureComponent} from 'react';
 import './DocString.css';
-import { dispatchOneOf } from '../immutableProto';
+
  /**
   * Functional element representing formatted text.
   */
