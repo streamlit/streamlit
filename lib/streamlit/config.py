@@ -60,23 +60,13 @@ def get_option(option):
     basedir = os.path.dirname(__file__)
     global __global_config
     if not __global_config:
-        try:
-            # First we assume that this is a deployed version and we look in
-            # sys.prefix for config.yaml.
-            __global_config = _load_config({
-                'local.root': sys.prefix,
-                'local.config': os.path.join(basedir, 'config/config.yaml'),
-                'proxy.useNode': False,
-                'proxy.staticRoot': os.path.join(basedir, 'static'),
-            })
-        except FileNotFoundError:
-            # If that didn't work, then use the development path.
-            __global_config = _load_config({
-                'local.root': '/'.join(__file__.split('/')[:-5]),
-                'local.config': 'config.yaml',
-                'proxy.useNode': True,
-                'proxy.staticRoot': 'local/client/build/',
-            })
+        production_version = ('site-packages' in __file__)
+        __global_config = _load_config({
+            'local.root': sys.prefix,
+            'local.config': os.path.join(basedir, 'config/config.yaml'),
+            'proxy.useNode': not production_version,
+            'proxy.staticRoot': os.path.join(basedir, 'static'),
+        })
     return __global_config[option]
 
 def get_path(option):

@@ -7,11 +7,15 @@ help:
 	@echo " protobuf - Recompile Protobufs for Python and Javascript."
 	@echo " develop  - Install streamlit pointing to local workspace."
 	@echo " install  - Install streamlit pointing to PYTHONPATH."
+	@echo " build    - build the static version of Streamlit (without Node)"
 	@echo " wheel    - Create a wheel file in dist/."
 	@echo " loc      - Count lines of code."
 
 .PHONY: init
 init: setup requirements react-init protobuf # react-build release
+
+.PHONY: build
+build: react-build
 
 setup:
 	pip install pip-tools
@@ -34,7 +38,7 @@ test:
 	PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
 install:
-	python setup.py install
+	cd lib ; python setup.py install
 
 develop:
 	cd lib ; python setup.py develop
@@ -46,11 +50,7 @@ develop:
 # 	@echo
 
 wheel:
-	python setup.py bdist_wheel sdist
-	@echo wheel file in dist/
-	@echo
-	@echo Release wheel file in $(shell ls dist/*$(shell python setup.py --version)-py27*whl) and install with '"pip install [wheel file]"'
-	@echo
+	cd lib ; python setup.py bdist_wheel sdist
 
 clean:
 	@echo FIXME: This needs to be fixed!
@@ -74,9 +74,9 @@ react-init:
 
 .PHONY: react-build
 react-build:
-	rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
+	# rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
 	cd frontend/ ; npm run build
-	rsync -av frontend/build/ streamlit/static/
+	rsync -av --delete frontend/build/ lib/streamlit/static/
 
 js-lint:
 	(cd frontend/streamlit; ./node_modules/.bin/eslint src)
