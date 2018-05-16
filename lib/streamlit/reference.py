@@ -18,22 +18,6 @@ import threading
 import streamlit
 from streamlit import io
 
-def render(func):
-    """Displays the function body as a code block, the executes the function.
-
-    Args
-    ----
-    func : function
-        A function which will be pretty-printed and then executed.
-    """
-    source = inspect.getsource(func)
-    if source.strip().startswith('render(lambda'):
-        source = source[:-2]
-    source = source[source.find(':') + 1:]
-    source = textwrap.dedent(source).strip()
-    io.markdown(f'```\n{source}\n```')
-    func()
-
 def display_reference():
     """Displays Streamlit's internal help in the browser."""
 
@@ -63,8 +47,7 @@ def display_reference():
     io.write('The `write` function also knows what to do when you pass a NumPy '
              'array or Pandas dataframe.')
 
-    @render
-    def numpy_example():
+    with io.echo():
         import numpy as np
         a_random_array = np.random.randn(200, 200)
 
@@ -72,8 +55,7 @@ def display_reference():
 
     io.write('And here is a dataframe example:')
 
-    @render
-    def dataframe_example():
+    with io.echo():
         import pandas as pd
         from datetime import datetime
 
@@ -94,32 +76,25 @@ def display_reference():
 
     io.write('So assuming `data_frame` has been defined as...')
 
-    chart_data = pd.DataFrame(
-        np.random.randn(20, 5),
-        columns=['pv', 'uv', 'a', 'b', 'c']
-    )
-
-    io.markdown(f'''```
-    chart_data = pd.DataFrame(
-        np.random.randn(20, 5),
-        columns=['pv', 'uv', 'a', 'b', 'c']
-    )\n```''')
+    with io.echo():
+        chart_data = pd.DataFrame(
+            np.random.randn(20, 5),
+            columns=['pv', 'uv', 'a', 'b', 'c']
+        )
 
     io.write('...you can easily draw the charts below:')
 
 
     io.subheader('Example of line chart')
 
-    @render
-    def chart_example1():
+    with io.echo():
         io.line_chart(chart_data)
 
     io.write('As you can see, each column in the dataframe becomes a different '
              'line. Also, values on the _x_ axis are the dataframe\'s indices. '
              'Which means we can customize them this way:')
 
-    @render
-    def chart_example2():
+    with io.echo():
         chart_data2 = pd.DataFrame(
             np.random.randn(20, 2),
             columns=['stock 1', 'stock 2'],
@@ -131,15 +106,13 @@ def display_reference():
 
     io.subheader('Example of area chart')
 
-    @render
-    def chart_example3():
+    with io.echo():
         io.area_chart(chart_data)
 
 
     io.subheader('Example of bar chart')
 
-    @render
-    def chart_example3():
+    with io.echo():
         trimmed_data = chart_data[['pv', 'uv']].iloc[:10]
         io.bar_chart(trimmed_data)
 
@@ -153,8 +126,7 @@ def display_reference():
     try:
         image_bytes = read_image(image_url)
 
-        @render
-        def image_example():
+        with io.echo():
             image = Image.open(BytesIO(image_bytes))
 
             io.image(image, caption="Sunset", width=400)
@@ -176,47 +148,51 @@ def display_reference():
 
     io.header('Preformatted text')
 
-    @render
-    def text_example():
-        io.text('You can also write preformatted text instead of _Markdown_!\n'
-                '                   ^^^^^^^^^^^^\n'
-                'Rock on! \m/(^_^)\m/ ')
+    with io.echo():
+        io.text("Here's preformatted text instead of _Markdown_!\n"
+                "       ^^^^^^^^^^^^\n"
+                "Rock on! \m/(^_^)\m/ ")
 
 
     io.header('JSON')
 
-    render(lambda: io.json({'hello': 'world'}))
-    render(lambda: io.json('{"object":{"array":[1,true,"3"]}}'))
+    with io.echo():
+        io.json({'hello': 'world'})
 
+    with io.echo():
+        io.json('{"object":{"array":[1,true,"3"]}}')
+
+    io.header('Inline Code Blocks')
+
+    with io.echo():
+        with io.echo():
+            io.write('Use `io.echo()` to display inline code blocks.')
 
     io.header('Alert boxes')
 
-    @render
-    def alert_examples():
+    with io.echo():
         io.error("This is an error message")
         io.warning("This is a warning message")
         io.info("This is an info message")
         io.success("This is a success message")
 
-
     io.header('Progress Bars')
 
-    @render
-    def progress_example():
+    with io.echo():
         for percent in [0, 25, 50, 75, 100]:
             io.write(f'{percent}% progress:')
             io.progress(percent)
 
     io.header('Help')
 
-    render(lambda: io.help(dir))
+    with io.echo():
+        io.help(dir)
 
     io.header('Out-of-Order Writing')
 
     io.write('Placeholders allow you to draw items out-of-order. For example:')
 
-    @render
-    def empty_example():
+    with io.echo():
         io.text('A')
         placeholder = io.empty()
         io.text('C')
@@ -225,8 +201,8 @@ def display_reference():
 
     io.header('Exceptions')
     io.write('You can print out exceptions using `io.exception()`:')
-    @render
-    def exception_example():
+
+    with io.echo():
         try:
             raise RuntimeError('An exception')
         except Exception as e:
@@ -252,8 +228,8 @@ def display_reference():
     io.subheader('Spinners')
     io.write('A visual way of showing long computation is with a spinner:')
     lengthy_computation = lambda: None # noop for demsontration purposes
-    @render
-    def spinner_example():
+
+    with io.echo():
         with io.spinner('Computing something time consuming...'):
             lengthy_computation()
 
@@ -262,11 +238,10 @@ def display_reference():
         'Every `streamlit.io` method (except `io.write`) returns a handle '
         'which can be used for animation.')
 
-    # @render
-    # def progress_animation_example():
-    #     import time
-    #     my_bar = io.progress(0)
-    #
-    #     for percent_complete in range(100):
-    #         my_bar.progress(percent_complete + 1)
-    #         time.sleep(0.1)
+    with io.echo():
+        import time
+        my_bar = io.progress(0)
+
+        for percent_complete in range(100):
+            my_bar.progress(percent_complete + 1)
+            time.sleep(0.1)
