@@ -8,12 +8,13 @@
 
 .streamlit-container .streamlit-table th {
   border-bottom: none;
+  border-bottom: 1px solid #dee2e6;
 }
 
-/* .streamlit-container .streamlit-table td {
+.streamlit-container .streamlit-table td {
   border-left: none;
   border-right: none;
-} */
+}
 
 /*
 

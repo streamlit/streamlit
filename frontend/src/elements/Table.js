@@ -40,7 +40,7 @@ class Table extends PureComponent {
       const rows = headerRows + dataRows;
 
       return (
-        <div class='streamlit-table' style={{width}}>
+        <div class='streamlit-table'>
           <ReactTable >
             <thead>
               <tr>
