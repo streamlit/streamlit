@@ -24,5 +24,7 @@ message Element {
     DocString doc_string = 7;
     Exception exception = 8;
     Map map = 9;
+    // VegaLiteChart = 10;
+    DataFrame table = 11;
   }
 }

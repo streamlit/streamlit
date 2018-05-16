@@ -368,13 +368,28 @@ class DeltaGenerator:
 
         Args
         ----
-        No args for the tie being.
+        points : DataFrame
+            The points to display. Must have 'lat' and 'lon' columns.
         """
         LAT_LON = ['lat', 'lon']
         assert set(points.columns) >= set(LAT_LON), \
             'Map points must contain "lat" and "lon" columns.'
         data_frame_proto.marshall_data_frame(points[LAT_LON],
             element.map.points)
+
+    @_export_to_io
+    @_create_element
+    def table(self, element, df):
+        """Creates a map element.
+
+        Args
+        ----
+        df : DataFrame
+            The table data.
+        """
+        if type(df) != pd.DataFrame:
+            df = pd.DataFrame(df)
+        data_frame_proto.marshall_data_frame(df, element.table)
 
     def add_rows(self, df):
         assert not self._generate_new_ids, \

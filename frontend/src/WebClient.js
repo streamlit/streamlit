@@ -121,11 +121,12 @@ class WebClient extends PureComponent {
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
-        elements.update(delta.get('id'), (element) =>
-          dispatchOneOf(delta, 'type', {
+        elements.update(delta.get('id'), (element) => {
+          console.log(`updating delta {delta.get('id')} -> {delta.get('typy')}`);
+          return dispatchOneOf(delta, 'type', {
             newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
-        }))), elements)
+        })})), elements)
     }));
   }
 

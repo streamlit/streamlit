@@ -66,7 +66,11 @@ clean:
 .PHONY: protobuf
 protobuf:
 	protoc --proto_path=protobuf protobuf/*.proto --python_out=lib/streamlit/protobuf
-	cd frontend/ ; ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./src/protobuf.js
+	cd frontend/ ; ( \
+		echo "/* eslint-disable */" ; \
+		echo ; \
+		./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module \
+	) > ./src/protobuf.js
 
 .PHONY: react-init
 react-init:
