@@ -41,16 +41,15 @@ def display_reference():
 
     io.header('The Basics')
 
-    @render
-    def write_example():
-        from streamlit import io
+    io.write('Import streamlit with `from streamlit import io`.')
+
+    with io.echo():
         io.write("""
             The `write` function is Streamlit\'s bread and butter. You can use
             it to write _markdown-formatted_ text in your Streamlit report.
         """)
 
-    @render
-    def write_example2():
+    with io.echo():
         the_meaning_of_life = 40 + 2;
 
         io.write(
@@ -263,11 +262,11 @@ def display_reference():
         'Every `streamlit.io` method (except `io.write`) returns a handle '
         'which can be used for animation.')
 
-    @render
-    def progress_animation_example():
-        import time
-        my_bar = io.progress(0)
-
-        for percent_complete in range(100):
-            my_bar.progress(percent_complete + 1)
-            time.sleep(0.1)
+    # @render
+    # def progress_animation_example():
+    #     import time
+    #     my_bar = io.progress(0)
+    #
+    #     for percent_complete in range(100):
+    #         my_bar.progress(percent_complete + 1)
+    #         time.sleep(0.1)

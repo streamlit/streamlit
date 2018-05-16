@@ -4,6 +4,7 @@ create new elements in a Report."""
 import contextlib
 import numpy as np
 import pandas as pd
+import re
 import sys
 import textwrap
 import traceback
@@ -147,14 +148,25 @@ def echo():
             io.write('This code will be printed')
     """
     code = empty()
-    start_frame = traceback.extract_stack()[0]
-    yield
-    end_frame = traceback.extract_stack()[0]
-    assert start_frame.filename == end_frame.filename
-    with open(start_frame.filename) as source_file:
-        lines = slice(start_frame.lineno, end_frame.lineno)
-        source = ''.join(source_file.readlines()[lines])
-        code.markdown(f'```\n{textwrap.dedent(source)}\n```')
+    try:
+        spaces = re.compile('\s*')
+        frame = traceback.extract_stack()[-3]
+        filename, start_line = frame.filename, frame.lineno
+        yield
+        end_line = traceback.extract_stack()[-3].lineno
+        lines_to_display = []
+        with open(filename) as source_file:
+            source_lines = source_file.readlines()
+            lines_to_display.extend(source_lines[start_line:end_line])
+            initial_spaces = spaces.match(lines_to_display[0]).end()
+            for line in source_lines[end_line+1:]:
+                if spaces.match(line).end() < initial_spaces:
+                    break
+                lines_to_display.append(line)
+        lines_to_display = textwrap.dedent(''.join(lines_to_display))
+        code.markdown(f'```\n{lines_to_display}\n```')
+    except FileNotFoundError as err:
+        code.warning(f'Unable to display code. {str(err)}')
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
