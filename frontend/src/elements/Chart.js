@@ -121,6 +121,7 @@ class Chart extends PureComponent {
           break;
         case 'float_64Index':
           tickFormatter = float => float.toFixed(2);
+          break;
         default:
           break;
       }

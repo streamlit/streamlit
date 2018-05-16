@@ -41,8 +41,8 @@ class Text extends PureComponent {
         try {
           bodyObject = JSON.parse(body)
         } catch (e) {
-          const pos = parseInt(e.message.replace(/[^0-9]/g, ''))
-          const split = body.substr(0, pos).split('\n')
+          const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10);
+          const split = body.substr(0, pos).split('\n');
           const line = `${split.length}:${split[split.length - 1].length + 1}`
           return (
             <div className="json-text-container" style={{width}}>
