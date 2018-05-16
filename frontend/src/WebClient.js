@@ -19,6 +19,7 @@ import Text from './elements/Text';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
 import Map from './elements/Map';
+import Table from './elements/Table';
 
 // Other local imports.
 import PersistentWebsocket from './PersistentWebsocket';
@@ -121,12 +122,11 @@ class WebClient extends PureComponent {
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
-        elements.update(delta.get('id'), (element) => {
-          console.log(`updating delta {delta.get('id')} -> {delta.get('typy')}`);
-          return dispatchOneOf(delta, 'type', {
+        elements.update(delta.get('id'), (element) =>
+          dispatchOneOf(delta, 'type', {
             newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
-        })})), elements)
+        }))), elements)
     }));
   }
 
@@ -205,6 +205,7 @@ class WebClient extends PureComponent {
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
           map: (map) => <Map map={map} width={width}/>,
+          table: (df) => <Table df={df} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

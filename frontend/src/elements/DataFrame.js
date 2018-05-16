@@ -25,10 +25,10 @@ import './DataFrame.css';
 
 class DataFrame extends PureComponent {
   render() {
-    try {
-      // Get the properties.
-      const {df, width} = this.props;
+    // Get the properties.
+    const {df, width} = this.props;
 
+    try {
       // Calculate the dimensions of this array.
       const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
       const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
@@ -89,7 +89,7 @@ class DataFrame extends PureComponent {
     } catch (e) {
       console.log(e.stack);
       return (
-        <Alert color="danger">
+        <Alert style={{width}} color="danger">
           <strong>{e.name}</strong>: {e.message}
         </Alert>
       );
