@@ -83,7 +83,7 @@ def marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.bool:
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
-        proto_array.strings.data.extend(pandas_array.astype(np.str))
+        proto_array.strings.data.extend(map(str, pandas_array))
     elif issubclass(pandas_array.dtype.type, np.datetime64):
         if pandas_array.dt.tz is None:
             current_zone = tzlocal.get_localzone()
