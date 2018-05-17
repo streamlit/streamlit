@@ -27,9 +27,6 @@ class Table extends PureComponent {
     const {df, width} = this.props;
 
     try {
-      const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
-        dataFrameGetDimensions(df);
-
       return (
         <div class='streamlit-table'>
           <div>
@@ -130,6 +127,8 @@ class Table extends PureComponent {
  * header - Whether to display the header.
  */
 function htmlRows({df, header}) {
+  const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
+    dataFrameGetDimensions(df);
   return <div>Printing Rows: {`${header}`}</div>;
 }
 
