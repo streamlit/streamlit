@@ -4,6 +4,7 @@
 
 import moment from 'moment';
 import momentDurationFormat from 'moment-duration-format';
+import numeral from 'numeral';
 momentDurationFormat(moment)
 
 class Duration {
@@ -39,5 +40,26 @@ class Format {
   }
 };
 
+/**
+ * Formats the string nicely if it's a floating point, number, date or duration.
+ */
+function toFormattedString(x) {
+  if (isFloat(x))
+    return numeral(x).format('0,0.0000');
+  else if (x instanceof Date)
+    return format.dateToString(x);
+  else if (x instanceof Duration)
+    return format.durationToString(x);
+  else
+    return x.toString();
+}
+
+/**
+ * Returns true if this number is a float.
+ */
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
+}
+
 const format = new Format();
-export { Duration, format }
+export { Duration, format, toFormattedString }

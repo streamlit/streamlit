@@ -5,15 +5,12 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
-import numeral from 'numeral';
-import { format, Duration } from '../format';
+import { toFormattedString } from '../format';
 
 import {
   dataFrameGetDimensions,
   indexGet,
-  indexGetLevelsAndLength,
   tableGet,
-  tableGetRowsAndCols,
 } from '../dataFrameProto';
 
 import './DataFrame.css';
@@ -31,8 +28,7 @@ class DataFrame extends PureComponent {
 
     try {
       // Calculate the dimensions of this array.
-      const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
-        dataFrameGetDimensions(df);
+      const { headerRows, headerCols, cols, rows } = dataFrameGetDimensions(df);
 
       // Rendering constants.
       const rowHeight = 25;
@@ -136,14 +132,7 @@ function getCellContents(df, headerRows, headerCols) {
       classes += ' odd'
 
     // Format floating point numbers nicely.
-    if (isFloat(contents))
-      contents = numeral(contents).format('0,0.0000');
-    else if (contents instanceof Date)
-      contents = format.dateToString(contents);
-    else if (contents instanceof Duration)
-      contents = format.durationToString(contents);
-    else
-      contents = contents.toString();
+    contents = toFormattedString(contents);
 
     // Put it all together
     return {classes, contents};
@@ -212,12 +201,5 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
   return {columnWidth, headerWidth};
 }
 
-
-/**
- * Returns true if this number is a float.
- */
-function isFloat(n){
-    return Number(n) === n && n % 1 !== 0;
-}
 
 export default DataFrame;

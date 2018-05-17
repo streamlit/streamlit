@@ -1,5 +1,3 @@
-#!./streamlit_run
-
 from streamlit import io, cache
 import pandas as pd
 import numpy as np
