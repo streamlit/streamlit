@@ -1,3 +1,5 @@
+from streamlit import io, Chart
+
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
 from keras.models import Sequential
@@ -8,8 +10,6 @@ import math
 import numpy as np
 import pandas as pd
 import sys
-
-from streamlit import io, Chart
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test):

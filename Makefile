@@ -97,7 +97,5 @@ loc:
 		xargs wc
 
 # Distributes the package to PyPi
-#distribute:
-#	cd dist ; python setup.py sdist
-#	cd dist ; python setup.py bdist_wheel
-#	cd dist ; twine upload dist/*
+distribute:
+	cd lib/dist ; ls -t *.whl | head -n 1 | xargs twine upload
