@@ -131,15 +131,29 @@ class Table extends PureComponent {
  * header - Whether to display the header.
  */
 function TableRows({df, header}) {
-  // const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
-  //   dataFrameGetDimensions(df);
-  // let rows = [];
-  // const startRow = header ? 0 : headerRows;
-  // const endRow = header ? headerRows : rows;
-  // for (var rowIdx = startRow ; rowIdx < endRow ; rowIdx++) {
-  //
-  // }
-  return <div>Printing Rows: {`${header}`}</div>;
+  const { headerRows, rows } = dataFrameGetDimensions(df);
+  const rowArray = [];
+  const startRow = header ? 0 : headerRows;
+  const endRow = header ? headerRows : rows;
+  for (var rowIdx = startRow ; rowIdx < endRow ; rowIdx++)
+    rowArray.push(<tr key={rowIdx}><TableRow df={df} rowIdx={rowIdx}/></tr>);
+  return rowArray;
+}
+
+/**
+ * Returns a list rows for the table as JSX HTML.
+ *
+ * df     - The dataFrame to display.
+ * rowIdx - The row index.
+ */
+function TableRow({df, rowIdx}) {
+  const { headerRows, headerCols, dataRows, dataCols, cols, rows } = dataFrameGetDimensions(df);
+  const isColHeader = rowIdx < headerRows;
+  const entries = [];
+  for (var colIdx = 0 ; colIdx < cols ; colIdx++) {
+    entries.push()
+  }
+  return <div>Row {rowIdx}</div>;
 }
 
 // /**
