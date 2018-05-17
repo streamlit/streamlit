@@ -9,10 +9,11 @@ import numeral from 'numeral';
 import { format, Duration } from '../format';
 
 import {
-  indexGetLevelsAndLength,
-  tableGetRowsAndCols,
+  dataFrameGetDimensions,
   indexGet,
-  tableGet
+  indexGetLevelsAndLength,
+  tableGet,
+  tableGetRowsAndCols,
 } from '../dataFrameProto';
 
 import './DataFrame.css';
@@ -30,16 +31,8 @@ class DataFrame extends PureComponent {
 
     try {
       // Calculate the dimensions of this array.
-      const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
-      const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
-      const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
-      if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
-        throw new Error("Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataCols} != ${dataColsCheck})`)
-      }
-      const cols = headerCols + dataCols;
-      const rows = headerRows + dataRows;
+      const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
+        dataFrameGetDimensions(df);
 
       // Rendering constants.
       const rowHeight = 25;

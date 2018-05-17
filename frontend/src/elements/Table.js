@@ -4,15 +4,15 @@
 
 import React, { PureComponent } from 'react';
 import { Alert, Table as ReactTable }  from 'reactstrap';
-// import { MultiGrid } from 'react-virtualized';
 // import numeral from 'numeral';
 // import { format, Duration } from '../format';
 
 import {
-  indexGetLevelsAndLength,
-  tableGetRowsAndCols,
+  dataFrameGetDimensions,
   indexGet,
-  tableGet
+  indexGetLevelsAndLength,
+  tableGet,
+  tableGetRowsAndCols,
 } from '../dataFrameProto';
 
 import './Table.css';
@@ -27,41 +27,42 @@ class Table extends PureComponent {
     const {df, width} = this.props;
 
     try {
-      // Calculate the dimensions of this array.
-      const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
-      const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
-      const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
-      if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
-        throw new Error("Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataCols} != ${dataColsCheck})`)
-      }
-      const cols = headerCols + dataCols;
-      const rows = headerRows + dataRows;
+      const { headerRows, headerCols, dataRows, dataCols, cols, rows } =
+        dataFrameGetDimensions(df);
 
       return (
         <div class='streamlit-table'>
-          <ReactTable >
-            <thead>
-              <tr>
-                <th>a</th>
-                <th>b</th>
-                <th>c</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">A</th>
-                <td>1</td>
-                <td>2</td>
-              </tr>
-              <tr>
-                <th scope="row">B</th>
-                <td>3</td>
-                <td>4</td>
-              </tr>
-            </tbody>
-          </ReactTable>
+          <div>
+            <div>Test table:</div>
+            <ReactTable >
+              <thead>
+                <tr>
+                  <th>a</th>
+                  <th>b</th>
+                  <th>c</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">A</th>
+                  <td>1</td>
+                  <td>2</td>
+                </tr>
+                <tr>
+                  <th scope="row">B</th>
+                  <td>3</td>
+                  <td>456</td>
+                </tr>
+              </tbody>
+            </ReactTable>
+          </div>
+          <div>
+            <div>Real Table:</div>
+            <ReactTable>
+              <thead> { htmlRows({df, header: true}) } </thead>
+              <tbody> { htmlRows({df, header: false}) } </tbody>
+            </ReactTable>
+          </div>
         </div>
       );
 
@@ -119,6 +120,17 @@ class Table extends PureComponent {
       );
     }
   }
+}
+
+
+/**
+ * Returns a list rows for the table as JSX HTML.
+ *
+ * df     - The dataFrame to display.
+ * header - Whether to display the header.
+ */
+function htmlRows({df, header}) {
+  return <div>Printing Rows: {`${header}`}</div>;
 }
 
 // /**

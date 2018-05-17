@@ -6,6 +6,26 @@ import { dispatchOneOf, updateOneOf } from './immutableProto';
 import { format } from './format';
 
 /**
+ * Returns a dictionary of integers:
+ *   { headerRows, headerCols, dataRows, dataCols, cols, rows }
+ * for this DataFrame.
+ */
+export function dataFrameGetDimensions(df) {
+ // Calculate the dimensions of this array.
+ const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
+ const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
+ const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
+ if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
+   throw new Error("Dataframe dimensions don't align: " +
+     `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+     `cols(${dataCols} != ${dataColsCheck})`)
+ }
+ const cols = headerCols + dataCols;
+ const rows = headerRows + dataRows;
+ return { headerRows, headerCols, dataRows, dataCols, cols, rows };
+}
+
+/**
  * Returns [rows, cls] for this table.
  */
 export function tableGetRowsAndCols(table) {
