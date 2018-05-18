@@ -65,10 +65,6 @@ export function dataFrameGet(df, col, row) {
         type: 'row-header',
       };
     } else {
-      console.log('tableGet');
-      console.log({col, row, headerCols, headerRows});
-      console.log(dataFrameGetDimensions(df));
-      console.log(df.toJS());
       return {
         contents: tableGet(df.get('data'), col - headerCols, row - headerRows),
         type: 'data',
