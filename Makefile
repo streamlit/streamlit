@@ -85,11 +85,11 @@ react-build:
 	rsync -av --delete frontend/build/ lib/streamlit/static/
 
 js-lint:
-	(cd frontend/streamlit; ./node_modules/.bin/eslint src)
+	cd frontend; ./node_modules/.bin/eslint src
 
 js-test:
-	(cd frontend/streamlit; npm run test)
-	(cd frontend/streamlit; npm run coverage)
+	cd frontend; npm run test
+	cd frontend; npm run coverage
 
 
 # Counts the number of lines of code in the project
