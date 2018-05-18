@@ -96,7 +96,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.8.2`.
+**Note:** The current version is `0.9.0`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*Right above where it says version number!*)
@@ -112,11 +112,14 @@ Build Streamlit so that it can run without the Node development server:
 ```
 make build
 ```
-Test that it works
+Test that it works:
 ```
 make install
+python -m streamlit version
 python -m streamlit help
 python examples/mnist-cnn.py
+python examples/apocrypha.py
+python examples/uber.py
 ```
 Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
 
@@ -152,40 +155,6 @@ Then test it on Mac and Linux.
 #### Post the Release Notes to Slack
 
 Post the release notes and declare victory!
-
-- Run the following commands:
-```
-make init
-make all
-```
-- Test that everything is running properly with:
-```
-./streamlit_run -m streamlit help
-```
-Then, open an interactive python shell with
-```
-./streamlit_run
-```
-and type in the following commands:
-```
-from streamlit import io
-io.write('Hello, world!')
-```
-Make sure that that is working properly.
-- Run the following commands:
-```
-make production
-make package
-```
-- Go into a temp directory (parallel to `streamlet-cloud`) and execute the following:
-```
-pip install --upgrade ../streamlet-cloud/dist
-
-```
-Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
-```
-make distribute
-```
 
 #### Create a New Tag for this Version
 
