@@ -5,7 +5,7 @@ from datetime import datetime
 
 io.title('Apocrypha')
 
-io.write('This is a set of "undocumented" Streamlit API calls.')
+io.write('The crypt of top secret _undocumented_ Streamlit API calls.')
 
 io.header('Tables')
 with io.echo():
@@ -16,7 +16,10 @@ with io.echo():
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
         columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
 
+    io.subheader("A Table")
     io.table(df)
+
+    io.subheader("...and It's Transpose")
     io.table(df.T)
 
 io.header('Maps')
