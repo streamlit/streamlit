@@ -81,17 +81,9 @@ make init
 
 ## Publishing to `PyPi`
 
-#### Create a New Branch for this Version
-
-Create a new branch called `versions/<version_number>`.
-
 #### Write The Release notes
 
 Place them [here](docs/release-notes.md). Then:
-```
-git commit -am <commit message>
-git push
-```
 
 #### Make Sure You Don't Have the Proxy Running
 
@@ -190,12 +182,18 @@ make package
 pip install --upgrade ../streamlet-cloud/dist
 
 ```
-- Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
+Go back into the development directory execute the following (see [detailed explanation](https://packaging.python.org/tutorials/distributing-packages/)):
 ```
 make distribute
 ```
-- Final test that everything is running properly with `periodic_table.py` **and** `mnist_demo.py`
-- Create and push a branch for this version.
+
+#### Create a New Tag for this Version
+
+```
+git commit -am "version <version number>"
+git tag <version number>
+git push
+```
 
 ## Refactored Notes
 
