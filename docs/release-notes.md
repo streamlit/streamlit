@@ -5,7 +5,15 @@ May 17, 2018
 ```
 We are thrilled to announce version 0.9 of Streamlit. To upgrade, please run:
 
-    pip install --upgrade streamlit
+    pip install --upgrade --no-cache-dir streamlit
+
+Check the version with:
+
+    python -m streamlit version
+
+Get complete help and API documentation with:
+
+    python -m streamlit help
 
 New features are:
 
