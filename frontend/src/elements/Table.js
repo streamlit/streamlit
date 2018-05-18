@@ -4,10 +4,10 @@
 
 import React, { PureComponent } from 'react';
 import { Alert, Table as ReactTable }  from 'reactstrap';
-// import numeral from 'numeral';
-// import { format, Duration } from '../format';
+import { toFormattedString } from '../format';
 
 import {
+  dataFrameGet,
   dataFrameGetDimensions,
   indexGet,
   indexGetLevelsAndLength,
@@ -29,41 +29,14 @@ class Table extends PureComponent {
     try {
       return (
         <div class='streamlit-table'>
-          <div>
-            <div>Test table:</div>
-            <ReactTable >
-              <thead>
-                <tr>
-                  <th>a</th>
-                  <th>b</th>
-                  <th>c</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">A</th>
-                  <td>1</td>
-                  <td>2</td>
-                </tr>
-                <tr>
-                  <th scope="row">B</th>
-                  <td>3</td>
-                  <td>456</td>
-                </tr>
-              </tbody>
-            </ReactTable>
-          </div>
-          <div>
-            <div>Real Table:</div>
-            <ReactTable>
-              <thead>
-                <TableRows df={df} header={true}/>
-              </thead>
-              <tbody>
-                <TableRows df={df} header={false}/>
-              </tbody>
-            </ReactTable>
-          </div>
+          <ReactTable>
+            <thead>
+              <TableRows df={df} header={true}/>
+            </thead>
+            <tbody>
+              <TableRows df={df} header={false}/>
+            </tbody>
+          </ReactTable>
         </div>
       );
 
@@ -125,7 +98,7 @@ class Table extends PureComponent {
 
 
 /**
- * Returns a list rows for the table as JSX HTML.
+ * Purely functional component returning a list of rows.
  *
  * df     - The dataFrame to display.
  * header - Whether to display the header.
@@ -136,12 +109,16 @@ function TableRows({df, header}) {
   const startRow = header ? 0 : headerRows;
   const endRow = header ? headerRows : rows;
   for (var rowIdx = startRow ; rowIdx < endRow ; rowIdx++)
-    rowArray.push(<tr key={rowIdx}><TableRow df={df} rowIdx={rowIdx}/></tr>);
+    rowArray.push(
+      <tr key={rowIdx}>
+        <TableRow df={df} rowIdx={rowIdx}/>
+      </tr>
+    );
   return rowArray;
 }
 
 /**
- * Returns a list rows for the table as JSX HTML.
+ * Purely functional component returning a list entries for a row.
  *
  * df     - The dataFrame to display.
  * rowIdx - The row index.
@@ -151,9 +128,19 @@ function TableRow({df, rowIdx}) {
   const isColHeader = rowIdx < headerRows;
   const entries = [];
   for (var colIdx = 0 ; colIdx < cols ; colIdx++) {
-    entries.push()
-  }
-  return <div>Row {rowIdx}</div>;
+    const { contents, type } = dataFrameGet(df, colIdx, rowIdx);
+    const formattedContents = toFormattedString(contents);
+    if (type === "corner") {
+      entries.push(<th>&nbsp;</th>);
+    } else if (type === "row-header") {
+      entries.push(<th scope="row"> { formattedContents } </th>);
+    } else if (type === "col-header") {
+      entries.push(<th> { formattedContents } </th>);
+    } else if (type === "data") {
+      entries.push(<td> { formattedContents } </td>);
+    }
+  };
+  return entries;
 }
 
 // /**

@@ -3,17 +3,19 @@
   font-family: 'IBM Plex Mono', monospace;
   text-align: right;
   padding: 0.5rem;
-  line-height: 1;
+  line-height: 1.3;
 }
 
 .streamlit-container .streamlit-table th {
   border-bottom: none;
   border-bottom: 1px solid #dee2e6;
+  vertical-align: middle;
 }
 
 .streamlit-container .streamlit-table td {
   border-left: none;
   border-right: none;
+  vertical-align: middle;
 }
 
 /*

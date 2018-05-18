@@ -68,6 +68,10 @@ def display_reference():
 
         io.write(df, '...and its transpose:', df.T)
 
+        io.warning('Testing some fake APIs here...')
+        io.table(df)
+        # io.table(df.T)
+
 
     io.header('Visualizing data as charts')
 

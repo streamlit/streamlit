@@ -8,9 +8,8 @@ import { MultiGrid } from 'react-virtualized';
 import { toFormattedString } from '../format';
 
 import {
+  dataFrameGet,
   dataFrameGetDimensions,
-  indexGet,
-  tableGet,
 } from '../dataFrameProto';
 
 import './DataFrame.css';
@@ -99,30 +98,9 @@ class DataFrame extends PureComponent {
 function getCellContents(df, headerRows, headerCols) {
   return (columnIndex, rowIndex) => {
     // All table elements have class 'dataframe'.
-    let classes = 'dataframe';
-    let contents = ''
 
-    // Data lookups depend on where we are in the grid.
-    if (columnIndex < headerCols) {
-      if (rowIndex < headerRows)
-        classes += ' corner'
-      else {
-        classes += ' col-header';
-        contents = indexGet(df.get('index'),
-          columnIndex, rowIndex - headerRows);
-      }
-    } else {
-      if (rowIndex < headerRows) {
-        classes += ' row-header';
-        contents = indexGet(df.get('columns'),
-          rowIndex, columnIndex - headerCols);
-      }
-      else {
-        classes += ' data'
-        contents = tableGet(df.get('data'),
-            columnIndex - headerCols, rowIndex - headerRows)
-      }
-    }
+    let { contents, type } = dataFrameGet(df, columnIndex, rowIndex);
+    let classes = `dataframe ${type}`;
 
     // Give special classes for even and odd rows.
     // We use + instead of - because they're equivalent mod 2.

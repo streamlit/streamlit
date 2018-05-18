@@ -37,6 +37,47 @@ export function tableGetRowsAndCols(table) {
 }
 
 /**
+ * Return the (i, j)th element of the DataFrame viewed as a big table including
+ * header columns and rows. Returns a dict of
+ * {
+ *  contents: <the cell contents, nicely formatted as a string>,
+ *  type: 'corner' | 'row-header' | 'col-header' | 'data'
+ * }
+ */
+export function dataFrameGet(df, col, row) {
+  const { headerRows, headerCols } = dataFrameGetDimensions(df);
+  if (col < headerCols) {
+    if (row < headerRows) {
+      return {
+        contents: '',
+        type: 'corner',
+      };
+    } else {
+      return {
+        contents: indexGet(df.get('index'), col, row - headerRows),
+        type: 'col-header',
+      };
+    }
+  } else {
+    if (row < headerRows) {
+      return {
+        contents: indexGet(df.get('columns'), row, col - headerCols),
+        type: 'row-header',
+      };
+    } else {
+      console.log('tableGet');
+      console.log({col, row, headerCols, headerRows});
+      console.log(dataFrameGetDimensions(df));
+      console.log(df.toJS());
+      return {
+        contents: tableGet(df.get('data'), col - headerCols, row - headerRows),
+        type: 'data',
+      };
+    }
+  }
+}
+
+/**
  * Returns the given element from the table.
  */
 export function tableGet(table, columnIndex, rowIndex) {
