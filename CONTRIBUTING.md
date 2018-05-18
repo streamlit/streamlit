@@ -161,7 +161,7 @@ Post the release notes and declare victory!
 ```
 git commit -am "version <version number>"
 git tag <version number>
-git push
+git push origin <version number>
 ```
 
 ## Refactored Notes
