@@ -8,6 +8,7 @@ aiohttp==3.2.1
 async-timeout==3.0.0
 attrs==18.1.0
 bson==0.5.5
+certifi==2018.4.16        # via requests
 chardet==3.0.4
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
@@ -22,6 +23,7 @@ multidict==4.3.1
 numpy==1.14.3
 pandas==0.22.0
 pillow==5.1.0
+pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
 protobuf==3.5.2.post1
 py==1.5.3                 # via pytest
@@ -33,8 +35,13 @@ pytest==3.5.1
 python-dateutil==2.7.3
 pytz==2018.4
 pyyaml==3.12
+requests-toolbelt==0.8.0  # via twine
+requests==2.18.4          # via requests-toolbelt, twine
 six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.0.2
+tqdm==4.23.3              # via twine
+twine==1.11.0
 tzlocal==1.5.1
+urllib3==1.22             # via requests
 yarl==1.2.4

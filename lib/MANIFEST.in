@@ -1,4 +1,3 @@
 include README.md
 include streamlit/config/config.yaml
-recursive-include streamlit/protobuf *.proto
 recursive-include streamlit/static *

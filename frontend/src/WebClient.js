@@ -154,7 +154,7 @@ class WebClient extends PureComponent {
     const reportName =
       decodeURIComponent(window.location.pathname).split( '/' )[2];
     document.title = `${reportName} (Streamlit)`
-    let uri = `ws://localhost:5008/stream/${encodeURIComponent(reportName)}`
+    let uri = `ws://localhost:50082/stream/${encodeURIComponent(reportName)}`
 
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_report)

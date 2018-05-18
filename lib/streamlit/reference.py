@@ -153,7 +153,6 @@ def display_reference():
                 "       ^^^^^^^^^^^^\n"
                 "Rock on! \m/(^_^)\m/ ")
 
-
     io.header('JSON')
 
     with io.echo():
