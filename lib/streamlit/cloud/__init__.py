@@ -1,15 +1,40 @@
 import glob
 import os
 import shutil
+import sys
+import time
+import hashlib
+import base64
 import time
 
-from streamlit import uuid_user
+from google.cloud import storage
+from streamlit.util import get_local_id
+
+def calculate_hash(filename):
+    binary_hash = hashlib.md5(open(filename,'rb').read()).digest()
+    return base64.b64encode(binary_hash).decode("utf-8")
+
+
+def upload_blobs(blobs):
+    for filename, blob in blobs.items():
+        blob.upload_from_filename(filename)
+        blob.make_public()
+        print(filename)
 
 class Cloud:
     def __init__(self):
-        self._uuid_user = uuid_user()
+        #self._uuid_user = uuid_user()
+        self._client = storage.Client()
+        self._bucketname = 'streamlit-gcs-test'
+        self._local_id = str(get_local_id())
+        self._ts = str(time.time())
 
-        self._tmp_dir = '/tmp/streamlit'
+        if not self._client.lookup_bucket(self._bucketname):
+            self._client.create_bucket(self._bucketname)
+            self._bucket.configure_website('index.html')
+            self._bucket.make_public(recursive=True, future=True)
+
+        self._bucket = self._client.get_bucket(self._bucketname)
 
         dirname = os.path.dirname(os.path.normpath(__file__))
         basedir = os.path.normpath(os.path.join(dirname, '..'))
@@ -18,35 +43,42 @@ class Cloud:
         self._has_static_files = False
 
         if not self._has_static_files:
-            if os.path.isfile(os.path.join(self._tmp_dir, 'index.html')):
-               return
-
-            # Not using copytree because if i use s3 or gcs i might still have
-            # to individually copy files.
-            # TODO(armando): Replace with shutil.copytree once in figure
-            # things out.
             dirs = []
-            files = []
+            filenames = []
             for filename in glob.iglob(os.path.join(self._static_dir, '**'), recursive=True):
                 if os.path.isfile(filename):
-                    files.append(os.path.relpath(filename, self._static_dir))
+                    filenames.append(os.path.relpath(filename, self._static_dir))
                 if os.path.isdir(filename):
                     dirs.append(os.path.relpath(filename, self._static_dir))
 
-            for d in dirs:
-                os.makedirs(os.path.join(self._tmp_dir, d))
-
-            for f in files:
-                shutil.copy(
-                    os.path.join(self._static_dir, f),
-                    os.path.join(self._tmp_dir, f))
-
             self._has_static_files = True
 
-    def create(self, name):
-        self._session_dir = os.path.join(self._tmp_dir, 'data', self._uuid_user, name)
-        if not os.path.isdir(self._session_dir):
-            os.makedirs(self._session_dir)
+        if not filenames:
+            print("No static files in {}".format(self._static_dir))
+            sys.exit(1)
+
+        blobs = {x.name: x.md5_hash for x in self._bucket.list_blobs()}
+        files = {x: calculate_hash(os.path.join(self._static_dir, x)) for x in filenames}
+
+        upload = [x for x in set(files.keys()) - set(blobs.keys())]
+        common = [x for x in set(blobs.keys()) & set(files.keys())]
+        for f in common:
+            filename = os.path.join(self._static_dir, f)
+            hash = files[f]
+            upload_hash = blobs[f]
+            if hash != upload_hash:
+                upload.append(f)
+
+        blobs = {}
+        for f in upload:
+            blob = self._bucket.blob(os.path.join(self._local_id, self._ts, f))
+            filename = os.path.join(self._static_dir, f)
+            blobs[filename] = blob
+        self._blobs = blobs
+
+#        upload_blobs(blobs)
+    def upload_static(self):
+        upload_blobs(self._blobs)
 
     def local_save(self, data):
             filename = os.path.join(self._session_dir, str(time.time()) + '.data')
@@ -56,3 +88,10 @@ class Cloud:
                 f.write(data)
 
             print('Wrote {}'.format(filename))
+
+    def cloud_save(self, data):
+            blob = self._bucket.blob(os.path.join(self._local_id, self._ts, 'data.pb'))
+            blob.upload_from_string(data)
+            blob.make_public()
+            path = os.path.join(self._local_id, self._ts, 'index.html')
+            print("https://storage.googleapis.com/streamlit-gcs-test/" + path)

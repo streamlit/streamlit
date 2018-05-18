@@ -196,6 +196,7 @@ class Proxy:
             port = config.get_option('proxy.port')
         url = f'http://{host}:{port}/report/{name}'
         webbrowser.open(url)
+        self._cloud.upload_static()
 
     def _register(self, connection):
         """Registers this connection under it's name so that client connections
@@ -205,7 +206,6 @@ class Proxy:
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
-            self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -268,16 +268,8 @@ class Proxy:
         keys = list(self._connections)
         master = self._connections[keys[0]]._master_queue
 
-        self._cloud.local_save(master.get_serialized_deltas())
+        self._cloud.cloud_save(master.get_serialized_deltas())
         return
-        client = storage.Client()
-        bucket = client.get_bucket('snapshot')
-        uid = self.generate_secure_id()
-        blob = bucket.blob('project/filename.pb')
-        content = self.get_bp()
-        content_type = 'application/x-protobuf'
-        predefined_acl = public-read
-        blob.upload_from_string(content, content_type=content_type, predefined_acl=predefined_acl)
 
 def main():
     """

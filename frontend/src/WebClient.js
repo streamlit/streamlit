@@ -56,14 +56,16 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-      var urlParams = new URLSearchParams(window.location.search);
-      var datafile = urlParams.get('datafile');
-      if (datafile) {
+      var localhost = false;
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+          localhost = true;
+
+      if (!localhost) {
           var callback = (blob) =>  {
               this.handleMessage(blob);
           };
 
-          fetch('data/' + datafile).then(function(response) {
+          fetch('data.pb').then(function(response) {
               return response.arrayBuffer();
           }).then(function(data) {
               return new Uint8Array(data);
