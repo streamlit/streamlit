@@ -9,10 +9,6 @@ import { toFormattedString } from '../format';
 import {
   dataFrameGet,
   dataFrameGetDimensions,
-  indexGet,
-  indexGetLevelsAndLength,
-  tableGet,
-  tableGetRowsAndCols,
 } from '../dataFrameProto';
 
 import './Table.css';
@@ -78,8 +74,7 @@ function TableRows({df, header}) {
  * rowIdx - The row index.
  */
 function TableRow({df, rowIdx}) {
-  const { headerRows, headerCols, dataRows, dataCols, cols, rows } = dataFrameGetDimensions(df);
-  const isColHeader = rowIdx < headerRows;
+  const { cols } = dataFrameGetDimensions(df);
   const entries = [];
   for (var colIdx = 0 ; colIdx < cols ; colIdx++) {
     const { contents, type } = dataFrameGet(df, colIdx, rowIdx);
