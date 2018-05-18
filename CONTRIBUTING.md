@@ -87,7 +87,11 @@ Create a new branch called `versions/<version_number>`.
 
 #### Write The Release notes
 
-Place them [here](docs/release-notes.md).
+Place them [here](docs/release-notes.md). Then:
+```
+git commit -am <commit message>
+git push
+```
 
 #### Make Sure You Don't Have the Proxy Running
 

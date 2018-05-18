@@ -1,5 +1,45 @@
 # Release Notes
 
+#### v0.9
+May 17, 2018
+```
+We are thrilled to announce version 0.9 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade streamlit
+
+New features are:
+
+1. Inline code blocks. Display code blocks inline with io.echo(). For example:
+
+     with io.echo():
+       io.write('Hello, world!')
+
+   This will first display the entire code block within the `with` scope, then
+   write "Hello, world!"
+
+2. Table support. (EXPERIMENTAL!) You can now display Numpy Arrays and Pandas
+   DataFrames as tables using the io.table() call:
+
+     io.table(df)
+
+   This is useful for copy-and-pasting table data.
+
+3. Map support. (EXPERIMENTAL!) You can now display dots on a map with:
+
+     io.map(df)
+
+   This plots as many points as there are rows, using 'lat' and 'lon' to
+   determine point locations.
+
+4. Streamlit is now much faster! Speed has improved when passing big tables,
+   especially those containing DateTimes.
+
+5. Better support for "interactive Streamlit usage." When you rerun the same
+   (possibly changed) script, elements stay cached on the page when possible.
+
+6. Tuple indices now display properly.
+```
+
 #### v0.8
 April 23, 2018
 ```
