@@ -5,12 +5,12 @@ from aiohttp import web, ClientSession
 from aiohttp.client_exceptions import ClientConnectorError
 
 import asyncio
-import bson
 import os
 import sys
 import threading
 import traceback
 import urllib
+import uuid
 
 from streamlit.util import get_local_id
 from streamlit import config
@@ -57,7 +57,7 @@ class Connection:
         Creates a new connection to the server.
         """
         # Create an ID for this Report
-        self._report_id = bson.ObjectId()
+        self._report_id = uuid.uuid4()
 
         # Create a name for this report.
         self._name = self._create_name()

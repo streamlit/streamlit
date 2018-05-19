@@ -103,6 +103,7 @@ class Proxy:
                 if msg_type == 'new_report':
                     assert not connection, 'Cannot send `new_report` twice.'
                     report_id = msg.new_report
+                    print('the report_id is', report_id)
                     connection = ProxyConnection(report_id, report_name)
                     self._register(connection)
                 elif msg_type == 'delta_list':
