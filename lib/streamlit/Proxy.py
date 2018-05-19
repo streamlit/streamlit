@@ -196,7 +196,7 @@ class Proxy:
             port = config.get_option('proxy.port')
         url = f'http://{host}:{port}/report/{name}'
         webbrowser.open(url)
-        self._cloud.upload_static()
+        # self._cloud.upload_static()
 
     def _register(self, connection):
         """Registers this connection under it's name so that client connections

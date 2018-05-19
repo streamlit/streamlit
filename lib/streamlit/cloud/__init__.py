@@ -31,17 +31,17 @@ def upload_s3(s3, files):
 class Cloud:
     def __init__(self):
         #self._uuid_user = uuid_user()
-        self._client = storage.Client()
-        self._bucketname = 'streamlit-gcs-test'
+        # self._client = storage.Client()
+        # self._bucketname = 'streamlit-gcs-test'
         self._local_id = str(get_local_id())
         self._ts = str(time.time())
 
-        if not self._client.lookup_bucket(self._bucketname):
-            self._client.create_bucket(self._bucketname)
-            self._bucket.configure_website('index.html')
-            self._bucket.make_public(recursive=True, future=True)
+        # if not self._client.lookup_bucket(self._bucketname):
+        #     self._client.create_bucket(self._bucketname)
+        #     self._bucket.configure_website('index.html')
+        #     self._bucket.make_public(recursive=True, future=True)
 
-        self._bucket = self._client.get_bucket(self._bucketname)
+        # self._bucket = self._client.get_bucket(self._bucketname)
 
         dirname = os.path.dirname(os.path.normpath(__file__))
         basedir = os.path.normpath(os.path.join(dirname, '..'))
@@ -64,24 +64,25 @@ class Cloud:
             print("No static files in {}".format(self._static_dir))
             sys.exit(1)
 
-        blobs = {x.name: x.md5_hash for x in self._bucket.list_blobs()}
+        # blobs = {x.name: x.md5_hash for x in self._bucket.list_blobs()}
         files = {x: calculate_hash(os.path.join(self._static_dir, x)) for x in filenames}
-
-        upload = [x for x in set(files.keys()) - set(blobs.keys())]
-        common = [x for x in set(blobs.keys()) & set(files.keys())]
-        for f in common:
-            filename = os.path.join(self._static_dir, f)
-            hash = files[f]
-            upload_hash = blobs[f]
-            if hash != upload_hash:
-                upload.append(f)
-
-        blobs = {}
-        for f in upload:
-            blob = self._bucket.blob(os.path.join(self._local_id, self._ts, f))
-            filename = os.path.join(self._static_dir, f)
-            blobs[filename] = blob
-        self._blobs = blobs
+        #
+        upload = files.keys()
+        # upload = [x for x in set(files.keys()) - set(blobs.keys())]
+        # common = [x for x in set(blobs.keys()) & set(files.keys())]
+        # for f in common:
+        #     filename = os.path.join(self._static_dir, f)
+        #     hash = files[f]
+        #     upload_hash = blobs[f]
+        #     if hash != upload_hash:
+        #         upload.append(f)
+        #
+        # blobs = {}
+        # for f in upload:
+        #     blob = self._bucket.blob(os.path.join(self._local_id, self._ts, f))
+        #     filename = os.path.join(self._static_dir, f)
+        #     blobs[filename] = blob
+        # self._blobs = blobs
 
         stuffs = {}
         for f in upload:
