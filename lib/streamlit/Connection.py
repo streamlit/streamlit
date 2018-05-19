@@ -40,11 +40,6 @@ def _assert_singleton_async(method):
     inner.__doc__ = method.__doc__
     return inner
 
-def get_delta_generator():
-    """Gets the DeltaGenerator for the singleton Connection instance,
-    establishing that connection if necessary."""
-    return Connection.get_connection().get_delta_generator()
-
 class Connection:
     """This encapsulates a single connection the to the server for a single
     report."""
@@ -132,6 +127,7 @@ class Connection:
                 name = name[:-3]
             if name == '__main__' and len(sys.argv) >= 2:
                 name = sys.argv[1]
+
         if name == '':
             name = str(self._report_id)
         return name

@@ -265,11 +265,14 @@ class Proxy:
                 return id[:length]
 
     def save_cloud(self, _data):
-        keys = list(self._connections)
-        master = self._connections[keys[0]]._master_queue
+        from streamlit import io
+        print('Just entered save_cloud')
 
-        self._cloud.cloud_save(master.get_serialized_deltas())
-        return
+        # keys = list(self._connections)
+        # master = self._connections[keys[0]]._master_queue
+        #
+        # self._cloud.cloud_save(master.get_serialized_deltas())
+        # return
 
 def main():
     """

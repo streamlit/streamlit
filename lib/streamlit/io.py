@@ -11,7 +11,7 @@ import traceback
 import types
 
 from streamlit.Chart import Chart
-from streamlit.connection import get_delta_generator
+from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
@@ -25,7 +25,8 @@ for name in dir(DeltaGenerator):
         # We introduce this level of indirection to wrap 'method' in a closure.
         def wrap_method(method):
             def wrapped_method(*args, **kwargs):
-                return method(get_delta_generator(), *args, **kwargs)
+                dg = Connection.get_connection().get_delta_generator()
+                return method(dg, *args, **kwargs)
             wrapped_method.__name__ = method.__name__
             wrapped_method.__doc__ = method.__doc__
             return wrapped_method
@@ -173,9 +174,9 @@ def echo():
 _this_may_be_proxy = sys.argv[0] == '-m'
 
 # In order to log all exceptions etc to the streamlit report after
-# `import streamlit.io` we establish the proxy by calling get_delta_generator().
+# `import streamlit.io` we establish the proxy by calling get_connection().
 # If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
 # skip this step. Overcautiously skipping this step isn't fatal in general as
 # it simply implies that the connection may be established later.
 if not _this_may_be_proxy:
-    get_delta_generator()
+    Connection.get_connection() # get_delta_generator()
