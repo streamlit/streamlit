@@ -10,6 +10,8 @@ import time
 from google.cloud import storage
 from streamlit.util import get_local_id
 
+import boto3
+
 def calculate_hash(filename):
     binary_hash = hashlib.md5(open(filename,'rb').read()).digest()
     return base64.b64encode(binary_hash).decode("utf-8")
@@ -19,6 +21,11 @@ def upload_blobs(blobs):
     for filename, blob in blobs.items():
         blob.upload_from_filename(filename)
         blob.make_public()
+        print(filename)
+
+def upload_s3(s3, files):
+    for filename, location in files.items():
+        s3.put_object(Body=open(filename,'rb').read(), Bucket='streamlit-test9', Key=location, ACL='public-read')
         print(filename)
 
 class Cloud:
@@ -76,9 +83,18 @@ class Cloud:
             blobs[filename] = blob
         self._blobs = blobs
 
+        stuffs = {}
+        for f in upload:
+            path  = os.path.join(self._local_id, self._ts, f)
+            filename = os.path.join(self._static_dir, f)
+            stuffs[filename] = path
+        self._stuffs = stuffs
+        self._s3 = boto3.client('s3')
+
 #        upload_blobs(blobs)
     def upload_static(self):
-        upload_blobs(self._blobs)
+        #upload_blobs(self._blobs)
+        upload_s3(self._s3, self._stuffs)
 
     def local_save(self, data):
             filename = os.path.join(self._session_dir, str(time.time()) + '.data')
@@ -90,8 +106,7 @@ class Cloud:
             print('Wrote {}'.format(filename))
 
     def cloud_save(self, data):
-            blob = self._bucket.blob(os.path.join(self._local_id, self._ts, 'data.pb'))
-            blob.upload_from_string(data)
-            blob.make_public()
+            location = os.path.join(self._local_id, self._ts, 'data.pb')
+            self._s3.put_object(Body=data, Bucket='streamlit-test9', Key=location, ACL='public-read')
             path = os.path.join(self._local_id, self._ts, 'index.html')
-            print("https://storage.googleapis.com/streamlit-gcs-test/" + path)
+            print("https://s3-us-west-2.amazonaws.com/streamlit-test9/" + path)
