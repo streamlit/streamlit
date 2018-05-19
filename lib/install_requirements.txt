@@ -7,19 +7,18 @@
 aiohttp==3.2.1
 async-timeout==3.0.0      # via aiohttp
 attrs==18.1.0             # via aiohttp
-bson==0.5.5
 chardet==3.0.4            # via aiohttp
 docutils==0.14
 idna-ssl==1.0.1           # via aiohttp
 idna==2.6                 # via idna-ssl, yarl
 multidict==4.3.1          # via aiohttp, yarl
 numpy==1.14.3             # via pandas
-pandas==0.22.0
+pandas==0.23.0
 pillow==5.1.0
 protobuf==3.5.2.post1
-python-dateutil==2.7.3    # via bson, pandas
+python-dateutil==2.7.3    # via pandas
 pytz==2018.4              # via pandas, tzlocal
 pyyaml==3.12
-six==1.11.0               # via bson, protobuf, python-dateutil
+six==1.11.0               # via protobuf, python-dateutil
 tzlocal==1.5.1
 yarl==1.2.4               # via aiohttp

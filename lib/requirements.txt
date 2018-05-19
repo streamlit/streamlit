@@ -7,7 +7,6 @@
 aiohttp==3.2.1
 async-timeout==3.0.0
 attrs==18.1.0
-bson==0.5.5
 certifi==2018.4.16        # via requests
 chardet==3.0.4
 coverage==4.5.1           # via pytest-cov
@@ -21,7 +20,7 @@ mccabe==0.6.1             # via flake8
 more-itertools==4.1.0     # via pytest
 multidict==4.3.1
 numpy==1.14.3
-pandas==0.22.0
+pandas==0.23.0
 pillow==5.1.0
 pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest

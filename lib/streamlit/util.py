@@ -1,7 +1,7 @@
 """A bunch of useful utilites."""
 
 # flake8: noqa
-import bson
+import uuid
 import contextlib
 import os
 import yaml
@@ -41,10 +41,10 @@ def __cache(path, serialize, deserialize):
         return wrapped_func
     return decorator
 
-@__cache('local_id.txt', lambda id: id.binary.hex(), bson.ObjectId)
+@__cache('local_uuid.txt', str, uuid.UUID)
 def get_local_id():
     """Returns a local id which identifies this user to the database."""
-    return bson.ObjectId()
+    return uuid.uuid4()
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
