@@ -268,7 +268,9 @@ class Proxy:
     def save_cloud(self, _data, connection):
         """Saves a serialized version of this report's deltas to the cloud."""
         deltas = connection.get_serialized_deltas()
-        self._cloud.upload_report(connection.name, connection.id, deltas)
+        loop = asyncio.get_event_loop()
+        upload_coroutine = self._cloud.upload_report(connection.id, deltas)
+        loop.create_task(upload_coroutine)
 
 def main():
     """

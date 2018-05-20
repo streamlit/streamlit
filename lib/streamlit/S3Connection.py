@@ -1,12 +1,11 @@
 """Handles a connecton to an S3 bucket to send Report data."""
 
-from boto3.s3.transfer import S3Transfer
-import boto3
+# from boto3.s3.transfer import S3Transfer
+import aiobotocore
 import glob
 import mimetypes
 import os
 import sys
-import urllib
 
 from streamlit import config
 
@@ -106,9 +105,13 @@ class S3Connection:
         # for k, v in self._stuffs.items():
         #     print('-', k, v)
         # sys.exit(-1)
-        self._s3 = boto3.client('s3')
+
+
+        # THIS IS THE GOOD STUFF
+        # self._s3 = boto3.client('s3')
         self._bucket = 'streamlit-test10'
-        self._transfer = S3Transfer(self._s3)
+        # self._transfer = S3Transfer(self._s3)
+        # pass
 
 #        upload_blobs(blobs)
     # def upload_static(self):
@@ -124,36 +127,48 @@ class S3Connection:
     #
     #         print('Wrote {}'.format(filename))
 
-    def upload_report(self, report_name, report_id, serialized_deltas):
+    async def upload_report(self, report_id, serialized_deltas):
         """Saves this report to our s3 bucket."""
-        # Function to store data in the s3 bucket
-        def put_object(data, location):
-            self._s3.put_object(Body=data, Bucket=self._bucket,
-                Key=location, ACL='public-read')
+        print('Got into upload_report (ASYNC DEF VERSION!)')
+
+        # # Function to store data in the s3 bucket
+        # def put_object(data, location):
+        #     self._s3.put_object(Body=data, Bucket=self._bucket,
+        #         Key=location, ACL='public-read')
 
         # All files in this bundle will be saved in this path.
-        save_root = os.path.join(
-            config.get_option('cloud.staticSaveRoot'),
-            urllib.parse.quote_plus(report_name),
-            report_id)
+        cloud_root = config.get_option('cloud.staticSaveRoot')
+        save_root = os.path.join(cloud_root, report_id)
 
         # Save all the files in the static directory (excluding map files.)
         static_root = config.get_path('proxy.staticRoot')
         all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
-        for load_filename in all_files:
-            if not os.path.isfile(load_filename):
-                continue
-            if load_filename.endswith('.map'):
-                continue
-            relative_filename = os.path.relpath(load_filename, static_root)
-            save_filename = os.path.join(save_root, relative_filename)
-            self._upload_file(load_filename, save_filename)
-            print(load_filename, '->', save_filename)
+        session = aiobotocore.get_session()
+        async with session.create_client('s3') as client:
+            for load_filename in all_files:
+                if not os.path.isfile(load_filename):
+                    continue
+                if load_filename.endswith('.map'):
+                    continue
+                relative_filename = os.path.relpath(load_filename, static_root)
+                save_filename = os.path.join(save_root, relative_filename)
+                # self._upload_file(load_filename, save_filename)
+                # resp = await client.upload_file(load_filename, self._bucket, save_filename)
+                # def callback(*args, **kwargs):
+                #     print('CALLBACK', args, kwargs)
+                mime_type = mimetypes.guess_type(load_filename)[0]
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+                print(f'The mime type for "{load_filename}" is "{mime_type}".')
+                with open(load_filename, 'rb') as input:
+                    data = input.read()
+                    resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
+                        Body=data, ContentType=mime_type, ACL='public-read')
+                    print(resp)
+                    print(load_filename, '->', save_filename)
         print('Finished saving.')
-
-        print('upload_report', report_name, report_id, type(serialized_deltas))
-        print('save to', save_root)
-        sys.exit(-1)
+        print('upload_report done', report_id, type(serialized_deltas))
+        # print('save to', save_root)
 
         # location = os.path.join(self._local_id, self._ts, 'data.pb')
         #
