@@ -1,6 +1,7 @@
 """Handles a connecton to an S3 bucket to send Report data."""
 
 import boto3
+from boto3.s3.transfer import S3Transfer
 import glob
 import os
 import sys
@@ -106,6 +107,7 @@ class S3Connection:
         # sys.exit(-1)
         self._s3 = boto3.client('s3')
         self._bucket = 'streamlit-test10'
+        self._transfer = S3Transfer(self._s3)
 
 #        upload_blobs(blobs)
     # def upload_static(self):
@@ -157,3 +159,6 @@ class S3Connection:
         #
         # path = os.path.join(self._local_id, self._ts, 'index.html')
         # print("https://s3-us-west-2.amazonaws.com/streamlit-test9/" + path)
+
+    def _upload_file(self, load_filename, save_filename):
+        pass
