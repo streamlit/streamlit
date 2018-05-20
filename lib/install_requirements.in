@@ -3,7 +3,7 @@ Pillow
 protobuf
 PyYAML
 aiohttp
-bson
+# bson
 # motor
 tzlocal
 docutils

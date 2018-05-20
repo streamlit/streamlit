@@ -109,6 +109,7 @@ class Proxy:
                 if msg_type == 'new_report':
                     assert not connection, 'Cannot send `new_report` twice.'
                     report_id = msg.new_report
+                    print('the report_id is', report_id)
                     connection = ProxyConnection(report_id, report_name)
                     self._register(connection)
                 elif msg_type == 'delta_list':
@@ -267,7 +268,7 @@ class Proxy:
     def save_cloud(self, _data, connection):
         """Saves a serialized version of this report's deltas to the cloud."""
         deltas = connection.get_serialized_deltas()
-        self._cloud.save_report(connection.name, connection.id, deltas)
+        self._cloud.upload_report(connection.name, connection.id, deltas)
 
 def main():
     """

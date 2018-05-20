@@ -4,6 +4,7 @@
 cloud:
   server: localhost
   port: 8554
+  staticSaveRoot: streamlit-static
 
 # Configuration for the local server.
 local:

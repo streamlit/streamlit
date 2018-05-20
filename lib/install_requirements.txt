@@ -7,10 +7,7 @@
 aiohttp==3.2.1
 async-timeout==3.0.0      # via aiohttp
 attrs==18.1.0             # via aiohttp
-bson==0.5.5
-cachetools==2.1.0         # via google-auth
-certifi==2018.4.16        # via requests
-chardet==3.0.4            # via aiohttp, requests
+chardet==3.0.4            # via aiohttp
 docutils==0.14
 google-api-core==1.1.2    # via google-cloud-core, google-cloud-storage
 google-auth==1.4.1        # via google-api-core
@@ -22,7 +19,7 @@ idna-ssl==1.0.1           # via aiohttp
 idna==2.6                 # via idna-ssl, requests, yarl
 multidict==4.3.1          # via aiohttp, yarl
 numpy==1.14.3             # via pandas
-pandas==0.22.0
+pandas==0.23.0
 pillow==5.1.0
 protobuf==3.5.2.post1
 pyasn1-modules==0.2.1     # via google-auth
@@ -33,6 +30,10 @@ pyyaml==3.12
 requests==2.18.4          # via google-api-core
 rsa==3.4.2                # via google-auth
 six==1.11.0               # via bson, google-api-core, google-auth, google-resumable-media, protobuf, python-dateutil
+python-dateutil==2.7.3    # via pandas
+pytz==2018.4              # via pandas, tzlocal
+pyyaml==3.12
+six==1.11.0               # via protobuf, python-dateutil
 tzlocal==1.5.1
 urllib3==1.22             # via requests
 yarl==1.2.4               # via aiohttp
