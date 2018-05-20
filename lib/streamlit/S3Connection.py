@@ -107,7 +107,7 @@ class S3Connection:
         #     print('-', k, v)
         # sys.exit(-1)
         self._s3 = boto3.client('s3')
-        self._bucket = 'streamlit-test9'
+        self._bucket = 'streamlit-test10'
         self._transfer = S3Transfer(self._s3)
 
 #        upload_blobs(blobs)
