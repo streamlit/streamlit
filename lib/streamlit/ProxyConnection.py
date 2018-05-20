@@ -63,3 +63,7 @@ class ProxyConnection:
         """Removes the client queue. Returns True iff the client queue list is
         empty."""
         self._client_queues.remove(queue)
+
+    def get_serialized_deltas(self):
+        """Return a byte array encoding all the deltas in this report."""
+        return self._master_queue.get_serialized_deltas()

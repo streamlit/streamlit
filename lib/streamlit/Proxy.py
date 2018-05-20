@@ -26,7 +26,7 @@ from streamlit import config
 from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
-from streamlit.cloud import Cloud
+from streamlit.S3Connection import S3Connection
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -73,7 +73,7 @@ class Proxy:
         self._connections = {}
 
         # Initialized things that the proxy will need to do cloud things.
-        self._cloud = Cloud()
+        self._cloud = S3Connection()
 
     def run_app(self):
         """Runs the web app."""
@@ -166,7 +166,7 @@ class Proxy:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.TEXT:
                         payload = msg.json()
-                        self.handle_payload(payload)
+                        self.handle_payload(payload, connection)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -247,14 +247,14 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    def handle_payload(self, payload):
+    def handle_payload(self, payload, connection):
         command = payload.get('command', None)
         handler = {
             'save-cloud': self.save_cloud
         }.get(command, None)
         if handler:
             data = payload.get('data', None)
-            handler(data)
+            handler(data, connection)
         else:
             print('no handler for command:', command)
 
@@ -264,15 +264,10 @@ class Proxy:
             if len(id) >= length:
                 return id[:length]
 
-    def save_cloud(self, _data):
-        from streamlit import io
-        print('Just entered save_cloud')
-
-        # keys = list(self._connections)
-        # master = self._connections[keys[0]]._master_queue
-        #
-        # self._cloud.cloud_save(master.get_serialized_deltas())
-        # return
+    def save_cloud(self, _data, connection):
+        """Saves a serialized version of this report's deltas to the cloud."""
+        deltas = connection.get_serialized_deltas()
+        self._cloud.save_report(connection.name, connection.id, deltas)
 
 def main():
     """
