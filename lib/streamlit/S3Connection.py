@@ -1,8 +1,9 @@
 """Handles a connecton to an S3 bucket to send Report data."""
 
-import boto3
 from boto3.s3.transfer import S3Transfer
+import boto3
 import glob
+import mimetypes
 import os
 import sys
 import urllib
@@ -106,7 +107,7 @@ class S3Connection:
         #     print('-', k, v)
         # sys.exit(-1)
         self._s3 = boto3.client('s3')
-        self._bucket = 'streamlit-test10'
+        self._bucket = 'streamlit-test9'
         self._transfer = S3Transfer(self._s3)
 
 #        upload_blobs(blobs)
@@ -146,9 +147,8 @@ class S3Connection:
                 continue
             relative_filename = os.path.relpath(load_filename, static_root)
             save_filename = os.path.join(save_root, relative_filename)
-            with open(load_filename, 'rb') as input:
-                put_object(input.read(), save_filename)
-                print(load_filename, '->', save_filename)
+            self._upload_file(load_filename, save_filename)
+            print(load_filename, '->', save_filename)
         print('Finished saving.')
 
         print('upload_report', report_name, report_id, type(serialized_deltas))
@@ -161,4 +161,14 @@ class S3Connection:
         # print("https://s3-us-west-2.amazonaws.com/streamlit-test9/" + path)
 
     def _upload_file(self, load_filename, save_filename):
-        pass
+        """Uploads the file to the given s3 bucket."""
+        # Figure out the MIME type
+        mime_type = mimetypes.guess_type(load_filename)[0]
+        if not mime_type:
+            mime_type = 'application/octet-stream'
+        print(f'The mime type for "{load_filename}" is "{mime_type}".')
+
+        print('About to upload', load_filename)
+        self._transfer.upload_file(load_filename, self._bucket, save_filename,
+            extra_args={'ContentType': mime_type, 'ACL': 'public-read'})
+        print('Finished uploading', save_filename)
