@@ -167,7 +167,7 @@ class Proxy:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.TEXT:
                         payload = msg.json()
-                        self.handle_payload(payload, connection)
+                        await self.handle_payload(payload, connection)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -248,14 +248,14 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    def handle_payload(self, payload, connection):
+    async def handle_payload(self, payload, connection):
         command = payload.get('command', None)
         handler = {
             'save-cloud': self.save_cloud
         }.get(command, None)
         if handler:
             data = payload.get('data', None)
-            handler(data, connection)
+            await handler(data, connection)
         else:
             print('no handler for command:', command)
 
@@ -265,12 +265,11 @@ class Proxy:
             if len(id) >= length:
                 return id[:length]
 
-    def save_cloud(self, _data, connection):
+    async def save_cloud(self, _data, connection):
         """Saves a serialized version of this report's deltas to the cloud."""
         deltas = connection.get_serialized_deltas()
         loop = asyncio.get_event_loop()
-        upload_coroutine = self._cloud.upload_report(connection.id, deltas)
-        loop.create_task(upload_coroutine)
+        await self._cloud.upload_report(connection.id, deltas)
 
 def main():
     """
