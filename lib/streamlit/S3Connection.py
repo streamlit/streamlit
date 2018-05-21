@@ -3,14 +3,16 @@
 # from boto3.s3.transfer import S3Transfer
 import aiobotocore
 import glob
+import hashlib
 import mimetypes
 import os
 import sys
 
+import streamlit
 from streamlit import config
 
 # <bucket>/streamlit_static/<release hash>/... static content here.
-# <bucket>/streamlit_static/<release hash>/data/<report_id>.protobuf
+# <bucket>/streamlit_static/<release hash>/reports/<report_id>.protobuf
 
 # import shutil
 # import time
@@ -134,62 +136,103 @@ class S3Connection:
         """Saves this report to our s3 bucket."""
         print('Got into upload_report (ASYNC DEF VERSION!)')
 
+        # Get the static files which need to be saved and their release hash.
+        static_root = config.get_path('proxy.staticRoot')
+        all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
+        static_data = []
+        md5 = hashlib.md5()
+        found_index = False
+        for filename in sorted(all_files):
+            if os.path.isfile(filename):
+                relative_path = os.path.relpath(filename, static_root)
+                found_index = found_index or filename.endswith('index.html')
+                with open(filename, 'rb') as input:
+                    file_data = input.read()
+                    static_data.append((relative_path, file_data))
+                    md5.update(file_data)
+        assert found_index, "Cannot find static files. Run 'make build'."
+        release_hash = f'{streamlit.__version__}-{md5.digest().hex()}'
+
+        # This gives us the filename of a thing
+        def s3_key(relative_path):
+            cloud_root = config.get_option('cloud.staticSaveRoot')
+            return os.path.join(cloud_root, release_hash, relative_path)
+
+        # Start the session:
+        session = aiobotocore.get_session()
+        async with session.create_client('s3') as client:
+            # Figure out whether we need to save the static data.
+            index_key = s3_key('index.html')
+            found_index = False
+            response = await client.list_objects_v2(Bucket=self._bucket, Prefix=index_key)
+            for obj in response.get('Contents', []):
+                if obj['Key'] == index_key:
+                    found_index = True
+                    break
+            print('Found the index:', found_index)
+
+            # Figure out what we need to save
+            save_data = [(f'reports/{report_id}.protobuf', serialized_deltas)]
+            if not found_index:
+                print('Didnt find the index. Adding many files.')
+                save_data.extend(static_data)
+            else:
+                print('Found the index, skipping many files')
+
+            # Save all the data
+            for path, data in save_data:
+                mime_type = mimetypes.guess_type(path)[0]
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+                await client.put_object(Bucket=self._bucket, Body=data,
+                    Key=s3_key(path), ContentType=mime_type, ACL='public-read')
+                print(path, '->', s3_key(path))
+
+        # all_data = [(
+        #         ,
+        #         open(filename, 'rb').read()
+        #     ) for filename in sorted(all_files) if ]
+        #
+        # # Compute the release hash for these static files.
+        # md5 = hashlib.md5()
+        # m.update
+
         # # Function to store data in the s3 bucket
         # def put_object(data, location):
         #     self._s3.put_object(Body=data, Bucket=self._bucket,
         #         Key=location, ACL='public-read')
 
         # All files in this bundle will be saved in this path.
-        cloud_root = config.get_option('cloud.staticSaveRoot')
-        save_root = os.path.join(cloud_root, report_id)
 
         # Save all the files in the static directory (excluding map files.)
-        static_root = config.get_path('proxy.staticRoot')
-        all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
-        session = aiobotocore.get_session()
-        async with session.create_client('s3') as client:
-            for load_filename in all_files:
-                if not os.path.isfile(load_filename):
-                    continue
-                if load_filename.endswith('.map'):
-                    continue
-                relative_filename = os.path.relpath(load_filename, static_root)
-                save_filename = os.path.join(save_root, relative_filename)
-                # self._upload_file(load_filename, save_filename)
-                # resp = await client.upload_file(load_filename, self._bucket, save_filename)
-                # def callback(*args, **kwargs):
-                #     print('CALLBACK', args, kwargs)
-                mime_type = mimetypes.guess_type(load_filename)[0]
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-                print(f'The mime type for "{load_filename}" is "{mime_type}".')
-                with open(load_filename, 'rb') as input:
-                    data = input.read()
-                    resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
-                        Body=data, ContentType=mime_type, ACL='public-read')
-                    # print(resp)
-                    print(load_filename, '->', save_filename)
 
-                    # test to see if the file exists
-                    file_exists = False
-                    response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
-                    print('Looking for key and got', response)
-                    for obj in response.get('Contents', []):
-                        if obj['Key'] == save_filename:
-                            print('Found the object with size', obj['Size'])
-                            file_exists = True
-                            break
-                    print('Found the object:', file_exists)
-                    print()
 
-            print('ABOUT TO UPLOAD THE DELTAS')
-            delta_filename = os.path.join(save_root, 'deltas.protobuf')
-            try:
-                await client.put_object(Bucket=self._bucket, Key=delta_filename,
-                    Body=serialized_deltas, ContentType='application/octet-stream',
-                    ACL='public-read')
-            except Exception as e:
-                print('GOT EXCEPTION', e)
+            # for load_filename in all_files:
+            #     if not os.path.isfile(load_filename):
+            #         continue
+            #     if load_filename.endswith('.map'):
+            #         continue
+            #     # relative_filename =
+            #     save_filename = os.path.join(save_root, relative_filename)
+            #     # self._upload_file(load_filename, save_filename)
+            #     # resp = await client.upload_file(load_filename, self._bucket, save_filename)
+            #     # def callback(*args, **kwargs):
+            #     #     print('CALLBACK', args, kwargs)
 
-            print('Finished saving.')
-            print('upload_report done', report_id, type(serialized_deltas))
+            #     print(f'The mime type for "{load_filename}" is "{mime_type}".')
+            #     with open(load_filename, 'rb') as input:
+            #         data = input.read()
+            #
+            #         # test to see if the file exists
+            #
+            # print('ABOUT TO UPLOAD THE DELTAS')
+            # delta_filename = os.path.join(save_root, 'deltas.protobuf')
+            # try:
+            #     await client.put_object(Bucket=self._bucket, Key=delta_filename,
+            #         Body=serialized_deltas, ContentType='application/octet-stream',
+            #         ACL='public-read')
+            # except Exception as e:
+            #     print('GOT EXCEPTION', e)
+            #
+            # print('Finished saving.')
+            # print('upload_report done', report_id, type(serialized_deltas))
