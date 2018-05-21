@@ -164,16 +164,46 @@ class S3Connection:
                     data = input.read()
                     resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
                         Body=data, ContentType=mime_type, ACL='public-read')
-                    print(resp)
+                    # print(resp)
                     print(load_filename, '->', save_filename)
-        print('Finished saving.')
-        print('upload_report done', report_id, type(serialized_deltas))
+
+                    # test to see if the file exists
+                    file_exists = False
+                    response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
+                    print('Looking for key and got', response)
+                    for obj in response.get('Contents', []):
+                        if obj['Key'] == save_filename:
+                            print('Found the object with size', obj['Size'])
+                            file_exists = True
+                            break
+                    print('Found the object:', file_exists)
+                    print()
+
+            print('ABOUT TO UPLOAD THE DELTAS')
+            delta_filename = os.path.join(save_root, 'deltas.protobuf')
+            try:
+                await client.put_object(Bucket=self._bucket, Key=delta_filename,
+                    Body=serialized_deltas, ContentType='application/octet-stream',
+                    ACL='public-read')
+            except Exception as e:
+                print('GOT EXCEPTION', e)
+
+            print('Finished saving.')
+            print('upload_report done', report_id, type(serialized_deltas))
         # print('save to', save_root)
 
         # location = os.path.join(self._local_id, self._ts, 'data.pb')
         #
         # path = os.path.join(self._local_id, self._ts, 'index.html')
         # print("https://s3-us-west-2.amazonaws.com/streamlit-test9/" + path)
+
+    # def _file_exists_on_s3(self, filename):
+    #     """Returns a True iff the key exists in S3."""
+    #     synchronous_s3 = boto3.resource('s3')
+    #     bucket = client.Bucket(self._bucket)
+    #     print('Got bucket:', bucket)
+    #     objs = list(bucket.objects.filter(Prefix=filename))
+    #     return len(objs) > 0 and objs[0].key == filename
 
     def _upload_file(self, load_filename, save_filename):
         """Uploads the file to the given s3 bucket."""
