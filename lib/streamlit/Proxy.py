@@ -16,6 +16,7 @@ which closes the proxy if no connections were established.
 from aiohttp import web, WSMsgType
 import asyncio
 import os
+import time
 import urllib
 import webbrowser
 import secrets
@@ -27,6 +28,8 @@ from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
 from streamlit.S3Connection import S3Connection
+
+from streamlit import io
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -167,11 +170,19 @@ class Proxy:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.TEXT:
                         payload = msg.json()
+<<<<<<< HEAD:lib/streamlit/Proxy.py
                         await self.handle_payload(payload, connection)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
                         print('Unknown message type:', msg.type)
+=======
+                        self.handle_payload(payload)
+                    elif msg.type == WSMsgType.CLOSE:
+                        break
+                    else:
+                        raise RuntimeError(f'Unknown message type: {msg.type}')
+>>>>>>> origin/protobuf-websocket:local/server/streamlit/local/Proxy.py
                 except asyncio.TimeoutError:
                     pass
         except concurrent.futures.CancelledError:
@@ -248,13 +259,18 @@ class Proxy:
         if not self._connections:
             self.stop()
 
+<<<<<<< HEAD:lib/streamlit/Proxy.py
     async def handle_payload(self, payload, connection):
+=======
+    def handle_payload(self, payload):
+>>>>>>> origin/protobuf-websocket:local/server/streamlit/local/Proxy.py
         command = payload.get('command', None)
         handler = {
             'save-cloud': self.save_cloud
         }.get(command, None)
         if handler:
             data = payload.get('data', None)
+<<<<<<< HEAD:lib/streamlit/Proxy.py
             await handler(data, connection)
         else:
             print('no handler for command:', command)
@@ -270,6 +286,26 @@ class Proxy:
         deltas = connection.get_serialized_deltas()
         loop = asyncio.get_event_loop()
         await self._cloud.upload_report(connection.id, deltas)
+=======
+            handler(data)
+        else:
+            print('no handler for command:', command)
+
+    def save_cloud(self, _data):
+        keys = list(self._connections)
+        save_dir = '/tmp/streamlit_local/data'
+
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        filename = '{}/{}-{}.data'.format(save_dir, keys[0], time.time())
+        master = self._connections[keys[0]]._master_queue
+        with open(filename, 'wb') as f:
+            f.write(master.get_serialized_deltas())
+        link = "http://localhost:8080/?datafile={}".format(os.path.basename(filename))
+        io.write(link)
+        return
+>>>>>>> origin/protobuf-websocket:local/server/streamlit/local/Proxy.py
 
 def main():
     """

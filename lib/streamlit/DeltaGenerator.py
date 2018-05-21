@@ -341,6 +341,20 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
+    def link(self, element, body):
+        """
+        Creates an element showing a link
+
+        Args
+        ----
+        body: str
+            The link.
+        """
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.LINK
+
+    @_export_to_io
+    @_create_element
     def json(self, element, body):
         """Displays the object as a pretty JSON string.
 

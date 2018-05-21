@@ -8,7 +8,7 @@ import {
   Container,
   Progress,
   Row,
-//  UncontrolledTooltip,
+  UncontrolledTooltip,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
 
@@ -23,7 +23,7 @@ import Map from './elements/Map';
 import Table from './elements/Table';
 
 // Other local imports.
-import PersistentWebsocket from './PersistentWebsocket';
+import ProtobufWebsocket from './ProtobufWebsocket';
 import { StreamlitMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -71,6 +71,41 @@ class WebClient extends PureComponent {
               return new Uint8Array(data);
           }).then(callback);
       }
+    // Compute the websocket URI based on the pathname.
+    const reportName =
+      decodeURIComponent(window.location.pathname).split( '/' )[2];
+    document.title = `${reportName} (Streamlit)`
+    const uri = `ws://localhost:5008/stream/${encodeURIComponent(reportName)}`
+
+    // Create the websocket connection.
+    this.websocket = new ProtobufWebsocket({
+      uri: uri,
+    })
+    // this.handleReconnect = this.handleReconnect.bind(this);
+    // this.handleMessage = this.handleMessage.bind(this);
+    // this.handleRegister = this.handleRegister.bind(this);
+    // this.sendCommand = this.sendCommand.bind(this);
+    //
+    // //
+  }
+
+  componentDidMount() {
+      // var urlParams = new URLSearchParams(window.location.search);
+      // var datafile = urlParams.get('datafile');
+      // console.log(datafile);
+      // if (datafile) {
+      //     var callback = (blob) =>  {
+      //         this.handleMessage(blob);
+      //     };
+      //
+      //     fetch('/data/' + datafile).then(function(response) {
+      //         return response.arrayBuffer();
+      //     }).then(function(data) {
+      //         var uint8 = new Uint8Array(data);
+      //         var blob = new Blob([uint8]);
+      //         return blob;
+      //     }).then(callback);
+      // }
   }
 
   componentWillUnmount() {
@@ -152,6 +187,18 @@ class WebClient extends PureComponent {
     }));
   }
 
+  sendCommand(command, data) {
+    return _ => {
+      console.log({command,data})
+      if (this.state.sender) {
+        const payload = { command, data }
+        this.state.sender(JSON.stringify(payload))
+      } else {
+        console.error('unable to send, no sender assigned')
+      }
+    }
+  }
+
   /**
    * Empties out all elements whose reportIds are no longer current.
    */
@@ -179,7 +226,7 @@ class WebClient extends PureComponent {
         this.state.sender(JSON.stringify(payload))
       } else {
         console.error('unable to send, no sender assigned')
-      }    
+      }
     }
   }
 
@@ -203,16 +250,21 @@ class WebClient extends PureComponent {
         <header>
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
-            <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em" onClick={this.sendCommand('save-cloud')}>
-            <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
-            </svg>
-            <PersistentWebsocket
+            <span onClick={this.sendCommand('save-cloud')}>
+              <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em">
+                <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+              </svg>
+              <UncontrolledTooltip placement="bottom" target="save-cloud-icon">
+                Save to cloud
+              </UncontrolledTooltip>
+            </span>
+            {/* <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
               onMessage={this.handleMessage}
               onRegister={this.handleRegister}
               persist={false}
-            />
+            /> */}
           </div>
         </header>
         <Container className="streamlit-container">
