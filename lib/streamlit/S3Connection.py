@@ -145,39 +145,39 @@ class S3Connection:
         all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
         session = aiobotocore.get_session()
         async with session.create_client('s3') as client:
-            for load_filename in all_files:
-                if not os.path.isfile(load_filename):
-                    continue
-                if load_filename.endswith('.map'):
-                    continue
-                relative_filename = os.path.relpath(load_filename, static_root)
-                save_filename = os.path.join(save_root, relative_filename)
-                # self._upload_file(load_filename, save_filename)
-                # resp = await client.upload_file(load_filename, self._bucket, save_filename)
-                # def callback(*args, **kwargs):
-                #     print('CALLBACK', args, kwargs)
-                mime_type = mimetypes.guess_type(load_filename)[0]
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-                print(f'The mime type for "{load_filename}" is "{mime_type}".')
-                with open(load_filename, 'rb') as input:
-                    data = input.read()
-                    resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
-                        Body=data, ContentType=mime_type, ACL='public-read')
-                    # print(resp)
-                    print(load_filename, '->', save_filename)
-
-                    # test to see if the file exists
-                    file_exists = False
-                    response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
-                    print('Looking for key and got', response)
-                    for obj in response.get('Contents', []):
-                        if obj['Key'] == save_filename:
-                            print('Found the object with size', obj['Size'])
-                            file_exists = True
-                            break
-                    print('Found the object:', file_exists)
-                    print()
+            # for load_filename in all_files:
+            #     if not os.path.isfile(load_filename):
+            #         continue
+            #     if load_filename.endswith('.map'):
+            #         continue
+            #     relative_filename = os.path.relpath(load_filename, static_root)
+            #     save_filename = os.path.join(save_root, relative_filename)
+            #     # self._upload_file(load_filename, save_filename)
+            #     # resp = await client.upload_file(load_filename, self._bucket, save_filename)
+            #     # def callback(*args, **kwargs):
+            #     #     print('CALLBACK', args, kwargs)
+            #     mime_type = mimetypes.guess_type(load_filename)[0]
+            #     if not mime_type:
+            #         mime_type = 'application/octet-stream'
+            #     print(f'The mime type for "{load_filename}" is "{mime_type}".')
+            #     with open(load_filename, 'rb') as input:
+            #         data = input.read()
+            #         resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
+            #             Body=data, ContentType=mime_type, ACL='public-read')
+            #         # print(resp)
+            #         print(load_filename, '->', save_filename)
+            #
+            #         # test to see if the file exists
+            #         file_exists = False
+            #         response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
+            #         print('Looking for key and got', response)
+            #         for obj in response.get('Contents', []):
+            #             if obj['Key'] == save_filename:
+            #                 print('Found the object with size', obj['Size'])
+            #                 file_exists = True
+            #                 break
+            #         print('Found the object:', file_exists)
+            #         print()
 
             print('ABOUT TO UPLOAD THE DELTAS')
             delta_filename = os.path.join(save_root, 'deltas.protobuf')
@@ -190,30 +190,3 @@ class S3Connection:
 
             print('Finished saving.')
             print('upload_report done', report_id, type(serialized_deltas))
-        # print('save to', save_root)
-
-        # location = os.path.join(self._local_id, self._ts, 'data.pb')
-        #
-        # path = os.path.join(self._local_id, self._ts, 'index.html')
-        # print("https://s3-us-west-2.amazonaws.com/streamlit-test9/" + path)
-
-    # def _file_exists_on_s3(self, filename):
-    #     """Returns a True iff the key exists in S3."""
-    #     synchronous_s3 = boto3.resource('s3')
-    #     bucket = client.Bucket(self._bucket)
-    #     print('Got bucket:', bucket)
-    #     objs = list(bucket.objects.filter(Prefix=filename))
-    #     return len(objs) > 0 and objs[0].key == filename
-
-    def _upload_file(self, load_filename, save_filename):
-        """Uploads the file to the given s3 bucket."""
-        # Figure out the MIME type
-        mime_type = mimetypes.guess_type(load_filename)[0]
-        if not mime_type:
-            mime_type = 'application/octet-stream'
-        print(f'The mime type for "{load_filename}" is "{mime_type}".')
-
-        print('About to upload', load_filename)
-        self._transfer.upload_file(load_filename, self._bucket, save_filename,
-            extra_args={'ContentType': mime_type, 'ACL': 'public-read'})
-        print('Finished uploading', save_filename)
