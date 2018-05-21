@@ -22,7 +22,7 @@ class ProtobufWebsocket {
   /**
    * Constructor.
    */
-  constructor({uri, onMessage, incomingMessageType}) {
+  constructor({uri, onMessage, incomingMessageType, outgoingMessageType}) {
     // To guarantee packet transmission order, this is the index of the last
     // dispatched incoming message.
     this.lastDispatchedMessageIndex = -1;
@@ -41,6 +41,18 @@ class ProtobufWebsocket {
       this.handleMessage(data, incomingMessageType, onMessage);
     this.websocket.onclose = this.handleClose.bind(this);
     this.websocket.onerror = this.handleError.bind(this);
+
+    // Sent messages will be encoded using this type.
+    this.outgoingMessageType = outgoingMessageType;
+  }
+
+  /**
+   * Encdes the message with the outgoingMessageType and sends it over the wire.
+   */
+  sendMessage(obj) {
+    const msg = this.outgoingMessageType.create(obj);
+    const buffer = this.outgoingMessageType.encode(msg).finish();
+    this.websocket.send(buffer)
   }
 
   handleMessage(data, messageType, onMessage) {

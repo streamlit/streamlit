@@ -8,7 +8,7 @@ import {
   Container,
   Progress,
   Row,
-  UncontrolledTooltip,
+  // UncontrolledTooltip,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
 
@@ -25,7 +25,7 @@ import Table from './elements/Table';
 // Other local imports.
 import ProtobufWebsocket from './ProtobufWebsocket';
 // import PersistentWebsocket from './PersistentWebsocket';
-import { StreamlitMsg, Text as TextProto }
+import { StreamlitMsg, BackendMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
@@ -53,7 +53,6 @@ class WebClient extends PureComponent {
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.handleRegister = this.handleRegister.bind(this);
-    this.sendCommand = this.sendCommand.bind(this);
   }
 
   componentDidMount() {
@@ -86,6 +85,7 @@ class WebClient extends PureComponent {
       uri: uri,
       onMessage: this.handleMessage.bind(this),
       incomingMessageType: StreamlitMsg,
+      outgoingMessageType: BackendMsg,
     })
     console.log('Created the websocket.')
 
@@ -192,18 +192,6 @@ class WebClient extends PureComponent {
     }));
   }
 
-  sendCommand(command, data) {
-    return _ => {
-      console.log({command,data})
-      if (this.state.sender) {
-        const payload = { command, data }
-        this.state.sender(JSON.stringify(payload))
-      } else {
-        console.error('unable to send, no sender assigned')
-      }
-    }
-  }
-
   /**
    * Empties out all elements whose reportIds are no longer current.
    */
@@ -221,6 +209,14 @@ class WebClient extends PureComponent {
         }
       })
     }));
+  }
+
+  sendBackendMsg(command) {
+    return () => {
+      const msg = {command: BackendMsg.Command[command]}
+      console.log('About to send message', msg)
+      this.websocket.sendMessage(msg)
+    }
   }
 
   render() {
@@ -244,14 +240,14 @@ class WebClient extends PureComponent {
         <header>
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
-            <span onClick={this.sendCommand('save-cloud')}>
-              <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em">
-                <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
-              </svg>
-              <UncontrolledTooltip placement="bottom" target="save-cloud-icon">
-                Save to cloud
-              </UncontrolledTooltip>
-            </span>
+            <svg id="cloud-upload-icon" viewBox="0 0 8 8" width="1em"
+                onClick={this.sendBackendMsg('CLOUD_UPLOAD')}>
+              <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+            </svg>
+            <svg id="info-icon" viewBox="0 0 8 8" width="1em"
+              onClick={this.sendBackendMsg('HELP')}>
+              <use xlinkHref={'/open-iconic.min.svg#info'} />
+            </svg>
             {/* <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}

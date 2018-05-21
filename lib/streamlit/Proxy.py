@@ -22,6 +22,7 @@ import secrets
 import concurrent.futures
 
 from streamlit import config
+from streamlit import protobuf
 from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
@@ -164,9 +165,8 @@ class Proxy:
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type == WSMsgType.TEXT:
-                        payload = msg.json()
-                        await self.handle_payload(payload, connection)
+                    if msg.type == WSMsgType.BINARY:
+                        await self.handle_backend_msg(msg.data)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -205,6 +205,7 @@ class Proxy:
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
+            # self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -246,16 +247,20 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    async def handle_payload(self, payload, connection):
-        command = payload.get('command', None)
-        handler = {
-            'save-cloud': self.save_cloud
-        }.get(command, None)
-        if handler:
-            data = payload.get('data', None)
-            await handler(data, connection)
-        else:
-            print('no handler for command:', command)
+    async def handle_backend_msg(self, payload):
+        backend_msg = protobuf.BackendMsg()
+        try:
+            backend_msg.ParseFromString(payload)
+            command  = backend_msg.command
+            if command == protobuf.BackendMsg.Command.Value('HELP'):
+                print("help")
+            elif command == protobuf.BackendMsg.Command.Value('CLOUD_UPLOAD'):
+                print("cloud-save")
+            else:
+                print("no handler for", protobuf.BackendMsg.Command.Name(backend_msg.command))
+        except Exception as e:
+            print(f'Cannot parse binary message: {e}')
+
 
     def generate_secure_id(self, length=20):
         while True:
