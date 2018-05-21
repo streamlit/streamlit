@@ -24,7 +24,7 @@ import Table from './elements/Table';
 
 // Other local imports.
 import PersistentWebsocket from './PersistentWebsocket';
-import { StreamlitMsg, Text as TextProto }
+import { BackendMsg, StreamlitMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
@@ -52,7 +52,7 @@ class WebClient extends PureComponent {
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.handleRegister = this.handleRegister.bind(this);
-    this.sendCommand = this.sendCommand.bind(this);
+    this.sendBackendMsg = this.sendBackendMsg.bind(this);
   }
 
   componentDidMount() {
@@ -169,15 +169,34 @@ class WebClient extends PureComponent {
     }));
   }
 
-  sendCommand(command, data) {
+  sendBackendMsg(command) {
     return _ => {
-      console.log({command,data})
+      let thisCommand = null;
+      switch (command) {
+        case 'info':
+          thisCommand = BackendMsg.Command.HELP;
+          break;
+
+        case 'cloud-upload':
+          thisCommand = BackendMsg.Command.CLOUD_UPLOAD;
+          break;
+
+        default:
+          thisCommand = null;
+          break;
+      }
+      if (thisCommand === null) {
+        console.error('invalid command: ' + command);
+        return;
+      }
+
+      let msg = BackendMsg.create({command: thisCommand});
+      let buffer = BackendMsg.encode(msg).finish();
       if (this.state.sender) {
-        const payload = { command, data }
-        this.state.sender(JSON.stringify(payload))
+        this.state.sender(buffer);
       } else {
         console.error('unable to send, no sender assigned')
-      }    
+      }
     }
   }
 
@@ -201,7 +220,7 @@ class WebClient extends PureComponent {
         <header>
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
-            <svg id="save-cloud-icon" viewBox="0 0 8 8" width="1em" onClick={this.sendCommand('save-cloud')}>
+            <svg id="cloud-upload-icon" viewBox="0 0 8 8" width="1em" onClick={this.sendBackendMsg('cloud-upload')}>
             <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
             </svg>
             <PersistentWebsocket
@@ -211,6 +230,9 @@ class WebClient extends PureComponent {
               onRegister={this.handleRegister}
               persist={false}
             />
+            <svg id="info-icon" viewBox="0 0 8 8" width="1em" onClick={this.sendBackendMsg('info')}>
+            <use xlinkHref={'/open-iconic.min.svg#info'} />
+            </svg>
           </div>
         </header>
         <Container className="streamlit-container">
