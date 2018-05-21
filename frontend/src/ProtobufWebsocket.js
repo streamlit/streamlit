@@ -6,11 +6,11 @@
 // import React, { PureComponent } from 'react';
 // import { UncontrolledTooltip } from 'reactstrap';
 
-const NORMAL_CLOSURE = 1000;
-const RECONNECT_TIMEOUT = 200.0;
+// const NORMAL_CLOSURE = 1000;
+// const RECONNECT_TIMEOUT = 200.0;
 const DISCONNECTED_STATE = 'disconnected';
-const CONNECTED_STATE = 'connected';
-const ERROR_STATE = 'error'
+// const CONNECTED_STATE = 'connected';
+// const ERROR_STATE = 'error'
 
 // import './PersistentWebsocket.css';
 

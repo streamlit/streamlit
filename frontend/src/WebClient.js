@@ -24,6 +24,7 @@ import Table from './elements/Table';
 
 // Other local imports.
 import ProtobufWebsocket from './ProtobufWebsocket';
+// import PersistentWebsocket from './PersistentWebsocket';
 import { StreamlitMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -56,40 +57,45 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-      var localhost = false;
-      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-          localhost = true;
+      // var localhost = false;
+      // if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      //     localhost = true;
+      //
+      // if (!localhost) {
+      //     var callback = (blob) =>  {
+      //         this.handleMessage(blob);
+      //     };
+      //
+      //     fetch('data.pb').then(function(response) {
+      //         return response.arrayBuffer();
+      //     }).then(function(data) {
+      //         return new Uint8Array(data);
+      //     }).then(callback);
+      // }
 
-      if (!localhost) {
-          var callback = (blob) =>  {
-              this.handleMessage(blob);
-          };
-
-          fetch('data.pb').then(function(response) {
-              return response.arrayBuffer();
-          }).then(function(data) {
-              return new Uint8Array(data);
-          }).then(callback);
-      }
     // Compute the websocket URI based on the pathname.
     const reportName =
       decodeURIComponent(window.location.pathname).split( '/' )[2];
     document.title = `${reportName} (Streamlit)`
-    const uri = `ws://localhost:5008/stream/${encodeURIComponent(reportName)}`
+    const uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
 
     // Create the websocket connection.
+    console.log('BEFORE: About to create websocket conneting to ws://localhost:5008/stream/test-upload')
+    console.log('About to create websocket conneting to', uri)
     this.websocket = new ProtobufWebsocket({
       uri: uri,
+      onMessage: this.handleMessage.bind(this),
+      incomingMessageType: StreamlitMsg,
     })
+    console.log('Created the websocket.')
+
     // this.handleReconnect = this.handleReconnect.bind(this);
-    // this.handleMessage = this.handleMessage.bind(this);
+    // this.handleMessage =
     // this.handleRegister = this.handleRegister.bind(this);
     // this.sendCommand = this.sendCommand.bind(this);
     //
     // //
-  }
 
-  componentDidMount() {
       // var urlParams = new URLSearchParams(window.location.search);
       // var datafile = urlParams.get('datafile');
       // console.log(datafile);
@@ -142,8 +148,7 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(msgArray) {
-    const msgProto = StreamlitMsg.decode(msgArray);
+  handleMessage(msgProto) {
     const msg = toImmutableProto(StreamlitMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
@@ -218,24 +223,13 @@ class WebClient extends PureComponent {
     }));
   }
 
-  sendCommand(command, data) {
-    return _ => {
-      console.log({command,data})
-      if (this.state.sender) {
-        const payload = { command, data }
-        this.state.sender(JSON.stringify(payload))
-      } else {
-        console.error('unable to send, no sender assigned')
-      }
-    }
-  }
-
   render() {
     // Compute the websocket URI based on the pathname.
     const reportName =
       decodeURIComponent(window.location.pathname).split( '/' )[2];
     document.title = `${reportName} (Streamlit)`
     let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+    console.log("Old fashioned connect to", uri)
 
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_report)
