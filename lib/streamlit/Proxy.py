@@ -166,7 +166,7 @@ class Proxy:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.TEXT:
                         payload = msg.json()
-                        self.handle_payload(payload)
+                        await self.handle_payload(payload)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -247,14 +247,14 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    def handle_payload(self, payload):
+    async def handle_payload(self, payload):
         command = payload.get('command', None)
         handler = {
             'save-cloud': self.save_cloud
         }.get(command, None)
         if handler:
             data = payload.get('data', None)
-            handler(data)
+            await handler(data)
         else:
             print('no handler for command:', command)
 
@@ -264,11 +264,14 @@ class Proxy:
             if len(id) >= length:
                 return id[:length]
 
-    def save_cloud(self, _data):
-        keys = list(self._connections)
-        master = self._connections[keys[0]]._master_queue
+    async def save_cloud(self, _data):
+        print('save_cloud')
 
-        self._cloud.local_save(master.get_serialized_deltas())
+        # keys = list(self._connections)
+        # master = self._connections[keys[0]]._master_queue
+        #
+        # self._cloud.local_save(master.get_serialized_deltas())
+
         # return
         # client = storage.Client()
         # bucket = client.get_bucket('snapshot')
