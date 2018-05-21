@@ -9,6 +9,9 @@ import sys
 
 from streamlit import config
 
+# <bucket>/streamlit_static/<release hash>/... static content here.
+# <bucket>/streamlit_static/<release hash>/data/<report_id>.protobuf
+
 # import shutil
 # import time
 # import hashlib
@@ -145,39 +148,39 @@ class S3Connection:
         all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
         session = aiobotocore.get_session()
         async with session.create_client('s3') as client:
-            # for load_filename in all_files:
-            #     if not os.path.isfile(load_filename):
-            #         continue
-            #     if load_filename.endswith('.map'):
-            #         continue
-            #     relative_filename = os.path.relpath(load_filename, static_root)
-            #     save_filename = os.path.join(save_root, relative_filename)
-            #     # self._upload_file(load_filename, save_filename)
-            #     # resp = await client.upload_file(load_filename, self._bucket, save_filename)
-            #     # def callback(*args, **kwargs):
-            #     #     print('CALLBACK', args, kwargs)
-            #     mime_type = mimetypes.guess_type(load_filename)[0]
-            #     if not mime_type:
-            #         mime_type = 'application/octet-stream'
-            #     print(f'The mime type for "{load_filename}" is "{mime_type}".')
-            #     with open(load_filename, 'rb') as input:
-            #         data = input.read()
-            #         resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
-            #             Body=data, ContentType=mime_type, ACL='public-read')
-            #         # print(resp)
-            #         print(load_filename, '->', save_filename)
-            #
-            #         # test to see if the file exists
-            #         file_exists = False
-            #         response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
-            #         print('Looking for key and got', response)
-            #         for obj in response.get('Contents', []):
-            #             if obj['Key'] == save_filename:
-            #                 print('Found the object with size', obj['Size'])
-            #                 file_exists = True
-            #                 break
-            #         print('Found the object:', file_exists)
-            #         print()
+            for load_filename in all_files:
+                if not os.path.isfile(load_filename):
+                    continue
+                if load_filename.endswith('.map'):
+                    continue
+                relative_filename = os.path.relpath(load_filename, static_root)
+                save_filename = os.path.join(save_root, relative_filename)
+                # self._upload_file(load_filename, save_filename)
+                # resp = await client.upload_file(load_filename, self._bucket, save_filename)
+                # def callback(*args, **kwargs):
+                #     print('CALLBACK', args, kwargs)
+                mime_type = mimetypes.guess_type(load_filename)[0]
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+                print(f'The mime type for "{load_filename}" is "{mime_type}".')
+                with open(load_filename, 'rb') as input:
+                    data = input.read()
+                    resp = await client.put_object(Bucket=self._bucket, Key=save_filename,
+                        Body=data, ContentType=mime_type, ACL='public-read')
+                    # print(resp)
+                    print(load_filename, '->', save_filename)
+
+                    # test to see if the file exists
+                    file_exists = False
+                    response = await client.list_objects_v2(Bucket=self._bucket, Prefix=save_filename)
+                    print('Looking for key and got', response)
+                    for obj in response.get('Contents', []):
+                        if obj['Key'] == save_filename:
+                            print('Found the object with size', obj['Size'])
+                            file_exists = True
+                            break
+                    print('Found the object:', file_exists)
+                    print()
 
             print('ABOUT TO UPLOAD THE DELTAS')
             delta_filename = os.path.join(save_root, 'deltas.protobuf')
