@@ -11,6 +11,7 @@ import {
   // UncontrolledTooltip,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
+import url from 'url';
 
 // Display Elements
 import DataFrame from './elements/DataFrame';
@@ -75,6 +76,8 @@ class WebClient extends PureComponent {
     // Compute the websocket URI based on the pathname.
     const reportName =
       decodeURIComponent(window.location.pathname).split( '/' )[2];
+    console.log('The report name is', reportName)
+    console.log('window.location.pathname is', window.location.pathname)
     document.title = `${reportName} (Streamlit)`
     const uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
 
