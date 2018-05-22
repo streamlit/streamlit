@@ -185,7 +185,8 @@ class Proxy:
         else:
             host = config.get_option('proxy.server')
             port = config.get_option('proxy.port')
-        url = f'http://{host}:{port}/report/{name}'
+        quoted_name = urllib.parse.quote_plus(name)
+        url = f'http://{host}:{port}/?name={quoted_name}'
         webbrowser.open(url)
 
     def _register(self, connection):
