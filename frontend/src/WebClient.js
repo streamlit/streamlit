@@ -10,6 +10,7 @@ import {
   Row,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
+import url from 'url';
 
 // Display Elements
 import DataFrame from './elements/DataFrame';
@@ -151,8 +152,10 @@ class WebClient extends PureComponent {
 
   render() {
     // Compute the websocket URI based on the pathname.
-    const reportName =
-      decodeURIComponent(window.location.pathname).split( '/' )[2];
+    // const reportName =
+    //   decodeURIComponent(window.location.pathname).split( '/' )[2];
+    const { query } = url.parse(window.location.href, true);
+    const reportName = query.name;
     document.title = `${reportName} (Streamlit)`
     let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
 
