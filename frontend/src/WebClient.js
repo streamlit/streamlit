@@ -73,16 +73,13 @@ class WebClient extends PureComponent {
       //     }).then(callback);
       // }
 
-    // Compute the websocket URI based on the pathname.
-    const reportName =
-      decodeURIComponent(window.location.pathname).split( '/' )[2];
-    console.log('The report name is', reportName)
-    console.log('window.location.pathname is', window.location.pathname)
+    const { query } = url.parse(window.location.href, true);
+    const reportName = query.name;
     document.title = `${reportName} (Streamlit)`
-    const uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+    let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+    console.log("Old fashioned connect to", uri)
 
     // Create the websocket connection.
-    console.log('BEFORE: About to create websocket conneting to ws://localhost:5008/stream/test-upload')
     console.log('About to create websocket conneting to', uri)
     this.websocket = new ProtobufWebsocket({
       uri: uri,
@@ -226,11 +223,7 @@ class WebClient extends PureComponent {
     // Compute the websocket URI based on the pathname.
     // const reportName =
     //   decodeURIComponent(window.location.pathname).split( '/' )[2];
-    const { query } = url.parse(window.location.href, true);
-    const reportName = query.name;
-    document.title = `${reportName} (Streamlit)`
-    let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
-    console.log("Old fashioned connect to", uri)
+
 
     // const get_report = /nb\/(.*)/.exec(window.location.pathname)
     // if (get_report)
