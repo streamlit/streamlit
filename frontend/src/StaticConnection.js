@@ -1,7 +1,7 @@
 /**
- * This class is the "brother" of ProtobufWebsocket. The class implements
+ * This class is the "brother" of WebsocketConnection. The class implements
  * loading deltas over an HTTP connection (as opposed to with websockets).
- * Like ProtobufWebsocket it also implements:
+ * Like WebsocketConnection it also implements:
  *
  *   get_status() - returns information to display status in the GUI
  *   connected_to_proxy() - always returns false
@@ -10,9 +10,9 @@
 
 
 /**
-* This class is the "brother" of ProtobufWebsocket. The class implements
+* This class is the "brother" of WebsocketConnection. The class implements
 * loading deltas over an HTTP connection (as opposed to with websockets).
-* Like ProtobufWebsocket it also implements:
+* Like WebsocketConnection it also implements:
 *
 *   get_status() - returns information to display status in the GUI
 *   connected_to_proxy() - always returns false

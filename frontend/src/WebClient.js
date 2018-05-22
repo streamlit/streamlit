@@ -24,7 +24,7 @@ import Map from './elements/Map';
 import Table from './elements/Table';
 
 // Other local imports.
-import ProtobufWebsocket from './ProtobufWebsocket';
+import WebsocketConnection from './WebsocketConnection';
 // import PersistentWebsocket from './PersistentWebsocket';
 import { StreamlitMsg, BackendMsg, Text as TextProto }
   from './protobuf';
@@ -81,7 +81,7 @@ class WebClient extends PureComponent {
 
     // Create the websocket connection.
     console.log('About to create websocket conneting to', uri)
-    this.websocket = new ProtobufWebsocket({
+    this.websocket = new WebsocketConnection({
       uri: uri,
       onMessage: this.handleMessage.bind(this),
       incomingMessageType: StreamlitMsg,
