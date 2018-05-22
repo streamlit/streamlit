@@ -97,21 +97,7 @@ class WebClient extends PureComponent {
     // //
 
       // var urlParams = new URLSearchParams(window.location.search);
-      // var datafile = urlParams.get('datafile');
-      // console.log(datafile);
-      // if (datafile) {
-      //     var callback = (blob) =>  {
-      //         this.handleMessage(blob);
-      //     };
-      //
-      //     fetch('/data/' + datafile).then(function(response) {
-      //         return response.arrayBuffer();
-      //     }).then(function(data) {
-      //         var uint8 = new Uint8Array(data);
-      //         var blob = new Blob([uint8]);
-      //         return blob;
-      //     }).then(callback);
-      // }
+
   }
 
   componentWillUnmount() {
