@@ -51,9 +51,6 @@ class Proxy:
             # Local connection to stream a new report.
             web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
 
-            # Client connection (serves up index.html)
-            web.get('/report/{report_name}', self._client_html_handler),
-
             # Outgoing endpoint to get the latest report.
             web.get('/stream/{report_name}', self._client_ws_handler)
         ])
@@ -129,11 +126,6 @@ class Proxy:
         return ws
 
     @_stop_proxy_on_exception
-    async def _client_html_handler(self, request):
-        static_root = config.get_path('proxy.staticRoot')
-        return web.FileResponse(os.path.join(static_root, 'index.html'))
-
-    @_stop_proxy_on_exception
     async def _client_ws_handler(self, request):
         """This is what the web client connects to."""
         # How long we wait between sending more data.
@@ -194,7 +186,8 @@ class Proxy:
         else:
             host = config.get_option('proxy.server')
             port = config.get_option('proxy.port')
-        url = f'http://{host}:{port}/report/{name}'
+        quoted_name = urllib.parse.quote_plus(name)
+        url = f'http://{host}:{port}/?name={quoted_name}'
         webbrowser.open(url)
 
     def _register(self, connection):
