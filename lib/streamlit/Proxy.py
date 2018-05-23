@@ -51,6 +51,9 @@ class Proxy:
             # Local connection to stream a new report.
             web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
 
+            # Client connection (serves up index.html)
+            web.get('/', self._client_html_handler),
+
             # Outgoing endpoint to get the latest report.
             web.get('/stream/{report_name}', self._client_ws_handler)
         ])
@@ -124,6 +127,11 @@ class Proxy:
             self._try_to_deregister(connection)
         self._potentially_stop_proxy()
         return ws
+
+    @_stop_proxy_on_exception
+    async def _client_html_handler(self, request):
+        static_root = config.get_path('proxy.staticRoot')
+        return web.FileResponse(os.path.join(static_root, 'index.html'))
 
     @_stop_proxy_on_exception
     async def _client_ws_handler(self, request):
