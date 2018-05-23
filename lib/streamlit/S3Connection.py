@@ -132,7 +132,7 @@ class S3Connection:
     #
     #         print('Wrote {}'.format(filename))
 
-    async def upload_report(self, report_id, serialized_deltas):
+    async def upload_report(self, report_id, report):
         """Saves this report to our s3 bucket."""
         print('Got into upload_report (ASYNC DEF VERSION!)')
 
@@ -172,7 +172,8 @@ class S3Connection:
             print('Found the index:', found_index)
 
             # Figure out what we need to save
-            save_data = [(f'reports/{report_id}.protobuf', serialized_deltas)]
+            serialized_report = report.SerializeToString()
+            save_data = [(f'reports/{report_id}.protobuf', serialized_report)]
             if not found_index:
                 print('Didnt find the index. Adding many files.')
                 save_data.extend(static_data)

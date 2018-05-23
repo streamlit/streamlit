@@ -25,7 +25,7 @@ import Table from './elements/Table';
 
 // Other local imports.
 import WebsocketConnection from './WebsocketConnection';
-// import PersistentWebsocket from './PersistentWebsocket';
+import StaticConnection from './StaticConnection';
 import { StreamlitMsg, BackendMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -74,20 +74,32 @@ class WebClient extends PureComponent {
       // }
 
     const { query } = url.parse(window.location.href, true);
-    const reportName = query.name;
-    document.title = `${reportName} (Streamlit)`
-    let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
-    console.log("Old fashioned connect to", uri)
+    if (query.name !== undefined) {
+        const reportName = query.name;
+        document.title = `${reportName} (Streamlit)`
+        let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+        // Create the websocket connection.
+        console.log('About to create websocket conneting to', uri)
+        this.connection = new WebsocketConnection({
+          uri: uri,
+          onMessage: this.handleMessage.bind(this),
+          incomingMessageType: StreamlitMsg,
+          outgoingMessageType: BackendMsg,
+        })
+        console.log('Created the websocket.')
+    } else if (query.id !== undefined) {
+        console.log('Doing a connection with report id', query.id);
+        this.connection = new StaticConnection({
+          reportId: query.id,
+          onMessage: this.handleMessage.bind(this),
+        })
+    } else {
+      this.resetState('URL must contain either a report name or ID.',
+        TextProto.Format.ERROR);
+    }
+    //  /// will be undefined
+    // console.log('is undefined', (reportName === undefined))
 
-    // Create the websocket connection.
-    console.log('About to create websocket conneting to', uri)
-    this.websocket = new WebsocketConnection({
-      uri: uri,
-      onMessage: this.handleMessage.bind(this),
-      incomingMessageType: StreamlitMsg,
-      outgoingMessageType: BackendMsg,
-    })
-    console.log('Created the websocket.')
 
     // this.handleReconnect = this.handleReconnect.bind(this);
     // this.handleMessage =
@@ -201,7 +213,7 @@ class WebClient extends PureComponent {
     return () => {
       const msg = {command: BackendMsg.Command[command]}
       console.log('About to send message', msg)
-      this.websocket.sendMessage(msg)
+      this.connection.sendToProxy(msg)
     }
   }
 

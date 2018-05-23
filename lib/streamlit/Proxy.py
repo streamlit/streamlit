@@ -158,7 +158,7 @@ class Proxy:
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.BINARY:
-                        await self.handle_backend_msg(msg.data)
+                        await self.handle_backend_msg(msg.data, connection)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -240,7 +240,7 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    async def handle_backend_msg(self, payload):
+    async def handle_backend_msg(self, payload, connection):
         backend_msg = protobuf.BackendMsg()
         try:
             backend_msg.ParseFromString(payload)
@@ -248,7 +248,7 @@ class Proxy:
             if command == protobuf.BackendMsg.Command.Value('HELP'):
                 print("help")
             elif command == protobuf.BackendMsg.Command.Value('CLOUD_UPLOAD'):
-                print("cloud-save")
+                await self.save_cloud(connection)
             else:
                 print("no handler for", protobuf.BackendMsg.Command.Name(backend_msg.command))
         except Exception as e:
@@ -261,11 +261,12 @@ class Proxy:
             if len(id) >= length:
                 return id[:length]
 
-    async def save_cloud(self, _data, connection):
+    async def save_cloud(self, connection):
         """Saves a serialized version of this report's deltas to the cloud."""
-        deltas = connection.get_serialized_deltas()
-        loop = asyncio.get_event_loop()
-        await self._cloud.upload_report(connection.id, deltas)
+        report = connection.get_report_proto()
+        print('SaveCloud', type(report))
+        print('SaveCloud', report)
+        await self._cloud.upload_report(connection.id, report)
 
 def main():
     """

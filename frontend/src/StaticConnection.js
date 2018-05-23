@@ -8,6 +8,7 @@
  *   send_to_proxy() - raises an exception because there's no proxy connection
  */
 
+import { StreamlitMsg } from './protobuf';
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
@@ -25,13 +26,13 @@ class StaticConnection {
     fetch(uri).then((response) => {
       console.log('Got a responses');
       console.log(response);
-      msg = StreamlitMsg.decode(new Uint8Array(response.arrayBuffer()));
+      const msg = StreamlitMsg.decode(new Uint8Array(response.arrayBuffer()));
       console.log('Convert it to a message')
       console.log(msg);
       console.log('About to call the callback.')
       onMessage(msg);
       console.log('Just called the callback.')
-    };
+    });
   }
 };
 

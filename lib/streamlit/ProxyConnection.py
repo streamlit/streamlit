@@ -64,6 +64,9 @@ class ProxyConnection:
         empty."""
         self._client_queues.remove(queue)
 
-    def get_serialized_deltas(self):
+    def get_report_proto(self):
         """Return a byte array encoding all the deltas in this report."""
-        return self._master_queue.get_serialized_deltas()
+        report = protobuf.Report()
+        report.name = self.name
+        self._master_queue.write_to_report(report)
+        return report
