@@ -57,22 +57,6 @@ class WebClient extends PureComponent {
   }
 
   componentDidMount() {
-      // var localhost = false;
-      // if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-      //     localhost = true;
-      //
-      // if (!localhost) {
-      //     var callback = (blob) =>  {
-      //         this.handleMessage(blob);
-      //     };
-      //
-      //     fetch('data.pb').then(function(response) {
-      //         return response.arrayBuffer();
-      //     }).then(function(data) {
-      //         return new Uint8Array(data);
-      //     }).then(callback);
-      // }
-
     const { query } = url.parse(window.location.href, true);
     if (query.name !== undefined) {
         const reportName = query.name;
@@ -97,19 +81,6 @@ class WebClient extends PureComponent {
       this.resetState('URL must contain either a report name or an ID.',
         TextProto.Format.ERROR);
     }
-    //  /// will be undefined
-    // console.log('is undefined', (reportName === undefined))
-
-
-    // this.handleReconnect = this.handleReconnect.bind(this);
-    // this.handleMessage =
-    // this.handleRegister = this.handleRegister.bind(this);
-    // this.sendCommand = this.sendCommand.bind(this);
-    //
-    // //
-
-      // var urlParams = new URLSearchParams(window.location.search);
-
   }
 
   componentWillUnmount() {
@@ -238,11 +209,11 @@ class WebClient extends PureComponent {
           <div className="connection-status">
             <svg id="cloud-upload-icon" viewBox="0 0 8 8" width="1em"
                 onClick={this.sendBackendMsg('CLOUD_UPLOAD')}>
-              <use xlinkHref={'/open-iconic.min.svg#cloud-upload'} />
+              <use xlinkHref={'./open-iconic.min.svg#cloud-upload'} />
             </svg>
             <svg id="info-icon" viewBox="0 0 8 8" width="1em"
               onClick={this.sendBackendMsg('HELP')}>
-              <use xlinkHref={'/open-iconic.min.svg#info'} />
+              <use xlinkHref={'./open-iconic.min.svg#info'} />
             </svg>
             {/* <PersistentWebsocket
               uri={uri}

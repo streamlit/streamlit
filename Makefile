@@ -80,9 +80,9 @@ react-init:
 
 .PHONY: react-build
 react-build:
-	# rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
 	cd frontend/ ; npm run build
-	rsync -av --delete frontend/build/ lib/streamlit/static/
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
 
 js-lint:
 	cd frontend; ./node_modules/.bin/eslint src
