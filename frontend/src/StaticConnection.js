@@ -22,17 +22,17 @@ import { StreamlitMsg } from './protobuf';
 class StaticConnection {
   constructor({reportId, onMessage}) {
     const uri = `reports/${reportId}.protobuf`;
-    console.log('static uri', uri);
+
+    // Load the report and display it.
     fetch(uri).then((response) => {
-      console.log('Got a responses');
-      console.log(response);
-      const msg = StreamlitMsg.decode(new Uint8Array(response.arrayBuffer()));
-      console.log('Convert it to a message')
-      console.log(msg);
-      console.log('About to call the callback.')
-      onMessage(msg);
-      console.log('Just called the callback.')
-    });
+      return response.arrayBuffer();
+    }).then((arrayBuffer) => {
+      onMessage(StreamlitMsg.decode(new Uint8Array(arrayBuffer)))
+    }).catch((error) => {
+      console.error('Unable to parse the data stream!!')
+      console.error(error);
+      // TODO: Do something meaningful here!
+    })
   }
 };
 
