@@ -106,6 +106,12 @@ Update the version in the following locations:
     - `lib/streamlit/config/config.yaml` : set the `proxy.port`
     - `frontend/src/WebClient.js` : set the line containing `ws://localhost/...`
 
+#### Test that Static Loading works
+
+```
+open http://localhost:3000/?id=example
+```
+
 #### Build Streamlit and Test It Without Node
 
 Build Streamlit so that it can run without the Node development server:
