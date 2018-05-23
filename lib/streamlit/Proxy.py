@@ -258,7 +258,8 @@ class Proxy:
             elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
                 await self._save_cloud(connection, ws)
             else:
-                print("no handler for", protobuf.BackMsg.Command.Name(backend_msg.command))
+                print("no handler for",
+                    protobuf.BackMsg.Command.Name(backend_msg.command))
         except Exception as e:
             print(f'Cannot parse binary message: {e}')
 
