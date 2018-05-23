@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "Delta.proto";
+
+// A message across a stream.
+message ForwardMsg {
+  oneof type {
+    // Sent from the local library indicating report status.
+    string new_report = 1;
+    DeltaList delta_list = 2;
+    bool report_finished = 3;
+
+    // Indicates when the
+  }
+}
