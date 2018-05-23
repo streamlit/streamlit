@@ -271,7 +271,6 @@ class Proxy:
 
         report = connection.get_report_proto()
         url = await self._cloud.upload_report(connection.id, report)
-        await asyncio.sleep(3.0)
 
         # Indicate that the save is done.
         progress_msg.Clear()
