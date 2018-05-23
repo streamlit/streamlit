@@ -37,32 +37,13 @@ class S3Connection:
 
     async def upload_report(self, report_id, report):
         """Saves this report to our s3 bucket."""
-        # This gives us the filename of a thing
-        def s3_key(relative_path):
-            cloud_root = config.get_option('cloud.staticSaveRoot')
-            return os.path.join(cloud_root, self._release_hash, relative_path)
-
-        # Start the session:
         session = aiobotocore.get_session()
         async with session.create_client('s3') as client:
-            # Figure out whether we need to save the static data.
-            index_key = s3_key('index.html')
-            found_index = False
-            response = await client.list_objects_v2(Bucket=self._bucket, Prefix=index_key)
-            for obj in response.get('Contents', []):
-                if obj['Key'] == index_key:
-                    found_index = True
-                    break
-            print('Found the index:', found_index)
-
             # Figure out what we need to save
             serialized_report = report.SerializeToString()
             save_data = [(f'reports/{report_id}.protobuf', serialized_report)]
-            if not found_index:
-                print('Didnt find the index. Adding many files.')
+            if not await self._already_saved_static_content(client):
                 save_data.extend(self._static_data)
-            else:
-                print('Found the index, skipping many files')
 
             # Save all the data
             for path, data in save_data:
@@ -70,10 +51,26 @@ class S3Connection:
                 if not mime_type:
                     mime_type = 'application/octet-stream'
                 await client.put_object(Bucket=self._bucket, Body=data,
-                    Key=s3_key(path), ContentType=mime_type, ACL='public-read')
-                print(path, '->', s3_key(path))
+                    Key=self._s3_key(path), ContentType=mime_type,
+                    ACL='public-read')
 
         # Return the url for the saved report.
         domain = 's3-us-west-2.amazonaws.com'
-        full_path = self._bucket + '/' + s3_key("index.html")
+        full_path = self._bucket + '/' + self._s3_key('index.html')
         return f'https://{domain}/{full_path}?id={report_id}'
+
+    async def _already_saved_static_content(self, client):
+        """Returns true if we've already saved the static content in the
+        bucket."""
+        index_key = self._s3_key('index.html')
+        response = await client.list_objects_v2(
+            Bucket=self._bucket, Prefix=index_key)
+        for obj in response.get('Contents', []):
+            if obj['Key'] == index_key:
+                return True
+        return False
+
+    def _s3_key(self, relative_path):
+        """Converts a path into an s3 key."""
+        cloud_root = config.get_option('cloud.staticSaveRoot')
+        return os.path.join(cloud_root, self._release_hash, relative_path)

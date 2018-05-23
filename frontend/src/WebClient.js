@@ -94,7 +94,7 @@ class WebClient extends PureComponent {
           onMessage: this.handleMessage.bind(this),
         })
     } else {
-      this.resetState('URL must contain either a report name or ID.',
+      this.resetState('URL must contain either a report name or an ID.',
         TextProto.Format.ERROR);
     }
     //  /// will be undefined
