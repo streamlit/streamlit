@@ -8,7 +8,7 @@
  *   send_to_proxy() - raises an exception because there's no proxy connection
  */
 
-import { StreamlitMsg } from './protobuf';
+import { ForwardMsg } from './protobuf';
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
@@ -27,7 +27,7 @@ class StaticConnection {
     fetch(uri).then((response) => {
       return response.arrayBuffer();
     }).then((arrayBuffer) => {
-      onMessage(StreamlitMsg.decode(new Uint8Array(arrayBuffer)))
+      onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
     }).catch((error) => {
       console.error('Unable to parse the data stream!!')
       console.error(error);

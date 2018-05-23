@@ -14,7 +14,7 @@ async def new_report_msg(report_id, ws):
     ws : websocket
         the websocket
     """
-    msg = protobuf.StreamlitMsg()
+    msg = protobuf.ForwardMsg()
     msg.new_report = str(report_id)
     await ws.send_bytes(msg.SerializeToString())
 
@@ -22,7 +22,7 @@ async def streamlit_msg_iter(ws):
     """Takes a websocket and yields a series of DeltaLists."""
     async for binary_msg in ws:
         if binary_msg.type == aiohttp.WSMsgType.BINARY:
-            streamlit_msg = protobuf.StreamlitMsg()
+            streamlit_msg = protobuf.ForwardMsg()
             try:
                 streamlit_msg.ParseFromString(binary_msg.data)
             except Exception as e:

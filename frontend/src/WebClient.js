@@ -26,7 +26,7 @@ import Table from './elements/Table';
 // Other local imports.
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
-import { StreamlitMsg, BackendMsg, Text as TextProto }
+import { ForwardMsg, BackMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf }
@@ -67,8 +67,8 @@ class WebClient extends PureComponent {
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage.bind(this),
-          incomingMessageType: StreamlitMsg,
-          outgoingMessageType: BackendMsg,
+          incomingMessageType: ForwardMsg,
+          outgoingMessageType: BackMsg,
         })
         console.log('Created the websocket.')
     } else if (query.id !== undefined) {
@@ -118,7 +118,7 @@ class WebClient extends PureComponent {
    * Callback when we get a message from the server.
    */
   handleMessage(msgProto) {
-    const msg = toImmutableProto(StreamlitMsg, msgProto);
+    const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
         this.setState(() => ({reportId: id}))
@@ -180,9 +180,9 @@ class WebClient extends PureComponent {
     }));
   }
 
-  sendBackendMsg(command) {
+  sendBackMsg(command) {
     return () => {
-      const msg = {command: BackendMsg.Command[command]}
+      const msg = {command: BackMsg.Command[command]}
       console.log('About to send message', msg)
       this.connection.sendToProxy(msg)
     }
@@ -208,11 +208,11 @@ class WebClient extends PureComponent {
           <a className="brand" href="/">Streamlit</a>
           <div className="connection-status">
             <svg id="cloud-upload-icon" viewBox="0 0 8 8" width="1em"
-                onClick={this.sendBackendMsg('CLOUD_UPLOAD')}>
+                onClick={this.sendBackMsg('CLOUD_UPLOAD')}>
               <use xlinkHref={'./open-iconic.min.svg#cloud-upload'} />
             </svg>
             <svg id="info-icon" viewBox="0 0 8 8" width="1em"
-              onClick={this.sendBackendMsg('HELP')}>
+              onClick={this.sendBackMsg('HELP')}>
               <use xlinkHref={'./open-iconic.min.svg#info'} />
             </svg>
             {/* <PersistentWebsocket
