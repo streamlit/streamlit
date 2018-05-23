@@ -264,9 +264,21 @@ class Proxy:
 
     async def _save_cloud(self, connection, ws):
         """Saves a serialized version of this report's deltas to the cloud."""
-        report = connection.get_report_proto()
-        url = await self._cloud.upload_report(connection.id, report)
-        print('saved to', url)
+        # Indicate that the save is starting.
+        progress_msg = protobuf.ForwardMsg()
+        progress_msg.upload_report_progress = 0;
+        await ws.send_bytes(progress_msg.SerializeToString())
+
+        await asyncio.sleep(3.0)
+
+        # # Indicate that the save is done.
+        # progress_msg.Clear()
+        # progress_msg.report_uploaded = 'all done!'
+        # await ws.send_bytes(progress_msg.SerializeToString())
+
+        # report = connection.get_report_proto()
+        # url = await self._cloud.upload_report(connection.id, report)
+        # print('saved to', url)
 
 def main():
     """

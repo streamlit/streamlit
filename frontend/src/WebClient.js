@@ -4,8 +4,13 @@ import React, { PureComponent } from 'react';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
+  Button,
   Col,
   Container,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Progress,
   Row,
   // UncontrolledTooltip,
@@ -126,15 +131,19 @@ class WebClient extends PureComponent {
           if (id === this.state.reportId)
             this.clearOldElements();
         }, 2000);
-        // this.resetState(`Receiving data for report ${id}`,
-        //   TextProto.Format.INFO);
       },
       deltaList: (deltaList) => {
         this.applyDeltas(deltaList);
       },
       reportFinished: () => {
         this.clearOldElements();
-      }
+      },
+      uploadReportProgress: (progress) => {
+        console.log('uploadReportProgress');
+      },
+      reportUploaded: (url) => {
+        console.log('reportUploaded');
+      },
     });
   }
 
@@ -201,6 +210,8 @@ class WebClient extends PureComponent {
     //   uri = 'ws://localhost:8554/api/getx/'
     // // console.log(`For path=${window.location.pathname} uri=${uri}`)
 
+    const toggle = () => { console.log('toggle'); };
+
     // Return the tree
     return (
       <div>
@@ -232,6 +243,17 @@ class WebClient extends PureComponent {
               </AutoSizer>
             </Col>
           </Row>
+
+          <Modal isOpen={true} toggle={toggle} className={""}>
+            <ModalHeader toggle={toggle}>Modal title</ModalHeader>
+            <ModalBody>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            </ModalBody>
+            <ModalFooter>
+              <Button color="primary" onClick={toggle}>Do Something</Button>{' '}
+              <Button color="secondary" onClick={toggle}>Cancel</Button>
+            </ModalFooter>
+          </Modal>
         </Container>
 
       </div>

@@ -5,11 +5,22 @@ import "Delta.proto";
 // A message across a stream.
 message ForwardMsg {
   oneof type {
-    // Sent from the local library indicating report status.
+    ////
+    // Report Deltas
+    ////
+
     string new_report = 1;
     DeltaList delta_list = 2;
     bool report_finished = 3;
 
-    // Indicates when the
+    ////
+    // Upload Progress
+    ////
+
+    // Indicates the % progres of a report upload.
+    uint32 upload_report_progress = 4;
+
+    // Indicates that the upload is complete and gives the URL.
+    string report_uploaded = 5;
   }
 }
