@@ -80,9 +80,7 @@ class WebsocketConnection {
       this.messageQueue[messageIndex] = messageType.decode(resultArray);
       while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
         const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1;
-        console.log('About to send message', dispatchMessageIndex);
         onMessage(this.messageQueue[dispatchMessageIndex]);
-        console.log('About to sent message message', dispatchMessageIndex);
         delete this.messageQueue[dispatchMessageIndex];
         this.lastDispatchedMessageIndex = dispatchMessageIndex;
       }

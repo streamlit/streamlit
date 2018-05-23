@@ -11,6 +11,7 @@
     "numeral": "^2.0.6",
     "protobufjs": "^6.8.6",
     "react": "^16.2.0",
+    "react-copy-to-clipboard": "^5.0.1",
     "react-dom": "^16.2.0",
     "react-json-view": "^1.16.1",
     "react-leaflet": "^1.9.1",

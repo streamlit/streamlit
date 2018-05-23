@@ -4,16 +4,10 @@ import React, { PureComponent } from 'react';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
-  Button,
   Col,
   Container,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
   Progress,
   Row,
-  // UncontrolledTooltip,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
 import url from 'url';
@@ -31,6 +25,8 @@ import Table from './elements/Table';
 // Other local imports.
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
+import UploadDialog from './UploadDialog';
+
 import { ForwardMsg, BackMsg, Text as TextProto }
   from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -59,6 +55,7 @@ class WebClient extends PureComponent {
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.handleRegister = this.handleRegister.bind(this);
+    this.closeUploadDialog = this.closeUploadDialog.bind(this);
   }
 
   componentDidMount() {
@@ -139,16 +136,34 @@ class WebClient extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        console.log('uploadReportProgress');
+        this.setState({
+          uploadProgress: progress,
+          uploadUrl: undefined
+        });
       },
       reportUploaded: (url) => {
-        console.log('reportUploaded');
+        console.error('Copied text to clipboard', url)
+        this.setState({
+          uploadProgress: undefined,
+          uploadUrl: url,
+        });
       },
     });
   }
 
   handleRegister(sender) {
     this.setState(_ => ({ sender }))
+  }
+
+  /**
+   * Closes the upload dialog if it's open.
+   */
+  closeUploadDialog() {
+    console.log('closeUploadDialog');
+    this.setState({
+      uploadProgress: undefined,
+      uploadUrl: undefined,
+    });
   }
 
   /**
@@ -192,7 +207,6 @@ class WebClient extends PureComponent {
   sendBackMsg(command) {
     return () => {
       const msg = {command: BackMsg.Command[command]}
-      console.log('About to send message', msg)
       this.connection.sendToProxy(msg)
     }
   }
@@ -210,8 +224,6 @@ class WebClient extends PureComponent {
     //   uri = 'ws://localhost:8554/api/getx/'
     // // console.log(`For path=${window.location.pathname} uri=${uri}`)
 
-    const toggle = () => { console.log('toggle'); };
-
     // Return the tree
     return (
       <div>
@@ -225,6 +237,10 @@ class WebClient extends PureComponent {
             <svg id="info-icon" viewBox="0 0 8 8" width="1em"
               onClick={this.sendBackMsg('HELP')}>
               <use xlinkHref={'./open-iconic.min.svg#info'} />
+            </svg>
+            <svg id="status-icon" viewBox="0 0 8 8" width="1em"
+              onClick={this.sendBackMsg('HELP')}>
+              <use xlinkHref={'./open-iconic.min.svg#bolt'} />
             </svg>
             {/* <PersistentWebsocket
               uri={uri}
@@ -244,18 +260,13 @@ class WebClient extends PureComponent {
             </Col>
           </Row>
 
-          <Modal isOpen={true} toggle={toggle} className={""}>
-            <ModalHeader toggle={toggle}>Modal title</ModalHeader>
-            <ModalBody>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </ModalBody>
-            <ModalFooter>
-              <Button color="primary" onClick={toggle}>Do Something</Button>{' '}
-              <Button color="secondary" onClick={toggle}>Cancel</Button>
-            </ModalFooter>
-          </Modal>
-        </Container>
+          <UploadDialog
+            progress={this.state.uploadProgress}
+            url={this.state.uploadUrl}
+            onClose={this.closeUploadDialog}
+          />
 
+        </Container>
       </div>
     );
   }
