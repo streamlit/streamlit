@@ -158,7 +158,7 @@ class Proxy:
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.BINARY:
-                        await self.handle_backend_msg(msg.data, connection)
+                        await self.handle_backend_msg(msg.data, connection, ws)
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -240,33 +240,25 @@ class Proxy:
         if not self._connections:
             self.stop()
 
-    async def handle_backend_msg(self, payload, connection):
+    async def handle_backend_msg(self, payload, connection, ws):
         backend_msg = protobuf.BackendMsg()
         try:
             backend_msg.ParseFromString(payload)
             command  = backend_msg.command
             if command == protobuf.BackendMsg.Command.Value('HELP'):
-                print("help")
+                os.system('python -m streamlit help &')
             elif command == protobuf.BackendMsg.Command.Value('CLOUD_UPLOAD'):
-                await self.save_cloud(connection)
+                await self.save_cloud(connection, ws)
             else:
                 print("no handler for", protobuf.BackendMsg.Command.Name(backend_msg.command))
         except Exception as e:
             print(f'Cannot parse binary message: {e}')
 
-
-    def generate_secure_id(self, length=20):
-        while True:
-            id = secrets.token_urlsafe(length * 10 // 9).replace('_', '').replace('-', '')
-            if len(id) >= length:
-                return id[:length]
-
-    async def save_cloud(self, connection):
+    async def save_cloud(self, connection, ws):
         """Saves a serialized version of this report's deltas to the cloud."""
         report = connection.get_report_proto()
-        print('SaveCloud', type(report))
-        print('SaveCloud', report)
-        await self._cloud.upload_report(connection.id, report)
+        url = await self._cloud.upload_report(connection.id, report)
+        print('saved to', url)
 
 def main():
     """

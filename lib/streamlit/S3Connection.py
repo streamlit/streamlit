@@ -189,6 +189,11 @@ class S3Connection:
                     Key=s3_key(path), ContentType=mime_type, ACL='public-read')
                 print(path, '->', s3_key(path))
 
+        # Return the url for the saved report.
+        domain = 's3-us-west-2.amazonaws.com'
+        full_path = self._bucket + '/' + s3_key("index.html")
+        return f'https://{domain}/{full_path}?id={report_id}'
+
         # all_data = [(
         #         ,
         #         open(filename, 'rb').read()
