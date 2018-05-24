@@ -58,7 +58,6 @@ frontend/src/protobuf.js
 # streamlit
 ########################################################################
 .streamlit/
-scratchpad.py
 lib/streamlit/static
 
 # Data Files
