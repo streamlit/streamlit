@@ -271,6 +271,7 @@ class Proxy:
         await ws.send_bytes(progress_msg.SerializeToString())
 
         report = connection.get_report_proto()
+        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
         url = await self._cloud.upload_report(connection.id, report)
 
         # Indicate that the save is done.

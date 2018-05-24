@@ -79,6 +79,18 @@ Rerun:
 make init
 ```
 
+#### Testing The Static Saving
+
+Create a bundle with the static files.
+```
+make build
+```
+Test that the locally saved example works:
+```
+open http://localhost:3000/?id=example
+```
+Then load a page and click the save icon.
+
 ## Publishing to `PyPi`
 
 #### Write The Release notes

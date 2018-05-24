@@ -67,6 +67,7 @@ class WebClient extends PureComponent {
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage.bind(this),
+          resetState: this.resetState.bind(this),
           incomingMessageType: ForwardMsg,
           outgoingMessageType: BackMsg,
         })
