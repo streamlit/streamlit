@@ -62,12 +62,23 @@ class S3Connection:
     async def _already_saved_static_content(self, client):
         """Returns true if we've already saved the static content in the
         bucket."""
+        # print('Looking for the key!!!')
+        # return True
+        # index_key = self._s3_key('index.html')
+        # resp = await client.get_object_acl(Bucket=self._bucket, Key=index_key)
+        # print(resp)
+        # # await client.Object(self._bucket, index_key).get()
+        # print('Forcing reply true')
+        # return True
         index_key = self._s3_key('index.html')
         response = await client.list_objects_v2(
             Bucket=self._bucket, Prefix=index_key)
         for obj in response.get('Contents', []):
+            # print('Checking out', obj['Key'])
             if obj['Key'] == index_key:
+                # print('Found the key!')
                 return True
+        # print('Did not find the key.')
         return False
 
     def _s3_key(self, relative_path):

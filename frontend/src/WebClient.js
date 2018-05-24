@@ -64,17 +64,14 @@ class WebClient extends PureComponent {
         const reportName = query.name;
         document.title = `${reportName} (Streamlit)`
         let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
-        // Create the websocket connection.
-        console.log('About to create websocket conneting to', uri)
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage.bind(this),
+          resetState: this.resetState.bind(this),
           incomingMessageType: ForwardMsg,
           outgoingMessageType: BackMsg,
         })
-        console.log('Created the websocket.')
     } else if (query.id !== undefined) {
-        console.log('Doing a connection with report id', query.id);
         this.connection = new StaticConnection({
           reportId: query.id,
           onMessage: this.handleMessage.bind(this),

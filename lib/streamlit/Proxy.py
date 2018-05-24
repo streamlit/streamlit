@@ -272,6 +272,7 @@ class Proxy:
 
         # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
         report = connection.get_report_proto()
+        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
         url = await self._cloud.upload_report(connection.id, report)
 
         # # Pretend to upload something.
