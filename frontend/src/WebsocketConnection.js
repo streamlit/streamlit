@@ -60,9 +60,6 @@ class WebsocketConnection {
   }
 
   handleMessage(data, messageType, onMessage) {
-    console.log('handleMessage');
-    console.log(data);
-
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex;
     this.nextMessageIndex += 1
