@@ -1,9 +1,5 @@
 .streamlit-upload-first-line {
-  margin-bottom: 1rem;
-}
-
-.streamlit-upload-check {
-  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* We make this an id instead of a class to enable clipboard copy */

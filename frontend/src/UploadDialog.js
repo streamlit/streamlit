@@ -54,10 +54,7 @@ function UploadDialog({ progress, url, onClose }) {
     body = (
       <ModalBody>
         <div className="streamlit-upload-first-line">
-          <svg viewBox="0 0 8 8" width="1em" className="streamlit-upload-check">
-            <use xlinkHref={'./open-iconic.min.svg#check'} />
-          </svg>
-          Copied report URL to clipboard.
+          Report saved to:
         </div>
         <div id="streamlit-upload-url"> {url} </div>
       </ModalBody>
@@ -65,16 +62,16 @@ function UploadDialog({ progress, url, onClose }) {
     footer = (
       <ModalFooter>
         <CopyToClipboard text={url} onCopy={onClose}>
-          <Button color="primary">Copy</Button>
+          <Button>Copy to clipboard</Button>
         </CopyToClipboard>{' '}
-        <Button color="secondary" onClick={onClose}>Done</Button>
+        <Button onClick={onClose}>Done</Button>
       </ModalFooter>
     );
   } else if (progress !== undefined) {
     body = (
       <ModalBody>
         <div className="streamlit-upload-first-line">
-          Uploading the report...
+          Saving report...
         </div>
         <div>
           <Progress animated value={progress}/>
@@ -87,7 +84,6 @@ function UploadDialog({ progress, url, onClose }) {
 
   return (
     <Modal isOpen={isOpen} toggle={onClose} className={""}>
-      <ModalHeader toggle={onClose}>Report Upload</ModalHeader>
       { body }
       { footer }
     </Modal>

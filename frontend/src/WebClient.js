@@ -142,7 +142,7 @@ class WebClient extends PureComponent {
         });
       },
       reportUploaded: (url) => {
-        console.error('Copied text to clipboard', url)
+        console.log('Copied text to clipboard', url);
         this.setState({
           uploadProgress: undefined,
           uploadUrl: url,
@@ -152,7 +152,7 @@ class WebClient extends PureComponent {
   }
 
   handleRegister(sender) {
-    this.setState(_ => ({ sender }))
+    this.setState(_ => ({ sender }));
   }
 
   /**
@@ -206,8 +206,8 @@ class WebClient extends PureComponent {
 
   sendBackMsg(command) {
     return () => {
-      const msg = {command: BackMsg.Command[command]}
-      this.connection.sendToProxy(msg)
+      const msg = {command: BackMsg.Command[command]};
+      this.connection.sendToProxy(msg);
     }
   }
 
@@ -229,19 +229,22 @@ class WebClient extends PureComponent {
       <div>
         <header>
           <a className="brand" href="/">Streamlit</a>
-          <div className="connection-status">
-            <svg id="cloud-upload-icon" viewBox="0 0 8 8" width="1em"
-                onClick={this.sendBackMsg('CLOUD_UPLOAD')}>
-              <use xlinkHref={'./open-iconic.min.svg#cloud-upload'} />
-            </svg>
-            <svg id="info-icon" viewBox="0 0 8 8" width="1em"
-              onClick={this.sendBackMsg('HELP')}>
-              <use xlinkHref={'./open-iconic.min.svg#info'} />
-            </svg>
-            <svg id="status-icon" viewBox="0 0 8 8" width="1em"
-              onClick={this.sendBackMsg('HELP')}>
-              <use xlinkHref={'./open-iconic.min.svg#bolt'} />
-            </svg>
+          <div className="streamlit-main-menu">
+            <button class="streamlit-main-menu-item" id="cloud-upload-icon">
+              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('CLOUD_UPLOAD')}>
+                <use xlinkHref={'./open-iconic.min.svg#cloud-upload'} />
+              </svg>
+            </button>
+            <button class="streamlit-main-menu-item" id="info-icon">
+              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('HELP')}>
+                <use xlinkHref={'./open-iconic.min.svg#info'} />
+              </svg>
+            </button>
+            <button class="streamlit-main-menu-item" id="cloud-upload-icon">
+              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('HELP')}>
+                <use xlinkHref={'./open-iconic.min.svg#bolt'} />
+              </svg>
+            </button>
             {/* <PersistentWebsocket
               uri={uri}
               onReconnect={this.handleReconnect}
@@ -293,10 +296,11 @@ class WebClient extends PureComponent {
     }).push(
       <div style={{width}} className="footer"/>
     ).flatMap((element, indx) => {
-      if (element)
-        return [<div className="element-container" key={indx}>{element}</div>]
-      else
-        return []
+      if (element) {
+        return [<div className="element-container" key={indx}>{element}</div>];
+      } else {
+        return [];
+      }
     })
   }
 }
