@@ -8,15 +8,15 @@ import { UncontrolledTooltip } from 'reactstrap';
 import './ConnectionStatus.css';
 
 // TODO: Share these constants with WebsocketConnection and StaticConnection.
-const DISCONNECTED_STATE = 'disconnected';
-const CONNECTED_STATE = 'connected';
-const ERROR_STATE = 'error'
-const STATIC_STATE = 'static'
+export const DISCONNECTED_STATE = 'disconnected';
+export const CONNECTED_STATE = 'connected';
+export const ERROR_STATE = 'error'
+export const STATIC_STATE = 'static'
 
 class ConnectionStatus extends PureComponent {
   render() {
     if (this.props.connectionState == STATIC_STATE) {
-      return;
+      return null;
     }
 
     return (

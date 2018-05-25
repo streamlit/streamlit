@@ -8,11 +8,8 @@ import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 // const NORMAL_CLOSURE = 1000;
 // const RECONNECT_TIMEOUT = 200.0;
 
-// TODO: Share these constants with StaticConnection and ConnectionStatus.
-const DISCONNECTED_STATE = 'disconnected';
-// const CONNECTED_STATE = 'connected';
-// const ERROR_STATE = 'error'
-// const STATIC_STATE = 'static'
+import { DISCONNECTED_STATE, CONNECTED_STATE, ERROR_STATE, STATIC_STATE } from
+  './ConnectionStatus';
 
 // import './PersistentWebsocket.css';
 
@@ -50,6 +47,9 @@ class WebsocketConnection {
       resetState('The connection is down. Please rerun your Python script.',
         TextProto.Format.WARNING);
     };
+
+    // Update the state
+    this.state = CONNECTED_STATE;
   }
 
   /**
@@ -87,12 +87,11 @@ class WebsocketConnection {
   }
 
   handleClose() {
-    // if (this.state.state !== ERROR_STATE)
-    //   this.setState({state: DISCONNECTED_STATE})
+    this.state = DISCONNECTED_STATE;
   }
 
   handleError(event) {
-
+    this.state = ERROR_STATE;
   }
 };
 
