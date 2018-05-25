@@ -270,14 +270,14 @@ class Proxy:
         progress_msg.upload_report_progress = 100
         await ws.send_bytes(progress_msg.SerializeToString())
 
-        # # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
-        # report = connection.get_report_proto()
-        # print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
-        # url = await self._cloud.upload_report(connection.id, report)
+        # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
+        report = connection.get_report_proto()
+        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
+        url = await self._cloud.upload_report(connection.id, report)
 
-        # Pretend to upload something.
-        await asyncio.sleep(3.0)
-        url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
+        # # Pretend to upload something.
+        # await asyncio.sleep(3.0)
+        # url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
 
         # Indicate that the save is done.
         progress_msg.Clear()
