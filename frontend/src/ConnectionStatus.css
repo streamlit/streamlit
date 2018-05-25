@@ -1,0 +1,16 @@
+#ConnectionStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#ConnectionStatus label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #768096;
+  margin: 0 1.25rem 0 0.5rem;
+}
+
+#ConnectionStatus svg * {
+  fill: #768096;
+}

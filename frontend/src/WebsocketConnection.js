@@ -7,9 +7,12 @@ import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 
 // const NORMAL_CLOSURE = 1000;
 // const RECONNECT_TIMEOUT = 200.0;
+
+// TODO: Share these constants with StaticConnection and ConnectionStatus.
 const DISCONNECTED_STATE = 'disconnected';
 // const CONNECTED_STATE = 'connected';
 // const ERROR_STATE = 'error'
+// const STATIC_STATE = 'static'
 
 // import './PersistentWebsocket.css';
 

@@ -7,6 +7,10 @@
  * - Accent red: #F63366
  * - Accent yellow: #FFFD80
  * - Accent blue: #2979E9
+ *
+ * Text sizes:
+ * - Normal: 1rem
+ * - Small: 0.8rem;
  */
 body {
   font-family: 'IBM Plex Sans', sans-serif;
@@ -82,23 +86,28 @@ header {
   border-top: 2px solid #FFFD80;
   border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
   position: fixed;
-  height: 2px;
   top: 0;
   left: 0;
   right: 0;
+  height: 3.5rem;
+  padding: 0 1rem;
   z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
-a.brand {
+#brand {
   font-weight: 700;
-  position: absolute;
-  top: 0.5rem;
-  left: 1rem;
   line-height: 1.5;
+  flex: 1 0;
+}
+
+#brand a {
   color: #101620;
 }
 
-a.brand:hover {
+#brand a:hover {
   color: #F63366;
 }
 
@@ -121,8 +130,7 @@ a.brand:hover {
 /* This is how bootstrap sets colors on secondary buttons.
  * Need to find a better way to override colors. Install SASS? */
 .btn-secondary:not([disabled]):not(.disabled):active,
-.btn-secondary:not([disabled]):not(.disabled).active,
-.show > .btn-secondary.dropdown-toggle {
+.btn-secondary:not([disabled]):not(.disabled).active {
   background-color: #F63366;
   color: #101620;
   border-color: #F63366;
@@ -132,58 +140,6 @@ a.brand:hover {
   background-color: transparent;
   color: #101620;
   border-color: transparent;
-}
-
-.streamlit-main-menu {
-  position: absolute;
-  top: 0.5rem;
-  right: 1rem;
-  display: flex;
-  flex-direction: row;
-}
-
-.streamlit-main-menu-item {
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  margin: 0 0 0 0.5rem;
-  border-radius: 0.8rem;
-  border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background-color: transparent;
-}
-
-.streamlit-main-menu-item:last-child {
-  margin-right: -0.25rem;
-}
-
-.streamlit-main-menu-item:hover {
-  background: #E6E9EF;
-}
-
-.streamlit-main-menu-item:focus {
-  outline: none;
-  /* TODO: Find good way to add focus back, for a11y.
-   * This here is just for a demo. */
-}
-
-.streamlit-main-menu-item:active {
-  background: #F63366;
-  opacity: 1.0;
-}
-
-.streamlit-main-menu-item > svg {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
-.streamlit-main-menu-item:hover {
-}
-
-.streamlit-main-menu-item:hover * {
 }
 
 .streamlit-container {
@@ -205,6 +161,11 @@ a.brand:hover {
 
 .progress-bar {
   background-color: #2979E9;
+}
+
+.icon {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 @media (max-width: 768px) {

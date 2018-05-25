@@ -10,6 +10,12 @@
 
 import { ForwardMsg } from './protobuf';
 
+// TODO: Share these constants with WebsocketConnection and ConnectionStatus.
+// const DISCONNECTED_STATE = 'disconnected';
+// const CONNECTED_STATE = 'connected';
+// const ERROR_STATE = 'error'
+const STATIC_STATE = 'static'
+
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
 * loading deltas over an HTTP connection (as opposed to with websockets).
@@ -22,6 +28,8 @@ import { ForwardMsg } from './protobuf';
 class StaticConnection {
   constructor({reportId, onMessage}) {
     const uri = `reports/${reportId}.protobuf`;
+
+    this.state = STATIC_STATE;
 
     // Load the report and display it.
     fetch(uri).then((response) => {

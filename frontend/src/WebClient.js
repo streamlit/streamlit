@@ -23,15 +23,15 @@ import Map from './elements/Map';
 import Table from './elements/Table';
 
 // Other local imports.
+import MainMenu from './MainMenu';
+import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import UploadDialog from './UploadDialog';
 
-import { ForwardMsg, BackMsg, Text as TextProto }
-  from './protobuf';
+import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
-import { toImmutableProto, dispatchOneOf }
-  from './immutableProto';
+import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
 
@@ -202,10 +202,14 @@ class WebClient extends PureComponent {
   }
 
   sendBackMsg(command) {
-    return () => {
-      const msg = {command: BackMsg.Command[command]};
-      this.connection.sendToProxy(msg);
-    }
+    if (!this.connection) return;
+    const msg = {command: BackMsg.Command[command]};
+    this.connection.sendToProxy(msg);
+  }
+
+  getConnectionState() {
+    if (!this.connection) return;
+    return this.connection.state;
   }
 
   render() {
@@ -225,31 +229,14 @@ class WebClient extends PureComponent {
     return (
       <div>
         <header>
-          <a className="brand" href="/">Streamlit</a>
-          <div className="streamlit-main-menu">
-            <button class="streamlit-main-menu-item" id="cloud-upload-icon">
-              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('CLOUD_UPLOAD')}>
-                <use xlinkHref={'./open-iconic.min.svg#cloud-upload'} />
-              </svg>
-            </button>
-            <button class="streamlit-main-menu-item" id="info-icon">
-              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('HELP')}>
-                <use xlinkHref={'./open-iconic.min.svg#info'} />
-              </svg>
-            </button>
-            <button class="streamlit-main-menu-item" id="cloud-upload-icon">
-              <svg viewBox="0 0 8 8" onClick={this.sendBackMsg('HELP')}>
-                <use xlinkHref={'./open-iconic.min.svg#bolt'} />
-              </svg>
-            </button>
-            {/* <PersistentWebsocket
-              uri={uri}
-              onReconnect={this.handleReconnect}
-              onMessage={this.handleMessage}
-              onRegister={this.handleRegister}
-              persist={false}
-            /> */}
+          <div id="brand">
+            <a href="/">Streamlit</a>
           </div>
+          <ConnectionStatus connectionState={this.getConnectionState()} />
+          <MainMenu
+            helpButtonCallback={() => this.sendBackMsg('HELP')}
+            saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
+            />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
