@@ -8,7 +8,7 @@ import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 // const NORMAL_CLOSURE = 1000;
 // const RECONNECT_TIMEOUT = 200.0;
 
-import { DISCONNECTED_STATE, CONNECTED_STATE, ERROR_STATE, STATIC_STATE } from
+import { DISCONNECTED_STATE, CONNECTED_STATE, ERROR_STATE } from
   './ConnectionStatus';
 
 // import './PersistentWebsocket.css';
@@ -25,7 +25,7 @@ class WebsocketConnection {
   /**
    * Constructor.
    */
-  constructor({uri, onMessage, resetState}) {
+  constructor({uri, onMessage, setConnectionState}) {
     // To guarantee packet transmission order, this is the index of the last
     // dispatched incoming message.
     this.lastDispatchedMessageIndex = -1;
@@ -40,16 +40,23 @@ class WebsocketConnection {
     // Create a new websocket.
     this.state = DISCONNECTED_STATE;
     this.websocket = new WebSocket(uri);
-    this.websocket.onmessage = ({data}) =>
+
+    this.websocket.onmessage = ({data}) => {
       this.handleMessage(data, onMessage);
-    this.websocket.onclose = () => {console.log('Closed')}
+    }
+
+    this.websocket.onclose = () => {
+      setConnectionState({connectionState: DISCONNECTED_STATE});
+    }
+
     this.websocket.onerror = () => {
-      resetState('The connection is down. Please rerun your Python script.',
-        TextProto.Format.WARNING);
+      setConnectionState({
+        connectionState: ERROR_STATE,
+        errMsg: 'The connection is down. Please rerun your Python script.',
+      });
     };
 
-    // Update the state
-    this.state = CONNECTED_STATE;
+    setConnectionState({connectionState: CONNECTED_STATE});
   }
 
   /**

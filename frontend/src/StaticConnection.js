@@ -9,12 +9,8 @@
  */
 
 import { ForwardMsg } from './protobuf';
+import { ERROR_STATE, STATIC_STATE } from './ConnectionStatus';
 
-// TODO: Share these constants with WebsocketConnection and ConnectionStatus.
-// const DISCONNECTED_STATE = 'disconnected';
-// const CONNECTED_STATE = 'connected';
-// const ERROR_STATE = 'error'
-const STATIC_STATE = 'static'
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
@@ -26,7 +22,7 @@ const STATIC_STATE = 'static'
 *   sendToProxy() - raises an exception because there's no proxy connection
 */
 class StaticConnection {
-  constructor({reportId, onMessage}) {
+  constructor({reportId, onMessage, setConnectionState}) {
     const uri = `reports/${reportId}.protobuf`;
 
     this.state = STATIC_STATE;
@@ -36,10 +32,11 @@ class StaticConnection {
       return response.arrayBuffer();
     }).then((arrayBuffer) => {
       onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
+      setConnectionState({connectionState: STATIC_STATE});
     }).catch((error) => {
-      console.error('Unable to parse the data stream!!')
-      console.error(error);
-      // TODO: Do something meaningful here!
+      setConnectionState({
+        connectionState: ERROR_STATE,
+        errMsg: `Unable to find or parse report with ID "${reportId}".`});
     })
   }
 };

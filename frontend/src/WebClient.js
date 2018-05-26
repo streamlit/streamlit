@@ -56,6 +56,7 @@ class WebClient extends PureComponent {
     this.handleMessage = this.handleMessage.bind(this);
     this.handleRegister = this.handleRegister.bind(this);
     this.closeUploadDialog = this.closeUploadDialog.bind(this);
+    this.setConnectionState = this.setConnectionState.bind(this);
   }
 
   componentDidMount() {
@@ -66,19 +67,20 @@ class WebClient extends PureComponent {
         let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
-          onMessage: this.handleMessage.bind(this),
-          resetState: this.resetState.bind(this),
-          incomingMessageType: ForwardMsg,
-          outgoingMessageType: BackMsg,
-        })
+          onMessage: this.handleMessage,
+          setConnectionState: this.setConnectionState,
+        });
     } else if (query.id !== undefined) {
         this.connection = new StaticConnection({
           reportId: query.id,
-          onMessage: this.handleMessage.bind(this),
-        })
+          onMessage: this.handleMessage,
+          setConnectionState: this.setConnectionState,
+        });
     } else {
-      this.resetState('URL must contain either a report name or an ID.',
-        TextProto.Format.ERROR);
+      this.showSingleTextElement(
+        'URL must contain either a report name or an ID.',
+        TextProto.Format.ERROR
+      );
     }
   }
 
@@ -90,7 +92,7 @@ class WebClient extends PureComponent {
    */
   handleReconnect() {
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', TextProto.Format.WARNING);
+    this.showSingleTextElement('Established connection.', TextProto.Format.WARNING);
   }
 
   /**
@@ -100,7 +102,7 @@ class WebClient extends PureComponent {
    * msg    - The message to display
    * format - One of the accepted formats from Text.proto.
    */
-  resetState(msg, format) {
+  showSingleTextElement(msg, format) {
     this.setState({
       reportId: '<null>',
       elements: fromJS([{
@@ -207,10 +209,16 @@ class WebClient extends PureComponent {
     this.connection.sendToProxy(msg);
   }
 
-  getConnectionState() {
-    if (!this.connection) return;
-    return this.connection.state;
+  /**
+   * Sets the connection state to given value defined in ConnectionStatus.js.
+   * errMsg is an optional error message to display on the screen.
+   */
+  setConnectionState({connectionState, errMsg}) {
+    this.setState({connectionState: connectionState});
+    if (errMsg)
+      this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
   }
+
 
   render() {
     // Compute the websocket URI based on the pathname.
@@ -232,7 +240,7 @@ class WebClient extends PureComponent {
           <div id="brand">
             <a href="/">Streamlit</a>
           </div>
-          <ConnectionStatus connectionState={this.getConnectionState()} />
+          <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             helpButtonCallback={() => this.sendBackMsg('HELP')}
             saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}

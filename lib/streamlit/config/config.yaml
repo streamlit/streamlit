@@ -4,7 +4,7 @@
 cloud:
   server: localhost
   port: 8554
-  staticSaveRoot: streamlit-static
+  staticSaveRoot: people/koen/streamlit
 
 # Configuration for the local server.
 local:
