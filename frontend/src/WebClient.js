@@ -55,18 +55,17 @@ class WebClient extends PureComponent {
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
-    this.handleRegister = this.handleRegister.bind(this);
     this.closeUploadDialog = this.closeUploadDialog.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
+    this.setReportName = this.setReportName.bind(this);
   }
 
   componentDidMount() {
     const { query } = url.parse(window.location.href, true);
     if (query.name !== undefined) {
         const reportName = query.name;
-        document.title = `${reportName} (Streamlit)`
+        this.setReportName(reportName);
         let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
-        this.setState({reportName});
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
@@ -77,6 +76,7 @@ class WebClient extends PureComponent {
           reportId: query.id,
           onMessage: this.handleMessage,
           setConnectionState: this.setConnectionState,
+          setReportName: this.setReportName,
         });
     } else {
       this.showSingleTextElement(
@@ -213,6 +213,13 @@ class WebClient extends PureComponent {
       this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
   }
 
+  /**
+   * Sets the reportName in state and upates the title bar.
+   */
+  setReportName(reportName) {
+    document.title = `${reportName} (Streamlit)`
+    this.setState({reportName});
+  }
 
   render() {
     // Return the tree
