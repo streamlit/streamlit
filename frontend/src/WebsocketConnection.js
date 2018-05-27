@@ -3,15 +3,9 @@
  * Google protocol buffers. It guarnatees message arrival order.
  */
 
-import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
+import {ForwardMsg, BackMsg, Text as TextProto} from './protobuf';
+import {ConnectionState} from './ConnectionState';
 
-// const NORMAL_CLOSURE = 1000;
-// const RECONNECT_TIMEOUT = 200.0;
-
-import { DISCONNECTED_STATE, CONNECTED_STATE, ERROR_STATE } from
-  './ConnectionStatus';
-
-// import './PersistentWebsocket.css';
 
 /**
 * This class is the "brother" of StaticConnection. The class  connects to the
@@ -38,7 +32,7 @@ class WebsocketConnection {
     this.messageQueue = {}
 
     // Create a new websocket.
-    this.state = DISCONNECTED_STATE;
+    this.state = ConnectionState.DISCONNECTED;
     this.websocket = new WebSocket(uri);
 
     this.websocket.onmessage = ({data}) => {
@@ -46,17 +40,17 @@ class WebsocketConnection {
     }
 
     this.websocket.onclose = () => {
-      setConnectionState({connectionState: DISCONNECTED_STATE});
+      setConnectionState({connectionState: ConnectionState.DISCONNECTED});
     }
 
     this.websocket.onerror = () => {
       setConnectionState({
-        connectionState: ERROR_STATE,
+        connectionState: ConnectionState.ERROR,
         errMsg: 'The connection is down. Please rerun your Python script.',
       });
     };
 
-    setConnectionState({connectionState: CONNECTED_STATE});
+    setConnectionState({connectionState: ConnectionState.CONNECTED});
   }
 
   /**
@@ -94,11 +88,11 @@ class WebsocketConnection {
   }
 
   handleClose() {
-    this.state = DISCONNECTED_STATE;
+    this.state = ConnectionState.DISCONNECTED;
   }
 
   handleError(event) {
-    this.state = ERROR_STATE;
+    this.state = ConnectionState.ERROR;
   }
 };
 

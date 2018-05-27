@@ -42,6 +42,7 @@ class WebClient extends PureComponent {
     // Initially the state reflects that no data has been received.
     this.state = {
       reportId: '<null>',
+      reportName: null,
       elements: fromJS([{
         type: 'text',
         text: {
@@ -65,6 +66,7 @@ class WebClient extends PureComponent {
         const reportName = query.name;
         document.title = `${reportName} (Streamlit)`
         let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+        this.setState({reportName});
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
@@ -122,10 +124,11 @@ class WebClient extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
-        this.setState(() => ({reportId: id}))
+        this.setState(() => ({reportId: id}));
         setTimeout(() => {
-          if (id === this.state.reportId)
+          if (id === this.state.reportId) {
             this.clearOldElements();
+          }
         }, 2000);
       },
       deltaList: (deltaList) => {
@@ -242,6 +245,8 @@ class WebClient extends PureComponent {
           </div>
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
+            isHelpPage={this.state.reportName == 'help'}
+            connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
             saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
             />

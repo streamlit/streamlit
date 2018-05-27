@@ -8,8 +8,8 @@
  *   send_to_proxy() - raises an exception because there's no proxy connection
  */
 
-import { ForwardMsg } from './protobuf';
-import { ERROR_STATE, STATIC_STATE } from './ConnectionStatus';
+import {ConnectionState} from './ConnectionState';
+import {ForwardMsg} from './protobuf';
 
 
 /**
@@ -25,17 +25,17 @@ class StaticConnection {
   constructor({reportId, onMessage, setConnectionState}) {
     const uri = `reports/${reportId}.protobuf`;
 
-    this.state = STATIC_STATE;
+    this.state = ConnectionState.STATIC;
 
     // Load the report and display it.
     fetch(uri).then((response) => {
       return response.arrayBuffer();
     }).then((arrayBuffer) => {
       onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
-      setConnectionState({connectionState: STATIC_STATE});
+      setConnectionState({connectionState: ConnectionState.STATIC});
     }).catch((error) => {
       setConnectionState({
-        connectionState: ERROR_STATE,
+        connectionState: ConnectionState.ERROR,
         errMsg: `Unable to find or parse report with ID "${reportId}".`});
     })
   }

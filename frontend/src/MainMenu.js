@@ -3,21 +3,19 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, { PureComponent } from 'react';
-import { UncontrolledTooltip } from 'reactstrap';
+import React, {PureComponent} from 'react';
+import {ConnectionState} from './ConnectionState';
 import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
 } from 'reactstrap';
+import {UncontrolledTooltip} from 'reactstrap';
 import './MainMenu.css';
 
 const NORMAL_CLOSURE = 1000;
 const RECONNECT_TIMEOUT = 200.0;
-const DISCONNECTED_STATE = 'disconnected';
-const CONNECTED_STATE = 'connected';
-const ERROR_STATE = 'error'
 
 /**
  *
@@ -47,7 +45,17 @@ class MainMenu extends PureComponent {
     }));
   }
 
+  getDisabledItems() {
+    return {
+      save: this.props.connectionState == ConnectionState.STATIC ||
+            this.props.connectionState == null,
+      help: this.props.isHelpPage,
+    }
+  }
+
   render() {
+    const disabledItems = this.getDisabledItems();
+
     return (
       <Dropdown
           id="MainMenu"
@@ -62,7 +70,7 @@ class MainMenu extends PureComponent {
         <DropdownMenu right>
 
           <DropdownItem
-              disabled={this.state.itemsDisabled}
+              disabled={disabledItems.save}
               onClick={() => this.handleSaveButtonClicked()}>
             Save report
           </DropdownItem>
@@ -70,7 +78,7 @@ class MainMenu extends PureComponent {
           <DropdownItem divider/>
 
           <DropdownItem
-              disabled={this.state.itemsDisabled}
+              disabled={disabledItems.help}
               onClick={() => this.handleHelpButtonClicked()}>
             Help
           </DropdownItem>

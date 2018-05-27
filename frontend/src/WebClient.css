@@ -111,6 +111,10 @@ header {
   color: #F63366;
 }
 
+button:focus {
+  outline: 5px auto #F63366;
+}
+
 .btn {
   border-radius: 0.75rem;
 }
@@ -132,7 +136,7 @@ header {
 .btn-secondary:not([disabled]):not(.disabled):active,
 .btn-secondary:not([disabled]):not(.disabled).active {
   background-color: #F63366;
-  color: #101620;
+  color: #FFFFFF;
   border-color: #F63366;
 }
 
@@ -140,6 +144,10 @@ header {
   background-color: transparent;
   color: #101620;
   border-color: transparent;
+}
+
+.dropdown-menu button:active {
+  background-color: #F63366;
 }
 
 .streamlit-container {

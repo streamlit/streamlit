@@ -3,15 +3,13 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, { PureComponent } from 'react';
-import { UncontrolledTooltip } from 'reactstrap';
+import {ConnectionState} from './ConnectionState';
+import React, {PureComponent} from 'react';
+import {UncontrolledTooltip} from 'reactstrap';
 import './PersistentWebsocket.css';
 
 const NORMAL_CLOSURE = 1000;
 const RECONNECT_TIMEOUT = 200.0;
-const DISCONNECTED_STATE = 'disconnected';
-const CONNECTED_STATE = 'connected';
-const ERROR_STATE = 'error'
 
 /**
  * Implements a persistent websocket connection.
@@ -24,7 +22,7 @@ class PersistentWebsocket extends PureComponent {
   constructor(props) {
     super(props);
     this.state = {
-      state: DISCONNECTED_STATE,
+      state: ConnectionState.DISCONNECTED,
     };
 
     // Bind all callbacks
@@ -49,7 +47,7 @@ class PersistentWebsocket extends PureComponent {
     // Prevent double-opening a websocket.
     if (this.websocket) {
       this.setState({
-        state: ERROR_STATE,
+        state: ConnectionState.ERROR,
         errorMsg: 'Cannot reopen an existing websocket.'
       })
       return;
@@ -85,7 +83,7 @@ class PersistentWebsocket extends PureComponent {
 
     // Set various event handler for the websocket.
     this.websocket.onopen = () => {
-      this.setState({state: CONNECTED_STATE});
+      this.setState({state: ConnectionState.CONNECTED});
       if (this.props.onReconnect) {
         this.props.onReconnect();
       }
@@ -113,8 +111,8 @@ class PersistentWebsocket extends PureComponent {
     };
 
     this.websocket.onclose = () => {
-      if (this.state.state !== ERROR_STATE)
-        this.setState({state: DISCONNECTED_STATE})
+      if (this.state.state !== ConnectionState.ERROR)
+        this.setState({state: ConnectionState.DISCONNECTED})
       this.closeWebsocket();
       if (this.props.persist)
         setTimeout(this.openWebsocket, RECONNECT_TIMEOUT);
@@ -122,7 +120,7 @@ class PersistentWebsocket extends PureComponent {
 
     this.websocket.onerror = (event) => {
       this.setState({
-        state: ERROR_STATE,
+        state: ConnectionState.ERROR,
         errorMsg: 'Error Connecting:' + this.props.uri
       });
     };
@@ -145,13 +143,13 @@ class PersistentWebsocket extends PureComponent {
     // Configure icon and tooltip based on current state.
     const {state, errorMsg} = this.state;
     let iconName, tooltipText;
-    if (state === DISCONNECTED_STATE) {
+    if (state === ConnectionState.DISCONNECTED) {
       iconName = 'ban'
       tooltipText = 'Disconnected.'
-    } else if (state === CONNECTED_STATE) {
+    } else if (state === ConnectionState.CONNECTED) {
       iconName = 'bolt';
       tooltipText = `Connected: ${this.props.uri}`;
-    } else if (state === ERROR_STATE) {
+    } else if (state === ConnectionState.ERROR) {
       iconName = 'warning';
       tooltipText = errorMsg;
     } else {
