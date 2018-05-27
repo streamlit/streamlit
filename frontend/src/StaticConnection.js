@@ -9,7 +9,7 @@
  */
 
 import {ConnectionState} from './ConnectionState';
-import {ForwardMsg} from './protobuf';
+import {Report} from './protobuf';
 
 
 /**
@@ -22,7 +22,7 @@ import {ForwardMsg} from './protobuf';
 *   sendToProxy() - raises an exception because there's no proxy connection
 */
 class StaticConnection {
-  constructor({reportId, onMessage, setConnectionState}) {
+  constructor({reportId, onMessage, setConnectionState, setReportName}) {
     const uri = `reports/${reportId}.protobuf`;
 
     this.state = ConnectionState.STATIC;
@@ -31,8 +31,13 @@ class StaticConnection {
     fetch(uri).then((response) => {
       return response.arrayBuffer();
     }).then((arrayBuffer) => {
-      onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
+      const report = Report.decode(new Uint8Array(arrayBuffer));
       setConnectionState({connectionState: ConnectionState.STATIC});
+      setReportName(report.name);
+      onMessage({
+        type: 'deltaList',
+        deltaList: report.deltaList,
+      });
     }).catch((error) => {
       setConnectionState({
         connectionState: ConnectionState.ERROR,
