@@ -124,7 +124,7 @@ class WebClient extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
-        this.setState(() => ({reportId: id}));
+        this.setState({reportId: id});
         setTimeout(() => {
           if (id === this.state.reportId) {
             this.clearOldElements();
@@ -153,15 +153,10 @@ class WebClient extends PureComponent {
     });
   }
 
-  handleRegister(sender) {
-    this.setState(_ => ({ sender }));
-  }
-
   /**
    * Closes the upload dialog if it's open.
    */
   closeUploadDialog() {
-    console.log('closeUploadDialog');
     this.setState({
       uploadProgress: undefined,
       uploadUrl: undefined,
@@ -172,10 +167,6 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // // debug - begin
-    // console.log(`applying deltas to report id ${this.state.reportId}`)
-    // // debug - end
-
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
@@ -224,18 +215,6 @@ class WebClient extends PureComponent {
 
 
   render() {
-    // Compute the websocket URI based on the pathname.
-    // const reportName =
-    //   decodeURIComponent(window.location.pathname).split( '/' )[2];
-
-
-    // const get_report = /nb\/(.*)/.exec(window.location.pathname)
-    // if (get_report)
-    //   uri = `ws://localhost:8554/api/get/${get_report[1]}`
-    // else if (window.location.pathname === '/x')
-    //   uri = 'ws://localhost:8554/api/getx/'
-    // // console.log(`For path=${window.location.pathname} uri=${uri}`)
-
     // Return the tree
     return (
       <div>
