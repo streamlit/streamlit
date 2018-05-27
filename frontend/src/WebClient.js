@@ -71,6 +71,7 @@ class WebClient extends PureComponent {
           uri: uri,
           onMessage: this.handleMessage,
           setConnectionState: this.setConnectionState,
+        });
     } else if (query.id !== undefined) {
         this.connection = new StaticConnection({
           reportId: query.id,

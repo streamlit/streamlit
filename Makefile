@@ -86,7 +86,7 @@ react-build:
 
 js-lint:
 	cd frontend; ./node_modules/.bin/eslint src
-https://s3-us-west-2.amazonaws.com/streamlit/streamlit-0.9.0_koen-py3-none-any.whl
+
 js-test:
 	cd frontend; npm run test
 	cd frontend; npm run coverage
