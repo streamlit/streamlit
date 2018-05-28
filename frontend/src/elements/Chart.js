@@ -109,7 +109,6 @@ class Chart extends PureComponent {
       let indexTransform = undefined
       // transform to human readable tick, e.g. to support Date
       let tickFormatter = undefined
-      console.log(`Chart.render() the indexType is ${indexType}`)
       switch (indexType) {
         case 'datetimeIndex':
           indexTransform = date => date.getTime()
