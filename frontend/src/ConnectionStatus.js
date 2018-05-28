@@ -9,14 +9,44 @@ import {UncontrolledTooltip} from 'reactstrap';
 import './ConnectionStatus.css';
 
 class ConnectionStatus extends PureComponent {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      minimized: this.shouldMinimize(),
+    };
+
+    this.handleScroll_bound = this.handleScroll.bind(this);
+  }
+
+  componentDidMount() {
+    window.addEventListener('scroll', this.handleScroll_bound);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.handleScroll_bound);
+  }
+
+  shouldMinimize() {
+    return window.scrollY > 32;
+  }
+
+  handleScroll() {
+    this.setState({
+      minimized: this.shouldMinimize(),
+    });
+  }
+
   render() {
-    if (this.props.connectionState == ConnectionState.STATIC) {
+    if (this.props.connectionState === ConnectionState.STATIC) {
       return null;
     }
 
     return (
       <div>
-        <div id="ConnectionStatus">
+        <div
+            id="ConnectionStatus"
+            className={this.state.minimized ? 'minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
             {this.drawIcon()}
           </svg>
