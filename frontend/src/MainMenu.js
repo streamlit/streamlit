@@ -11,11 +11,7 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from 'reactstrap';
-import {UncontrolledTooltip} from 'reactstrap';
 import './MainMenu.css';
-
-const NORMAL_CLOSURE = 1000;
-const RECONNECT_TIMEOUT = 200.0;
 
 /**
  *
@@ -47,8 +43,8 @@ class MainMenu extends PureComponent {
 
   getDisabledItems() {
     return {
-      save: this.props.connectionState == ConnectionState.STATIC ||
-            this.props.connectionState == null,
+      save: this.props.connectionState === ConnectionState.STATIC ||
+            this.props.connectionState === null,
       help: this.props.isHelpPage,
     }
   }
@@ -59,7 +55,8 @@ class MainMenu extends PureComponent {
     return (
       <Dropdown
           id="MainMenu"
-          isOpen={this.state.dropdownOpen} toggle={() => this.toggle()}
+          isOpen={this.state.dropdownOpen}
+          toggle={() => this.toggle()}
           >
         <DropdownToggle id="MainMenuButton">
           <svg className="icon" viewBox="0 0 8 8">

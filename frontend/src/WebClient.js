@@ -245,7 +245,7 @@ class WebClient extends PureComponent {
           </div>
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
-            isHelpPage={this.state.reportName == 'help'}
+            isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
             saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
