@@ -3,10 +3,7 @@ pandas
 Pillow!=5.1.0
 protobuf
 PyYAML
-aiohttp
-# bson
-# motor
-tzlocal
 docutils
-# google-cloud-storage
-aiobotocore
+pandas
+protobuf
+tzlocal
