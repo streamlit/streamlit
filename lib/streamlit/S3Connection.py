@@ -16,7 +16,7 @@ class S3Connection:
 
     def __init__(self):
         # This is the bucket where we're saving the data.
-        self._bucket = 'uberinternal.com'
+        self._bucket = 'streamlit-test10'
 
         # Get the static files which need to be saved and their release hash.
         static_root = config.get_path('proxy.staticRoot')
@@ -55,7 +55,7 @@ class S3Connection:
                     ACL='public-read')
 
         # Return the url for the saved report.
-        domain = 'people-s3.uberinternal.com/s3'
+        domain = 's3-us-west-2.amazonaws.com'
         full_path = self._bucket + '/' + self._s3_key('index.html')
         return f'https://{domain}/{full_path}?id={report_id}'
 
