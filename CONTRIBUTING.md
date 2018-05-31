@@ -108,15 +108,17 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.9.0-koen`.
+**Note:** The current version is `0.10.0`.
 
 Update the version in the following locations:
-  - `CONTRIBUTING.md` (*Right above where it says version number!*)
+  - `CONTRIBUTING.md` (*In two places! Above and below*)
   - `lib/setup.py`
   - `frontend/package.json`
   - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
     - `lib/streamlit/config/config.yaml` : set the `proxy.port`
-    - `frontend/src/WebClient.js` : set the line containing `ws://localhost/...`
+    - `frontend/src/WebClient.js` : set the `PROXY_PORT`.
+
+Run `make init` so things like `package-lock.json` get updated.
 
 #### Test that Static Loading works
 
@@ -153,7 +155,7 @@ This assumes that the current working directory is called `streamlit` and you ha
 ```
 make wheel
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.9.0-py3-none-any.whl
+pip install --upgrade ../streamlit/lib/dist/streamlit-0.10.0-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
