@@ -43,9 +43,13 @@ class MainMenu extends PureComponent {
 
   getDisabledItems() {
     return {
-      save: this.props.connectionState === ConnectionState.STATIC ||
-            this.props.connectionState === null,
-      help: this.props.isHelpPage,
+      save: this.props.connectionState == ConnectionState.STATIC ||
+            this.props.connectionState == ConnectionState.DISCONNECTED ||
+            this.props.connectionState == null,
+      help: this.props.isHelpPage ||
+            this.props.connectionState == ConnectionState.STATIC ||
+            this.props.connectionState == ConnectionState.DISCONNECTED ||
+            this.props.connectionState == null,
     }
   }
 
