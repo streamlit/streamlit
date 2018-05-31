@@ -19,7 +19,7 @@ proxy:
   port: 5010
 
   # How many seconds the proxy waits for the connection before timing out.
-  waitForConnectionSecs: 10.0
+  waitForConnectionSecs: 10.1
 
   # Whether to use the node server or not.
   # useNode: False
