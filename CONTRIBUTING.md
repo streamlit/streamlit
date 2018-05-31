@@ -143,14 +143,24 @@ python examples/uber.py
 ```
 Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
 
-If everything works, then revert to development mode by typing:
+If everything works and you want to go back to coding, then revert to
+development mode by typing:
 ```
 make develop
 ```
 
 #### Build the Wheel and Test That
 
-This assumes that the current working directory is called `streamlit` and you have a parallel folder called `streamlit-staging` to test this version.
+First, make sure you're not in development mode:
+
+```
+make install
+```
+
+Now go through the following steps:
+
+(Note: this assumes that the current working directory is called `streamlit` and
+you have a parallel folder called `streamlit-staging` to test this version.)
 
 ```
 make wheel
@@ -164,7 +174,7 @@ python -m streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 ```
-Also, if possible, test the wheel in Linux.
+Also, if possible, test the wheel in Mac and Linux.
 
 #### Distribute the Wheel
 ```
