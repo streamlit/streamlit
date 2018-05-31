@@ -35,6 +35,11 @@ import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
 
+/**
+ * Port used to connect to the proxy server.
+ */
+const PROXY_PORT = 5009;
+
 class WebClient extends PureComponent {
   constructor(props) {
     super(props);
@@ -65,7 +70,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://localhost:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
