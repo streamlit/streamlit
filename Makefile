@@ -1,5 +1,5 @@
 # Black magic to get module directories
-modules := $(foreach initpy, $(foreach dir, $(wildcard *), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
+modules := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
 help:
 	@echo "Streamlit Make Commands:"
@@ -31,11 +31,11 @@ requirements: lib/requirements.txt lib/install_requirements.txt
 
 lint:
 	# linting
-	flake8 $(modules) tests/
+	cd lib; flake8 $(modules) tests/
 
 test:
 	# testing + code coverage
-	PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
+	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
 install:
 	cd lib ; python setup.py install
@@ -54,14 +54,16 @@ wheel:
 
 clean:
 	@echo FIXME: This needs to be fixed!
-	# rm -rf build dist  .eggs *.egg-info
-	# find . -name '*.pyc' -type f -delete
-	# find . -name __pycache__ -type d -delete
-	# find . -name .pytest_cache -exec rm -rf {} \;
-	# (cd frontend; rm -rf client/build client/node_modules streamlit/lib streamlit/coverage streamlit/node_modules)
-	# rm -rf streamlit/static
-	# find . -name .streamlit -type d -exec rm -rf {} \;
-	# rm -rf .coverage*
+	cd lib; rm -rf build dist  .eggs *.egg-info
+	find . -name '*.pyc' -type f -delete
+	find . -name __pycache__ -type d -delete
+	find . -name .pytest_cache -exec rm -rf {} \;
+	cd frontend; rm -rf build node_modules
+	rm -f lib/streamlit/protobuf/*_pb2.py
+	rm -f frontend/src/protobuf.js
+	rm -rf lib/streamlit/static
+	find . -name .streamlit -type d -exec rm -rf {} \;
+	cd lib; rm -rf .coverage*
 
 .PHONY: protobuf
 protobuf:
@@ -78,16 +80,16 @@ react-init:
 
 .PHONY: react-build
 react-build:
-	# rsync -arvm --include="*/" --include="*.css" --exclude="*" frontend/streamlit/src/ frontend/streamlit/lib/
 	cd frontend/ ; npm run build
-	rsync -av --delete frontend/build/ lib/streamlit/static/
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
 
 js-lint:
-	(cd frontend/streamlit; ./node_modules/.bin/eslint src)
+	cd frontend; ./node_modules/.bin/eslint src
 
 js-test:
-	(cd frontend/streamlit; npm run test)
-	(cd frontend/streamlit; npm run coverage)
+	cd frontend; npm run test
+	cd frontend; npm run coverage
 
 
 # Counts the number of lines of code in the project

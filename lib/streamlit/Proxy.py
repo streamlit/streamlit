@@ -18,12 +18,15 @@ import asyncio
 import os
 import urllib
 import webbrowser
+import secrets
 import concurrent.futures
 
 from streamlit import config
+from streamlit import protobuf
 from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
+from streamlit.S3Connection import S3Connection
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -48,6 +51,9 @@ class Proxy:
             # Local connection to stream a new report.
             web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
 
+            # Client connection (serves up index.html)
+            web.get('/', self._client_html_handler),
+
             # Outgoing endpoint to get the latest report.
             web.get('/stream/{report_name}', self._client_ws_handler)
         ])
@@ -65,6 +71,9 @@ class Proxy:
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
         self._connections = {}
+
+        # Initialized things that the proxy will need to do cloud things.
+        self._cloud = S3Connection()
 
     def run_app(self):
         """Runs the web app."""
@@ -120,6 +129,11 @@ class Proxy:
         return ws
 
     @_stop_proxy_on_exception
+    async def _client_html_handler(self, request):
+        static_root = config.get_path('proxy.staticRoot')
+        return web.FileResponse(os.path.join(static_root, 'index.html'))
+
+    @_stop_proxy_on_exception
     async def _client_ws_handler(self, request):
         """This is what the web client connects to."""
         # How long we wait between sending more data.
@@ -151,9 +165,12 @@ class Proxy:
                 # Watch for a CLOSE method as we sleep for throttle_secs.
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type != WSMsgType.CLOSE:
-                        raise RuntimeError(f'Unknown message type: {msg.type}')
-                    break
+                    if msg.type == WSMsgType.BINARY:
+                        await self._handle_backend_msg(msg.data, connection, ws)
+                    elif msg.type == WSMsgType.CLOSE:
+                        break
+                    else:
+                        print('Unknown message type:', msg.type)
                 except asyncio.TimeoutError:
                     pass
         except concurrent.futures.CancelledError:
@@ -189,6 +206,7 @@ class Proxy:
         self._connections[connection.name] = connection
         if new_name:
             self._lauch_web_client(connection.name)
+            # self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -229,6 +247,42 @@ class Proxy:
         close the proxy."""
         if not self._connections:
             self.stop()
+
+    async def _handle_backend_msg(self, payload, connection, ws):
+        backend_msg = protobuf.BackMsg()
+        try:
+            backend_msg.ParseFromString(payload)
+            command  = backend_msg.command
+            if command == protobuf.BackMsg.Command.Value('HELP'):
+                os.system('python -m streamlit help &')
+            elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
+                await self._save_cloud(connection, ws)
+            else:
+                print("no handler for",
+                    protobuf.BackMsg.Command.Name(backend_msg.command))
+        except Exception as e:
+            print(f'Cannot parse binary message: {e}')
+
+    async def _save_cloud(self, connection, ws):
+        """Saves a serialized version of this report's deltas to the cloud."""
+        # Indicate that the save is starting.
+        progress_msg = protobuf.ForwardMsg()
+        progress_msg.upload_report_progress = 100
+        await ws.send_bytes(progress_msg.SerializeToString())
+
+        # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
+        report = connection.get_report_proto()
+        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
+        url = await self._cloud.upload_report(connection.id, report)
+
+        # # Pretend to upload something.
+        # await asyncio.sleep(3.0)
+        # url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
+
+        # Indicate that the save is done.
+        progress_msg.Clear()
+        progress_msg.report_uploaded = url
+        await ws.send_bytes(progress_msg.SerializeToString())
 
 def main():
     """

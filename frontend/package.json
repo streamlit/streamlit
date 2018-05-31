@@ -1,6 +1,6 @@
 {
   "name": "streamlit-client",
-  "version": "0.9.0",
+  "version": "0.10.1",
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0-beta.3",
@@ -11,6 +11,7 @@
     "numeral": "^2.0.6",
     "protobufjs": "^6.8.6",
     "react": "^16.2.0",
+    "react-copy-to-clipboard": "^5.0.1",
     "react-dom": "^16.2.0",
     "react-json-view": "^1.16.1",
     "react-leaflet": "^1.9.1",
@@ -25,5 +26,12 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
-  }
+  },
+  "devDependencies": {
+    "eslint-config-airbnb": "^16.1.0",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-jsx-a11y": "^6.0.3",
+    "eslint-plugin-react": "^7.8.2"
+  },
+  "homepage": "./"
 }

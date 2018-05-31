@@ -79,6 +79,18 @@ Rerun:
 make init
 ```
 
+#### Testing The Static Saving
+
+Create a bundle with the static files.
+```
+make build
+```
+Test that the locally saved example works:
+```
+open http://localhost:3000/?id=example
+```
+Then load a page and click the save icon.
+
 ## Publishing to `PyPi`
 
 #### Write The Release notes
@@ -96,15 +108,23 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.9.0`.
+**Note:** The current version is `0.10.1`.
 
 Update the version in the following locations:
-  - `CONTRIBUTING.md` (*Right above where it says version number!*)
+  - `CONTRIBUTING.md` (*In two places! Above and below*)
   - `lib/setup.py`
   - `frontend/package.json`
   - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
     - `lib/streamlit/config/config.yaml` : set the `proxy.port`
-    - `frontend/src/WebClient.js` : set the line containing `ws://localhost/...`
+    - `frontend/src/WebClient.js` : set the `PROXY_PORT`.
+
+Run `make init` so things like `package-lock.json` get updated.
+
+#### Test that Static Loading works
+
+```
+open http://localhost:3000/?id=example
+```
 
 #### Build Streamlit and Test It Without Node
 
@@ -123,19 +143,29 @@ python examples/uber.py
 ```
 Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
 
-If everything works, then revert to development mode by typing:
+If everything works and you want to go back to coding, then revert to
+development mode by typing:
 ```
 make develop
 ```
 
 #### Build the Wheel and Test That
 
-This assumes that the current working directory is called `streamlit` and you have a parallel folder called `streamlit-staging` to test this version.
+First, make sure you're not in development mode:
+
+```
+make install
+```
+
+Now go through the following steps:
+
+(Note: this assumes that the current working directory is called `streamlit` and
+you have a parallel folder called `streamlit-staging` to test this version.)
 
 ```
 make wheel
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.9.0-py3-none-any.whl
+pip install --upgrade ../streamlit/lib/dist/streamlit-0.10.1-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
@@ -144,7 +174,7 @@ python -m streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 ```
-Also, if possible, test the wheel in Linux.
+Also, if possible, test the wheel in Mac and Linux.
 
 #### Distribute the Wheel
 ```

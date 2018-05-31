@@ -23,14 +23,22 @@ import Map from './elements/Map';
 import Table from './elements/Table';
 
 // Other local imports.
-import PersistentWebsocket from './PersistentWebsocket';
-import { StreamlitMsg, Text as TextProto }
-  from './protobuf';
+import MainMenu from './MainMenu';
+import ConnectionStatus from './ConnectionStatus';
+import WebsocketConnection from './WebsocketConnection';
+import StaticConnection from './StaticConnection';
+import UploadDialog from './UploadDialog';
+
+import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
-import { toImmutableProto, dispatchOneOf }
-  from './immutableProto';
+import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
+
+/**
+ * Port used to connect to the proxy server.
+ */
+const PROXY_PORT = 5010;
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -39,6 +47,7 @@ class WebClient extends PureComponent {
     // Initially the state reflects that no data has been received.
     this.state = {
       reportId: '<null>',
+      reportName: null,
       elements: fromJS([{
         type: 'text',
         text: {
@@ -51,9 +60,35 @@ class WebClient extends PureComponent {
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
+    this.closeUploadDialog = this.closeUploadDialog.bind(this);
+    this.setConnectionState = this.setConnectionState.bind(this);
+    this.setReportName = this.setReportName.bind(this);
   }
 
   componentDidMount() {
+    const { query } = url.parse(window.location.href, true);
+    if (query.name !== undefined) {
+        const reportName = query.name;
+        this.setReportName(reportName);
+        let uri = `ws://localhost:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        this.connection = new WebsocketConnection({
+          uri: uri,
+          onMessage: this.handleMessage,
+          setConnectionState: this.setConnectionState,
+        });
+    } else if (query.id !== undefined) {
+        this.connection = new StaticConnection({
+          reportId: query.id,
+          onMessage: this.handleMessage,
+          setConnectionState: this.setConnectionState,
+          setReportName: this.setReportName,
+        });
+    } else {
+      this.showSingleTextElement(
+        'URL must contain either a report name or an ID.',
+        TextProto.Format.ERROR
+      );
+    }
   }
 
   componentWillUnmount() {
@@ -64,7 +99,7 @@ class WebClient extends PureComponent {
    */
   handleReconnect() {
     // Initially the state reflects that no data has been received.
-    this.resetState('Established connection.', TextProto.Format.WARNING);
+    this.showSingleTextElement('Established connection.', TextProto.Format.WARNING);
   }
 
   /**
@@ -74,7 +109,7 @@ class WebClient extends PureComponent {
    * msg    - The message to display
    * format - One of the accepted formats from Text.proto.
    */
-  resetState(msg, format) {
+  showSingleTextElement(msg, format) {
     this.setState({
       reportId: '<null>',
       elements: fromJS([{
@@ -90,25 +125,46 @@ class WebClient extends PureComponent {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(msgArray) {
-    const msgProto = StreamlitMsg.decode(msgArray);
-    const msg = toImmutableProto(StreamlitMsg, msgProto);
+  handleMessage(msgProto) {
+    const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newReport: (id) => {
-        this.setState(() => ({reportId: id}))
+        this.setState({reportId: id});
         setTimeout(() => {
-          if (id === this.state.reportId)
+          if (id === this.state.reportId) {
             this.clearOldElements();
+          }
         }, 2000);
-        // this.resetState(`Receiving data for report ${id}`,
-        //   TextProto.Format.INFO);
       },
       deltaList: (deltaList) => {
         this.applyDeltas(deltaList);
       },
       reportFinished: () => {
         this.clearOldElements();
-      }
+      },
+      uploadReportProgress: (progress) => {
+        this.setState({
+          uploadProgress: progress,
+          uploadUrl: undefined
+        });
+      },
+      reportUploaded: (url) => {
+        console.log('Copied text to clipboard', url);
+        this.setState({
+          uploadProgress: undefined,
+          uploadUrl: url,
+        });
+      },
+    });
+  }
+
+  /**
+   * Closes the upload dialog if it's open.
+   */
+  closeUploadDialog() {
+    this.setState({
+      uploadProgress: undefined,
+      uploadUrl: undefined,
     });
   }
 
@@ -116,10 +172,6 @@ class WebClient extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDeltas(deltaList) {
-    // // debug - begin
-    // console.log(`applying deltas to report id ${this.state.reportId}`)
-    // // debug - end
-
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
       elements: deltaList.get('deltas').reduce((elements, delta) => (
@@ -150,35 +202,45 @@ class WebClient extends PureComponent {
     }));
   }
 
-  render() {
-    // Compute the websocket URI based on the pathname.
-    // const reportName =
-    //   decodeURIComponent(window.location.pathname).split( '/' )[2];
-    const { query } = url.parse(window.location.href, true);
-    const reportName = query.name;
+  sendBackMsg(command) {
+    if (!this.connection) return;
+    const msg = {command: BackMsg.Command[command]};
+    this.connection.sendToProxy(msg);
+  }
+
+  /**
+   * Sets the connection state to given value defined in ConnectionStatus.js.
+   * errMsg is an optional error message to display on the screen.
+   */
+  setConnectionState({connectionState, errMsg}) {
+    this.setState({connectionState: connectionState});
+    if (errMsg)
+      this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
+  }
+
+  /**
+   * Sets the reportName in state and upates the title bar.
+   */
+  setReportName(reportName) {
     document.title = `${reportName} (Streamlit)`
-    let uri = `ws://localhost:5009/stream/${encodeURIComponent(reportName)}`
+    this.setState({reportName});
+  }
 
-    // const get_report = /nb\/(.*)/.exec(window.location.pathname)
-    // if (get_report)
-    //   uri = `ws://localhost:8554/api/get/${get_report[1]}`
-    // else if (window.location.pathname === '/x')
-    //   uri = 'ws://localhost:8554/api/getx/'
-    // // console.log(`For path=${window.location.pathname} uri=${uri}`)
-
+  render() {
     // Return the tree
     return (
       <div>
         <header>
-          <a className="brand" href="/">Streamlit</a>
-          <div className="connection-status">
-            <PersistentWebsocket
-              uri={uri}
-              onReconnect={this.handleReconnect}
-              onMessage={this.handleMessage}
-              persist={false}
-            />
+          <div id="brand">
+            <a href="/">Streamlit</a>
           </div>
+          <ConnectionStatus connectionState={this.state.connectionState} />
+          <MainMenu
+            isHelpPage={this.state.reportName === 'help'}
+            connectionState={this.state.connectionState}
+            helpButtonCallback={() => this.sendBackMsg('HELP')}
+            saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
+            />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
@@ -188,8 +250,14 @@ class WebClient extends PureComponent {
               </AutoSizer>
             </Col>
           </Row>
-        </Container>
 
+          <UploadDialog
+            progress={this.state.uploadProgress}
+            url={this.state.uploadUrl}
+            onClose={this.closeUploadDialog}
+          />
+
+        </Container>
       </div>
     );
   }
@@ -216,10 +284,11 @@ class WebClient extends PureComponent {
     }).push(
       <div style={{width}} className="footer"/>
     ).flatMap((element, indx) => {
-      if (element)
-        return [<div className="element-container" key={indx}>{element}</div>]
-      else
-        return []
+      if (element) {
+        return [<div className="element-container" key={indx}>{element}</div>];
+      } else {
+        return [];
+      }
     })
   }
 }

@@ -16,7 +16,9 @@ from Element_pb2 import Element
 from Delta_pb2 import Delta, DeltaList
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
 from Text_pb2 import Text
-from StreamlitMsg_pb2 import StreamlitMsg
+from ForwardMsg_pb2 import ForwardMsg
+from BackMsg_pb2 import BackMsg
+from Report_pb2 import Report
 
 # Clear out all temporary variables.
 sys.path.pop()

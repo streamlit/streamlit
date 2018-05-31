@@ -7,3 +7,5 @@ aiohttp
 # motor
 tzlocal
 docutils
+# google-cloud-storage
+aiobotocore

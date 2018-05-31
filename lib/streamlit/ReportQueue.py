@@ -54,6 +54,10 @@ class ReportQueue:
 
         return deltas
 
+    def write_to_report(self, report):
+        """Copies this queue's deltas into the report protobuf."""
+        report.delta_list.deltas.extend(self._deltas)
+
     async def flush_queue(self, ws):
         """Sends the deltas across the websocket in a DeltaList, clearing the
         queue afterwards."""
@@ -63,14 +67,14 @@ class ReportQueue:
         # Send any remaining deltas.
         deltas = self.get_deltas()
         if deltas:
-            msg = protobuf.StreamlitMsg()
+            msg = protobuf.ForwardMsg()
             msg.delta_list.deltas.extend(deltas)
             await ws.send_bytes(msg.SerializeToString())
 
         # Send report_finished method if this queue is closed.
         if self._state == QueueState.CLOSING:
             self._state = QueueState.CLOSED
-            msg = protobuf.StreamlitMsg()
+            msg = protobuf.ForwardMsg()
             msg.report_finished = True
             await ws.send_bytes(msg.SerializeToString())
 

@@ -63,3 +63,10 @@ class ProxyConnection:
         """Removes the client queue. Returns True iff the client queue list is
         empty."""
         self._client_queues.remove(queue)
+
+    def get_report_proto(self):
+        """Return a byte array encoding all the deltas in this report."""
+        report = protobuf.Report()
+        report.name = self.name
+        self._master_queue.write_to_report(report)
+        return report

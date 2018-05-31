@@ -4,6 +4,7 @@
 cloud:
   server: localhost
   port: 8554
+  staticSaveRoot: people/koen/streamlit
 
 # Configuration for the local server.
 local:
@@ -15,10 +16,10 @@ local:
 # Configuration of the proxy server
 proxy:
   server: localhost
-  port: 5009
+  port: 5010
 
   # How many seconds the proxy waits for the connection before timing out.
-  waitForConnectionSecs: 10.0
+  waitForConnectionSecs: 10.1
 
   # Whether to use the node server or not.
   # useNode: False

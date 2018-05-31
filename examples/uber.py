@@ -28,6 +28,6 @@ def display_uber_data(hour):
     io.write(data)
 
 if __name__ == '__main__':
-    hour = 18
+    hour = 0
     assert 0 <= hour < 24
     display_uber_data(hour)

@@ -4,11 +4,15 @@
 #
 #    pip-compile --output-file lib/requirements.txt lib/requirements.in
 #
-aiohttp==3.2.1
-async-timeout==3.0.0
+aiobotocore==0.8.0
+aiohttp==3.1.3
+async-timeout==2.0.1
 attrs==18.1.0
+awscli==1.15.12           # via aiobotocore
+botocore==1.10.12
 certifi==2018.4.16        # via requests
 chardet==3.0.4
+colorama==0.3.7           # via awscli
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
 flake8-docstrings==1.3.0
@@ -16,19 +20,23 @@ flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0
 idna-ssl==1.0.1
 idna==2.6
+jmespath==0.9.3
 mccabe==0.6.1             # via flake8
 more-itertools==4.1.0     # via pytest
 multidict==4.3.1
 numpy==1.14.3
+packaging==17.1
 pandas==0.23.0
 pillow==5.1.0
 pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
 protobuf==3.5.2.post1
 py==1.5.3                 # via pytest
+pyasn1==0.4.2             # via rsa
 pycodestyle==2.3.1        # via flake8
 pydocstyle==2.1.1         # via flake8-docstrings
 pyflakes==1.6.0           # via flake8
+pyparsing==2.2.0
 pytest-cov==2.5.1
 pytest==3.5.1
 python-dateutil==2.7.3
@@ -36,6 +44,8 @@ pytz==2018.4
 pyyaml==3.12
 requests-toolbelt==0.8.0  # via twine
 requests==2.18.4          # via requests-toolbelt, twine
+rsa==3.4.2                # via awscli
+s3transfer==0.1.13        # via awscli
 six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.0.2
@@ -43,4 +53,5 @@ tqdm==4.23.3              # via twine
 twine==1.11.0
 tzlocal==1.5.1
 urllib3==1.22             # via requests
+wrapt==1.10.11
 yarl==1.2.4

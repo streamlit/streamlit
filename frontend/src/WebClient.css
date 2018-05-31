@@ -7,6 +7,10 @@
  * - Accent red: #F63366
  * - Accent yellow: #FFFD80
  * - Accent blue: #2979E9
+ *
+ * Text sizes:
+ * - Normal: 1rem
+ * - Small: 0.8rem;
  */
 body {
   font-family: 'IBM Plex Sans', sans-serif;
@@ -82,30 +86,68 @@ header {
   border-top: 2px solid #FFFD80;
   border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
   position: fixed;
-  height: 2px;
   top: 0;
   left: 0;
   right: 0;
+  height: 3.5rem;
+  padding: 0 1rem;
   z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
-a.brand {
+#brand {
   font-weight: 700;
-  position: absolute;
-  top: 0.5rem;
-  left: 1rem;
   line-height: 1.5;
+  flex: 1 0;
+}
+
+#brand a {
   color: #101620;
 }
 
-a.brand:hover {
+#brand a:hover {
   color: #F63366;
 }
 
-.connection-status {
-  position: absolute;
-  top: 0.5rem;
-  right: 1rem;
+button:focus {
+  outline: 5px auto #F63366;
+}
+
+.btn {
+  border-radius: 0.75rem;
+}
+
+.btn-primary {
+  background-color: transparent;
+  border-color: #E6E9EF;
+  color: #101620;
+}
+
+.btn:hover {
+  background-color: transparent;
+  color: #F63366;
+  border-color: #F63366;
+}
+
+/* This is how bootstrap sets colors on secondary buttons.
+ * Need to find a better way to override colors. Install SASS? */
+.btn-secondary:not([disabled]):not(.disabled):active,
+.btn-secondary:not([disabled]):not(.disabled).active {
+  background-color: #F63366;
+  color: #FFFFFF;
+  border-color: #F63366;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #101620;
+  border-color: transparent;
+}
+
+.dropdown-menu button:active {
+  background-color: #F63366;
 }
 
 .streamlit-container {
@@ -127,6 +169,11 @@ a.brand:hover {
 
 .progress-bar {
   background-color: #2979E9;
+}
+
+.icon {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 @media (max-width: 768px) {
