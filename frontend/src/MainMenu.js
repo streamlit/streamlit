@@ -70,6 +70,7 @@ class MainMenu extends PureComponent {
 
         <DropdownMenu right>
 
+          {/*
           <DropdownItem
               disabled={disabledItems.save}
               onClick={() => this.handleSaveButtonClicked()}>
@@ -77,6 +78,7 @@ class MainMenu extends PureComponent {
           </DropdownItem>
 
           <DropdownItem divider/>
+          */}
 
           <DropdownItem
               disabled={disabledItems.help}
