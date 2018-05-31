@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Loads the configuration data."""
 
 import collections

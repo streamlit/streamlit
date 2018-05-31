@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 from .caseconverters import to_snake_case
 from .ChartComponent import ChartComponent
 
@@ -68,7 +70,7 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
-class ForEachColumn:
+class ForEachColumn(object):
     """
     This is used to include a certain component as many times as there are
     columns in the dataset.
@@ -76,7 +78,7 @@ class ForEachColumn:
     def __init__(self, comp):
         self.comp = comp
 
-class ColumnAtIndex:
+class ColumnAtIndex(object):
     """
     This is used to specify that a certain property should point to whichever
     column is at this index.
@@ -84,7 +86,7 @@ class ColumnAtIndex:
     def __init__(self, index):
         self.index = index
 
-class ColumnAtCurrentIndex:
+class ColumnAtCurrentIndex(object):
     """
     This is used within a ForEachColumn to specify that a certain property
     should point to the column that the ForEachColumn is cycling through right
@@ -92,14 +94,14 @@ class ColumnAtCurrentIndex:
     """
     pass
 
-class IndexColumn:
+class IndexColumn(object):
     """
     This is used to specify that a certain property should point to the index of
     the dataframe.
     """
     pass
 
-class ValueCycler:
+class ValueCycler(object):
     """
     This is used within a ForEachColumn to specify values that should be cycled
     through, as we iterate through the columns.
@@ -115,7 +117,7 @@ class ColorCycler(ValueCycler):
     Cycles some pretty colors.
     """
     def __init__(self):
-        super().__init__(
+        super(ColorCycler, self).__init__(
             '#e41a1c',
             '#377eb8',
             '#4daf4a',
@@ -145,37 +147,37 @@ BASIC_REQUIRED_COMPONENTS = (
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('line', {
+        BASIC_REQUIRED_COMPONENTS,
+        (ForEachColumn(('line', {
             'data_key': ColumnAtCurrentIndex(),
             'dot': 'false',
             'stroke': ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'area_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('area', {
+        BASIC_REQUIRED_COMPONENTS +
+        (ForEachColumn(('area', {
             'data_key': ColumnAtCurrentIndex(),
             'fill': ColorCycler(),
             'stroke': ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'bar_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('bar', {
+        BASIC_REQUIRED_COMPONENTS +
+        (ForEachColumn(('bar', {
             'data_key': ColumnAtCurrentIndex(),
             'fill': ColorCycler(),
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'composed_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
+        BASIC_REQUIRED_COMPONENTS,
     ),
 }

@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """This package contains all functions which the user can use to
 create new elements in a Report."""
 

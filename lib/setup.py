@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 import setuptools
 
 try: # for pip >= 10

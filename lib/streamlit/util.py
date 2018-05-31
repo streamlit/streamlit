@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """A bunch of useful utilites."""
 
 # flake8: noqa

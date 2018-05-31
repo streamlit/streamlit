@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 import unittest
 
 

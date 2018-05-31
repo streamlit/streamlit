@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 #!./streamlit_run
 
 """Example of everything that's possible in streamlit."""

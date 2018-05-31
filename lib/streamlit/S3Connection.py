@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Handles a connecton to an S3 bucket to send Report data."""
 
 # from boto3.s3.transfer import S3Transfer
@@ -11,7 +13,7 @@ import sys
 import streamlit
 from streamlit import config
 
-class S3Connection:
+class S3Connection(object):
     """Handles a connecton to an S3 bucket to send Report data."""
 
     def __init__(self):

@@ -4,6 +4,7 @@ Pillow!=5.1.0
 protobuf
 PyYAML
 docutils
+future-fstrings
 pandas
 protobuf
 tzlocal

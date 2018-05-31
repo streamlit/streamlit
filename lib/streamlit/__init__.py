@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 # Defe
 import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version

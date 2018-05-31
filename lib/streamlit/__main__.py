@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """This is a script which is run when the streamlit package is executed."""
 
 import sys

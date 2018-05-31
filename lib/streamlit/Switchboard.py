@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Package for the Switchboard class, which contains and manages
 a set of ReportQueues."""
 
@@ -9,7 +11,7 @@ from streamlit.config import get_config as get_shared_config
 from streamlit.ReportQueue import ReportQueue
 from streamlit.DeltaGenerator import DeltaGenerator
 
-class Switchboard:
+class Switchboard(object):
     """Contains a set of ReportQueues and manages thier incoming, outgoing
     connections."""
 

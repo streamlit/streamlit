@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 import re
 
 def to_upper_camel_case(snake_case_str):

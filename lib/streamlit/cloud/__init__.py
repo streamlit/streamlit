@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 import glob
 import os
 import shutil
@@ -28,7 +30,7 @@ def upload_s3(s3, files):
         s3.put_object(Body=open(filename,'rb').read(), Bucket='streamlit-test9', Key=location, ACL='public-read')
         print(filename)
 
-class Cloud:
+class Cloud(object):
     def __init__(self):
         #self._uuid_user = uuid_user()
         # self._client = storage.Client()

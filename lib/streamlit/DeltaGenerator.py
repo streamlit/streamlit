@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import io
@@ -54,7 +56,7 @@ def _create_element(method):
     wrapped_method.__doc__ = method.__doc__
     return wrapped_method
 
-class DeltaGenerator:
+class DeltaGenerator(object):
     """
     Creates delta messages. If id is set to none, then an id is created for each
     message and a new Generator with that id is created."

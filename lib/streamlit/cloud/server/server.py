@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """This is a webserver for the streamlit project."""
 
 import sys

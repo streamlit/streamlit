@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Represents the streamlit.io cloud server."""
 
 from aiohttp import web, WSMsgType
@@ -6,7 +8,7 @@ from streamlit.shared.config import get_config as get_shared_config
 from streamlit.shared.Switchboard import Switchboard
 import asyncio
 
-class Server:
+class Server(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):

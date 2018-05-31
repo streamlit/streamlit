@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 #!./streamlit_run
 
 """Running this creates a "development environment" in the background

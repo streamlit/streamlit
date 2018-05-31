@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """A Report Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
@@ -40,7 +42,7 @@ def _assert_singleton_async(method):
     inner.__doc__ = method.__doc__
     return inner
 
-class Connection:
+class Connection(object):
     """This encapsulates a single connection the to the server for a single
     report."""
 

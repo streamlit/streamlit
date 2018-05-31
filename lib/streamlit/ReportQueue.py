@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 
 """
 A queue of deltas associated with a particular Report.
@@ -20,7 +22,7 @@ class QueueState(enum.Enum):
     # Indicates that the queue is now closed.
     CLOSED = 2
 
-class ReportQueue:
+class ReportQueue(object):
     """Accumulates a bunch of deltas."""
 
     def __init__(self):

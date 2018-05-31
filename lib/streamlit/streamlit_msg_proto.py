@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 import aiohttp
 from streamlit import protobuf
 

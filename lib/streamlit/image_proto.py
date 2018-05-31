@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """
 Converts a numpy image array and list of caption to protobuf.ImageList.
 """

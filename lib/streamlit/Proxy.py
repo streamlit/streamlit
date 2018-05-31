@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """A proxy server between the Streamlit libs and web client.
 
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
@@ -41,7 +43,7 @@ def _stop_proxy_on_exception(coroutine):
     wrapped_coroutine.__doc__ = coroutine.__doc__
     return wrapped_coroutine
 
-class Proxy:
+class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):

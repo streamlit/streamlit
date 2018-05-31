@@ -1,6 +1,8 @@
+# -*- coding: future_fstrings -*-
+
 from .caseconverters import to_upper_camel_case, to_lower_camel_case
 
-class ChartComponent:
+class ChartComponent(object):
     def __init__(self, type, props):
         """Constructor.
 

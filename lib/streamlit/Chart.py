@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """A Python wrapper around ReChart charts.
 
 See: recharts.org
@@ -69,7 +71,7 @@ current_module = __import__(__name__)
 # Column name used to designate the dataframe index.
 INDEX_COLUMN_DESIGNATOR = '::index'
 
-class Chart:
+class Chart(object):
     def __init__(self, data, type, width=0, height=0, **kwargs):
         """Constructs a chart object.
 

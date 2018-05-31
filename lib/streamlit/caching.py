@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """A library of useful utilities."""
 
 import dis

@@ -1,10 +1,12 @@
+# -*- coding: future_fstrings -*-
+
 """Stores information shared by both local_connections and
 client_connections related to a particular report."""
 
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 
-class ProxyConnection:
+class ProxyConnection(object):
     """Stores information shared by both local_connections and
     client_connections related to a particular report."""
 

@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """
 Constructs the protobuf module.
 

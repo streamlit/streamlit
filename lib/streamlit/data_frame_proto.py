@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
 
 import numpy as np
