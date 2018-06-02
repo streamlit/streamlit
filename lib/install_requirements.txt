@@ -6,6 +6,7 @@
 #
 docutils==0.14
 future-fstrings==0.4.3
+future==0.16.0
 numpy==1.14.4             # via pandas
 pandas==0.23.0
 pillow==5.0.0

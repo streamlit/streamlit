@@ -10,7 +10,7 @@ import yaml
 import threading
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
-__CACHE = {}
+__CACHE = dict() # use insead of {} for 2/3 compatibility
 
 def __cache(path, serialize, deserialize):
     """Performs two levels of caching:

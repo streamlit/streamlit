@@ -86,7 +86,7 @@ class Cloud(object):
         #     blobs[filename] = blob
         # self._blobs = blobs
 
-        stuffs = {}
+        stuffs = dict
         for f in upload:
             path  = os.path.join(self._local_id, self._ts, f)
             filename = os.path.join(self._static_dir, f)

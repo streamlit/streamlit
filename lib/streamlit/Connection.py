@@ -3,6 +3,16 @@
 """A Report Object which exposes a print method which can be used to
 write objects out to a wbpage."""
 
+# Python 2/3 compatibility
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import range, map, str, dict, object, zip, int
+from io import open
+from future.standard_library import install_aliases
+install_aliases()
+
 from aiohttp import web, ClientSession
 from aiohttp.client_exceptions import ClientConnectorError
 

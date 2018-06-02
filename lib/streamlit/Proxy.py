@@ -15,6 +15,16 @@ To ensure the proxy closes, a short timeout is launched for each connection
 which closes the proxy if no connections were established.
 """
 
+# Python 2/3 compatibility
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import range, map, str, dict, object, zip, int
+from io import open
+from future.standard_library import install_aliases
+install_aliases()
+
 from aiohttp import web, WSMsgType
 import asyncio
 import os
@@ -72,10 +82,10 @@ class Proxy(object):
         # This table from names to ProxyConnections stores all the information
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
-        self._connections = {}
+        self._connections = dict() # use insead of {} for 2/3 compatibility
 
         # Initialized things that the proxy will need to do cloud things.
-        self._cloud = S3Connection()
+        self._cloud = None # S3Connection()
 
     def run_app(self):
         """Runs the web app."""

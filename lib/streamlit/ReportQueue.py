@@ -102,7 +102,7 @@ class ReportQueue(object):
         assert self._state != QueueState.CLOSED, \
             'Cannot empty a closed queue.'
         self._deltas = []
-        self._id_map = {}
+        self._id_map = dict() # use insead of {} for 2/3 compatibility
 
     @staticmethod
     def compose(delta1, delta2):
