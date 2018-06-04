@@ -6,6 +6,7 @@
 #
 atomicwrites==1.1.5       # via pytest
 attrs==18.1.0             # via pytest
+backports-abc==0.5
 certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
 configparser==3.5.0       # via flake8, pydocstyle
@@ -18,6 +19,7 @@ flake8==3.5.0
 funcsigs==1.0.2           # via pytest
 future-fstrings==0.4.3
 future==0.16.0
+futures==3.2.0
 idna==2.6                 # via requests
 mccabe==0.6.1             # via flake8
 more-itertools==4.2.0     # via pytest
@@ -38,10 +40,12 @@ pytz==2018.4
 pyyaml==3.12
 requests-toolbelt==0.8.0  # via twine
 requests==2.18.4          # via requests-toolbelt, twine
+singledispatch==3.4.0.3
 six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.1.0
 tokenize-rt==2.0.1
+tornado==5.0.2
 tqdm==4.23.4              # via twine
 twine==1.11.0
 tzlocal==1.5.1

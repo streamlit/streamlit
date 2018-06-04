@@ -3,7 +3,7 @@
 """Handles a connecton to an S3 bucket to send Report data."""
 
 # from boto3.s3.transfer import S3Transfer
-import aiobotocore
+# import aiobotocore
 import glob
 import hashlib
 import mimetypes
@@ -37,6 +37,7 @@ class S3Connection(object):
         assert found_index, "Cannot find static files. Run 'make build'."
         self._release_hash = f'{streamlit.__version__}-{md5.digest().hex()}'
 
+    '''
     async def upload_report(self, report_id, report):
         """Saves this report to our s3 bucket."""
         session = aiobotocore.get_session()
@@ -82,6 +83,7 @@ class S3Connection(object):
                 return True
         # print('Did not find the key.')
         return False
+    '''
 
     def _s3_key(self, relative_path):
         """Converts a path into an s3 key."""

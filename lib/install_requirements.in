@@ -8,4 +8,5 @@ future
 future-fstrings
 pandas
 protobuf
+tornado
 tzlocal

@@ -4,9 +4,11 @@
 #
 #    pip-compile --output-file lib/install_requirements.txt lib/install_requirements.in
 #
+backports-abc==0.5        # via tornado
 docutils==0.14
 future-fstrings==0.4.3
 future==0.16.0
+futures==3.2.0            # via tornado
 numpy==1.14.4             # via pandas
 pandas==0.23.0
 pillow==5.0.0
@@ -14,6 +16,8 @@ protobuf==3.5.2.post1
 python-dateutil==2.7.3    # via pandas
 pytz==2018.4              # via pandas, tzlocal
 pyyaml==3.12
-six==1.11.0               # via protobuf, python-dateutil
+singledispatch==3.4.0.3   # via tornado
+six==1.11.0               # via protobuf, python-dateutil, singledispatch
 tokenize-rt==2.0.1        # via future-fstrings
+tornado==5.0.2
 tzlocal==1.5.1

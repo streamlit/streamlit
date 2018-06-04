@@ -11,6 +11,7 @@ import enum
 
 from streamlit import data_frame_proto
 from streamlit import protobuf
+from tornado import gen
 
 class QueueState(enum.Enum):
     # Indicates that the queue is accepting deltas.
@@ -60,7 +61,8 @@ class ReportQueue(object):
         """Copies this queue's deltas into the report protobuf."""
         report.delta_list.deltas.extend(self._deltas)
 
-    async def flush_queue(self, ws):
+    @gen.coroutine
+    def flush_queue(self, ws):
         """Sends the deltas across the websocket in a DeltaList, clearing the
         queue afterwards."""
         assert self._state != QueueState.CLOSED, \
@@ -71,14 +73,14 @@ class ReportQueue(object):
         if deltas:
             msg = protobuf.ForwardMsg()
             msg.delta_list.deltas.extend(deltas)
-            await ws.send_bytes(msg.SerializeToString())
+            yield ws.send_bytes(msg.SerializeToString())
 
         # Send report_finished method if this queue is closed.
         if self._state == QueueState.CLOSING:
             self._state = QueueState.CLOSED
             msg = protobuf.ForwardMsg()
             msg.report_finished = True
-            await ws.send_bytes(msg.SerializeToString())
+            yield ws.send_bytes(msg.SerializeToString())
 
     def clone(self):
         """Returns a clone of this ReportQueue."""

@@ -25,12 +25,9 @@ from io import open
 from future.standard_library import install_aliases
 install_aliases()
 
-from aiohttp import web, WSMsgType
-import asyncio
 import os
 import urllib
 import webbrowser
-import secrets
 import concurrent.futures
 
 from streamlit import config
@@ -39,13 +36,22 @@ from streamlit.ProxyConnection import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
 from streamlit.S3Connection import S3Connection
+from streamlit.logger import get_logger
+
+from tornado import gen, web
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+
+LOGGER = get_logger()
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
     propagates out of the inner coroutine."""
-    async def wrapped_coroutine(proxy, *args, **kwargs):
+    @gen.coroutine
+    def wrapped_coroutine(proxy, *args, **kwargs):
         try:
-            return await coroutine(proxy, *args, **kwargs)
+            a = yield coroutine(proxy, *args, **kwargs)
+            raise gen.Return(a)
         except:
             proxy.stop()
             raise
@@ -57,24 +63,38 @@ class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):
-        # Set up the server.
-        self._app = web.Application()
-        self._app.router.add_routes([
-            # Local connection to stream a new report.
-            web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
+        routes = []
+        '''
+        # Local connection to stream a new report.
+        web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
 
-            # Client connection (serves up index.html)
-            web.get('/', self._client_html_handler),
+        # Client connection (serves up index.html)
+        web.get('/', self._client_html_handler),
 
-            # Outgoing endpoint to get the latest report.
-            web.get('/stream/{report_name}', self._client_ws_handler)
-        ])
+        # Outgoing endpoint to get the latest report.
+        web.get('/stream/{report_name}', self._client_ws_handler),
+        '''
 
         # If we're not using the node development server, then the proxy
         # will serve up the development pages.
         if not config.get_option('proxy.useNode'):
             static_path = config.get_path('proxy.staticRoot')
-            self._app.router.add_static('/', path=static_path)
+            LOGGER.info(f'Serving static content from {static_path}')
+
+            routes.extend([
+                (r"/()$", web.StaticFileHandler, {'path': f'{static_path}/index.html'}),
+                (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
+            ])
+        else:
+            LOGGER.info('useNode == True, not serving static content from python.')
+
+        self._app = web.Application(routes)
+
+        # Attach an http server
+        port = config.get_option('proxy.port')
+        http_server = HTTPServer(self._app)
+        http_server.listen(port)
+        LOGGER.info('Proxy http server started on port {}'.format(port))
 
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
@@ -89,8 +109,11 @@ class Proxy(object):
 
     def run_app(self):
         """Runs the web app."""
+        '''
         port = config.get_option('proxy.port')
         web.run_app(self._app, port=port)
+        '''
+        IOLoop.current().start()
 
     def stop(self):
         """Stops the proxy. Allowing all current handler to exit normally."""
@@ -98,6 +121,7 @@ class Proxy(object):
             asyncio.get_event_loop().stop()
         self._stopped = True
 
+    '''
     @_stop_proxy_on_exception
     async def _local_ws_handler(self, request):
         """Handles a connection to a "local" instance of Streamlit, i.e.
@@ -190,6 +214,7 @@ class Proxy(object):
         if connection != None:
             self._remove_client(connection, queue)
         return ws
+    '''
 
     def _lauch_web_client(self, name):
         """Launches a web browser to connect to the proxy to get the named
@@ -239,12 +264,14 @@ class Proxy(object):
         """Returns true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
+    '''
     async def _add_client(self, report_name, ws):
         """Adds a queue to the connection for the given report_name."""
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
         await new_report_msg(connection.id, ws)
         return (connection, queue)
+    '''
 
     def _remove_client(self, connection, queue):
         """Removes the queue from the connection, and closes the connection if
@@ -259,6 +286,7 @@ class Proxy(object):
         if not self._connections:
             self.stop()
 
+    '''
     async def _handle_backend_msg(self, payload, connection, ws):
         backend_msg = protobuf.BackMsg()
         try:
@@ -294,6 +322,7 @@ class Proxy(object):
         progress_msg.Clear()
         progress_msg.report_uploaded = url
         await ws.send_bytes(progress_msg.SerializeToString())
+    '''
 
 def main():
     """

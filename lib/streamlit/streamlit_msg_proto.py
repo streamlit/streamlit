@@ -10,11 +10,11 @@ from io import open
 from future.standard_library import install_aliases
 install_aliases()
 
-import aiohttp
-
 from streamlit import protobuf
+from tornado import gen
 
-async def new_report_msg(report_id, ws):
+@gen.coroutine
+def new_report_msg(report_id, ws):
     """
     Sends a message indicating a new report across the websocket wire.
 
@@ -29,8 +29,11 @@ async def new_report_msg(report_id, ws):
     """
     msg = protobuf.ForwardMsg()
     msg.new_report = str(report_id)
-    await ws.send_bytes(msg.SerializeToString())
+    yield ws.send_bytes(msg.SerializeToString())
 
+def streamlit_msg_iter(ws):
+    pass
+'''
 async def streamlit_msg_iter(ws):
     """Takes a websocket and yields a series of DeltaLists."""
     async for binary_msg in ws:
@@ -49,3 +52,4 @@ async def streamlit_msg_iter(ws):
                   ws.exception())
         else:
             print(f'Received incorrect message type {binary_msg.type.name}.')
+'''

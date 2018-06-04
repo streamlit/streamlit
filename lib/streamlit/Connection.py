@@ -13,10 +13,6 @@ from io import open
 from future.standard_library import install_aliases
 install_aliases()
 
-from aiohttp import web, ClientSession
-from aiohttp.client_exceptions import ClientConnectorError
-
-import asyncio
 import os
 import sys
 import threading
@@ -41,6 +37,7 @@ def _assert_singleton(method):
     inner.__doc__ = method.__doc__
     return inner
 
+'''
 def _assert_singleton_async(method):
     """Asserts that this coroutine is called on the singleton instance of
     Connection."""
@@ -51,6 +48,7 @@ def _assert_singleton_async(method):
     inner.__name__ = method.__name__
     inner.__doc__ = method.__doc__
     return inner
+'''
 
 class Connection(object):
     """This encapsulates a single connection the to the server for a single
@@ -75,8 +73,10 @@ class Connection(object):
         # Set to false when the connection should close.
         self._is_open = True
 
+        '''
         # This is the event loop to talk with the serverself.
         self._loop = asyncio.new_event_loop()
+        '''
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
@@ -113,8 +113,12 @@ class Connection(object):
         def cleanup_on_exit():
             current_thread.join()
             sys.excepthook = original_excepthook
+            '''
             self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
-        threading.Thread(target=cleanup_on_exit, daemon=False).start()
+            '''
+        t = threading.Thread(target=cleanup_on_exit)
+        t.daemon = False
+        t.start()
 
     @_assert_singleton
     def unregister(self):
@@ -147,18 +151,22 @@ class Connection(object):
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
-        self._loop.call_soon_threadsafe(self._queue, delta)
+        self._queue(delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
         """Opens a connection to the server in a separate thread. Returns
         the event loop for that thread."""
         def connection_thread():
+            '''
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
+            '''
             self.unregister()
-        threading.Thread(target=connection_thread, daemon=False).start()
-
+        t = threading.Thread(target=connection_thread)
+        t.daemon = False
+        t.start()
+    '''
     @_assert_singleton_async
     async def _attempt_connection(self):
         """Tries to establish a connection to the proxy (launching the
@@ -214,3 +222,4 @@ class Connection(object):
             await self._queue.flush_queue(ws)
             await asyncio.sleep(throttle_secs)
         await self._queue.flush_queue(ws)
+    '''
