@@ -25,6 +25,7 @@ from io import open
 from future.standard_library import install_aliases
 install_aliases()
 
+import json
 import os
 import urllib
 import webbrowser
@@ -43,6 +44,8 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
 LOGGER = get_logger()
+
+from tornado.websocket import WebSocketHandler
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -63,16 +66,16 @@ class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):
-        routes = []
+        routes = [
+            # Outgoing endpoint to get the latest report.
+            ('/stream/(.*)', ClientWebSocket),
+        ]
         '''
         # Local connection to stream a new report.
         web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
 
         # Client connection (serves up index.html)
         web.get('/', self._client_html_handler),
-
-        # Outgoing endpoint to get the latest report.
-        web.get('/stream/{report_name}', self._client_ws_handler),
         '''
 
         # If we're not using the node development server, then the proxy
@@ -167,19 +170,31 @@ class Proxy(object):
     async def _client_html_handler(self, request):
         static_root = config.get_path('proxy.staticRoot')
         return web.FileResponse(os.path.join(static_root, 'index.html'))
+    '''
 
-    @_stop_proxy_on_exception
-    async def _client_ws_handler(self, request):
-        """This is what the web client connects to."""
+class ClientWebSocket(WebSocketHandler):
+    """Websocket handler class which the web client connects to."""
+
+    def open(self, *args):
+        """Get and return websocket."""
+        report_name = args[0]
         # How long we wait between sending more data.
         throttle_secs = config.get_option('local.throttleSecs')
-
-        # Get the report name
-        report_name = request.match_info.get('report_name')
 
         # Manages our connection to the local client.
         connection, queue = None, None
 
+        LOGGER.info('Websocket opened')
+
+    def on_message(self, msg):
+        if type(msg) != unicode:
+            LOGGER.info('Not handling non unicode payload "{}"'.format(repr(msg)))
+            return
+        data = json.loads(msg)
+        payload = json.dumps(data)
+        self.write_message(payload, binary=False)
+        LOGGER.info('Sent payload "{}"'.format(payload))
+        '''
         try:
             # Establishe the websocket.
             ws = web.WebSocketResponse()
@@ -214,7 +229,7 @@ class Proxy(object):
         if connection != None:
             self._remove_client(connection, queue)
         return ws
-    '''
+        '''
 
     def _lauch_web_client(self, name):
         """Launches a web browser to connect to the proxy to get the named
