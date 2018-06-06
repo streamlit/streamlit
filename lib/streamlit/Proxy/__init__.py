@@ -38,6 +38,7 @@ from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.streamlit_msg_proto import streamlit_msg_iter
 from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
+from streamlit.Proxy.websocket import ClientWebSocket, LocalWebSocket
 
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
@@ -45,7 +46,6 @@ from tornado.ioloop import IOLoop
 
 LOGGER = get_logger()
 
-from tornado.websocket import WebSocketHandler
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator which stops the the proxy if an exception
@@ -69,11 +69,12 @@ class Proxy(object):
         routes = [
             # Outgoing endpoint to get the latest report.
             ('/stream/(.*)', ClientWebSocket),
+
+            # Local connection to stream a new report.
+            ('/new/(.*)/(.*)', LocalWebSocket),
+
         ]
         '''
-        # Local connection to stream a new report.
-        web.get('/new/{local_id}/{report_name}', self._local_ws_handler),
-
         # Client connection (serves up index.html)
         web.get('/', self._client_html_handler),
         '''
@@ -126,112 +127,12 @@ class Proxy(object):
 
     '''
     @_stop_proxy_on_exception
-    async def _local_ws_handler(self, request):
-        """Handles a connection to a "local" instance of Streamlit, i.e.
-        one producing deltas to display on the client."""
-        # Parse out the control information.
-        local_id = request.match_info.get('local_id')
-        report_name = request.match_info.get('report_name')
-        report_name = urllib.parse.unquote_plus(report_name)
-
-        # This is the connection object we will register when we
-        connection = None
-
-        # Instantiate a new queue and stream data into it.
-        try:
-            # Establishe the websocket.
-            ws = web.WebSocketResponse()
-            await ws.prepare(request)
-
-            async for msg in streamlit_msg_iter(ws):
-                msg_type = msg.WhichOneof('type')
-                if msg_type == 'new_report':
-                    assert not connection, 'Cannot send `new_report` twice.'
-                    report_id = msg.new_report
-                    connection = ProxyConnection(report_id, report_name)
-                    self._register(connection)
-                elif msg_type == 'delta_list':
-                    assert connection, 'No `delta_list` before `new_report`.'
-                    for delta in msg.delta_list.deltas:
-                        connection.enqueue(delta)
-                else:
-                    raise RuntimeError(f'Cannot parse message type: {msg_type}')
-        except concurrent.futures.CancelledError:
-            pass
-
-        # Deregister this connection and see if we can close the proxy.
-        if connection:
-            connection.finished_local_connection()
-            self._try_to_deregister(connection)
-        self._potentially_stop_proxy()
-        return ws
-
-    @_stop_proxy_on_exception
     async def _client_html_handler(self, request):
         static_root = config.get_path('proxy.staticRoot')
         return web.FileResponse(os.path.join(static_root, 'index.html'))
     '''
 
-class ClientWebSocket(WebSocketHandler):
-    """Websocket handler class which the web client connects to."""
-
-    def open(self, *args):
-        """Get and return websocket."""
-        report_name = args[0]
-        # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
-
-        # Manages our connection to the local client.
-        connection, queue = None, None
-
-        LOGGER.info('Websocket opened')
-
-    def on_message(self, msg):
-        if type(msg) != unicode:
-            LOGGER.info('Not handling non unicode payload "{}"'.format(repr(msg)))
-            return
-        data = json.loads(msg)
-        payload = json.dumps(data)
-        self.write_message(payload, binary=False)
-        LOGGER.info('Sent payload "{}"'.format(payload))
-        '''
-        try:
-            # Establishe the websocket.
-            ws = web.WebSocketResponse()
-            await ws.prepare(request)
-
-            # Stream the data across.
-            connection, queue = await self._add_client(report_name, ws)
-            while True:
-                # See if the queue has changed.
-                if not self._is_registered(connection):
-                    self._remove_client(connection, queue)
-                    connection, queue = await self._add_client(report_name, ws)
-
-                # Send any new deltas across the wire.
-                if not queue.is_closed():
-                    await queue.flush_queue(ws)
-
-                # Watch for a CLOSE method as we sleep for throttle_secs.
-                try:
-                    msg = await ws.receive(timeout=throttle_secs)
-                    if msg.type == WSMsgType.BINARY:
-                        await self._handle_backend_msg(msg.data, connection, ws)
-                    elif msg.type == WSMsgType.CLOSE:
-                        break
-                    else:
-                        print('Unknown message type:', msg.type)
-                except asyncio.TimeoutError:
-                    pass
-        except concurrent.futures.CancelledError:
-            pass
-
-        if connection != None:
-            self._remove_client(connection, queue)
-        return ws
-        '''
-
-    def _lauch_web_client(self, name):
+    def _launch_web_client(self, name):
         """Launches a web browser to connect to the proxy to get the named
         report.
 
@@ -329,9 +230,9 @@ class ClientWebSocket(WebSocketHandler):
         print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
         url = await self._cloud.upload_report(connection.id, report)
 
-        # # Pretend to upload something.
-        # await asyncio.sleep(3.0)
-        # url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
+        # Pretend to upload something.
+        await asyncio.sleep(3.0)
+        url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
 
         # Indicate that the save is done.
         progress_msg.Clear()
@@ -339,14 +240,3 @@ class ClientWebSocket(WebSocketHandler):
         await ws.send_bytes(progress_msg.SerializeToString())
     '''
 
-def main():
-    """
-    Creates a proxy server and launches the browser to connect to it.
-    The proxy server will close when the browswer connection closes (or if
-    it times out waiting for the browser connection.)
-    """
-    proxy_server = Proxy()
-    proxy_server.run_app()
-
-if __name__ == '__main__':
-    main()
