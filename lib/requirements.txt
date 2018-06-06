@@ -9,6 +9,7 @@ attrs==18.1.0             # via pytest
 backports-abc==0.5
 certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
+click==6.7
 configparser==3.5.0       # via flake8, pydocstyle
 coverage==4.5.1           # via pytest-cov
 docutils==0.14

@@ -5,6 +5,7 @@
 #    pip-compile --output-file lib/install_requirements.txt lib/install_requirements.in
 #
 backports-abc==0.5        # via tornado
+click==6.7
 docutils==0.14
 future-fstrings==0.4.3
 future==0.16.0

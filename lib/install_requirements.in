@@ -3,6 +3,7 @@ pandas
 Pillow!=5.1.0
 protobuf
 PyYAML
+click
 docutils
 future
 future-fstrings

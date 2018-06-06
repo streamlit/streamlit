@@ -2,10 +2,23 @@
 
 """This is a script which is run when the streamlit package is executed."""
 
+# Python 2/3 compatibility
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import range, map, str, dict, object, zip, int
+from io import open
+from future.standard_library import install_aliases
+install_aliases()
+
 import sys
 import textwrap
+
+import click
+
 import streamlit
 import streamlit.caching
+import streamlit.logger
 import streamlit.reference
 
 def print_usage():
@@ -34,21 +47,28 @@ def help():
 def version():
     print('Streamlit v' + streamlit.__version__)
 
-def main():
-    # Dispatch based on the given command.
-    accepted_commands = {
-        'usage': print_usage,
-        'clear_cache': clear_cache,
-        'help': help,
-        'version': version
-    }
-    try:
-        accepted_commands[sys.argv[1]](*sys.argv[2:])
-    except IndexError:
-        print_usage()
-    except KeyError:
-        print(f'Command "{sys.argv[1]}" invalid.\n')
-        print_usage()
+
+COMMANDS = {
+    'usage': print_usage,
+    'clear_cache': clear_cache,
+    'help': help,
+    'version': version
+}
+
+@click.command()
+@click.pass_context
+@click.argument('mode', default='usage', type=click.Choice(list(COMMANDS.keys())))
+@click.option('--log_level', show_default=True, type=click.Choice([
+    'error', 'warning', 'info', 'debug']))
+def main(ctx, mode, log_level):  # pragma: no cover
+    """Run main function."""
+    if log_level:
+        streamlit.logger.set_log_level(log_level)
+
+    if mode == 'usage':
+        click.echo(ctx.get_help())
+    COMMANDS[mode]()
+
 
 if __name__ == '__main__':
     main()
