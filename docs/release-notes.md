@@ -22,8 +22,7 @@ New features and bug fixes are:
 
 4. Fixed a crash when rending DataFrame MultiIndices including Nones.
 
-5. Images with alpha channels now display. However, the alpha channel is
-   currently ignored. We will fix this in a future version.
+5. Images with alpha channels now display correctly using io.image.
 
 Streamlit also now supports saving to S3 and GCS buckets however this
 functionality is not yet exposed. Please contact @adrien if you're interested
