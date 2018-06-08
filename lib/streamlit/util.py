@@ -8,9 +8,15 @@ import contextlib
 import os
 import yaml
 import threading
+import pwd
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
+
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 
 def __cache(path, serialize, deserialize):
     """Performs two levels of caching:
@@ -46,7 +52,9 @@ def __cache(path, serialize, deserialize):
 @__cache('local_uuid.txt', str, uuid.UUID)
 def get_local_id():
     """Returns a local id which identifies this user to the database."""
-    return uuid.uuid4()
+    mac = str(uuid.getnode())
+    user = pwd.getpwuid(os.geteuid()).pw_name
+    return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):

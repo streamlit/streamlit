@@ -66,13 +66,14 @@ class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):
+        self._connections = {}
+
         routes = [
+            # # Local connection to stream a new report.
+            ('/new/(.*)/(.*)', LocalWebSocket, dict(connections=self._connections)),
+
             # Outgoing endpoint to get the latest report.
-            ('/stream/(.*)', ClientWebSocket),
-
-            # Local connection to stream a new report.
-            ('/new/(.*)/(.*)', LocalWebSocket),
-
+            ('/stream/(.*)', ClientWebSocket, dict(connections=self._connections)),
         ]
         '''
         # Client connection (serves up index.html)
@@ -117,7 +118,9 @@ class Proxy(object):
         port = config.get_option('proxy.port')
         web.run_app(self._app, port=port)
         '''
+        LOGGER.debug('About to start the proxy.')
         IOLoop.current().start()
+        LOGGER.debug('Just started the proxy.')
 
     def stop(self):
         """Stops the proxy. Allowing all current handler to exit normally."""

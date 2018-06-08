@@ -151,7 +151,11 @@ class Chart(object):
                 comp_name, comp_value = required_component.comp
             else:
                 numRepeats = 1
-                comp_name, comp_value = required_component
+                # TODO(armando):  Figure out why this doesn't unpack correctly
+                if len(required_component) == 2:
+                    comp_name, comp_value = required_component
+                else:
+                    continue
 
             if comp_name in existing_component_names:
                 continue

@@ -16,15 +16,25 @@ install_aliases()
 import os
 import sys
 import threading
+import time
 import traceback
 import urllib
 import uuid
+
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.websocket import websocket_connect
 
 from streamlit.util import get_local_id
 from streamlit import config
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.streamlit_msg_proto import new_report_msg
+from streamlit import protobuf
+from streamlit.logger import get_logger
+
+LOGGER = get_logger()
+
 
 def _assert_singleton(method):
     """Asserts that this method is called on the singleton instance of
@@ -57,6 +67,14 @@ class Connection(object):
     # This is the singleton connection object.
     _connection = None
 
+    _ws = None
+
+    # Queue to store deltas as they flow across.
+    _queue = ReportQueue()
+
+    _is_open = False
+
+    # This is the class through which we can add elements to the Report
     def __init__(self):
         """
         Creates a new connection to the server.
@@ -67,11 +85,6 @@ class Connection(object):
         # Create a name for this report.
         self._name = self._create_name()
 
-        # Queue to store deltas as they flow across.
-        self._queue = ReportQueue()
-
-        # Set to false when the connection should close.
-        self._is_open = True
 
         '''
         # This is the event loop to talk with the serverself.
@@ -87,6 +100,7 @@ class Connection(object):
         necessary."""
         # Instantiate the singleton connection if necessary.
         if cls._connection == None:
+            LOGGER.debug('no connection, registering one')
             # Create the new connection.
             Connection().register()
 
@@ -152,6 +166,8 @@ class Connection(object):
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
         self._queue(delta)
+        #ioloop = IOLoop.current()
+        #ioloop.spawn_callback(self._queue, delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
@@ -162,13 +178,17 @@ class Connection(object):
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
             '''
+            ioloop = IOLoop.instance()
+            ioloop.run_sync(self._attempt_connection)
             self.unregister()
+            LOGGER.debug('exit')
         t = threading.Thread(target=connection_thread)
-        t.daemon = False
+        t.daemon = True
         t.start()
-    '''
-    @_assert_singleton_async
-    async def _attempt_connection(self):
+
+
+    @gen.coroutine
+    def _attempt_connection(self):
         """Tries to establish a connection to the proxy (launching the
         proxy if necessary). Then, pumps deltas through the connection."""
         # Create a connection URI.
@@ -176,50 +196,75 @@ class Connection(object):
         port = config.get_option('proxy.port')
         local_id = get_local_id()
         report_name = urllib.parse.quote_plus(self._name)
-        uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
+        uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
-        # Try to connect twice to the websocket
-        session = ClientSession(loop=self._loop)
+        LOGGER.debug(f'Attempt to connect to proxy at {uri}.')
         try:
             # Try to connect to the proxy for the first time.
             try:
-                async with session.ws_connect(uri) as ws:
-                    await self._transmit_through_websocket(ws)
-                    return
-            except ClientConnectorError:
-                pass
+                ws = yield websocket_connect(uri)
+                type(self)._ws = ws
+                type(self)._connection = self
+                type(self)._is_open = True
+                yield self._transmit_through_websocket(ws)
+                return
+            except IOError:
+                LOGGER.error(f'Failed to connect to proxy at {uri}.  Attempting to start proxy.')
 
             # Connecting to the proxy failed, so let's start the proxy manually.
-            await self._launch_proxy()
+            yield self._launch_proxy()
 
             # Try again to transmit data through the proxy
             try:
-                async with session.ws_connect(uri) as ws:
-                    await self._transmit_through_websocket(ws)
-            except ClientConnectorError:
-                print(f'Failed to connect to {uri}.')
+                ws = yield websocket_connect(uri)
+                type(self)._connection = self
+                type(self)._is_open = True
+                yield self._transmit_through_websocket(ws)
+            except IOError:
+                LOGGER.error(f'Failed to connect to {uri}.')
 
         finally:
             # Closing the session.
-            await session.close()
+            pass
 
-    @_assert_singleton_async
-    async def _launch_proxy(self):
+    @_assert_singleton
+    @gen.coroutine
+    def _launch_proxy(self):
         """Launches the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
         os.system('python -m streamlit.Proxy &')
-        await asyncio.sleep(wait_for_proxy_secs)
+        LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
+        yield gen.sleep(wait_for_proxy_secs)
 
-    @_assert_singleton_async
-    async def _transmit_through_websocket(self, ws):
+    @_assert_singleton
+    @gen.coroutine
+    def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        await new_report_msg(self._report_id, ws)
+        yield new_report_msg(self._report_id, ws)
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
+        LOGGER.debug('transmit through websocket.  ws = %s, queue = %s', ws,
+            type(self)._connection._queue)
         while self._is_open:
-            await self._queue.flush_queue(ws)
-            await asyncio.sleep(throttle_secs)
-        await self._queue.flush_queue(ws)
-    '''
+            yield type(self)._queue.flush_queue(ws)
+            yield gen.sleep(throttle_secs)
+        yield type(self)._queue.flush_queue(ws)
+
+
+if __name__ == '__main__':
+    c = Connection().get_connection()
+    queue = Connection()._queue
+    _id = 0
+    LOGGER.debug(queue)
+    while True:
+        delta = protobuf.Delta()
+        delta.id = _id
+        delta.new_element.text.format = protobuf.Text.MARKDOWN
+        delta.new_element.text.body = '{}'.format(
+            time.time())
+        queue(delta)
+        _id += 1
+
+        time.sleep(5)

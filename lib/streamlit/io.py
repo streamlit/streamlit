@@ -180,5 +180,7 @@ _this_may_be_proxy = sys.argv[0] == '-m'
 # If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
 # skip this step. Overcautiously skipping this step isn't fatal in general as
 # it simply implies that the connection may be established later.
+'''
 if not _this_may_be_proxy:
     Connection.get_connection() # get_delta_generator()
+'''

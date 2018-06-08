@@ -1,3 +1,4 @@
+# -*- coding: future_fstrings -*-
 from streamlit import io, Chart
 
 from keras.datasets import mnist

@@ -29,7 +29,7 @@ def new_report_msg(report_id, ws):
     """
     msg = protobuf.ForwardMsg()
     msg.new_report = str(report_id)
-    yield ws.send_bytes(msg.SerializeToString())
+    yield ws.write_message(msg.SerializeToString(), binary=True)
 
 def streamlit_msg_iter(ws):
     pass

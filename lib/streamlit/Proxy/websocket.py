@@ -1,35 +1,72 @@
 import json
+import urllib
 
 from tornado.websocket import WebSocketHandler
+from tornado import gen
 
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.ProxyConnection import ProxyConnection
+from streamlit import protobuf
+from streamlit.streamlit_msg_proto import new_report_msg
+import webbrowser
+
+
+
 
 LOGGER = get_logger()
+
+def _stop_proxy_on_exception(coroutine):
+    """Coroutine decorator which stops the the proxy if an exception
+    propagates out of the inner coroutine."""
+    @gen.coroutine
+    def wrapped_coroutine(proxy, *args, **kwargs):
+        try:
+            a = yield coroutine(proxy, *args, **kwargs)
+            raise gen.Return(a)
+        except:
+            proxy.stop()
+            raise
+    wrapped_coroutine.__name__ = coroutine.__name__
+    wrapped_coroutine.__doc__ = coroutine.__doc__
+    return wrapped_coroutine
 
 
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
+    def initialize(self, connections):
+        self._connections = connections
+
+    def check_origin(self, origin):
+        """Ignore CORS."""
+        # WARNING.  EXTREMELY UNSECURE.
+        # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
+        return True
+
+    @gen.coroutine
     def open(self, *args):
         """Get and return websocket."""
-        report_name = args[0]
+        self._report_name = args[0]
         # How long we wait between sending more data.
         throttle_secs = config.get_option('local.throttleSecs')
 
         # Manages our connection to the local client.
-        connection, queue = None, None
+        self._connection = self._connections[self._report_name]
+        self._queue = self._connection.add_client_queue()
+        yield new_report_msg(self._connection.id, self)
 
-        LOGGER.info('Browser websocket opened for "{}"'.format(report_name))
+        LOGGER.info('Browser websocket opened for "{}"'.format(self._report_name))
+        while True:
+            if not self._queue.is_closed():
+                yield self._queue.flush_queue(self)
+                yield gen.sleep(throttle_secs)
 
     def on_message(self, msg):
-        if type(msg) != unicode:
-            LOGGER.info('Not handling non unicode payload "{}"'.format(repr(msg)))
-            return
         data = json.loads(msg)
         payload = json.dumps(data)
         self.write_message(payload, binary=False)
-        LOGGER.info('Sent payload "{}"'.format(payload))
+        LOGGER.debug('Sent payload "{}"'.format(payload))
         '''
         try:
             # Establishe the websocket.
@@ -71,45 +108,48 @@ class ClientWebSocket(WebSocketHandler):
 class LocalWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
+    def initialize(self, connections):
+        self._connections = connections
+
+    def check_origin(self, origin):
+        """Ignore CORS."""
+        # WARNING.  EXTREMELY UNSECURE.
+        # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
+        return True
+
+    #@_stop_proxy_on_exception
     def open(self, *args):
-        """Get and return websocket."""
-        local_id = args[0]
-        report_name = args[1]
-        LOGGER.info('Local websocket opened for "{}/{}"'.format(local_id, report_name))
-
-    '''
-    @_stop_proxy_on_exception
-    async def _local_ws_handler(self, request):
-        """Handles a connection to a "local" instance of Streamlit, i.e.
-        one producing deltas to display on the client."""
+        """Handles a connection to a "local" instance of Streamlit, i.e. one producing deltas to display on the client."""
         # Parse out the control information.
-        local_id = request.match_info.get('local_id')
-        report_name = request.match_info.get('report_name')
-        report_name = urllib.parse.unquote_plus(report_name)
+        self._local_id = args[0]
+        self._report_name = args[1]
+        self._report_name = urllib.parse.unquote_plus(self._report_name)
+        self._connection = None
+        LOGGER.info('Local websocket opened for "{}/{}"'.format(self._local_id, self._report_name))
 
-        # This is the connection object we will register when we
-        connection = None
+    #@_stop_proxy_on_exception
+    def on_message(self, message):
+        # LOGGER.debug(repr(message))
 
-        # Instantiate a new queue and stream data into it.
-        try:
-            Establishe the websocket.
-            ws = web.WebSocketResponse()
-            await ws.prepare(request)
+        msg = protobuf.ForwardMsg()
+        msg.ParseFromString(message)
 
-            async for msg in streamlit_msg_iter(ws):
-                msg_type = msg.WhichOneof('type')
-                if msg_type == 'new_report':
-                    assert not connection, 'Cannot send `new_report` twice.'
-                    report_id = msg.new_report
-                    print('the report_id is', report_id)
-                    connection = ProxyConnection(report_id, report_name)
-                    self._register(connection)
-                elif msg_type == 'delta_list':
-                    assert connection, 'No `delta_list` before `new_report`.'
-                    for delta in msg.delta_list.deltas:
-                        connection.enqueue(delta)
-                else:
-                    raise RuntimeError(f'Cannot parse message type: {msg_type}')
+        msg_type = msg.WhichOneof('type')
+        if msg_type == 'new_report':
+            assert not self._connection, 'Cannot send `new_report` twice.'
+            report_id = msg.new_report
+            print('the report_id is', report_id)
+            self._connection = ProxyConnection(report_id, self._report_name)
+            self._connections[self._connection.name] = self._connection
+            new_name = self._connection.name not in self._connections
+            self._launch_web_client(self._connection.name)
+        elif msg_type == 'delta_list':
+            assert self._connection, 'No `delta_list` before `new_report`.'
+            for delta in msg.delta_list.deltas:
+                self._connection.enqueue(delta)
+    '''
+        else:
+            raise RuntimeError(f'Cannot parse message type: {msg_type}')
         except concurrent.futures.CancelledError:
             pass
 
@@ -120,3 +160,23 @@ class LocalWebSocket(WebSocketHandler):
         self._potentially_stop_proxy()
         return ws
     '''
+
+    def _launch_web_client(self, name):
+        """Launches a web browser to connect to the proxy to get the named
+        report.
+
+        Args
+        ----
+        name : string
+            The name of the report to which the web browser should connect.
+        """
+        if config.get_option('proxy.useNode'):
+            host, port = 'localhost', '3000'
+        else:
+            host = config.get_option('proxy.server')
+            port = config.get_option('proxy.port')
+        quoted_name = urllib.parse.quote_plus(name)
+        url = 'http://{}:{}/?name={}'.format(
+            host, port, quoted_name)
+        webbrowser.open(url)
+
