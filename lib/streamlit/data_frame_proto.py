@@ -34,8 +34,6 @@ def marshall_index(pandas_index, proto_index):
         for level in pandas_index.levels:
             marshall_index(level, proto_index.multi_index.levels.add())
         for label in pandas_index.labels:
-            print('proto lables:', proto_index.multi_index.labels)
-            print('adding:', label)
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
         if pandas_index.tz is None:
