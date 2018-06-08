@@ -1,5 +1,35 @@
 # Release Notes
 
+#### v0.11
+June 8, 2018
+```
+We are thrilled to announce version 0.11 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    python -m streamlit help
+
+New features and bug fixes are:
+
+1. You can now get help within the UI. Click the hamburger icon in the upper
+   right-hand corner.
+
+2. We changed the default color palette for charts to make them more readable.
+
+3. DataFrames now render properly when the number of columns change.
+
+4. Fixed a crash when rending DataFrame MultiIndices including Nones.
+
+5. Images with alpha channels now display. However, the alpha channel is
+   currently ignored. We will fix this in a future version.
+
+Streamlit also now supports saving to S3 and GCS buckets however this
+functionality is not yet exposed. Please contact @adrien if you're interested
+in testing this.
+```
+
 #### v0.9
 May 17, 2018
 ```

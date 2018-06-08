@@ -22,7 +22,7 @@ def marshall_images(numpy_imgs, captions, width, proto_imgs):
     # Load it into the protobuf.
     for (img, caption) in zip(pil_imgs, captions):
         img_bytes = io.BytesIO()
-        img.save(img_bytes, format='png')
+        img.save(img_bytes, format='PNG')
         img_bytes = img_bytes.getvalue()
 
         proto_img = proto_imgs.imgs.add()
@@ -44,7 +44,14 @@ def convert_to_uint8(imgs):
 
 def convert_to_3_color_channels(imgs):
     """Final dimension should be 3 for three color channels."""
-    if imgs.shape[-1] == 3:
+    if imgs.shape[-1] == 4:
+        # Currently, we truncate the alpha channel. In the futrue, we should
+        # handle transparency properly at some point, probably by changing the
+        # entire pipeline here to support RGBA.
+        img_slice = [slice(None) for i in range(len(imgs.shape))]
+        img_slice[-1] = slice(0, 3)
+        return imgs[tuple(img_slice)]
+    elif imgs.shape[-1] == 3:
         return imgs
     elif imgs.shape[-1] == 1:
         return convert_to_3_color_channels(imgs.reshape(imgs.shape[:-1]))
