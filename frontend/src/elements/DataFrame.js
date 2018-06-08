@@ -21,6 +21,11 @@ import './DataFrame.css';
 // let prev_df, prev_width = [null, null];
 
 class DataFrame extends PureComponent {
+  constructor(props) {
+    super(props);
+    this.multGridRef = React.createRef();
+  }
+
   render() {
     // Get the properties.
     const {df, width} = this.props;
@@ -42,6 +47,15 @@ class DataFrame extends PureComponent {
         getWidths(cols, rows, headerCols, width - border, cellContents);
       // width = tableWidth + border;
 
+      // Since this is a PureComponent, finding ourselves in this method
+      // means that the props have chaged, so we should force a rerender of the
+      // widths.
+      setTimeout(() => {
+        if (this.multGridRef.current !== null) {
+          this.multGridRef.current.recomputeGridSize();
+        }
+      }, 0);
+
       // Put it all together.
       return (
         <div style={{width, height}}>
@@ -62,6 +76,7 @@ class DataFrame extends PureComponent {
                 width={width - border}
                 classNameBottomLeftGrid='table-bottom-left'
                 classNameTopRightGrid='table-top-right'
+                ref={this.multGridRef}
               />
               <div className="fixup fixup-top-right" style={{
                 width: border,
