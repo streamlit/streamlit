@@ -1,5 +1,10 @@
 # -*- coding: future_fstrings -*-
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 from .caseconverters import to_upper_camel_case, to_lower_camel_case
 
 class ChartComponent(object):

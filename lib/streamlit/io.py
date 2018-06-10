@@ -3,6 +3,11 @@
 """This package contains all functions which the user can use to
 create new elements in a Report."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 import contextlib
 import numpy as np
 import pandas as pd

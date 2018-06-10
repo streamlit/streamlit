@@ -2,7 +2,11 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-import io
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 import json
 import math
 import numpy as np
@@ -33,7 +37,7 @@ def _export_to_io(method):
     return method
 
 def _create_element(method):
-    """Allows you to easily create a method which creates a new element deltaself.
+    """Allows you to easily create a method which creates a new element delta.
 
     Converts a method of the with arguments (self, element, ...) into a method
     with arguments (self, ...). Thus, the intantiation of the element proto

@@ -4,14 +4,9 @@
 write objects out to a wbpage."""
 
 # Python 2/3 compatibility
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from builtins import range, map, str, dict, object, zip, int
-from io import open
-from future.standard_library import install_aliases
-install_aliases()
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
 
 import os
 import sys
@@ -86,6 +81,7 @@ class Connection(object):
         # Create a name for this report.
         self._name = self._create_name()
 
+        assert self._name != '-c', "This connection should not be created!" # DEBUG
 
         '''
         # This is the event loop to talk with the serverself.
@@ -131,9 +127,9 @@ class Connection(object):
             '''
             self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
             '''
-        t = threading.Thread(target=cleanup_on_exit)
-        t.daemon = False
-        t.start()
+        cleanup_thread = threading.Thread(target=cleanup_on_exit)
+        cleanup_thread.daemon = False
+        cleanup_thread.start()
 
     @_assert_singleton
     def unregister(self):
@@ -186,10 +182,9 @@ class Connection(object):
             ioloop.run_sync(self._attempt_connection)
             self.unregister()
             LOGGER.debug('exit')
-        t = threading.Thread(target=connection_thread)
-        t.daemon = True
-        t.start()
-
+        connection_thread = threading.Thread(target=connection_thread)
+        connection_thread.daemon = False
+        connection_thread.start()
 
     @gen.coroutine
     def _attempt_connection(self):

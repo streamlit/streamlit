@@ -4,6 +4,11 @@
 
 """Example of everything that's possible in streamlit."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 # import numpy as np
 from PIL import Image
 import urllib

@@ -3,6 +3,11 @@
 """Stores information shared by both local_connections and
 client_connections related to a particular report."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 

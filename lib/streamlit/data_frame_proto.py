@@ -2,6 +2,11 @@
 
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 import numpy as np
 import pandas as pd
 import tzlocal

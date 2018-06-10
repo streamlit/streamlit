@@ -1,14 +1,11 @@
+# -*- coding: future_fstrings -*-
+
 """Websocket handler class which the local python library connects to."""
 
 # Python 2/3 compatibility
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from builtins import range, map, str, dict, object, zip, int
-from io import open
-from future.standard_library import install_aliases
-install_aliases()
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
 
 from tornado import gen
 from tornado.websocket import WebSocketHandler
@@ -46,7 +43,7 @@ class LocalWebSocket(WebSocketHandler):
         LOGGER.info('Local websocket opened for "{}/{}"'.format(self._local_id, self._report_name))
 
     def on_message(self, message):
-        LOGGER.debug(repr(message))
+        # LOGGER.debug(repr(message))
 
         msg = protobuf.ForwardMsg()
         msg.ParseFromString(message)

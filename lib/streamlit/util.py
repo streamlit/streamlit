@@ -2,6 +2,11 @@
 
 """A bunch of useful utilites."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 # flake8: noqa
 import uuid
 import contextlib

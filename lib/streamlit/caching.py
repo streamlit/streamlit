@@ -2,6 +2,11 @@
 
 """A library of useful utilities."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.future import setup_2_3_compatibility
+setup_2_3_compatibility(globals())
+
 import dis
 import hashlib
 import os
