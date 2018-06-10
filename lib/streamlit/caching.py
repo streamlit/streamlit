@@ -16,7 +16,7 @@ import shutil
 
 from functools import wraps
 
-from streamlit import io
+from streamlit import st
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
 
@@ -45,7 +45,7 @@ def cache(func):
 		# This
 
 		# Temporarily display this message while computing this function.
-		with io.spinner(message):
+		with st.spinner(message):
 			# Searches for addresses like "object <listcomp> at 0x1052cca50"
 			address = re.compile(r'at\ 0x[0-9a-f]+')
 			instr_to_str = lambda i: address.sub('ADDRESS', str(i))

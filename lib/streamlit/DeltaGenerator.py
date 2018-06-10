@@ -269,8 +269,8 @@ class DeltaGenerator(object):
 
         Example
         -------
-        To learn how the io.write function works, call::
-            io.help(io.write)
+        To learn how the st.write function works, call::
+            st.help(st.write)
         """
         if not hasattr(obj, '__name__'):
             raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
@@ -392,7 +392,7 @@ class DeltaGenerator(object):
         --------
         Here is an example of a progress bar increasing over time::
             import time
-            my_bar = io.progress(0)
+            my_bar = st.progress(0)
             for percent_complete in range(100):
                 my_bar.progress(percent_complete + 1)
         """

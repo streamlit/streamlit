@@ -16,7 +16,7 @@ class DeltaGeneratorDecoratorTest(unittest.TestCase):
     """Test Decorators."""
 
     def test_export_to_io(self):
-        """Test DeltaGenerator decorator export_to_io."""
+        """Test DeltaGenerator decorator export_to_st."""
         def method():
             pass
 

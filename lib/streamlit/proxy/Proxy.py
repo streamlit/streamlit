@@ -151,7 +151,7 @@ class Proxy(object):
             self._try_to_deregister(connection)
             self._potentially_stop_proxy()
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-        loop = asyncio.get_event_loop()
+        loop = asyncst.get_event_loop()
         loop.call_later(timeout_secs, connection_timeout)
 
     def _try_to_deregister(self, connection):
@@ -217,7 +217,7 @@ class Proxy(object):
         url = await self._cloud.upload_report(connection.id, report)
 
         # Pretend to upload something.
-        await asyncio.sleep(3.0)
+        await asyncst.sleep(3.0)
         url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'  # noqa: E501
 
         # Indicate that the save is done.

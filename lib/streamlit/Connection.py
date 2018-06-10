@@ -85,7 +85,7 @@ class Connection(object):
 
         '''
         # This is the event loop to talk with the serverself.
-        self._loop = asyncio.new_event_loop()
+        self._loop = asyncst.new_event_loop()
         '''
 
         # This is the class through which we can add elements to the Report
@@ -177,7 +177,7 @@ class Connection(object):
             '''
             # TODO(armando): Figure out how to get event loop to start
             #                in 3.6 only.
-            # asyncio.set_event_loop(asyncio.new_event_loop())
+            # asyncst.set_event_loop(asyncst.new_event_loop())
             ioloop = IOLoop.current()
             ioloop.run_sync(self._attempt_connection)
             self.unregister()

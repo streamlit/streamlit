@@ -85,7 +85,7 @@ class ClientWebSocket(WebSocketHandler):
                         break
                     else:
                         print('Unknown message type:', msg.type)
-                except asyncio.TimeoutError:
+                except asyncst.TimeoutError:
                     pass
         except concurrent.futures.CancelledError:
             pass

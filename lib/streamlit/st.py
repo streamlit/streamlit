@@ -141,9 +141,9 @@ def spinner(text):
     --------
     ::
 
-        with io.spinner('Wait for it...'):
+        with st.spinner('Wait for it...'):
             time.sleep(5)
-        io.success('Done!')
+        st.success('Done!')
     """
     try:
         message = warning(text)
@@ -158,8 +158,8 @@ def echo():
     Example
     -------
     ::
-        with io.echo():
-            io.write('This code will be printed')
+        with st.echo():
+            st.write('This code will be printed')
     """
     yield
     # TODO(armando): Debug and get this working again.  Most likely due

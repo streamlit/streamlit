@@ -140,7 +140,7 @@ Other new features include:
 
 1. Streamlit functions are available globally in the `io` package. For example:
 
-    from streamlit import io
+    from streamlit import st
     io.write('Hello world.')
 
 2. Markdown is now the default for write(). Try:

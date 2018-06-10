@@ -15,16 +15,16 @@ Currently, streamlit requires Python 3.6.
 Copy and paste this example and it should work:
 
 ```python
-from streamlit import io
+from streamlit import st
 import numpy as np
 import time
 
-io.title('Streamlit Example')
-io.write('Hello, World!')
-io.write(np.random.randn(200, 200))
+st.title('Streamlit Example')
+st.write('Hello, World!')
+st.write(np.random.randn(200, 200))
 
-io.subheader('A Progress Bar')
-bar = io.progress(0)
+st.subheader('A Progress Bar')
+bar = st.progress(0)
 for i in range(100):
   bar.progress(i + 1)
   time.sleep(0.1)

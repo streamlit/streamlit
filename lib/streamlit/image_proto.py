@@ -41,7 +41,7 @@ def marshall_images(img, captions, width, proto_imgs):
 
     # Load it into the protobuf.
     for (img, caption) in zip(pil_imgs, captions):
-        img_bytes = io.BytesIO()
+        img_bytes = st.BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes = img_bytes.getvalue()
 
