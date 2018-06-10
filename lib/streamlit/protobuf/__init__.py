@@ -8,8 +8,8 @@ Takes symbols from ./*_pb2.py and re-exports them in this module.
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.future import setup_2_3_compatibility
-setup_2_3_compatibility(globals())
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 import os
 import sys

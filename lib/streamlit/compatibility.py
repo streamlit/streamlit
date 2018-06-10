@@ -4,17 +4,18 @@
 be called as follows:
 
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit import future
-future.setup_2_3_compatibility(globals())
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 """
 
 import sys
+import os
 
-def setup_2_3_compatibility(caller_globals):
+def setup_2_3_shims(caller_globals):
     """
     Meant to be called as follows:
 
-    setup_2_3_compatibility(globals())
+    setup_2_3_shims(globals())
 
     And sets up a bunch of compatibility aliases to make python 2 more like
     python 3.
@@ -38,12 +39,17 @@ def setup_2_3_compatibility(caller_globals):
     for symbol in export_symbols:
         caller_globals[symbol] = locals()[symbol]
 
-    import urllib, test, dbm
-    print(urllib)
-    print(test)
-    print(dbm)
-    sys.exit(-1)
+    # Before we can call future.stanard_library, we need to make sure we're not
+    # overriding any of the packages that it monkey patches or this can cause
+    # some screwyness.
+    illegal_package_names = ['urllib', 'test', 'dbm']
+    current_directory_files = os.listdir('.')
+    for illegal_package_name in illegal_package_names:
+        illegal_source_file = illegal_package_name + '.py'
+        assert illegal_source_file not in current_directory_files, \
+            f'File "{illegal_source_file}" overrides a built-in package name.' \
+            ' Please rename it.'
 
-    # # Do a bunch of dark monkey patching magic.
-    # from future.standard_library import install_aliases
-    # install_aliases()
+    # Do a bunch of dark monkey patching magic.
+    from future.standard_library import install_aliases
+    install_aliases()

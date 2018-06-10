@@ -8,4 +8,4 @@ As I'm moving around files and bulding up functionality in Armando's `2.7` branc
 
 ## Tests
 
-- This is a test.
+- If you have a file called `test.py`, `urllib.py`, or `dbm.py` in your cwd, then streamlit will fail when calling `setup_2_3_shims()`.

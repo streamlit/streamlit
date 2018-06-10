@@ -61,8 +61,8 @@ Or, with syntax sugar type-specific builders:
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.future import setup_2_3_compatibility
-setup_2_3_compatibility(globals())
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 import pandas as pd
 

@@ -6,8 +6,8 @@ Converts a numpy image array and list of caption to protobuf.ImageList.
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.future import setup_2_3_compatibility
-setup_2_3_compatibility(globals())
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 import numpy as np
 import io
