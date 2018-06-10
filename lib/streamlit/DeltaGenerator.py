@@ -9,6 +9,7 @@ setup_2_3_shims(globals())
 
 import json
 import math
+import sys
 import numpy as np
 import pandas as pd
 import textwrap
@@ -18,12 +19,13 @@ from streamlit import image_proto
 from streamlit.Chart import Chart
 from streamlit.chartconfig import CHART_TYPES
 from streamlit.caseconverters import to_snake_case
+from streamlit.logger import get_logger
 from streamlit import data_frame_proto
 from streamlit import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
-
 EXPORT_TO_IO_FLAG = '__export_to_io__'
+LOGGER = get_logger()
 
 from functools import wraps
 
@@ -60,7 +62,11 @@ def _create_element(method):
         except Exception as e:
             # See DeltaGenerator.exception for why this is disabled.
             # self.exception(e)
-            pass
+            # pass
+            import sys
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_tb(exc_traceback, file=sys.stderr)
+
     return wrapped_method
 
 class DeltaGenerator(object):
@@ -284,8 +290,6 @@ class DeltaGenerator(object):
             doc_string = f'No docs available.'
         element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
 
-    # TODO(armando): Exception handling is not working correctly, most
-    #                likely due to 2.7/3.6 differences.
     @_export_to_io
     @_create_element
     def exception(self, element, exception):
@@ -297,10 +301,28 @@ class DeltaGenerator(object):
         exception: Exception
             The exception to display.
         """
-        tb = traceback.extract_tb(exception.__traceback__)
         element.exception.type = type(exception).__name__
         element.exception.message = str(exception)
-        element.exception.stack_trace.extend(traceback.format_list(tb))
+
+        # Get the traceback for the exception.
+        exception_traceback = None
+        if hasattr(exception, '__traceback__'):
+            # This is the Python 3 way to get the traceback.
+            exception_traceback = traceback.extract_tb(exception.__traceback__)
+        else:
+            # Hack for Python 2 which will extract the traceback as long as this
+            # method was called on the exception as it was caught, which is
+            # likely what the user would do.
+            _, live_exception, live_traceback = sys.exc_info()
+            if exception == live_exception:
+                exception_traceback = traceback.extract_tb(live_traceback)
+        if exception_traceback != None:
+            stack_trace = traceback.format_list(exception_traceback)
+        else:
+            stack_trace = [
+                'Cannot extract the stack trace for this exception. '\
+                'Try calling exception() within the `catch` block.']
+        element.exception.stack_trace.extend(stack_trace)
 
     @_export_to_io
     def dataframe(self, pandas_df):

@@ -114,24 +114,24 @@ class Connection(object):
         type(self)._connection = self
         self._connect_to_proxy()
 
-        # Override the default exception handler.
-        original_excepthook = sys.excepthook
-        def streamlit_excepthook(exc_type, exc_value, exc_tb):
-            self.get_delta_generator().exception(exc_value)
-            original_excepthook(exc_type, exc_value, exc_tb)
-        sys.excepthook = streamlit_excepthook
-
-        # When the current thread closes, then close down the connection.
-        current_thread = threading.current_thread()
-        def cleanup_on_exit():
-            current_thread.join()
-            sys.excepthook = original_excepthook
-            '''
-            self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
-            '''
-        cleanup_thread = threading.Thread(target=cleanup_on_exit)
-        cleanup_thread.daemon = False
-        cleanup_thread.start()
+        # # Override the default exception handler.
+        # original_excepthook = sys.excepthook
+        # def streamlit_excepthook(exc_type, exc_value, exc_tb):
+        #     self.get_delta_generator().exception(exc_value)
+        #     original_excepthook(exc_type, exc_value, exc_tb)
+        # sys.excepthook = streamlit_excepthook
+        #
+        # # When the current thread closes, then close down the connection.
+        # current_thread = threading.current_thread()
+        # def cleanup_on_exit():
+        #     current_thread.join()
+        #     sys.excepthook = original_excepthook
+        #     '''
+        #     self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
+        #     '''
+        # cleanup_thread = threading.Thread(target=cleanup_on_exit)
+        # cleanup_thread.daemon = False
+        # cleanup_thread.start()
 
     @_assert_singleton
     def unregister(self):
@@ -210,7 +210,7 @@ class Connection(object):
                 yield self._transmit_through_websocket(ws)
                 return
             except IOError:
-                LOGGER.error(f'Failed to connect to proxy at {uri}.  Attempting to start proxy.')
+                LOGGER.info(f'Failed to connect to proxy at {uri}.  Attempting to start proxy.')
 
             # Connecting to the proxy failed, so let's start the proxy manually.
             yield self._launch_proxy()
@@ -224,6 +224,9 @@ class Connection(object):
             except IOError:
                 LOGGER.error(f'Failed to connect to {uri}.')
 
+        # except Exception as e:
+        #     LOGGER.error('Exception in websocket connection.')
+        #     LOGGER.error(e)
         finally:
             # Closing the session.
             pass
@@ -246,13 +249,12 @@ class Connection(object):
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
-        LOGGER.debug('transmit through websocket.  ws = %s, queue = %s', ws,
-            type(self)._connection._queue)
+        LOGGER.debug(f'Websocket Transmit ws = {ws}')
+        LOGGER.debug(f'Websocket Transmit queue = {type(self)._connection._queue}')
         while self._is_open:
             yield type(self)._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
         yield type(self)._queue.flush_queue(ws)
-
 
 if __name__ == '__main__':
     c = Connection().get_connection()

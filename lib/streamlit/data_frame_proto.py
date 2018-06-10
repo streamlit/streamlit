@@ -7,10 +7,13 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+from streamlit.logger import get_logger
+
 import numpy as np
 import pandas as pd
 import tzlocal
-# from tiny_report import protobuf
+
+LOGGER = get_logger()
 
 def marshall_data_frame(pandas_df, proto_df):
     """
@@ -79,6 +82,21 @@ def marshall_any_array(pandas_array, proto_array):
 
     # Only works on 1D arrays.
     assert len(pandas_array.shape) == 1, 'Array must be 1D.'
+
+    LOGGER.debug(f'Marshalling array: {pandas_array}')
+    LOGGER.debug(f'Marshalling array dytpe: {pandas_array.dtype}')
+    LOGGER.debug(f'first elt: {pandas_array[0]} {type(pandas_array[0])} {int(pandas_array[0]) == int(32)}')
+
+    LOGGER.debug(dir(traceback))
+    LOGGER.debug(traceback.extract_tb)
+    # # exc_type, exc_value, exc_traceback = sys.exc_info()
+    # # LOGGER.debug(traceback.extract_tb())
+    # raise RuntimeError('Something')
+    if int(pandas_array[0]) == int(32):
+        LOGGER.debug('This is bad. I want to know how I got here.')
+        raise Exception("This is an exception! Where is my stack?!")
+    #     # raise RuntimeError('This is bad.')
+    # # if str(pandas_array.dtype) == str('uint8'):
 
     # Perform type-conversion based on the array dtype.
     if issubclass(pandas_array.dtype.type, np.floating):
