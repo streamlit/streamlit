@@ -126,6 +126,7 @@ class Connection(object):
         def cleanup_on_exit():
             current_thread.join()
             sys.excepthook = original_excepthook
+
             '''
             self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
             '''

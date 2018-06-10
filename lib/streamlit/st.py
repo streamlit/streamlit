@@ -129,8 +129,8 @@ def write(*args):
 
         flush_buffer()
     except:
-        _, exception, traceback = sys.exc_info()
-        exception(exception, traceback)
+        _, exc, exc_tb = sys.exc_info()
+        exception(exc, exc_tb)
 
 @contextlib.contextmanager
 def spinner(text):
