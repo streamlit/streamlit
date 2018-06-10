@@ -286,7 +286,7 @@ class DeltaGenerator(object):
         except AttributeError:
             pass
         doc_string = obj.__doc__
-        if type(doc_string) is not str:
+        if not isinstance(doc_string, string_types):
             doc_string = f'No docs available.'
         element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
 

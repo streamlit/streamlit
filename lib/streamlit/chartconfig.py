@@ -152,7 +152,7 @@ BASIC_REQUIRED_COMPONENTS = (
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        BASIC_REQUIRED_COMPONENTS,
+        BASIC_REQUIRED_COMPONENTS + 
         (ForEachColumn(('line', {
             'data_key': ColumnAtCurrentIndex(),
             'dot': 'false',

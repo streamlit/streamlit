@@ -42,8 +42,9 @@ def setup_2_3_shims(caller_globals):
     for symbol in export_symbols:
         caller_globals[symbol] = locals()[symbol]
 
-    # Make FileNotFoundError work
+    # Special Cases
     caller_globals['FileNotFoundError'] = IOError
+    caller_globals['dict_types'] = (dict, type({}))
 
     # Before we can call future.stanard_library, we need to make sure we're not
     # overriding any of the packages that it monkey patches or this can cause

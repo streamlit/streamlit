@@ -70,11 +70,13 @@ from .ChartComponent import ChartComponent
 from .caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
 from .chartconfig import *
 from streamlit import data_frame_proto
+from streamlit.logger import get_logger
 
 current_module = __import__(__name__)
 
 # Column name used to designate the dataframe index.
 INDEX_COLUMN_DESIGNATOR = '::index'
+LOGGER = get_logger()
 
 class Chart(object):
     def __init__(self, data, type, width=0, height=0, **kwargs):
@@ -101,7 +103,7 @@ class Chart(object):
         self._type = type
         self._width = width
         self._height = height
-        self._components = []
+        self._components = list()
         self._props = [(str(k), str(v)) for (k,v) in kwargs.items()]
 
     def append_component(self, component_name, props):
@@ -156,26 +158,20 @@ class Chart(object):
                 comp_name, comp_value = required_component.comp
             else:
                 numRepeats = 1
-                # TODO(armando):  Figure out why this doesn't unpack correctly
-                if len(required_component) == 2:
-                    comp_name, comp_value = required_component
-                else:
-                    continue
+                comp_name, comp_value = required_component
 
             if comp_name in existing_component_names:
                 continue
 
             for i in range(numRepeats):
-                if type(comp_value) is dict:
-                    props = {
-                        k: self._materializeValue(v, i)
+                if isinstance(comp_value, dict_types):
+                    props = dict(
+                        (k, self._materializeValue(v, i))
                         for (k, v) in comp_value.items()
-                    }
-                    self.append_component(comp_name, props)
-
+                    )
                 else:
                     props = self._materializeValue(comp_value, i)
-                    self.append_component(comp_name, props)
+                self.append_component(comp_name, props)
 
     def _materializeValue(self, value, currCycle):
         """Replaces ColumnAtIndex, etc, with a column name if needed.
