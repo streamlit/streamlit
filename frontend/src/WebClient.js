@@ -20,6 +20,7 @@ import Text from './elements/Text';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
 import Map from './elements/Map';
+import DeckGlMap from './elements/DeckGlMap';
 import Table from './elements/Table';
 
 // Other local imports.
@@ -242,11 +243,12 @@ class WebClient extends PureComponent {
             saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
             />
         </header>
+
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
               <AutoSizer className="main">
-                { ({width}) => this.renderElements(width) }
+                {({width}) => this.renderElements(width)}
               </AutoSizer>
             </Col>
           </Row>
@@ -267,16 +269,17 @@ class WebClient extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
-          dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
-          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
-          text: (text) => <Text element={text} width={width}/>,
+          dataFrame: (df) => <DataFrame df={df} width={width}/>,
+          deckGlMap: (el) => <DeckGlMap element={el} width={width}/>,
           docString: (doc) => <DocString element={doc} width={width}/>,
-          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
           empty: (empty) => undefined,
+          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           map: (map) => <Map map={map} width={width}/>,
+          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           table: (df) => <Table df={df} width={width}/>,
+          text: (text) => <Text element={text} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

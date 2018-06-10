@@ -393,6 +393,19 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
+    def deck_gl_map(self, element, data, **kwargs):
+        """Creates a deck.gl map element.
+
+        Args
+        ----
+        data : DataFrame
+            The data to display.
+        """
+        data_frame_proto.marshall_data_frame(data, element.deck_gl_map.data)
+        element.deck_gl_map.options = json.dumps(kwargs)
+
+    @_export_to_io
+    @_create_element
     def table(self, element, df):
         """Creates a map element.
 

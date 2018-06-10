@@ -9,6 +9,7 @@ import "DocString.proto";
 import "Exception.proto";
 import "Empty.proto";
 import "Map.proto";
+import "DeckGlMap.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -26,5 +27,6 @@ message Element {
     Map map = 9;
     // VegaLiteChart = 10;
     DataFrame table = 11;
+    DeckGlMap deck_gl_map = 12;
   }
 }

@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
-import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
+import { tableGetRowsAndCols, indexGet, tableGet, INDEX_COLUMN_DESIGNATOR } from '../dataFrameProto';
 import { format, Duration } from '../format';
 
 import * as recharts from 'recharts';
@@ -77,7 +77,7 @@ const COMPONENTS = {
 }
 
 /** Column name used to designate the dataframe index. */
-const INDEX_COLUMN_DESIGNATOR = '::index';
+const INDEX0_COLUMN_DESIGNATOR = INDEX_COLUMN_DESIGNATOR + '[0]';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
@@ -129,10 +129,11 @@ class Chart extends PureComponent {
         let rowData = {};
 
         if (hasSupportedIndex) {
-          rowData[INDEX_COLUMN_DESIGNATOR] =
+          rowData[INDEX0_COLUMN_DESIGNATOR] =
               indexGet(dataFrame.get('index'), 0, rowIndex);
           if (indexTransform) {
-            rowData[INDEX_COLUMN_DESIGNATOR] = indexTransform(rowData[INDEX_COLUMN_DESIGNATOR])
+            rowData[INDEX0_COLUMN_DESIGNATOR] =
+                indexTransform(rowData[INDEX0_COLUMN_DESIGNATOR])
           }
         }
 

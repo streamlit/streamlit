@@ -66,8 +66,8 @@ from streamlit import data_frame_proto
 
 current_module = __import__(__name__)
 
-# Column name used to designate the dataframe index.
-INDEX_COLUMN_DESIGNATOR = '::index'
+# Column name used to designate the 0th dataframe index.
+INDEX0_COLUMN_DESIGNATOR = 'index[0]'
 
 class Chart:
     def __init__(self, data, type, width=0, height=0, **kwargs):
@@ -185,7 +185,7 @@ class Chart:
             i = currCycle
 
         elif isinstance(value, IndexColumn):
-            return INDEX_COLUMN_DESIGNATOR
+            return INDEX0_COLUMN_DESIGNATOR
 
         elif isinstance(value, ValueCycler):
             return value.get(currCycle)
