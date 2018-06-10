@@ -236,7 +236,7 @@ class Connection(object):
     def _launch_proxy(self):
         """Launches the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
-        os.system('python -m streamlit.Proxy &')
+        os.system('python -m streamlit.proxy &')
         LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
         yield gen.sleep(wait_for_proxy_secs)
 

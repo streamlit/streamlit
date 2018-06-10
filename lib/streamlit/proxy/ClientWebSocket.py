@@ -1,19 +1,20 @@
-"""Proxy Tornado Handlers."""
+"""Websocket handler class which the web client connects to."""
+
+# Python 2/3 compatibility
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import range, map, str, dict, object, zip, int
+from io import open
+from future.standard_library import install_aliases
+install_aliases()
+
+import webbrowser
 import json
 import urllib
 
-from tornado.websocket import WebSocketHandler
-from tornado import gen
-
-from streamlit import config
-from streamlit.logger import get_logger
-from streamlit.ProxyConnection import ProxyConnection
-from streamlit import protobuf
-from streamlit.streamlit_msg_proto import new_report_msg
-import webbrowser
-
 LOGGER = get_logger()
-
 
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
@@ -89,6 +90,7 @@ class ClientWebSocket(WebSocketHandler):
             self._remove_client(connection, queue)
         return ws
         '''
+<<<<<<< HEAD:lib/streamlit/proxy/websocket.py
 
 
 class LocalWebSocket(WebSocketHandler):
@@ -170,3 +172,5 @@ class LocalWebSocket(WebSocketHandler):
         url = 'http://{}:{}/?name={}'.format(
             host, port, quoted_name)
         webbrowser.open(url)
+=======
+>>>>>>> 8df5916... Moved ClientWebsocketConnection and LocalWebSocketConnection to thier own files.:lib/streamlit/proxy/ClientWebSocket.py
