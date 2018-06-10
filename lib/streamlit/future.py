@@ -38,11 +38,11 @@ def setup_2_3_compatibility(caller_globals):
     for symbol in export_symbols:
         caller_globals[symbol] = locals()[symbol]
 
-    # import urllib, test, dbm
-    # print(urllib)
-    # print(test)
-    # print(dbm)
-    # sys.exit(-1)
+    import urllib, test, dbm
+    print(urllib)
+    print(test)
+    print(dbm)
+    sys.exit(-1)
 
     # # Do a bunch of dark monkey patching magic.
     # from future.standard_library import install_aliases
