@@ -10,7 +10,7 @@ io.write('The crypt of top secret _undocumented_ Streamlit API calls.')
 io.header('Tables')
 with io.echo():
     arrays = [
-        np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
+        np.array(['bar', 'bar', 'baz', 'baz', 'foo', None , 'qux', 'qux']),
         np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
 
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,

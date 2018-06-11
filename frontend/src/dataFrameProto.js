@@ -110,7 +110,11 @@ export function indexGet(index, level, i) {
     multiIndex: (idx) => {
       const levels = idx.getIn(['levels', level]);
       const labels = idx.getIn(['labels', level]);
-      return indexGet(levels, 0, labels.getIn(['data', i]));
+      const label = labels.getIn(['data', i]);
+      if (label < 0)
+        return "NaN";
+      else
+        return indexGet(levels, 0, label);
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
     float_64Index: (idx) => idx.getIn(['data', 'data', i]),

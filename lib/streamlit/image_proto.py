@@ -14,7 +14,7 @@ def marshall_images(numpy_imgs, captions, width, proto_imgs):
     # Convert into cannonical form.
     numpy_imgs = np.array(numpy_imgs)
     numpy_imgs = convert_to_uint8(numpy_imgs)
-    numpy_imgs = convert_to_3_color_channels(numpy_imgs)
+    numpy_imgs = convert_to_4_color_channels(numpy_imgs)
     numpy_imgs = convert_imgs_to_list(numpy_imgs)
     pil_imgs = list(map(Image.fromarray, numpy_imgs))
     captions = convert_captions_to_list(captions, len(pil_imgs))
@@ -22,7 +22,7 @@ def marshall_images(numpy_imgs, captions, width, proto_imgs):
     # Load it into the protobuf.
     for (img, caption) in zip(pil_imgs, captions):
         img_bytes = io.BytesIO()
-        img.save(img_bytes, format='png')
+        img.save(img_bytes, format='PNG')
         img_bytes = img_bytes.getvalue()
 
         proto_img = proto_imgs.imgs.add()
@@ -42,18 +42,22 @@ def convert_to_uint8(imgs):
     assert issubclass(imgs.dtype.type, np.integer), 'Illegal image format.'
     return imgs.clip(0, 255).astype(np.uint8)
 
-def convert_to_3_color_channels(imgs):
+def convert_to_4_color_channels(imgs):
     """Final dimension should be 3 for three color channels."""
-    if imgs.shape[-1] == 3:
+    if imgs.shape[-1] == 4:
         return imgs
+    elif imgs.shape[-1] == 3:
+        alpha_channel = np.full(imgs.shape[:-1] + (1,), 255, dtype=np.uint8)
+        return np.concatenate([imgs, alpha_channel], axis=len(imgs.shape)-1)
+        # raise RuntimeError('Ok. Let us get out of here.')
     elif imgs.shape[-1] == 1:
-        return convert_to_3_color_channels(imgs.reshape(imgs.shape[:-1]))
+        return convert_to_4_color_channels(imgs.reshape(imgs.shape[:-1]))
     else:
         imgs = np.array([imgs, imgs, imgs])
         if len(imgs.shape) == 3:
-            return imgs.transpose((1, 2, 0))
+            return convert_to_4_color_channels(imgs.transpose((1, 2, 0)))
         elif len(imgs.shape) == 4:
-            return imgs.transpose((1, 2, 3, 0))
+            return convert_to_4_color_channels(imgs.transpose((1, 2, 3, 0)))
     raise RuntimeError('Array shape cannot be displayed as an image.')
 
 def convert_imgs_to_list(imgs):
