@@ -7,16 +7,29 @@ import io
 import base64
 from PIL import Image
 
-def marshall_images(numpy_imgs, captions, width, proto_imgs):
+def marshall_images(img, captions, width, proto_imgs):
     """
-    Converts a numpy image array and list of caption to protobuf.ImageList.
+    Mashalls img and captions into a protobuf.ImageList.
+
+    Args
+    ----
+    img: list of NumPy images or a buffer containing image bytes.
+    captions: list of caption strings.
+    width: the image width.
+    proto_imgs: the ImageList proto to fill.
     """
     # Convert into cannonical form.
-    numpy_imgs = np.array(numpy_imgs)
-    numpy_imgs = convert_to_uint8(numpy_imgs)
-    numpy_imgs = convert_to_4_color_channels(numpy_imgs)
-    numpy_imgs = convert_imgs_to_list(numpy_imgs)
-    pil_imgs = list(map(Image.fromarray, numpy_imgs))
+    if isinstance(img, io.BytesIO):
+        img.seek(0)
+        pil_img = Image.open(img)
+        pil_imgs = [pil_img]
+    else:
+        numpy_imgs = np.array(img)
+        numpy_imgs = convert_to_uint8(numpy_imgs)
+        numpy_imgs = convert_to_4_color_channels(numpy_imgs)
+        numpy_imgs = convert_imgs_to_list(numpy_imgs)
+        pil_imgs = list(map(Image.fromarray, numpy_imgs))
+
     captions = convert_captions_to_list(captions, len(pil_imgs))
 
     # Load it into the protobuf.

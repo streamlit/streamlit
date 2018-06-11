@@ -1,7 +1,9 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+import io
 import json
 import math
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import textwrap
@@ -268,7 +270,7 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
-    def image(self, element, image, caption=None, width=0):
+    def image(self, element, image=None, caption=None, width=0):
         """Displays an image.
 
         Args
@@ -281,6 +283,9 @@ class DeltaGenerator:
         width:
             Image width. 0 means use original width.
         """
+        if image is None:
+            image = io.BytesIO()
+            plt.savefig(image, format='png')
         image_proto.marshall_images(image, caption, width, element.imgs)
 
     # TODO: remove `img()`, now replaced by `image()`
@@ -288,7 +293,7 @@ class DeltaGenerator:
     def img(self, imgs, caption=None, width=0):
         """Displays an image or horizontal array of images.
 
-        imgs     - a monochrom image of shape (w,h) or (w,h,1)
+        imgs     - a monochrome image of shape (w,h) or (w,h,1)
                    OR a color image of shape (w,h,3)
                    OR an array of such images
         caption  - string caption, or string array for multiple images
