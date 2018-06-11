@@ -28,3 +28,20 @@ def to_snake_case(camel_case_str):
     """
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camel_case_str)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+def convert_dict_keys(func, dic):
+    """Applies a conversion function to all keys in a dict.
+
+    Args 
+    ----
+    func : a conversion function from string to string.
+    dic : the dictionary to convert in place.
+    """
+    for k, v in dic.items():
+        converted_key = func(k)
+        dic.pop(k)
+
+        if type(v) is dict:
+            dic[converted_key] = convert_dict_keys(func, v)
+        else:
+            dic[converted_key] = v

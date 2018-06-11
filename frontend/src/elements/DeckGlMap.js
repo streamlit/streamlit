@@ -1,9 +1,18 @@
 import React, {PureComponent} from 'react';
-import DeckGL, {ScatterplotLayer, TextLayer} from 'deck.gl';
+import DeckGL, {
+  ArcLayer,
+  GridLayer,
+  HexagonLayer,
+  LineLayer,
+  PointCloudLayer,
+  ScatterplotLayer,
+  ScreenGridLayer,
+  TextLayer,
+} from 'deck.gl';
 import MapGL from 'react-map-gl';
 import {dataFrameToArrayOfDicts} from '../dataFrameProto';
 
-import { Alert }  from 'reactstrap';
+import {Alert}  from 'reactstrap';
 
 import {
   indexGetByName,
@@ -19,6 +28,9 @@ const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dy
 class DeckGlMap extends PureComponent {
   constructor(props) {
     super(props);
+
+    // TODO: Grab map style from props.
+    this.mapStyle = 'grey';
 
     // TODO: Set lat/lon/zoom based on data, if not set explicitly.
     const optStr = this.props.element.get('options');
@@ -45,29 +57,27 @@ class DeckGlMap extends PureComponent {
   }
 
   render() {
-    const data = dataFrameToArrayOfDicts(this.props.element.get('data'));
-
     try {
-      return (
-        <MapGL
-          {...this.state.viewport}
-          mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-          onViewportChange={this._onViewportChange.bind(this)}
-          >
+      if (this.mapStyle) {
+        return (
+          <MapGL
+            {...this.state.viewport}
+            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+            onViewportChange={this._onViewportChange.bind(this)}
+            >
+            <DeckGL
+              {...this.state.viewport}
+              layers={this.buildLayers()} />
+          </MapGL>
+        );
+
+      } else {
+        return (
           <DeckGL
             {...this.state.viewport}
-            layers={[
-              new ScatterplotLayer({
-                data: data,
-                //data: [{lon: -122.402, lat: 37.79, color: "#ff0000", radius: 1000}],
-                opacity: 0.3,
-                getPosition: d => [d.lon, d.lat],
-                getRadius: d => d.radius == null ? 100 : d.radius,
-                getColor: d => d.color == null ? [200, 30, 0, 128] : hexToRgba(d.color),
-              }),
-            ]} />
-        </MapGL>
-      )
+            layers={this.buildLayers()} />
+        );
+      }
     } catch (e) {
       console.log(e.stack);
       return (
@@ -77,53 +87,210 @@ class DeckGlMap extends PureComponent {
       );
     }
   }
-}
 
-
-function fallback(x, def) {
-  if (x == null) return def;
-  return x;
-}
-
-function hexToRgba(hex) {
-  if (!hex || typeof hex != 'string') {
-    throw new Error('Hex value must be a string');
+  buildLayers() {
+    const layers = this.props.element.get('layers');
+    return layers.map(layer => this.buildLayer(layer)).toArray();
   }
 
-  if (hex.length == 0) {
-    throw new Error('Hex string cannot have zero length');
-  }
+  buildLayer(layer) {
+    const data = dataFrameToArrayOfDicts(layer.get('data'));
+    const spec = JSON.parse(layer.get('spec'));
+    parseEncodings(spec);
 
-  if (hex[0] != '#') {
-    throw new Error('Hex string must start with "#"');
-  }
+    const type = spec.type || '';
+    delete spec.type;
 
-  hex = hex.substr(1);
+    switch (type.toLowerCase()) {
+      case 'arclayer':
+        return new ArcLayer(
+          {data, ...Defaults.ArcLayer, ...spec});
 
-  // Add alpha.
-  if (hex.length == 3) hex += 'f';
-  else if (hex.length == 6) hex += 'ff';
+      case 'gridlayer':
+        return new GridLayer(
+          {data, ...Defaults.GridLayer, ...spec});
 
-  // If shorthand: rgba
-  if (hex.length == 4) {
-    const res = hex.match(/[a-f0-9]/gi);
-    if (res.length != 4) {
-      throw new Error(
-          'Hex string must be of form #rgb, #rgba, #rrggbb, or #rrggbbaa');
+      case 'hexagonlayer':
+        return new HexagonLayer(
+          {data, ...Defaults.HexagonLayer, ...spec});
+
+      case 'linelayer':
+        return new LineLayer(
+          {data, ...Defaults.LineLayer, ...spec});
+
+      case 'pointcloudlayer':
+        return new PointCloudLayer(
+          {data, ...Defaults.PointCloudLayer, ...spec});
+
+      case 'scatterplotlayer':
+        return new ScatterplotLayer(
+          {data, ...Defaults.ScatterplotLayer, ...spec});
+
+      case 'screengridlayer':
+        return new ScreenGridLayer(
+          {data, ...Defaults.ScreenGridLayer, ...spec});
+
+      case 'textlayer':
+        return new TextLayer(
+          {data, ...Defaults.TextLayer, ...spec});
+
+      default:
+        throw new Error(`Unsupported layer type "${type}"`);
     }
-    return res.map(v => parseInt(v + v, 16));
-
-  // If longhand: rrggbbaa
-  } else if (hex.length == 8) {
-    const res = hex.match(/[a-f0-9]{2}/gi);
-    if (res.length != 4) {
-      throw new Error(
-          'Hex string must be of form #rgb, #rgba, #rrggbb, or #rrggbbaa');
-    }
-    return res.map(v => parseInt(v, 16));
   }
-
-  if (!hex) throw new Error('Bad hex string');
 }
+
+
+/**
+ * Returns the first non-null/non-undefined argument.
+ *
+ * Usage:
+ *   fallback(value, fallbackValue)
+ *
+ * Accepts infinitely many arguments:
+ *   fallback(value, fallback1, fallback2, fallback3)
+ */
+function fallback() {
+  for (let i = 0; i < arguments.length; i++) {
+    if (arguments[i] != null) return arguments[i];
+  }
+  return null;
+}
+
+function getPositionFromLatLonColumns(d) {
+  return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)];
+}
+
+function getEndPositionFromLatLonColumn(d) {
+  return [fallback(d.longitude2, d.lon2), fallback(d.latitude2, d.lat2)];
+}
+
+function getPositionFromPositionXYZColumns(d) {
+  return [
+    fallback(d.longitude, d.lon, d.positionX, d.x),
+    fallback(d.latitude, d.lat, d.positionY, d.y),
+    fallback(d.latitude, d.lat, d.positionZ, d.z),
+  ];
+}
+
+function getNormalFromNormalXYZColumns(d) {
+  return [d.normalX, d.normalY, d.normalZ];
+}
+
+const DEFAULT_COLOR = [200, 30, 0, 128];
+
+function getColorFromColorRGBAColumns(d) {
+  return d.colorR && d.colorG && d.colorB ?
+      [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
+      DEFAULT_COLOR;
+}
+
+function getSourceColorFromSourceColorRGBAColumns(d) {
+  return d.sourceColorR && d.sourceColorG && d.sourceColorB ?
+      [d.sourceColorR, d.sourceColorG, d.sourceColorB,
+          d.sourceColorA == null ? 255 : d.sourceColorA] :
+      DEFAULT_COLOR;
+}
+
+function getTargetColorFromTargetColorRGBAColumns(d) {
+  return d.targetColorR && d.targetColorG && d.targetColorB ?
+      [d.targetColorR, d.targetColorG, d.targetColorB,
+          d.targetColorA == null ? 255 : d.targetColorA] :
+      DEFAULT_COLOR;
+}
+
+/**
+ * Converts spec from
+ * {
+ *   ...
+ *   encodings: {
+ *     foo: 'bar',
+ *   },
+ *   ...
+ * }
+ *
+ * to
+ * {
+ *   ...
+ *   getFoo: d => d.bar,
+ *   ...
+ * }
+ */
+function parseEncodings(spec) {
+  const encodings = spec.encodings;
+  if (!encodings) return;
+
+  delete spec.encodings;
+
+  Object.keys(encodings).forEach(key => {
+    spec[makeGetterName(key)] = d => d[encodings[key]];
+  });
+}
+
+
+/**
+ * Takes a string 'foo' and returns 'getFoo'.
+ */
+function makeGetterName(key) {
+  if (typeof key != 'string' || key.length == 0)
+    throw new Error('Encodings must be strings');
+
+  return 'get' + key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+
+const Defaults = {
+  ArcLayer: {
+    getSourceColor: getSourceColorFromSourceColorRGBAColumns,
+    getTargetColor: getTargetColorFromTargetColorRGBAColumns,
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getEndPositionFromLatLonColumn,
+  },
+
+  // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
+
+  GridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  HexagonLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  LineLayer: {
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getEndPositionFromLatLonColumn,
+  },
+
+  // IconLayer: TODO
+  // PathLayer: TODO
+
+  PointCloudLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromPositionXYZColumns,
+    getNormal: getNormalFromNormalXYZColumns,
+  },
+
+  // PolygonLayer: TODO
+
+  ScatterplotLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromLatLonColumns,
+    getRadius: d => fallback(d.radius, 100),
+  },
+
+  ScreenGridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+    getWeight: d => d.weight,
+  },
+
+  TextLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPixelOffset:
+        d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
+    getPosition: getPositionFromLatLonColumns,
+  },
+};
+
 
 export default DeckGlMap;

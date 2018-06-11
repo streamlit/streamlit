@@ -10,7 +10,7 @@ import traceback
 from streamlit import image_proto
 from streamlit.Chart import Chart
 from streamlit.chartconfig import CHART_TYPES
-from streamlit.caseconverters import to_snake_case
+from streamlit.caseconverters import to_snake_case, to_lower_camel_case, convert_dict_keys
 from streamlit import data_frame_proto
 from streamlit import protobuf
 
@@ -393,15 +393,43 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
-    def deck_gl_map(self, element, data, **kwargs):
+    def deck_gl_map(self, element, data=None, **kwargs):
         """Creates a deck.gl map element.
 
         Args
         ----
-        data : DataFrame
-            The data to display.
+        data : DataFrame or None
+        kwargs : dict of
+            - optional layers: dict of
+                - data: DataFrame
+                - type: string - a layer type accepted by DeckGl
+                - other keys: anything accepted by that layer type
+                - encoding: dict of
+                    - components accepted by that layer type
+            - other keys: anything accepted by DeckGl
         """
-        data_frame_proto.marshall_data_frame(data, element.deck_gl_map.data)
+        layer_dicts = kwargs.get('layers') or []
+
+        # If no layers defined and data is passed at the top level,
+        # created a scatterplot layer with the top-level data by default.
+        if data is not None and not layer_dicts:
+            layer_dicts.append({
+                'data': data,
+                'type': 'ScatterplotLayer',
+            })
+
+        for layer_dict in layer_dicts:
+            if 'data' not in layer_dict: continue
+            # Remove DataFrame because it's not JSON-serializable
+            data = layer_dict.pop('data')
+
+            layer = element.deck_gl_map.layers.add()
+            convert_dict_keys(to_lower_camel_case, layer_dict)
+            layer.spec = json.dumps(layer_dict)
+            data_frame_proto.marshall_data_frame(data, layer.data)
+
+        # Dump JSON at the end, because we need to make sure DataFrames are not
+        # present.
         element.deck_gl_map.options = json.dumps(kwargs)
 
     @_export_to_io
