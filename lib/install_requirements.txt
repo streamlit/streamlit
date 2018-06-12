@@ -18,7 +18,7 @@ multidict==4.3.1          # via aiobotocore, aiohttp, yarl
 numpy==1.14.3             # via pandas
 packaging==17.1           # via aiobotocore
 pandas==0.23.0
-pillow==5.1.0
+pillow==5.0.0
 protobuf==3.5.2.post1
 pyparsing==2.2.0          # via packaging
 python-dateutil==2.7.3    # via botocore, pandas

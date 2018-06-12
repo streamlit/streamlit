@@ -27,7 +27,7 @@ multidict==4.3.1
 numpy==1.14.3
 packaging==17.1
 pandas==0.23.0
-pillow==5.1.0
+pillow==5.0.0
 pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
 protobuf==3.5.2.post1
