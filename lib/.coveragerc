@@ -1,0 +1,4 @@
+[run]
+omit =
+    # ignore protobuf
+    streamlit/protobuf/*_pb2.py

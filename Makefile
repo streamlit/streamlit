@@ -29,11 +29,11 @@ lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
 requirements: lib/requirements.txt lib/install_requirements.txt
 	pip install -r lib/requirements.txt
 
-lint:
+pylint:
 	# linting
 	cd lib; flake8 $(modules) tests/
 
-test:
+pytest:
 	# testing + code coverage
 	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
