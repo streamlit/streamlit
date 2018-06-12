@@ -12,6 +12,8 @@ import textwrap
 import traceback
 import types
 
+from functools import wraps
+
 from streamlit.Chart import Chart
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
@@ -31,11 +33,10 @@ for name in dir(DeltaGenerator):
     if hasattr(method, EXPORT_TO_IO_FLAG):
         # We introduce this level of indirection to wrap 'method' in a closure.
         def wrap_method(method):
+            @wraps(method)
             def wrapped_method(*args, **kwargs):
                 dg = Connection.get_connection().get_delta_generator()
                 return method(dg, *args, **kwargs)
-            wrapped_method.__name__ = method.__name__
-            wrapped_method.__doc__ = method.__doc__
             return wrapped_method
         setattr(sys.modules[__name__], name, wrap_method(method))
 

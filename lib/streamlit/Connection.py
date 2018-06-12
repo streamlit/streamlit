@@ -21,6 +21,8 @@ import traceback
 import urllib
 import uuid
 
+from functools import wraps
+
 from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.websocket import websocket_connect
@@ -39,12 +41,11 @@ LOGGER = get_logger()
 def _assert_singleton(method):
     """Asserts that this method is called on the singleton instance of
     Connection."""
+    @wraps(method)
     def inner(self, *args, **kwargs):
         assert self == Connection._connection, \
             f'Can only call {method.__name__}() on the singleton Connection.'
         return method(self, *args, **kwargs)
-    inner.__name__ = method.__name__
-    inner.__doc__ = method.__doc__
     return inner
 
 '''

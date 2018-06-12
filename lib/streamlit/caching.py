@@ -9,6 +9,8 @@ import pickle
 import re
 import shutil
 
+from functools import wraps
+
 from streamlit import io
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
@@ -22,6 +24,7 @@ def cache(func):
 
 	CACHE_PATH = '.streamlit'
 
+        @wraps(func)
 	def wrapped_func(*argc, **argv):
 		"""This function wrapper will only call the underlying function in
 		the case of a cache miss. Cached objects are stored in the cache/
@@ -63,8 +66,6 @@ def cache(func):
 
 	# make this a well-behaved decorator by preserving important function attributes
 	try:
-		wrapped_func.__name__ = func.__name__
-		wrapped_func.__doc__ = func.__doc__
 		wrapped_func.__dict__.update(func.__dict__)
 	except AttributeError:
 		pass

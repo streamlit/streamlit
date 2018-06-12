@@ -21,6 +21,8 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 
 EXPORT_TO_IO_FLAG = '__export_to_io__'
 
+from functools import wraps
+
 def _export_to_io(method):
     """Flag this DeltaGenerator method to be exported to the streamlit.io
     package.
@@ -45,6 +47,7 @@ def _create_element(method):
     -------
     A new DeltaGenerator method with arguments (self, ...)
     """
+    @wraps(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def create_element(element):
@@ -54,8 +57,6 @@ def _create_element(method):
             # See DeltaGenerator.exception for why this is disabled.
             # self.exception(e)
             pass
-    wrapped_method.__name__ = method.__name__
-    wrapped_method.__doc__ = method.__doc__
     return wrapped_method
 
 class DeltaGenerator(object):
