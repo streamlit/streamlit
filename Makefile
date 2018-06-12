@@ -31,7 +31,7 @@ requirements: lib/requirements.txt lib/install_requirements.txt
 
 pylint:
 	# linting
-	cd lib; flake8 $(modules) tests/
+	cd lib; flake8 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
 
 pytest:
 	# testing + code coverage
@@ -63,7 +63,7 @@ clean:
 	rm -f frontend/src/protobuf.js
 	rm -rf lib/streamlit/static
 	find . -name .streamlit -type d -exec rm -rf {} \;
-	cd lib; rm -rf .coverage*
+	cd lib; rm -rf .coverage .coverage\.*
 
 .PHONY: protobuf
 protobuf:

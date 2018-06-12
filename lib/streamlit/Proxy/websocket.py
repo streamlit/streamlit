@@ -1,3 +1,4 @@
+"""Proxy Tornado Handlers."""
 import json
 import urllib
 
@@ -11,31 +12,14 @@ from streamlit import protobuf
 from streamlit.streamlit_msg_proto import new_report_msg
 import webbrowser
 
-
-
-
 LOGGER = get_logger()
-
-def _stop_proxy_on_exception(coroutine):
-    """Coroutine decorator which stops the the proxy if an exception
-    propagates out of the inner coroutine."""
-    @gen.coroutine
-    def wrapped_coroutine(proxy, *args, **kwargs):
-        try:
-            a = yield coroutine(proxy, *args, **kwargs)
-            raise gen.Return(a)
-        except:
-            proxy.stop()
-            raise
-    wrapped_coroutine.__name__ = coroutine.__name__
-    wrapped_coroutine.__doc__ = coroutine.__doc__
-    return wrapped_coroutine
 
 
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
     def initialize(self, connections):
+        """Initialize self._connections."""
         self._connections = connections
 
     def check_origin(self, origin):
@@ -56,13 +40,15 @@ class ClientWebSocket(WebSocketHandler):
         self._queue = self._connection.add_client_queue()
         yield new_report_msg(self._connection.id, self)
 
-        LOGGER.info('Browser websocket opened for "{}"'.format(self._report_name))
+        LOGGER.info('Browser websocket opened for "{}"'.format(
+            self._report_name))
         while True:
             if not self._queue.is_closed():
                 yield self._queue.flush_queue(self)
                 yield gen.sleep(throttle_secs)
 
     def on_message(self, msg):
+        """Run callback for websocket messages."""
         data = json.loads(msg)
         payload = json.dumps(data)
         self.write_message(payload, binary=False)
@@ -89,7 +75,7 @@ class ClientWebSocket(WebSocketHandler):
                 try:
                     msg = await ws.receive(timeout=throttle_secs)
                     if msg.type == WSMsgType.BINARY:
-                        await self._handle_backend_msg(msg.data, connection, ws)
+                        await self._handle_backend_msg( msg.data, connection, ws)  # noqa: E501
                     elif msg.type == WSMsgType.CLOSE:
                         break
                     else:
@@ -109,6 +95,7 @@ class LocalWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
     def initialize(self, connections):
+        """Initialize self._connections."""
         self._connections = connections
 
     def check_origin(self, origin):
@@ -117,18 +104,23 @@ class LocalWebSocket(WebSocketHandler):
         # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
         return True
 
-    #@_stop_proxy_on_exception
+    # @_stop_proxy_on_exception
     def open(self, *args):
-        """Handles a connection to a "local" instance of Streamlit, i.e. one producing deltas to display on the client."""
+        """Handle connection to "local" instance of Streamlit.
+
+        i.e. one producing deltas to display on the client.
+        """
         # Parse out the control information.
         self._local_id = args[0]
         self._report_name = args[1]
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
-        LOGGER.info('Local websocket opened for "{}/{}"'.format(self._local_id, self._report_name))
+        LOGGER.info('Local websocket opened for "{}/{}"'.format(
+            self._local_id, self._report_name))
 
-    #@_stop_proxy_on_exception
+    # @_stop_proxy_on_exception
     def on_message(self, message):
+        """Run callback for websocket messages."""
         # LOGGER.debug(repr(message))
 
         msg = protobuf.ForwardMsg()
@@ -138,7 +130,7 @@ class LocalWebSocket(WebSocketHandler):
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
             report_id = msg.new_report
-            print('the report_id is', report_id)
+            LOGGER.debug('the report_id is %s', report_id)
             self._connection = ProxyConnection(report_id, self._report_name)
             self._connections[self._connection.name] = self._connection
             new_name = self._connection.name not in self._connections
@@ -162,8 +154,7 @@ class LocalWebSocket(WebSocketHandler):
     '''
 
     def _launch_web_client(self, name):
-        """Launches a web browser to connect to the proxy to get the named
-        report.
+        """Launch web browser to connect to the proxy to get the named report.
 
         Args
         ----
@@ -179,4 +170,3 @@ class LocalWebSocket(WebSocketHandler):
         url = 'http://{}:{}/?name={}'.format(
             host, port, quoted_name)
         webbrowser.open(url)
-

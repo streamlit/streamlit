@@ -20,23 +20,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
-from builtins import range, map, str, dict, object, zip, int
-from io import open
+from builtins import dict, object
 from future.standard_library import install_aliases
-install_aliases()
-
-import json
-import os
-import urllib
-import webbrowser
-import concurrent.futures
 
 from streamlit import config
-from streamlit import protobuf
-from streamlit.ProxyConnection import ProxyConnection
-from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.streamlit_msg_proto import streamlit_msg_iter
-from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
 from streamlit.Proxy.websocket import ClientWebSocket, LocalWebSocket
 
@@ -44,12 +31,13 @@ from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
+install_aliases()
+
 LOGGER = get_logger()
 
 
 def _stop_proxy_on_exception(coroutine):
-    """Coroutine decorator which stops the the proxy if an exception
-    propagates out of the inner coroutine."""
+    """Coroutine decorator to stop proxy on exception."""
     @gen.coroutine
     def wrapped_coroutine(proxy, *args, **kwargs):
         try:
@@ -62,10 +50,12 @@ def _stop_proxy_on_exception(coroutine):
     wrapped_coroutine.__doc__ = coroutine.__doc__
     return wrapped_coroutine
 
+
 class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):
+        """Proxy constructor."""
         self._connections = {}
 
         routes = [
@@ -107,13 +97,13 @@ class Proxy(object):
         # This table from names to ProxyConnections stores all the information
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
-        self._connections = dict() # use insead of {} for 2/3 compatibility
+        self._connections = dict()  # use instead of {} for 2/3 compatibility
 
         # Initialized things that the proxy will need to do cloud things.
-        self._cloud = None # S3Connection()
+        self._cloud = None  # S3Connection()
 
     def run_app(self):
-        """Runs the web app."""
+        """Run web app."""
         '''
         port = config.get_option('proxy.port')
         web.run_app(self._app, port=port)
@@ -123,9 +113,12 @@ class Proxy(object):
         LOGGER.debug('Just started the proxy.')
 
     def stop(self):
-        """Stops the proxy. Allowing all current handler to exit normally."""
+        """Stop proxy.
+
+        Allowing all current handler to exit normally.
+        """
         if not self._stopped:
-            asyncio.get_event_loop().stop()
+            IOLoop.current().close()
         self._stopped = True
 
     '''
@@ -135,27 +128,11 @@ class Proxy(object):
         return web.FileResponse(os.path.join(static_root, 'index.html'))
     '''
 
-    def _launch_web_client(self, name):
-        """Launches a web browser to connect to the proxy to get the named
-        report.
-
-        Args
-        ----
-        name : string
-            The name of the report to which the web browser should connect.
-        """
-        if config.get_option('proxy.useNode'):
-            host, port = 'localhost', '3000'
-        else:
-            host = config.get_option('proxy.server')
-            port = config.get_option('proxy.port')
-        quoted_name = urllib.parse.quote_plus(name)
-        url = f'http://{host}:{port}/?name={quoted_name}'
-        webbrowser.open(url)
-
     def _register(self, connection):
-        """Registers this connection under it's name so that client connections
-        will connect to it."""
+        """Register this connection's name.
+
+        So that client connections can connect to it.
+        """
         # Register the connection and launch a web client if this is a new name.
         new_name = connection.name not in self._connections
         self._connections[connection.name] = connection
@@ -173,14 +150,17 @@ class Proxy(object):
         loop.call_later(timeout_secs, connection_timeout)
 
     def _try_to_deregister(self, connection):
-        """Deregisters this ProxyConnection so long as there aren't any open
+        """Try to deregister proxy connection.
+
+        Deregister this ProxyConnection so long as there aren't any open
         connection (local or client), and the connection is no longer in its
-        grace period."""
+        grace period.
+        """
         if self._is_registered(connection) and connection.can_be_deregistered():
             del self._connections[connection.name]
 
     def _is_registered(self, connection):
-        """Returns true if this connection is registered to its name."""
+        """Return true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
     '''
@@ -193,15 +173,13 @@ class Proxy(object):
     '''
 
     def _remove_client(self, connection, queue):
-        """Removes the queue from the connection, and closes the connection if
-        necessary."""
+        """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
         self._try_to_deregister(connection)
         self._potentially_stop_proxy()
 
     def _potentially_stop_proxy(self):
-        """Checks to see if we have any open connections. If not,
-        close the proxy."""
+        """Stop proxy if no open connections."""
         if not self._connections:
             self.stop()
 
@@ -230,16 +208,15 @@ class Proxy(object):
 
         # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
         report = connection.get_report_proto()
-        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')
+        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')  # noqa: E501
         url = await self._cloud.upload_report(connection.id, report)
 
         # Pretend to upload something.
         await asyncio.sleep(3.0)
-        url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'
+        url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'  # noqa: E501
 
         # Indicate that the save is done.
         progress_msg.Clear()
         progress_msg.report_uploaded = url
         await ws.send_bytes(progress_msg.SerializeToString())
     '''
-
