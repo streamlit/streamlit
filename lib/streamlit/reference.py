@@ -20,6 +20,11 @@ import threading
 import streamlit
 from streamlit import io
 
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 def display_reference():
     """Displays Streamlit's internal help in the browser."""
 
@@ -120,7 +125,8 @@ def display_reference():
 
     io.header('Visualizing data as images')
 
-    @streamlit.cache
+    # See caching.py for why this is commented out.
+    # @streamlit.cache
     def read_image(url):
         return urllib.request.urlopen(url).read()
     image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'

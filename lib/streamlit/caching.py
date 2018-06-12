@@ -13,6 +13,9 @@ from streamlit import io
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
 
+# TODO(armando): dis.get_instructions only exists in 3.6, find or add a 2.7/3.6
+#                compatible function.
+
 def cache(func):
 	"""A function decorator which enables the function to cache its
 	input/output behavior to disk."""

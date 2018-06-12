@@ -51,7 +51,9 @@ def _create_element(method):
                 method(self, element, *args, **kwargs)
             return self._new_element(create_element)
         except Exception as e:
-            self.exception(e)
+            # See DeltaGenerator.exception for why this is disabled.
+            # self.exception(e)
+            pass
     wrapped_method.__name__ = method.__name__
     wrapped_method.__doc__ = method.__doc__
     return wrapped_method
@@ -176,6 +178,8 @@ class DeltaGenerator(object):
             doc_string = f'No docs available.'
         element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
 
+    # TODO(armando): Exception handling is not working correctly, most
+    #                likely due to 2.7/3.6 differences.
     @_export_to_io
     @_create_element
     def exception(self, element, exception):

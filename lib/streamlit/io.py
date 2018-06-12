@@ -17,6 +17,11 @@ from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
 # singleton connection object (in streamlit.connection) and then
@@ -150,6 +155,10 @@ def echo():
         with io.echo():
             io.write('This code will be printed')
     """
+    yield
+    # TODO(armando): Debug and get this working again.  Most likely due
+    #                to 2.7/3.6 differences on traceback
+    '''
     code = empty()
     try:
         spaces = re.compile('\s*')
@@ -170,17 +179,20 @@ def echo():
         code.markdown(f'```\n{lines_to_display}\n```')
     except FileNotFoundError as err:
         code.warning(f'Unable to display code. {str(err)}')
+    '''
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
-_this_may_be_proxy = sys.argv[0] == '-m'
-
+# For whatever reason, sys.argv[0] is different based on python version.
+# * Python 2.7 = '-c'
+# * Python 3.6 = '-m'
+_this_may_be_proxy = False
+if sys.argv[0] in ('-m', '-c'):
+    _this_may_be_proxy = True
 # In order to log all exceptions etc to the streamlit report after
 # `import streamlit.io` we establish the proxy by calling get_connection().
 # If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
 # skip this step. Overcautiously skipping this step isn't fatal in general as
 # it simply implies that the connection may be established later.
-'''
 if not _this_may_be_proxy:
-    Connection.get_connection() # get_delta_generator()
-'''
+    Connection.get_connection().get_delta_generator()

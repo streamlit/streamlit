@@ -178,7 +178,10 @@ class Connection(object):
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
             '''
-            ioloop = IOLoop.instance()
+            # TODO(armando): Figure out how to get event loop to start
+            #                in 3.6 only.
+            # asyncio.set_event_loop(asyncio.new_event_loop())
+            ioloop = IOLoop.current()
             ioloop.run_sync(self._attempt_connection)
             self.unregister()
             LOGGER.debug('exit')
