@@ -270,22 +270,33 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
-    def image(self, element, image=None, caption=None, width=0):
+    def pyplot(self, element, width=0):
+        """Displays a matplotlib.pyplot image.
+
+        Args
+        ----
+        element : The proto element.
+        width : Image width. 0 means use original width.
+        """
+        image = io.BytesIO()
+        plt.savefig(image, format='png')
+        image_proto.marshall_images(image, None, width, element.imgs)
+
+    @_export_to_io
+    @_create_element
+    def image(self, element, image, caption=None, width=0):
         """Displays an image.
 
         Args
         ----
-        image: image or array
+        image : image or array
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
-        caption:
+        caption :
             String caption
-        width:
+        width :
             Image width. 0 means use original width.
         """
-        if image is None:
-            image = io.BytesIO()
-            plt.savefig(image, format='png')
         image_proto.marshall_images(image, caption, width, element.imgs)
 
     # TODO: remove `img()`, now replaced by `image()`

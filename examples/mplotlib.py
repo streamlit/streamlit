@@ -65,4 +65,4 @@ plt.tight_layout()
 #plt.show()
 
 # Show plot in streamlit
-io.image()
+io.pyplot()
