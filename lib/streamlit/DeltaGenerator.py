@@ -82,6 +82,50 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
+    def text(self, element, body):
+        """Writes fixed width text.
+
+        Args
+        ----
+        body : string
+            The string to display.
+        """
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.PLAIN
+
+    @_export_to_io
+    @_create_element
+    def markdown(self, element, body):
+        """Displays the string, formatted as markdown.
+
+        Args
+        ----
+        string : string
+            The string to display as markdown.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+        """
+        element.text.body = textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
+
+    @_export_to_io
+    @_create_element
+    def json(self, element, body):
+        """Displays the object as a pretty JSON string.
+
+        Args
+        ----
+        object : object
+            The object to stringify. All referenced objects should have JSON counterpart.
+            If object is a string, we assume it is already JSON formatted.
+        """
+        element.text.body = (body if isinstance(body, str) else json.dumps(body))
+        element.text.format = protobuf.Text.JSON
+
+    @_export_to_io
+    @_create_element
     def title(self, element, string):
         """Displays the string as a title (h1) header.
 
@@ -130,72 +174,6 @@ class DeltaGenerator(object):
         """
         element.text.body = str(string)
         element.text.format = protobuf.Text.SUB_HEADER
-
-    @_export_to_io
-    @_create_element
-    def text(self, element, body):
-        """Writes fixed width text.
-
-        Args
-        ----
-        body : string
-            The string to display.
-        """
-        element.text.body = str(body)
-        element.text.format = protobuf.Text.PLAIN
-
-    @_export_to_io
-    @_create_element
-    def help(self, element, obj):
-        """Displays the doc string for this object, nicely formatted.
-
-        Displays the doc string for this object. If the doc string is
-        represented as ReStructuredText, then it will be converted to
-        Markdown on the client before display.
-
-        Args
-        ----
-        obj: Object
-            The object to display.
-
-        Returns
-        -------
-        A DeltaGenerator object which allows you to overwrite this element.
-
-        Example
-        -------
-        To learn how the io.write function works, call::
-            io.help(io.write)
-        """
-        if not hasattr(obj, '__name__'):
-            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
-        element.doc_string.name = obj.__name__
-        try:
-            element.doc_string.module = obj.__module__
-        except AttributeError:
-            pass
-        doc_string = obj.__doc__
-        if type(doc_string) is not str:
-            doc_string = f'No docs available.'
-        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
-
-    # TODO(armando): Exception handling is not working correctly, most
-    #                likely due to 2.7/3.6 differences.
-    @_export_to_io
-    @_create_element
-    def exception(self, element, exception):
-        """
-        Prints this exception to the Report.
-
-        Args
-        ----
-        exception: Exception
-            The exception to display.
-        """
-        tb = traceback.extract_tb(exception.__traceback__)
-        element.exception.type = type(exception).__name__
-        element.exception.message = str(exception)
-        element.exception.stack_trace.extend(traceback.format_list(tb))
 
     @_export_to_io
     @_create_element
@@ -252,6 +230,73 @@ class DeltaGenerator(object):
         """
         element.text.body = str(body)
         element.text.format = protobuf.Text.SUCCESS
+
+    @_export_to_io
+    @_create_element
+    def link(self, element, body):
+        """
+        Creates an element showing a link
+
+        Args
+        ----
+        body: str
+            The link.
+        """
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.LINK
+
+    @_export_to_io
+    @_create_element
+    def help(self, element, obj):
+        """Displays the doc string for this object, nicely formatted.
+
+        Displays the doc string for this object. If the doc string is
+        represented as ReStructuredText, then it will be converted to
+        Markdown on the client before display.
+
+        Args
+        ----
+        obj: Object
+            The object to display.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+
+        Example
+        -------
+        To learn how the io.write function works, call::
+            io.help(io.write)
+        """
+        if not hasattr(obj, '__name__'):
+            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
+        element.doc_string.name = obj.__name__
+        try:
+            element.doc_string.module = obj.__module__
+        except AttributeError:
+            pass
+        doc_string = obj.__doc__
+        if type(doc_string) is not str:
+            doc_string = f'No docs available.'
+        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
+
+    # TODO(armando): Exception handling is not working correctly, most
+    #                likely due to 2.7/3.6 differences.
+    @_export_to_io
+    @_create_element
+    def exception(self, element, exception):
+        """
+        Prints this exception to the Report.
+
+        Args
+        ----
+        exception: Exception
+            The exception to display.
+        """
+        tb = traceback.extract_tb(exception.__traceback__)
+        element.exception.type = type(exception).__name__
+        element.exception.message = str(exception)
+        element.exception.stack_trace.extend(traceback.format_list(tb))
 
     @_export_to_io
     def dataframe(self, pandas_df):
@@ -348,51 +393,6 @@ class DeltaGenerator(object):
                 my_bar.progress(percent_complete + 1)
         """
         element.progress.value = value
-
-    @_export_to_io
-    @_create_element
-    def markdown(self, element, body):
-        """Displays the string, formatted as markdown.
-
-        Args
-        ----
-        string : string
-            The string to display as markdown.
-
-        Returns
-        -------
-        A DeltaGenerator object which allows you to overwrite this element.
-        """
-        element.text.body = textwrap.dedent(body).strip()
-        element.text.format = protobuf.Text.MARKDOWN
-
-    @_export_to_io
-    @_create_element
-    def link(self, element, body):
-        """
-        Creates an element showing a link
-
-        Args
-        ----
-        body: str
-            The link.
-        """
-        element.text.body = str(body)
-        element.text.format = protobuf.Text.LINK
-
-    @_export_to_io
-    @_create_element
-    def json(self, element, body):
-        """Displays the object as a pretty JSON string.
-
-        Args
-        ----
-        object : object
-            The object to stringify. All referenced objects should have JSON counterpart.
-            If object is a string, we assume it is already JSON formatted.
-        """
-        element.text.body = (body if isinstance(body, str) else json.dumps(body))
-        element.text.format = protobuf.Text.JSON
 
     @_export_to_io
     @_create_element
