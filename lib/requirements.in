@@ -5,3 +5,4 @@ pytest
 pytest-cov
 testfixtures
 twine
+six

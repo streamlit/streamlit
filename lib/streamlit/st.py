@@ -23,11 +23,14 @@ from streamlit.Chart import Chart
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
+from streamlit.logger import get_logger
 
 try:
     FileNotFoundError
 except NameError:
     FileNotFoundError = IOError
+
+LOGGER = get_logger()
 
 # Basically, the functions in this package wrap member functions of
 # DeltaGenerator. What they do is get the DeltaGenerator from the
@@ -107,7 +110,10 @@ def write(*args):
                 string_buffer[:] = []
 
         for arg in args:
-            if type(arg) == str:
+            # LOGGER.debug(f'argument type: {type(arg)} {type(arg) == str}')
+            # LOGGER.debug(f'is a string: {isinstance(arg, str)}')
+            # LOGGER.debug(f'is a string type: {}')
+            if isinstance(arg, string_types):
                 string_buffer.append(arg)
             elif isinstance(arg, DATAFRAME_LIKE_TYPES):
                 flush_buffer()

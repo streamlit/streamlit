@@ -35,6 +35,9 @@ def setup_2_3_shims(caller_globals):
     from io import open
     export_symbols += ['open']
 
+    from six import string_types
+    export_symbols += ['string_types']
+
     # Export these symbols to the calling function's symbol table.
     for symbol in export_symbols:
         caller_globals[symbol] = locals()[symbol]
