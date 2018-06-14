@@ -30,3 +30,8 @@ except Exception as e1:
     except Exception as e2:
         st.exception(e1)
 ```
+- The following code causes an exception to be sent over the websocket connection.
+```python
+import streamlit
+raise Exception('test')
+```

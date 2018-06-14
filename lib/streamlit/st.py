@@ -128,8 +128,9 @@ def write(*args):
                 string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
         flush_buffer()
-    except Exception as e:
-        exception(e)
+    except:
+        _, exception, traceback = sys.exc_info()
+        exception(exception, traceback)
 
 @contextlib.contextmanager
 def spinner(text):
