@@ -65,15 +65,16 @@ def get_option(option):
     file.
     """
     basedir = os.path.dirname(__file__)
+    production_version = ('site-packages' in __file__)
     global __global_config
     if not __global_config:
-        production_version = ('site-packages' in __file__)
         __global_config = _load_config({
             'local.root': sys.prefix,
             'local.config': os.path.join(basedir, 'config/config.yaml'),
             'proxy.useNode': not production_version,
             'proxy.staticRoot': os.path.join(basedir, 'static'),
         })
+    __global_config['proxy.useNode'] = not production_version
     return __global_config[option]
 
 def get_path(option):

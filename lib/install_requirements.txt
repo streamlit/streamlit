@@ -5,18 +5,23 @@
 #    pip-compile --output-file lib/install_requirements.txt lib/install_requirements.in
 #
 backports-abc==0.5        # via tornado
+boto3==1.7.39
+botocore==1.10.39         # via boto3, s3transfer
 click==6.7
 docutils==0.14
+enum==0.4.6
 future-fstrings==0.4.3
 future==0.16.0
-futures==3.2.0            # via tornado
+futures==3.2.0            # via s3transfer, tornado
+jmespath==0.9.3           # via boto3, botocore
 numpy==1.14.4             # via pandas
 pandas==0.23.0
 pillow==5.0.0
 protobuf==3.5.2.post1
-python-dateutil==2.7.3    # via pandas
+python-dateutil==2.7.3    # via botocore, pandas
 pytz==2018.4              # via pandas, tzlocal
 pyyaml==3.12
+s3transfer==0.1.13        # via boto3
 singledispatch==3.4.0.3   # via tornado
 six==1.11.0               # via protobuf, python-dateutil, singledispatch
 tokenize-rt==2.0.1        # via future-fstrings

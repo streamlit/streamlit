@@ -3,8 +3,10 @@ pandas
 Pillow!=5.1.0
 protobuf
 PyYAML
+boto3
 click
 docutils
+enum
 future
 future-fstrings
 pandas

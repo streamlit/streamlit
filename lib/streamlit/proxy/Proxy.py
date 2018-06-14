@@ -22,7 +22,6 @@ setup_2_3_shims(globals())
 
 from streamlit import config
 from streamlit import protobuf
-from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
 
 from streamlit.streamlit_msg_proto import new_report_msg
@@ -37,6 +36,69 @@ import webbrowser
 import functools
 
 LOGGER = get_logger()
+
+def _launch_web_client(name):
+    """Launches a web browser to connect to the proxy to get the named
+    report.
+
+    Args
+    ----
+    name : string
+        The name of the report to which the web browser should connect.
+    """
+    if config.get_option('proxy.useNode'):
+        host, port = 'localhost', '3000'
+    else:
+        host = config.get_option('proxy.server')
+        port = config.get_option('proxy.port')
+    quoted_name = urllib.parse.quote_plus(name)
+    url = 'http://{}:{}/?name={}'.format(
+        host, port, quoted_name)
+    webbrowser.open(url)
+
+def stop_proxy_on_exception(is_coroutine=False):
+    """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
+    def stop_proxy_decorator(callback):
+        if is_coroutine:
+            @functools.wraps(callback)
+            @gen.coroutine
+            def wrapped_coroutine(web_socket_handler, *args, **kwargs):
+                try:
+                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
+                    LOGGER.debug(f'About to yield {callback}')
+                    rv = yield callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'About to return {rv}')
+                    raise gen.Return(rv)
+                except gen.Return:
+                    LOGGER.debug(f'Passing through COROUTINE return value:')
+                    raise
+                except Exception as e:
+                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_coroutine
+        else:
+            @functools.wraps(callback)
+            def wrapped_callback(web_socket_handler, *args, **kwargs):
+                try:
+                    return callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'Running wrapped version of {callback}')
+                    # if is_coroutine:
+                    #     LOGGER.debug(f'About to yield {callback}')
+                    #     rv = yield callback(web_socket_handler, *args, **kwargs)
+                    #     raise gen.Return(rv)
+                    # else:
+                    #
+                    # # callback(web_socket_handler, *args, **kwargs)
+                except Exception as e:
+                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_callback
+        return functools.wraps(callback)(wrapped_callback)
+    return stop_proxy_decorator
 
 class Proxy(object):
     """The main base class for the streamlit server."""
@@ -184,103 +246,7 @@ class Proxy(object):
         self.try_to_deregister_proxy_connection(connection)
         self.potentially_stop()
 
-    '''
-    async def _handle_backend_msg(self, payload, connection, ws):
-        backend_msg = protobuf.BackMsg()
-        try:
-            backend_msg.ParseFromString(payload)
-            command  = backend_msg.command
-            if command == protobuf.BackMsg.Command.Value('HELP'):
-                os.system('python -m streamlit help &')
-            elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
-                await self._save_cloud(connection, ws)
-            else:
-                print("no handler for",
-                    protobuf.BackMsg.Command.Name(backend_msg.command))
-        except Exception as e:
-            print(f'Cannot parse binary message: {e}')
-
-    async def _save_cloud(self, connection, ws):
-        """Saves a serialized version of this report's deltas to the cloud."""
-        # Indicate that the save is starting.
-        progress_msg = protobuf.ForwardMsg()
-        progress_msg.upload_report_progress = 100
-        await ws.send_bytes(progress_msg.SerializeToString())
-
-        # COMMENTED OUT FOR THIAGO (becuase he doesn't have AWS creds)
-        report = connection.get_report_proto()
-        print(f'Saving report of size {len(report.SerializeToString())} and type {type(report.SerializeToString())}')  # noqa: E501
-        url = await self._cloud.upload_report(connection.id, report)
-
-        # Pretend to upload something.
-        await asyncst.sleep(3.0)
-        url = 'https://s3-us-west-2.amazonaws.com/streamlit-test10/streamlit-static/0.9.0-b5a7d29ec8d0469961e5e5f050944dd4/index.html?id=90a3ef64-7a67-4f90-88c9-8161934af74a'  # noqa: E501
-
-        # Indicate that the save is done.
-        progress_msg.Clear()
-        progress_msg.report_uploaded = url
-        await ws.send_bytes(progress_msg.SerializeToString())
-    '''
-
-def _launch_web_client(name):
-    """Launches a web browser to connect to the proxy to get the named
-    report.
-
-    Args
-    ----
-    name : string
-        The name of the report to which the web browser should connect.
-    """
-    if config.get_option('proxy.useNode'):
-        host, port = 'localhost', '3000'
-    else:
-        host = config.get_option('proxy.server')
-        port = config.get_option('proxy.port')
-    quoted_name = urllib.parse.quote_plus(name)
-    url = 'http://{}:{}/?name={}'.format(
-        host, port, quoted_name)
-    webbrowser.open(url)
-
-def stop_proxy_on_exception(is_coroutine=False):
-    """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
-    def stop_proxy_decorator(callback):
-        if is_coroutine:
-            @functools.wraps(callback)
-            @gen.coroutine
-            def wrapped_coroutine(web_socket_handler, *args, **kwargs):
-                try:
-                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
-                    LOGGER.debug(f'About to yield {callback}')
-                    rv = yield callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'About to return {rv}')
-                    raise gen.Return(rv)
-                except gen.Return:
-                    LOGGER.debug(f'Passing through COROUTINE return value:')
-                    raise
-                except Exception as e:
-                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
-                    web_socket_handler._proxy.stop()
-                    LOGGER.debug('Stopped the proxy.')
-                    raise
-            return wrapped_coroutine
-        else:
-            @functools.wraps(callback)
-            def wrapped_callback(web_socket_handler, *args, **kwargs):
-                try:
-                    return callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'Running wrapped version of {callback}')
-                    # if is_coroutine:
-                    #     LOGGER.debug(f'About to yield {callback}')
-                    #     rv = yield callback(web_socket_handler, *args, **kwargs)
-                    #     raise gen.Return(rv)
-                    # else:
-                    #
-                    # # callback(web_socket_handler, *args, **kwargs)
-                except Exception as e:
-                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
-                    web_socket_handler._proxy.stop()
-                    LOGGER.debug('Stopped the proxy.')
-                    raise
-            return wrapped_callback
-        return functools.wraps(callback)(wrapped_callback)
-    return stop_proxy_decorator
+    def _potentially_stop_proxy(self):
+        """Stop proxy if no open connections."""
+        if not self._connections:
+            self.stop()
