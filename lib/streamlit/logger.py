@@ -62,20 +62,18 @@ def setup_formatter(logger):
     """Sets up the console formatter for a given logger."""
     # Deregister any previous console loggers.
     if hasattr(logger, 'streamlit_console_handler'):
-        print('Getting rid of previous streamlit_console_handler.')
         logger.removeHandler(logger.streamlit_console_handler)
 
     # Creates the console handler for this logger.
     global THIS_IS_PROXY
     if THIS_IS_PROXY:
-        formatter = logging.Formatter('PROXY_%(levelname)s:%(name)s:%(message)s')
+        formatter = logging.Formatter('- PROXY %(levelname)-5s %(name)-20s: %(message)s')
     else:
-        formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+        formatter = logging.Formatter('- LOCAL %(levelname)-5s %(name)-20s: %(message)s')
     logger.streamlit_console_handler = logging.StreamHandler()
     logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
-    print('Adding new streamlit_console_handler.')
     logger.addHandler(logger.streamlit_console_handler)
 
 def init_aiohttp_logs():
@@ -90,7 +88,6 @@ def init_aiohttp_logs():
 
     logger = get_logger()
     logger.debug('Initialized aiohttp logs')
-
 
 def init_tornado_logs():
     """Initialize tornado logs."""
