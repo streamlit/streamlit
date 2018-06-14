@@ -5,10 +5,11 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.proxy import Proxy
-from streamlit.logger import get_logger
-
+from streamlit.logger import get_logger, set_this_is_proxy
+set_this_is_proxy()
 LOGGER = get_logger()
+
+from streamlit.proxy import Proxy
 
 def main():
     """Run Proxy main handler.
@@ -21,7 +22,6 @@ def main():
     LOGGER.debug('Instantiated the proxy server. About to call run_app()')
     proxy_server.run_app()
     LOGGER.debug('Finished calling run app.')
-
 
 if __name__ == '__main__':
     main()

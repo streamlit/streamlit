@@ -25,7 +25,7 @@ def test_print_function():
 @janky_test
 def test_builtin_types():
     import abc, itertools, future.types
-    assert type(range) == abc.ABCMeta
+    assert range == future.types.newrange
     assert map == itertools.imap
     assert str == future.types.newstr
     assert dict == future.types.newdict

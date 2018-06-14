@@ -80,6 +80,7 @@ class Connection(object):
 
         # Create a name for this report.
         self._name = self._create_name()
+        LOGGER.debug(f'Created a connection with name "{self._name}"')
 
         assert self._name != '-c', "This connection should not be created!" # DEBUG
 
@@ -97,7 +98,8 @@ class Connection(object):
         necessary."""
         # Instantiate the singleton connection if necessary.
         if cls._connection == None:
-            LOGGER.debug('no connection, registering one')
+            LOGGER.debug('No connection. Registering one.')
+
             # Create the new connection.
             Connection().register()
 

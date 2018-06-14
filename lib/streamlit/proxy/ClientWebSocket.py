@@ -15,7 +15,7 @@ import webbrowser
 from streamlit import config
 from streamlit import protobuf
 from streamlit.logger import get_logger
-from streamlit.ProxyConnection import ProxyConnection
+# from streamlit.proxy import ProxyConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 
 LOGGER = get_logger()

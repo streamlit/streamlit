@@ -11,9 +11,14 @@ import inspect
 import logging
 import sys
 
-LOGGERS = {}
+# Loggers for each name are saved here.
+LOGGERS = dict()
+
+# The global log level is set here across all names.
 LOG_LEVEL = logging.DEBUG
 
+# This boolean is True iff this is the proxy.
+THIS_IS_PROXY = False
 
 def set_log_level(level):
     """Set log level."""
@@ -47,6 +52,31 @@ def set_log_level(level):
     global LOG_LEVEL
     LOG_LEVEL = log_level
 
+def set_this_is_proxy():
+    global THIS_IS_PROXY
+    THIS_IS_PROXY = True
+    for log in LOGGERS.values():
+        setup_formatter(log)
+
+def setup_formatter(logger):
+    """Sets up the console formatter for a given logger."""
+    # Deregister any previous console loggers.
+    if hasattr(logger, 'streamlit_console_handler'):
+        print('Getting rid of previous streamlit_console_handler.')
+        logger.removeHandler(logger.streamlit_console_handler)
+
+    # Creates the console handler for this logger.
+    global THIS_IS_PROXY
+    if THIS_IS_PROXY:
+        formatter = logging.Formatter('PROXY_%(levelname)s:%(name)s:%(message)s')
+    else:
+        formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+    logger.streamlit_console_handler = logging.StreamHandler()
+    logger.streamlit_console_handler.setFormatter(formatter)
+
+    # Register the new console logger.
+    print('Adding new streamlit_console_handler.')
+    logger.addHandler(logger.streamlit_console_handler)
 
 def init_aiohttp_logs():
     """Initialize aiohttp logs."""
@@ -91,20 +121,19 @@ def get_logger(name=None):
             package = ''
         modulename = inspect.getmodulename(filename)
 
+        # Join the name with periods, and get rid of any leading periods.
         name = '.'.join([package, modulename])
+        while True:
+            if name == '':
+                name = 'null'
+                break
+            elif name[0] == '.':
+                name = name[1:]
+            else:
+                break
 
     if name in LOGGERS.keys():
         return LOGGERS[name]
-
-    formatter = logging.Formatter(
-        fmt='%(asctime)s.%(msecs)03d %(levelname)s:%(name)s:%(message)s',
-        datefmt='%Y-%m-%d, %H:%M:%S')
-
-    # using shorter logs
-    formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
-
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
 
     if name == 'root':
         log = logging.getLogger()
@@ -113,8 +142,10 @@ def get_logger(name=None):
 
     log.setLevel(LOG_LEVEL)
     log.propagate = False
-    log.addHandler(console)
+    setup_formatter(log)
 
     LOGGERS[name] = log
 
     return log
+
+import streamlit.proxy

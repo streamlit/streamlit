@@ -22,24 +22,18 @@ setup_2_3_shims(globals())
 
 from streamlit import config
 from streamlit import protobuf
-# from streamlit.streamlit_msg_proto import new_report_msg
-# from streamlit.streamlit_msg_proto import streamlit_msg_iter
 from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
-
-
 from streamlit.proxy import ClientWebSocket, LocalWebSocket
-# from streamlit.ProxyConnection import ProxyConnection
-
+# from streamlit.streamlit_msg_proto import new_report_msg
+# from streamlit.streamlit_msg_proto import streamlit_msg_iter
+# from streamlit.proxy import ProxyConnection
 
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
-install_aliases()
-
 LOGGER = get_logger()
-
 
 def _stop_proxy_on_exception(coroutine):
     """Coroutine decorator to stop proxy on exception."""
