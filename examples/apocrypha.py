@@ -1,3 +1,12 @@
+# -*- coding: future_fstrings -*-
+
+"""The crypt of top secret undocumented Streamlit API calls."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 from streamlit import st
 import numpy as np
 import pandas as pd
