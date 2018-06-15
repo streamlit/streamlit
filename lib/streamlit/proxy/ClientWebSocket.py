@@ -56,28 +56,32 @@ class ClientWebSocket(WebSocketHandler):
         # self._queue = self._connection.add_client_queue()
         # yield new_report_msg(self._connection.id, self)
 
-        LOGGER.info(f'Browser websocket opened for "{self._report_name}"')
-        self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
-        LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
-        LOGGER.debug(f'Got a new queue : {self._queue}')
+        try:
+            LOGGER.info(f'Browser websocket opened for "{self._report_name}"')
+            self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
+            LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
+            LOGGER.debug(f'Got a new queue : {self._queue}')
 
-        LOGGER.debug(f'Starting loop for "{self._connection.name}"')
-        while self._is_open:
-            if not self._proxy.proxy_connection_is_registered(self._connection):
-                LOGGER.debug(f'The proxy connection for "{self._report_name}" is not registered.')
-                self._proxy.remove_client(self._connection, self._queue)
-                self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
-                LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
-                LOGGER.debug(f'Got a new queue : {self._queue}')
+            LOGGER.debug(f'Starting loop for "{self._connection.name}"')
+            while self._is_open:
+                if not self._proxy.proxy_connection_is_registered(self._connection):
+                    LOGGER.debug(f'The proxy connection for "{self._report_name}" is not registered.')
+                    self._proxy.remove_client(self._connection, self._queue)
+                    self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
+                    LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
+                    LOGGER.debug(f'Got a new queue : {self._queue}')
 
-            if not self._queue.is_closed():
-                yield self._queue.flush_queue(self)
+                if not self._queue.is_closed():
+                    yield self._queue.flush_queue(self)
 
-            yield gen.sleep(throttle_secs)
+                yield gen.sleep(throttle_secs)
+            LOGGER.debug(f'Closing loop for "{self._connection.name}"')
+        except KeyError as e:
+            LOGGER.info(f'Attempting to access non-existant report "{e}".')
 
-        LOGGER.debug(f'Closing loop for "{self._connection.name}"')
-        self._proxy.remove_client(self._connection, self._queue)
-        LOGGER.debug(f'FINALLY removed the client for "{self._connection.name}"')
+        if self._connection != None:
+            self._proxy.remove_client(self._connection, self._queue)
+            LOGGER.debug(f'Removed the client for "{self._connection.name}"')
 
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
