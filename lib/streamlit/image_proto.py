@@ -102,9 +102,6 @@ def convert_captions_to_list(captions, n_imgs):
     else:
         captions = list(map(str, captions))
 
-    LOGGER.debug(f'len(captions): {len(captions)}')
-    LOGGER.debug(f'n_imgs: {n_imgs}')
-    LOGGER.debug(f'captions: {captions}')
     assert len(captions) == n_imgs, \
         f"Cannot pair {len(captions)} captions with {n_imgs} images."
 
