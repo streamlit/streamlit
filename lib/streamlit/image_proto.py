@@ -14,7 +14,11 @@ import io
 import base64
 from PIL import Image
 
-def marshall_images(img, captions, width, proto_imgs):
+# setup logging
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
+def marshall_images(numpy_imgs, captions, width, proto_imgs):
     """
     Mashalls img and captions into a protobuf.ImageList.
 
@@ -93,11 +97,14 @@ def convert_captions_to_list(captions, n_imgs):
     """Canonicalize the caption format and ensure one caption per image."""
     if captions is None:
         captions = [''] * n_imgs
-    elif type(captions) == str:
+    elif isinstance(captions, string_types):
         captions = [captions] * n_imgs
     else:
         captions = list(map(str, captions))
 
+    LOGGER.debug(f'len(captions): {len(captions)}')
+    LOGGER.debug(f'n_imgs: {n_imgs}')
+    LOGGER.debug(f'captions: {captions}')
     assert len(captions) == n_imgs, \
         f"Cannot pair {len(captions)} captions with {n_imgs} images."
 

@@ -165,17 +165,20 @@ def echo():
         with st.echo():
             st.write('This code will be printed')
     """
-    yield
-    # TODO(armando): Debug and get this working again.  Most likely due
-    #                to 2.7/3.6 differences on traceback
-    '''
+    from streamlit.compatibility import running_py3
     code = empty()
     try:
         spaces = re.compile('\s*')
         frame = traceback.extract_stack()[-3]
-        filename, start_line = frame.filename, frame.lineno
+        if running_py3():
+            filename, start_line = frame.filename, frame.lineno
+        else:
+            filename, start_line = frame[:2]
         yield
-        end_line = traceback.extract_stack()[-3].lineno
+        if running_py3():
+            end_line = traceback.extract_stack()[-3].lineno
+        else:
+            end_line = traceback.extract_stack()[-3][1]
         lines_to_display = []
         with open(filename) as source_file:
             source_lines = source_file.readlines()
@@ -189,7 +192,6 @@ def echo():
         code.markdown(f'```\n{lines_to_display}\n```')
     except FileNotFoundError as err:
         code.warning(f'Unable to display code. {str(err)}')
-    '''
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.

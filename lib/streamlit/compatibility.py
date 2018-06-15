@@ -20,7 +20,7 @@ def setup_2_3_shims(caller_globals):
     And sets up a bunch of compatibility aliases to make python 2 more like
     python 3.
     """
-    if sys.version_info >= (3, 0):
+    if running_py3():
         assert False, "TODO: Delete this assertion after verifying it triggers in python 3. ~ Adrien"
         return
 
@@ -60,3 +60,7 @@ def setup_2_3_shims(caller_globals):
     # Do a bunch of dark monkey patching magic.
     from future.standard_library import install_aliases
     install_aliases()
+
+def running_py3():
+    """Returns True iff we're running 3 or above."""
+    return sys.version_info >= (3, 0)

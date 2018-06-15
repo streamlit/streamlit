@@ -25,6 +25,9 @@ from streamlit import protobuf
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 EXPORT_TO_IO_FLAG = '__export_to_io__'
+
+# setup logging
+from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 from functools import wraps
