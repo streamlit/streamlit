@@ -60,7 +60,6 @@ class ClientWebSocket(WebSocketHandler):
         self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
         LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
         LOGGER.debug(f'Got a new queue : {self._queue}')
-        raise RuntimeError('Got a queue and connection.')
 
         LOGGER.debug(f'Starting loop for "{self._connection.name}"')
         while self._is_open:
