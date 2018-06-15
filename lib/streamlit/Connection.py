@@ -75,16 +75,29 @@ class Connection(object):
         self._name = self._create_name()
         LOGGER.debug(f'Created a connection with name "{self._name}"')
 
-        # Queue to store deltas as they flow across.
+        # This is the event loop to talk with the proxy.
+        self._loop = IOLoop(make_current=False)
+        LOGGER.debug(f'Created io loop {self._loop}.')
+
+        # This ReportQueue stores deltas until they're ready to be transmitted
+        # over the websocket.
+        #
+        # VERY IMPORTANT: The key to understanding local threading in Streamlit
+        # is that self._queue acts like a thread-safe channel for data (in this
+        # case deltas) from the main thread (e.g. st.write()) to the proxy
+        # connection thread (e.g. flush_queue()). To ensure the thread-safety of
+        # this channel, ALL methods called on this ReportQueue must happen in a
+        # coroutine executed on self._loop. For example, the ReportQueue is
+        # filled by calling _enqueue_delta which schedules a callback on
+        # self._loop. The ReportQueue is drained in _transmit_through_websocket
+        # which also runs on self._loop. Directly manipulating self._queue
+        # from other threads could cause rare, subtle race conditions!
         self._queue = ReportQueue()
 
         # Will stay open until the main thread closes. Then gets set to false to
-        # cleanly close down the connection.
+        # cleanly close down the connection. Like self._queue, this variable
+        # is only ever accessed
         self._is_open = True
-
-        # This is the event loop to talk with the proxy.
-        self._loop = IOLoop()
-        LOGGER.debug(f'Created io loop {self._loop}.')
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
@@ -123,10 +136,7 @@ class Connection(object):
         def cleanup_on_exit():
             current_thread.join()
             sys.excepthook = original_excepthook
-
-            '''
-            self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
-            '''
+            self._loop.add_callback(setattr, self, '_is_open', False)
         cleanup_thread = threading.Thread(target=cleanup_on_exit)
         cleanup_thread.daemon = False
         cleanup_thread.start()
@@ -162,9 +172,7 @@ class Connection(object):
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
-        self._queue(delta)
-        #ioloop = IOLoop.current()
-        #ioloop.spawn_callback(self._queue, delta)
+        self._loop.add_callback(self._queue, delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
@@ -175,11 +183,9 @@ class Connection(object):
             self._loop.run_until_complete(self._attempt_connection())
             self._loop.close()
             '''
-            # TODO(armando): Figure out how to get event loop to start
-            #                in 3.6 only.
-            # asyncst.set_event_loop(asyncst.new_event_loop())
-            ioloop = IOLoop.current()
-            ioloop.run_sync(self._attempt_connection)
+            self._loop.make_current()
+            LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
+            self._loop.run_sync(self._attempt_connection)
             self.unregister()
             LOGGER.debug('exit')
         connection_thread = threading.Thread(target=connection_thread)
