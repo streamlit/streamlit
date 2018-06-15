@@ -24,7 +24,7 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
-from streamlit.proxy import ClientWebSocket, LocalWebSocket
+
 # from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.streamlit_msg_proto import streamlit_msg_iter
 # from streamlit.proxy import ProxyConnection
@@ -32,34 +32,28 @@ from streamlit.proxy import ClientWebSocket, LocalWebSocket
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
+import urllib
+import webbrowser
+import functools
 
 LOGGER = get_logger()
-
-def _stop_proxy_on_exception(coroutine):
-    """Coroutine decorator to stop proxy on exception."""
-    @gen.coroutine
-    def wrapped_coroutine(proxy, *args, **kwargs):
-        try:
-            a = yield coroutine(proxy, *args, **kwargs)
-            raise gen.Return(a)
-        except:
-            proxy.stop()
-            raise
-    wrapped_coroutine.__name__ = coroutine.__name__
-    wrapped_coroutine.__doc__ = coroutine.__doc__
-    return wrapped_coroutine
-
 
 class Proxy(object):
     """The main base class for the streamlit server."""
 
     def __init__(self):
         """Proxy constructor."""
-        self._connections = {}
+        # This table from names to ProxyConnections stores all the information
+        # about our connections. When the number of connections drops to zero,
+        # then the proxy shuts down.
+        self._connections = dict()  # use instead of {} for 2/3 compatibility
+        LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
+        from streamlit.proxy import LocalWebSocket, ClientWebSocket
         routes = [
             # # Local connection to stream a new report.
-            ('/new/(.*)/(.*)', LocalWebSocket, dict(connections=self._connections)),
+            ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
+            # ('/new/(.*)/(.*)', LocalWebSocket, dict(connections=self._connections)),
 
             # Outgoing endpoint to get the latest report.
             ('/stream/(.*)', ClientWebSocket, dict(connections=self._connections)),
@@ -93,10 +87,10 @@ class Proxy(object):
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
 
-        # This table from names to ProxyConnections stores all the information
-        # about our connections. When the number of connections drops to zero,
-        # then the proxy shuts down.
-        self._connections = dict()  # use instead of {} for 2/3 compatibility
+        # # This table from names to ProxyConnections stores all the information
+        # # about our connections. When the number of connections drops to zero,
+        # # then the proxy shuts down.
+        # self._connections = dict()  # use instead of {} for 2/3 compatibility
 
         # Initialized things that the proxy will need to do cloud things.
         self._cloud = None  # S3Connection()
@@ -117,7 +111,7 @@ class Proxy(object):
         Allowing all current handler to exit normally.
         """
         if not self._stopped:
-            IOLoop.current().close()
+            IOLoop.current().stop()
         self._stopped = True
 
     '''
@@ -127,26 +121,32 @@ class Proxy(object):
         return web.FileResponse(os.path.join(static_root, 'index.html'))
     '''
 
-    def _register(self, connection):
+    def register_proxy_connection(self, connection):
         """Register this connection's name.
 
         So that client connections can connect to it.
         """
+        LOGGER.debug(f'Regisering proxy connection for "{connection.name}"')
+        LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
+
         # Register the connection and launch a web client if this is a new name.
         new_name = connection.name not in self._connections
         self._connections[connection.name] = connection
         if new_name:
-            self._lauch_web_client(connection.name)
+            _launch_web_client(connection.name)
             # self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
+            LOGGER.debug(f'In connection timeout for "{connection.name}".')
             connection.end_grace_period()
             self._try_to_deregister(connection)
             self._potentially_stop_proxy()
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-        loop = asyncst.get_event_loop()
+        loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
+        LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
+        LOGGER.debug(f'Finished resistering connection: {list(self._connections.keys())} ({id(self._connections)})')
 
     def _try_to_deregister(self, connection):
         """Try to deregister proxy connection.
@@ -181,6 +181,8 @@ class Proxy(object):
         """Stop proxy if no open connections."""
         if not self._connections:
             self.stop()
+
+
 
     '''
     async def _handle_backend_msg(self, payload, connection, ws):
@@ -219,3 +221,34 @@ class Proxy(object):
         progress_msg.report_uploaded = url
         await ws.send_bytes(progress_msg.SerializeToString())
     '''
+
+def _launch_web_client(name):
+    """Launches a web browser to connect to the proxy to get the named
+    report.
+
+    Args
+    ----
+    name : string
+        The name of the report to which the web browser should connect.
+    """
+    if config.get_option('proxy.useNode'):
+        host, port = 'localhost', '3000'
+    else:
+        host = config.get_option('proxy.server')
+        port = config.get_option('proxy.port')
+    quoted_name = urllib.parse.quote_plus(name)
+    url = 'http://{}:{}/?name={}'.format(
+        host, port, quoted_name)
+    webbrowser.open(url)
+
+def stop_proxy_on_exception(callback):
+    """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
+    @functools.wraps(callback)
+    def wrapped_callback(web_socket_handler, *args, **kwargs):
+        try:
+            callback(web_socket_handler, *args, **kwargs)
+        except:
+            LOGGER.debug('Caught an exception. Stopping the proxy.')
+            web_socket_handler._proxy.stop()
+            raise
+    return wrapped_callback

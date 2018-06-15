@@ -24,7 +24,6 @@ class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
     def initialize(self, connections):
-        """Initialize self._connections."""
         self._connections = connections
 
     def check_origin(self, origin):
@@ -41,6 +40,8 @@ class ClientWebSocket(WebSocketHandler):
         throttle_secs = config.get_option('local.throttleSecs')
 
         # Manages our connection to the local client.
+        LOGGER.debug(f'Opening connection with self._connections: {id(self._connections)}')
+        LOGGER.debug(f'Existing keys: {list(self._connections.keys())}')
         self._connection = self._connections[self._report_name]
         self._queue = self._connection.add_client_queue()
         yield new_report_msg(self._connection.id, self)

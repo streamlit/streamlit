@@ -35,3 +35,4 @@ except Exception as e1:
 import streamlit
 raise Exception('test')
 ```
+- throwing an exception in a websocket handler decorated with `stop_proxy_on_exception()` causes the websocket to close

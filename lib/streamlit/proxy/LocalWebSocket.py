@@ -10,21 +10,20 @@ setup_2_3_shims(globals())
 from tornado import gen
 from tornado.websocket import WebSocketHandler
 import urllib
-import webbrowser
 
 from streamlit import config
 from streamlit import protobuf
+from streamlit.proxy import Proxy, ProxyConnection
 from streamlit.logger import get_logger
 from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.proxy import ProxyConnection
 
 LOGGER = get_logger()
 
 class LocalWebSocket(WebSocketHandler):
     """Websocket handler class which the local python library connects to."""
 
-    def initialize(self, connections):
-        self._connections = connections
+    def initialize(self, proxy):
+        self._proxy = proxy
 
     def check_origin(self, origin):
         """Ignore CORS."""
@@ -32,6 +31,7 @@ class LocalWebSocket(WebSocketHandler):
         # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
         return True
 
+    @Proxy.stop_proxy_on_exception
     def open(self, *args):
         """Handles a connection to a "local" instance of Streamlit, i.e. one producing deltas to display on the client."""
         # Parse out the control information.
@@ -39,9 +39,9 @@ class LocalWebSocket(WebSocketHandler):
         self._report_name = args[1]
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
+        LOGGER.info(f'Local websocket opened for "{self._report_name}"')
 
-        LOGGER.info('Local websocket opened for "{}/{}"'.format(self._local_id, self._report_name))
-
+    @Proxy.stop_proxy_on_exception
     def on_message(self, message):
         # LOGGER.debug(repr(message))
 
@@ -52,18 +52,20 @@ class LocalWebSocket(WebSocketHandler):
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
             report_id = msg.new_report
-            print('the report_id is', report_id)
             self._connection = ProxyConnection(report_id, self._report_name)
-            self._connections[self._connection.name] = self._connection
-            new_name = self._connection.name not in self._connections
-            self._launch_web_client(self._connection.name)
+            self._proxy.register_proxy_connection(self._connection)
         elif msg_type == 'delta_list':
             assert self._connection, 'No `delta_list` before `new_report`.'
             for delta in msg.delta_list.deltas:
                 self._connection.enqueue(delta)
-    '''
         else:
             raise RuntimeError(f'Cannot parse message type: {msg_type}')
+
+    @Proxy.stop_proxy_on_exception
+    def on_close(self):
+        LOGGER.info(f'Local websocket closed for "{self._report_name}"')
+        raise RuntimeError('This is a thing.')
+    '''
         except concurrent.futures.CancelledError:
             pass
 
@@ -74,22 +76,3 @@ class LocalWebSocket(WebSocketHandler):
         self._potentially_stop_proxy()
         return ws
     '''
-
-    def _launch_web_client(self, name):
-        """Launches a web browser to connect to the proxy to get the named
-        report.
-
-        Args
-        ----
-        name : string
-            The name of the report to which the web browser should connect.
-        """
-        if config.get_option('proxy.useNode'):
-            host, port = 'localhost', '3000'
-        else:
-            host = config.get_option('proxy.server')
-            port = config.get_option('proxy.port')
-        quoted_name = urllib.parse.quote_plus(name)
-        url = 'http://{}:{}/?name={}'.format(
-            host, port, quoted_name)
-        webbrowser.open(url)
