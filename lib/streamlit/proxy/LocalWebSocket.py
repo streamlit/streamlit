@@ -31,7 +31,7 @@ class LocalWebSocket(WebSocketHandler):
         # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
         return True
 
-    @Proxy.stop_proxy_on_exception
+    @Proxy.stop_proxy_on_exception()
     def open(self, *args):
         """Handles a connection to a "local" instance of Streamlit, i.e. one producing deltas to display on the client."""
         # Parse out the control information.
@@ -41,12 +41,13 @@ class LocalWebSocket(WebSocketHandler):
         self._connection = None
         LOGGER.info(f'Local websocket opened for "{self._report_name}"')
 
-    @Proxy.stop_proxy_on_exception
+    @Proxy.stop_proxy_on_exception()
     def on_message(self, message):
-        # LOGGER.debug(repr(message))
-
+        # LOGGER.debug(repr(message)
         msg = protobuf.ForwardMsg()
         msg.ParseFromString(message)
+
+        # raise RuntimeError('Exceptionin on_message')
 
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
@@ -61,10 +62,10 @@ class LocalWebSocket(WebSocketHandler):
         else:
             raise RuntimeError(f'Cannot parse message type: {msg_type}')
 
-    @Proxy.stop_proxy_on_exception
+    @Proxy.stop_proxy_on_exception()
     def on_close(self):
         LOGGER.info(f'Local websocket closed for "{self._report_name}"')
-    
+
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
             self._connection.finished_local_connection()

@@ -36,3 +36,4 @@ import streamlit
 raise Exception('test')
 ```
 - throwing an exception in a websocket handler decorated with `stop_proxy_on_exception()` causes the websocket to close
+- test that report names are successfully transferred from the client to the proxy even when they have the following characters `+`, `?`, and `/` (also, what about crazy unicode character??)

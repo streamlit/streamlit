@@ -25,7 +25,7 @@ from streamlit import protobuf
 from streamlit.S3Connection import S3Connection
 from streamlit.logger import get_logger
 
-# from streamlit.streamlit_msg_proto import new_report_msg
+from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.streamlit_msg_proto import streamlit_msg_iter
 # from streamlit.proxy import ProxyConnection
 
@@ -53,10 +53,9 @@ class Proxy(object):
         routes = [
             # # Local connection to stream a new report.
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
-            # ('/new/(.*)/(.*)', LocalWebSocket, dict(connections=self._connections)),
 
             # Outgoing endpoint to get the latest report.
-            ('/stream/(.*)', ClientWebSocket, dict(connections=self._connections)),
+            ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
         ]
         '''
         # Client connection (serves up index.html)
@@ -140,8 +139,8 @@ class Proxy(object):
         def connection_timeout():
             LOGGER.debug(f'In connection timeout for "{connection.name}".')
             connection.end_grace_period()
-            self._try_to_deregister(connection)
-            self._potentially_stop_proxy()
+            self.try_to_deregister_proxy_connection(connection)
+            self.potentially_stop()
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
         loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
@@ -155,8 +154,14 @@ class Proxy(object):
         connection (local or client), and the connection is no longer in its
         grace period.
         """
-        if self._is_registered(connection) and connection.can_be_deregistered():
+        if not self.proxy_connection_is_registered(connection):
+            return
+        if connection.can_be_deregistered():
             del self._connections[connection.name]
+
+    def proxy_connection_is_registered(self, connection):
+        """Return true if this connection is registered to its name."""
+        return self._connections.get(connection.name, None) is connection
 
     def potentially_stop(self):
         """Stop proxy if no open connections."""
@@ -165,26 +170,19 @@ class Proxy(object):
         if not self._connections:
             self.stop()
 
-    def _is_registered(self, connection):
-        """Return true if this connection is registered to its name."""
-        return self._connections.get(connection.name, None) is connection
-
-    '''
-    async def _add_client(self, report_name, ws):
+    @gen.coroutine
+    def add_client(self, report_name, ws):
         """Adds a queue to the connection for the given report_name."""
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
-        await new_report_msg(connection.id, ws)
-        return (connection, queue)
-    '''
+        yield new_report_msg(connection.id, ws)
+        raise gen.Return((connection, queue))
 
-    def _remove_client(self, connection, queue):
+    def remove_client(self, connection, queue):
         """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
-        self._try_to_deregister(connection)
-        self._potentially_stop_proxy()
-
-
+        self.try_to_deregister_proxy_connection(connection)
+        self.potentially_stop()
 
     '''
     async def _handle_backend_msg(self, payload, connection, ws):
@@ -243,14 +241,42 @@ def _launch_web_client(name):
         host, port, quoted_name)
     webbrowser.open(url)
 
-def stop_proxy_on_exception(callback):
+def stop_proxy_on_exception(is_coroutine=False):
     """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
-    @functools.wraps(callback)
-    def wrapped_callback(web_socket_handler, *args, **kwargs):
-        try:
-            callback(web_socket_handler, *args, **kwargs)
-        except:
-            LOGGER.debug('Caught an exception. Stopping the proxy.')
-            web_socket_handler._proxy.stop()
-            raise
-    return wrapped_callback
+    def stop_proxy_decorator(callback):
+        if is_coroutine:
+            @functools.wraps(callback)
+            @gen.coroutine
+            def wrapped_coroutine(web_socket_handler, *args, **kwargs):
+                try:
+                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
+                    LOGGER.debug(f'About to yield {callback}')
+                    rv = yield callback(web_socket_handler, *args, **kwargs)
+                    raise gen.Return(rv)
+                except Exception as e:
+                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_coroutine
+        else:
+            @functools.wraps(callback)
+            def wrapped_callback(web_socket_handler, *args, **kwargs):
+                try:
+                    return callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'Running wrapped version of {callback}')
+                    # if is_coroutine:
+                    #     LOGGER.debug(f'About to yield {callback}')
+                    #     rv = yield callback(web_socket_handler, *args, **kwargs)
+                    #     raise gen.Return(rv)
+                    # else:
+                    #
+                    # # callback(web_socket_handler, *args, **kwargs)
+                except Exception as e:
+                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_callback
+        return functools.wraps(callback)(wrapped_callback)
+    return stop_proxy_decorator
