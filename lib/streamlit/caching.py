@@ -7,8 +7,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import dis
 import hashlib
+import inspect
 import os
 import pickle
 import re
@@ -19,6 +19,9 @@ from functools import wraps
 from streamlit import st
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
+from streamlit.logger import get_logger
+
+LOGGER = get_logger()
 
 # TODO(armando): dis.get_instructions only exists in 3.6, find or add a 2.7/3.6
 #                compatible function.
@@ -29,7 +32,7 @@ def cache(func):
 
 	CACHE_PATH = '.streamlit'
 
-        @wraps(func)
+	@wraps(func)
 	def wrapped_func(*argc, **argv):
 		"""This function wrapper will only call the underlying function in
 		the case of a cache miss. Cached objects are stored in the cache/
@@ -52,9 +55,8 @@ def cache(func):
 
 			# Calculate the filename hash.
 			hasher = hashlib.new('md5')
-			hasher.update(pickle.dumps([argc, argv] +
-				[instr_to_str(i) for i in dis.get_instructions(func)],
-				pickle.HIGHEST_PROTOCOL))
+			hasher.update(pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL))
+			hasher.update(inspect.getsource(func))
 			path = f'cache/f{hasher.hexdigest()}.pickle'
 
 			# Load the file (hit) or compute the function (miss)

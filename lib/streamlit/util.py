@@ -18,11 +18,6 @@ import pwd
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
 
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
-
 def __cache(path, serialize, deserialize):
     """Performs two levels of caching:
 
