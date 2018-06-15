@@ -174,3 +174,7 @@ def escape_markdown(raw_string):
 #     except FileNotFoundError:
 #         pass
 #     return __LOCAL_CONFIG
+
+def get_static_dir():
+    dirname = os.path.dirname(os.path.normpath(__file__))
+    return os.path.normpath(os.path.join(dirname, 'static'))

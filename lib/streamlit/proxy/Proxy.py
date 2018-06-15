@@ -23,6 +23,7 @@ setup_2_3_shims(globals())
 from streamlit import config
 from streamlit import protobuf
 from streamlit.logger import get_logger
+from streamlit.util import get_static_dir
 
 from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.streamlit_msg_proto import streamlit_msg_iter
@@ -127,7 +128,7 @@ class Proxy(object):
         # If we're not using the node development server, then the proxy
         # will serve up the development pages.
         if not config.get_option('proxy.useNode'):
-            static_path = config.get_path('proxy.staticRoot')
+            static_path = get_static_dir()
             LOGGER.info(f'Serving static content from {static_path}')
 
             routes.extend([

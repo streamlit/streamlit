@@ -55,7 +55,7 @@ class LocalWebSocket(WebSocketHandler):
             self._connection = ProxyConnection(report_id, self._report_name)
             self._proxy.register_proxy_connection(self._connection)
             # new_name = self._connection.name not in self._connections
-            self._launch_web_client(self._connection.name)
+            #self._launch_web_client(self._connection.name)
         elif msg_type == 'delta_list':
             assert self._connection, 'No `delta_list` before `new_report`.'
             for delta in msg.delta_list.deltas:

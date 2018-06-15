@@ -28,7 +28,11 @@ class StaticConnection {
     this.state = ConnectionState.STATIC;
 
     // Load the report and display it.
-    fetch(uri).then((response) => {
+    fetch(uri, {
+        redirect: 'follow',
+        credentials: 'same-origin',
+        mode: 'no-cors'
+    }).then((response) => {
       return response.arrayBuffer();
     }).then((arrayBuffer) => {
       const report = Report.decode(new Uint8Array(arrayBuffer));

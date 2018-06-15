@@ -14,6 +14,7 @@ from tornado.concurrent import run_on_executor, futures
 
 from streamlit.logger import get_logger
 from streamlit import errors
+from streamlit import config
 
 LOGGER = get_logger()
 
@@ -65,10 +66,25 @@ class S3(Cloud):
         log.propagate = False
 
         # Config related stuff.
-        self._bucketname = 'streamlit-armando'
-        self._region = 'us-west-2'
-        self._domain = 's3-us-west-2.amazonaws.com'
-        self._cloud_root = 'something_else'
+        self._bucketname = config.get_option('s3.bucketname')
+        self._url = config.get_option('s3.url')
+        self._key_prefix = config.get_option('s3.key_prefix')
+        self._region = config.get_option('s3.region')
+
+        user = os.getenv('USER', None)
+
+        if self._url and 'USER' in self._url:
+            self._url = self._url.replace('USER', user)
+        if self._key_prefix and 'USER' in self._key_prefix:
+            self._key_prefix = self._key_prefix.replace('USER', user)
+
+        if self._key_prefix is None:
+            self._key_prefix = ''
+
+        if not self._url:
+            self._s3_url = os.path.join('https://%s.%s' % (self._bucketname, 's3.amazonaws.com'), self._s3_key('index.html'))
+        else:
+            self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
 
         self._client = boto3.client('s3')
 
@@ -89,12 +105,14 @@ class S3(Cloud):
                     Key=self._s3_key(filename),
                     ContentType=mime_type,
                     ACL='public-read')
-                LOGGER.debug('upload: %s', filename)
+                LOGGER.debug('Uploaded: %s', filename)
 
     @run_on_executor
     def _bucket_exists(self):
+        # THIS DOES NOT WORK because the aws exception isn't being
+        # caught and disappearing.
         try:
-            print(self._client.head_bucket(Bucket=self._bucketname))
+            self._client.head_bucket(Bucket=self._bucketname)
         except botocore.exceptions.ClientError:
             LOGGER.info('"%s" bucket not found', self._bucketname)
             return False
@@ -116,21 +134,30 @@ class S3(Cloud):
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
                 yield self._create_bucket()
-            yield self._upload_static_dir()
 
         except botocore.exceptions.NoCredentialsError:
             LOGGER.error('please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" environment variables')
             raise errors.S3NoCredentials
 
-    def _s3_key(self, relative_path):
+    def _s3_key(self, relative_path, add_prefix=True):
         """Convert a local file path into an s3 key (ie path)."""
-        return os.path.normpath(
-            os.path.join(self._cloud_root, self._release_hash, relative_path))
+        key = os.path.join(self._release_hash, relative_path)
+        if add_prefix:
+            key = os.path.join(self._key_prefix, key)
+        return os.path.normpath(key)
 
-    @run_on_executor
+    @gen.coroutine
     def upload_report(self, report_id, report):
         """Save report to s3."""
-        self.s3_init()
+        yield self.s3_init()
+        yield self._upload_static_dir()
+        yield self._s3_upload_report(report_id, report)
+
+        # Return the url for the saved report.
+        raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
+
+    @run_on_executor
+    def _s3_upload_report(self, report_id, report):
         # Figure out what we need to save
         serialized_report = report.SerializeToString()
         save_data = [('reports/%s.protobuf' % report_id, serialized_report)]
@@ -146,83 +173,4 @@ class S3(Cloud):
                 Key=self._s3_key(path),
                 ContentType=mime_type,
                 ACL='public-read')
-            LOGGER.debug('Uploaded %s', path)
-
-        # Return the url for the saved report.
-        full_path = os.path.join(self._bucketname, self._s3_key('index.html'))
-        return 'https://%s/%s?id=%s' % (self._domain, full_path, report_id)
-
-
-'''
-class S3Connection(object):
-    """Handles a connecton to an S3 bucket to send Report data."""
-        raise errors.NoStaticFiles('Cannot find static files. Run "make build".')
-
-    def __init__(self):
-        # This is the bucket where we're saving the data.
-        self._bucket = 'streamlit-test10'
-
-        # Get the static files which need to be saved and their release hash.
-        static_root = config.get_path('proxy.staticRoot')
-        all_files = glob.iglob(os.path.join(static_root, '**'), recursive=True)
-        self._static_data = []
-        md5 = hashlib.md5()
-        found_index = False
-        for filename in sorted(all_files):
-            if os.path.isfile(filename):
-                relative_path = os.path.relpath(filename, static_root)
-                found_index = found_index or filename.endswith('index.html')
-                with open(filename, 'rb') as input:
-                    file_data = input.read()
-                    self._static_data.append((relative_path, file_data))
-                    md5.update(file_data)
-        assert found_index, "Cannot find static files. Run 'make build'."
-        self._release_hash = f'{streamlit.__version__}-{md5.digest().hex()}'
-
-    async def upload_report(self, report_id, report):
-        """Saves this report to our s3 bucket."""
-        session = aiobotocore.get_session()
-        async with session.create_client('s3') as client:
-            # Figure out what we need to save
-            serialized_report = report.SerializeToString()
-            save_data = [(f'reports/{report_id}.protobuf', serialized_report)]
-            if not await self._already_saved_static_content(client):
-                save_data.extend(self._static_data)
-
-            # Save all the data
-            for path, data in save_data:
-                mime_type = mimetypes.guess_type(path)[0]
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-                await client.put_object(Bucket=self._bucket, Body=data,
-                    Key=self._s3_key(path), ContentType=mime_type,
-                    ACL='public-read')
-
-        # Return the url for the saved report.
-        domain = 's3-us-west-2.amazonaws.com'
-        full_path = self._bucket + '/' + self._s3_key('index.html')
-        return f'https://{domain}/{full_path}?id={report_id}'
-
-    async def _already_saved_static_content(self, client):
-        """Returns true if we've already saved the static content in the
-        bucket."""
-        # print('Looking for the key!!!')
-        # return True
-        # index_key = self._s3_key('index.html')
-        # resp = await client.get_object_acl(Bucket=self._bucket, Key=index_key)
-        # print(resp)
-        # # await client.Object(self._bucket, index_key).get()
-        # print('Forcing reply true')
-        # return True
-        index_key = self._s3_key('index.html')
-        response = await client.list_objects_v2(
-            Bucket=self._bucket, Prefix=index_key)
-        for obj in response.get('Contents', []):
-            # print('Checking out', obj['Key'])
-            if obj['Key'] == index_key:
-                # print('Found the key!')
-                return True
-        # print('Did not find the key.')
-        return False
-
-'''
+            LOGGER.debug('Uploaded: %s', path)

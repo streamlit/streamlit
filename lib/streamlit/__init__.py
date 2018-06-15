@@ -10,8 +10,6 @@ setup_2_3_shims(globals())
 from . import logger
 logger.init_tornado_logs()
 logger.get_logger('root')
-logger.set_log_level('DEBUG')
-
 # Defe
 import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version
@@ -20,3 +18,6 @@ __version__ = pkg_resources.require("streamlit")[0].version
 from streamlit.Chart import *
 from streamlit.caching import cache
 from streamlit import st
+from streamlit import config
+
+logger.set_log_level(config.get_option('log_level').upper())
