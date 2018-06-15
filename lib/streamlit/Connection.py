@@ -82,10 +82,9 @@ class Connection(object):
         # cleanly close down the connection.
         self._is_open = True
 
-        '''
-        # This is the event loop to talk with the serverself.
-        self._loop = asyncst.new_event_loop()
-        '''
+        # This is the event loop to talk with the proxy.
+        self._loop = IOLoop()
+        LOGGER.debug(f'Created io loop {self._loop}.')
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
