@@ -111,16 +111,23 @@ class ClientWebSocket(WebSocketHandler):
         """Save serialized version of report deltas to the cloud."""
         # Indicate that the save is starting.
         progress_msg = protobuf.ForwardMsg()
-        progress_msg.upload_report_progress = 100
-        yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+        try:
+            progress_msg.upload_report_progress = 100
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
 
-        report = connection.get_report_proto()
-        LOGGER.debug('Saving report of size %d and type %s',
-                     len(report.SerializeToString()),
-                     type(report.SerializeToString()))
-        url = yield self._cloud.upload_report(connection.id, report)
+            report = connection.get_report_proto()
+            LOGGER.debug('Saving report of size %d and type %s',
+                         len(report.SerializeToString()),
+                         type(report.SerializeToString()))
+            url = yield self._cloud.upload_report(connection.id, report)
 
-        # Indicate that the save is done.
-        progress_msg.Clear()
-        progress_msg.report_uploaded = url
-        yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            # Indicate that the save is done.
+            progress_msg.Clear()
+            progress_msg.report_uploaded = url
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+        except Exception as e:
+            # Horrible hack to show something if something breaks.
+            progress_msg.Clear()
+            progress_msg.report_uploaded = 'ERROR: ' + str(e)
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            raise
