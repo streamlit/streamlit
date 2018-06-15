@@ -65,7 +65,7 @@ class ClientWebSocket(WebSocketHandler):
         while self._is_open:
             if not self._proxy.proxy_connection_is_registered(self._connection):
                 LOGGER.debug(f'The proxy connection for "{self._report_name}" is not registered.')
-                self._proxy.remove_client(self, self._connection, self._queue)
+                self._proxy.remove_client(self._connection, self._queue)
                 self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
                 LOGGER.debug(f'Got a new connection ("{self._connection.name}") : {self._connection}')
                 LOGGER.debug(f'Got a new queue : {self._queue}')
@@ -76,7 +76,10 @@ class ClientWebSocket(WebSocketHandler):
             yield gen.sleep(throttle_secs)
 
         LOGGER.debug(f'Closing loop for "{self._connection.name}"')
+        self._proxy.remove_client(self._connection, self._queue)
+        LOGGER.debug(f'FINALLY removed the client for "{self._connection.name}"')
 
+    @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
     def on_message(self, msg):
         LOGGER.debug(f'Received message of length {len(msg)}.')
@@ -94,6 +97,11 @@ class ClientWebSocket(WebSocketHandler):
                     protobuf.BackMsg.Command.Name(backend_msg.command))
         except Exception as e:
             LOGGER.error('Cannot parse binary message: %s', e)
+
+    @Proxy.stop_proxy_on_exception()
+    def on_close(self):
+        LOGGER.debug('Received close message.')
+        self._is_open = False
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):

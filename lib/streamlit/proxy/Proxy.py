@@ -252,7 +252,11 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
                     LOGGER.debug(f'About to yield {callback}')
                     rv = yield callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'About to return {rv}')
                     raise gen.Return(rv)
+                except gen.Return:
+                    LOGGER.debug(f'Passing through COROUTINE return value:')
+                    raise
                 except Exception as e:
                     LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
                     web_socket_handler._proxy.stop()
