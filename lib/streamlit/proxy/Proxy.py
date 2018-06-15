@@ -148,7 +148,7 @@ class Proxy(object):
         LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
         LOGGER.debug(f'Finished resistering connection: {list(self._connections.keys())} ({id(self._connections)})')
 
-    def _try_to_deregister(self, connection):
+    def try_to_deregister_proxy_connection(self, connection):
         """Try to deregister proxy connection.
 
         Deregister this ProxyConnection so long as there aren't any open
@@ -157,6 +157,13 @@ class Proxy(object):
         """
         if self._is_registered(connection) and connection.can_be_deregistered():
             del self._connections[connection.name]
+
+    def potentially_stop(self):
+        """Stop proxy if no open connections."""
+        LOGGER.debug('Stopping if there are no more connections: ' +
+            str(list(self._connections.keys())))
+        if not self._connections:
+            self.stop()
 
     def _is_registered(self, connection):
         """Return true if this connection is registered to its name."""
@@ -176,11 +183,6 @@ class Proxy(object):
         connection.remove_client_queue(queue)
         self._try_to_deregister(connection)
         self._potentially_stop_proxy()
-
-    def _potentially_stop_proxy(self):
-        """Stop proxy if no open connections."""
-        if not self._connections:
-            self.stop()
 
 
 

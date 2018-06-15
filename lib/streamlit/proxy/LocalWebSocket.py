@@ -64,15 +64,9 @@ class LocalWebSocket(WebSocketHandler):
     @Proxy.stop_proxy_on_exception
     def on_close(self):
         LOGGER.info(f'Local websocket closed for "{self._report_name}"')
-        # raise RuntimeError('This is a thing.')
-    '''
-        except concurrent.futures.CancelledError:
-            pass
-
-        # Deregister this connection and see if we can close the proxy.
-        if connection:
-            connection.finished_local_connection()
-            self._try_to_deregister(connection)
-        self._potentially_stop_proxy()
-        return ws
-    '''
+    
+        # Deregistering this connection and see if we can close the proxy.
+        if self._connection:
+            self._connection.finished_local_connection()
+            self._proxy.try_to_deregister_proxy_connection(self._connection)
+        self._proxy.potentially_stop()
