@@ -2,7 +2,7 @@
 import os
 
 from tornado import gen
-from tornado.websocket import WebSocketHandler
+from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from streamlit import config
 from streamlit import protobuf
@@ -70,6 +70,8 @@ class ClientWebSocket(WebSocketHandler):
             LOGGER.debug('Closing loop for "%s"', self._connection.name)
         except KeyError as e:
             LOGGER.info('Attempting to access non-existant report "%s"', e)
+        except WebSocketClosedError:
+            pass
 
         if self._connection is not None:
             self._proxy.remove_client(self._connection, self._queue)
