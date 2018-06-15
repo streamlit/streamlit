@@ -63,13 +63,6 @@ class Connection(object):
     # This is the singleton connection object.
     _connection = None
 
-    _ws = None
-
-    # Queue to store deltas as they flow across.
-    _queue = ReportQueue()
-
-    _is_open = False
-
     # This is the class through which we can add elements to the Report
     def __init__(self):
         """
@@ -82,7 +75,12 @@ class Connection(object):
         self._name = self._create_name()
         LOGGER.debug(f'Created a connection with name "{self._name}"')
 
-        assert self._name != '-c', "This connection should not be created!" # DEBUG
+        # Queue to store deltas as they flow across.
+        self._queue = ReportQueue()
+
+        # Will stay open until the main thread closes. Then gets set to false to
+        # cleanly close down the connection.
+        self._is_open = True
 
         '''
         # This is the event loop to talk with the serverself.
@@ -111,7 +109,7 @@ class Connection(object):
         # Establish this connection and connect to the proxy server.
         assert type(self)._connection == None, \
             'Cannot register two connections'
-        type(self)._connection = self
+        Connection._connection = self
         self._connect_to_proxy()
 
         # Override the default exception handler.
@@ -205,13 +203,10 @@ class Connection(object):
             # Try to connect to the proxy for the first time.
             try:
                 ws = yield websocket_connect(uri)
-                type(self)._ws = ws
-                type(self)._connection = self
-                type(self)._is_open = True
                 yield self._transmit_through_websocket(ws)
                 return
             except IOError:
-                LOGGER.info(f'Failed to connect to proxy at {uri}.  Attempting to start proxy.')
+                LOGGER.info(f'Connection to {uri} failed.  Starting the proxy.')
 
             # Connecting to the proxy failed, so let's start the proxy manually.
             yield self._launch_proxy()
@@ -219,8 +214,6 @@ class Connection(object):
             # Try again to transmit data through the proxy
             try:
                 ws = yield websocket_connect(uri)
-                type(self)._connection = self
-                type(self)._is_open = True
                 yield self._transmit_through_websocket(ws)
             except IOError:
                 LOGGER.error(f'Failed to connect to {uri}.')
@@ -247,11 +240,17 @@ class Connection(object):
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
         LOGGER.debug(f'Websocket Transmit ws = {ws}')
-        LOGGER.debug(f'Websocket Transmit queue = {type(self)._connection._queue}')
+        LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
         while self._is_open:
-            yield type(self)._queue.flush_queue(ws)
+            yield self._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
-        yield type(self)._queue.flush_queue(ws)
+        yield self._queue.flush_queue(ws)
+        LOGGER.debug('Closed the connection object.')
+
+class ProxyConnectionError(Exception):
+    def __init__(self, uri):
+        msg = f'Unable to connect to proxy at {uri}.'
+        super(ProxyConnectionError, self).__init__(msg)
 
 if __name__ == '__main__':
     c = Connection().get_connection()
