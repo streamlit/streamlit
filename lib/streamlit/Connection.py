@@ -198,28 +198,23 @@ class Connection(object):
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
-        LOGGER.debug(f'Attempt to connect to proxy at {uri}.')
+        LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
-            # Try to connect to the proxy for the first time.
-            try:
-                ws = yield websocket_connect(uri)
-                yield self._transmit_through_websocket(ws)
-                return
-            except IOError:
-                LOGGER.info(f'Connection to {uri} failed.  Starting the proxy.')
+            ws = yield websocket_connect(uri)
+            yield self._transmit_through_websocket(ws)
+            return
+        except IOError:
+            LOGGER.info(f'First connection to {uri} failed.')
 
-            # Connecting to the proxy failed, so let's start the proxy manually.
-            yield self._launch_proxy()
+        LOGGER.info('Starting the proxy manually.')
+        yield self._launch_proxy()
 
-            # Try again to transmit data through the proxy
-            try:
-                ws = yield websocket_connect(uri)
-                yield self._transmit_through_websocket(ws)
-            except IOError:
-                LOGGER.error(f'Failed to connect to {uri}.')
-        finally:
-            # Closing the session.
-            pass
+        LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
+        try:
+            ws = yield websocket_connect(uri)
+            yield self._transmit_through_websocket(ws)
+        except IOError:
+            raise ProxyConnectionError(uri)
 
     @_assert_singleton
     @gen.coroutine
