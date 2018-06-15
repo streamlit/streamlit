@@ -32,6 +32,7 @@ class ClientWebSocket(WebSocketHandler):
         # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
         return True
 
+    # @Proxy.stop_proxy_on_exception
     @gen.coroutine
     def open(self, *args):
         """Get and return websocket."""
@@ -53,6 +54,7 @@ class ClientWebSocket(WebSocketHandler):
                 yield self._queue.flush_queue(self)
                 yield gen.sleep(throttle_secs)
 
+    # @Proxy.stop_proxy_on_exception
     def on_message(self, msg):
         """Run callback for websocket messages."""
         data = json.loads(msg)
