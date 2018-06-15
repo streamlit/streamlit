@@ -192,6 +192,7 @@ class Connection(object):
         connection_thread.daemon = False
         connection_thread.start()
 
+    @_assert_singleton
     @gen.coroutine
     def _attempt_connection(self):
         """Tries to establish a connection to the proxy (launching the

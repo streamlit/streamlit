@@ -36,7 +36,7 @@ def marshall_index(pandas_index, proto_index):
     proto_index  - Protobuf.Index (output)
     """
     if type(pandas_index) == pd.Index:
-        marshall_any_array(pandas_index.data, proto_index.plain_index.data)
+        marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         proto_index.range_index.start = pandas_index.min()
         proto_index.range_index.stop = pandas_index.max() + 1
@@ -82,21 +82,6 @@ def marshall_any_array(pandas_array, proto_array):
 
     # Only works on 1D arrays.
     assert len(pandas_array.shape) == 1, 'Array must be 1D.'
-
-    LOGGER.debug(f'Marshalling array: {pandas_array}')
-    LOGGER.debug(f'Marshalling array dytpe: {pandas_array.dtype}')
-    LOGGER.debug(f'first elt: {pandas_array[0]} {type(pandas_array[0])} {int(pandas_array[0]) == int(32)}')
-
-    LOGGER.debug(dir(traceback))
-    LOGGER.debug(traceback.extract_tb)
-    # # exc_type, exc_value, exc_traceback = sys.exc_info()
-    # # LOGGER.debug(traceback.extract_tb())
-    # raise RuntimeError('Something')
-    if int(pandas_array[0]) == int(32):
-        LOGGER.debug('This is bad. I want to know how I got here.')
-        raise Exception("This is an exception! Where is my stack?!")
-    #     # raise RuntimeError('This is bad.')
-    # # if str(pandas_array.dtype) == str('uint8'):
 
     # Perform type-conversion based on the array dtype.
     if issubclass(pandas_array.dtype.type, np.floating):
