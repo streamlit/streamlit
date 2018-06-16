@@ -93,4 +93,3 @@ class MainMenu extends PureComponent {
 };
 
 export default MainMenu;
-

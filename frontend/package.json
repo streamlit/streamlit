@@ -1,6 +1,6 @@
 {
   "name": "streamlit-client",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0-beta.3",
@@ -10,9 +10,9 @@
     "moment-duration-format": "^2.2.2",
     "numeral": "^2.0.6",
     "protobufjs": "^6.8.6",
-    "react": "^16.2.0",
+    "react": "^16.3.0",
     "react-copy-to-clipboard": "^5.0.1",
-    "react-dom": "^16.2.0",
+    "react-dom": "^16.3.0",
     "react-json-view": "^1.16.1",
     "react-leaflet": "^1.9.1",
     "react-markdown": "^3.3.0",

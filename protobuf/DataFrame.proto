@@ -55,7 +55,7 @@ message RangeIndex {
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.MultiIndex.html
 message MultiIndex {
   repeated Index levels = 1;
-  repeated UInt32Array labels = 2;
+  repeated Int32Array labels = 2;
 
   //// Not yet implemented:
   // int sort_order = 3;
@@ -94,6 +94,10 @@ message StringArray {
 
 message DoubleArray {
   repeated double data = 1;
+}
+
+message Int32Array {
+  repeated int32 data = 1;
 }
 
 message Int64Array {

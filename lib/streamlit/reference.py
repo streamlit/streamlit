@@ -61,7 +61,7 @@ def display_reference():
 
         arrays = [
             np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
-            np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two'])]
+            np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', None])]
 
         df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
             columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])

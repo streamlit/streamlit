@@ -108,7 +108,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.10.1`.
+**Note:** The current version is `0.11.0`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
@@ -143,29 +143,18 @@ python examples/uber.py
 ```
 Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
 
-If everything works and you want to go back to coding, then revert to
-development mode by typing:
-```
-make develop
-```
-
 #### Build the Wheel and Test That
 
-First, make sure you're not in development mode:
-
-```
-make install
-```
-
-Now go through the following steps:
+Go through the following steps:
 
 (Note: this assumes that the current working directory is called `streamlit` and
 you have a parallel folder called `streamlit-staging` to test this version.)
 
 ```
+make install   # must be in 'install' mode before making wheel
 make wheel
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.10.1-py3-none-any.whl
+pip install --upgrade ../streamlit/lib/dist/streamlit-0.11.0-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
@@ -192,6 +181,14 @@ Post the release notes and declare victory!
 git commit -am "version <version number>"
 git tag <version number>
 git push origin <version number>
+```
+
+#### Go Back to Develop Mode
+
+If everything works and you want to go back to coding, then revert to
+development mode by typing:
+```
+make develop
 ```
 
 ## Refactored Notes
