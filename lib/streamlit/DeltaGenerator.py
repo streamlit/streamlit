@@ -3,7 +3,6 @@
 import io
 import json
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import textwrap
@@ -278,6 +277,11 @@ class DeltaGenerator:
         element : The proto element.
         width : Image width. 0 means use original width.
         """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(f'pyplot() command requires matplotlib')
+
         image = io.BytesIO()
         plt.savefig(image, format='png')
         image_proto.marshall_images(image, None, width, element.imgs)
