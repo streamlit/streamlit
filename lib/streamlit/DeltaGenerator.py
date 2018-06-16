@@ -10,7 +10,7 @@ import traceback
 from streamlit import image_proto
 from streamlit.Chart import Chart
 from streamlit.chartconfig import CHART_TYPES
-from streamlit.caseconverters import to_snake_case, to_lower_camel_case, convert_dict_keys
+from streamlit.caseconverters import to_snake_case, to_lower_camel_case_if_no_underscores, convert_dict_keys
 from streamlit import data_frame_proto
 from streamlit import protobuf
 
@@ -408,7 +408,10 @@ class DeltaGenerator:
                     - components accepted by that layer type
             - other keys: anything accepted by DeckGl
         """
-        layer_dicts = kwargs.get('layers') or []
+        if 'layers' in kwargs:
+            layer_dicts = kwargs.pop('layers')
+        else:
+            layer_dicts = []
 
         # If no layers defined and data is passed at the top level,
         # created a scatterplot layer with the top-level data by default.
@@ -424,7 +427,7 @@ class DeltaGenerator:
             data = layer_dict.pop('data')
 
             layer = element.deck_gl_map.layers.add()
-            convert_dict_keys(to_lower_camel_case, layer_dict)
+            convert_dict_keys(to_lower_camel_case_if_no_underscores, layer_dict)
             layer.spec = json.dumps(layer_dict)
             data_frame_proto.marshall_data_frame(data, layer.data)
 

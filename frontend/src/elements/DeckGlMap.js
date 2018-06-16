@@ -14,12 +14,6 @@ import {dataFrameToArrayOfDicts} from '../dataFrameProto';
 
 import {Alert}  from 'reactstrap';
 
-import {
-  indexGetByName,
-  tableGet,
-  tableGetRowsAndCols,
-} from '../dataFrameProto';
-
 // import './DeckGlMap.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -79,7 +73,7 @@ class DeckGlMap extends PureComponent {
         );
       }
     } catch (e) {
-      console.log(e.stack);
+      console.error(e.stack);
       return (
         <Alert color="danger">
           <strong>{e.name}</strong>: {e.message}
@@ -177,7 +171,7 @@ function getNormalFromNormalXYZColumns(d) {
   return [d.normalX, d.normalY, d.normalZ];
 }
 
-const DEFAULT_COLOR = [200, 30, 0, 128];
+const DEFAULT_COLOR = [200, 30, 0, 160];
 
 function getColorFromColorRGBAColumns(d) {
   return d.colorR && d.colorG && d.colorB ?
@@ -203,7 +197,7 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
  * Converts spec from
  * {
  *   ...
- *   encodings: {
+ *   encoding: {
  *     foo: 'bar',
  *   },
  *   ...
@@ -217,13 +211,17 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
  * }
  */
 function parseEncodings(spec) {
-  const encodings = spec.encodings;
-  if (!encodings) return;
+  const encoding = spec.encoding;
+  if (!encoding) return;
 
-  delete spec.encodings;
+  delete spec.encoding;
 
-  Object.keys(encodings).forEach(key => {
-    spec[makeGetterName(key)] = d => d[encodings[key]];
+  Object.keys(encoding).forEach(key => {
+    const v = encoding[key];
+    spec[makeGetterName(key)] =
+        typeof v === 'string' ?
+        d => d[v] :
+        d => v;
   });
 }
 
@@ -232,7 +230,7 @@ function parseEncodings(spec) {
  * Takes a string 'foo' and returns 'getFoo'.
  */
 function makeGetterName(key) {
-  if (typeof key != 'string' || key.length == 0)
+  if (typeof key !== 'string' || key.length === 0)
     throw new Error('Encodings must be strings');
 
   return 'get' + key.charAt(0).toUpperCase() + key.slice(1);

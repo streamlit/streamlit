@@ -12,12 +12,26 @@ def to_lower_camel_case(snake_case_str):
 
     Example:
         foo_bar -> fooBar
+        fooBar -> foobar
     """
-    upperCamelCase = to_upper_camel_case(snake_case_str)
-    if upperCamelCase:
-        return upperCamelCase[0].lower() + upperCamelCase[1:]
+    titleCaseWords = (w for w in snake_case_str.title().split('_'))
+    if titleCaseWords:
+        return titleCaseWords[0].lower() + titleCaseWords[1:]
     else:
         return ''
+
+def to_lower_camel_case_if_no_underscores(snake_case_str):
+    """Converts snake_case to lowerCamelCase if there is no "_" in input.
+
+    If input has underscores, does nothing.
+
+    Example:
+        foo_bar -> fooBar
+        fooBar -> fooBar
+    """
+    if '_' in snake_case_str:
+        return to_lower_camel_case(snake_case_str)
+    return snake_case_str
 
 def to_snake_case(camel_case_str):
     """Converts UpperCamelCase and lowerCamelCase to snake_case.
@@ -39,6 +53,8 @@ def convert_dict_keys(func, dic):
     """
     for k, v in dic.items():
         converted_key = func(k)
+        if converted_key == k: continue
+
         dic.pop(k)
 
         if type(v) is dict:
