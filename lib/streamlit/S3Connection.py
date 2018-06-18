@@ -73,10 +73,10 @@ class S3(Cloud):
 
         user = os.getenv('USER', None)
 
-        if self._url and 'USER' in self._url:
-            self._url = self._url.replace('USER', user)
-        if self._key_prefix and 'USER' in self._key_prefix:
-            self._key_prefix = self._key_prefix.replace('USER', user)
+        if self._url and '{USER}' in self._url:
+            self._url = self._url.replace('{USER}', user)
+        if self._key_prefix and '{USER}' in self._key_prefix:
+            self._key_prefix = self._key_prefix.replace('{USER}', user)
 
         if self._key_prefix is None:
             self._key_prefix = ''

@@ -28,19 +28,14 @@ def set_log_level(level):
         level = level.upper()
     if level == 'CRITICAL' or level == logging.CRITICAL:
         log_level = logging.CRITICAL
-        logger.debug('log level set to CRITICAL')
     elif level == 'ERROR' or level == logging.ERROR:
         log_level = logging.ERROR
-        logger.debug('log level set to ERROR')
     elif level == 'WARNING' or level == logging.WARNING:
         log_level = logging.WARNING
-        logger.debug('log level set to WARNING')
     elif level == 'INFO' or level == logging.INFO:
         log_level = logging.INFO
-        logger.debug('log level set to INFO')
     elif level == 'DEBUG' or level == logging.DEBUG:
         log_level = logging.DEBUG
-        logger.debug('log level set to DEBUG')
     else:
         msg = 'undefined log level "{}"'.format(level)
         logger.critical(msg)
