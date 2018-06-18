@@ -16,7 +16,7 @@ import shutil
 
 from functools import wraps
 
-from streamlit import st
+import streamlit as st
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
 from streamlit.logger import get_logger

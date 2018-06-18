@@ -245,8 +245,7 @@ class DeltaGenerator(object):
         element.text.format = protobuf.Text.SUCCESS
 
     @_export_to_io
-    @_create_element
-    def link(self, element, body):
+    def link(self, *args, **kwargs):
         """
         Creates an element showing a link
 
@@ -255,8 +254,7 @@ class DeltaGenerator(object):
         body: str
             The link.
         """
-        element.text.body = str(body)
-        element.text.format = protobuf.Text.LINK
+        raise RuntimeError('Link() is deprecated. Please use markdown() instead.')
 
     @_export_to_io
     @_create_element
@@ -394,18 +392,9 @@ class DeltaGenerator(object):
 
     # TODO: remove `img()`, now replaced by `image()`
     @_export_to_io
-    def img(self, imgs, caption=None, width=0):
-        """Displays an image or horizontal array of images.
-
-        imgs     - a monochrome image of shape (w,h) or (w,h,1)
-                   OR a color image of shape (w,h,3)
-                   OR an array of such images
-        caption  - string caption, or string array for multiple images
-        width    - Image width. 0 means use original width.
-        """
-        def set_images(element):
-            image_proto.marshall_images(imgs, caption, width, element.imgs)
-        return self._new_element(set_images)
+    def img(self, *args, **kwargs):
+        """DEPRECATED. Use st.image() instead."""
+        raise RuntimeError('DEPRECATED. Please use image() instead.')
 
     @_export_to_io
     @_create_element

@@ -57,7 +57,7 @@ class Config(object):
             ),
             log_level = dict(
                 _comment = 'error, warning, info, debug',
-                value = 'info',
+                value = 'error',
             ),
             local = dict(
                 _comment = 'Configuration for the local server',
@@ -105,8 +105,6 @@ class Config(object):
         )
         self._config = yaml.load(self._dump())
 
-
-
     def _enable_development(self):
         self._raw_config['proxy']['useNode'] = True
         self._raw_config['log_level']['value'] = 'debug'
@@ -134,9 +132,11 @@ class Config(object):
         return '\n'.join(out).lstrip()
 
     def dumps(self):
-       with open(self._configfile, 'w') as f:
-           f.write(self._dump())
-           LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
+        LOGGER.info('Skipping writing "%s".', self._configfile)
+        return
+        with open(self._configfile, 'w') as f:
+            f.write(self._dump())
+            LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
 
 def _flatten(nested_dict, flat_dict, prefix=[]):
     for k, v in nested_dict.items():
