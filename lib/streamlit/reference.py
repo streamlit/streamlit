@@ -23,7 +23,7 @@ import textwrap
 import threading
 
 import streamlit
-from streamlit import st
+import streamlit as st
 
 try:
     FileNotFoundError
@@ -37,7 +37,7 @@ def display_reference():
 
     st.header('The Basics')
 
-    st.write('Import streamlit with `from streamlit import st`.')
+    st.write('Import streamlit with `import streamlit as st`.')
 
     with st.echo():
         st.write("""

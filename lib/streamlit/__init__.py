@@ -34,7 +34,7 @@ from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 from streamlit.Connection import Connection
 from streamlit.Chart import Chart
 from streamlit.util import escape_markdown
-# from streamlit import st
+# import streamlit as st
 # from streamlit import config
 
 # Basically, the functions in this package wrap member functions of

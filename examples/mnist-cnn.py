@@ -7,7 +7,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import st, Chart
+import streamlit as st
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -55,14 +55,14 @@ class MyCallback(keras.callbacks.Callback):
         indices = np.random.choice(len(self._x_test), 36)
         test_data = self._x_test[indices]
         prediction = np.argmax(self.model.predict(test_data), axis=1)
-        st.img(1.0 - test_data, caption=prediction)
+        st.image(1.0 - test_data, caption=prediction)
         summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
         st.text(summary)
         self._summary_stats.text(f'{"epoch":>8s} :  {epoch}\n{summary}')
 
     def _create_chart(self, type='line', height=0):
         empty_data = pd.DataFrame(columns=['loss', 'acc'])
-        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart = st.Chart(empty_data, f'{type}_chart', height=height)
         epoch_chart.y_axis(type='number',
             y_axis_id="loss_axis", allow_data_overflow="true")
         epoch_chart.y_axis(type='number', orientation='right',

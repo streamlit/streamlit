@@ -15,7 +15,7 @@ Currently, streamlit requires Python 3.6.
 Copy and paste this example and it should work:
 
 ```python
-from streamlit import st
+import streamlit as st
 import numpy as np
 import time
 

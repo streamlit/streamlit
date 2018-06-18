@@ -7,7 +7,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import st
+import streamlit as st
 import numpy as np
 import pandas as pd
 from datetime import datetime

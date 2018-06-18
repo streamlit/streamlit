@@ -134,7 +134,7 @@ class WebClient extends PureComponent {
           if (id === this.state.reportId) {
             this.clearOldElements();
           }
-        }, 2000);
+        }, 3000);
       },
       deltaList: (deltaList) => {
         this.applyDeltas(deltaList);

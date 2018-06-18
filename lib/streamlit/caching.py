@@ -45,31 +45,31 @@ def cache(func):
 		except:
 			message = f'Caching:\n{func.__name__}()'
 
-		# This
+		# Searches for addresses like "object <listcomp> at 0x1052cca50"
+		address = re.compile(r'at\ 0x[0-9a-f]+')
+		instr_to_str = lambda i: address.sub('ADDRESS', str(i))
 
-		# Temporarily display this message while computing this function.
-		with st.spinner(message):
-			# Searches for addresses like "object <listcomp> at 0x1052cca50"
-			address = re.compile(r'at\ 0x[0-9a-f]+')
-			instr_to_str = lambda i: address.sub('ADDRESS', str(i))
+		# Calculate the filename hash.
+		hasher = hashlib.new('md5')
+		hasher.update(pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL))
+		hasher.update(inspect.getsource(func))
+		path = f'cache/f{hasher.hexdigest()}.pickle'
 
-			# Calculate the filename hash.
-			hasher = hashlib.new('md5')
-			hasher.update(pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL))
-			hasher.update(inspect.getsource(func))
-			path = f'cache/f{hasher.hexdigest()}.pickle'
-
-			# Load the file (hit) or compute the function (miss)
-			try:
-				with streamlit_read(path, binary=True) as input:
-					rv = pickle.load(input)
-					# print('%s (HIT)' % path)
-			except FileNotFoundError:
+		# Load the file (hit) or compute the function (miss)
+		try:
+			with streamlit_read(path, binary=True) as input:
+				rv = pickle.load(input)
+		except FileNotFoundError:
+			# Temporarily display this message while computing this function.
+			# The reason we embed the spinner this deep into this function is
+			# because otherwise you could see an instantaneous flash of a spinner
+			# during cache-hits, which is distracting. This way, we only see
+			# the spinner when there's a cache miss.
+			with st.spinner(message):
 				rv = func(*argc, **argv)
 				with streamlit_write(path, binary=True) as output:
 					pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-				# print('%s (MISS)' % path)
-			return rv
+		return rv
 
 	# make this a well-behaved decorator by preserving important function attributes
 	try:

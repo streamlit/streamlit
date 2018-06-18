@@ -7,7 +7,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import st, cache
+import streamlit as st
 import pandas as pd
 import numpy as np
 
@@ -16,7 +16,7 @@ DATA_URL = 'https://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data
 
 st.title('Uber Example')
 
-@cache
+@st.cache
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
     lowercase = lambda x: str(x).lower()
