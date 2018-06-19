@@ -189,7 +189,7 @@ def echo():
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = spaces.match(lines_to_display[0]).end()
-            for line in source_lines[end_line+1:]:
+            for line in source_lines[end_line:]:
                 if spaces.match(line).end() < initial_spaces:
                     break
                 lines_to_display.append(line)
@@ -214,8 +214,6 @@ if sys.argv[0] in ('-m', '-c'):
 # it simply implies that the connection may be established later.
 if not _this_may_be_proxy:
     Connection.get_connection().get_delta_generator()
-
-
 
 ### DEPRECATION WARNING ###
 # Everything below this point exists TEMPORARILY to emulate the old io

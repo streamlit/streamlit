@@ -363,6 +363,7 @@ class DeltaGenerator(object):
         element : The proto element.
         """
         try:
+            import matplotlib
             import matplotlib.pyplot as plt
             plt.ioff()
         except ImportError:

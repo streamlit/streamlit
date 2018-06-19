@@ -129,7 +129,9 @@ def display_reference():
 
     st.subheader('Matplotlib')
 
-    def matplotlib_example():
+    st.write('You can use Matplotlib in Streamlit. '
+        'Just us `st.pyplot()` instead of `plt.show()`.')
+    try:
         with st.echo():
             from matplotlib import cm, pyplot as plt
             from mpl_toolkits.mplot3d import Axes3D
@@ -144,15 +146,18 @@ def display_reference():
             surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
 
             st.pyplot()
-    st.write('This is an example.')
-    matplotlib_example()
-    st.write('Finished the example.')
-
+    except Exception as e:
+        err_str = str(e)
+        if err_str.startswith('Python is not installed as a framework.'):
+            err_str = 'Matplotlib backend is not compatible with your Python ' \
+                'installation. Please consider adding "backend: TkAgg" to your ' \
+                ' ~/.matplitlib/matplotlibrc. For more information, please see ' \
+                '"Working with Matplotlib on OSX" in the Matplotlib FAQ.'
+        st.warning('Error running matplotlib: ' + err_str)
 
     st.header('Visualizing data as images')
 
-    # See caching.py for why this is commented out.
-    # @streamlit.cache
+    @st.cache
     def read_image(url):
         return urllib.request.urlopen(url).read()
     image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'

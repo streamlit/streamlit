@@ -23,9 +23,6 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger()
 
-# TODO(armando): dis.get_instructions only exists in 3.6, find or add a 2.7/3.6
-#                compatible function.
-
 def cache(func):
 	"""A function decorator which enables the function to cache its
 	input/output behavior to disk."""
