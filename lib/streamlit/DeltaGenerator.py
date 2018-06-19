@@ -364,6 +364,7 @@ class DeltaGenerator(object):
         """
         try:
             import matplotlib.pyplot as plt
+            plt.ioff()
         except ImportError:
             raise ImportError(f'pyplot() command requires matplotlib')
 

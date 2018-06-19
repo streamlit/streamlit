@@ -131,10 +131,8 @@ def display_reference():
 
     def matplotlib_example():
         with st.echo():
+            from matplotlib import cm, pyplot as plt
             from mpl_toolkits.mplot3d import Axes3D
-            import matplotlib.pyplot as plt
-            from matplotlib import cm
-            # from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
             # Create some data
             X, Y = np.meshgrid(np.arange(-5, 5, 0.25), np.arange(-5, 5, 0.25))
