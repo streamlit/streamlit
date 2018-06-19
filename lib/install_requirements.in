@@ -6,7 +6,7 @@ PyYAML
 boto3
 click
 docutils
-enum
+enum-compat
 future
 future-fstrings
 pandas

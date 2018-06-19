@@ -15,8 +15,8 @@ click==6.7
 configparser==3.5.0       # via flake8, pydocstyle
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
-enum34==1.1.6             # via flake8
-enum==0.4.6
+enum-compat==0.0.2
+enum34==1.1.6             # via enum-compat, flake8
 flake8-docstrings==1.3.0
 flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0

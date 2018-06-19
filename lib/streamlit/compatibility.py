@@ -21,7 +21,6 @@ def setup_2_3_shims(caller_globals):
     python 3.
     """
     if running_py3():
-        assert False, "TODO: Delete this assertion after verifying it triggers in python 3. ~ Adrien"
         return
 
     # These are the symbols we will export to the calling package.

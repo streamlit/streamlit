@@ -39,6 +39,6 @@ def display_uber_data(hour):
     st.write(data)
 
 if __name__ == '__main__':
-    hour = 9
+    hour = 12
     assert 0 <= hour < 24
     display_uber_data(hour)

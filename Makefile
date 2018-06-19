@@ -50,7 +50,8 @@ develop:
 # 	@echo
 
 wheel:
-	cd lib ; python setup.py bdist_wheel sdist
+	cd lib ; python setup.py bdist_wheel --universal
+	# cd lib ; python setup.py bdist_wheel sdist
 
 clean:
 	@echo FIXME: This needs to be fixed!
