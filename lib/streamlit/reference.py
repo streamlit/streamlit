@@ -127,6 +127,29 @@ def display_reference():
         trimmed_data = chart_data[['pv', 'uv']].iloc[:10]
         st.bar_chart(trimmed_data)
 
+    st.subheader('Matplotlib')
+
+    def matplotlib_example():
+        with st.echo():
+            from mpl_toolkits.mplot3d import Axes3D
+            import matplotlib.pyplot as plt
+            from matplotlib import cm
+            # from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+            # Create some data
+            X, Y = np.meshgrid(np.arange(-5, 5, 0.25), np.arange(-5, 5, 0.25))
+            Z = np.sin(np.sqrt(X**2 + Y**2))
+
+            # Plot the surface.
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
+
+            st.pyplot()
+    st.write('This is an example.')
+    matplotlib_example()
+    st.write('Finished the example.')
+
 
     st.header('Visualizing data as images')
 
@@ -253,6 +276,6 @@ def display_reference():
         import time
         my_bar = st.progress(0)
 
-        for percent_complete in range(100):
-            my_bar.progress(percent_complete + 1)
-            time.sleep(0.1)
+        # for percent_complete in range(100):
+        #     my_bar.progress(percent_complete + 1)
+        #     time.sleep(0.1)
