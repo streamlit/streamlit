@@ -10,6 +10,7 @@ setup_2_3_shims(globals())
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 DATE_TIME = 'date/time'
 DATA_URL = 'https://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data-sep14.csv.gz'
@@ -38,6 +39,6 @@ def display_uber_data(hour):
     st.write(data)
 
 if __name__ == '__main__':
-    hour = 0
+    hour = 9
     assert 0 <= hour < 24
     display_uber_data(hour)
