@@ -141,7 +141,7 @@ def display_reference():
         with st.echo():
             image = Image.open(BytesIO(image_bytes))
 
-            st.image(image, caption="Sunset", width=400)
+            st.image(image, caption="Sunset", use_column_width=True)
 
             array = np.array(image).transpose((2, 0, 1))
             channels = array.reshape(array.shape + (1,))

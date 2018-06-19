@@ -355,13 +355,12 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
-    def pyplot(self, element, width=0):
+    def pyplot(self, element):
         """Displays a matplotlib.pyplot image.
 
         Args
         ----
         element : The proto element.
-        width : Image width. 0 means use original width.
         """
         try:
             import matplotlib.pyplot as plt
@@ -370,23 +369,35 @@ class DeltaGenerator(object):
 
         image = io.BytesIO()
         plt.savefig(image, format='png')
-        image_proto.marshall_images(image, None, width, element.imgs)
+        image_proto.marshall_images(image, None, -2, element.imgs)
 
     @_export_to_io
     @_create_element
-    def image(self, element, image, caption=None, width=0):
+    def image(self, element, image, caption=None, width=None,
+            use_column_width=False):
         """Displays an image.
 
         Args
         ----
-        image : image or array
+        image : image or array of images
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
-        caption :
+            OR an RGBA image of shape (w,h,4)
+            OR a list of one of the above
+        caption : string or list of strings
             String caption
-        width :
-            Image width. 0 means use original width.
+        width : int or None
+            Image width. 'None' means use the image width.
+        use_column_width : bool
+            If True, set the image width to the column width. This overrides
+            the `width` parameter.
         """
+        if use_column_width:
+            width = -2
+        elif width == None:
+            width = -1
+        elif width == 0:
+            raise RuntimeError('Cannot sent width 0 image.')
         image_proto.marshall_images(image, caption, width, element.imgs)
 
     # TODO: remove `img()`, now replaced by `image()`
