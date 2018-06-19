@@ -7,11 +7,12 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import io
 import json
 import math
-import sys
 import numpy as np
 import pandas as pd
+import sys
 import textwrap
 import traceback
 
@@ -63,9 +64,7 @@ def _create_element(method):
                 method(self, element, *args, **kwargs)
             return self._new_element(create_element)
         except Exception as e:
-            # See DeltaGenerator.exception for why this is disabled.
-            # self.exception(e)
-            # pass
+            self.exception(e)
             import sys
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, file=sys.stderr)

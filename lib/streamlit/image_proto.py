@@ -10,7 +10,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import numpy as np
-import io
+from io import BytesIO
 import base64
 from PIL import Image
 
@@ -18,7 +18,7 @@ from PIL import Image
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
-def marshall_images(numpy_imgs, captions, width, proto_imgs):
+def marshall_images(img, captions, width, proto_imgs):
     """
     Mashalls img and captions into a protobuf.ImageList.
 
@@ -30,7 +30,7 @@ def marshall_images(numpy_imgs, captions, width, proto_imgs):
     proto_imgs: the ImageList proto to fill.
     """
     # Convert into cannonical form.
-    if isinstance(img, io.BytesIO):
+    if isinstance(img, BytesIO):
         img.seek(0)
         pil_img = Image.open(img)
         pil_imgs = [pil_img]
@@ -45,7 +45,7 @@ def marshall_images(numpy_imgs, captions, width, proto_imgs):
 
     # Load it into the protobuf.
     for (img, caption) in zip(pil_imgs, captions):
-        img_bytes = io.BytesIO()
+        img_bytes = BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes = img_bytes.getvalue()
 
