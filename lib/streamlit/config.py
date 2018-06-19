@@ -132,7 +132,7 @@ class Config(object):
         return '\n'.join(out).lstrip()
 
     def dumps(self):
-        LOGGER.info('Skipping writing "%s".', self._configfile)
+        LOGGER.debug('Skipping writing "%s".', self._configfile)
         return
         with open(self._configfile, 'w') as f:
             f.write(self._dump())

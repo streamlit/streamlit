@@ -52,9 +52,10 @@ def __cache(path, serialize, deserialize):
 @__cache('local_uuid.txt', str, uuid.UUID)
 def get_local_id():
     """Returns a local id which identifies this user to the database."""
-    mac = str(uuid.getnode())
-    user = pwd.getpwuid(os.geteuid()).pw_name
-    return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
+    # mac = str(uuid.getnode())
+    # user = pwd.getpwuid(os.geteuid()).pw_name
+    # return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
+    return uuid.uuid4()
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):

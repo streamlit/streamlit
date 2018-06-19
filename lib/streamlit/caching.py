@@ -49,7 +49,7 @@ def cache(func):
 		# Calculate the filename hash.
 		hasher = hashlib.new('md5')
 		hasher.update(pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL))
-		hasher.update(inspect.getsource(func))
+		hasher.update(inspect.getsource(func).encode('utf-8'))
 		path = f'cache/f{hasher.hexdigest()}.pickle'
 
 		# Load the file (hit) or compute the function (miss)

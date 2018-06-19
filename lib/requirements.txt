@@ -6,34 +6,29 @@
 #
 atomicwrites==1.1.5       # via pytest
 attrs==18.1.0             # via pytest
-backports-abc==0.5
-boto3==1.7.39
-botocore==1.10.39
+boto3==1.7.40
+botocore==1.10.40
 certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
 click==6.7
-configparser==3.5.0       # via flake8, pydocstyle
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
 enum-compat==0.0.2
-enum34==1.1.6             # via enum-compat, flake8
 flake8-docstrings==1.3.0
 flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0
-funcsigs==1.0.2           # via pytest
 future-fstrings==0.4.3
 future==0.16.0
-futures==3.2.0
 idna==2.6                 # via requests
 jmespath==0.9.3
 mccabe==0.6.1             # via flake8
 more-itertools==4.2.0     # via pytest
-numpy==1.14.4
-pandas==0.23.0
+numpy==1.14.5
+pandas==0.23.1
 pillow==5.0.0
 pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
-protobuf==3.5.2.post1
+protobuf==3.6.0
 py==1.5.3                 # via pytest
 pycodestyle==2.3.1        # via flake8
 pydocstyle==2.1.1         # via flake8-docstrings
@@ -46,11 +41,9 @@ pyyaml==3.12
 requests-toolbelt==0.8.0  # via twine
 requests==2.18.4          # via requests-toolbelt, twine
 s3transfer==0.1.13
-singledispatch==3.4.0.3
 six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.1.0
-tokenize-rt==2.0.1
 tornado==5.0.2
 tqdm==4.23.4              # via twine
 twine==1.11.0

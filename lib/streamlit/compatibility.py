@@ -21,44 +21,45 @@ def setup_2_3_shims(caller_globals):
     python 3.
     """
     if running_py3():
-        return
+        caller_globals['dict_types'] = (type({}),)
+        caller_globals['string_types'] = (type(''),)
+    else:
+        # These are the symbols we will export to the calling package.
+        export_symbols = []
 
-    # These are the symbols we will export to the calling package.
-    export_symbols = []
+        # Override basic types.
+        from builtins import range, map, str, dict, object, zip, int
+        export_symbols += ['range', 'map', 'str', 'dict', 'object', 'zip', 'int']
 
-    # Override basic types.
-    from builtins import range, map, str, dict, object, zip, int
-    export_symbols += ['range', 'map', 'str', 'dict', 'object', 'zip', 'int']
+        # Oerride the open function.
+        from io import open
+        export_symbols += ['open']
 
-    # Oerride the open function.
-    from io import open
-    export_symbols += ['open']
+        from six import string_types
+        export_symbols += ['string_types']
 
-    from six import string_types
-    export_symbols += ['string_types']
+        # Export these symbols to the calling function's symbol table.
+        for symbol in export_symbols:
+            caller_globals[symbol] = locals()[symbol]
 
-    # Export these symbols to the calling function's symbol table.
-    for symbol in export_symbols:
-        caller_globals[symbol] = locals()[symbol]
+        # Special Cases
+        caller_globals['FileNotFoundError'] = IOError
+        caller_globals['dict_types'] = (dict, type({}))
 
-    # Special Cases
-    caller_globals['FileNotFoundError'] = IOError
-    caller_globals['dict_types'] = (dict, type({}))
+        # Before we can call future.stanard_library, we need to make sure we're not
+        # overriding any of the packages that it monkey patches or this can cause
+        # some screwyness.
+        illegal_package_names = ['urllib', 'test', 'dbm']
+        current_directory_files = os.listdir('.')
+        for illegal_package_name in illegal_package_names:
+            illegal_source_file = illegal_package_name + '.py'
+            assert illegal_source_file not in current_directory_files, \
+                f'File "{illegal_source_file}" overrides a built-in package name.' \
+                ' Please rename it.'
 
-    # Before we can call future.stanard_library, we need to make sure we're not
-    # overriding any of the packages that it monkey patches or this can cause
-    # some screwyness.
-    illegal_package_names = ['urllib', 'test', 'dbm']
-    current_directory_files = os.listdir('.')
-    for illegal_package_name in illegal_package_names:
-        illegal_source_file = illegal_package_name + '.py'
-        assert illegal_source_file not in current_directory_files, \
-            f'File "{illegal_source_file}" overrides a built-in package name.' \
-            ' Please rename it.'
-
-    # Do a bunch of dark monkey patching magic.
-    from future.standard_library import install_aliases
-    install_aliases()
+        # Do a bunch of dark monkey patching magic.
+        from future.standard_library import install_aliases
+        install_aliases()
 
 def running_py3():
     """Returns True iff we're running 3 or above."""
