@@ -371,12 +371,12 @@ class DeltaGenerator(object):
 
         image = io.BytesIO()
         plt.savefig(image, format='png')
-        image_proto.marshall_images(image, None, -2, element.imgs)
+        image_proto.marshall_images(image, None, -2, element.imgs, False)
 
     @_export_to_io
     @_create_element
     def image(self, element, image, caption=None, width=None,
-            use_column_width=False):
+            use_column_width=False, clamp=False):
         """Displays an image.
 
         Args
@@ -393,6 +393,8 @@ class DeltaGenerator(object):
         use_column_width : bool
             If True, set the image width to the column width. This overrides
             the `width` parameter.
+        clamp : bool
+            Clamp the image to the given range.
         """
         if use_column_width:
             width = -2
@@ -400,7 +402,7 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise RuntimeError('Image width must be positive.')
-        image_proto.marshall_images(image, caption, width, element.imgs)
+        image_proto.marshall_images(image, caption, width, element.imgs, clamp)
 
     # TODO: remove `img()`, now replaced by `image()`
     @_export_to_io
