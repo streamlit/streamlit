@@ -398,8 +398,8 @@ class DeltaGenerator(object):
             width = -2
         elif width == None:
             width = -1
-        elif width == 0:
-            raise RuntimeError('Cannot sent width 0 image.')
+        elif width <= 0:
+            raise RuntimeError('Image width must be positive.')
         image_proto.marshall_images(image, caption, width, element.imgs)
 
     # TODO: remove `img()`, now replaced by `image()`

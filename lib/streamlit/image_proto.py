@@ -35,7 +35,12 @@ def marshall_images(img, captions, width, proto_imgs):
         pil_img = Image.open(img)
         pil_imgs = [pil_img]
     else:
-        numpy_imgs = np.array(img)
+        # extra map enables support for arrays of PIL images
+        try:
+            numpy_imgs = np.array(img)
+        except TypeError:
+            LOGGING.debug(f'Unable to convert {type(img)} directly to an array.')
+            numpy_imgs = np.array(map(np.array, img))
         numpy_imgs = convert_to_uint8(numpy_imgs)
         numpy_imgs = convert_to_4_color_channels(numpy_imgs)
         numpy_imgs = convert_imgs_to_list(numpy_imgs)
