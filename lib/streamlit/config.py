@@ -132,11 +132,11 @@ class Config(object):
         return '\n'.join(out).lstrip()
 
     def dumps(self):
-        LOGGER.debug('Skipping writing "%s".', self._configfile)
+        # Skipping writing self._configfile
         return
-        with open(self._configfile, 'w') as f:
-            f.write(self._dump())
-            LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
+        # with open(self._configfile, 'w') as f:
+        #     f.write(self._dump())
+        #     LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
 
 def _flatten(nested_dict, flat_dict, prefix=[]):
     for k, v in nested_dict.items():
