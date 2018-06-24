@@ -44,7 +44,8 @@ class DataFrame extends PureComponent {
       const cellContents = getCellContents(df, headerRows, headerCols);
       const cellRenderer = getCellRenderer(cellContents);
       const {columnWidth, headerWidth} =
-        getWidths(cols, rows, headerCols, width - border, cellContents);
+        getWidths(cols, rows, headerCols, headerRows, width - border,
+          cellContents);
       // width = tableWidth + border;
 
       // Since this is a PureComponent, finding ourselves in this method
@@ -149,7 +150,7 @@ function getCellRenderer(cellContents) {
 /**
  * Computes various dimensions for the table.
  */
-function getWidths(cols, rows, headerCols, width, cellContents) {
+function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
   // Calculate column width based on character count alone.
    let columnWidth = ({index}) => {
     const colIndex = index;
@@ -158,12 +159,21 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
     const padding = 14;
     const [minWidth, maxWidth] = [25, 400];
 
-    // Set the colWidth to the maximum width of a column. If more than maxRows
-    // then select maxRows at random to measure.
+    // Set the colWidth to the maximum width of a column.
     const maxRows = 100;
     let colWidth = minWidth;
     for (var i = 0 ; i < Math.min(rows, maxRows) ; i++) {
-      const rowIndex = rows > maxRows ? Math.floor(Math.random() * rows) : i;
+      let rowIndex = -1;
+      if (i < headerRows) {
+        // Always measure all the header rows.
+        rowIndex = i;
+      } else if (rows > maxRows) {
+        // If there are a lot of rows, then pick some at random.
+        rowIndex = Math.floor(Math.random() * rows);
+      } else {
+        // Otherwise, just measure every row.
+        rowIndex = i;
+      }
       const nChars = cellContents(colIndex, rowIndex).contents.length;
       const cellWidth = nChars * charWidth + padding;
       if (cellWidth > maxWidth)

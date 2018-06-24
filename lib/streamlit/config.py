@@ -89,7 +89,7 @@ class Config(object):
             s3 = dict(
                 _comment = 'S3 Configuration',
                 bucketname = dict(
-                    value = None,
+                    value = 'streamlit-public',
                 ),
                 region = dict(
                     _comment = 'ie. us-west-2',

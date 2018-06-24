@@ -258,6 +258,9 @@ class _IO(object):
     write = _IO_show_warning(write)
     echo = _IO_show_warning(lambda *args: error('Please use st.echo()'))
     spinner = _IO_show_warning(lambda *args: error('Please use st.spinner()'))
+    area_chart = _IO_show_warning(area_chart)
+    bar_chart = _IO_show_warning(bar_chart)
+    line_chart = _IO_show_warning(line_chart)
 
 # This class is a pseudo-package which exists to emit deprecation warnings.
 io = _IO()

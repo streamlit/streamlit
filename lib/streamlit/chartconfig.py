@@ -13,12 +13,12 @@ CHART_TYPES = set([
     'AreaChart',
     'BarChart',
     'LineChart',
-    'ComposedChart',
+    # 'ComposedChart',
     # 'PieChart',
-    'RadarChart',
+    # 'RadarChart',
     # 'RadialBarChart',
     # 'ScatterChart',
-    'Treemap',
+    # 'Treemap',
 ])
 
 # Set of snake-case strings containing the ReChart chart types accepted by
@@ -152,7 +152,7 @@ BASIC_REQUIRED_COMPONENTS = (
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        BASIC_REQUIRED_COMPONENTS + 
+        BASIC_REQUIRED_COMPONENTS +
         (ForEachColumn(('line', {
             'data_key': ColumnAtCurrentIndex(),
             'dot': 'false',

@@ -31,7 +31,8 @@ class Cloud(object):
         md5 = hashlib.md5()
         md5.update(
             open(os.path.join(self._static_dir, 'index.html'), 'rb').read())
-        self._release_hash = '%s-%s' % (streamlit.__version__, binascii.hexlify(md5.digest()))
+        self._release_hash = '%s-%s' % (streamlit.__version__,
+            binascii.hexlify(md5.digest()).decode('ascii'))
 
     def _get_static_dir(self):
         """Return static directory location."""
