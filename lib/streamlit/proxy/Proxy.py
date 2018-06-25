@@ -75,6 +75,7 @@ def stop_proxy_on_exception(is_coroutine=False):
                     raise
                 except Exception as e:
                     LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
                     raise
@@ -94,6 +95,7 @@ def stop_proxy_on_exception(is_coroutine=False):
                     # # callback(web_socket_handler, *args, **kwargs)
                 except Exception as e:
                     LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
+                    traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
                     raise
@@ -165,7 +167,7 @@ class Proxy(object):
         '''
         LOGGER.debug('About to start the proxy.')
         IOLoop.current().start()
-        LOGGER.debug('Just started the proxy.')
+        LOGGER.debug('IOLoop closed.')
 
     def stop(self):
         """Stop proxy.

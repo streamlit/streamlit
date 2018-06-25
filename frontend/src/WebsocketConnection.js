@@ -86,14 +86,6 @@ class WebsocketConnection {
       }
     }
   }
-
-  handleClose() {
-    this.state = ConnectionState.DISCONNECTED;
-  }
-
-  handleError(event) {
-    this.state = ConnectionState.ERROR;
-  }
 };
 
 export default WebsocketConnection;

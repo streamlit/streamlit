@@ -9,18 +9,25 @@ message ForwardMsg {
     // Report Deltas
     ////
 
-    string new_report = 1;
-    DeltaList delta_list = 2;
-    bool report_finished = 3;
+    NewConnection new_connection = 1;
+    string new_report = 2;
+    DeltaList delta_list = 3;
+    bool report_finished = 4;
 
     ////
     // Upload Progress
     ////
 
     // Indicates the % progres of a report upload.
-    uint32 upload_report_progress = 4;
+    uint32 upload_report_progress = 5;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 5;
+    string report_uploaded = 6;
   }
+}
+
+// This is the first message that is sent when the connection is opened.
+message NewConnection {
+  // True if saving is properly configured.
+  bool saving_configured = 1;
 }

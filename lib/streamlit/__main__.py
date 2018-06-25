@@ -29,7 +29,7 @@ def clear_cache():
     streamlit.caching.clear_cache(True)
 
 def help():
-    print('Showing help page in browser..')
+    print('Showing help page in browser...')
     streamlit.reference.display_reference()
 
 def version():

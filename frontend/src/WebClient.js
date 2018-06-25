@@ -128,6 +128,11 @@ class WebClient extends PureComponent {
   handleMessage(msgProto) {
     const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
+      newConnection: (connectionProperties) => {
+        console.log('Got a new connection:')
+        console.log(connectionProperties.toJS())
+        console.log(`savingConfigured: "${connectionProperties.get('savingConfigured')}"`)
+      },
       newReport: (id) => {
         this.setState({reportId: id});
         setTimeout(() => {
@@ -149,7 +154,6 @@ class WebClient extends PureComponent {
         });
       },
       reportUploaded: (url) => {
-        console.log('Copied text to clipboard', url);
         this.setState({
           uploadProgress: undefined,
           uploadUrl: url,

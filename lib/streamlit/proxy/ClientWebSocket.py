@@ -45,7 +45,11 @@ class ClientWebSocket(WebSocketHandler):
         throttle_secs = config.get_option('local.throttleSecs')
 
         try:
+            # Send the opening message
             LOGGER.info('Browser websocket opened for "%s"', self._report_name)
+            self._send_new_connection_msg()
+
+            # Get a ProxyConnection object to coordinate sending deltas over this report name.
             self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
@@ -89,6 +93,18 @@ class ClientWebSocket(WebSocketHandler):
         """Run callback for websocket messages."""
         LOGGER.debug(repr(msg))
         yield self._handle_backend_msg(msg, self._connection, self)
+
+    @gen.coroutine
+    def _send_new_connection_msg(self):
+        """Sends a message to the browser indicating local configuration
+        settings."""
+        msg = protobuf.ForwardMsg()
+
+        LOGGER.debug('New Client Connection: saving_is_configured=%s' % \
+            config.saving_is_configured())
+        msg.new_connection.saving_configured = config.saving_is_configured()
+
+        yield self.write_message(msg.SerializeToString(), binary=True)
 
     @gen.coroutine
     def _handle_backend_msg(self, payload, connection, ws):

@@ -89,7 +89,7 @@ class Config(object):
             s3 = dict(
                 _comment = 'S3 Configuration',
                 bucketname = dict(
-                    value = 'streamlit-public',
+                    value = None,
                 ),
                 region = dict(
                     _comment = 'ie. us-west-2',
@@ -151,3 +151,8 @@ def get_option(opt):
     config = dict()
     _flatten(c, config)
     return config.get('%s' % opt, None)
+
+def saving_is_configured():
+    """Returns true if S3 (and eventually GCS?) saving is configured properly
+    for this session."""
+    return (get_option('s3.bucketname') is not None)

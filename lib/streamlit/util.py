@@ -53,7 +53,7 @@ def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
 
-@__cache('local_uuid.txt', _decode_ascii, uuid.UUID)
+@__cache('local_uuid.txt', str, uuid.UUID)
 def get_local_id():
     """Returns a local id which identifies this user to the database."""
     # mac = str(uuid.getnode())
