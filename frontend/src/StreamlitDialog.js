@@ -1,0 +1,99 @@
+import React from 'react';
+
+import {
+  // Alert,
+  Button,
+  // Col,
+  // Container,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Progress,
+  // Row,
+  // UncontrolledTooltip,
+} from 'reactstrap';
+
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+
+import './StreamlitDialog.css';
+
+function StreamlitDialog({ dialogProps }) {
+  // This table of functions constructs the dialog based on dialogProps.type
+  const populateDialogTable = {
+    'uploadProgress': uploadProgressDialog,
+    'uploaded': uploadedDialog,
+    [undefined]: noDialog,
+  };
+  const populateDialogFunc =
+    populateDialogTable[dialogProps.type] || typeNotRecognizedDialog;
+
+  // We call that function to populate the dialog.
+  const {body, footer} = populateDialogFunc(dialogProps);
+  const isOpen = ((body !== undefined) || (footer != undefined));
+  return (
+    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={""}>
+      { body }
+      { footer }
+    </Modal>
+  );
+}
+
+/**
+ * Shows the progress of an upload in progress.
+ */
+function uploadProgressDialog({progress}) {
+
+  return { body:
+    <ModalBody>
+      <div className="streamlit-upload-first-line">
+        Saving report...
+      </div>
+      <div>
+        <Progress animated value={progress}/>
+      </div>
+    </ModalBody>
+  }
+}
+
+/**
+ * Shows the URL after something has been uploaded.
+ */
+function uploadedDialog({url, onClose}) {
+  return {
+    body: (
+      <ModalBody>
+        <div className="streamlit-upload-first-line">
+          Report saved to:
+        </div>
+        <div id="streamlit-upload-url"> {url} </div>
+      </ModalBody>
+    ),
+    footer: (
+      <ModalFooter>
+        <CopyToClipboard text={url} onCopy={onClose}>
+          <Button>Copy to clipboard</Button>
+        </CopyToClipboard>{' '}
+        <Button onClick={onClose}>Done</Button>
+      </ModalFooter>
+    ),
+  };
+}
+
+/**
+ * Returns an empty dictionary, indicating that no object is to be displayed.
+ */
+function noDialog() {
+  return {}
+}
+
+/**
+ * If the dialog type is not recognized, dipslay this dialog.
+ */
+function typeNotRecognizedDialog({type}) {
+  return {
+    body: <ModalBody>{`Dialog type "${type}" not recognized.`}</ModalBody>
+  };
+}
+
+export default StreamlitDialog;

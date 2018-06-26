@@ -27,7 +27,7 @@ import MainMenu from './MainMenu';
 import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
-import UploadDialog from './UploadDialog';
+import StreamlitDialog from './StreamlitDialog';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -60,7 +60,7 @@ class WebClient extends PureComponent {
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
-    this.closeUploadDialog = this.closeUploadDialog.bind(this);
+    this.closeDialog = this.closeDialog.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
   }
@@ -148,16 +148,16 @@ class WebClient extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.setState({
-          uploadProgress: progress,
-          uploadUrl: undefined
-        });
+        this.setState({ dialog: {
+          type: 'uploadProgress',
+          progress: progress,
+        }});
       },
       reportUploaded: (url) => {
-        this.setState({
-          uploadProgress: undefined,
-          uploadUrl: url,
-        });
+        this.setState({ dialog: {
+          type: 'uploaded',
+          url: url,
+        }});
       },
     });
   }
@@ -165,11 +165,12 @@ class WebClient extends PureComponent {
   /**
    * Closes the upload dialog if it's open.
    */
-  closeUploadDialog() {
-    this.setState({
-      uploadProgress: undefined,
-      uploadUrl: undefined,
-    });
+  closeDialog() {
+    this.setState({dialog: undefined});
+    // this.setState({
+    //   uploadProgress: undefined,
+    //   uploadUrl: undefined,
+    // });
   }
 
   /**
@@ -255,10 +256,8 @@ class WebClient extends PureComponent {
             </Col>
           </Row>
 
-          <UploadDialog
-            progress={this.state.uploadProgress}
-            url={this.state.uploadUrl}
-            onClose={this.closeUploadDialog}
+          <StreamlitDialog
+            dialogProps={{...this.state.dialog, onClose: this.closeDialog}}
           />
 
         </Container>
