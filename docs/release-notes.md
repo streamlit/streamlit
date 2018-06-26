@@ -1,5 +1,50 @@
 # Release Notes
 
+#### v0.12
+June 25, 2018
+```
+We are thrilled to announce version 0.12 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    python -m streamlit help
+
+MAJOR API CHANGE!
+
+We have deprecated the `streamlit.io` package. Please import Streamlit like so:
+
+    import streamlit as st
+
+    st.write(...) etc.
+
+The `streamlit.io` package will be removed in future versions of Streamlit.
+
+New features are:
+
+1. Streamlit now supports Matplotlib! Please use st.pyplot() where you would
+   normally use plt.show()
+
+3. Streamlit now runs on Python 2.7.10 and above!
+
+3. You can now save reports to Amazon S3. Please contact Adrien at
+   adrien.g.treuille@gmail.com to set this up.
+
+4. If your text editor supports go-to-definition for functions and classes,
+   these now work properly for functions in the `streamlit` package.
+
+Bug fixes are:
+
+1. Debug logging messages no longer displayed when Streamlit is launched.
+
+2. You can now pass an array of PIL images to st.image().
+
+3. Streamlit provides more intelligent warnings when floating point arrays are
+   passed to st.image() whose bounds are not on the range [0, 1].
+```
+
+
 #### v0.11
 June 8, 2018
 ```

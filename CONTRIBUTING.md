@@ -108,7 +108,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.12.3`.
+**Note:** The current version is `0.12.4`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
@@ -154,7 +154,7 @@ you have a parallel folder called `streamlit-staging` to test this version.)
 make install   # must be in 'install' mode before making wheel
 make wheel
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.12.3-py3-none-any.whl
+pip install --upgrade ../streamlit/lib/dist/streamlit-0.12.4-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
