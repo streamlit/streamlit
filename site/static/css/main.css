@@ -77,7 +77,7 @@ header::before {
   left: 0;
   transform: translateZ(-1px) scale(3);
   z-index: -1;
-  background-image: url('/images/sparkle.jpg');
+  background-image: url('../images/sparkle.jpg');
   background-size: cover;
   background-position-x: center;
   background-position-y: center;
