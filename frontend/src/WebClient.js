@@ -63,6 +63,7 @@ class WebClient extends PureComponent {
     this.closeDialog = this.closeDialog.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
+    this.saveReport = this.saveReport.bind(this);
   }
 
   componentDidMount() {
@@ -215,10 +216,10 @@ class WebClient extends PureComponent {
         type: "warning",
         msg: (
           <div>
-            Saving reports is not currently configurd.
-            Please contact
-              <a href="mailto:adrien.g.treuille@gmail.com/">Adrien</a> to
-              setup sharing.
+            You do not have Amazon S3 or Google GCS sharig configured.
+            Please contact&nbsp;
+              <a href="mailto:adrien.g.treuille@gmail.com">Adrien</a>
+            &nbsp;to setup sharing.
           </div>
         ),
       });
@@ -262,8 +263,8 @@ class WebClient extends PureComponent {
             isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
-            saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
-            />
+            saveButtonCallback={this.saveReport}
+          />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">

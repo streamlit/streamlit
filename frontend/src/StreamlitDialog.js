@@ -23,6 +23,7 @@ function StreamlitDialog({ dialogProps }) {
   const populateDialogTable = {
     'uploadProgress': uploadProgressDialog,
     'uploaded': uploadedDialog,
+    'warning': warningDialog,
     [undefined]: noDialog,
   };
   const populateDialogFunc =
@@ -85,6 +86,20 @@ function uploadedDialog({url, onClose}) {
  */
 function noDialog() {
   return {}
+}
+
+/**
+ * If the dialog type is not recognized, dipslay this dialog.
+ */
+function warningDialog({type, msg, onClose}) {
+  return {
+    body: <ModalBody>{msg}</ModalBody>,
+    footer: (
+      <ModalFooter>
+        <Button onClick={onClose}>Done</Button>
+      </ModalFooter>
+    ),
+  };
 }
 
 /**
