@@ -1,0 +1,13 @@
+{{ define "main" }}
+    <h1>Page not found</h1>
+
+    <p>Uh-oh, you seem to have taken a wrong turn! It looks like this was the result of either:</p>
+
+    <ul>
+        <li>A mistyped URL, or a copy-and-paste mistakex</li>
+        <li>A broken link on a web pages or in an email</li>
+        <li>Moved or deleted content</li>
+    </ul>
+
+    <p>Try going back to <a href="{{ .Site.BaseURL }}">{{ .Site.BaseURL }}</a> and navigating from there.</p>
+{{ end }}
