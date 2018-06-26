@@ -129,9 +129,9 @@ class WebClient extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
-        console.log('Got a new connection:')
-        console.log(connectionProperties.toJS())
-        console.log(`savingConfigured: "${connectionProperties.get('savingConfigured')}"`)
+        this.setState({
+          savingConfigured: connectionProperties.get('savingConfigured'),
+        });
       },
       newReport: (id) => {
         this.setState({reportId: id});
@@ -148,18 +148,19 @@ class WebClient extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.setState({ dialog: {
-          type: 'uploadProgress',
-          progress: progress,
-        }});
+        this.openDialog({type: 'uploadProgress', progress: progress});
       },
       reportUploaded: (url) => {
-        this.setState({ dialog: {
-          type: 'uploaded',
-          url: url,
-        }});
+        this.openDialog({type: 'uploaded', url: url})
       },
     });
+  }
+
+  /**
+   * Opens a dialog with the specified state.
+   */
+  openDialog(dialogProps) {
+    this.setState({dialog: dialogProps});
   }
 
   /**
@@ -167,10 +168,6 @@ class WebClient extends PureComponent {
    */
   closeDialog() {
     this.setState({dialog: undefined});
-    // this.setState({
-    //   uploadProgress: undefined,
-    //   uploadUrl: undefined,
-    // });
   }
 
   /**
@@ -205,6 +202,27 @@ class WebClient extends PureComponent {
         }
       })
     }));
+  }
+
+  /**
+   * Callback to call when we want to save the report.
+   */
+  saveReport() {
+    if (this.state.savingConfigured) {
+      this.sendBackMsg('CLOUD_UPLOAD')
+    } else {
+      this.openDialog({
+        type: "warning",
+        msg: (
+          <div>
+            Saving reports is not currently configurd.
+            Please contact
+              <a href="mailto:adrien.g.treuille@gmail.com/">Adrien</a> to
+              setup sharing.
+          </div>
+        ),
+      });
+    }
   }
 
   sendBackMsg(command) {
