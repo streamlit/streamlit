@@ -1,0 +1,25 @@
+{{ define "main" }}
+<main>
+  <header class="parallax">
+    <h1>{{ .Site.Title }}</h1>
+    <div id="lede">Magical data science</div>
+
+    {{/* TODO: Configure site menu.
+
+    {{ with .Site.Menus.main }}
+    <nav>
+      <ul>
+      {{ range . }}
+        <li><a href="{{ .URL | absURL }}">{{ .Name }}</a></li>
+      {{ end }}
+      </ul>
+    </nav>
+    {{ end }}
+    */}}
+  </header>
+
+  {{ partial "quickstart" . }}
+
+  {{ partial "contact" . }}
+</main>
+{{ end }}
