@@ -8,7 +8,6 @@ Install with:
 ```bash
 pip install streamlit
 ```
-Currently, streamlit requires Python 3.6.
 
 ## Static Example
 
