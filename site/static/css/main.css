@@ -62,7 +62,6 @@ header::before {
   right: 0;
   bottom: 0;
   left: 0;
-  transform: translateZ(-1px) scale(2.2);
   z-index: -1;
   background-color: #1c2339;
   background-image: url('../images/cave.jpg');
@@ -72,11 +71,18 @@ header::before {
   background-repeat: no-repeat;
 }
 
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  /* Chrome & Safari CSS hack, since the line below is breaking Firefox */
+  header::before {
+    transform: translateZ(-1px) scale(2.2);
+  }
+}
+
+
 header h1 {
   font-family: 'PT Sans', sans-serif;
   font-weight: 800;
   font-size: 9vmin;
-  letter-spacing: 0.01em;
   width: 60rem;
   max-width: 80vw;
   line-height: 1;
