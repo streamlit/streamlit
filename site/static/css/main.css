@@ -77,11 +77,6 @@ header h1 {
   font-weight: 800;
   font-size: 9vmin;
   letter-spacing: 0.01em;
-  /*
-  text-shadow: 0 0.05em 0.05em rgba(10, 30, 60, 0.25),
-      0 0.05em 0.25em rgba(10, 30, 60, 0.25);
-  color: white;
-  */
   width: 60rem;
   max-width: 80vw;
   line-height: 1;
