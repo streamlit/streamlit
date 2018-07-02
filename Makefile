@@ -85,6 +85,7 @@ react-build:
 	cd frontend/ ; npm run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
+	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
 js-lint:
 	cd frontend; ./node_modules/.bin/eslint src

@@ -256,7 +256,7 @@ class WebClient extends PureComponent {
       <div>
         <header>
           <div id="brand">
-            <a href="/">Streamlit</a>
+            <a href="http://streamlit.io">Streamlit</a>
           </div>
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
