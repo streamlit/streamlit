@@ -146,4 +146,4 @@ class ClientWebSocket(WebSocketHandler):
             progress_msg.Clear()
             progress_msg.report_uploaded = 'ERROR: ' + str(e)
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
-            raise
+            raise e
