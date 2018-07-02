@@ -34,7 +34,7 @@ LOGGER = get_logger()
 from functools import wraps
 
 def _export_to_io(method):
-    """Flag this DeltaGenerator method to be exported to the streamlit.io
+    """Flag this DeltaGenerator method to be exported to the streamlit
     package.
 
     This should be the outermost decorator, i.e. before all others.

@@ -208,7 +208,7 @@ if sys.argv[0] in ('-m', '-c'):
     _this_may_be_proxy = True
 
 # In order to log all exceptions etc to the streamlit report after
-# `import streamlit.io` we establish the proxy by calling get_connection().
+# `import streamlit` we establish the proxy by calling get_connection().
 # If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
 # skip this step. Overcautiously skipping this step isn't fatal in general as
 # it simply implies that the connection may be established later.
