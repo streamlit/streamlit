@@ -91,6 +91,10 @@ open http://localhost:3000/?id=example
 ```
 Then load a page and click the save icon.
 
+## Coding Conventions
+
+Streamlit coding conventions can be found [here](docs/conventions.md).
+
 ## Publishing to `PyPi`
 
 #### Write The Release notes

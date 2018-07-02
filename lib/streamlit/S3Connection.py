@@ -67,10 +67,15 @@ class S3(Cloud):
         log.propagate = False
 
         # Config related stuff.
-        self._bucketname = config.get_option('s3.bucketname')
-        self._url = config.get_option('s3.url')
-        self._key_prefix = config.get_option('s3.key_prefix')
-        self._region = config.get_option('s3.region')
+        self._bucketname = config.get_s3_option('bucket')
+        self._url = config.get_s3_option('url')
+        self._key_prefix = config.get_s3_option('keyPrefix')
+        self._region = config.get_s3_option('region')
+
+        # self._bucketname = config.get_option('s3.bucketname')
+        # self._url = config.get_option('s3.url')
+        # self._key_prefix = config.get_option('s3.key_prefix')
+        # self._region = config.get_option('s3.region')
 
         user = os.getenv('USER', None)
 
