@@ -51,6 +51,8 @@ develop:
 # 	@echo
 
 wheel:
+	# Get rid of the old build folder to make sure that we delete old js and css.
+	rm -rfv lib/build
 	cd lib ; python setup.py bdist_wheel --universal
 	# cd lib ; python setup.py bdist_wheel sdist
 
