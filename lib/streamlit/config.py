@@ -156,10 +156,22 @@ def get_option(opt):
     _flatten(c, config)
     return config.get('%s' % opt, None)
 
-def set_option(opt, val):
-    c = Config().Get()
-    group, option = opt.split('.')
-    streamlit.config.Config._config._config[group][option] = val
+def get_s3_option(option):
+    """This function gets an s3 option and returns it. It supports both new
+    and old ways of getting these options. Options can be one of:
+      - profile
+      - bucket
+      - keyPrefix
+      - url
+    """
+    LOGGER.debug('Trying to get bucket option')
+    LOGGER.debug('s3.nothing -> %s' % get_option('s3.nothing'))
+    import sys
+    sys.exit(-1)
+
+    if option == 'profile':
+        return get_option('storage.s3')['profile']
+
 
 def saving_is_configured():
     """Returns true if S3 (and eventually GCS?) saving is configured properly
