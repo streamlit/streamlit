@@ -38,7 +38,7 @@ import './WebClient.css';
 /**
  * Port used to connect to the proxy server.
  */
-const PROXY_PORT = 5012;
+const PROXY_PORT = 5013;
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -216,7 +216,7 @@ class WebClient extends PureComponent {
         type: "warning",
         msg: (
           <div>
-            You do not have Amazon S3 or Google GCS sharig configured.
+            You do not have Amazon S3 or Google GCS sharing configured.
             Please contact&nbsp;
               <a href="mailto:adrien.g.treuille@gmail.com">Adrien</a>
             &nbsp;to setup sharing.

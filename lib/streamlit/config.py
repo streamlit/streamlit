@@ -1,4 +1,13 @@
+# -*- coding: future_fstrings -*-
+
 """Loads the configuration data."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+# Package Imports
 import os
 import yaml
 
@@ -57,7 +66,7 @@ class Config(object):
             ),
             log_level = dict(
                 _comment = 'error, warning, info, debug',
-                value = 'error',
+                value = 'warning',
             ),
             local = dict(
                 _comment = 'Configuration for the local server',
@@ -164,16 +173,32 @@ def get_s3_option(option):
       - keyPrefix
       - url
     """
-    LOGGER.debug('Trying to get bucket option')
-    LOGGER.debug('s3.nothing -> %s' % get_option('s3.nothing'))
-    import sys
-    sys.exit(-1)
-
-    if option == 'profile':
-        return get_option('storage.s3')['profile']
-
+    # Maps s3 options to the new and old option name displaying
+    # a deprecation warning if the old option name is used.
+    s3_option_table = dict(
+        # name      # new location         # old location
+        profile   = ('storage.s3.profile'  , None           ),
+        bucket    = ('storage.s3.bucket'   , 's3.bucketname'),
+        keyPrefix = ('storage.s3.keyPrefix', 's3.key_prefix'),
+        url       = ('storage.s3.url'      , 's3.url'       ),
+        region    = ('storage.s3.region'   , 's3.region'    ),
+    )
+    try:
+        new_option, old_option = s3_option_table[option]
+        LOGGER.debug(f'Getting option "{option}" which maps to "{new_option}" or "{old_option}".')
+    except KeyError:
+        raise RuntimeError('S3 Option "%s" not recognized.' % option)
+    if get_option(new_option) is not None:
+        return get_option(new_option)
+    elif old_option is None:
+        return None
+    elif get_option(old_option) is None:
+        return None
+    else:
+        LOGGER.warning(f'DEPRECATION WARNING: Please update ~/.streamlit/config.yaml by renaming "{old_option}" to "{new_option}".')
+        return get_option(old_option)
 
 def saving_is_configured():
     """Returns true if S3 (and eventually GCS?) saving is configured properly
     for this session."""
-    return (get_option('s3.bucketname') is not None)
+    return (get_s3_option('bucket') is not None)

@@ -1,12 +1,21 @@
+# -*- coding: future_fstrings -*-
+
 """Handles a connecton to an S3 bucket to send Report data."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+# Standard Library Imports
 import binascii
+import boto3
+import botocore
 import hashlib
 import logging
 import mimetypes
 import os
 
-import boto3
-import botocore
 import streamlit
 
 from tornado import gen
@@ -92,7 +101,13 @@ class S3(Cloud):
         else:
             self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
 
-        self._client = boto3.client('s3')
+        aws_profile = config.get_s3_option('profile')
+        if aws_profile is not None:
+            LOGGER.debug(f'Using AWS profile "{aws_profile}".')
+            self._client = boto3.Session(profile_name=aws_profile).client('s3')
+        else:
+            LOGGER.debug(f'Using default AWS profile.')
+            self._client = boto3.client('s3')
 
     @run_on_executor
     def _upload_static_dir(self):
