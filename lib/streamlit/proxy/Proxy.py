@@ -31,12 +31,43 @@ from streamlit.streamlit_msg_proto import new_report_msg
 
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
+from tornado import httpclient
 from tornado.ioloop import IOLoop
 import urllib
 import webbrowser
 import functools
+import socket
+import os
 
 LOGGER = get_logger()
+EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
+
+def set_remote(val):
+    config.set_option('proxy.isRemote', val)
+
+def _get_remote_urls(port, quoted_name):
+    ips = []
+    http_client = httpclient.HTTPClient()
+    try:
+        for key in ('local-ipv4', 'public-ipv4'):
+            endpoint = os.path.join(EC2_METADATA_URL, key)
+            response = http_client.fetch(endpoint, request_timeout=0.01)
+            ips.append(response.body)
+    except httpclient.HTTPError as e:
+        # Basically if not on EC2 do a hack and try to connect to
+        # internet and see what the local ip is.
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 53))
+        ips.append(s.getsockname()[0])
+        s.close()
+    finally:
+        http_client.close()
+
+    for ip in ips:
+        url = 'http://{}:{}/?name={}'.format(ip, port, quoted_name)
+        LOGGER.debug('url = %s', url)
+        LOGGER.info('Connect to %s', url)
+
 
 def _launch_web_client(name):
     """Launches a web browser to connect to the proxy to get the named
@@ -55,7 +86,16 @@ def _launch_web_client(name):
     quoted_name = urllib.parse.quote_plus(name)
     url = 'http://{}:{}/?name={}'.format(
         host, port, quoted_name)
-    webbrowser.open(url)
+
+    remote = config.get_option('proxy.isRemote')
+    if not remote:
+        # Only open up a browser if there's a display ie console.
+        if os.getenv('DISPLAY'):
+            webbrowser.open(url)
+    else:
+        LOGGER.debug('proxy.isRemote = %s', remote)
+        _get_remote_urls(port, quoted_name)
+
 
 def stop_proxy_on_exception(is_coroutine=False):
     """Decorates WebSocketHandler callbacks to stop the proxy on exception."""

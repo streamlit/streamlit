@@ -85,6 +85,10 @@ class Config(object):
                     _comment = 'Whether to use the node server or not.',
                     value = False,
                 ),
+                isRemote = dict(
+                    _comment = 'Is the proxy running remotely.',
+                    value = False,
+                ),
             ),
             s3 = dict(
                 _comment = 'S3 Configuration',
@@ -151,6 +155,11 @@ def get_option(opt):
     config = dict()
     _flatten(c, config)
     return config.get('%s' % opt, None)
+
+def set_option(opt, val):
+    c = Config().Get()
+    group, option = opt.split('.')
+    streamlit.config.Config._config._config[group][option] = val
 
 def saving_is_configured():
     """Returns true if S3 (and eventually GCS?) saving is configured properly
