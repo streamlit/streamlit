@@ -1,11 +1,4 @@
-# -*- coding: future_fstrings -*-
-
 """Loads the configuration data."""
-
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
 
 # Package Imports
 import os
@@ -185,7 +178,8 @@ def get_s3_option(option):
     )
     try:
         new_option, old_option = s3_option_table[option]
-        LOGGER.debug(f'Getting option "{option}" which maps to "{new_option}" or "{old_option}".')
+        LOGGER.debug('Getting option "%s" which maps to "%s" or "%s".' \
+            % (option, new_option, old_option))
     except KeyError:
         raise RuntimeError('S3 Option "%s" not recognized.' % option)
     if get_option(new_option) is not None:
@@ -195,7 +189,8 @@ def get_s3_option(option):
     elif get_option(old_option) is None:
         return None
     else:
-        LOGGER.warning(f'DEPRECATION WARNING: Please update ~/.streamlit/config.yaml by renaming "{old_option}" to "{new_option}".')
+        LOGGER.warning('DEPRECATION: Please update ~/.streamlit/config.yaml by renaming "%s" to "%s".' \
+            % (old_option, new_option))
         return get_option(old_option)
 
 def saving_is_configured():
