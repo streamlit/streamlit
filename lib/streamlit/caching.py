@@ -42,9 +42,9 @@ def cache(func):
 		except:
 			message = f'Caching:\n{func.__name__}()'
 
-		# Searches for addresses like "object <listcomp> at 0x1052cca50"
-		address = re.compile(r'at\ 0x[0-9a-f]+')
-		instr_to_str = lambda i: address.sub('ADDRESS', str(i))
+		# # Searches for addresses like "object <listcomp> at 0x1052cca50"
+		# address = re.compile(r'at\ 0x[0-9a-f]+')
+		# instr_to_str = lambda i: address.sub('ADDRESS', str(i))
 
 		# Calculate the filename hash.
 		hasher = hashlib.new('md5')
@@ -52,10 +52,13 @@ def cache(func):
 		hasher.update(inspect.getsource(func).encode('utf-8'))
 		path = f'cache/f{hasher.hexdigest()}.pickle'
 
+		LOGGER.debug('Cache filename: ' + path)
+
 		# Load the file (hit) or compute the function (miss)
 		try:
 			with streamlit_read(path, binary=True) as input:
 				rv = pickle.load(input)
+				LOGGER.debug('Cache HIT: ' + str(type(rv)))
 		except FileNotFoundError:
 			# Temporarily display this message while computing this function.
 			# The reason we embed the spinner this deep into this function is
@@ -66,6 +69,7 @@ def cache(func):
 				rv = func(*argc, **argv)
 				with streamlit_write(path, binary=True) as output:
 					pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
+				LOGGER.debug('Cache MISS: ' + str(type(rv)))
 		return rv
 
 	# make this a well-behaved decorator by preserving important function attributes
