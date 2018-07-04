@@ -8,8 +8,13 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import json
+
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
+
+from streamlit.logger import get_logger
+LOGGER = get_logger()
 
 class ProxyConnection(object):
     """Stores information shared by both local_connections and
@@ -71,9 +76,20 @@ class ProxyConnection(object):
         empty."""
         self._client_queues.remove(queue)
 
-    def get_report_proto(self):
-        """Return a byte array encoding all the deltas in this report."""
-        report = protobuf.Report()
-        report.name = self.name
-        self._master_queue.write_to_report(report)
-        return report
+    def serialize_report_to_files(self):
+        """Returns a list of pairs to be serialized of the form:
+            [
+                (filename_1, data_1),
+                (filename_2, data_2), etc..
+            ]
+        """
+        # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
+        deltas = self._master_queue.clone().get_deltas()
+        manifest = dict(
+            name = self.name,
+            nDeltas = len(deltas)
+        )
+        return \
+            [(f'{self.id}/manfiest.json', json.dumps(manifest))] + \
+            [(f'{self.id}/{idx}.delta', delta.SerializeToString())
+                for idx, delta in enumerate(deltas)]
