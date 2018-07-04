@@ -44,6 +44,8 @@ class ClientWebSocket(WebSocketHandler):
         # How long we wait between sending more data.
         throttle_secs = config.get_option('local.throttleSecs')
 
+        indicated_closed = False
+
         try:
             # Send the opening message
             LOGGER.info('Browser websocket opened for "%s"', self._report_name)
@@ -69,6 +71,9 @@ class ClientWebSocket(WebSocketHandler):
 
                 if not self._queue.is_closed():
                     yield self._queue.flush_queue(self)
+                elif not indicated_closed:
+                    LOGGER.debug('XXX The queue for "%s" is closed.' % self._connection.name)
+                    indicated_closed = True
 
                 yield gen.sleep(throttle_secs)
             LOGGER.debug('Closing loop for "%s"', self._connection.name)

@@ -28,8 +28,8 @@ from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit import protobuf
-from streamlit.logger import get_logger
 
+from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
@@ -134,9 +134,12 @@ class Connection(object):
         # When the current thread closes, then close down the connection.
         current_thread = threading.current_thread()
         def cleanup_on_exit():
+            LOGGER.debug('Cleanup thread waiting for main thread to end.')
             current_thread.join()
+            LOGGER.debug('Main thread ended. Restoring excepthook.')
             sys.excepthook = original_excepthook
             self._loop.add_callback(setattr, self, '_is_open', False)
+            LOGGER.debug('Submitted callback to stop the connection thread.')
         cleanup_thread = threading.Thread(target=cleanup_on_exit)
         cleanup_thread.daemon = False
         cleanup_thread.start()
@@ -172,22 +175,23 @@ class Connection(object):
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
-        self._loop.add_callback(self._queue, delta)
+        LOGGER.debug('Enqueueing %s' % id(delta))
+        def queue_the_delta():
+            self._queue(delta)
+            LOGGER.debug('Enqueued %s in connection thread.' % id(delta))
+        self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
         """Opens a connection to the server in a separate thread. Returns
         the event loop for that thread."""
         def connection_thread():
-            '''
-            self._loop.run_until_complete(self._attempt_connection())
-            self._loop.close()
-            '''
             self._loop.make_current()
             LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
             self._loop.run_sync(self._attempt_connection)
+            self._loop.close()
             self.unregister()
-            LOGGER.debug('exit')
+            LOGGER.debug('Exit.. (deltas remaining = %s)' % len(self._queue._deltas))
         connection_thread = threading.Thread(target=connection_thread)
         connection_thread.daemon = False
         connection_thread.start()
@@ -245,7 +249,10 @@ class Connection(object):
         while self._is_open:
             yield self._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
+        LOGGER.debug('Connection closing. Flushing queue for the last time.')
         yield self._queue.flush_queue(ws)
+        LOGGER.debug('Finished flusing the queue writing=%s' % ws.stream.writing())
+        yield ws.close()
         LOGGER.debug('Closed the connection object.')
 
 class ProxyConnectionError(Exception):

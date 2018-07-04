@@ -35,6 +35,7 @@ from tornado.ioloop import IOLoop
 import urllib
 import webbrowser
 import functools
+import traceback
 
 LOGGER = get_logger()
 
@@ -223,6 +224,7 @@ class Proxy(object):
             return
         if connection.can_be_deregistered():
             del self._connections[connection.name]
+            LOGGER.debug('Got rid of connection "%s".' % connection.name)
 
     def proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""

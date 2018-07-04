@@ -17,6 +17,9 @@ from streamlit import data_frame_proto
 from streamlit import protobuf
 from tornado import gen
 
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
 class QueueState(object):
     # Indicates that the queue is accepting deltas.
     OPEN = 0
@@ -39,6 +42,9 @@ class ReportQueue(object):
         """Adds a delta into this queue."""
         assert self._state != QueueState.CLOSED, \
             'Cannot add deltas after the queue closes.'
+
+        if self._state == QueueState.CLOSING:
+            LOGGER.debug('Warning: Enqueing a delta in a closing queue.')
 
         # Store the index if necessary.
         if (delta.id in self._id_map):
@@ -73,19 +79,36 @@ class ReportQueue(object):
             'Cannot get deltas after the queue closes.'
 
         # Send any remaining deltas.
-        deltas = self.get_deltas()
-        if deltas:
-            msg = protobuf.ForwardMsg()
-            msg.delta_list.deltas.extend(deltas)
-            yield ws.write_message(msg.SerializeToString(), binary=True)
-
+        @gen.coroutine
+        def send_deltas():
+            deltas = self.get_deltas()
+            if deltas:
+                msg = protobuf.ForwardMsg()
+                for delta in deltas:
+                    LOGGER.debug("Adding delta for id %s" % delta.id)
+                msg.delta_list.deltas.extend(deltas)
+                yield ws.write_message(msg.SerializeToString(), binary=True)
+                LOGGER.debug("Finished writing all the deltas.")
+                raise gen.Return(True)
+            else:
+                raise gen.Return(False)
+        yield send_deltas()
 
         # Send report_finished method if this queue is closed.
         if self._state == QueueState.CLOSING:
+            # Keep flushing the deltas until the queue is empty
+            while True:
+                sent_more_deltas = yield send_deltas()
+                LOGGER.debug('Sent a final set of deltas: %s' % sent_more_deltas)
+                if not sent_more_deltas:
+                    LOGGER.debug('No more deltas to send.')
+                    break
+            LOGGER.debug('This client queue is closing.')
             self._state = QueueState.CLOSED
             msg = protobuf.ForwardMsg()
             msg.report_finished = True
             yield ws.write_message(msg.SerializeToString(), binary=True)
+            LOGGER.debug('Sent report_finished message.')
 
     def clone(self):
         """Returns a clone of this ReportQueue."""
