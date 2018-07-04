@@ -140,10 +140,10 @@ class ClientWebSocket(WebSocketHandler):
             LOGGER.debug('to serialize: %s' % ([(name, len(bytes)) for name, bytes in files],))
             url = yield self._cloud.upload_report(connection.id, files)
 
-            # # Indicate that the save is done.
-            # progress_msg.Clear()
-            # progress_msg.report_uploaded = url
-            # yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            # Indicate that the save is done.
+            progress_msg.Clear()
+            progress_msg.report_uploaded = url
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
             progress_msg.Clear()
