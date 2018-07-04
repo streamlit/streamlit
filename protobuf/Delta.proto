@@ -14,8 +14,3 @@ message Delta {
     DataFrame add_rows = 3;
   }
 }
-
-// A list of deltas
-message DeltaList {
-  repeated Delta deltas = 1;
-}

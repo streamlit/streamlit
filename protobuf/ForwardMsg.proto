@@ -11,19 +11,18 @@ message ForwardMsg {
 
     NewConnection new_connection = 1;
     string new_report = 2;
-    DeltaList delta_list = 3;
-    string error = 4;
-    bool report_finished = 5;
+    Delta delta = 3;
+    bool report_finished = 4;
 
     ////
     // Upload Progresst
     ////
 
     // Indicates the % progres of a report upload.
-    uint32 upload_report_progress = 6;
+    uint32 upload_report_progress = 5;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 7;
+    string report_uploaded = 6;
   }
 }
 
