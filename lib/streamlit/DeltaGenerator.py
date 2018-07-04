@@ -142,7 +142,7 @@ class DeltaGenerator(object):
             The object to stringify. All referenced objects should have JSON counterpart.
             If object is a string, we assume it is already JSON formatted.
         """
-        element.text.body = (body if isinstance(body, str) else json.dumps(body))
+        element.text.body = (body if isinstance(body, string_types) else json.dumps(body))
         element.text.format = protobuf.Text.JSON
 
     @_export_to_io

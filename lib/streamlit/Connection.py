@@ -8,6 +8,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import base58
 import os
 import sys
 import threading
@@ -69,7 +70,7 @@ class Connection(object):
         Creates a new connection to the server.
         """
         # Create an ID for this Report
-        self._report_id = uuid.uuid4()
+        self._report_id = base58.b58encode(uuid.uuid4().bytes)
 
         # Create a name for this report.
         self._name = self._create_name()
