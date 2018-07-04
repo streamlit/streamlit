@@ -89,6 +89,7 @@ class ReportQueue(object):
                 raise gen.Return(True)
             else:
                 raise gen.Return(False)
+        # LOGGER.debug('About to flush the queue %s through ws=%s' % (id(self), id(ws)))
         yield send_deltas()
 
         # Send report_finished method if this queue is closed.
