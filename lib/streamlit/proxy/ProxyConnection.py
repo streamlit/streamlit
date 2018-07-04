@@ -90,6 +90,6 @@ class ProxyConnection(object):
             nDeltas = len(deltas)
         )
         return \
-            [(f'{self.id}/manfiest.json', json.dumps(manifest))] + \
-            [(f'{self.id}/{idx}.delta', delta.SerializeToString())
+            [(f'reports/{self.id}/manfiest.json', json.dumps(manifest))] + \
+            [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
                 for idx, delta in enumerate(deltas)]
