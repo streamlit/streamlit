@@ -67,11 +67,6 @@ class ReportQueue(object):
 
         return deltas
 
-    def write_to_report(self, report):
-        """Copies this queue's deltas into the report protobuf."""
-        raise RuntimeError('Need to fix how these reports are sent out.')
-        report.delta_XYZ_list.deltas.extend(self._deltas)
-
     @gen.coroutine
     def flush_queue(self, ws):
         """Sends the deltas across the websocket in a series of delta messages,

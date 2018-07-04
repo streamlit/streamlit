@@ -20,11 +20,10 @@ import streamlit
 
 from tornado import gen
 from tornado.concurrent import run_on_executor, futures
-
-from streamlit.logger import get_logger
 from streamlit import errors
 from streamlit import config
 
+from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
