@@ -44,13 +44,13 @@ class Cloud(object):
                 relative_name = os.path.relpath(absolute_name, self._static_dir)
                 with open(absolute_name, 'rb') as input:
                     file_data = input.read()
-                    self._static_files.append(relative_name, file_data)
+                    self._static_files.append((relative_name, file_data))
                     md5.update(file_data)
-        if not files:
+        if not self._static_files:
             raise errors.NoStaticFiles(
                 'Cannot find static files. Run "make build".')
         self._release_hash = '%s-%s' % (streamlit.__version__,
-            base58.b58encode(md5.digest()[:2]))
+            base58.b58encode(md5.digest()[:3]))
 
     def _get_static_dir(self):
         """Return static directory location."""
@@ -115,7 +115,7 @@ class S3(Cloud):
                 Key=self._s3_key('index.html'))
             return []
         except botocore.exceptions.ClientError:
-            return self._static_files.clone()
+            return list(self._static_files)
 
     @run_on_executor
     def _bucket_exists(self):
@@ -162,28 +162,20 @@ class S3(Cloud):
         yield self.s3_init()
         files_to_upload = yield self._get_static_upload_files()
         yield self._s3_upload_files(files_to_upload + files)
-        # yield self._s3_upload_report(report_id, report)
 
         # Return the url for the saved report.
         raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
 
     @run_on_executor
     def _s3_upload_files(self, files):
-        for filename, data in files:
-            LOGGER.debug('Uploading "%s" (bytes=%i)' % (filename, len(data)))
-        # # Figure out what we need to save
-        # serialized_report = report.SerializeToString()
-        # save_data = [('reports/%s.protobuf' % report_id, serialized_report)]
-        #
-        # # Save all the data
-        # for path, data in save_data:
-        #     mime_type = mimetypes.guess_type(path)[0]
-        #     if not mime_type:
-        #         mime_type = 'application/octet-stream'
-        #     self._client.put_object(
-        #         Bucket=self._bucketname,
-        #         Body=data,
-        #         Key=self._s3_key(path),
-        #         ContentType=mime_type,
-        #         ACL='public-read')
-        #     LOGGER.debug('Uploaded: %s', path)
+        for path, data in files:
+            mime_type = mimetypes.guess_type(path)[0]
+            if not mime_type:
+                mime_type = 'application/octet-stream'
+            self._client.put_object(
+                Bucket=self._bucketname,
+                Body=data,
+                Key=self._s3_key(path),
+                ContentType=mime_type,
+                ACL='public-read')
+            LOGGER.debug('Uploaded: %s -> %s' % (path, self._s3_key(path)))
