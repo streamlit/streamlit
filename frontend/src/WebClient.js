@@ -142,8 +142,8 @@ class WebClient extends PureComponent {
           }
         }, 3000);
       },
-      deltaList: (deltaList) => {
-        this.applyDeltas(deltaList);
+      delta: (delta) => {
+        this.applyDelta(delta);
       },
       reportFinished: () => {
         this.clearOldElements();
@@ -174,15 +174,14 @@ class WebClient extends PureComponent {
   /**
    * Applies a list of deltas to the elements.
    */
-  applyDeltas(deltaList) {
+  applyDelta(delta) {
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
-      elements: deltaList.get('deltas').reduce((elements, delta) => (
-        elements.update(delta.get('id'), (element) =>
+      elements: elements.update(delta.get('id'), (element) =>
           dispatchOneOf(delta, 'type', {
             newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
-        }))), elements)
+        }))
     }));
   }
 

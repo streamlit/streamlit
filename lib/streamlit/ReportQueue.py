@@ -69,12 +69,13 @@ class ReportQueue(object):
 
     def write_to_report(self, report):
         """Copies this queue's deltas into the report protobuf."""
-        report.delta_list.deltas.extend(self._deltas)
+        raise RuntimeError('Need to fix how these reports are sent out.')
+        report.delta_XYZ_list.deltas.extend(self._deltas)
 
     @gen.coroutine
     def flush_queue(self, ws):
-        """Sends the deltas across the websocket in a DeltaList, clearing the
-        queue afterwards."""
+        """Sends the deltas across the websocket in a series of delta messages,
+        clearing the queue afterwards."""
         assert self._state != QueueState.CLOSED, \
             'Cannot get deltas after the queue closes.'
 
@@ -82,14 +83,11 @@ class ReportQueue(object):
         @gen.coroutine
         def send_deltas():
             deltas = self.get_deltas()
-            if deltas:
+            for delta in deltas:
                 msg = protobuf.ForwardMsg()
-                msg.delta_list.deltas.extend(deltas)
+                msg.delta.CopyFrom(delta)
                 yield ws.write_message(msg.SerializeToString(), binary=True)
-                raise gen.Return(True)
-            else:
-                raise gen.Return(False)
-        # LOGGER.debug('About to flush the queue %s through ws=%s' % (id(self), id(ws)))
+            raise gen.Return(len(deltas) > 0)
         yield send_deltas()
 
         # Send report_finished method if this queue is closed.
