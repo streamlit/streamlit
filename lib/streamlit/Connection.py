@@ -178,6 +178,8 @@ class Connection(object):
         """Enqueues the given delta for transmission to the server."""
         def queue_the_delta():
             self._queue(delta)
+            LOGGER.debug('Finished enqueuing %s.' % id(delta))
+        LOGGER.debug('About to enqueue %s.' % id(delta))
         self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
@@ -246,6 +248,7 @@ class Connection(object):
         LOGGER.debug(f'Websocket Transmit ws = {ws}')
         LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
         while self._is_open:
+            LOGGER.debug('About to flush the queue.')
             yield self._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
         LOGGER.debug('Connection closing. Flushing queue for the last time.')
