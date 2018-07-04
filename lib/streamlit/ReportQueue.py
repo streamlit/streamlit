@@ -84,11 +84,8 @@ class ReportQueue(object):
             deltas = self.get_deltas()
             if deltas:
                 msg = protobuf.ForwardMsg()
-                for delta in deltas:
-                    LOGGER.debug("Adding delta for id %s" % delta.id)
                 msg.delta_list.deltas.extend(deltas)
                 yield ws.write_message(msg.SerializeToString(), binary=True)
-                LOGGER.debug("Finished writing all the deltas.")
                 raise gen.Return(True)
             else:
                 raise gen.Return(False)
