@@ -175,10 +175,8 @@ class Connection(object):
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueues the given delta for transmission to the server."""
-        LOGGER.debug('Enqueueing %s' % id(delta))
         def queue_the_delta():
             self._queue(delta)
-            LOGGER.debug('Enqueued %s in connection thread.' % id(delta))
         self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
