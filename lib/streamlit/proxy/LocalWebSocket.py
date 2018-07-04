@@ -52,10 +52,11 @@ class LocalWebSocket(WebSocketHandler):
             report_id = msg.new_report
             self._connection = ProxyConnection(report_id, self._report_name)
             self._proxy.register_proxy_connection(self._connection)
-        elif msg_type == 'delta_list':
-            assert self._connection, 'No `delta_list` before `new_report`.'
-            for delta in msg.delta_list.deltas:
-                self._connection.enqueue(delta)
+            # new_name = self._connection.name not in self._connections
+            #self._launch_web_client(self._connection.name)
+        elif msg_type == 'delta':
+            assert self._connection, 'No `delta` before `new_report`.'
+            self._connection.enqueue(msg.delta)
         else:
             raise RuntimeError('Cannot parse message type: %s' % msg_type)
 

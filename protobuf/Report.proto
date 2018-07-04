@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-import "Delta.proto";
-
-// A complete report with all deltas to reconstruct the report from scratch.
-message Report {
-  string name = 1;
-  DeltaList delta_list = 2;
-}

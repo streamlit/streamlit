@@ -20,12 +20,11 @@ sys.path.append(dir_path)
 
 from Chart_pb2 import Chart
 from Element_pb2 import Element
-from Delta_pb2 import Delta, DeltaList
+from Delta_pb2 import Delta
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
 from Text_pb2 import Text
 from ForwardMsg_pb2 import ForwardMsg
 from BackMsg_pb2 import BackMsg
-from Report_pb2 import Report
 
 # Clear out all temporary variables.
 sys.path.pop()
