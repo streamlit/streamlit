@@ -138,14 +138,8 @@ class ClientWebSocket(WebSocketHandler):
 
             files = connection.serialize_report_to_files()
             LOGGER.debug('to serialize: %s' % ([(name, len(bytes)) for name, bytes in files],))
-            raise RuntimeError('Received %i files from serialize_report_to_files()' % len(files))
+            url = yield self._cloud.upload_report(connection.id, files)
 
-            # report = connection.get_report_proto()
-            # LOGGER.debug('Saving report of size %d and type %s',
-            #              len(report.SerializeToString()),
-            #              type(report.SerializeToString()))
-            # url = yield self._cloud.upload_report(connection.id, report)
-            #
             # # Indicate that the save is done.
             # progress_msg.Clear()
             # progress_msg.report_uploaded = url
