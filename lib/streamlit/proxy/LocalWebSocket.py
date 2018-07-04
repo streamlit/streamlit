@@ -56,6 +56,7 @@ class LocalWebSocket(WebSocketHandler):
             assert self._connection, 'No `delta_list` before `new_report`.'
             for delta in msg.delta_list.deltas:
                 self._connection.enqueue(delta)
+                LOGGER.debug('Proxy received delta with id %s.' % delta.id)
         else:
             raise RuntimeError('Cannot parse message type: %s' % msg_type)
 
