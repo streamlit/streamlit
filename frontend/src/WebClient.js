@@ -52,7 +52,7 @@ class WebClient extends PureComponent {
       elements: fromJS([{
         type: 'text',
         text: {
-          format: 8,  // info
+          format: TextProto.Format.INFO,
           body: 'Ready to receive data',
         }
       }]),
