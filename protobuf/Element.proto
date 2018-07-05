@@ -1,14 +1,15 @@
 syntax = "proto3";
 
-import "Text.proto";
-import "DataFrame.proto";
+import "Balloons.proto";
 import "Chart.proto";
-import "Image.proto";
-import "Progress.proto";
+import "DataFrame.proto";
 import "DocString.proto";
-import "Exception.proto";
 import "Empty.proto";
+import "Exception.proto";
+import "Image.proto";
 import "Map.proto";
+import "Progress.proto";
+import "Text.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -26,5 +27,6 @@ message Element {
     Map map = 9;
     // VegaLiteChart = 10;
     DataFrame table = 11;
+    Balloons balloons = 12;
   }
 }
