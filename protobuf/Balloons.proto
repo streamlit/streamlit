@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// A python empty.
+message Balloons {
+  Type type = 1;
+
+  enum Type {
+    DEFAULT = 0;
+  }
+}

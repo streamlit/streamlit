@@ -12,6 +12,7 @@ import json
 import math
 import numpy as np
 import pandas as pd
+import random
 import sys
 import textwrap
 import traceback
@@ -91,6 +92,14 @@ class DeltaGenerator(object):
         else:
             self._generate_new_ids = False
             self._id = id
+
+    @_export_to_io
+    @_create_element
+    def balloons(self, element):
+        """Draws celebratory balloons!
+        """
+        element.balloons.type = protobuf.Balloons.DEFAULT
+        element.balloons.execution_id = random.randrange(0xFFFFFFFF)
 
     @_export_to_io
     @_create_element
