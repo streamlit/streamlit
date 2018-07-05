@@ -13,14 +13,15 @@ import { fromJS } from 'immutable';
 import url from 'url';
 
 // Display Elements
-import DataFrame from './elements/DataFrame';
+import Balloons from './elements/Balloons';
 import Chart from './elements/Chart';
-import ImageList from './elements/ImageList';
-import Text from './elements/Text';
+import DataFrame from './elements/DataFrame';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
+import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import Table from './elements/Table';
+import Text from './elements/Text';
 
 // Other local imports.
 import MainMenu from './MainMenu';
@@ -299,6 +300,7 @@ class WebClient extends PureComponent {
           empty: (empty) => undefined,
           map: (map) => <Map map={map} width={width}/>,
           table: (df) => <Table df={df} width={width}/>,
+          balloons: (balloons) => <Balloons balloons={balloons}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

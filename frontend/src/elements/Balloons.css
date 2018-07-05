@@ -1,0 +1,47 @@
+.balloons > .balloon {
+  position: fixed;
+  bottom: 0;
+  margin-left: -68px; /* Center 136px-wide image */
+
+  /* If modifying the duration, you should also modify Balloons.js */
+  animation-duration: 0.3s, 1s, 1s;
+  animation-name: wobble, fade, move-up;
+  animation-timing-function: ease-in-out, ease-in, ease-in;
+  animation-direction: alternate, normal, normal;
+  animation-iteration-count: infinite, 1, 1;
+  opacity: 0;
+}
+
+@keyframes move-up {
+  from {
+    bottom: 0;
+  }
+
+  to {
+    bottom: 110vh;
+  }
+}
+
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes wobble {
+  from {
+    transform: translateX(-5vw);
+  }
+
+  to {
+    transform: translateX(5vw);
+  }
+}
