@@ -112,7 +112,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.13.0`.
+**Note:** The current version is `0.13.2`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
@@ -122,7 +122,10 @@ Update the version in the following locations:
     - `lib/streamlit/config/config.yaml` : set the `proxy.port`
     - `frontend/src/WebClient.js` : set the `PROXY_PORT`.
 
-Run `make init` so things like `package-lock.json` get updated.
+Then, so things like `package-lock.json` get updated, run:
+```
+make init
+```
 
 #### Test that Static Loading works
 
@@ -159,7 +162,7 @@ you have a parallel folder called `streamlit-staging` to test this version.)
 make install   # must be in 'install' mode before making wheel
 make wheel
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.13.0-py3-none-any.whl
+pip install --upgrade ../streamlit/lib/dist/streamlit-0.13.2-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
@@ -177,7 +180,6 @@ make distribute
 Then test it on Mac and Linux.
 
 #### Post the Release Notes to Slack
-
 Post the release notes and declare victory!
 
 #### Create a New Tag for this Version
