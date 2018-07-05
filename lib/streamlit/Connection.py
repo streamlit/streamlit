@@ -248,7 +248,6 @@ class Connection(object):
         LOGGER.debug(f'Websocket Transmit ws = {ws}')
         LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
         while self._is_open:
-            LOGGER.debug('About to flush the queue.')
             yield self._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
         LOGGER.debug('Connection closing. Flushing queue for the last time.')
