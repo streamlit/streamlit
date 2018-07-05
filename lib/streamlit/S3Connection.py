@@ -51,7 +51,7 @@ class Cloud(object):
             raise errors.NoStaticFiles(
                 'Cannot find static files. Run "make build".')
         self._release_hash = '%s-%s' % (streamlit.__version__,
-            base58.b58encode(md5.digest()[:3]))
+            base58.b58encode(md5.digest()[:3]).decode("utf-8"))
 
     def _get_static_dir(self):
         """Return static directory location."""
