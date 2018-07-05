@@ -70,7 +70,7 @@ class Connection(object):
         Creates a new connection to the server.
         """
         # Create an ID for this Report
-        self._report_id = base58.b58encode(uuid.uuid4().bytes)
+        self._report_id = base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
         # Create a name for this report.
         self._name = self._create_name()
