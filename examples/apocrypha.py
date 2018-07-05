@@ -33,3 +33,5 @@ with st.echo():
 
 st.header('Maps')
 st.warning('TODO: Need to document the st.map() API here.')
+
+st.balloons()
