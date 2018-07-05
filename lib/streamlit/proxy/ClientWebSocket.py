@@ -143,7 +143,6 @@ class ClientWebSocket(WebSocketHandler):
             yield progress(0)
 
             files = connection.serialize_report_to_files()
-            LOGGER.debug('to serialize: %s' % ([(name, len(bytes)) for name, bytes in files],))
             url = yield self._cloud.upload_report(connection.id, files, progress)
 
             # Indicate that the save is done.

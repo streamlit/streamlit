@@ -179,5 +179,5 @@ class S3(Cloud):
                 Key=self._s3_key(path),
                 ContentType=mime_type,
                 ACL='public-read')
-            LOGGER.debug('Uploaded: %s -> %s' % (path, self._s3_key(path)))
+            LOGGER.debug('Uploaded: "%s"' % path)
             yield progress_coroutine(math.ceil(100 * (i+1) / len(files)))
