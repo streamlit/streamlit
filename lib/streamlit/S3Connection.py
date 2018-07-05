@@ -14,6 +14,7 @@ import boto3
 import botocore
 import hashlib
 import logging
+import math
 import mimetypes
 import os
 
@@ -157,18 +158,18 @@ class S3(Cloud):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def upload_report(self, report_id, files):
+    def upload_report(self, report_id, files, progress_coroutine):
         """Save report to s3."""
         yield self.s3_init()
         files_to_upload = yield self._get_static_upload_files()
-        yield self._s3_upload_files(files_to_upload + files)
+        yield self._s3_upload_files(files_to_upload + files, progress_coroutine)
 
         # Return the url for the saved report.
         raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
 
-    @run_on_executor
-    def _s3_upload_files(self, files):
-        for path, data in files:
+    @gen.coroutine
+    def _s3_upload_files(self, files, progress_coroutine):
+        for i, (path, data) in enumerate(files):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
                 mime_type = 'application/octet-stream'
@@ -179,3 +180,4 @@ class S3(Cloud):
                 ContentType=mime_type,
                 ACL='public-read')
             LOGGER.debug('Uploaded: %s -> %s' % (path, self._s3_key(path)))
+            yield progress_coroutine(math.ceil(100 * (i+1) / len(files)))
