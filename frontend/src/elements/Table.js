@@ -24,7 +24,7 @@ class Table extends PureComponent {
 
     try {
       return (
-        <div class='streamlit-table'>
+        <div className='streamlit-table'>
           <ReactTable>
             <thead>
               <TableRows df={df} header={true}/>
