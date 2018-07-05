@@ -178,8 +178,6 @@ class Connection(object):
         """Enqueues the given delta for transmission to the server."""
         def queue_the_delta():
             self._queue(delta)
-            LOGGER.debug('Finished enqueuing %s.' % id(delta))
-        LOGGER.debug('About to enqueue %s.' % id(delta))
         self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
