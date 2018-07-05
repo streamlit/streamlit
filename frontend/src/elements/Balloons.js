@@ -11,6 +11,8 @@ const BALLOON_PROB = 0.5;
 
 const MAX_ANIMATION_DURATION_MS = 1000;  // see CSS
 
+const BALLOONS_INDICES = Array.from({length: NUM_BALLOONS});
+
 class Balloons extends PureComponent {
   constructor(props) {
     super(props);
@@ -29,9 +31,10 @@ class Balloons extends PureComponent {
 
     return (
       <div className="balloons">
-        {Array.from({length: NUM_BALLOONS}, (i) => (
+        {BALLOONS_INDICES.map(i => (
           <img
             className="balloon"
+            key={i}
             src={getBalloonUrl(this.props.balloons)}
             style={{
               left: Math.random() * (POS_MAX_VW - POS_MIN_VW)
