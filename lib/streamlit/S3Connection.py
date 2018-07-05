@@ -8,11 +8,13 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # Standard Library Imports
+import base58
 import binascii
 import boto3
 import botocore
 import hashlib
 import logging
+import math
 import mimetypes
 import os
 
@@ -20,11 +22,10 @@ import streamlit
 
 from tornado import gen
 from tornado.concurrent import run_on_executor, futures
-
-from streamlit.logger import get_logger
 from streamlit import errors
 from streamlit import config
 
+from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
@@ -35,30 +36,26 @@ class Cloud(object):
         """Constructor."""
         dirname = os.path.dirname(os.path.normpath(__file__))
         self._static_dir = os.path.normpath(os.path.join(dirname, 'static'))
-        self._static_files = self._get_static_files()
 
-        md5 = hashlib.md5()
-        md5.update(
-            open(os.path.join(self._static_dir, 'index.html'), 'rb').read())
+        # load the static files and compute the release hash
+        self._static_files, md5 = [], hashlib.md5()
+        for root, dirnames, filenames in os.walk(self._static_dir):
+            for filename in filenames:
+                absolute_name = os.path.join(root, filename)
+                relative_name = os.path.relpath(absolute_name, self._static_dir)
+                with open(absolute_name, 'rb') as input:
+                    file_data = input.read()
+                    self._static_files.append((relative_name, file_data))
+                    md5.update(file_data)
+        if not self._static_files:
+            raise errors.NoStaticFiles(
+                'Cannot find static files. Run "make build".')
         self._release_hash = '%s-%s' % (streamlit.__version__,
-            binascii.hexlify(md5.digest()).decode('ascii'))
+            base58.b58encode(md5.digest()[:3]))
 
     def _get_static_dir(self):
         """Return static directory location."""
         return self._static_dir
-
-    def _get_static_files(self):
-        """Return relative path of all static files in a list."""
-        files = []
-        for root, dirnames, filenames in os.walk(self._static_dir):
-            for filename in filenames:
-                f = os.path.relpath(
-                    os.path.join(root, filename),
-                    self._static_dir)
-                files.append(f)
-        if not files:
-            raise errors.NoStaticFiles('Cannot find static files. Run "make build".')
-        return files
 
 
 class S3(Cloud):
@@ -110,23 +107,16 @@ class S3(Cloud):
             self._client = boto3.client('s3')
 
     @run_on_executor
-    def _upload_static_dir(self):
+    def _get_static_upload_files(self):
+        """Returns a list of static files to upload, or an empty list if they're
+        already uploaded."""
         try:
             self._client.head_object(
                 Bucket=self._bucketname,
                 Key=self._s3_key('index.html'))
+            return []
         except botocore.exceptions.ClientError:
-            for filename in self._static_files:
-                mime_type = mimetypes.guess_type(filename)[0]
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-                self._client.put_object(
-                    Bucket=self._bucketname,
-                    Body=open(os.path.join(self._static_dir, filename), 'rb').read(),
-                    Key=self._s3_key(filename),
-                    ContentType=mime_type,
-                    ACL='public-read')
-                LOGGER.debug('Uploaded: %s', filename)
+            return list(self._static_files)
 
     @run_on_executor
     def _bucket_exists(self):
@@ -168,23 +158,18 @@ class S3(Cloud):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def upload_report(self, report_id, report):
+    def upload_report(self, report_id, files, progress_coroutine):
         """Save report to s3."""
         yield self.s3_init()
-        yield self._upload_static_dir()
-        yield self._s3_upload_report(report_id, report)
+        files_to_upload = yield self._get_static_upload_files()
+        yield self._s3_upload_files(files_to_upload + files, progress_coroutine)
 
         # Return the url for the saved report.
         raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
 
-    @run_on_executor
-    def _s3_upload_report(self, report_id, report):
-        # Figure out what we need to save
-        serialized_report = report.SerializeToString()
-        save_data = [('reports/%s.protobuf' % report_id, serialized_report)]
-
-        # Save all the data
-        for path, data in save_data:
+    @gen.coroutine
+    def _s3_upload_files(self, files, progress_coroutine):
+        for i, (path, data) in enumerate(files):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
                 mime_type = 'application/octet-stream'
@@ -194,4 +179,5 @@ class S3(Cloud):
                 Key=self._s3_key(path),
                 ContentType=mime_type,
                 ACL='public-read')
-            LOGGER.debug('Uploaded: %s', path)
+            LOGGER.debug('Uploaded: "%s"' % path)
+            yield progress_coroutine(math.ceil(100 * (i+1) / len(files)))

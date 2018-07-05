@@ -130,25 +130,28 @@ class ClientWebSocket(WebSocketHandler):
     @gen.coroutine
     def _save_cloud(self, connection, ws):
         """Save serialized version of report deltas to the cloud."""
-        # Indicate that the save is starting.
-        progress_msg = protobuf.ForwardMsg()
-        try:
-            progress_msg.upload_report_progress = 100
+        @gen.coroutine
+        def progress(percent):
+            """Takes a 0 <= percent <= 100 and updates the frontend with this
+            progress."""
+            progress_msg = protobuf.ForwardMsg()
+            progress_msg.upload_report_progress = percent
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
 
-            report = connection.get_report_proto()
-            LOGGER.debug('Saving report of size %d and type %s',
-                         len(report.SerializeToString()),
-                         type(report.SerializeToString()))
-            url = yield self._cloud.upload_report(connection.id, report)
+        # Indicate that the save is starting.
+        try:
+            yield progress(0)
+
+            files = connection.serialize_report_to_files()
+            url = yield self._cloud.upload_report(connection.id, files, progress)
 
             # Indicate that the save is done.
-            progress_msg.Clear()
+            progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = url
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
-            progress_msg.Clear()
+            progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = 'ERROR: ' + str(e)
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
             raise e
