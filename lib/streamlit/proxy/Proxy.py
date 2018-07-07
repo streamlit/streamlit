@@ -46,7 +46,7 @@ EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
 def set_remote(val):
     config.set_option('proxy.isRemote', val)
 
-def _get_remote_urls(port, quoted_name):
+def _print_remote_url(port, quoted_name):
     ips = []
     http_client = httpclient.HTTPClient()
     try:
@@ -88,15 +88,15 @@ def _launch_web_client(name):
     url = 'http://{}:{}/?name={}'.format(
         host, port, quoted_name)
 
-    remote = config.get_option('proxy.isRemote')
-    if not remote:
-        # Only open up a browser if there's a display ie console.
-        if os.getenv('DISPLAY'):
-            webbrowser.open(url)
+    headless = config.get_option('proxy.isRemote')
+    LOGGER.debug(f'headless = {headless}')
+    if headless:
+        _print_remote_url(port, quoted_name)
     else:
-        LOGGER.debug('proxy.isRemote = %s', remote)
-        _get_remote_urls(port, quoted_name)
-
+        if os.name == 'posix' and not os.getenv('DISPLAY'):
+            LOGGER.warning('Attempting to run Streamlit in a headless system. '\
+                'Please consider setitng proxy.mode to "headless".')
+        webbrowser.open(url)
 
 def stop_proxy_on_exception(is_coroutine=False):
     """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
