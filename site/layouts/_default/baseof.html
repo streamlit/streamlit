@@ -1,20 +1,26 @@
 <!DOCTYPE HTML>
-<html>
+<html class="kind-{{ .Kind }}">
   <head>
     <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} &middot; {{ .Site.Title }}{{ end }}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {{ with .Site.LanguageCode }}<meta http-equiv="content-language" content="{{ . }}" />{{ end }}
-
-    <meta name="google-site-verification" content="DVVce32YjZewjhFnokQfYn-cLWl8_ca4F5Wy5D_J-Nw" />
-
+    {{ partial "google_verification" . }}
+    {{ partial "google_analytics" . }}
     {{ partial "fonts" . }}
     <link rel="stylesheet" href="{{ .Site.BaseURL }}css/main.css" />
+    <link rel="stylesheet" href="{{ .Site.BaseURL }}css/syntax.css" />
   </head>
 
   <body>
+    {{ block "header" . }}
+      {{ partial "header" . }}
+    {{ end }}
+
     {{ block "main" . }}{{ end }}
 
-    {{ partial "footer" . }}
+    {{ block "footer" . }}
+      {{ partial "footer" . }}
+    {{ end }}
   </body>
 </html>

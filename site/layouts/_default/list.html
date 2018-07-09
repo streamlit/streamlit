@@ -1,10 +1,16 @@
 {{ define "main" }}
+<main id="list">
+  <div class="contents">
+    <h1>{{ .Title }}</h1>
     {{ .Content }}
 
-    {{ $paginator := .Paginate .Data.Pages }}
-    {{ range $paginator.Pages }}
-        {{ .Render "summary" }}
-    {{ end }}
-
-    {{ partial "pagination" . }}
+    <ul>
+      {{ range .Data.Pages }}
+        <li>
+            <a href="{{.Permalink}}">{{.Title}}</a>
+        </li>
+      {{ end }}
+    </ul>
+  </div>
+</main>
 {{ end }}
