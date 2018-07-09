@@ -7,7 +7,7 @@ this site to the world you must first install that.
 
 On Ubuntu/Debian that's as simple as
 
-```
+```bash
 sudo apt-get install hugo
 ```
 
@@ -45,7 +45,7 @@ not really using that feature right now.
 For development, you can start a local server with auto-reload and all those
 nice things with the following command:
 
-```
+```bash
 hugo server -D
 ```
 
@@ -60,10 +60,18 @@ The site will be accessible at `localhost:1313`.
 
 When you're ready to build your site for reals, just run:
 
-```
+```bash
 hugo
 ```
 
 This compiles everything into `html` files that live inside the `public/`
-folder. Once compilation is done, just copy the `public/` folder to your host
-and you're done!
+folder.
+
+Once compilation is done, we need to copy the `public/` folder to our host
+(Amazon S3):
+
+```bash
+aws s3 sync --acl public-read public s3://streamlit.io/
+```
+
+Done-zo!
