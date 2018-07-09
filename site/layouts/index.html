@@ -1,11 +1,10 @@
 {{ define "main" }}
-<main>
-  <header class="parallax">
-    <h1 id="logo"><span class="light">stream</span><span class="dark">lit</span></h1>
-  </header>
+<main id="home">
+  <section id="fullbleed" class="parallax dark">
+    <h1 class="logo"><strong>stream</strong><span>lit</span></h1>
+  </section>
 
   {{ partial "quickstart" . }}
-
   {{ partial "contact" . }}
 </main>
 
@@ -18,3 +17,7 @@
   }
 </script>
 {{ end }}
+
+
+{{ define "header" }}<!-- -->{{ end }}
+{{ define "footer" }}<!-- -->{{ end }}
