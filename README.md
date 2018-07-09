@@ -1,6 +1,7 @@
 # Streamlit
 
-This library lets you do realtime data-science. Here is an example of it's use for static data science:
+Streamlit is a magical frontend for data science and machine learning.
+Here is an example of how to use it:
 
 ## Installation
 
