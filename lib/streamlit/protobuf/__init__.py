@@ -22,6 +22,7 @@ from Chart_pb2 import Chart
 from Element_pb2 import Element
 from Delta_pb2 import Delta
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
+import DataTransform_pb2 as DataTransform
 from Text_pb2 import Text
 from Balloons_pb2 import Balloons
 from ForwardMsg_pb2 import ForwardMsg

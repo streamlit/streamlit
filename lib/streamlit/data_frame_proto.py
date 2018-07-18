@@ -171,6 +171,8 @@ def get_data_frame(delta):
             return delta.new_element.data_frame
         elif element_type == 'chart':
             return delta.new_element.chart.data
+        elif element_type == 'vega_lite_chart':
+            return delta.new_element.vega_lite_chart.data
     elif delta_type == 'add_rows':
         return delta.add_rows
     else:

@@ -242,6 +242,7 @@ function getDataFrame(element) {
   return dispatchOneOf(element, 'type', {
     dataFrame: (df) => df,
     chart: (chart) => chart.get('data'),
+    vegaLiteChart: (chart) => chart.get('data'),
   });
 }
 
@@ -252,6 +253,7 @@ function setDataFrame(element, df) {
   return updateOneOf(element, 'type', {
     dataFrame: () => df,
     chart: (chart) => chart.set('data', df),
+    vegaLiteChart: (chart) => chart.set('data', df),
   });
 }
 
