@@ -132,15 +132,18 @@ class ColorCycler(ValueCycler):
             '#a65628',
             '#f781bf')
 
-DASH_STR = '3 3'
-
 
 BASIC_REQUIRED_COMPONENTS = (
-    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
+    ('cartesian_grid', {
+        'stroke': '#E6E9EF',
+    }),
     ('x_axis', {
+        'stroke': '#101620',
         'data_key': IndexColumn(),
     }),
-    ('y_axis', {}),
+    ('y_axis', {
+        'stroke': '#101620',
+    }),
     ('tooltip', {}),
     ('legend', {}),
 )
