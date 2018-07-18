@@ -1,6 +1,12 @@
 # -*- coding: future_fstrings -*-
 
-"""Module documentation here."""
+"""Exports everything that should be visible to Streamlit users.
+
+The functions in this package wrap member functions of DeltaGenerator, as well
+as from any namespace within DeltaGenerator. What they do is get the
+DeltaGenerator from the singleton connection object (in streamlit.connection)
+and then call the corresponding function on that DeltaGenerator.
+"""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -28,30 +34,41 @@ import traceback
 import types
 
 # Import some files directly from this module
-from streamlit.Chart import *
 from streamlit.caching import cache
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 from streamlit.Connection import Connection
-from streamlit.Chart import Chart
 from streamlit.util import escape_markdown
 # import streamlit as st
 # from streamlit import config
+from types import SimpleNamespace
 
-# Basically, the functions in this package wrap member functions of
-# DeltaGenerator. What they do is get the DeltaGenerator from the
-# singleton connection object (in streamlit.connection) and then
-# call the corresponding function on that DeltaGenerator.
+
+this_module = sys.modules[__name__]
+
+def wrap_delta_generator_method(method):
+    @functools.wraps(method)
+    def wrapped_method(*args, **kwargs):
+        dg = Connection.get_connection().get_delta_generator()
+        return method(dg, *args, **kwargs)
+    return wrapped_method
+
 for name in dir(DeltaGenerator):
-    method = getattr(DeltaGenerator, name)
-    if hasattr(method, EXPORT_TO_IO_FLAG):
+    member = getattr(DeltaGenerator, name)
+
+    if hasattr(member, EXPORT_TO_IO_FLAG):
+        method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
-        def wrap_method(method):
-            @functools.wraps(method)
-            def wrapped_method(*args, **kwargs):
-                dg = Connection.get_connection().get_delta_generator()
-                return method(dg, *args, **kwargs)
-            return wrapped_method
-        setattr(sys.modules[__name__], name, wrap_method(method))
+        setattr(this_module, name, wrap_delta_generator_method(method))
+
+    if isinstance(member, SimpleNamespace):
+        orig_ns = member
+        ns = SimpleNamespace()
+        setattr(this_module, name, ns)
+
+        for subname in dir(orig_ns):
+            if subname.startswith('_'): continue
+            method = getattr(orig_ns, subname)
+            setattr(ns, subname, wrap_delta_generator_method(method))
 
 def write(*args):
     """Writes its arguments to the Report.
@@ -104,7 +121,7 @@ def write(*args):
     )
 
     FIGURE_LIKE_TYPES = (
-        Chart,
+        #XXX Chart,
     )
     # return markdown(*args)
     try:
@@ -126,9 +143,9 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif isinstance(arg, FIGURE_LIKE_TYPES):
-                flush_buffer()
-                chart(arg)
+            #XXX elif isinstance(arg, FIGURE_LIKE_TYPES):
+            #XXX     flush_buffer()
+            #XXX     chart(arg)
             else:
                 string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
@@ -247,7 +264,9 @@ class _IO(object):
     help = _IO_show_warning(help)
     exception = _IO_show_warning(exception)
     dataframe = _IO_show_warning(dataframe)
-    chart = _IO_show_warning(chart)
+    #XXX chart = _IO_show_warning(chart)
+    chart = _IO_show_warning(
+        lambda *args: error('Private method "chart" was removed'))
     image = _IO_show_warning(image)
     img = _IO_show_warning(img)
     progress = _IO_show_warning(progress)

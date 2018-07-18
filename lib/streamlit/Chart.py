@@ -68,7 +68,7 @@ import pandas as pd
 
 from .ChartComponent import ChartComponent
 from .caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
-from .chartconfig import *
+from .chartconfig import *  # XXX TODO: Replace with DictBuilder
 from streamlit import data_frame_proto
 from streamlit.logger import get_logger
 
@@ -95,7 +95,7 @@ class Chart(object):
             height -- a number with the chart height. Defaults to 0, which means
             "the default height" rather than actually 0px.
 
-            kwargs -- keyword arguments containng properties to be added to the
+            kwargs -- keyword arguments containg properties to be added to the
             ReChart's top-level element
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'

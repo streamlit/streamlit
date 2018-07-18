@@ -18,6 +18,7 @@ import Chart from './elements/Chart';
 import DataFrame from './elements/DataFrame';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
+import VegaLiteChart from './elements/VegaLiteChart';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import Table from './elements/Table';
@@ -291,6 +292,7 @@ class WebClient extends PureComponent {
         return dispatchOneOf(element, 'type', {
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
+          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
