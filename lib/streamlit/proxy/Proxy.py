@@ -43,8 +43,8 @@ import os
 LOGGER = get_logger()
 EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
 
-def set_remote(val):
-    config.set_option('proxy.isRemote', val)
+# def set_remote(val):
+#     config.set_option('proxy.isRemote', val)
 
 def _print_remote_url(port, quoted_name):
     ips = []
@@ -95,7 +95,7 @@ def _launch_web_client(name):
     else:
         if os.name == 'posix' and not os.getenv('DISPLAY'):
             LOGGER.warning('Attempting to run Streamlit in a headless system. '\
-                'Please consider setitng proxy.mode to "headless".')
+                'Please consider setitng proxy.isRemote to "true" in streamlit/config.yaml.')
         webbrowser.open(url)
 
 def stop_proxy_on_exception(is_coroutine=False):

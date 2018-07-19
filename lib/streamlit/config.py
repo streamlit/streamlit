@@ -27,7 +27,8 @@ class Config(object):
 
             if os.path.isfile(c._configfile):
                 config = c._load_yaml()
-                c._config.update(config)
+                if config is not None:
+                    _update(c._config, config)
             else:
                 c.dumps()
 
@@ -143,6 +144,19 @@ class Config(object):
         # with open(self._configfile, 'w') as f:
         #     f.write(self._dump())
         #     LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
+
+def _update(first_dict, second_dict):
+    """Updates the first dict to contain information from the second dict. This
+    function is recursive on nested dicts."""
+    for key in second_dict.keys():
+        print('The key is:', key, key in first_dict)
+        if key not in first_dict:
+            first_dict[key] = second_dict[key]
+        else:
+            try:
+                _update(first_dict[key], second_dict[key])
+            except AttributeError:
+                first_dict[key] = second_dict[key]
 
 def _flatten(nested_dict, flat_dict, prefix=[]):
     for k, v in nested_dict.items():
