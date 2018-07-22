@@ -121,9 +121,6 @@ def write(*args):
         types.ModuleType,
     )
 
-    FIGURE_LIKE_TYPES = (
-        #XXX Chart,
-    )
     # return markdown(*args)
     try:
         string_buffer = []
@@ -144,9 +141,6 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            #XXX elif isinstance(arg, FIGURE_LIKE_TYPES):
-            #XXX     flush_buffer()
-            #XXX     chart(arg)
             else:
                 string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
@@ -279,7 +273,6 @@ class _IO(object):
     help = _IO_show_warning(help)
     exception = _IO_show_warning(exception)
     dataframe = _IO_show_warning(dataframe)
-    #XXX chart = _IO_show_warning(chart)
     chart = _IO_show_warning(
         lambda *args: error('Private method "chart" was removed'))
     image = _IO_show_warning(image)

@@ -364,10 +364,10 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
-    def vega_lite_chart(self, element, data=None, spec=None):
+    def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
         """Displays a chart.
         """
-        vc = VegaLiteChart(data, spec)
+        vc = VegaLiteChart(data, spec, **kwargs)
         vc.marshall(element.vega_lite_chart)
 
     @_export_to_io

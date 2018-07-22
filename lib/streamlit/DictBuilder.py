@@ -72,28 +72,31 @@ def get_merged_spec_item(df, user_params, spec_value, curr_out_value,
     # Handle simple items.
     # (for these, the value passed by the user takes precedence)
 
-    if curr_out_value is not NoValue:
-        return NoChange
+    if curr_out_value is NoValue:
+        if type(spec_value) is ParamBuilder:
+            return spec_value.build(user_params)
 
-    elif type(spec_value) is ParamBuilder:
-        return spec_value.build(user_params)
+        elif isinstance(spec_value, ValueCycler):
+            return spec_value.get(curr_col_index)
 
-    elif isinstance(spec_value, ValueCycler):
-        return spec_value.get(curr_col_index)
+        elif isinstance(spec_value, ColumnFinder):
+            return get_first_match(df.columns, spec_value.alternatives)
 
-    elif spec_value == '__current_column_number__':
-        return curr_col_index
+        elif spec_value == '__current_column_number__':
+            return curr_col_index
 
-    elif spec_value == '__current_column_name__':
-        return str(df.columns[curr_col_index])
+        elif spec_value == '__current_column_name__':
+            return str(df.columns[curr_col_index])
 
-    elif spec_value == '__column_type__':
-        return guess_column_type(df, curr_col_index)
+        elif spec_value == '__column_type__':
+            return guess_column_type(df, curr_col_index)
 
-    # TODO: support '__index_column_type__' 
-    # TODO: support '__index_column_name__' 
+        # TODO: support '__index_column_type__' 
+        # TODO: support '__index_column_name__' 
+        else:
+            return spec_value
     else:
-        return spec_value
+        return NoChange
 
 
 def handle_for_each_spec(df, user_params, for_each_column, curr_out_value,
@@ -163,6 +166,11 @@ class ForEachColumn:
         self.content_to_repeat = content
 
 
+class ColumnFinder:
+    def __init__(self, *alternatives):
+        self.alternatives = set(alternatives)
+
+
 class NoValue:
     pass
 
@@ -197,6 +205,15 @@ class ColorCycler(ValueCycler):
             '#ffff33',
             '#a65628',
             '#f781bf')
+
+
+def get_first_match(available_names, wanted_names):
+    for name in available_names:
+        if name.lower() in wanted_names:
+            return name
+    raise ValueError(
+        'Data must have column with one of these names: %s'
+        % wanted_names)
 
 
 # See https://github.com/altair-viz/altair/blob/ed9eab81bba5074cdb94284d64846ba262a4ef97/altair/utils/core.py
