@@ -2,6 +2,15 @@ from copy import deepcopy
 import numpy as np
 
 
+CURRENT_COLUMN_NAME = '__current_column_name__'
+CURRENT_COLUMN_NUMBER = '__current_column_number__'
+CURRENT_COLUMN_TYPE = '__current_column_type__'
+INDEX_COLUMN_NAME = '__index_column_name__'
+
+# Column name used to designate the dataframe index in JavaScript.
+INDEX_COLUMN_DESIGNATOR = '::index'
+
+
 class DictBuilder:
     def __init__(self, spec, shallow=False, column=None):
         self.spec = spec
@@ -17,7 +26,7 @@ class DictBuilder:
 
         spec_override : A dictionary. Keys/values specified here override the
         spec used when constructing this object. May contain special tags such
-        as ForEachColumn, ParamBuilder, and __current_column_number__.
+        as ForEachColumn, ParamBuilder, and CURRENT_COLUMN_NUMBER.
 
         user_params : A dictionary that will be used to fetch user override
         values for the ParamBuilder special tag.
@@ -82,14 +91,17 @@ def get_merged_spec_item(df, user_params, spec_value, curr_out_value,
         elif isinstance(spec_value, ColumnFinder):
             return get_first_match(df.columns, spec_value.alternatives)
 
-        elif spec_value == '__current_column_number__':
+        elif spec_value == CURRENT_COLUMN_NUMBER:
             return curr_col_index
 
-        elif spec_value == '__current_column_name__':
+        elif spec_value == CURRENT_COLUMN_NAME:
             return str(df.columns[curr_col_index])
 
-        elif spec_value == '__column_type__':
+        elif spec_value == CURRENT_COLUMN_TYPE:
             return guess_column_type(df, curr_col_index)
+
+        elif spec_value == INDEX_COLUMN_NAME:
+            return INDEX_COLUMN_DESIGNATOR
 
         # TODO: support '__index_column_type__' 
         # TODO: support '__index_column_name__' 
