@@ -1,18 +1,22 @@
 """A Python wrapper around Vega Lite.
 """
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import json
 import pandas as pd
 import sys
 
 from streamlit import data_frame_proto, protobuf
-from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, ColorCycler
+from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, ColorCycler, ColumnFinder
+from streamlit.dicttools import unflatten
 
-
-# XXX TODO use unflatten to accept non-dict specs.
 
 class VegaLiteChart:
-    def __init__(self, data=None, spec=None, data_transform_str=None):
+    def __init__(self, data=None, spec=None, data_transform_str=None, **kwargs):
         """Constructs a Vega Lite chart object.
 
         Args
@@ -26,6 +30,11 @@ class VegaLiteChart:
         data_transform_str : string
             The data transform that was applied to the data (e.g. "stack"),
             or None if no transformation.
+
+        **kwargs : any type
+            Syntactic sugar notation to add items to the Vega Lite spec. Keys
+            are "unflattened" at the underscore characters. For example,
+            foo_bar_baz=123 becomes foo={'bar': {'bar': 123}}.
         """
         if data is None:
             data = pd.DataFrame([])
@@ -34,7 +43,11 @@ class VegaLiteChart:
             data = pd.DataFrame(data)
 
         if spec is None:
-            spec = {}
+            spec = dict()
+
+        # Merge spec with unflattened kwargs, where kwargs take precedence.
+        # This only works for string keys, but kwarg keys are strings anyways.
+        spec = dict(spec, **vega_unflatten(kwargs))
 
         self._data = data
         self._spec = json.dumps(spec)
@@ -76,11 +89,11 @@ _ENCODINGS = set([
 
 
 # TODO: Figure out how to make this work with layers
-def unflatten(flat_dict):
+def vega_unflatten(flat_dict):
     """Converts a flat dict of key-value pairs to a spec tree.
 
     Example:
-        unflatten({
+        vega_unflatten({
           foo_bar_baz: 123,
           foo_bar_biz: 456,
           x_bonks: 'hi',
@@ -111,27 +124,18 @@ def unflatten(flat_dict):
     --------
     A tree made of dicts inside of dicts.
     """
-    out = {}
-    for pathstr, v in flat_dict.items():
-        path = pathstr.split('_')
+    out_dict = unflatten(flat_dict)
 
-        if path[0] in _ENCODINGS:
-            path.insert(0, 'encoding')
+    for k, v in list(out_dict.items()):
+        if k in _ENCODINGS:
+            if 'encoding' not in out_dict:
+                out_dict['encoding'] = dict() 
+            out_dict['encoding'][k] = v
+            out_dict.pop(k)
 
-        prev_dict = None
-        curr_dict = out
+    return out_dict
 
-        for k in path:
-            if k not in curr_dict:
-                curr_dict[k] = {}
-            prev_dict = curr_dict
-            curr_dict = curr_dict[k]
-
-        prev_dict[k] = v
-
-    return out
-
-
+    
 def transform_dataframe(df, transform_name):
     if transform_name == protobuf.DataTransform.STACK:
         df = df.stack()
@@ -150,6 +154,9 @@ _SELECTION_DECLARATION = DictBuilder({
 
 
 _CHART_DECLARATIONS = {
+    # Usage:
+    #  vega_lite.line_chart(df)
+    #  vega_lite.line_chart(df, x_axis_title='Time (s)', etc...)
     'line_chart': {
         'data_transform': protobuf.DataTransform.STACK,
         'params': [],
@@ -178,6 +185,9 @@ _CHART_DECLARATIONS = {
         }),
     },
 
+    # Usage:
+    #  vega_lite.area_chart(df)
+    #  vega_lite.area_chart(df, x_axis_title='Time (s)', etc...)
     'area_chart': {
         'data_transform': protobuf.DataTransform.STACK,
         'params': [],
@@ -209,6 +219,9 @@ _CHART_DECLARATIONS = {
         }),
     },
 
+    # Usage:
+    #  vega_lite.scatter_chart(df)
+    #  vega_lite.scatter_chart(df, x_axis_title='Time (s)', etc...)
     'scatter_chart': {
         'data_transform': None,
         'params': [],
@@ -251,6 +264,9 @@ _CHART_DECLARATIONS = {
         }),
     },
 
+    # Usage:
+    #  vega_lite.binned_scatter_chart(df)
+    #  vega_lite.binned_scatter_chart(df, x_bin_maxbins=20, etc...)
     'binned_scatter_chart': {
         'data_transform': None,
         'params': [],
@@ -282,6 +298,9 @@ _CHART_DECLARATIONS = {
         }),
     },
 
+    # Usage:
+    #  vega_lite.bar_chart(df)
+    #  vega_lite.bar_chart(df, x_axis_title='Quarters' etc...)
     'bar_chart': {
         'data_transform': protobuf.DataTransform.STACK,
         'params': [],
@@ -314,14 +333,18 @@ _CHART_DECLARATIONS = {
         }),
     },
 
-    'geo_chart': {
+    # Usage:
+    #  vega_lite.geo_chart_beta(df)
+    # TODO: Make this more useful
+    'geo_scatter_chart': {
         'data_transform': None,
         'params': set(['map']),
         'spec_builder': DictBuilder({
             'layer': [
                 DictBuilder({
                     'data': DictBuilder({
-                        'url': ParamBuilder('map', '/geo/nyc.json'),
+                        # TODO: Change default.
+                        'url': ParamBuilder('map', '/geo/us-10m.json'),
                         'format': DictBuilder({
                             'type': 'topojson',
                             'feature': 'nyc_boroughs',
@@ -344,13 +367,13 @@ _CHART_DECLARATIONS = {
                         'type': 'circle',
                     }),
                     'encoding': DictBuilder({
-                        'latitude': {
-                            'field': '__index__',
+                        'latitude': DictBuilder({
+                            'field': ColumnFinder('lat', 'latitude'),
                             'type': '__column_type__',
                             'axis': {'title': ''},
-                        },
+                        }),
                         'longitude': DictBuilder({
-                            'field': '__current_column_name__',
+                            'field': ColumnFinder('lon', 'longitude'),
                             'type': '__column_type__',
                         }),
                         'size': DictBuilder({
@@ -405,7 +428,7 @@ def _get_builder(chart_type, chart_declaration):
             k: v for (k, v) in kwargs.items()
             if k not in chart_declaration['params']}
 
-        user_spec = unflatten(non_param_args)
+        user_spec = vega_unflatten(non_param_args)
 
         merged_spec = chart_declaration['spec_builder'].build(
             data, spec_override=user_spec, user_params=user_params)
