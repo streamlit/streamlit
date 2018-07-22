@@ -11,8 +11,11 @@ import pandas as pd
 import sys
 
 from streamlit import data_frame_proto, protobuf
-from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, ColorCycler, ColumnFinder
+from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, ColorCycler, ColumnFinder, CURRENT_COLUMN_TYPE, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
 from streamlit.dicttools import unflatten
+
+
+STACKED_COLUMN_NAME = '__stacked_column__'
 
 
 class VegaLiteChart:
@@ -140,8 +143,8 @@ def transform_dataframe(df, transform_name):
     if transform_name == protobuf.DataTransform.STACK:
         df = df.stack()
         df = df.reset_index(level=1)
-        df.columns = ['__stacked_column__', 'values']
-        df = df[['values', '__stacked_column__']]
+        df.columns = [STACKED_COLUMN_NAME, 'values']
+        df = df[['values', STACKED_COLUMN_NAME]]
     return df
 
 
@@ -167,17 +170,17 @@ _CHART_DECLARATIONS = {
             }),
             'encoding': DictBuilder({
                 'x': DictBuilder({
-                    'field': '__index__',
-                    'type': '__column_type__',
+                    'field': INDEX_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                 }),
                 'y': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                 }, column=0),
                 'color': DictBuilder({
-                    'field': '__current_column_name__',
+                    'field': CURRENT_COLUMN_NAME,
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
@@ -198,17 +201,17 @@ _CHART_DECLARATIONS = {
             }),
             'encoding': DictBuilder({
                 'x': DictBuilder({
-                    'field': '__index__',
-                    'type': '__column_type__',
+                    'field': INDEX_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                 }),
                 'y': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                 }, column=0),
                 'color': DictBuilder({
-                    'field': '__current_column_name__',
+                    'field': CURRENT_COLUMN_NAME,
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
@@ -232,29 +235,29 @@ _CHART_DECLARATIONS = {
             }),
             'encoding': DictBuilder({
                 'x': DictBuilder({
-                    'field': '__index__',
-                    'type': '__column_type__',
+                    'field': INDEX_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                     'scale': DictBuilder({
                         'zero': False,
                     }, shallow=True),
                 }),
                 'y': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'axis': {'title': ''},
                     'scale': DictBuilder({
                         'zero': False,
                     }, shallow=True),
                 }, column=0),
                 'size': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
                 'color': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'legend': {'title': ''},
                 }, column=2, shallow=True),
                 'opacity': DictBuilder({
@@ -277,15 +280,15 @@ _CHART_DECLARATIONS = {
             }),
             'encoding': DictBuilder({
                 'x': DictBuilder({
-                    'field': '__index__',
-                    'type': '__column_type__',
+                    'field': INDEX_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'bin': DictBuilder({
                         'maxbins': 10,
                     }),
                 }, column=0),
                 'y': DictBuilder({
-                    'field': '__current_column_name__',
-                    'type': '__column_type__',
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
                     'bin': DictBuilder({
                         'maxbins': 10,
                     }),
@@ -311,18 +314,18 @@ _CHART_DECLARATIONS = {
             }),
             'encoding': DictBuilder({
                 'x': {
-                    'field': '__index__',
+                    'field': INDEX_COLUMN_NAME,
                     'type': 'nominal',
                     'axis': {'title': ''},
                 },
                 'y': DictBuilder({
-                    'field': '__current_column_name__',
+                    'field': CURRENT_COLUMN_NAME,
                     'type': 'quantitative',
                     'stack': None,
                     'axis': {'title': ''},
                 }, column=0),
                 'color': DictBuilder({
-                    'field': '__current_column_name__',
+                    'field': CURRENT_COLUMN_NAME,
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1),
@@ -369,12 +372,12 @@ _CHART_DECLARATIONS = {
                     'encoding': DictBuilder({
                         'latitude': DictBuilder({
                             'field': ColumnFinder('lat', 'latitude'),
-                            'type': '__column_type__',
+                            'type': CURRENT_COLUMN_TYPE,
                             'axis': {'title': ''},
                         }),
                         'longitude': DictBuilder({
                             'field': ColumnFinder('lon', 'longitude'),
-                            'type': '__column_type__',
+                            'type': CURRENT_COLUMN_TYPE,
                         }),
                         'size': DictBuilder({
                             'value': 1,
