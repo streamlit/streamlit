@@ -8,8 +8,7 @@ import './VegaLiteChart.css';
 
 
 const MagicFields = {
-  DATAFRAME_INDEX: '__index__',
-  COLUMN_TYPE: '__column_type__',
+  DATAFRAME_INDEX: '::index',
 };
 
 

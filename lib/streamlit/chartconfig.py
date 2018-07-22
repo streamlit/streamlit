@@ -5,8 +5,9 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from .caseconverters import to_snake_case
-from .ChartComponent import ChartComponent
+from streamlit.ChartComponent import ChartComponent
+from streamlit.DictBuilder import ForEachColumn, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
+from streamlit.caseconverters import to_snake_case
 
 # Set of ReChart chart types accepted by Streamlit.
 CHART_TYPES = set([
@@ -75,63 +76,6 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
-class ForEachColumn(object):
-    """
-    This is used to include a certain component as many times as there are
-    columns in the dataset.
-    """
-    def __init__(self, comp):
-        self.comp = comp
-
-class ColumnAtIndex(object):
-    """
-    This is used to specify that a certain property should point to whichever
-    column is at this index.
-    """
-    def __init__(self, index):
-        self.index = index
-
-class ColumnAtCurrentIndex(object):
-    """
-    This is used within a ForEachColumn to specify that a certain property
-    should point to the column that the ForEachColumn is cycling through right
-    now.
-    """
-    pass
-
-class IndexColumn(object):
-    """
-    This is used to specify that a certain property should point to the index of
-    the dataframe.
-    """
-    pass
-
-class ValueCycler(object):
-    """
-    This is used within a ForEachColumn to specify values that should be cycled
-    through, as we iterate through the columns.
-    """
-    def __init__(self, *items):
-        self._items = items
-
-    def get(self, index):
-        return self._items[index % len(self._items)]
-
-class ColorCycler(ValueCycler):
-    """
-    Cycles some pretty colors.
-    """
-    def __init__(self):
-        super(ColorCycler, self).__init__(
-            '#e41a1c',
-            '#377eb8',
-            '#4daf4a',
-            '#984ea3',
-            '#ff7f00',
-            '#cccc33',
-            '#a65628',
-            '#f781bf')
-
 
 BASIC_REQUIRED_COMPONENTS = (
     ('cartesian_grid', {
@@ -139,7 +83,7 @@ BASIC_REQUIRED_COMPONENTS = (
     }),
     ('x_axis', {
         'stroke': '#101620',
-        'data_key': IndexColumn(),
+        'data_key': INDEX_COLUMN_NAME,
     }),
     ('y_axis', {
         'stroke': '#101620',
@@ -151,13 +95,13 @@ BASIC_REQUIRED_COMPONENTS = (
 
 # A dict mapping each chart type to a tuple with all components that are
 # required for that chart type. The components themselves are expressed here as
-# 2-tuples. Here you can use special types ColumnAtIndex, ColumnAtCurrentIndex,
+# 2-tuples. Here you can use special types CURRENT_COLUMN_NAME,
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
         BASIC_REQUIRED_COMPONENTS +
         (ForEachColumn(('line', {
-            'data_key': ColumnAtCurrentIndex(),
+            'data_key': CURRENT_COLUMN_NAME,
             'dot': 'false',
             'stroke': ColorCycler(),
             'type': 'linear',
@@ -168,7 +112,7 @@ REQUIRED_COMPONENTS = {
     'area_chart': (
         BASIC_REQUIRED_COMPONENTS +
         (ForEachColumn(('area', {
-            'data_key': ColumnAtCurrentIndex(),
+            'data_key': CURRENT_COLUMN_NAME,
             'fill': ColorCycler(),
             'stroke': ColorCycler(),
             'type': 'linear',
@@ -179,7 +123,7 @@ REQUIRED_COMPONENTS = {
     'bar_chart': (
         BASIC_REQUIRED_COMPONENTS +
         (ForEachColumn(('bar', {
-            'data_key': ColumnAtCurrentIndex(),
+            'data_key': CURRENT_COLUMN_NAME,
             'fill': ColorCycler(),
             'is_animation_active': 'false',
         })),)
