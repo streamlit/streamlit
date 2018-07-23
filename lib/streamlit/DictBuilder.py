@@ -104,7 +104,6 @@ def get_merged_spec_item(df, user_params, spec_value, curr_out_value,
             return INDEX_COLUMN_DESIGNATOR
 
         # TODO: support '__index_column_type__' 
-        # TODO: support '__index_column_name__' 
         else:
             return spec_value
     else:

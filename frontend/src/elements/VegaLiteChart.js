@@ -3,6 +3,7 @@ import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
 
 import VegaLite from 'react-vega-lite';
+import vegaTooltip from 'vega-tooltip';
 
 import './VegaLiteChart.css';
 
@@ -56,7 +57,7 @@ class VegaLiteChart extends Component {
             renderer="canvas"
             width={width}
             height={height}
-            onNewView={view => this.vegaView = view}
+            onNewView={this._onNewView.bind(this)}
             />
       );
 
@@ -77,6 +78,9 @@ class VegaLiteChart extends Component {
   shouldComponentUpdate(newProps, newState) {
     const data0 = this.props.chart.get('data');
     const data1 = newProps.chart.get('data');
+
+    if (!data0 || !data1) return true;
+    if (!data0.get('data') || !data1.get('data')) return true;
 
     const [numRows0, numCols0] = tableGetRowsAndCols(data0.get('data'));
     const [numRows1, numCols1] = tableGetRowsAndCols(data1.get('data'));
@@ -147,6 +151,11 @@ class VegaLiteChart extends Component {
   toImageUrl(type, scaleFactor) {
     if (!this.vegaView) throw new Error('Chart has not been drawn yet');
     return this.vegaView.toImageUrl(type, scaleFactor);
+  }
+
+  _onNewView(view) {
+    this.vegaView = view;
+    vegaTooltip(view);
   }
 }
 
