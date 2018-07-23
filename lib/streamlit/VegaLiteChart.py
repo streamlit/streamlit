@@ -162,7 +162,7 @@ _CHART_DECLARATIONS = {
     #  vega_lite.line_chart(df, x_axis_title='Time (s)', etc...)
     'line_chart': {
         'data_transform': protobuf.DataTransform.STACK,
-        'params': [],
+        'user_params': [],
         'spec_builder': DictBuilder({
             'selection': _SELECTION_DECLARATION,
             'mark': DictBuilder({
@@ -184,6 +184,10 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
+                'tooltip': DictBuilder({
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
+                }, column=0),
             }),
         }),
     },
@@ -193,7 +197,7 @@ _CHART_DECLARATIONS = {
     #  vega_lite.area_chart(df, x_axis_title='Time (s)', etc...)
     'area_chart': {
         'data_transform': protobuf.DataTransform.STACK,
-        'params': [],
+        'user_params': [],
         'spec_builder': DictBuilder({
             'selection': _SELECTION_DECLARATION,
             'mark': DictBuilder({
@@ -215,6 +219,10 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
+                'tooltip': DictBuilder({
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
+                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
@@ -227,7 +235,7 @@ _CHART_DECLARATIONS = {
     #  vega_lite.scatter_chart(df, x_axis_title='Time (s)', etc...)
     'scatter_chart': {
         'data_transform': None,
-        'params': [],
+        'user_params': [],
         'spec_builder': DictBuilder({
             'selection': _SELECTION_DECLARATION,
             'mark': DictBuilder({
@@ -260,6 +268,10 @@ _CHART_DECLARATIONS = {
                     'type': CURRENT_COLUMN_TYPE,
                     'legend': {'title': ''},
                 }, column=2, shallow=True),
+                'tooltip': DictBuilder({
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
+                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
@@ -272,7 +284,7 @@ _CHART_DECLARATIONS = {
     #  vega_lite.binned_scatter_chart(df, x_bin_maxbins=20, etc...)
     'binned_scatter_chart': {
         'data_transform': None,
-        'params': [],
+        'user_params': [],
         'spec_builder': DictBuilder({
             'selection': _SELECTION_DECLARATION,
             'mark': DictBuilder({
@@ -306,7 +318,7 @@ _CHART_DECLARATIONS = {
     #  vega_lite.bar_chart(df, x_axis_title='Quarters' etc...)
     'bar_chart': {
         'data_transform': protobuf.DataTransform.STACK,
-        'params': [],
+        'user_params': [],
         'spec_builder': DictBuilder({
             'selection': _SELECTION_DECLARATION,
             'mark': DictBuilder({
@@ -329,6 +341,10 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1),
+                'tooltip': DictBuilder({
+                    'field': CURRENT_COLUMN_NAME,
+                    'type': CURRENT_COLUMN_TYPE,
+                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
@@ -337,30 +353,34 @@ _CHART_DECLARATIONS = {
     },
 
     # Usage:
-    #  vega_lite.geo_chart_beta(df)
-    # TODO: Make this more useful
+    #  vega_lite.geo_scatter_chart(df)
+    #  vega_lite.geo_scatter_chart(df,
+    #      map='http://foo.com/map.json',
+    #      feature='my_feature',
+    #  )
     'geo_scatter_chart': {
         'data_transform': None,
-        'params': set(['map']),
+        'user_params': set(['map', 'feature']),
         'spec_builder': DictBuilder({
+            'height': 500,
             'layer': [
                 DictBuilder({
                     'data': DictBuilder({
                         # TODO: Change default.
-                        'url': ParamBuilder('map', '/geo/us-10m.json'),
+                        'url': ParamBuilder('map', 'https://unpkg.com/world-atlas@1/world/50m.json'),
                         'format': DictBuilder({
                             'type': 'topojson',
-                            'feature': 'nyc_boroughs',
+                            'feature': ParamBuilder('feature', 'countries'),
                         }),
                     }),
                     'mark': DictBuilder({
                         'type': 'geoshape',
                         'stroke': 'white',
-                        'strokeWidth': 2
+                        'strokeWidth': 1
                     }),
                     'encoding': DictBuilder({
                         'color': DictBuilder({
-                            'value': '#888',
+                            'value': '#E6E9EF',
                         }),
                     }),
                 }),
@@ -408,8 +428,9 @@ def _get_builder(chart_type, chart_declaration):
 
     chart_declaration : A "chart declaration" dict. Contains keys:
     'data_transform' (a DataTransform proto enum value or None), and
-    'spec_builder' (a DictBuilder with the Vega Lite spec), 'params' (a set with
-    names of custom parameters accepted by this builder -- see ParamBuilder).
+    'spec_builder' (a DictBuilder with the Vega Lite spec), 'user_params' (a
+    set with names of custom parameters accepted by this builder -- see
+    ParamBuilder).
     """
     def chart_constructor(data=None, **kwargs):
         if data is None:
@@ -425,11 +446,11 @@ def _get_builder(chart_type, chart_declaration):
 
         user_params = {
             k: v for (k, v) in kwargs.items()
-            if k in chart_declaration['params']}
+            if k in chart_declaration['user_params']}
 
         non_param_args = {
             k: v for (k, v) in kwargs.items()
-            if k not in chart_declaration['params']}
+            if k not in chart_declaration['user_params']}
 
         user_spec = vega_unflatten(non_param_args)
 
