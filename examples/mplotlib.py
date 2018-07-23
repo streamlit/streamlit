@@ -1,7 +1,7 @@
 # Matplotlib example copied from
 # https://matplotlib.org/gallery/images_contours_and_fields/plot_streamplot.html
 
-from streamlit import io
+import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -65,4 +65,4 @@ plt.tight_layout()
 #plt.show()
 
 # Show plot in streamlit
-io.pyplot()
+st.pyplot()
