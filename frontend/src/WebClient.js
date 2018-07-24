@@ -72,7 +72,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://localhost:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://${window.location.hostname}:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,

@@ -149,7 +149,6 @@ def _update(first_dict, second_dict):
     """Updates the first dict to contain information from the second dict. This
     function is recursive on nested dicts."""
     for key in second_dict.keys():
-        print('The key is:', key, key in first_dict)
         if key not in first_dict:
             first_dict[key] = second_dict[key]
         else:
