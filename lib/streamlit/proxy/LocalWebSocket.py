@@ -7,8 +7,6 @@ from streamlit import protobuf
 from streamlit.proxy import Proxy, ProxyConnection
 from streamlit.logger import get_logger
 
-import webbrowser
-
 LOGGER = get_logger()
 
 
@@ -72,21 +70,3 @@ class LocalWebSocket(WebSocketHandler):
             self._connection.finished_local_connection()
             self._proxy.try_to_deregister_proxy_connection(self._connection)
         self._proxy.potentially_stop()
-
-    def _launch_web_client(self, name):
-        """Launch web browser to connect to the proxy to get the named report.
-
-        Args
-        ----
-        name : string
-            The name of the report to which the web browser should connect.
-        """
-        if config.get_option('proxy.useNode'):
-            host, port = 'localhost', '3000'
-        else:
-            host = config.get_option('proxy.server')
-            port = config.get_option('proxy.port')
-        quoted_name = urllib.parse.quote_plus(name)
-        url = 'http://{}:{}/?name={}'.format(
-            host, port, quoted_name)
-        webbrowser.open(url)

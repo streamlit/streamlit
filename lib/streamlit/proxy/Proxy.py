@@ -30,14 +30,47 @@ from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.proxy import ProxyConnection
 
 from tornado import gen, web
+from tornado import httpclient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
+import functools
+import os
+import platform
+import socket
+import traceback
 import urllib
 import webbrowser
-import functools
-import traceback
 
 LOGGER = get_logger()
+EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
+
+# def set_remote(val):
+#     config.set_option('proxy.isRemote', val)
+
+def _print_remote_url(port, quoted_name):
+    ips = []
+    http_client = None
+    try:
+        http_client = httpclient.HTTPClient()
+        for key in ('local-ipv4', 'public-ipv4'):
+            endpoint = os.path.join(EC2_METADATA_URL, key)
+            response = http_client.fetch(endpoint, request_timeout=0.01)
+            ips.append(response.body)
+    except (httpclient.HTTPError, RuntimeError) as e:
+        # Basically if not on EC2 do a hack and try to connect to
+        # internet and see what the local ip is.
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 53))
+        ips.append(s.getsockname()[0])
+        s.close()
+    finally:
+        if http_client is not None:
+            http_client.close()
+
+    timeout_secs = config.get_option('proxy.waitForConnectionSecs')
+    for ip in ips:
+        url = 'http://{}:{}/?name={}'.format(ip, port, quoted_name)
+        print('Please connect to %s within %s seconds.' % (url, timeout_secs))
 
 def _launch_web_client(name):
     """Launches a web browser to connect to the proxy to get the named
@@ -56,7 +89,16 @@ def _launch_web_client(name):
     quoted_name = urllib.parse.quote_plus(name)
     url = 'http://{}:{}/?name={}'.format(
         host, port, quoted_name)
-    webbrowser.open(url)
+
+    headless = config.get_option('proxy.isRemote')
+    LOGGER.debug(f'headless = {headless}')
+    if headless:
+        _print_remote_url(port, quoted_name)
+    else:
+        if platform.system() == 'Linux' and not os.getenv('DISPLAY'):
+            LOGGER.warning('Attempting to run Streamlit in a headless system. '\
+                'Please consider setitng proxy.isRemote to "true" in streamlit/config.yaml.')
+        webbrowser.open(url)
 
 def stop_proxy_on_exception(is_coroutine=False):
     """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
