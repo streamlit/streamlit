@@ -72,7 +72,7 @@ class ClientWebSocket(WebSocketHandler):
                 if not self._queue.is_closed():
                     yield self._queue.flush_queue(self)
                 elif not indicated_closed:
-                    LOGGER.debug('XXX The queue for "%s" is closed.' % self._connection.name)
+                    LOGGER.debug('The queue for "%s" is closed.' % self._connection.name)
                     indicated_closed = True
 
                 yield gen.sleep(throttle_secs)

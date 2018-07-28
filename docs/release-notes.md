@@ -1,5 +1,37 @@
 # Release Notes
 
+#### v0.13
+July 20, 2018
+```
+We are thrilled to announce version 0.13 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    python -m streamlit help
+
+New features are:
+
+1. Streamlit now supports remote operation! Get all the buttery goodness of
+   Streamlit from AWS instances or in your private cloud. To do this:
+
+     1. Install streamlit on your cloud instance (as shown above).
+     2. Add the following to your ~/.streamlit/config.yaml:
+
+          proxy:
+            isRemote: true
+            waitForConnectionSecs: 60
+
+2. Saving static reports to S3 and loading them is now progressive and much
+   faster!
+
+3. There were also numerous bug fixes, including one which causes st.cache() to
+   hang.
+
+Please enjoy and we always love feedback!
+```
+
 #### v0.12
 June 25, 2018
 ```
