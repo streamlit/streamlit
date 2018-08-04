@@ -1,8 +1,8 @@
 ---
-title: "Getting Started"
+title: "Installation"
 ---
 
-Installing Streamlit is one-line operation! But first there are some
+Installing Streamlit is just a one-line operation! But first there are some
 prerequisites that we must get out of the out of the way:
 
 1. Streamlit requires Python 2.7 or higher, or 3.0 or higher.
@@ -25,8 +25,9 @@ $ python -m streamlit help
 
 This last command should open a new tab in your web browser.
 
-To finish up, we recommend you **spend a couple of minutes reading the contents
-of that tab,** since it is a great crash course on the most important Streamlit
-commands.
+The doc that just opened in that tab is actually really useful, and you'll
+likely be getting back to it every now and then for quick reference. So to
+finish up, we recommend you **take a minute to read that doc** since
+it is a great crash course on the most important Streamlit commands.
 
 Next, let's create our [first Streamlit report](/docs/tutorial/).
