@@ -69,6 +69,18 @@ clean:
 	find . -name .streamlit -type d -exec rm -rf {} \;
 	cd lib; rm -rf .coverage .coverage\.*
 
+.PHONY: site
+site:
+	cd site; hugo
+
+.PHONY: site
+devel-site:
+	cd site; hugo server -D
+
+.PHONY: publish-site
+publish-site:
+	cd site; aws s3 sync --acl public-read public s3://streamlit.io/
+
 .PHONY: protobuf
 protobuf:
 	protoc --proto_path=protobuf protobuf/*.proto --python_out=lib/streamlit/protobuf
