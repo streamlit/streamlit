@@ -153,16 +153,16 @@ Check that all elements and figure work properly. You should also see the port n
 
 #### Build the Wheel and Test That
 
-Go through the following steps:
-
-(Note: this assumes that the current working directory is called `streamlit` and
-you have a parallel folder called `streamlit-staging` to test this version.)
+Make the wheel:
 
 ```
 make install   # must be in 'install' mode before making wheel
 make wheel
+```
+Test in in a **fresh 2.7 install**:
+```
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.13.5-py3-none-any.whl
+pip install ../streamlit/lib/dist/streamlit-0.13.5-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
@@ -171,7 +171,9 @@ python -m streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 ```
-Also, if possible, test the wheel in Mac and Linux.
+Also, if possible, test the wheel in:
+- A fresh 3.6 install.
+- On Linux
 
 #### Distribute the Wheel
 ```
