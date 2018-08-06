@@ -51,7 +51,7 @@ to a report. That's already pretty useful, but we're only getting started
 --- there's more awesome on the way!
 
 First up, let's start by preparing a dataset full of random numbers and printing
-it to the screen. Add this at the end of `hello.py`.
+it to the screen. So add this at the end of `hello.py`:
 
 ```python
 import numpy as np
@@ -107,14 +107,15 @@ st.line_chart(df)
 ```
 
 In your browser, you'll notice **your report now has a nice title, a header, and
-some explanatory text** here and there.
+some explanatory text** here and there. It's a good idea to add this kind of
+structure to all your reports, so they are more legible both by other people
+and by your future self when coming back to a report months later.
 
 
 ## Making progress
 
 Now let's slow things down a bit. By which I mean, let's add a long-running
-computation that blocks the rest of the script from executing, and then later
-I'll show you how Streamlet makes those situations much better.
+computation that blocks the rest of the script from executing.
 
 Add this at the end of `hello.py`:
 
@@ -131,7 +132,7 @@ st.write('...and now we\'re done!')
 ```
 
 This is all well and good, but it's somewhat annoying that during the 10s that
-it takes for the script to run you have no indication what is actually
+it takes for the for loop to run you have no indication what is actually
 happening. **Wouldn't it be great if the report could tell you what was
 happening inside that long running function?**
 
@@ -139,7 +140,6 @@ Well, it totally can! Just replace the snippet above with:
 
 ```python
 st.header('Showing progress')
-
 import time
 
 st.write('Starting a long computation...')
@@ -174,9 +174,9 @@ st.balloons()
 
 Now you should have a basic idea of how to use Streamlit in your own scripts:
 just `import streamlit as st` and experiment away from there! A good way to
-start is by copy/pasting from the Streamlit cheatsheet. Just run `python -m streamlit
-help` on a terminal to see it, or click the *help* item in Streamlit's top-right
-menu.
+start is by copy/pasting code snippets straight from the Streamlit cheatsheet.
+Just run `python -m streamlit help` on a terminal to see it, or click the *help*
+item in Streamlit's top-right menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
 Streamlit on your day-to-day --- and we'll introduce you to some more advanced
