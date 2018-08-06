@@ -150,7 +150,7 @@ bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration', i)
+  latest_iteration.write('Iteration ', i)
   bar.progress(i + 1)
   time.sleep(0.1)
 
@@ -216,9 +216,10 @@ bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration', i)
+  latest_iteration.write('Iteration ', i)
   bar.progress(i + 1)
   time.sleep(0.1)
 
 st.write('...and now we\'re done!')
+st.balloons()
 ```
