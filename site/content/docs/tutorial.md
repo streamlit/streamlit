@@ -180,7 +180,7 @@ menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
 Streamlit on your day-to-day --- and we'll introduce you to some more advanced
-Streamlit commands. Click here for [Part 2 of our tutorial](/docs/tutorial2/).
+Streamlit commands. Click here for [part 2 of our tutorial](/docs/tutorial2/).
 
 ## Appendix: the final script
 
