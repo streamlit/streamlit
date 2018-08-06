@@ -1,8 +1,9 @@
 html {
+  color: #101620;
   font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 body {
@@ -13,13 +14,16 @@ body {
   flex-direction: column;
 }
 
-a {
+a,
+a:visited {
   color: #2979E9;
   transition: color 400ms;
 }
 
-a:hover {
+a:hover,
+a:active {
   color: #F63366;
+  text-decoration: underline;
   transition: none;
 }
 
@@ -97,8 +101,7 @@ header {
   padding: 0.25rem;
   color: #fff;
   font-size: 1rem;
-  background-color: #193689;
-  background-image: linear-gradient(90deg, #193689, #c0aae5);
+  background-color: #262c39;
 }
 
 footer {
