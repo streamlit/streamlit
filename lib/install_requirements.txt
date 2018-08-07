@@ -21,4 +21,4 @@ six>=1.0.0                # via protobuf, python-dateutil, singledispatch
 tokenize-rt>=2.0.0        # via future-fstrings
 tornado>=5.0.0
 tzlocal>=1.5.0
-base58
+base58>=1.0.0
