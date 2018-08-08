@@ -33,7 +33,6 @@ from streamlit import protobuf
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
-
 def _assert_singleton(method):
     """Asserts that this method is called on the singleton instance of
     Connection."""
