@@ -1,6 +1,7 @@
 ---
 title: "Tutorial part 2"
 draft: true
+weight: 100
 ---
 
 At this point, you have probably [already set Streamlit

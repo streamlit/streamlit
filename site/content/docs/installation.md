@@ -1,5 +1,6 @@
 ---
 title: "Installation"
+weight: 1
 ---
 
 Installing Streamlit is just a one-line operation! But first there are some
