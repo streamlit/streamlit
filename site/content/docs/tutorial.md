@@ -1,5 +1,5 @@
 ---
-title: "Tutorial"
+title: "Streamlit tutorial: the basics"
 weight: 100
 ---
 
