@@ -1,7 +1,6 @@
 ---
-title: "Tutorial part 2"
-draft: true
-weight: 100
+title: "Streamlit tutorial: caching, mapping, and more!"
+weight: 101
 ---
 
 At this point, you have probably [already set Streamlit
@@ -65,8 +64,8 @@ load into the dataframe.
 So let's try out this function and see what happens:
 
 ```python
-data_load_state = set.write('Loading data...')
-data = load_data(100000)
+data_load_state = st.write('Loading data...')
+data = load_data(10000)
 data_load_state.write('Loading data... done!')
 ```
 
@@ -107,10 +106,10 @@ Since this is the first time you're running the script with `@st.cache` in it,
 you'll see no change. But let's continue tweaking our file so you can see what
 happens next.
 
-Append this:
+Replace the line `st.write('Done!')` with this:
 
 ```python
-st.write('Now with cache!')
+st.write('Done! (using st.cache)')
 ```
 
 ...then rerun the script and notice how **the line you just added appears
@@ -175,40 +174,58 @@ back to the task at hand: understanding Uber's passenger pickup patterns in NYC.
 
 ## Drawing a histogram
 
-A basic question you might ask is, "_what are Uber's busiest hours?_" To answer,
-let's break down all the pickup times into at histogram, binned by hour:
+A basic question you might ask is "_what are Uber's busiest hours?_" To answer
+that, let's break down all the pickup times into at histogram, binned by hour:
 
 ```python
 st.subheader(f'Number of pickups by hour')
-hist_values = np.histogram(filtered_data.dt.hour, bins=12, range=(0,12))[0]
+hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0, 24))[0]
 st.bar_chart(hist_values)
 ```
 
-Rerun the script, and a histogram will appear immediately (thanks, cache!)
+Rerun the script, and a histogram will appear immediately.
+What the chart tells us is that **Uber is busiest around 17:00 (i.e. 5pm)**.
+Cool!
 
-## Drawing a map
+
+## Dots on a map
+
+Now let's see what all those pickups look like when overlaid on top of a map of
+NYC:
 
 ```python
 st.subheader(f'Map of all pickups')
-st.map(filtered_data)
+st.map(data)
 ```
 
-## Filtering by hour
+**Yes, really. Drawing a map is _that_ simple.** Just call `st.map` and pass in
+a datset where come column is named `lat` and another `lon`.
+
+And since this is not the 90s, the map is interactive: go ahead and try panning
+and zooming it a bit!
+
+But let's do one better. In the previous section, we learned that the peak Uber
+hour is 17:00, so you may be wondering "what are the peak Uber _locations_ at 5pm?"
+
+Well, that should be easy to find out: just filter the map to show only pickups
+between 5--6pm and find out.
+
+So replace the previous snippet with the following:
 
 ```python
 # Some number in the range 0-23
-hour_to_filter = 12
+hour_to_filter = 17
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
-st.subheader(f'Raw data at {hour_to_filter}h')
-st.write(filtered_data)
-
-st.subheader(f'Number of pickups by minute at {hour_to_filter}h')
-st.bar_chart(np.histogram(filtered_data.dt.minute, bins=60, range=(0,60))[0])
-
-st.subheader(f'Map of all pickups at {hour_to_filter}h')
+st.subheader(f'Map of all pickups at {hour_to_filter}:00')
 st.map(filtered_data)
 ```
+
+And we're done!
+
+Looks like **Uber's prime real estate at that time is Midtown, slightly
+off-center toward the East side**. Groovy!
+
 
 ## Appendix: the final script
 
@@ -234,27 +251,21 @@ def load_data(nrows):
     data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
     return data
 
-data = load_data(100000)
+st.write('Loading data...')
+data = load_data(10000)
+st.write('Done! (using st.cache)')
 
 st.subheader(f'Raw data')
 st.write(data)
 
 st.subheader(f'Number of pickups by hour')
-st.bar_chart(np.histogram(filtered_data.dt.hour, bins=12, range=(0,12))[0])
-
-st.subheader(f'Map of all pickups')
-st.map(filtered_data)
+hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
+st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = 12
+hour_to_filter = 17
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
-st.subheader(f'Raw data at {hour_to_filter}h')
-st.write(filtered_data)
-
-st.subheader(f'Number of pickups by minute at {hour_to_filter}h')
-st.bar_chart(np.histogram(filtered_data.dt.minute, bins=60, range=(0,60))[0])
-
-st.subheader(f'Map of all pickups at {hour_to_filter}h')
+st.subheader(f'Map of all pickups at {hour_to_filter}:00')
 st.map(filtered_data)
 ```
