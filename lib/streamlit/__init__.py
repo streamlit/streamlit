@@ -24,6 +24,7 @@ import pandas as pd
 import re
 import sys
 import textwrap
+import threading
 import traceback
 import types
 
@@ -155,9 +156,23 @@ def spinner(text):
         st.success('Done!')
     """
     try:
-        message = warning(text)
+        # Set the message 0.1 seconds in the future to avoid annoying flickering
+        # if this spinner runs too quickly.
+        DELAY_SECS = 0.1
+        message = empty()
+        display_message = True
+        display_message_lock = threading.Lock()
+        def set_message():
+            with display_message_lock:
+                if display_message:
+                    message.warning(str(text))
+        threading.Timer(DELAY_SECS, set_message).start()
+
+        # Yield control back to the context.
         yield
     finally:
+        with display_message_lock:
+            display_message = False
         message.empty()
 
 @contextlib.contextmanager
