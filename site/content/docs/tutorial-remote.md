@@ -1,81 +1,150 @@
 ---
-title: "Running Streamlit Remotely"
-draft: true
+title: "Running Streamlit remotely"
+weight: 101
 ---
 
-Sometimes, you need to run Streamlit remotely -  be it on AWS, GCS, or Paperspace - we've got you! 
+Sometimes, you need to run Streamlit remotely --- be it on AWS, GCS, or
+Paperspace --- we've got you! 
+
 Let's do this.
 
 ## Before we start
-We assume that you already have a machine/instance up & running on AWS, GCS, or Paperspace. The instance should [have a public IP attached to it](https://paperspace.zendesk.com/hc/en-us/articles/236362888-Public-IPs#%E2%80%9Cassign%E2%80%9D),
-which we'll now refer to as `PUBLIC_IP`. We assume that your code is on the instance already, in a file called `uber_pickups.py`
 
-For simplicity, we're going to show you how to do all this with Paperspace. The steps are similar for AWS & GCS.
+For this tutorial, we assume that you already have a machine/instance up and
+running on AWS, GCS, Paperspace, or whatever other computer you have access to.
+For simplicity, we're going to show you how to do all this with Paperspace. The
+steps are similar for other hosts.
 
-## Running Streamlit Remotely
+Let's say the address of this computer/machine/instance is `REMOTE_HOST`. For
+Paperspace, that's [the public IP attached
+to](https://paperspace.zendesk.com/hc/en-us/articles/236362888-Public-IPs#%E2%80%9Cassign%E2%80%9D)
+your instance.
 
-I will now show you how to install Streamlit on your instance & run your code remotely. First, SSH into your instance: 
+And let's assume that your code is on the instance already, in a file called
+`my_script.py`.
+
+## Configuration
+
+To start with, SSH into your instance: 
+
+```bash
+$ ssh paperspace@REMOTE_HOST
 ```
-ssh paperspace@PUBLIC_IP
-```
+
 From here, [install Streamlit onto your instance](/docs/installation/).
 
-Next, change the config to tell Streamlit to run remotely. Add these lines to `~/.streamlit/config.yaml`: 
+Next, we need to configure Streamlit to let it know it's running remotely.
+So go ahead and add these lines to `~/.streamlit/config.yaml`:
 
-```
+```bash
 proxy:
     isRemote: true
     waitForConnectionSecs: 60
 ```
 
-Now, let's allow all incoming SSH connections to port 5013 (so you can access the Streamlit report). 
+_NOTE: You may have to create this file if it doesn't exist yet._
+
+Now, let's set up the instance's firewall to allow all incoming SSH connections
+to port 5013, so you can access the Streamlit report: 
+
 ```
-sudo ufw allow 5013
+$ sudo ufw allow 5013
 ```
 
-Finally, run your Streamlit code on your instance!
-```
-python uber_pickups.py
+Finally, to make sure everything worked, run the Streamlit cheat sheet and try
+to access it in your local browser:
+
+```bash
+$ python -m streamlit help
 ```
 
-You should now see your report at `http://PUBLIC_IP:5013/?name=uber_pickups`
+The report should be available at `http://REMOTE_HOST:5013/help`
+
+
+## Running remote code
+
+Based on the last command in the previous section, you probably already guessed
+that you run Streamlit-powered code on your remote host the same way you run it
+on your local machine!
+
+So that's just:
+
+```bash
+$ python my_script.py
+```
+
+The main difference is that your local web browser will not automatically open
+when the remote script runs. Instead, you need to open your browser yourself
+and point it to: `http://REMOTE_HOST:5013/?name=my_script`
+
+And that's it!
+
 
 ## From the comfort of your local text editor
-When you're actively working on a Streamlit report remotely, you may want to edit the code directly through 
-your favorite text editor. We will show you how to do this with Atom and Sublime. Let us know (<hello@streamlit.io>) if you want instructions for other editors.
 
-First, you need to install [rmate](https://github.com/textmate/rmate) on your remote instance:
+When actively working on a Streamlit report remotely, you may want to
+edit the code directly through your favorite text editor. We will now show you
+how to do this with Atom, Sublime Text, Vi, and Emacs. Let us know
+(<hello@streamlit.io>) if you'd like instructions for other editors, or if
+you have instructions to contribute!
+
+For Atom or Sublime Text, you should first install
+[rmate](https://github.com/textmate/rmate) on your remote instance:
+
+```bash
+$ ssh paperspace@REMOTE_HOST
+$ sudo curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rmate/master/rmate
+$ sudo chmod +x /usr/local/bin/rmate
 ```
-sudo curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rmate/master/rmate
-sudo chmod +x /usr/local/bin/rmate
-```
 
-### Remote Editing with Atom 
-If you use Atom, you need to install [Remote Atom](https://atom.io/packages/remote-atom): \
-`Atom -> Preferences -> Install -> "remote-atom" -> Install`
+### Atom 
 
+If you use Atom, you need to install [Remote
+Atom](https://atom.io/packages/remote-atom):
 
-Next, we run the Remote Atom Server as follows: \
-`Packages -> Remote Atom -> Start Server`
+* _Atom → Preferences → Install → "remote-atom" → Install_
 
+Then run the Remote Atom Server:
+
+* _Packages → Remote Atom → Start Server_
 
 Finally, SSH into your remote machine with remote port fowarded & run rmate:
+
+```bash
+$ ssh -R 52698:localhost:52698 paperspace@REMOTE_HOST
+$ rmate my_script.py
 ```
-ssh -R 52698:localhost:52698 paperspace@PUBLIC_IP
-rmate uber_pickups.py
+
+This should automatically open the file in Atom for editing. Every time you
+save, it will save to the remote file directly.
+
+
+### Sublime Text
+
+If you use Sublime Text, you need to install
+[RemoteSubl](https://github.com/randy3k/RemoteSubl):
+
+* _Tools → Command Palette → "Package Control: Install Package" → "RemoteSubl"_
+
+Now you can just SSH into your remote machine with remote port fowarded and run
+rmate:
+
+```bash
+$ ssh -R 52698:localhost:52698 paperspace@REMOTE_HOST
+$ rmate my_script.py
 ```
 
-This should automatically open the file in Atom for editing. Every time you save, it will save to the remote file directly.
-
-### Remote Editing with Sublime
-If you use Sublime, you need to install [RemoteSubl](https://github.com/randy3k/RemoteSubl): \
-`Tools -> Command Palette -> "Package Control: Install Package" -> "RemoteSubl"`
-
-Now you can just SSH into your remote machine with remote port fowarded & run rmate:
-```
-ssh -R 52698:localhost:52698 paperspace@PUBLIC_IP
-rmate uber_pickups.py
-```
-This should automatically open the file in Sublime for editing. Every time you save, it will save to the remote file directly.
+This should automatically open the file in Sublime Text for editing. Every time
+you save, it will save to the remote file directly.
 
 
+### Vi or Emacs
+
+There are two ways to edit remote files in Vi/Emacs:
+
+1. In your local machine, open the file like you'd open any local file, but
+   specify its full address in the form `username@REMOTE_HOST:filepath`.
+
+2. Or you can just SSH into your remote machine and edit the file from there ☺
+
+Simple!

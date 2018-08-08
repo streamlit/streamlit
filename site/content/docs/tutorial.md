@@ -1,5 +1,6 @@
 ---
 title: "Tutorial"
+weight: 100
 ---
 
 Now that you have [already set Streamlit up](/docs/getting_started/), open up a
