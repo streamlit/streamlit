@@ -50,9 +50,6 @@ def cache(func):
 			path = f'cache/f{hasher.hexdigest()}.pickle'
 			LOGGER.debug('Cache filename: ' + path)
 
-			import time
-			time.sleep(3.0)
-
 			# Load the file (hit) or compute the function (miss)
 			try:
 				with streamlit_read(path, binary=True) as input:
