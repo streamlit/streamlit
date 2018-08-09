@@ -42,35 +42,39 @@ import urllib
 import webbrowser
 
 LOGGER = get_logger()
-EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
+AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+REMOTE_DOC = 'http://streamlit.io/docs/remote-operation/'
 
 # def set_remote(val):
 #     config.set_option('proxy.isRemote', val)
 
 def _print_remote_url(port, quoted_name):
-    ips = []
-    http_client = None
-    try:
-        http_client = httpclient.HTTPClient()
-        for key in ('local-ipv4', 'public-ipv4'):
-            endpoint = os.path.join(EC2_METADATA_URL, key)
-            response = http_client.fetch(endpoint, request_timeout=0.01)
-            ips.append(response.body)
-    except (httpclient.HTTPError, RuntimeError) as e:
-        # Basically if not on EC2 do a hack and try to connect to
-        # internet and see what the local ip is.
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 53))
-        ips.append(s.getsockname()[0])
-        s.close()
-    finally:
-        if http_client is not None:
-            http_client.close()
+    external_ip = config.get_option('proxy.externalIP')
+
+    if external_ip:
+        LOGGER.debug(f'proxy.externalIP set to {external_ip}')
+    else:
+        print('proxy.externalIP not set, attempting autodetect of external IP')
+
+        http_client = None
+        try:
+            http_client = httpclient.HTTPClient()
+            response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
+            external_ip = response.body.strip()
+        except (httpclient.HTTPError, RuntimeError) as e:
+            LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
+        finally:
+            if http_client is not None:
+                http_client.close()
+
+    if external_ip is None:
+        print('Did not auto detect external ip. Please go to '
+              f'{REMOTE_DOC} for debugging hints.')
+        return
 
     timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-    for ip in ips:
-        url = 'http://{}:{}/?name={}'.format(ip, port, quoted_name)
-        print('Please connect to %s within %s seconds.' % (url, timeout_secs))
+    url = 'http://{}:{}/?name={}'.format(external_ip, port, quoted_name)
+    print('Please connect to %s within %s seconds.' % (url, timeout_secs))
 
 def _launch_web_client(name):
     """Launches a web browser to connect to the proxy to get the named
@@ -249,6 +253,9 @@ class Proxy(object):
             connection.end_grace_period()
             self.try_to_deregister_proxy_connection(connection)
             self.potentially_stop()
+            print('Connection timeout to proxy.\n'
+                  'Did you try to connect and nothing happened? Please go to '
+                  f'{REMOTE_DOC} for debugging hints.')
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
         loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
