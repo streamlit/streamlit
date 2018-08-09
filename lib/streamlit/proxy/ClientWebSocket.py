@@ -118,6 +118,7 @@ class ClientWebSocket(WebSocketHandler):
             backend_msg.ParseFromString(payload)
             command = backend_msg.command
             if command == protobuf.BackMsg.Command.Value('HELP'):
+                LOGGER.debug('Received command to display help.')
                 os.system('python -m streamlit help &')
             elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
                 yield self._save_cloud(connection, ws)
