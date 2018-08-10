@@ -8,7 +8,7 @@ CURRENT_COLUMN_TYPE = '__current_column_type__'
 INDEX_COLUMN_NAME = '__index_column_name__'
 
 # Column name used to designate the dataframe index in JavaScript.
-INDEX_COLUMN_DESIGNATOR = '::index'
+INDEX_COLUMN_DESIGNATOR = '(index)'
 
 
 class DictBuilder:

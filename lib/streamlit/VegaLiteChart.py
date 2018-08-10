@@ -15,7 +15,7 @@ from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, Colo
 from streamlit.dicttools import unflatten
 
 
-STACKED_COLUMN_NAME = '__stacked_column__'
+STACKED_COLUMN_NAME = '(layer)'
 
 
 class VegaLiteChart:
@@ -184,10 +184,6 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
-                'tooltip': DictBuilder({
-                    'field': CURRENT_COLUMN_NAME,
-                    'type': CURRENT_COLUMN_TYPE,
-                }, column=0),
             }),
         }),
     },
@@ -219,10 +215,6 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1, shallow=True),
-                'tooltip': DictBuilder({
-                    'field': CURRENT_COLUMN_NAME,
-                    'type': CURRENT_COLUMN_TYPE,
-                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
@@ -268,10 +260,6 @@ _CHART_DECLARATIONS = {
                     'type': CURRENT_COLUMN_TYPE,
                     'legend': {'title': ''},
                 }, column=2, shallow=True),
-                'tooltip': DictBuilder({
-                    'field': CURRENT_COLUMN_NAME,
-                    'type': CURRENT_COLUMN_TYPE,
-                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
@@ -341,10 +329,6 @@ _CHART_DECLARATIONS = {
                     'type': 'nominal',
                     'legend': {'title': ''},
                 }, column=1),
-                'tooltip': DictBuilder({
-                    'field': CURRENT_COLUMN_NAME,
-                    'type': CURRENT_COLUMN_TYPE,
-                }, column=0),
                 'opacity': DictBuilder({
                     'value': 0.75,
                 }, shallow=True),
