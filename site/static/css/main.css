@@ -269,29 +269,34 @@ html.kind-home {
   font-size: 1rem;
 }
 
-#home #sneakpeak {
+
+#home dl {
+  margin: 0 0 1rem 0;
+}
+
+#home #quickstart {
   background-image: linear-gradient(180deg, #ecf6ff, #fff 5rem);
 }
 
-#home #sneakpeak dl {
+#home #quickstart dl {
   font-family: 'IBM Plex Mono', monospace;
 }
 
-#home #sneakpeak dt {
+#home #quickstart dt {
   color: #F63366;
   margin-top: 1rem;
 }
 
-#home #sneakpeak dt::before {
+#home #quickstart dt::before {
   content: '# ';
 }
 
-#home #sneakpeak dd {
+#home #quickstart dd {
   font-weight: bold;
   color: #333;
 }
 
-#home #sneakpeak dd::before {
+#home #quickstart dd::before {
   content: '$ ';
   font-weight: normal;
 }
