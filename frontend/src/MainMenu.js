@@ -13,6 +13,8 @@ import {
 } from 'reactstrap';
 import './MainMenu.css';
 
+const ONLINE_DOCS_URL = 'http://streamlit.io/docs';
+
 /**
  *
  */
@@ -33,6 +35,10 @@ class MainMenu extends PureComponent {
 
   handleHelpButtonClicked() {
     this.props.helpButtonCallback();
+  }
+
+  handleDocButtonClicked() {
+    window.open(ONLINE_DOCS_URL, '_blank');
   }
 
   toggle() {
@@ -79,9 +85,14 @@ class MainMenu extends PureComponent {
           <DropdownItem divider/>
 
           <DropdownItem
+              onClick={() => this.handleDocButtonClicked()}>
+            Documentation
+          </DropdownItem>
+
+          <DropdownItem
               disabled={disabledItems.help}
               onClick={() => this.handleHelpButtonClicked()}>
-            Help
+            Quick help
           </DropdownItem>
 
         </DropdownMenu>
