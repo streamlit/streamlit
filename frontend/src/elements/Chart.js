@@ -77,7 +77,7 @@ const COMPONENTS = {
 }
 
 /** Column name used to designate the dataframe index. */
-const INDEX_COLUMN_DESIGNATOR = '::index';
+const INDEX_COLUMN_DESIGNATOR = '(index)';
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
