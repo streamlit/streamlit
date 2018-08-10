@@ -58,7 +58,7 @@ to access it in your local browser:
 $ python -m streamlit help
 ```
 
-The report should be available at `http://REMOTE_HOST:5013/help`
+The report should be available at `http://REMOTE_HOST:5013/?name=help`
 
 
 ## Running remote code
