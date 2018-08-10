@@ -130,7 +130,7 @@ def display_reference():
     st.subheader('Matplotlib')
 
     st.write('You can use Matplotlib in Streamlit. '
-        'Just us `st.pyplot()` instead of `plt.show()`.')
+        'Just use `st.pyplot()` instead of `plt.show()`.')
     try:
         with st.echo():
             from matplotlib import cm, pyplot as plt
@@ -154,6 +154,33 @@ def display_reference():
                 ' ~/.matplitlib/matplotlibrc. For more information, please see ' \
                 '"Working with Matplotlib on OSX" in the Matplotlib FAQ.'
         st.warning('Error running matplotlib: ' + err_str)
+
+    st.subheader('Vega Lite')
+
+    st.write(
+        'For complex interactive charts, you can use '
+        '[Vega Lite](https://vega.github.io/vega-lite/):')
+
+    with st.echo():
+        df = pd.DataFrame(np.random.randn(200, 3), columns=['a', 'b', 'c'])
+
+        st.vega_lite_chart(df, {
+            'mark': 'circle',
+            'encoding': {
+              'x': {'field': 'a', 'type': 'quantitative'},
+              'y': {'field': 'b', 'type': 'quantitative'},
+              'size': {'field': 'c', 'type': 'quantitative'},
+              'color': {'field': 'c', 'type': 'quantitative'},
+            },
+
+            # Add zooming/panning:
+            'selection': {
+                'grid': {
+                    'type': 'interval',
+                    'bind': 'scales',
+                },
+            },
+          })
 
     st.header('Visualizing data as images')
 
