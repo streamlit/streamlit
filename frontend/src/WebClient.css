@@ -92,6 +92,10 @@ header {
   align-items: center;
 }
 
+.wide header {
+  background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
+}
+
 #brand {
   font-weight: 700;
   line-height: 1.5;
@@ -149,6 +153,11 @@ button:focus {
   margin-top: 80px;
 }
 
+.wide .streamlit-container {
+  width: unset;
+  max-width: unset;
+}
+
 .streamlit-container .element-container {
   display: inline-block;
   margin-bottom: 1rem;
@@ -172,7 +181,9 @@ button:focus {
 }
 
 @media (max-width: 768px) {
-  header {
+  header,
+  .wide header {
     position: absolute;
+    background: unset;
   }
 }

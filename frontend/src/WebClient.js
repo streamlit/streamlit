@@ -29,6 +29,7 @@ import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
+import SettingsDialog from './SettingsDialog';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -56,12 +57,20 @@ class WebClient extends PureComponent {
           body: 'Ready to receive data',
         }
       }]),
+      streamlitDialogProps: undefined,
+      settingsDialogIsShown: false,
+      userSettings: {
+        wideMode: false,
+      },
     };
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
-    this.closeDialog = this.closeDialog.bind(this);
+    this.closeStreamlitDialog = this.closeStreamlitDialog.bind(this);
+    this.openSettingsDialog = this.openSettingsDialog.bind(this);
+    this.closeSettingsDialog = this.closeSettingsDialog.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
@@ -150,10 +159,10 @@ class WebClient extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.openDialog({type: 'uploadProgress', progress: progress});
+        this.openStreamlitDialog({type: 'uploadProgress', progress: progress});
       },
       reportUploaded: (url) => {
-        this.openDialog({type: 'uploaded', url: url})
+        this.openStreamlitDialog({type: 'uploaded', url: url})
       },
     });
   }
@@ -161,15 +170,41 @@ class WebClient extends PureComponent {
   /**
    * Opens a dialog with the specified state.
    */
-  openDialog(dialogProps) {
-    this.setState({dialog: dialogProps});
+  openStreamlitDialog(dialogProps) {
+    this.setState({streamlitDialogProps: dialogProps});
   }
 
   /**
    * Closes the upload dialog if it's open.
    */
-  closeDialog() {
-    this.setState({dialog: undefined});
+  closeStreamlitDialog() {
+    this.setState({streamlitDialogProps: undefined});
+  }
+
+  /**
+   * Opens the settings dialog.
+   */
+  openSettingsDialog() {
+    this.setState({settingsDialogIsShown: true});
+  }
+
+  /**
+   * Closes the settings dialog if it's open.
+   */
+  closeSettingsDialog() {
+    this.setState({settingsDialogIsShown: false});
+  }
+
+  /**
+   * Saves a settings object.
+   */
+  saveSettings(settings) {
+    this.setState({
+      userSettings: {
+        ...this.state.userSettings,
+        wideMode: settings.wideMode,
+      },
+    });
   }
 
   /**
@@ -212,7 +247,7 @@ class WebClient extends PureComponent {
     if (this.state.savingConfigured) {
       this.sendBackMsg('CLOUD_UPLOAD')
     } else {
-      this.openDialog({
+      this.openStreamlitDialog({
         type: "warning",
         msg: (
           <div>
@@ -253,7 +288,7 @@ class WebClient extends PureComponent {
   render() {
     // Return the tree
     return (
-      <div>
+      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
         <header>
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
@@ -263,12 +298,14 @@ class WebClient extends PureComponent {
             isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
+            settingsButtonCallback={this.openSettingsDialog}
             saveButtonCallback={this.saveReport}
           />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
-            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
+            <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
@@ -276,7 +313,17 @@ class WebClient extends PureComponent {
           </Row>
 
           <StreamlitDialog
-            dialogProps={{...this.state.dialog, onClose: this.closeDialog}}
+            dialogProps={{
+              ...this.state.streamlitDialogProps,
+              onClose: this.closeStreamlitDialog
+            }}
+          />
+
+          <SettingsDialog
+            settings={this.state.userSettings}
+            isShown={this.state.settingsDialogIsShown}
+            closeCallback={this.closeSettingsDialog}
+            saveSettingsCallback={this.saveSettings}
           />
 
         </Container>

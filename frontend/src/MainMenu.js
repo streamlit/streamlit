@@ -31,6 +31,10 @@ class MainMenu extends PureComponent {
     this.props.saveButtonCallback();
   }
 
+  handleSettingsButtonClicked() {
+    this.props.settingsButtonCallback();
+  }
+
   handleHelpButtonClicked() {
     this.props.helpButtonCallback();
   }
@@ -74,6 +78,11 @@ class MainMenu extends PureComponent {
               disabled={disabledItems.save}
               onClick={() => this.handleSaveButtonClicked()}>
             Save report
+          </DropdownItem>
+
+          <DropdownItem
+              onClick={() => this.handleSettingsButtonClicked()}>
+            Settings
           </DropdownItem>
 
           <DropdownItem divider/>
