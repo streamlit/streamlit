@@ -31,7 +31,7 @@ class Balloons extends PureComponent {
 
     return (
       <div className="balloons">
-        {BALLOONS_INDICES.map(i => (
+        {BALLOONS_INDICES.map((_, i) => (
           <img
             className="balloon"
             key={i}
