@@ -99,9 +99,16 @@ class S3(Cloud):
             self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
 
         aws_profile = config.get_s3_option('profile')
+        access_key_id = config.get_s3_option('accessKeyId')
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._client = boto3.Session(profile_name=aws_profile).client('s3')
+        elif access_key_id is not None:
+            secret_access_key = config.get_s3_option('secretAccessKey')
+            self._client = boto3.client(
+                's3',
+                 aws_access_key_id=access_key_id,
+                 aws_secret_access_key=secret_access_key)
         else:
             LOGGER.debug(f'Using default AWS profile.')
             self._client = boto3.client('s3')
