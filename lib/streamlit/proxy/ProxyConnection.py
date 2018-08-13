@@ -14,6 +14,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 
 from streamlit.logger import get_logger
+from streamlit.util import get_local_id
 LOGGER = get_logger()
 
 class ProxyConnection(object):
@@ -85,8 +86,10 @@ class ProxyConnection(object):
         """
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
+        local_id = str(get_local_id())
         manifest = dict(
             name = self.name,
+            local_id = local_id,
             nDeltas = len(deltas)
         )
         return \
