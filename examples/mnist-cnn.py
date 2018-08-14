@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import streamlit as st
+from streamlit.Chart import Chart
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -62,7 +63,7 @@ class MyCallback(keras.callbacks.Callback):
 
     def _create_chart(self, type='line', height=0):
         empty_data = pd.DataFrame(columns=['loss', 'acc'])
-        epoch_chart = st.Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
         epoch_chart.y_axis(type='number',
             y_axis_id="loss_axis", allow_data_overflow="true")
         epoch_chart.y_axis(type='number', orientation='right',
@@ -75,7 +76,7 @@ class MyCallback(keras.callbacks.Callback):
         getattr(epoch_chart, type)(type='monotone', data_key='acc',
             stroke='#82ca9d', fill='#82ca9d',
             dot="false", y_axis_id='acc_axis')
-        return st.chart(epoch_chart)
+        return st.Connection.get_connection().get_delta_generator()._native_chart(epoch_chart)
 
 st.title('MNIST CNN')
 
