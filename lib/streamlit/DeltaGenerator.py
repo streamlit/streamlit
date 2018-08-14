@@ -24,7 +24,6 @@ from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LIT
 from streamlit.logger import get_logger
 from streamlit import data_frame_proto
 from streamlit import protobuf
-from types import SimpleNamespace
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 EXPORT_TO_IO_FLAG = '__export_to_io__'
@@ -72,6 +71,10 @@ def _create_element(method):
             traceback.print_tb(exc_traceback, file=sys.stderr)
 
     return wrapped_method
+
+class _VegaLite(object):
+    """An empty class to hold Vega Lite objects."""
+    pass
 
 class DeltaGenerator(object):
     """
@@ -551,7 +554,7 @@ class DeltaGenerator(object):
             pass
         return df
 
-    vega_lite = SimpleNamespace()
+    vega_lite = _VegaLite()
 
 
 def register_vega_lite_chart_method(chart_type, chart_builder):
