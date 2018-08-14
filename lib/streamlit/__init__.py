@@ -46,7 +46,7 @@ from types import SimpleNamespace
 
 this_module = sys.modules[__name__]
 
-def wrap_delta_generator_method(method):
+def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
         dg = Connection.get_connection().get_delta_generator()
@@ -59,7 +59,7 @@ for name in dir(DeltaGenerator):
     if hasattr(member, EXPORT_TO_IO_FLAG):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
-        setattr(this_module, name, wrap_delta_generator_method(method))
+        setattr(this_module, name, _wrap_delta_generator_method(method))
 
     if isinstance(member, SimpleNamespace):
         orig_ns = member
@@ -69,7 +69,7 @@ for name in dir(DeltaGenerator):
         for subname in dir(orig_ns):
             if subname.startswith('_'): continue
             method = getattr(orig_ns, subname)
-            setattr(ns, subname, wrap_delta_generator_method(method))
+            setattr(ns, subname, _wrap_delta_generator_method(method))
 
 def write(*args):
     """Writes its arguments to the Report.
