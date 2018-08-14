@@ -42,7 +42,7 @@ import './WebClient.css';
 /**
  * Port used to connect to the proxy server.
  */
-const PROXY_PORT = 5014;
+const PROXY_PORT = 8501;
 
 
 class WebClient extends PureComponent {

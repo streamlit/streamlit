@@ -82,7 +82,7 @@ class Config(object):
             proxy = dict(
                 _comment = 'Configuration of the proxy server',
                 port = dict(
-                    value = int(streamlit.__version__.split('.')[1]) + 5000,
+                    value = 8501,
                 ),
                 server = dict(
                     value = 'localhost',
