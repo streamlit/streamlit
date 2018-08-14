@@ -2,6 +2,7 @@
 import os
 
 from tornado import gen
+from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from streamlit import config
@@ -41,11 +42,6 @@ class ClientWebSocket(WebSocketHandler):
         self._report_name = report_name
         LOGGER.debug('The Report name is "%s"', self._report_name)
 
-        # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
-
-        indicated_closed = False
-
         try:
             # Send the opening message
             LOGGER.info('Browser websocket opened for "%s"', self._report_name)
@@ -58,6 +54,23 @@ class ClientWebSocket(WebSocketHandler):
             LOGGER.debug('Got a new queue : "%s"', self._queue)
 
             LOGGER.debug('Starting loop for "%s"', self._connection.name)
+            loop = IOLoop.current()
+            loop.spawn_callback(self.do_loop)
+
+        except KeyError as e:
+            LOGGER.info('Attempting to access non-existant report "%s"', e)
+        except WebSocketClosedError:
+            pass
+
+    @Proxy.stop_proxy_on_exception(is_coroutine=True)
+    @gen.coroutine
+    def do_loop(self):
+        # How long we wait between sending more data.
+        throttle_secs = config.get_option('local.throttleSecs')
+
+        indicated_closed = False
+
+        try:
             while self._is_open:
                 if not self._proxy.proxy_connection_is_registered(self._connection):
                     LOGGER.debug('The proxy connection for "%s" is not registered.',
