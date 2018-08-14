@@ -69,6 +69,10 @@ class MainMenu extends PureComponent {
         </DropdownToggle>
 
         <DropdownMenu right>
+          <DropdownItem>
+            <span>Rerun Script</span>
+            <span className="shortcut">R</span>
+          </DropdownItem>
 
           <DropdownItem
               disabled={disabledItems.save}

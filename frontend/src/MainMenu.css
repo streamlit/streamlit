@@ -1,0 +1,13 @@
+/* The menu itself. */
+#MainMenu div.dropdown-menu {
+  width: 11rem;
+}
+
+/* For keybaord shortcuts. */
+#MainMenu span.shortcut {
+  color: darkgray;
+  float: right;
+  font-size: 0.75rem;
+  font-variant: small-caps;
+  margin-top: 0.25rem;
+}

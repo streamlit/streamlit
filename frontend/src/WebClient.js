@@ -30,6 +30,7 @@ import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
+// import PlayPause from './PlayPause';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
