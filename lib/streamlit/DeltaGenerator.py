@@ -535,10 +535,14 @@ class DeltaGenerator(object):
         return generator
 
     def _maybe_transform_dataframe(self, df):
-        element_type = self._latest_element.WhichOneof('type')
-        if element_type == 'vega_lite_chart':
-            return transform_dataframe(
-                df, self._latest_element.vega_lite_chart.data_transform)
+        # TODO(tvst): what is up with this _latest_element thing? ~ Adrien
+        try:
+            element_type = self._latest_element.WhichOneof('type')
+            if element_type == 'vega_lite_chart':
+                return transform_dataframe(
+                    df, self._latest_element.vega_lite_chart.data_transform)
+        except AttributeError:
+            pass
         return df
 
     vega_lite = SimpleNamespace()
