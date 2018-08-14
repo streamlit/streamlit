@@ -36,12 +36,12 @@ import types
 
 # Import some files directly from this module
 from streamlit.caching import cache
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG, _VegaLite
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 # import streamlit as st
 # from streamlit import config
-from types import SimpleNamespace
+# from types import SimpleNamespace
 
 
 this_module = sys.modules[__name__]
@@ -61,13 +61,14 @@ for name in dir(DeltaGenerator):
         # We introduce this level of indirection to wrap 'method' in a closure.
         setattr(this_module, name, _wrap_delta_generator_method(method))
 
-    if isinstance(member, SimpleNamespace):
+    if isinstance(member, _VegaLite):
         orig_ns = member
-        ns = SimpleNamespace()
+        ns = _VegaLite()
         setattr(this_module, name, ns)
 
         for subname in dir(orig_ns):
-            if subname.startswith('_'): continue
+            if subname.startswith('_'):
+                continue
             method = getattr(orig_ns, subname)
             setattr(ns, subname, _wrap_delta_generator_method(method))
 

@@ -11,7 +11,7 @@ INDEX_COLUMN_NAME = '__index_column_name__'
 INDEX_COLUMN_DESIGNATOR = '(index)'
 
 
-class DictBuilder:
+class DictBuilder(object):
     def __init__(self, spec, shallow=False, column=None):
         self.spec = spec
         self.is_shallow = shallow
@@ -103,7 +103,7 @@ def get_merged_spec_item(df, user_params, spec_value, curr_out_value,
         elif spec_value == INDEX_COLUMN_NAME:
             return INDEX_COLUMN_DESIGNATOR
 
-        # TODO: support '__index_column_type__' 
+        # TODO: support '__index_column_type__'
         else:
             return spec_value
     else:
@@ -160,7 +160,7 @@ def handle_list_spec(df, user_params, spec_value, curr_out_value,
         return parsed_spec_list
 
 
-class ParamBuilder:
+class ParamBuilder(object):
     def __init__(self, name, default_value=None):
         self.name = name
         self.default_value = default_value
@@ -172,25 +172,25 @@ class ParamBuilder:
         return self.default_value
 
 
-class ForEachColumn:
+class ForEachColumn(object):
     def __init__(self, content):
         self.content_to_repeat = content
 
 
-class ColumnFinder:
+class ColumnFinder(object):
     def __init__(self, *alternatives):
         self.alternatives = set(alternatives)
 
 
-class NoValue:
+class NoValue(object):
     pass
 
 
-class NoChange:
+class NoChange(object):
     pass
 
 
-class ValueCycler:
+class ValueCycler(object):
     """
     This is used within a ForEachColumn to specify values that should be cycled
     through, as we iterate through the columns.
@@ -207,7 +207,7 @@ class ColorCycler(ValueCycler):
     Cycles some pretty colors.
     """
     def __init__(self):
-        super().__init__(
+        super(ColorCycler, self).__init__(
             '#e41a1c',
             '#377eb8',
             '#4daf4a',
