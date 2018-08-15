@@ -127,7 +127,9 @@ class ClientWebSocket(WebSocketHandler):
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
-                LOGGER.info('Rerunning the command "%s".' % \
+                LOGGER.info('Current working directory: "%s"' % \
+                    self._connection.cwd)
+                LOGGER.info('Rerunning command: "%s"' % \
                     backend_msg.rerun_script)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
