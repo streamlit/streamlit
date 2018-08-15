@@ -121,10 +121,7 @@ function rerunScriptDialog({getCommandLine, setCommandLine,
           <textarea
             className="command-line"
             value={getCommandLine()}
-            onChange={(x) => {
-              console.log('GOT A TEXTAREA CHANGE');
-              console.log(x)
-            }}
+            onChange={(event) => setCommandLine(event.target.value)}
           />
         </div>
       </ModalBody>
