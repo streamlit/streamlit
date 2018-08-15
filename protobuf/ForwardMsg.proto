@@ -37,6 +37,9 @@ message NewReportMessage {
   // The report ID
   string id = 1;
 
+  // The current working directory from which this report was launched.
+  string cwd = 2;
+
   // The command line that launched this report.
-  repeated string command_line = 2;
+  repeated string command_line = 3;
 }

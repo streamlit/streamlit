@@ -10,7 +10,7 @@ from tornado import gen
 import sys
 
 @gen.coroutine
-def new_report_msg(report_id, command_line, ws):
+def new_report_msg(report_id, cwd, command_line, ws):
     """
     Sends a message indicating a new report across the websocket wire.
 
@@ -18,6 +18,8 @@ def new_report_msg(report_id, command_line, ws):
     ----
     report_id : uuid
         ID of the new report
+    cwd : string
+        The current working directory from which this report was launched.
     command_line : list of strings
         the command line arguments used to launch the report
     ws : websocket
@@ -26,5 +28,6 @@ def new_report_msg(report_id, command_line, ws):
     # Pack it into a ForwardMsg
     msg = protobuf.ForwardMsg()
     msg.new_report.id = str(report_id)
+    msg.new_report.cwd = cwd
     msg.new_report.command_line.extend(command_line)
     yield ws.write_message(msg.SerializeToString(), binary=True)

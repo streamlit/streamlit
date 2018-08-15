@@ -25,6 +25,9 @@ class ProxyConnection(object):
         # The uuid of this report.
         self.id = new_report_msg.id
 
+        # The current working directory from which this report was launched.
+        self.cwd = new_report_msg.cwd
+
         # The command line arguments used to launch this message
         self.command_line = list(new_report_msg.command_line)
 
