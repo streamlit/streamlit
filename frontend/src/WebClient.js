@@ -68,6 +68,8 @@ class WebClient extends PureComponent {
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
+    this.getCommandLine = this.getCommandLine.bind(this);
+    this.setCommandLine = this.setCommandLine.bind(this);
   }
 
   componentDidMount() {
@@ -235,10 +237,24 @@ class WebClient extends PureComponent {
   rerunScript() {
     this.openDialog({
       type: "rerunScript",
-      commandLine: null,
-      onEdit: null,
+      getCommandLine: this.getCommandLine,
+      setCommandLine: this.setCommandLine,
       rerunCallback: null,
     });
+  }
+
+  /**
+   * Gets the script's command line arguments.
+   */
+  getCommandLine() {
+    return this.state.commandLine;
+  }
+
+  /**
+   * Sets the script's command line arguments.
+   */
+  setCommandLine(commandLine) {
+    this.setState({commandLine});
   }
 
   sendBackMsg(command) {

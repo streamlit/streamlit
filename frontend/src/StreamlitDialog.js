@@ -106,18 +106,23 @@ function warningDialog({msg, onClose}) {
 /**
  * Dialog shown when the user wants to rerun a script.
  *
- * commandLine    - the string which will be called to rerun the script
- * onChange       - callback which sets the command line text
- * rerunCallback  - callback to rerun the current command line
+ * getCommandLine - callback to get the script's command line
+ * setCommandLine - callback to set the script's command line
+ * rerunCallback  - callback to rerun the script's command line
  * onClose        - callback to close the dialog
  */
-function rerunScriptDialog({commandLine, onChange, rerunCallback, onClose}) {
+function rerunScriptDialog({getCommandLine, setCommandLine,
+    rerunCallback, onClose}) {
   return {
     body: (
       <ModalBody>
         <div className="rerun-header">Command Line:</div>
         <div>
-          <textarea className="command-line" value={commandLine} onChange={onChange}/>
+          <textarea
+            className="command-line"
+            value={getCommandLine()}
+            onChange={setCommandLine}
+          />
         </div>
       </ModalBody>
     ),
