@@ -2,10 +2,14 @@ syntax = "proto3";
 
 // A backend message between browser and proxy.
 message BackMsg {
-  enum Command {
-    HELP = 0;
-    CLOUD_UPLOAD = 1;
-    LOCAL_SAVE = 2;
+  oneof type {
+    // Set to true to ask the proxy to display the inline help.
+    bool help = 1;
+
+    // Set to true to ask the proxy to upload the report.
+    bool cloud_upload = 2;
+
+    // Asks the proxy to run the script with this given command line.
+    string rerun_script = 3;
   }
-  Command command = 1;
 }

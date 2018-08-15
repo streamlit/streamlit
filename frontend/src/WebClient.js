@@ -67,6 +67,7 @@ class WebClient extends PureComponent {
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
+    this.displayHelp = this.displayHelp.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
   }
@@ -217,7 +218,10 @@ class WebClient extends PureComponent {
    */
   saveReport() {
     if (this.state.savingConfigured) {
-      this.sendBackMsg('CLOUD_UPLOAD')
+      this.sendBackMsg({
+        type: 'cloudUpload',
+        cloudUpload: true,
+      });
     } else {
       this.openDialog({
         type: "warning",
@@ -241,7 +245,7 @@ class WebClient extends PureComponent {
       type: "rerunScript",
       getCommandLine: (() => this.state.commandLine),
       setCommandLine: ((commandLine) => this.setState({commandLine})),
-      rerunCallback: this.rerunScript,
+      rerunCallback: this.rerunScript
     });
   }
 
@@ -250,13 +254,34 @@ class WebClient extends PureComponent {
    */
   rerunScript() {
     this.closeDialog();
-    console.log('RERUN SCRIPT', this.state.commandLine);
+    this.sendBackMsg({
+      type: 'rerunScript',
+      rerunScript: this.state.commandLine
+    });
   }
 
-  sendBackMsg(command) {
-    if (!this.connection) return;
-    const msg = {command: BackMsg.Command[command]};
-    this.connection.sendToProxy(msg);
+  /**
+   * Tells the proxy to display the inline help dialog.
+   */
+  displayHelp() {
+    this.sendBackMsg({
+      type: 'help',
+      help: true
+    });
+  }
+
+  /**
+   * Sends a message back to the proxy.
+   */
+  sendBackMsg(msg) {
+    if (this.connection) {
+      console.error('Sending back message:');
+      console.error(msg);
+      this.connection.sendToProxy(msg);
+    } else {
+      console.error('Cannot send a back message without a connection:');
+      console.error(msg);
+    }
   }
 
   /**
@@ -289,7 +314,7 @@ class WebClient extends PureComponent {
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
-            helpButtonCallback={() => this.sendBackMsg('HELP')}
+            helpButtonCallback={this.displayHelp}
             saveButtonCallback={this.saveReport}
             rerunScriptCallback={this.openRerunScriptDialog}
           />
