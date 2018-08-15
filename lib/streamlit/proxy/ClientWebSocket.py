@@ -118,15 +118,19 @@ class ClientWebSocket(WebSocketHandler):
         backend_msg = protobuf.BackMsg()
         try:
             backend_msg.ParseFromString(payload)
-            command = backend_msg.command
-            if command == protobuf.BackMsg.Command.Value('HELP'):
+            LOGGER.debug('Received the following backend message:')
+            LOGGER.debug(backend_msg)
+            msg_type = backend_msg.WhichOneof('type')
+            if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
                 os.system('python -m streamlit help &')
-            elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
+            elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
+            elif msg_type == 'rerun_script':
+                LOGGER.info('Rerunning the command "%s".' % \
+                    backend_msg.rerun_script)
             else:
-                LOGGER.warning('no handler for "%s"',
-                               protobuf.BackMsg.Command.Name(backend_msg.command))
+                LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
             LOGGER.error('Cannot parse binary message: %s', e)
 
