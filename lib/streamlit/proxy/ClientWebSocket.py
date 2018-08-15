@@ -1,6 +1,7 @@
 """Websocket handler class which the web client connects to."""
 
 from tornado import gen
+from tornado.concurrent import run_on_executor, futures
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 import os
 
@@ -15,6 +16,8 @@ LOGGER = get_logger()
 
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
+
+    executor = futures.ThreadPoolExecutor(5)
 
     def initialize(self, proxy):
         """Initialize self._connections."""
@@ -129,12 +132,16 @@ class ClientWebSocket(WebSocketHandler):
             elif msg_type == 'rerun_script':
                 full_command = 'cd "%s" ; %s' % \
                     (self._connection.cwd, backend_msg.rerun_script)
-                LOGGER.info('Running command: %s' % full_command)
-                os.system(full_command)
+                yield self._run(full_command)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
             LOGGER.error('Cannot parse binary message: %s', e)
+
+    @run_on_executor
+    def _run(self, cmd):
+        LOGGER.info('Running command: %s' % cmd)
+        os.system(cmd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):
