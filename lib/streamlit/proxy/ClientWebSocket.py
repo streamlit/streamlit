@@ -55,6 +55,8 @@ class ClientWebSocket(WebSocketHandler):
             self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
+            LOGGER.debug('Got a new command line ("%s") : %s',
+                         self._connection.name, self._connection.command_line)
             LOGGER.debug('Got a new queue : "%s"', self._queue)
 
             LOGGER.debug('Starting loop for "%s"', self._connection.name)

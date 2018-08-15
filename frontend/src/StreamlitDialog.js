@@ -129,7 +129,7 @@ function rerunScriptDialog({getCommandLine, setCommandLine,
     footer: (
       <ModalFooter>
         <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
-        <Button color="primary" onClick={onClose}>Rerun</Button>
+        <Button color="primary" onClick={rerunCallback}>Rerun</Button>
       </ModalFooter>
     ),
   };
