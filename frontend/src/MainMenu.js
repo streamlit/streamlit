@@ -3,7 +3,7 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, {PureComponent} from 'react';
+import React, {Component} from 'react';
 import {ConnectionState} from './ConnectionState';
 import {
   Dropdown,
@@ -18,7 +18,7 @@ const ONLINE_DOCS_URL = 'http://streamlit.io/docs';
 /**
  *
  */
-class MainMenu extends PureComponent {
+class MainMenu extends Component {
   /**
    * Constructor.
    */
@@ -29,21 +29,9 @@ class MainMenu extends PureComponent {
     };
   }
 
-  handleSaveButtonClicked() {
-    this.props.saveButtonCallback();
-  }
-
-  handleHelpButtonClicked() {
-    this.props.helpButtonCallback();
-  }
-
-  handleDocButtonClicked() {
-    window.open(ONLINE_DOCS_URL, '_blank');
-  }
-
   toggle() {
-    this.setState(s => ({
-      dropdownOpen: !s.dropdownOpen,
+    this.setState(({dropdownOpen}) => ({
+      dropdownOpen: !dropdownOpen,
     }));
   }
 
@@ -75,14 +63,15 @@ class MainMenu extends PureComponent {
         </DropdownToggle>
 
         <DropdownMenu right>
-          <DropdownItem>
+          <DropdownItem
+              onClick={this.props.rerunScriptCallback}>
             <span>Rerun Script</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
               disabled={disabledItems.save}
-              onClick={() => this.handleSaveButtonClicked()}>
+              onClick={this.props.saveButtonCallback}>
             Save report
           </DropdownItem>
 
@@ -95,8 +84,8 @@ class MainMenu extends PureComponent {
 
           <DropdownItem
               disabled={disabledItems.help}
-              onClick={() => this.handleHelpButtonClicked()}>
-            Quick help
+              onClick={this.props.helpButtonCallback}>
+            Help
           </DropdownItem>
 
         </DropdownMenu>

@@ -24,6 +24,7 @@ function StreamlitDialog({ dialogProps }) {
     'uploadProgress': uploadProgressDialog,
     'uploaded': uploadedDialog,
     'warning': warningDialog,
+    'rerunScript': rerunScriptDialog,
     [undefined]: noDialog,
   };
   const populateDialogFunc =
@@ -33,7 +34,7 @@ function StreamlitDialog({ dialogProps }) {
   const {body, footer} = populateDialogFunc(dialogProps);
   const isOpen = ((body !== undefined) || (footer != undefined));
   return (
-    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={""}>
+    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={"streamlit-dialog"}>
       { body }
       { footer }
     </Modal>
@@ -89,14 +90,41 @@ function noDialog() {
 }
 
 /**
- * If the dialog type is not recognized, dipslay this dialog.
+ * Prints out a warning
  */
-function warningDialog({type, msg, onClose}) {
+function warningDialog({msg, onClose}) {
   return {
     body: <ModalBody>{msg}</ModalBody>,
     footer: (
       <ModalFooter>
         <Button onClick={onClose}>Done</Button>
+      </ModalFooter>
+    ),
+  };
+}
+
+/**
+ * Dialog shown when the user wants to rerun a script.
+ *
+ * commandLine    - the string which will be called to rerun the script
+ * onChange       - callback which sets the command line text
+ * rerunCallback  - callback to rerun the current command line
+ * onClose        - callback to close the dialog
+ */
+function rerunScriptDialog({commandLine, onChange, rerunCallback, onClose}) {
+  return {
+    body: (
+      <ModalBody>
+        <div>Reruning this script.</div>
+        <div>
+          <textarea value={commandLine} onChange={onChange}/>
+        </div>
+      </ModalBody>
+    ),
+    footer: (
+      <ModalFooter>
+        <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
+        <Button color="primary" onClick={onClose}>Rerun</Button>
       </ModalFooter>
     ),
   };
