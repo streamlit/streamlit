@@ -34,7 +34,7 @@ function StreamlitDialog({ dialogProps }) {
   const {body, footer} = populateDialogFunc(dialogProps);
   const isOpen = ((body !== undefined) || (footer != undefined));
   return (
-    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={"streamlit-dialog"}>
+    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className="streamlit-dialog">
       { body }
       { footer }
     </Modal>
@@ -115,9 +115,9 @@ function rerunScriptDialog({commandLine, onChange, rerunCallback, onClose}) {
   return {
     body: (
       <ModalBody>
-        <div>Reruning this script.</div>
+        <div className="rerun-header">Command Line:</div>
         <div>
-          <textarea value={commandLine} onChange={onChange}/>
+          <textarea className="command-line" value={commandLine} onChange={onChange}/>
         </div>
       </ModalBody>
     ),
