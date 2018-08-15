@@ -1,8 +1,8 @@
 """Websocket handler class which the web client connects to."""
-import os
 
 from tornado import gen
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
+import os
 
 from streamlit import config
 from streamlit import protobuf
@@ -127,10 +127,10 @@ class ClientWebSocket(WebSocketHandler):
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
-                LOGGER.info('Current working directory: "%s"' % \
-                    self._connection.cwd)
-                LOGGER.info('Rerunning command: "%s"' % \
-                    backend_msg.rerun_script)
+                full_command = 'cd "%s" ; %s' % \
+                    (self._connection.cwd, backend_msg.rerun_script)
+                LOGGER.info('Running command: %s' % full_command)
+                os.system(full_command)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
