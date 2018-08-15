@@ -49,11 +49,8 @@ class LocalWebSocket(WebSocketHandler):
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
-            report_id = msg.new_report
-            self._connection = ProxyConnection(report_id, self._report_name)
+            self._connection = ProxyConnection(msg.new_report, self._report_name)
             self._proxy.register_proxy_connection(self._connection)
-            # new_name = self._connection.name not in self._connections
-            #self._launch_web_client(self._connection.name)
         elif msg_type == 'delta':
             assert self._connection, 'No `delta` before `new_report`.'
             self._connection.enqueue(msg.delta)

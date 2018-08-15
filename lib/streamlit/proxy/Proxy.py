@@ -291,7 +291,10 @@ class Proxy(object):
         """Adds a queue to the connection for the given report_name."""
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
-        yield new_report_msg(connection.id, ws)
+        yield new_report_msg(connection.id, connection.command_line, ws)
+        LOGGER.debug('Added new client. Id: ' + connection.id)
+        LOGGER.debug('Added new client. Command line: ' + \
+            str(connection.command_line))
         raise gen.Return((connection, queue))
 
     def remove_client(self, connection, queue):

@@ -67,9 +67,8 @@ class WebClient extends PureComponent {
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
+    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
-    this.getCommandLine = this.getCommandLine.bind(this);
-    this.setCommandLine = this.setCommandLine.bind(this);
   }
 
   componentDidMount() {
@@ -140,10 +139,13 @@ class WebClient extends PureComponent {
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
-      newReport: (id) => {
-        this.setState({reportId: id});
+      newReport: (newReportMsg) => {
+        this.setState({
+          reportId: newReportMsg.get('id'),
+          commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+        });
         setTimeout(() => {
-          if (id === this.state.reportId) {
+          if (newReportMsg.get('id') === this.state.reportId) {
             this.clearOldElements();
           }
         }, 3000);
@@ -232,29 +234,23 @@ class WebClient extends PureComponent {
   }
 
   /**
-   * Callback when the user wants to rerun the script.
+   * Opens the dialog to rerun the script.
    */
-  rerunScript() {
+  openRerunScriptDialog() {
     this.openDialog({
       type: "rerunScript",
-      getCommandLine: this.getCommandLine,
-      setCommandLine: this.setCommandLine,
-      rerunCallback: null,
+      getCommandLine: (() => this.state.commandLine),
+      setCommandLine: ((commandLine) => this.setState({commandLine})),
+      rerunCallback: this.rerunScript,
     });
   }
 
   /**
-   * Gets the script's command line arguments.
+   * Reruns the script (given by this.state.commandLine).
    */
-  getCommandLine() {
-    return this.state.commandLine;
-  }
-
-  /**
-   * Sets the script's command line arguments.
-   */
-  setCommandLine(commandLine) {
-    this.setState({commandLine});
+  rerunScript() {
+    this.closeDialog();
+    console.log('RERUN SCRIPT', this.state.commandLine);
   }
 
   sendBackMsg(command) {
@@ -295,7 +291,7 @@ class WebClient extends PureComponent {
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
             saveButtonCallback={this.saveReport}
-            rerunScriptCallback={this.rerunScript}
+            rerunScriptCallback={this.openRerunScriptDialog}
           />
         </header>
         <Container className="streamlit-container">
