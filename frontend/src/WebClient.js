@@ -67,6 +67,7 @@ class WebClient extends PureComponent {
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
+    this.rerunScript = this.rerunScript.bind(this);
   }
 
   componentDidMount() {
@@ -220,12 +221,24 @@ class WebClient extends PureComponent {
           <div>
             You do not have Amazon S3 or Google GCS sharing configured.
             Please contact&nbsp;
-              <a href="mailto:adrien.g.treuille@gmail.com">Adrien</a>
+              <a href="mailto:adrien@streamlit.io">Adrien</a>
             &nbsp;to setup sharing.
           </div>
         ),
       });
     }
+  }
+
+  /**
+   * Callback when the user wants to rerun the script.
+   */
+  rerunScript() {
+    this.openDialog({
+      type: "rerunScript",
+      commandLine: null,
+      onEdit: null,
+      rerunCallback: null,
+    });
   }
 
   sendBackMsg(command) {
@@ -266,6 +279,7 @@ class WebClient extends PureComponent {
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
             saveButtonCallback={this.saveReport}
+            rerunScriptCallback={this.rerunScript}
           />
         </header>
         <Container className="streamlit-container">
