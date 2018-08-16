@@ -575,7 +575,6 @@ def register_vega_lite_chart_method(chart_type, chart_builder):
 
     setattr(DeltaGenerator.vega_lite, chart_type, vega_lite_chart_method)
 
-
 # Add chart-building methods to DeltaGenerator
 for k, v in VEGA_LITE_BUILDERS:
     register_vega_lite_chart_method(k, v)
