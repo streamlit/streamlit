@@ -24,6 +24,7 @@ function StreamlitDialog({ dialogProps }) {
     'uploadProgress': uploadProgressDialog,
     'uploaded': uploadedDialog,
     'warning': warningDialog,
+    'rerunScript': rerunScriptDialog,
     [undefined]: noDialog,
   };
   const populateDialogFunc =
@@ -33,7 +34,7 @@ function StreamlitDialog({ dialogProps }) {
   const {body, footer} = populateDialogFunc(dialogProps);
   const isOpen = ((body !== undefined) || (footer != undefined));
   return (
-    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={""}>
+    <Modal isOpen={isOpen} toggle={dialogProps.onClose} className="streamlit-dialog">
       { body }
       { footer }
     </Modal>
@@ -89,14 +90,46 @@ function noDialog() {
 }
 
 /**
- * If the dialog type is not recognized, dipslay this dialog.
+ * Prints out a warning
  */
-function warningDialog({type, msg, onClose}) {
+function warningDialog({msg, onClose}) {
   return {
     body: <ModalBody>{msg}</ModalBody>,
     footer: (
       <ModalFooter>
         <Button onClick={onClose}>Done</Button>
+      </ModalFooter>
+    ),
+  };
+}
+
+/**
+ * Dialog shown when the user wants to rerun a script.
+ *
+ * getCommandLine - callback to get the script's command line
+ * setCommandLine - callback to set the script's command line
+ * rerunCallback  - callback to rerun the script's command line
+ * onClose        - callback to close the dialog
+ */
+function rerunScriptDialog({getCommandLine, setCommandLine,
+    rerunCallback, onClose}) {
+  return {
+    body: (
+      <ModalBody>
+        <div className="rerun-header">Command Line:</div>
+        <div>
+          <textarea autoFocus
+            className="command-line"
+            value={getCommandLine()}
+            onChange={(event) => setCommandLine(event.target.value)}
+          />
+        </div>
+      </ModalBody>
+    ),
+    footer: (
+      <ModalFooter>
+        <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
+        <Button color="primary" onClick={rerunCallback}>Rerun</Button>
       </ModalFooter>
     ),
   };

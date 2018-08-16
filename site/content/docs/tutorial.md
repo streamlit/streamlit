@@ -176,8 +176,8 @@ st.balloons()
 Now you should have a basic idea of how to use Streamlit in your own scripts:
 just `import streamlit as st` and experiment away from there! A good way to
 start is by copy/pasting code snippets straight from the Streamlit cheatsheet.
-Just run `python -m streamlit help` on a terminal to see it, or click the *help*
-item in Streamlit's top-right menu.
+Just run `python -m streamlit help` on a terminal to see it, or click the *Quick
+help* item in Streamlit's top-right menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
 Streamlit on your day-to-day --- and we'll introduce you to some more advanced

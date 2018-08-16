@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
@@ -376,12 +375,14 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
-    def pyplot(self, element):
+    def pyplot(self, element, fig=None):
         """Displays a matplotlib.pyplot image.
 
         Args
         ----
-        element : The proto element.
+        fig : Matplotlib Figure
+            The figure to plot. When this argument isn't specified, which is
+            the usual case, this function will render the global plot.
         """
         try:
             import matplotlib
@@ -390,8 +391,13 @@ class DeltaGenerator(object):
         except ImportError:
             raise ImportError(f'pyplot() command requires matplotlib')
 
+        # You can call .savefig() on a Figure object or directly on the pyplot
+        # module, in which case you're doing it to the latest Figure.
+        if not fig:
+            fig = plt
+
         image = io.BytesIO()
-        plt.savefig(image, format='png')
+        fig.savefig(image, format='png')
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
     @_export_to_io

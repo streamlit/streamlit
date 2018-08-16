@@ -10,7 +10,7 @@ message ForwardMsg {
     ////
 
     NewConnection new_connection = 1;
-    string new_report = 2;
+    NewReportMessage new_report = 2;
     Delta delta = 3;
     bool report_finished = 4;
 
@@ -30,4 +30,16 @@ message ForwardMsg {
 message NewConnection {
   // True if saving is properly configured.
   bool saving_configured = 1;
+}
+
+// This is the first message that is sent when the connection is opened.
+message NewReportMessage {
+  // The report ID
+  string id = 1;
+
+  // The current working directory from which this report was launched.
+  string cwd = 2;
+
+  // The command line that launched this report.
+  repeated string command_line = 3;
 }

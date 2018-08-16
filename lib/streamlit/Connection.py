@@ -238,7 +238,9 @@ class Connection(object):
     def _transmit_through_websocket(self, ws):
         """Sends queue data across the websocket as it becomes available."""
         # Send the header information across.
-        yield new_report_msg(self._report_id, ws)
+        yield new_report_msg(self._report_id,
+            os.getcwd(), ['python'] + sys.argv, ws)
+        LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')

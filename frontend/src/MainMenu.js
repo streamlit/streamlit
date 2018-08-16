@@ -3,8 +3,8 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, {PureComponent} from 'react';
-import {ConnectionState} from './ConnectionState';
+import React, {Component} from 'react';
+import ConnectionState from './ConnectionState';
 import {
   Dropdown,
   DropdownItem,
@@ -13,10 +13,12 @@ import {
 } from 'reactstrap';
 import './MainMenu.css';
 
+const ONLINE_DOCS_URL = 'http://streamlit.io/docs';
+
 /**
  *
  */
-class MainMenu extends PureComponent {
+class MainMenu extends Component {
   /**
    * Constructor.
    */
@@ -27,35 +29,13 @@ class MainMenu extends PureComponent {
     };
   }
 
-  handleSaveButtonClicked() {
-    this.props.saveButtonCallback();
-  }
-
-  handleHelpButtonClicked() {
-    this.props.helpButtonCallback();
-  }
-
   toggle() {
-    this.setState(s => ({
-      dropdownOpen: !s.dropdownOpen,
+    this.setState(({dropdownOpen}) => ({
+      dropdownOpen: !dropdownOpen,
     }));
   }
 
-  getDisabledItems() {
-    return {
-      save: this.props.connectionState === ConnectionState.STATIC ||
-            this.props.connectionState === ConnectionState.DISCONNECTED ||
-            this.props.connectionState === null,
-      help: this.props.isHelpPage ||
-            this.props.connectionState === ConnectionState.STATIC ||
-            this.props.connectionState === ConnectionState.DISCONNECTED ||
-            this.props.connectionState === null,
-    }
-  }
-
   render() {
-    const disabledItems = this.getDisabledItems();
-
     return (
       <Dropdown
           id="MainMenu"
@@ -69,19 +49,39 @@ class MainMenu extends PureComponent {
         </DropdownToggle>
 
         <DropdownMenu right>
+          <DropdownItem
+              disabled={!this.props.isProxyConnected}
+              onClick={this.props.quickRerunCallback}>
+            <span>Rerun</span>
+            <span className="shortcut">R</span>
+          </DropdownItem>
 
           <DropdownItem
-              disabled={disabledItems.save}
-              onClick={() => this.handleSaveButtonClicked()}>
+              disabled={!this.props.isProxyConnected}
+              onClick={this.props.rerunCallback}>
+            <span>Edit Command</span>
+            <span className="shortcut">&#x21e7;R</span>
+          </DropdownItem>
+
+          <DropdownItem divider/>
+
+          <DropdownItem
+              disabled={!this.props.isProxyConnected}
+              onClick={this.props.saveCallback}>
             Save report
           </DropdownItem>
 
           <DropdownItem divider/>
 
           <DropdownItem
-              disabled={disabledItems.help}
-              onClick={() => this.handleHelpButtonClicked()}>
-            Help
+              onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
+            Documentation
+          </DropdownItem>
+
+          <DropdownItem
+              disabled={this.props.isHelpPage || !this.props.isProxyConnected}
+              onClick={this.props.helpCallback}>
+            Quick Help
           </DropdownItem>
 
         </DropdownMenu>

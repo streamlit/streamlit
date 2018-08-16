@@ -21,9 +21,15 @@ class ProxyConnection(object):
     """Stores information shared by both local_connections and
     client_connections related to a particular report."""
 
-    def __init__(self, id, name):
-        # The unique BSON ID of this report.
-        self.id = id
+    def __init__(self, new_report_msg, name):
+        # The uuid of this report.
+        self.id = new_report_msg.id
+
+        # The current working directory from which this report was launched.
+        self.cwd = new_report_msg.cwd
+
+        # The command line arguments used to launch this message
+        self.command_line = list(new_report_msg.command_line)
 
         # The name for this report.
         self.name = name

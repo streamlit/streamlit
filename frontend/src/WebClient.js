@@ -1,6 +1,7 @@
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react';
+import { hotkeys } from 'react-keyboard-shortcuts';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
@@ -26,6 +27,7 @@ import Text from './elements/Text';
 
 // Other local imports.
 import MainMenu from './MainMenu';
+import ConnectionState from './ConnectionState';
 import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
@@ -41,6 +43,7 @@ import './WebClient.css';
  * Port used to connect to the proxy server.
  */
 const PROXY_PORT = 5014;
+
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -64,8 +67,38 @@ class WebClient extends PureComponent {
     this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
+    this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
+    this.displayHelp = this.displayHelp.bind(this);
+    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
+    this.rerunScript = this.rerunScript.bind(this);
+  }
+
+  /**
+   * Global keyboard shortcuts.
+   */
+  hot_keys = {
+    // The r key reruns the script.
+    'r': {
+      priority: 1,
+      handler: () => this.rerunScript(),
+    },
+
+    // The shift+r key opens the rerun script dialog.
+    'shift+r': {
+      priority: 1,
+      handler: () => this.openRerunScriptDialog(),
+    },
+
+    // The enter key runs the "default action" of the dialog.
+    'enter': {
+      priority: 1,
+      handler: () => {
+        if (this.state.dialog && this.state.dialog.defaultAction)
+          this.state.dialog.defaultAction();
+      },
+    }
   }
 
   componentDidMount() {
@@ -136,10 +169,13 @@ class WebClient extends PureComponent {
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
-      newReport: (id) => {
-        this.setState({reportId: id});
+      newReport: (newReportMsg) => {
+        this.setState({
+          reportId: newReportMsg.get('id'),
+          commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+        });
         setTimeout(() => {
-          if (id === this.state.reportId) {
+          if (newReportMsg.get('id') === this.state.reportId) {
             this.clearOldElements();
           }
         }, 3000);
@@ -211,7 +247,10 @@ class WebClient extends PureComponent {
    */
   saveReport() {
     if (this.state.savingConfigured) {
-      this.sendBackMsg('CLOUD_UPLOAD')
+      this.sendBackMsg({
+        type: 'cloudUpload',
+        cloudUpload: true,
+      });
     } else {
       this.openDialog({
         type: "warning",
@@ -219,7 +258,7 @@ class WebClient extends PureComponent {
           <div>
             You do not have Amazon S3 or Google GCS sharing configured.
             Please contact&nbsp;
-              <a href="mailto:adrien.g.treuille@gmail.com">Adrien</a>
+              <a href="mailto:adrien@streamlit.io">Adrien</a>
             &nbsp;to setup sharing.
           </div>
         ),
@@ -227,10 +266,62 @@ class WebClient extends PureComponent {
     }
   }
 
-  sendBackMsg(command) {
-    if (!this.connection) return;
-    const msg = {command: BackMsg.Command[command]};
-    this.connection.sendToProxy(msg);
+  /**
+   * Opens the dialog to rerun the script.
+   */
+  openRerunScriptDialog() {
+    if (this.isProxyConnected()) {
+      this.openDialog({
+        type: "rerunScript",
+        getCommandLine: (() => this.state.commandLine),
+        setCommandLine: ((commandLine) => this.setState({commandLine})),
+        rerunCallback: this.rerunScript,
+
+        // This will be called if enter is pressed.
+        defaultAction: this.rerunScript,
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
+  }
+
+  /**
+   * Reruns the script (given by this.state.commandLine).
+   */
+  rerunScript() {
+    this.closeDialog();
+    if (this.isProxyConnected()) {
+      this.sendBackMsg({
+        type: 'rerunScript',
+        rerunScript: this.state.commandLine
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
+  }
+
+  /**
+   * Tells the proxy to display the inline help dialog.
+   */
+  displayHelp() {
+    this.sendBackMsg({
+      type: 'help',
+      help: true
+    });
+  }
+
+  /**
+   * Sends a message back to the proxy.
+   */
+  sendBackMsg(msg) {
+    if (this.connection) {
+      console.error('Sending back message:');
+      console.error(msg);
+      this.connection.sendToProxy(msg);
+    } else {
+      console.error('Cannot send a back message without a connection:');
+      console.error(msg);
+    }
   }
 
   /**
@@ -241,6 +332,16 @@ class WebClient extends PureComponent {
     this.setState({connectionState: connectionState});
     if (errMsg)
       this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
+  }
+
+  /**
+   * Indicates whether we're connect to the proxy.
+   */
+  isProxyConnected() {
+    return !(
+      this.state.connectionState === ConnectionState.STATIC ||
+      this.state.connectionState === ConnectionState.DISCONNECTED ||
+      this.state.connectionState === null);
   }
 
   /**
@@ -262,9 +363,11 @@ class WebClient extends PureComponent {
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
-            connectionState={this.state.connectionState}
-            helpButtonCallback={() => this.sendBackMsg('HELP')}
-            saveButtonCallback={this.saveReport}
+            isProxyConnected={this.isProxyConnected()}
+            helpCallback={this.displayHelp}
+            saveCallback={this.saveReport}
+            quickRerunCallback={this.rerunScript}
+            rerunCallback={this.openRerunScriptDialog}
           />
         </header>
         <Container className="streamlit-container">
@@ -318,4 +421,4 @@ class WebClient extends PureComponent {
   }
 }
 
-export default WebClient;
+export default hotkeys(WebClient);
