@@ -72,28 +72,20 @@ class WebClient extends PureComponent {
     this.displayHelp = this.displayHelp.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
-
-    // /**
-    //  * Maps key combinations to commands.
-    //  */
-    // this.keyMap = {
-    //   rerunScript: 'r'
-    // };
-    //
-    // /**
-    //  * Map key commands to callbakcs.
-    //  */
-    // this.keyHandlers = {
-    //   rerunScript: this.openRerunScriptDialog,
-    // };
   }
 
   /**
    * Global keyboard shortcuts.
    */
   hot_keys = {
-    // The r key opens the rerun script dialog.
+    // The r key reruns the script.
     'r': {
+      priority: 1,
+      handler: () => this.rerunScript(),
+    },
+
+    // The shift+r key opens the rerun script dialog.
+    'shift+r': {
       priority: 1,
       handler: () => this.openRerunScriptDialog(),
     },
@@ -353,9 +345,10 @@ class WebClient extends PureComponent {
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
-            helpButtonCallback={this.displayHelp}
-            saveButtonCallback={this.saveReport}
-            rerunScriptCallback={this.openRerunScriptDialog}
+            helpCallback={this.displayHelp}
+            saveCallback={this.saveReport}
+            quickRerunCallback={this.rerunScript}
+            rerunCallback={this.openRerunScriptDialog}
           />
         </header>
         <Container className="streamlit-container">

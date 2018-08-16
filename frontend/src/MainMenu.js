@@ -66,14 +66,23 @@ class MainMenu extends Component {
         <DropdownMenu right>
           <DropdownItem
               disabled={disabledItems.rerun}
-              onClick={this.props.rerunScriptCallback}>
-            <span>Rerun Script</span>
+              onClick={this.props.quickRerunCallback}>
+            <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
+              disabled={disabledItems.rerun}
+              onClick={this.props.rerunCallback}>
+            <span>Edit Command</span>
+            <span className="shortcut">&#x21e7;R</span>
+          </DropdownItem>
+
+          <DropdownItem divider/>
+
+          <DropdownItem
               disabled={disabledItems.save}
-              onClick={this.props.saveButtonCallback}>
+              onClick={this.props.saveCallback}>
             Save report
           </DropdownItem>
 
@@ -81,7 +90,7 @@ class MainMenu extends Component {
 
           <DropdownItem
               disabled={disabledItems.help}
-              onClick={this.props.helpButtonCallback}>
+              onClick={this.props.helpCallback}>
             Help
           </DropdownItem>
 
