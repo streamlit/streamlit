@@ -211,7 +211,10 @@ class Proxy(object):
         LOGGER.debug('About to start the proxy.')
         IOLoop.current().start()
         LOGGER.debug('IOLoop closed.')
-        if not self._received_client_connection:
+
+        # Give the user a helpful hint if no connection was received.
+        headless = config.get_option('proxy.isRemote')
+        if headless and not self._received_client_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
                 f'Please go to {REMOTE_DOC} for debugging hints.')
