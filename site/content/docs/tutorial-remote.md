@@ -45,10 +45,10 @@ proxy:
 _NOTE: You may have to create this file if it doesn't exist yet._
 
 Now, let's set up the instance's firewall to allow all incoming SSH connections
-to port 5013, so you can access the Streamlit report: 
+to port 8501, so you can access the Streamlit report: 
 
 ```
-$ sudo ufw allow 5013
+$ sudo ufw allow 8501
 ```
 
 Finally, to make sure everything worked, run the Streamlit cheat sheet and try
@@ -58,7 +58,7 @@ to access it in your local browser:
 $ python -m streamlit help
 ```
 
-The report should be available at `http://REMOTE_HOST:5013/help`
+The report should be available at `http://REMOTE_HOST:8501/help`
 
 
 ## Running remote code
@@ -75,7 +75,7 @@ $ python my_script.py
 
 The main difference is that your local web browser will not automatically open
 when the remote script runs. Instead, you need to open your browser yourself
-and point it to: `http://REMOTE_HOST:5013/?name=my_script`
+and point it to: `http://REMOTE_HOST:8501/?name=my_script`
 
 And that's it!
 
