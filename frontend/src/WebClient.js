@@ -67,6 +67,7 @@ class WebClient extends PureComponent {
     this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
+    this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
     this.saveReport = this.saveReport.bind(this);
     this.displayHelp = this.displayHelp.bind(this);
@@ -269,15 +270,19 @@ class WebClient extends PureComponent {
    * Opens the dialog to rerun the script.
    */
   openRerunScriptDialog() {
-    this.openDialog({
-      type: "rerunScript",
-      getCommandLine: (() => this.state.commandLine),
-      setCommandLine: ((commandLine) => this.setState({commandLine})),
-      rerunCallback: this.rerunScript,
+    if (this.isProxyConnected()) {
+      this.openDialog({
+        type: "rerunScript",
+        getCommandLine: (() => this.state.commandLine),
+        setCommandLine: ((commandLine) => this.setState({commandLine})),
+        rerunCallback: this.rerunScript,
 
-      // This will be called if enter is pressed.
-      defaultAction: this.rerunScript,
-    });
+        // This will be called if enter is pressed.
+        defaultAction: this.rerunScript,
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
   }
 
   /**
@@ -285,10 +290,14 @@ class WebClient extends PureComponent {
    */
   rerunScript() {
     this.closeDialog();
-    this.sendBackMsg({
-      type: 'rerunScript',
-      rerunScript: this.state.commandLine
-    });
+    if (this.isProxyConnected()) {
+      this.sendBackMsg({
+        type: 'rerunScript',
+        rerunScript: this.state.commandLine
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
   }
 
   /**
@@ -328,7 +337,7 @@ class WebClient extends PureComponent {
   /**
    * Indicates whether we're connect to the proxy.
    */
-  proxyIsConnected() {
+  isProxyConnected() {
     return !(
       this.state.connectionState === ConnectionState.STATIC ||
       this.state.connectionState === ConnectionState.DISCONNECTED ||
@@ -354,7 +363,7 @@ class WebClient extends PureComponent {
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
-            connectionState={this.state.connectionState}
+            isProxyConnected={this.isProxyConnected()}
             helpCallback={this.displayHelp}
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
