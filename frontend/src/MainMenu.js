@@ -33,24 +33,7 @@ class MainMenu extends Component {
     }));
   }
 
-  getDisabledItems() {
-    return {
-      rerun: this.props.connectionState === ConnectionState.STATIC ||
-             this.props.connectionState === ConnectionState.DISCONNECTED ||
-             this.props.connectionState === null,
-      save:  this.props.connectionState === ConnectionState.STATIC ||
-             this.props.connectionState === ConnectionState.DISCONNECTED ||
-             this.props.connectionState === null,
-      help:  this.props.isHelpPage ||
-             this.props.connectionState === ConnectionState.STATIC ||
-             this.props.connectionState === ConnectionState.DISCONNECTED ||
-             this.props.connectionState === null,
-    }
-  }
-
   render() {
-    const disabledItems = this.getDisabledItems();
-
     return (
       <Dropdown
           id="MainMenu"
@@ -65,14 +48,14 @@ class MainMenu extends Component {
 
         <DropdownMenu right>
           <DropdownItem
-              disabled={disabledItems.rerun}
+              disabled={!this.props.isProxyConnected}
               onClick={this.props.quickRerunCallback}>
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
-              disabled={disabledItems.rerun}
+              disabled={!this.props.isProxyConnected}
               onClick={this.props.rerunCallback}>
             <span>Edit Command</span>
             <span className="shortcut">&#x21e7;R</span>
@@ -81,7 +64,7 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
-              disabled={disabledItems.save}
+              disabled={!this.props.isProxyConnected}
               onClick={this.props.saveCallback}>
             Save report
           </DropdownItem>
@@ -89,7 +72,7 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
-              disabled={disabledItems.help}
+              disabled={!(this.props.isProxyConnected || this.props.isHelpPage)}
               onClick={this.props.helpCallback}>
             Help
           </DropdownItem>
