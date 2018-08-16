@@ -74,9 +74,14 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
+              onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
+            Documentation
+          </DropdownItem>
+
+          <DropdownItem
               disabled={!(this.props.isProxyConnected || this.props.isHelpPage)}
               onClick={this.props.helpCallback}>
-            Help
+            Quick Help
           </DropdownItem>
 
         </DropdownMenu>
