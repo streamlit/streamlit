@@ -118,7 +118,7 @@ function rerunScriptDialog({getCommandLine, setCommandLine,
       <ModalBody>
         <div className="rerun-header">Command Line:</div>
         <div>
-          <textarea
+          <textarea autoFocus
             className="command-line"
             value={getCommandLine()}
             onChange={(event) => setCommandLine(event.target.value)}

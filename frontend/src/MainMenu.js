@@ -35,13 +35,16 @@ class MainMenu extends Component {
 
   getDisabledItems() {
     return {
-      save: this.props.connectionState === ConnectionState.STATIC ||
-            this.props.connectionState === ConnectionState.DISCONNECTED ||
-            this.props.connectionState === null,
-      help: this.props.isHelpPage ||
-            this.props.connectionState === ConnectionState.STATIC ||
-            this.props.connectionState === ConnectionState.DISCONNECTED ||
-            this.props.connectionState === null,
+      rerun: this.props.connectionState === ConnectionState.STATIC ||
+             this.props.connectionState === ConnectionState.DISCONNECTED ||
+             this.props.connectionState === null,
+      save:  this.props.connectionState === ConnectionState.STATIC ||
+             this.props.connectionState === ConnectionState.DISCONNECTED ||
+             this.props.connectionState === null,
+      help:  this.props.isHelpPage ||
+             this.props.connectionState === ConnectionState.STATIC ||
+             this.props.connectionState === ConnectionState.DISCONNECTED ||
+             this.props.connectionState === null,
     }
   }
 
@@ -62,6 +65,7 @@ class MainMenu extends Component {
 
         <DropdownMenu right>
           <DropdownItem
+              disabled={disabledItems.rerun}
               onClick={this.props.rerunScriptCallback}>
             <span>Rerun Script</span>
             <span className="shortcut">R</span>
