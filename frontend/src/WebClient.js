@@ -1,6 +1,7 @@
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react';
+import { hotkeys } from 'react-keyboard-shortcuts';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
@@ -43,6 +44,7 @@ import './WebClient.css';
  */
 const PROXY_PORT = 5014;
 
+
 class WebClient extends PureComponent {
   constructor(props) {
     super(props);
@@ -70,6 +72,40 @@ class WebClient extends PureComponent {
     this.displayHelp = this.displayHelp.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
+
+    // /**
+    //  * Maps key combinations to commands.
+    //  */
+    // this.keyMap = {
+    //   rerunScript: 'r'
+    // };
+    //
+    // /**
+    //  * Map key commands to callbakcs.
+    //  */
+    // this.keyHandlers = {
+    //   rerunScript: this.openRerunScriptDialog,
+    // };
+  }
+
+  /**
+   * Global keyboard shortcuts.
+   */
+  hot_keys = {
+    // The r key opens the rerun script dialog.
+    'r': {
+      priority: 1,
+      handler: () => this.openRerunScriptDialog(),
+    },
+
+    // The enter key runs the "default action" of the dialog.
+    'enter': {
+      priority: 1,
+      handler: () => {
+        if (this.state.dialog && this.state.dialog.defaultAction)
+          this.state.dialog.defaultAction();
+      },
+    }
   }
 
   componentDidMount() {
@@ -245,7 +281,10 @@ class WebClient extends PureComponent {
       type: "rerunScript",
       getCommandLine: (() => this.state.commandLine),
       setCommandLine: ((commandLine) => this.setState({commandLine})),
-      rerunCallback: this.rerunScript
+      rerunCallback: this.rerunScript,
+
+      // This will be called if enter is pressed.
+      defaultAction: this.rerunScript,
     });
   }
 
@@ -370,4 +409,4 @@ class WebClient extends PureComponent {
   }
 }
 
-export default WebClient;
+export default hotkeys(WebClient);
