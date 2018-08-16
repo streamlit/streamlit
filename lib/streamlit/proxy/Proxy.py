@@ -133,13 +133,6 @@ def stop_proxy_on_exception(is_coroutine=False):
                 try:
                     return callback(web_socket_handler, *args, **kwargs)
                     LOGGER.debug(f'Running wrapped version of {callback}')
-                    # if is_coroutine:
-                    #     LOGGER.debug(f'About to yield {callback}')
-                    #     rv = yield callback(web_socket_handler, *args, **kwargs)
-                    #     raise gen.Return(rv)
-                    # else:
-                    #
-                    # # callback(web_socket_handler, *args, **kwargs)
                 except Exception as e:
                     LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
                     traceback.print_exc()
@@ -161,7 +154,11 @@ class Proxy(object):
         self._connections = dict()  # use instead of {} for 2/3 compatibility
         LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
+        # We have to import these in here to break a circular import reference
+        # issue in Python 2.7.
         from streamlit.proxy import LocalWebSocket, ClientWebSocket
+
+        # Set up HTTP routes
         routes = [
             # # Local connection to stream a new report.
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
@@ -169,14 +166,9 @@ class Proxy(object):
             # Outgoing endpoint to get the latest report.
             ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
         ]
-        '''
-        # Client connection (serves up index.html)
-        web.get('/', self._client_html_handler),
-        '''
-
-        # If we're not using the node development server, then the proxy
-        # will serve up the development pages.
         if not config.get_option('proxy.useNode'):
+            # If we're not using the node development server, then the proxy
+            # will serve up the development pages.
             static_path = get_static_dir()
             LOGGER.info(f'Serving static content from {static_path}')
 
@@ -186,7 +178,6 @@ class Proxy(object):
             ])
         else:
             LOGGER.info('useNode == True, not serving static content from python.')
-
         self._app = web.Application(routes)
 
         # Attach an http server
@@ -194,6 +185,11 @@ class Proxy(object):
         http_server = HTTPServer(self._app)
         http_server.listen(port)
         LOGGER.info('Proxy http server started on port {}'.format(port))
+
+        # Remember whether we've seen any client connections so that we can
+        # display a helpful warming message if the proxy closed without having
+        # received any connections.
+        self._received_client_connection = False
 
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
@@ -215,6 +211,10 @@ class Proxy(object):
         LOGGER.debug('About to start the proxy.')
         IOLoop.current().start()
         LOGGER.debug('IOLoop closed.')
+        if not self._received_client_connection:
+            print('Connection timeout to proxy.')
+            print('Did you try to connect and nothing happened? '
+                f'Please go to {REMOTE_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -253,9 +253,6 @@ class Proxy(object):
             connection.end_grace_period()
             self.try_to_deregister_proxy_connection(connection)
             self.potentially_stop()
-            print('Connection timeout to proxy.\n'
-                  'Did you try to connect and nothing happened? Please go to '
-                  f'{REMOTE_DOC} for debugging hints.')
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
         loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
@@ -289,6 +286,7 @@ class Proxy(object):
     @gen.coroutine
     def add_client(self, report_name, ws):
         """Adds a queue to the connection for the given report_name."""
+        self._received_client_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
         yield new_report_msg(connection.id,
@@ -303,8 +301,3 @@ class Proxy(object):
         connection.remove_client_queue(queue)
         self.try_to_deregister_proxy_connection(connection)
         self.potentially_stop()
-
-    def _potentially_stop_proxy(self):
-        """Stop proxy if no open connections."""
-        if not self._connections:
-            self.stop()
