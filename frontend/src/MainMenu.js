@@ -79,7 +79,7 @@ class MainMenu extends Component {
           </DropdownItem>
 
           <DropdownItem
-              disabled={!(this.props.isProxyConnected || this.props.isHelpPage)}
+              disabled={this.props.isHelpPage || !this.props.isProxyConnected}
               onClick={this.props.helpCallback}>
             Quick Help
           </DropdownItem>
