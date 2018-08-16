@@ -27,11 +27,11 @@ import Text from './elements/Text';
 
 // Other local imports.
 import MainMenu from './MainMenu';
+import ConnectionState from './ConnectionState';
 import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
-// import PlayPause from './PlayPause';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -323,6 +323,16 @@ class WebClient extends PureComponent {
     this.setState({connectionState: connectionState});
     if (errMsg)
       this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
+  }
+
+  /**
+   * Indicates whether we're connect to the proxy.
+   */
+  proxyIsConnected() {
+    return !(
+      this.state.connectionState === ConnectionState.STATIC ||
+      this.state.connectionState === ConnectionState.DISCONNECTED ||
+      this.state.connectionState === null);
   }
 
   /**
