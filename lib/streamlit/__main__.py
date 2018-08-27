@@ -1,8 +1,10 @@
 """This is a script which is run when the streamlit package is executed."""
+import getpass
 import sys
 import textwrap
 
 import click
+import psutil
 
 import streamlit
 import streamlit.caching
@@ -20,6 +22,7 @@ def print_usage():
 
         clear_cache - Clear the memoization cache.
         help        - Show help in browser.
+        kill_proxy  - Kill proxy.
         usage       - Print this help message.
         version     - Print the version number.
     """
@@ -32,6 +35,18 @@ def help():
     print('Showing help page in browser...')
     streamlit.reference.display_reference()
 
+def kill_proxy():
+    found_proxy = False
+    for p in psutil.process_iter(attrs=['name', 'username']):
+        if 'python' in p.name() \
+            and 'streamlit.proxy' in p.cmdline() \
+            and getpass.getuser() == p.info['username']:
+            print('Killing proxy with PID %d' % p.pid)
+            p.kill()
+            found_proxy = True
+    if not found_proxy:
+        print('No streamlit proxies found')
+
 def version():
     print('Streamlit v' + streamlit.__version__)
 
@@ -40,6 +55,7 @@ COMMANDS = {
     'usage': print_usage,
     'clear_cache': clear_cache,
     'help': help,
+    'kill_proxy': kill_proxy,
     'version': version
 }
 
