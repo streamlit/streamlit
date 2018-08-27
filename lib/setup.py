@@ -28,4 +28,10 @@ setuptools.setup(
 
     zip_safe = False,  # install source files not egg
     include_package_data = True,  # copy html and friends
+
+    entry_points = {
+        'console_scripts': [
+            'streamlit = streamlit.__main__:main',
+        ],
+    },
 )
