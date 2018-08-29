@@ -10,7 +10,6 @@ import {
   ModalBody,
   ModalFooter,
 } from 'reactstrap';
-import './SettingsDialog.css';
 
 /**
  *
@@ -37,7 +36,7 @@ class SettingsDialog extends PureComponent {
   render() {
     return (
       <Modal
-          isOpen={this.props.isShown}
+          isOpen={this.props.isOpen}
           toggle={this.handleCancelButtonClick}
           onOpened={this.handleDialogOpen}
           >
@@ -87,13 +86,13 @@ class SettingsDialog extends PureComponent {
   handleCancelButtonClick() {
     // Discard settings from this.state by not saving them in this.settings.
     // this.settings = {...this.state};
-    this.props.closeCallback();
+    this.props.onClose();
   }
 
   handleSaveButtonClick() {
     this.settings = {...this.state};
-    this.props.saveSettingsCallback(this.settings)
-    this.props.closeCallback();
+    this.props.onSave(this.settings)
+    this.props.onClose();
   }
 };
 

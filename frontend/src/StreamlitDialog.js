@@ -14,24 +14,36 @@ import {
   // UncontrolledTooltip,
 } from 'reactstrap';
 
+import SettingsDialog from './SettingsDialog';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 
 import './StreamlitDialog.css';
 
+const dialogRenderers = {
+  UPLOAD_PROGRESS: uploadProgressDialog,
+  UPLOAD_DONE: uploadedDialog,
+  WARNING: warningDialog,
+  SETTINGS: settingsDialog,
+  [undefined]: noDialog,
+};
+
 function StreamlitDialog({ dialogProps }) {
   // This table of functions constructs the dialog based on dialogProps.type
-  const populateDialogTable = {
-    'uploadProgress': uploadProgressDialog,
-    'uploaded': uploadedDialog,
-    'warning': warningDialog,
-    [undefined]: noDialog,
-  };
   const populateDialogFunc =
-    populateDialogTable[dialogProps.type] || typeNotRecognizedDialog;
+      dialogRenderers[dialogProps.type] || typeNotRecognizedDialog;
 
   // We call that function to populate the dialog.
-  const {body, footer} = populateDialogFunc(dialogProps);
+  const {body, footer, custom} = populateDialogFunc(dialogProps);
+
+  // Show custom dialog.
+  if (custom) {
+    return custom;
+  }
+
+  // Show generic dialog.
+
   const isOpen = ((body !== undefined) || (footer != undefined));
+
   return (
     <Modal isOpen={isOpen} toggle={dialogProps.onClose} className={""}>
       { body }
@@ -44,17 +56,18 @@ function StreamlitDialog({ dialogProps }) {
  * Shows the progress of an upload in progress.
  */
 function uploadProgressDialog({progress}) {
-
-  return { body:
-    <ModalBody>
-      <div className="streamlit-upload-first-line">
-        Saving report...
-      </div>
-      <div>
-        <Progress animated value={progress}/>
-      </div>
-    </ModalBody>
-  }
+  return {
+    body: (
+      <ModalBody>
+        <div className="streamlit-upload-first-line">
+          Saving report...
+        </div>
+        <div>
+          <Progress animated value={progress}/>
+        </div>
+      </ModalBody>
+    ),
+  };
 }
 
 /**
@@ -67,9 +80,10 @@ function uploadedDialog({url, onClose}) {
         <div className="streamlit-upload-first-line">
           Report saved to:
         </div>
-        <div id="streamlit-upload-url"> {url} </div>
+        <div id="streamlit-upload-url">{url}</div>
       </ModalBody>
     ),
+
     footer: (
       <ModalFooter>
         <CopyToClipboard text={url} onCopy={onClose}>
@@ -82,10 +96,26 @@ function uploadedDialog({url, onClose}) {
 }
 
 /**
+ * Shows the settings dialog.
+ */
+function settingsDialog({settings, isOpen, onSave, onClose}) {
+  return {
+    custom: (
+      <SettingsDialog
+        settings={settings}
+        isOpen={isOpen}
+        onSave={onSave}
+        onClose={onClose}
+      />
+    ),
+  };
+}
+
+/**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
 function noDialog() {
-  return {}
+  return {};
 }
 
 /**

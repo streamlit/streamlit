@@ -29,7 +29,6 @@ import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
-import SettingsDialog from './SettingsDialog';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -58,7 +57,6 @@ class WebClient extends PureComponent {
         }
       }]),
       streamlitDialogProps: undefined,
-      settingsDialogIsShown: false,
       userSettings: {
         wideMode: false,
       },
@@ -68,8 +66,6 @@ class WebClient extends PureComponent {
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.closeStreamlitDialog = this.closeStreamlitDialog.bind(this);
-    this.openSettingsDialog = this.openSettingsDialog.bind(this);
-    this.closeSettingsDialog = this.closeSettingsDialog.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.setReportName = this.setReportName.bind(this);
@@ -159,10 +155,16 @@ class WebClient extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.openStreamlitDialog({type: 'uploadProgress', progress: progress});
+        this.openStreamlitDialog({
+          type: 'UPLOAD_PROGRESS',
+          progress: progress,
+        });
       },
       reportUploaded: (url) => {
-        this.openStreamlitDialog({type: 'uploaded', url: url})
+        this.openStreamlitDialog({
+          type: 'UPLOAD_DONE',
+          url: url,
+        })
       },
     });
   }
@@ -179,20 +181,6 @@ class WebClient extends PureComponent {
    */
   closeStreamlitDialog() {
     this.setState({streamlitDialogProps: undefined});
-  }
-
-  /**
-   * Opens the settings dialog.
-   */
-  openSettingsDialog() {
-    this.setState({settingsDialogIsShown: true});
-  }
-
-  /**
-   * Closes the settings dialog if it's open.
-   */
-  closeSettingsDialog() {
-    this.setState({settingsDialogIsShown: false});
   }
 
   /**
@@ -248,7 +236,7 @@ class WebClient extends PureComponent {
       this.sendBackMsg('CLOUD_UPLOAD')
     } else {
       this.openStreamlitDialog({
-        type: "warning",
+        type: 'WARNING',
         msg: (
           <div>
             You do not have Amazon S3 or Google GCS sharing configured.
@@ -298,7 +286,12 @@ class WebClient extends PureComponent {
             isHelpPage={this.state.reportName === 'help'}
             connectionState={this.state.connectionState}
             helpButtonCallback={() => this.sendBackMsg('HELP')}
-            settingsButtonCallback={this.openSettingsDialog}
+            settingsButtonCallback={() => this.openStreamlitDialog({
+              type: 'SETTINGS',
+              isOpen: true,
+              settings: this.state.userSettings,
+              onSave: this.saveSettings,
+            })}
             saveButtonCallback={this.saveReport}
           />
         </header>
@@ -317,13 +310,6 @@ class WebClient extends PureComponent {
               ...this.state.streamlitDialogProps,
               onClose: this.closeStreamlitDialog
             }}
-          />
-
-          <SettingsDialog
-            settings={this.state.userSettings}
-            isShown={this.state.settingsDialogIsShown}
-            closeCallback={this.closeSettingsDialog}
-            saveSettingsCallback={this.saveSettings}
           />
 
         </Container>
