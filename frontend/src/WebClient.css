@@ -110,6 +110,11 @@ header {
   color: #F63366;
 }
 
+.btn,
+button {
+  display: flex;
+}
+
 button:focus {
   outline: 5px auto #F63366;
 }
