@@ -3,13 +3,16 @@ modules := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)
 
 help:
 	@echo "Streamlit Make Commands:"
-	@echo " init     - Run once to install python and js dependencies."
-	@echo " build    - build the static version of Streamlit (without Node)"
-	@echo " protobuf - Recompile Protobufs for Python and Javascript."
-	@echo " develop  - Install streamlit pointing to local workspace."
-	@echo " install  - Install streamlit pointing to PYTHONPATH."
-	@echo " wheel    - Create a wheel file in dist/."
-	@echo " loc      - Count lines of code."
+	@echo " init         - Run once to install python and js dependencies."
+	@echo " build        - build the static version of Streamlit (without Node)"
+	@echo " protobuf     - Recompile Protobufs for Python and Javascript."
+	@echo " develop      - Install streamlit pointing to local workspace."
+	@echo " install      - Install streamlit pointing to PYTHONPATH."
+	@echo " wheel        - Create a wheel file in dist/."
+	@echo " loc          - Count lines of code."
+	@echo " site         - Builds the site at /site/public."
+	@echo " devel-site   - Starts the dev server for the site."
+	@echo " publish-site - Builds and pushes the site to prod."
 
 .PHONY: init
 init: setup requirements react-init protobuf # react-build release

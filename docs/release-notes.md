@@ -1,5 +1,64 @@
 # Release Notes
 
+#### v0.14.2
+August 16, 2018
+```
+We are thrilled to announce version 0.14 of Streamlit including public saving,
+fast script rerunning, and more! To upgrade, please run:
+
+    pkill -9 -f streamlit.proxy # make sure the old proxy isn't running
+    pip install --upgrade --no-cache-dir streamlit
+
+See our beautiful new docs!
+
+    http://streamlit.io/docs
+
+Get complete help and API documentation:
+
+    python -m streamlit help
+
+New features are:
+
+1. Anyone can now publicly share Streamlit reports! You all get unlimited free
+   cloud space to share your beautiful reports (at least for now while we're
+   in beta). Just click "Save Report" in the upper-right-hand menu.
+
+2. You can now rerun you scripts from within the Streamlit interface -- a
+   buttery smooth and lightning fast new eval-run interaction. Just type 'r'
+   from the Streamlit webpage (or shift+r to change command line arguments).
+   You can also access these options from the menu.
+
+3. Streamlit not supports Vega Lite charts (including zoomable charts)! Check
+   out the power and beauty of this powerful library here:
+
+     https://vega.github.io/vega-lite/examples/
+
+   See examples of the use of Vega Lite in Streamlit by running
+
+     python -m streamlit help
+
+4. Caching with @st.cache is now orders-of-magnitudes faster. You can now
+   skip redundant data fetches and computation even faster!
+
+5. Matplotlib support with st.pyplot() now lets you pass an explicit plot
+   argument.
+
+6. Running Streamlit remotely (say in AWS)? We improved auto-detection of the
+   server's IP. If that doesn't work, you can also manually set the IP by
+   setting:
+
+     proxy:
+       externalIP: EXTERNAL_IP_ADDRESS
+
+  in your ~/.streamlit/config.yaml.
+
+7. We fixed a serious bug which caused Streamlit to hang when using the
+   latest version of tornado.
+
+Please enjoy and we always love feedback!
+```
+
+
 #### v0.13
 July 20, 2018
 ```

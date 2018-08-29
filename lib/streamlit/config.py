@@ -1,10 +1,12 @@
 """Loads the configuration data."""
 
 # Package Imports
+import ast
+import json
 import os
 import yaml
 
-from tornado import gen
+from tornado import gen, httpclient
 from tornado.concurrent import run_on_executor, futures
 
 import streamlit
@@ -33,6 +35,11 @@ class Config(object):
                 c.dumps()
 
             cls._config = c
+
+            # if bucket is not set then use default credentials.
+            if (c._config['storage']['s3']['bucket'] is None and
+                c._config['storage'].get('useDefault') is not False):
+                get_default_creds()
 
         return cls._config._config
 
@@ -75,7 +82,7 @@ class Config(object):
             proxy = dict(
                 _comment = 'Configuration of the proxy server',
                 port = dict(
-                    value = int(streamlit.__version__.split('.')[1]) + 5000,
+                    value = 8501,
                 ),
                 server = dict(
                     value = 'localhost',
@@ -107,6 +114,14 @@ class Config(object):
                 ),
                 key_prefix = dict(
                     value = None,
+                ),
+            ),
+            storage = dict(
+                _comment = 'Remote Storage options',
+                s3 = dict(
+                    bucket = dict(
+                        value = None,
+                    ),
                 ),
             ),
         )
@@ -188,6 +203,9 @@ def get_s3_option(option):
         keyPrefix = ('storage.s3.keyPrefix', 's3.key_prefix'),
         url       = ('storage.s3.url'      , 's3.url'       ),
         region    = ('storage.s3.region'   , 's3.region'    ),
+
+        accessKeyId = ('storage.s3.accessKeyId', None),
+        secretAccessKey = ('storage.s3.secretAccessKey', None),
     )
     try:
         new_option, old_option = s3_option_table[option]
@@ -210,3 +228,29 @@ def saving_is_configured():
     """Returns true if S3 (and eventually GCS?) saving is configured properly
     for this session."""
     return (get_s3_option('bucket') is not None)
+
+
+def get_default_creds():
+    # TODO(armando): Should we always fetch this or should we write
+    # credentials to disk and then if the user deletes it, refetch?
+    http_client = None
+    try:
+        http_client = httpclient.HTTPClient()
+        endpoint = 'http://streamlit.io/tmp/st_pub_write.json'
+        response = http_client.fetch(endpoint, request_timeout=5)
+        # Strip unicode
+        creds = ast.literal_eval(response.body.decode('utf-8'))
+        # LOGGER.debug(response.body)
+
+        c = Config._config._config
+        if c['storage'].get('s3') is None:
+            c['storage']['s3'] = {}
+
+        # Replace whatever is in the config with the default credentials
+        c['storage']['s3'].update(creds)
+
+    except (httpclient.HTTPError, RuntimeError) as e:
+        pass
+    finally:
+        if http_client is not None:
+            http_client.close()

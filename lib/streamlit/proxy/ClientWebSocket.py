@@ -1,8 +1,10 @@
 """Websocket handler class which the web client connects to."""
-import os
 
 from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.concurrent import run_on_executor, futures
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
+import os
 
 from streamlit import config
 from streamlit import protobuf
@@ -15,6 +17,8 @@ LOGGER = get_logger()
 
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
+
+    executor = futures.ThreadPoolExecutor(5)
 
     def initialize(self, proxy):
         """Initialize self._connections."""
@@ -41,11 +45,6 @@ class ClientWebSocket(WebSocketHandler):
         self._report_name = report_name
         LOGGER.debug('The Report name is "%s"', self._report_name)
 
-        # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
-
-        indicated_closed = False
-
         try:
             # Send the opening message
             LOGGER.info('Browser websocket opened for "%s"', self._report_name)
@@ -55,9 +54,28 @@ class ClientWebSocket(WebSocketHandler):
             self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
+            LOGGER.debug('Got a new command line ("%s") : %s',
+                         self._connection.name, self._connection.command_line)
             LOGGER.debug('Got a new queue : "%s"', self._queue)
 
             LOGGER.debug('Starting loop for "%s"', self._connection.name)
+            loop = IOLoop.current()
+            loop.spawn_callback(self.do_loop)
+
+        except KeyError as e:
+            LOGGER.info('Attempting to access non-existant report "%s"', e)
+        except WebSocketClosedError:
+            pass
+
+    @Proxy.stop_proxy_on_exception(is_coroutine=True)
+    @gen.coroutine
+    def do_loop(self):
+        # How long we wait between sending more data.
+        throttle_secs = config.get_option('local.throttleSecs')
+
+        indicated_closed = False
+
+        try:
             while self._is_open:
                 if not self._proxy.proxy_connection_is_registered(self._connection):
                     LOGGER.debug('The proxy connection for "%s" is not registered.',
@@ -116,16 +134,27 @@ class ClientWebSocket(WebSocketHandler):
         backend_msg = protobuf.BackMsg()
         try:
             backend_msg.ParseFromString(payload)
-            command = backend_msg.command
-            if command == protobuf.BackMsg.Command.Value('HELP'):
+            LOGGER.debug('Received the following backend message:')
+            LOGGER.debug(backend_msg)
+            msg_type = backend_msg.WhichOneof('type')
+            if msg_type == 'help':
+                LOGGER.debug('Received command to display help.')
                 os.system('python -m streamlit help &')
-            elif command == protobuf.BackMsg.Command.Value('CLOUD_UPLOAD'):
+            elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
+            elif msg_type == 'rerun_script':
+                full_command = 'cd "%s" ; %s' % \
+                    (self._connection.cwd, backend_msg.rerun_script)
+                yield self._run(full_command)
             else:
-                LOGGER.warning('no handler for "%s"',
-                               protobuf.BackMsg.Command.Name(backend_msg.command))
+                LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
             LOGGER.error('Cannot parse binary message: %s', e)
+
+    @run_on_executor
+    def _run(self, cmd):
+        LOGGER.info('Running command: %s' % cmd)
+        os.system(cmd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):

@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
@@ -21,6 +20,7 @@ from streamlit import image_proto
 from streamlit.Chart import Chart
 from streamlit.chartconfig import CHART_TYPES
 from streamlit.caseconverters import to_snake_case
+from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
 from streamlit.logger import get_logger
 from streamlit import data_frame_proto
 from streamlit import protobuf
@@ -71,6 +71,10 @@ def _create_element(method):
             traceback.print_tb(exc_traceback, file=sys.stderr)
 
     return wrapped_method
+
+class _VegaLite(object):
+    """An empty class to hold Vega Lite objects."""
+    pass
 
 class DeltaGenerator(object):
     """
@@ -354,8 +358,7 @@ class DeltaGenerator(object):
             data_frame_proto.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
 
-    @_export_to_io
-    def chart(self, chart):
+    def _native_chart(self, chart):
         """Displays a chart.
         """
         def set_chart(element):
@@ -364,12 +367,22 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
-    def pyplot(self, element):
+    def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
+        """Displays a chart.
+        """
+        vc = VegaLiteChart(data, spec, **kwargs)
+        vc.marshall(element.vega_lite_chart)
+
+    @_export_to_io
+    @_create_element
+    def pyplot(self, element, fig=None):
         """Displays a matplotlib.pyplot image.
 
         Args
         ----
-        element : The proto element.
+        fig : Matplotlib Figure
+            The figure to plot. When this argument isn't specified, which is
+            the usual case, this function will render the global plot.
         """
         try:
             import matplotlib
@@ -378,8 +391,13 @@ class DeltaGenerator(object):
         except ImportError:
             raise ImportError(f'pyplot() command requires matplotlib')
 
+        # You can call .savefig() on a Figure object or directly on the pyplot
+        # module, in which case you're doing it to the latest Figure.
+        if not fig:
+            fig = plt
+
         image = io.BytesIO()
-        plt.savefig(image, format='png')
+        fig.savefig(image, format='png')
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
     @_export_to_io
@@ -486,6 +504,9 @@ class DeltaGenerator(object):
             'Only existing elements can add_rows.'
         if type(df) != pd.DataFrame:
             df = pd.DataFrame(df)
+
+        df = self._maybe_transform_dataframe(df)
+
         delta = protobuf.Delta()
         delta.id = self._id
         data_frame_proto.marshall_data_frame(df, delta.add_rows)
@@ -498,7 +519,7 @@ class DeltaGenerator(object):
         sends the new element to the delta queue, and finally
         returns a generator for that element ID.
 
-        set_element - Function which sets the feilds for a protobuf.Element
+        set_element - Function which sets the fields for a protobuf.Element
         """
         # Create a delta message.
         delta = protobuf.Delta()
@@ -522,7 +543,44 @@ class DeltaGenerator(object):
         self._queue(delta)
         return generator
 
-def register_chart_method(chart_type):
+    def _maybe_transform_dataframe(self, df):
+        # TODO(tvst): what is up with this _latest_element thing? ~ Adrien
+        try:
+            element_type = self._latest_element.WhichOneof('type')
+            if element_type == 'vega_lite_chart':
+                return transform_dataframe(
+                    df, self._latest_element.vega_lite_chart.data_transform)
+        except AttributeError:
+            pass
+        return df
+
+    vega_lite = _VegaLite()
+
+
+def register_vega_lite_chart_method(chart_type, chart_builder):
+    """Adds a chart-building method to DeltaGenerator for a specific chart type.
+
+    Args:
+        chart_type -- A string with the snake-case name of the chart type to
+        add. This will be the method name.
+
+        chart_builder -- A function that returns an object that can marshall
+        chart protos.
+    """
+    @_export_to_io
+    @_create_element
+    def vega_lite_chart_method(self, element, data=None, *args, **kwargs):
+        vc = chart_builder(data, *args, **kwargs)
+        vc.marshall(element.vega_lite_chart)
+
+    setattr(DeltaGenerator.vega_lite, chart_type, vega_lite_chart_method)
+
+# Add chart-building methods to DeltaGenerator
+for k, v in VEGA_LITE_BUILDERS:
+    register_vega_lite_chart_method(k, v)
+
+
+def register_native_chart_method(chart_type):
     """Adds a chart-building method to DeltaGenerator for a specific chart type.
 
     Args:
@@ -531,10 +589,10 @@ def register_chart_method(chart_type):
     """
     @_export_to_io
     def chart_method(self, data, **kwargs):
-        return self.chart(Chart(data, type=chart_type, **kwargs))
+        return self._native_chart(Chart(data, type=chart_type, **kwargs))
 
     setattr(DeltaGenerator, chart_type, chart_method)
 
 # Add chart-building methods to DeltaGenerator
 for chart_type in CHART_TYPES:
-    register_chart_method(to_snake_case(chart_type))
+    register_native_chart_method(to_snake_case(chart_type))

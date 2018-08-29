@@ -112,7 +112,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.13.5`.
+**Note:** The current version is `0.14.2`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
@@ -162,7 +162,7 @@ make wheel
 Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
-pip install ../streamlit/lib/dist/streamlit-0.13.5-py3-none-any.whl
+pip install ../streamlit/lib/dist/streamlit-0.14.2-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
@@ -199,39 +199,3 @@ development mode by typing:
 ```
 make develop
 ```
-
-## Refactored Notes
-
-### TL;DR
-
-#### General development
-- go to branch - `git checkout armando/refactor`
-- make virtualenv using virtualenvwrapper.
-  `$ mkvirtualenv -p /usr/bin/python3.6 streamlit-refactor` or `workon streamlit-refactor`
-- `make` - to npm build, pip install and just generally setup everything.
-- `make develop` - allows python to find streamlit in your code directory.
-
-#### Python
-- make lint
-- make test
-
-#### Javascript
-- make js-lint
-- make js-test
-
-This isnt necessary for development but if you want to see where the
-files would go from the 'wheel' file.
-* `make release` - wheel  in dist/ directory.
-* `make install` - python will find streamlit in $VIRTUAL_ENV/lib/python3.6/site-packages/streamlit-*/streamlit
-
-### Unsorted notes.
-- With `MANIFEST.in` when you do a `python setup.py install` or `python
-  setup.py bdist_wheel` it will copy things in MANIFEST.in under the
-  streamlit/ directory only.  Things that are not under that directory
-  that are included ie root level things like `README.md`, will only be
-  copied in the source distribution ie `python setup sdist`
-
-- Now all you have to do is run `make`
-- To edit the python code and have it point to the src files use `make develop`
-- To install it in the python environment use `make install`
-- `make release` builds the wheel file.

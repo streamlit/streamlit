@@ -14,15 +14,22 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 
 from streamlit.logger import get_logger
+from streamlit.util import get_local_id
 LOGGER = get_logger()
 
 class ProxyConnection(object):
     """Stores information shared by both local_connections and
     client_connections related to a particular report."""
 
-    def __init__(self, id, name):
-        # The unique BSON ID of this report.
-        self.id = id
+    def __init__(self, new_report_msg, name):
+        # The uuid of this report.
+        self.id = new_report_msg.id
+
+        # The current working directory from which this report was launched.
+        self.cwd = new_report_msg.cwd
+
+        # The command line arguments used to launch this message
+        self.command_line = list(new_report_msg.command_line)
 
         # The name for this report.
         self.name = name
@@ -85,8 +92,10 @@ class ProxyConnection(object):
         """
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
+        local_id = str(get_local_id())
         manifest = dict(
             name = self.name,
+            local_id = local_id,
             nDeltas = len(deltas)
         )
         return \

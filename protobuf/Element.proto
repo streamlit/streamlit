@@ -8,6 +8,7 @@ import "Empty.proto";
 import "Exception.proto";
 import "Image.proto";
 import "Map.proto";
+import "VegaLiteChart.proto";
 import "Progress.proto";
 import "Text.proto";
 
@@ -25,7 +26,7 @@ message Element {
     DocString doc_string = 7;
     Exception exception = 8;
     Map map = 9;
-    // VegaLiteChart = 10;
+    VegaLiteChart vega_lite_chart = 10;
     DataFrame table = 11;
     Balloons balloons = 12;
   }

@@ -17,7 +17,7 @@ For example this React code:
             <YAxis/>
             <CartesianGrid strokeDasharray='3 3'/>
             <Tooltip/>
-            <Legend />
+            <Legend/>
             <Line type='monotone' dataKey='pv' stroke='#8884d8' strokeDasharray='5 5'/>
             <Line type='monotone' dataKey='uv' stroke='#82ca9d' strokeDasharray='3 4 5 2'/>
     </LineChart>
@@ -34,19 +34,6 @@ Would become:
         stroke_dasharray='5 5')
     line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d',
         stroke_dasharray='3 4 5 2')
-
-Or, in builder notation:
-
-    (Chart(data, 'line_chart', width=600, height=300)
-        .x_axis(data_key='name')
-        .y_axis()
-        .cartesian_grid(stroke_dasharray='3 3')
-        .tooltip()
-        .legend()
-        .line(type='monotone', data_key='pv', stroke='#8884d8',
-            stroke_dasharray='5 5')
-        .line(type='monotone', data_key='uv', stroke='#82ca9d',
-            stroke_dasharray='3 4 5 2'))
 
 Or, with syntax sugar type-specific builders:
 
@@ -66,16 +53,15 @@ setup_2_3_shims(globals())
 
 import pandas as pd
 
-from .ChartComponent import ChartComponent
-from .caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
-from .chartconfig import *
 from streamlit import data_frame_proto
+from streamlit.ChartComponent import ChartComponent
+from streamlit.DictBuilder import ForEachColumn, ValueCycler, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME, INDEX_COLUMN_DESIGNATOR
+from streamlit.caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
+from streamlit.chartconfig import *
 from streamlit.logger import get_logger
 
 current_module = __import__(__name__)
 
-# Column name used to designate the dataframe index.
-INDEX_COLUMN_DESIGNATOR = '::index'
 LOGGER = get_logger()
 
 class Chart(object):
@@ -95,7 +81,7 @@ class Chart(object):
             height -- a number with the chart height. Defaults to 0, which means
             "the default height" rather than actually 0px.
 
-            kwargs -- keyword arguments containng properties to be added to the
+            kwargs -- keyword arguments containg properties to be added to the
             ReChart's top-level element
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
@@ -141,8 +127,7 @@ class Chart(object):
         a tuple of all components that are required for that chart. Required
         components themselves are either normal tuples or a repeated tuple
         (specified via ForEachColumn), and their children can use special
-        identifiers such as ColumnAtIndex, ColumnAtCurrentIndex, and
-        ValueCycler.
+        identifiers such as ColumnAtCurrentIndex, and ValueCycler.
         """
         required_components = REQUIRED_COMPONENTS.get(self._type, None)
 
@@ -155,7 +140,7 @@ class Chart(object):
 
             if isinstance(required_component, ForEachColumn):
                 numRepeats = len(self._data.columns)
-                comp_name, comp_value = required_component.comp
+                comp_name, comp_value = required_component.content_to_repeat
             else:
                 numRepeats = 1
                 comp_name, comp_value = required_component
@@ -174,24 +159,24 @@ class Chart(object):
                 self.append_component(comp_name, props)
 
     def _materializeValue(self, value, currCycle):
-        """Replaces ColumnAtIndex, etc, with a column name if needed.
+        """Replaces ColumnAtCurrentIndex, etc, with a column name if needed.
 
         Args:
-            value -- anything. If value is a ColumnAtIndex or
-            ColumnAtCurrentIndex then it gets replaces with a column name. If
-            ValueCycler, it returns the current item in the cycler's list. If
-            it's anything else, it just passes through.
+            value -- anything. If value is a ColumnAtCurrentIndex then it gets
+            replaces with a column name. If ValueCycler, it returns the current
+            item in the cycler's list. If it's anything else, it just passes
+            through.
 
             currCycle -- an integer. For repeated fields (denoted via
             ForEachColumn) this is the number of the current column.
         """
-        if isinstance(value, ColumnAtIndex):
-            i = value.index
-
-        elif isinstance(value, ColumnAtCurrentIndex):
+        if value == CURRENT_COLUMN_NAME:
             i = currCycle
+            if i >= len(self._data.columns):
+                raise IndexError('Index {} out of bounds'.format(i))
+            return self._data.columns[i]
 
-        elif isinstance(value, IndexColumn):
+        elif value == INDEX_COLUMN_NAME:
             return INDEX_COLUMN_DESIGNATOR
 
         elif isinstance(value, ValueCycler):
@@ -200,29 +185,6 @@ class Chart(object):
         else:
             return value
 
-        if i >= len(self._data.columns):
-            raise IndexError('Index {} out of bounds'.format(i))
-
-        return self._data.columns[i]
-
-
-def register_type_builder(chart_type):
-    """Adds a builder function to this module, to build specific chart types.
-
-    These sugary builders also set up some nice defaults from the
-    DEFAULT_COMPONENTS dict, that can be overriden after the instance is built.
-
-    Args:
-        chart_type -- A string with the upper-camel-case name of the chart type
-        to add.
-    """
-    chart_type_snake = to_snake_case(chart_type)
-
-    def type_builder(data, **kwargs):
-        kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
-        return Chart(data, type=chart_type_snake, **kwargs)
-
-    setattr(current_module, chart_type, type_builder)
 
 def register_component(component_name, implemented):
     """Adds a method to the Chart class, to set the given component.
@@ -254,11 +216,33 @@ def register_component(component_name, implemented):
 
     setattr(Chart, component_name, append_component_method)
 
+
+# Add methods to Chart class, for each component in CHART_COMPONENTS.
+for component_name, implemented in CHART_COMPONENTS.items():
+    register_component(to_snake_case(component_name), implemented)
+
+
+def register_type_builder(chart_type):
+    """Adds a builder function to this module, to build specific chart types.
+
+    These sugary builders also set up some nice defaults from the
+    DEFAULT_COMPONENTS dict, that can be overriden after the instance is built.
+
+    Args:
+        chart_type -- A string with the upper-camel-case name of the chart type
+        to add.
+    """
+    chart_type_snake = to_snake_case(chart_type)
+
+    def type_builder(data, **kwargs):
+        kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
+        return Chart(data, type=chart_type_snake, **kwargs)
+
+    setattr(current_module, chart_type, type_builder)
+
+
 # Add syntax-sugar builder functions to this module, to allow us to do things
 # like FooChart(data) instead of Chart(data, 'foo_chart').
 for chart_type in CHART_TYPES:
     register_type_builder(chart_type)
 
-# Add methods to Chart class, for each component in CHART_COMPONENTS.
-for component_name, implemented in CHART_COMPONENTS.items():
-    register_component(to_snake_case(component_name), implemented)

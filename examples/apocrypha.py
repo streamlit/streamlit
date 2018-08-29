@@ -25,10 +25,10 @@ with st.echo():
     df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
         columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
 
-    st.subheader("A Table")
+    st.subheader("A table")
     st.table(df)
 
-    st.subheader("...and It's Transpose")
+    st.subheader("...and its transpose")
     st.table(df.T)
 
 st.header('Maps')

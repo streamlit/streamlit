@@ -1,10 +1,10 @@
 ---
 title: "Running Streamlit remotely"
-weight: 102
+weight: 101
 ---
 
 Sometimes, you need to run Streamlit remotely --- be it on AWS, GCS, or
-Paperspace --- we've got you!
+Paperspace --- we've got you! 
 
 Let's do this.
 
@@ -25,7 +25,7 @@ And let's assume that your code is on the instance already, in a file called
 
 ## Configuration
 
-To start with, SSH into your instance:
+To start with, SSH into your instance: 
 
 ```bash
 $ ssh paperspace@REMOTE_HOST
@@ -45,7 +45,7 @@ proxy:
 _NOTE: You may have to create this file if it doesn't exist yet._
 
 Now, let's set up the instance's firewall to allow all incoming SSH connections
-to port 8501, so you can access the Streamlit report:
+to port 8501, so you can access the Streamlit report: 
 
 ```
 $ sudo ufw allow 8501
@@ -58,7 +58,7 @@ to access it in your local browser:
 $ python -m streamlit help
 ```
 
-The report should be available at `http://REMOTE_HOST:8501/?name=help`
+The report should be available at `http://REMOTE_HOST:8501/help`
 
 
 ## Running remote code
@@ -97,7 +97,7 @@ $ sudo curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rma
 $ sudo chmod +x /usr/local/bin/rmate
 ```
 
-### Atom
+### Atom 
 
 If you use Atom, you need to install [Remote
 Atom](https://atom.io/packages/remote-atom):
