@@ -21,7 +21,6 @@ from streamlit.Chart import Chart
 from streamlit.chartconfig import CHART_TYPES
 from streamlit.caseconverters import to_snake_case
 from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
-from streamlit.logger import get_logger
 from streamlit import data_frame_proto
 from streamlit import protobuf
 
