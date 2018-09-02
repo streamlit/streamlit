@@ -86,6 +86,8 @@ def _launch_web_client(name):
         The name of the report to which the web browser should connect.
     """
     if config.get_option('proxy.useNode'):
+        # If changing the port, also change:
+        #   frontend/src/remotelogging.js
         host, port = 'localhost', '3000'
     else:
         host = config.get_option('proxy.server')

@@ -33,6 +33,8 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
+import { remoteLog } from './remotelogging';
+
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -163,13 +165,16 @@ class WebClient extends PureComponent {
    */
   handleMessage(msgProto) {
     const msg = toImmutableProto(ForwardMsg, msgProto);
+
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
+        remoteLog('newConnection');
         this.setState({
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
       newReport: (newReportMsg) => {
+        remoteLog('newReport');
         this.setState({
           reportId: newReportMsg.get('id'),
           commandLine: newReportMsg.get('commandLine').toJS().join(' '),
@@ -190,6 +195,7 @@ class WebClient extends PureComponent {
         this.openDialog({type: 'uploadProgress', progress: progress});
       },
       reportUploaded: (url) => {
+        remoteLog('reportUploaded');
         this.openDialog({type: 'uploaded', url: url})
       },
     });
@@ -353,7 +359,6 @@ class WebClient extends PureComponent {
   }
 
   render() {
-    // Return the tree
     return (
       <div>
         <header>
