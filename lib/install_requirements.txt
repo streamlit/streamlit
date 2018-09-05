@@ -12,7 +12,7 @@ numpy>=1.14.0             # via pandas
 pandas>=0.23.0
 pillow>=5.0.0
 protobuf>=3.5.0
-psutil
+psutil>=5.4.7
 python-dateutil>=2.7.0    # via botocore, pandas
 pytz>=2018.0              # via pandas, tzlocal
 pyyaml>=3.0
