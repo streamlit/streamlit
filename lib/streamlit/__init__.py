@@ -26,6 +26,7 @@ LOGGER = logger.get_logger('root')
 import contextlib
 import functools
 import numpy as np
+import os
 import pandas as pd
 import re
 import sys
@@ -227,12 +228,18 @@ def echo():
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
+#
 # For whatever reason, sys.argv[0] is different based on python version.
 # * Python 2.7 = '-c'
 # * Python 3.6 = '-m'
 _this_may_be_proxy = False
 if sys.argv[0] in ('-m', '-c'):
     _this_may_be_proxy = True
+
+print('Running Streamlit command:')
+print(os.path.split(sys.argv[0])[1])
+print(os.path.split(sys.argv[0])[1] == 'streamlit')
+sys.exit(-1)
 
 # In order to log all exceptions etc to the streamlit report after
 # `import streamlit` we establish the proxy by calling get_connection().
