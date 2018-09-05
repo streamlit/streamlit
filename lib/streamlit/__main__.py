@@ -14,19 +14,14 @@ import streamlit.reference
 def print_usage():
     """Prints a help message."""
     usage = """
-        Usage:
-
-        python -m streamlit <command>
-
-        where command is one of:
-
-        clear_cache - Clear the memoization cache.
-        help        - Show help in browser.
-        kill_proxy  - Kill proxy.
-        usage       - Print this help message.
-        version     - Print the version number.
+        Where [MODE] is one of:
+          clear_cache - Clear the memoization cache.
+          help        - Show help in browser.
+          kill_proxy  - Kill proxy.
+          usage       - Print this help message.
+          version     - Print the version number.
     """
-    print(textwrap.dedent(usage).strip())
+    print("\n" + textwrap.dedent(usage).strip())
 
 def clear_cache():
     streamlit.caching.clear_cache(True)
