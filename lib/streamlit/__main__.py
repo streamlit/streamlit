@@ -40,7 +40,7 @@ def kill_proxy():
             p.kill()
             found_proxy = True
     if not found_proxy:
-        print('No streamlit proxies found')
+        print('No Streamlit proxies found.')
 
 def version():
     print('Streamlit v' + streamlit.__version__)
