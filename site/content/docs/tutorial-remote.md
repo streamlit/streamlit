@@ -55,7 +55,7 @@ Finally, to make sure everything worked, run the Streamlit cheat sheet and try
 to access it in your local browser:
 
 ```bash
-$ python -m streamlit help
+$ streamlit help
 ```
 
 The report should be available at `http://REMOTE_HOST:8501/help`

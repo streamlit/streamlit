@@ -143,8 +143,8 @@ make build
 Test that it works:
 ```
 make install
-python -m streamlit version
-python -m streamlit help
+streamlit version
+streamlit help
 python examples/mnist-cnn.py
 python examples/apocrypha.py
 python examples/uber.py
@@ -164,11 +164,11 @@ Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
 pip install ../streamlit/lib/dist/streamlit-0.15.0-py3-none-any.whl
-python -m streamlit help
+streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
-python -m streamlit help
-python -m streamlit help
+streamlit help
+streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 ```

@@ -21,7 +21,7 @@ $ pip install streamlit
 quick-reference page, which is itself written as a Streamlit report:
 
 ```bash
-$ python -m streamlit help
+$ streamlit help
 ```
 
 This last command should open a new tab in your web browser.
