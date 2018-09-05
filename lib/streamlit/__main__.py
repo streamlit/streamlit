@@ -17,6 +17,7 @@ def print_usage():
         Where [MODE] is one of:
           clear_cache - Clear the memoization cache.
           help        - Show help in browser.
+          kill_proxy  - Kill proxy.
           usage       - Print this help message.
           version     - Print the version number.
     """
