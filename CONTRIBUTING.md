@@ -106,13 +106,14 @@ Place them [here](docs/release-notes.md). Then:
 Run:
 
 ```
+streamlit kill_proxy
 ps -ef | grep -i python
 ```
 and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.14.2`.
+**Note:** The current version is `0.15.0`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
@@ -162,7 +163,7 @@ make wheel
 Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
-pip install ../streamlit/lib/dist/streamlit-0.14.2-py3-none-any.whl
+pip install ../streamlit/lib/dist/streamlit-0.15.0-py3-none-any.whl
 python -m streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
