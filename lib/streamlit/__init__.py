@@ -236,17 +236,18 @@ _this_may_be_proxy = False
 if sys.argv[0] in ('-m', '-c'):
     _this_may_be_proxy = True
 
-print('Running Streamlit command:')
-print(os.path.split(sys.argv[0])[1])
-print(os.path.split(sys.argv[0])[1] == 'streamlit')
-sys.exit(-1)
+# Test whether this is the 'streamlit' command.
+_this_may_be_streamlit_command = os.path.split(sys.argv[0])[1] == 'streamlit'
 
 # In order to log all exceptions etc to the streamlit report after
 # `import streamlit` we establish the proxy by calling get_connection().
-# If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
-# skip this step. Overcautiously skipping this step isn't fatal in general as
-# it simply implies that the connection may be established later.
-if not _this_may_be_proxy:
+# If there's any chance that this is the proxy (i.e. _this_may_be_proxy) or the
+# streamlit command (i.e. _this_may_be_streamlit_command), then we skip this
+# step.
+#
+# Overcautiously skipping this step isn't fatal in general as it simply implies
+# that the connection may be established later.
+if not (_this_may_be_proxy or _this_may_be_streamlit_command):
     Connection.get_connection().get_delta_generator()
 
 ### DEPRECATION WARNING ###
