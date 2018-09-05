@@ -44,7 +44,8 @@ COMMANDS = {
 @click.option('--log_level', show_default=True, type=click.Choice([
     'error', 'warning', 'info', 'debug']))
 def main(ctx, mode, log_level):  # pragma: no cover
-    """Run main function."""
+    """Streamlit helper commands to see help (streamlit help) and to manage the
+    cache and proxy."""
     if log_level:
         streamlit.logger.set_log_level(log_level)
 
