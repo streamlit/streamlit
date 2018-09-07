@@ -10,7 +10,7 @@ we're going to show you how to set up remote operation with AWS. The steps are s
 ## Before we start
 We assume that:
 
-* you already have a machine/instance up and running on AWS, GCS, or whatever other computer you have access to,
+* you have a machine/instance up and running on AWS, GCS, or whatever other computer you have access to,
 * your instance allows incoming TCP connections at port 8501, and
 * your code is already on the instance, in a file called `my_script.py`.
 
@@ -90,11 +90,7 @@ $ sudo curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rma
 $ sudo chmod +x /usr/local/bin/rmate
 ```
 
-Next, SSH into your remote machine with remote port fowarded. You do this by appending the following to the end of your SSH command:
-
-```
--R 52698:localhost:52698
-```
+Next, SSH into your remote machine with remote port fowarded. You do this by appending the following to the end of your SSH command: ```-R 52698:localhost:52698```
 
 Finally, run rmate from your instance:
 ```bash
@@ -125,8 +121,8 @@ How do you fix this? First, click on your instance in the [AWS Console](https://
 
 ### It just hangs when I run my script
 Sometimes there is a hanging proxy from your previous run. A quick way to fix that is by running this command:
-```
-streamlit kill_proxy
+```bash
+$ streamlit kill_proxy
 ```
 
 If that doesn't fix it, please contact us!
