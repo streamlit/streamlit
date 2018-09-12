@@ -156,7 +156,7 @@ bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.text(f'Iteration {i}')
+  latest_iteration.text('Iteration %d' % i)
   bar.progress(i + 1)
   time.sleep(0.1)
 
@@ -222,7 +222,7 @@ bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.text(f'Iteration {i}')
+  latest_iteration.text('Iteration %d' % i)
   bar.progress(i + 1)
   time.sleep(0.1)
 
