@@ -3,7 +3,9 @@ title: "Streamlit tutorial: the basics"
 weight: 100
 ---
 
-Now that you have [already set Streamlit up](/docs/getting_started/), open up a
+*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
+
+Now that you have [already set up Streamlit](/docs/installation/), open up a
 text editor and paste this in:
 
 ```python

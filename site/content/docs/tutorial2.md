@@ -3,10 +3,11 @@ title: "Streamlit tutorial: caching, mapping, and more!"
 weight: 101
 ---
 
-At this point, you have probably [already set Streamlit
-up](/docs/getting_started/), and even created [your first Streamlit
-report](/docs/tutorial). So now let's get down to a more concrete example of 
-how you'd use Streamlit when trying to accomplish a real world task.
+*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
+
+At this point, you have probably [already set up Streamlit](/docs/installation/),
+and even created [your first Streamlit report](/docs/tutorial). So now let's get down to a more
+concrete example of how you'd use Streamlit when trying to accomplish a real world task.
 
 ## The task
 
