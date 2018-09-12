@@ -151,12 +151,12 @@ import time
 st.write('Starting a long computation...')
 
 # Place some widgets on the page
-latest_iteration = st.write('')
+latest_iteration = st.empty()
 bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration ', i)
+  latest_iteration.text(f'Iteration {i}')
   bar.progress(i + 1)
   time.sleep(0.1)
 
@@ -217,12 +217,12 @@ import time
 st.write('Starting a long computation...')
 
 # Place some widgets on the page
-latest_iteration = st.write('')
+latest_iteration = st.empty()
 bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration ', i)
+  latest_iteration.text(f'Iteration {i}')
   bar.progress(i + 1)
   time.sleep(0.1)
 
