@@ -47,6 +47,9 @@ the word “Streamlit” is now **bold**. The way we did that was by adding thos
 asterisks `**` on each side of the word we wanted to bold. That works because
 **`st.write()` supports Markdown!**
 
+_**PRO TIP:** You can also re-run your program from within your web browser! Simply press 'r'._
+
+
 ## Enter the data
 
 Ok, so far I just showed you how to write some Markdown-formatted text strings
