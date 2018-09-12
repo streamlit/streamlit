@@ -136,6 +136,12 @@ class Connection(object):
         def cleanup_on_exit():
             LOGGER.debug('Cleanup thread waiting for main thread to end.')
             current_thread.join()
+            LOGGER.debug('Cleanup thread waiting for main thread to end.')
+            # TODO(armando): Fix with something that checks if the proxy
+            #                ran once and only sleep if we're waiting
+            #                for the proxy to startup.  https://trello.com/c/1WECpDht
+            LOGGER.debug('Sleeping 5 seconds in case the local script ran very quickly.')
+            time.sleep(5)
             LOGGER.debug('Main thread ended. Restoring excepthook.')
             sys.excepthook = original_excepthook
             self._loop.add_callback(setattr, self, '_is_open', False)
