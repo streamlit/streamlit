@@ -76,7 +76,7 @@ class Config(object):
                 ),
                 waitForProxySecs = dict(
                     _comment = 'How long to wait for the proxy server to start up.',
-                    value = 2.0,
+                    value = 3.0,
                 ),
             ),
             proxy = dict(
