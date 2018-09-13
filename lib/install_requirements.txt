@@ -14,12 +14,12 @@ pillow>=5.0.0
 protobuf>=3.5.0
 psutil>=5.4.7
 python-dateutil>=2.7.0    # via botocore, pandas
-pytz>=2018.0              # via pandas, tzlocal
+pytz>=2017.2              # via pandas, tzlocal
 pyyaml>=3.0
 s3transfer>=0.1.0         # via boto3
 singledispatch>=3.4.0.0   # via tornado
 six>=1.0.0                # via protobuf, python-dateutil, singledispatch
 tokenize-rt>=2.0.0        # via future-fstrings
-tornado>=5.0.0
+tornado>=4.5.1            # used to be >=5.0.0
 tzlocal>=1.5.0
 base58>=1.0.0
