@@ -99,6 +99,10 @@ class Connection(object):
         # is only ever accessed
         self._is_open = True
 
+        # Needed for very short lived scripts that terminate before the
+        # proxy is even started.
+        self._connected_to_proxy_once = False
+
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
 
@@ -136,12 +140,11 @@ class Connection(object):
         def cleanup_on_exit():
             LOGGER.debug('Cleanup thread waiting for main thread to end.')
             current_thread.join()
-            LOGGER.debug('Cleanup thread waiting for main thread to end.')
-            # TODO(armando): Fix with something that checks if the proxy
-            #                ran once and only sleep if we're waiting
-            #                for the proxy to startup.  https://trello.com/c/1WECpDht
-            LOGGER.debug('Sleeping 5 seconds in case the local script ran very quickly.')
-            time.sleep(5)
+            if not self._connected_to_proxy_once:
+                LOGGER.debug('Local script started and exited too fast before proxy started')
+                LOGGER.debug('Waiting for proxy to start once and receive deletas before exiting.')
+                while not self._connected_to_proxy_once:
+                    time.sleep(1)
             LOGGER.debug('Main thread ended. Restoring excepthook.')
             sys.excepthook = original_excepthook
             self._loop.add_callback(setattr, self, '_is_open', False)
@@ -215,6 +218,7 @@ class Connection(object):
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri)
+            self._connected_to_proxy_once = True
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -226,6 +230,7 @@ class Connection(object):
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri)
+            self._connected_to_proxy_once = True
             yield self._transmit_through_websocket(ws)
         except IOError:
             raise ProxyConnectionError(uri)
