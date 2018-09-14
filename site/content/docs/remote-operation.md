@@ -35,7 +35,7 @@ proxy:
     externalIP: EXTERNAL_IP
 ```
 
-_NOTE: You may have to create this file if it doesn't exist yet._
+_NOTE: You may have to create the ~/.streamlit directory if it doesn't exist yet._
 
 Finally, to make sure everything worked, run the Streamlit cheat sheet and try
 to access it in your local browser:
