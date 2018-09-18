@@ -48,7 +48,7 @@ function StreamlitDialog({ dialogProps }) {
         isOpen={isOpen}
         toggle={dialogProps.onClose}
         className="streamlit-dialog"
-    >
+        >
       { body }
       { footer }
     </Modal>
@@ -150,7 +150,7 @@ function rerunScriptDialog({getCommandLine, setCommandLine,
 }
 
 
-/*8
+/**
  * Shows the settings dialog.
  */
 function settingsDialog({settings, isOpen, onSave, onClose}) {
