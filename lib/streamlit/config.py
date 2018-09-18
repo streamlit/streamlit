@@ -124,6 +124,13 @@ class Config(object):
                     ),
                 ),
             ),
+            client = dict(
+                remotelyTrackUsage = dict(
+                    _comment = (
+                        'Whether Streamlit should remotely record usage stats'),
+                    value = True,
+                ),
+            ),
         )
         self._config = yaml.load(self._dump())
 
@@ -228,6 +235,17 @@ def saving_is_configured():
     """Returns true if S3 (and eventually GCS?) saving is configured properly
     for this session."""
     return (get_s3_option('bucket') is not None)
+
+
+def remotely_track_usage():
+    """Returns true if we should log user events remotely for our own stats"""
+    val = get_option('client.remotelyTrackUsage')
+    LOGGER.debug('remotelyTrackUsage: %s' % val)
+
+    if type(val) is bool:
+        return val
+
+    return True  # default to True. See also /frontend/src/remotelogging.js
 
 
 def get_default_creds():

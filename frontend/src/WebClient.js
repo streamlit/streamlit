@@ -33,18 +33,14 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
-import { remoteLog } from './remotelogging';
+import { PROXY_PORT } from './baseconsts';
+import { initRemoteLogger, remoteLog } from './remotelogging';
 
 import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
-
-/**
- * Port used to connect to the proxy server.
- */
-const PROXY_PORT = 8501;
 
 
 class WebClient extends PureComponent {
@@ -168,13 +164,17 @@ class WebClient extends PureComponent {
 
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
-        remoteLog('newConnection');
+        initRemoteLogger({
+          remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
+        });
+        // TODO: Check if report allows logging XXX
+        remoteLog('newConnection', 'newMessage');
         this.setState({
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
       newReport: (newReportMsg) => {
-        remoteLog('newReport');
+        remoteLog('newReport', 'newMessage');
         this.setState({
           reportId: newReportMsg.get('id'),
           commandLine: newReportMsg.get('commandLine').toJS().join(' '),
@@ -195,7 +195,6 @@ class WebClient extends PureComponent {
         this.openDialog({type: 'uploadProgress', progress: progress});
       },
       reportUploaded: (url) => {
-        remoteLog('reportUploaded');
         this.openDialog({type: 'uploaded', url: url})
       },
     });
@@ -253,6 +252,7 @@ class WebClient extends PureComponent {
    */
   saveReport() {
     if (this.state.savingConfigured) {
+      remoteLog('saveReport', 'newInteraction');
       this.sendBackMsg({
         type: 'cloudUpload',
         cloudUpload: true,
@@ -297,6 +297,7 @@ class WebClient extends PureComponent {
   rerunScript() {
     this.closeDialog();
     if (this.isProxyConnected()) {
+      remoteLog('rerunScript', 'newInteraction');
       this.sendBackMsg({
         type: 'rerunScript',
         rerunScript: this.state.commandLine
@@ -310,6 +311,7 @@ class WebClient extends PureComponent {
    * Tells the proxy to display the inline help dialog.
    */
   displayHelp() {
+    remoteLog('displayHelp', 'newInteraction');
     this.sendBackMsg({
       type: 'help',
       help: true
