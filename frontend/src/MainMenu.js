@@ -4,7 +4,6 @@
  */
 
 import React, {Component} from 'react';
-import ConnectionState from './ConnectionState';
 import {
   Dropdown,
   DropdownItem,
