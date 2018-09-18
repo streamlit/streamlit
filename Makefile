@@ -83,7 +83,7 @@ devel-site:
 .PHONY: publish-site
 publish-site:
 	cd site; hugo
-	cd site; aws s3 sync --acl public-read public s3://streamlit.io/
+	cd site; aws s3 sync --acl public-read public s3://streamlit.io/ --profile streamlit
 
 .PHONY: protobuf
 protobuf:

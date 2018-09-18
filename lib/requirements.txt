@@ -13,12 +13,15 @@ botocore==1.10.40
 certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
 click==6.7
+configparser==3.5.0       # via flake8, pydocstyle
 coverage==4.5.1           # via pytest-cov
 docutils==0.14
 enum-compat==0.0.2
+enum34==1.1.6             # via enum-compat, flake8
 flake8-docstrings==1.3.0
 flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0
+funcsigs==1.0.2           # via pytest
 future-fstrings==0.4.3
 future==0.16.0
 futures==3.1.1
@@ -32,6 +35,7 @@ pillow==5.0.0
 pkginfo==1.4.2            # via twine
 pluggy==0.6.0             # via pytest
 protobuf==3.6.0
+psutil==5.4.7
 py==1.5.3                 # via pytest
 pycodestyle==2.3.1        # via flake8
 pydocstyle==2.1.1         # via flake8-docstrings

@@ -143,7 +143,7 @@ class ClientWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                os.system('python -m streamlit help &')
+                os.system('streamlit help &')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':

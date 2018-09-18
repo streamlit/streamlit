@@ -16,7 +16,6 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import config
 from streamlit import data_frame_proto
 from streamlit import image_proto
 from streamlit import protobuf

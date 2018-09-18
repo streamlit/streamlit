@@ -68,7 +68,7 @@ class MainMenu extends Component {
           <DropdownItem
               disabled={!this.props.isProxyConnected}
               onClick={this.props.saveCallback}>
-            Save report
+            Share report
           </DropdownItem>
 
           <DropdownItem divider/>
