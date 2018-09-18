@@ -4,6 +4,7 @@
 import ast
 import json
 import os
+import socket
 import yaml
 
 from tornado import gen, httpclient
@@ -76,7 +77,7 @@ class Config(object):
                 ),
                 waitForProxySecs = dict(
                     _comment = 'How long to wait for the proxy server to start up.',
-                    value = 2.0,
+                    value = 3.0,
                 ),
             ),
             proxy = dict(
@@ -249,8 +250,8 @@ def get_default_creds():
         # Replace whatever is in the config with the default credentials
         c['storage']['s3'].update(creds)
 
-    except (httpclient.HTTPError, RuntimeError) as e:
-        pass
+    except (httpclient.HTTPError, RuntimeError, socket.gaierror) as e:
+        LOGGER.debug('Not using default credentials.  Error getting default credentials from %s: %s', endpoint, e)
     finally:
         if http_client is not None:
             http_client.close()

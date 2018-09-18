@@ -14,6 +14,10 @@ from streamlit import data_frame_proto, protobuf
 from streamlit.DictBuilder import DictBuilder, ParamBuilder, ForEachColumn, ColorCycler, ColumnFinder, CURRENT_COLUMN_TYPE, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
 from streamlit.dicttools import unflatten
 
+# setup logging
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
 
 STACKED_COLUMN_NAME = '(layer)'
 
@@ -441,13 +445,7 @@ def _get_builder(chart_type, chart_declaration):
         merged_spec = chart_declaration['spec_builder'].build(
             data, spec_override=user_spec, user_params=user_params)
 
-        # Useful for debugging:
-        #import json
-        #print(json.dumps(
-        #    merged_spec,
-        #    sort_keys=True,
-        #    indent=2,
-        #    separators=(',', ': ')))
+        LOGGER.debug(merged_spec)
 
         return VegaLiteChart(data, merged_spec, data_transform_str)
 

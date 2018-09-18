@@ -7,7 +7,7 @@ Installing Streamlit is just a one-line operation! But first there are some
 prerequisites that we must get out of the out of the way:
 
 1. Streamlit requires Python 2.7 or higher, or 3.6 or higher.
-2. You'll also need the `pip` tool for installing Python packages.
+2. You'll also need the `pip` tool for installing Python packages. [Here](https://pip.pypa.io/en/stable/installing/) is how you can install `pip`.
 
 ## Installation
 
@@ -21,7 +21,7 @@ $ pip install streamlit
 quick-reference page, which is itself written as a Streamlit report:
 
 ```bash
-$ python -m streamlit help
+$ streamlit help
 ```
 
 This last command should open a new tab in your web browser.
