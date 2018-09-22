@@ -86,8 +86,7 @@ def _launch_web_client(name):
         The name of the report to which the web browser should connect.
     """
     if config.get_option('proxy.useNode'):
-        # If changing the dev port, make sure it doesn't match the prod port,
-        # or it may break things like IS_DEV_ENV in frontend/src/baseconsts.js
+        # If changing this, also change frontend/src/baseconsts.js
         host, port = 'localhost', '3000'
     else:
         host = config.get_option('proxy.server')

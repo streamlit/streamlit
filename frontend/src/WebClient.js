@@ -33,7 +33,7 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
-import { PROXY_PORT } from './baseconsts';
+import { PROXY_PORT_PROD } from './baseconsts';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
@@ -104,7 +104,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://${window.location.hostname}:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
