@@ -6,6 +6,10 @@ import { IS_DEV_ENV } from './baseconsts';
  */
 let trackUsage = true;
 
+/**
+ * Params:
+ *   remotelyTrackUsage: a boolean. If true, we'll track usage remotely.
+ */
 export function initRemoteTracker({remotelyTrackUsage}) {
   if (remotelyTrackUsage != null) trackUsage = remotelyTrackUsage;
   console.log('Track stats remotely: ', trackUsage);
