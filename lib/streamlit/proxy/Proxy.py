@@ -43,7 +43,7 @@ import webbrowser
 
 LOGGER = get_logger()
 AWS_CHECK_IP = 'http://checkip.amazonaws.com'
-REMOTE_DOC = 'http://streamlit.io/docs/remote-operation/'
+HELP_DOC = 'http://streamlit.io/docs/help/'
 
 # def set_remote(val):
 #     config.set_option('proxy.isRemote', val)
@@ -69,7 +69,7 @@ def _print_remote_url(port, quoted_name):
 
     if external_ip is None:
         print('Did not auto detect external ip. Please go to '
-              f'{REMOTE_DOC} for debugging hints.')
+              f'{HELP_DOC} for debugging hints.')
         return
 
     timeout_secs = config.get_option('proxy.waitForConnectionSecs')
@@ -218,7 +218,7 @@ class Proxy(object):
         if headless and not self._received_client_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
-                f'Please go to {REMOTE_DOC} for debugging hints.')
+                f'Please go to {HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
