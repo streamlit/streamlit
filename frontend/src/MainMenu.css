@@ -1,9 +1,14 @@
+#MainMenuButton {
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
 /* The menu itself. */
 #MainMenu div.dropdown-menu {
   width: 12rem;
 }
 
-/* For keybaord shortcuts. */
+/* For keyboard shortcuts. */
 #MainMenu span.shortcut {
   color: darkgray;
   float: right;

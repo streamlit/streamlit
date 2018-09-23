@@ -3,7 +3,7 @@
  * Google protocol buffers. It guarnatees message arrival order.
  */
 
-import {ForwardMsg, BackMsg, Text as TextProto} from './protobuf';
+import {ForwardMsg, BackMsg} from './protobuf';
 import {ConnectionState} from './ConnectionState';
 
 
