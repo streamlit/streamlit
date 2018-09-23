@@ -35,7 +35,7 @@ def cache(func):
 		the case of a cache miss. Cached objects are stored in the cache/
 		directory."""
 		# Temporarily display this message while computing this function.
-		if len(argc) == 0 and len(argv == 0):
+		if len(argc) == 0 and len(argv) == 0:
 			message = f'Caching {func.__name__}().'
 		else:
 			message = f'Caching {func.__name__}(...).'
