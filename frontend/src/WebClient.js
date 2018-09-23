@@ -33,11 +33,10 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
-import { PROXY_PORT_PROD } from './baseconsts';
-import { initRemoteTracker, trackEventRemotely } from './remotetracking';
-
 import { ForwardMsg, Text as TextProto } from './protobuf';
+import { PROXY_PORT_PROD } from './baseconsts';
 import { addRows } from './dataFrameProto';
+import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
@@ -58,12 +57,16 @@ class WebClient extends PureComponent {
           body: 'Ready to receive data',
         }
       }]),
+      userSettings: {
+        wideMode: false,
+      },
     };
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
@@ -214,6 +217,18 @@ class WebClient extends PureComponent {
   }
 
   /**
+   * Saves a settings object.
+   */
+  saveSettings(settings) {
+    this.setState({
+      userSettings: {
+        ...this.state.userSettings,
+        wideMode: settings.wideMode,
+      },
+    });
+  }
+
+  /**
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
@@ -361,7 +376,7 @@ class WebClient extends PureComponent {
 
   render() {
     return (
-      <div>
+      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
         <header>
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
@@ -374,11 +389,18 @@ class WebClient extends PureComponent {
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
+            settingsCallback={() => this.openDialog({
+              type: 'settings',
+              isOpen: true,
+              settings: this.state.userSettings,
+              onSave: this.saveSettings,
+            })}
           />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
-            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
+            <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>

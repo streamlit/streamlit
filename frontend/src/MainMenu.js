@@ -70,6 +70,11 @@ class MainMenu extends Component {
             Share report
           </DropdownItem>
 
+          <DropdownItem
+              onClick={() => this.props.settingsCallback()}>
+            Settings
+          </DropdownItem>
+
           <DropdownItem divider/>
 
           <DropdownItem
