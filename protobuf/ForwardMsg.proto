@@ -30,6 +30,10 @@ message ForwardMsg {
 message NewConnection {
   // True if saving is properly configured.
   bool saving_configured = 1;
+
+  // If true, tells Streamlit to log datpoints for our own stats when the user
+  // performs certain actions.
+  bool remotely_track_usage = 2;
 }
 
 // This is the first message that is sent when the connection is opened.

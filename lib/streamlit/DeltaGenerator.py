@@ -16,13 +16,14 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import image_proto
-from streamlit.Chart import Chart
-from streamlit.chartconfig import CHART_TYPES
-from streamlit.caseconverters import to_snake_case
-from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
 from streamlit import data_frame_proto
+from streamlit import image_proto
 from streamlit import protobuf
+from streamlit.Chart import Chart
+from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
+from streamlit.caseconverters import to_snake_case
+from streamlit.chartconfig import CHART_TYPES
+from streamlit.logger import get_logger
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 EXPORT_TO_IO_FLAG = '__export_to_io__'
@@ -555,6 +556,11 @@ class DeltaGenerator(object):
 
     vega_lite = _VegaLite()
 
+
+def createNewDelta():
+    """Creates a new DeltaGenerator and sets up some basic info."""
+    delta = protobuf.Delta()
+    return delta
 
 def register_vega_lite_chart_method(chart_type, chart_builder):
     """Adds a chart-building method to DeltaGenerator for a specific chart type.
