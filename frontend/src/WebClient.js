@@ -33,16 +33,13 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
-import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
+import { ForwardMsg, Text as TextProto } from './protobuf';
+import { PROXY_PORT_PROD } from './baseconsts';
 import { addRows } from './dataFrameProto';
+import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
-
-/**
- * Port used to connect to the proxy server.
- */
-const PROXY_PORT = 8501;
 
 
 class WebClient extends PureComponent {
@@ -60,12 +57,16 @@ class WebClient extends PureComponent {
           body: 'Ready to receive data',
         }
       }]),
+      userSettings: {
+        wideMode: false,
+      },
     };
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
@@ -106,7 +107,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://${window.location.hostname}:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
@@ -163,13 +164,19 @@ class WebClient extends PureComponent {
    */
   handleMessage(msgProto) {
     const msg = toImmutableProto(ForwardMsg, msgProto);
+
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
+        initRemoteTracker({
+          remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
+        });
+        trackEventRemotely('newConnection', 'newMessage');
         this.setState({
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
       newReport: (newReportMsg) => {
+        trackEventRemotely('newReport', 'newMessage');
         this.setState({
           reportId: newReportMsg.get('id'),
           commandLine: newReportMsg.get('commandLine').toJS().join(' '),
@@ -210,6 +217,18 @@ class WebClient extends PureComponent {
   }
 
   /**
+   * Saves a settings object.
+   */
+  saveSettings(settings) {
+    this.setState({
+      userSettings: {
+        ...this.state.userSettings,
+        wideMode: settings.wideMode,
+      },
+    });
+  }
+
+  /**
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
@@ -247,6 +266,7 @@ class WebClient extends PureComponent {
    */
   saveReport() {
     if (this.state.savingConfigured) {
+      trackEventRemotely('saveReport', 'newInteraction');
       this.sendBackMsg({
         type: 'cloudUpload',
         cloudUpload: true,
@@ -291,6 +311,7 @@ class WebClient extends PureComponent {
   rerunScript() {
     this.closeDialog();
     if (this.isProxyConnected()) {
+      trackEventRemotely('rerunScript', 'newInteraction');
       this.sendBackMsg({
         type: 'rerunScript',
         rerunScript: this.state.commandLine
@@ -304,6 +325,7 @@ class WebClient extends PureComponent {
    * Tells the proxy to display the inline help dialog.
    */
   displayHelp() {
+    trackEventRemotely('displayHelp', 'newInteraction');
     this.sendBackMsg({
       type: 'help',
       help: true
@@ -353,9 +375,8 @@ class WebClient extends PureComponent {
   }
 
   render() {
-    // Return the tree
     return (
-      <div>
+      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
         <header>
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
@@ -368,11 +389,18 @@ class WebClient extends PureComponent {
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
+            settingsCallback={() => this.openDialog({
+              type: 'settings',
+              isOpen: true,
+              settings: this.state.userSettings,
+              onSave: this.saveSettings,
+            })}
           />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
-            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
+            <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
