@@ -100,9 +100,11 @@ class Config(object):
                     _comment = 'Is the proxy running remotely.',
                     value = False,
                 ),
-                externalIp = dict(
-                    _comment = 'IP address of the machine where Streamlit is running.',
-                    value = get_ip(),
+                externalIP = dict(
+                    _comment = ('IP address of the machine where Streamlit is '
+                        'running.'),
+                    # Must be None, so the autodetection in Proxy.py takes place
+                    value = None,
                 ),
             ),
             s3 = dict(
