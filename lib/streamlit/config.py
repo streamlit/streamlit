@@ -279,22 +279,3 @@ def get_default_creds():
     finally:
         if http_client is not None:
             http_client.close()
-
-def get_ip():
-    """Gets the IP address of the current machine.
-
-    Returns:
-        IPv4 address as a string.
-
-    From: https://stackoverflow.com/a/28950776
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
-        IP = s.getsockname()[0]
-    except:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
