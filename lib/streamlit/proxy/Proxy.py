@@ -37,6 +37,7 @@ import functools
 import os
 import platform
 import socket
+import textwrap
 import traceback
 import urllib
 import webbrowser
@@ -67,12 +68,13 @@ def _print_remote_url(port, quoted_name):
     external_url = get_report_url(external_ip, port, quoted_name)
     lan_url = get_report_url(lan_ip, port, quoted_name)
 
-    print('=============================================================')
-    print('Open one of the URLs below in your browser within %s seconds.'
-          % timeout_secs)
-    print('External URL:', external_url)
-    print('Internal URL:', lan_url)
-    print('=============================================================')
+    print(textwrap.dedent(f'''
+        =============================================================
+        Open one of the URLs below in your browser within {int(timeout_secs)} seconds
+        External URL: {external_url}
+        Internal URL: {lan_url}
+        =============================================================
+    '''))
 
 def _launch_web_client(name):
     """Launches a web browser to connect to the proxy to get the named
