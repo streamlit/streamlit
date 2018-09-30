@@ -222,7 +222,7 @@ def display_reference():
 
     st.write('''
         Streamlit can play video in all formats supported by modern
-        browsers. Below is an example of a _mp4_-formatted file:
+        browsers. Below is an example of an _mp4_-formatted file:
         ''')
 
     video_url = 'https://www.sample-videos.com/video/mp4/480/big_buck_bunny_480p_2mb.mp4'
