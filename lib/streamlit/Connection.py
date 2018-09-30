@@ -26,12 +26,18 @@ from tornado.websocket import websocket_connect
 from streamlit.util import get_local_id
 from streamlit import config
 from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
+from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit import protobuf
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
+
+# Websocket arguments.
+WS_ARGS = {
+    # Max size of the message to send via the websocket.
+    'max_message_size': MESSAGE_SIZE_LIMIT,
+}
 
 def _assert_singleton(method):
     """Asserts that this method is called on the singleton instance of
@@ -42,19 +48,6 @@ def _assert_singleton(method):
             f'Can only call {method.__name__}() on the singleton Connection.'
         return method(self, *args, **kwargs)
     return inner
-
-'''
-def _assert_singleton_async(method):
-    """Asserts that this coroutine is called on the singleton instance of
-    Connection."""
-    async def inner(self, *args, **kwargs):
-        assert self == Connection._connection, \
-            f'Can only call {method.__name__}() on the singleton Connection.'
-        return await method(self, *args, **kwargs)
-    inner.__name__ = method.__name__
-    inner.__doc__ = method.__doc__
-    return inner
-'''
 
 class Connection(object):
     """This encapsulates a single connection the to the server for a single
@@ -214,7 +207,7 @@ class Connection(object):
 
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
-            ws = yield websocket_connect(uri)
+            ws = yield websocket_connect(uri, **WS_ARGS)
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -225,7 +218,7 @@ class Connection(object):
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
-            ws = yield websocket_connect(uri)
+            ws = yield websocket_connect(uri, **WS_ARGS)
             yield self._transmit_through_websocket(ws)
         except IOError:
             raise ProxyConnectionError(uri)

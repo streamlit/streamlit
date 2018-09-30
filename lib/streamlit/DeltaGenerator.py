@@ -18,6 +18,7 @@ import traceback
 
 from streamlit import data_frame_proto
 from streamlit import image_proto
+from streamlit import generic_binary_proto
 from streamlit import protobuf
 from streamlit.Chart import Chart
 from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
@@ -400,11 +401,12 @@ class DeltaGenerator(object):
         fig.savefig(image, format='png')
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
+    # TODO: Make this accept files and strings/bytes as input.
     @_export_to_io
     @_create_element
     def image(self, element, image, caption=None, width=None,
             use_column_width=False, clamp=False):
-        """Displays an image.
+        """Displays an image or images.
 
         Args
         ----
@@ -439,6 +441,42 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
+    def audio(self, element, data, format='audio/wav'):
+        """Inserts an audio player.
+
+        Args
+        ----
+        data : The audio bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the audio file. Defaults to 'audio/wav'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        """
+        # TODO: Provide API to convert raw NumPy arrays to audio file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.audio, data)
+        element.audio.format=format
+
+    @_export_to_io
+    @_create_element
+    def video(self, element, data, format='video/mp4'):
+        """Inserts a video player.
+
+        Args
+        ----
+        data : The video bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the video file. Defaults to 'video/mp4'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        """
+        # TODO: Provide API to convert raw NumPy arrays to video file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.video, data)
+        element.video.format=format
+
+    @_export_to_io
+    @_create_element
     def progress(self, element, value):
         """Displays the string as a h3 header.
 
@@ -453,7 +491,7 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        Here is an example of a progress bar increasing over time::
+        Here is an example of a progress bar increasing over time:
             import time
             my_bar = st.progress(0)
             for percent_complete in range(100):
