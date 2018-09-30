@@ -113,15 +113,12 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.15.4`.
+**Note:** The current version is `0.15.6`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
   - `lib/setup.py`
   - `frontend/package.json`
-  - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
-    - `lib/streamlit/config/config.yaml` : set the `proxy.port`
-    - `frontend/src/WebClient.js` : set the `PROXY_PORT`.
 
 Then, so things like `package-lock.json` get updated, run:
 ```
@@ -163,7 +160,7 @@ make wheel
 Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
-pip install ../streamlit/lib/dist/streamlit-0.15.4-py3-none-any.whl
+pip install ../streamlit/lib/dist/streamlit-0.15.6-py3-none-any.whl
 streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache

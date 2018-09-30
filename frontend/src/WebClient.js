@@ -43,7 +43,6 @@ import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
 
-
 class WebClient extends PureComponent {
   constructor(props) {
     super(props);
