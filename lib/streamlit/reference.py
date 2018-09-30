@@ -185,24 +185,33 @@ def display_reference():
     st.header('Visualizing data as images')
 
     @st.cache
-    def read_image(url):
-        return urllib.request.urlopen(url).read()
+    def read_file_from_url(url):
+        try:
+            return urllib.request.urlopen(url).read()
+        except urllib.error.URLError:
+            st.error(f'Unable to load file from {image_url}. '
+                'Is the internet connected?')
+
     image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'
-    try:
-        image_bytes = read_image(image_url)
+    image_bytes = read_file_from_url(image_url)
 
-        with st.echo():
-            image = Image.open(BytesIO(image_bytes))
+    with st.echo():
+        image = Image.open(BytesIO(image_bytes))
 
-            st.image(image, caption="Sunset", use_column_width=True)
+        st.image(image, caption="Sunset", use_column_width=True)
 
-            array = np.array(image).transpose((2, 0, 1))
-            channels = array.reshape(array.shape + (1,))
+        array = np.array(image).transpose((2, 0, 1))
+        channels = array.reshape(array.shape + (1,))
 
-            st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
-    except urllib.error.URLError:
-        st.error(f'Unable to load image from {image_url}. '
-            'Is the internet connected?')
+        st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
+
+    st.header('Playing audio')
+
+    audio_url = 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg'
+    audio_bytes = read_file_from_url(audio_url)
+
+    with st.echo():
+        st.audio(audio_bytes, format='audio/ogg')
 
     st.header('Inserting headers')
 
