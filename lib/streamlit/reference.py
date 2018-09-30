@@ -210,8 +210,26 @@ def display_reference():
     audio_url = 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg'
     audio_bytes = read_file_from_url(audio_url)
 
+    st.write('''
+        Streamlit can play audio in all formats supported by modern
+        browsers. Below is an example of an _ogg_-formatted file:
+        ''')
+
     with st.echo():
         st.audio(audio_bytes, format='audio/ogg')
+
+    st.header('Playing video')
+
+    st.write('''
+        Streamlit can play video in all formats supported by modern
+        browsers. Below is an example of a _mp4_-formatted file:
+        ''')
+
+    video_url = 'https://www.sample-videos.com/video/mp4/480/big_buck_bunny_480p_2mb.mp4'
+    video_bytes = read_file_from_url(video_url)
+
+    with st.echo():
+        st.video(video_bytes, format='video/webm')
 
     st.header('Inserting headers')
 
