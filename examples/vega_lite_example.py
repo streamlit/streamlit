@@ -35,6 +35,8 @@ st.header('Line chart')
 
 st.subheader('Single line')
 
+st.write('The plot below also tests `st.add_rows()`')
+
 df = pd.DataFrame({
     'day': range(100),
     'stock price': np.random.randn(100),
@@ -49,8 +51,26 @@ c = st.vega_lite_chart(df,
 
 # Testing add_rows support
 df = pd.DataFrame({
-    'day': range(100, 200),
-    'stock price': np.random.randn(100),
+    'day': range(100, 150),
+    'stock price': np.zeros(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(150, 200),
+    'stock price': np.ones(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(200, 250),
+    'stock price': np.zeros(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(250, 300),
+    'stock price': np.ones(50),
 })
 c.add_rows(df)
 
