@@ -1,3 +1,4 @@
+import io
 import streamlit as st
 import numpy as np
 import wave
@@ -31,6 +32,6 @@ f.writeframes(sine_wave)
 
 f.close()
 
-with open('sound.wav', 'rb') as f:
+with io.open('sound.wav', 'rb') as f:
     x.text('Sending wave...')
     x.audio(f)
