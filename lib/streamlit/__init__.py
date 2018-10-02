@@ -37,7 +37,7 @@ import types
 
 # Import some files directly from this module
 from streamlit.caching import cache
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG, _VegaLite
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG 
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 # import streamlit as st
@@ -61,17 +61,6 @@ for name in dir(DeltaGenerator):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
         setattr(this_module, name, _wrap_delta_generator_method(method))
-
-    if isinstance(member, _VegaLite):
-        orig_ns = member
-        ns = _VegaLite()
-        setattr(this_module, name, ns)
-
-        for subname in dir(orig_ns):
-            if subname.startswith('_'):
-                continue
-            method = getattr(orig_ns, subname)
-            setattr(ns, subname, _wrap_delta_generator_method(method))
 
 def write(*args):
     """Writes its arguments to the Report.
