@@ -241,7 +241,7 @@ class Proxy(object):
 
         So that client connections can connect to it.
         """
-        LOGGER.debug(f'Regisering proxy connection for "{connection.name}"')
+        LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
         LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
 
         # Register the connection and launch a web client if this is a new name.

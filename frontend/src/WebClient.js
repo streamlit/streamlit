@@ -14,16 +14,18 @@ import { fromJS } from 'immutable';
 import url from 'url';
 
 // Display Elements
+import Audio from './elements/Audio';
 import Balloons from './elements/Balloons';
 import Chart from './elements/Chart';
 import DataFrame from './elements/DataFrame';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
-import VegaLiteChart from './elements/VegaLiteChart';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import Table from './elements/Table';
 import Text from './elements/Text';
+import VegaLiteChart from './elements/VegaLiteChart';
+import Video from './elements/Video';
 
 // Other local imports.
 import MainMenu from './MainMenu';
@@ -420,6 +422,7 @@ class WebClient extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
+          audio: (audio) => <Audio audio={audio} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
@@ -432,6 +435,7 @@ class WebClient extends PureComponent {
           map: (map) => <Map map={map} width={width}/>,
           table: (df) => <Table df={df} width={width}/>,
           balloons: (balloons) => <Balloons balloons={balloons}/>,
+          video: (video) => <Video video={video} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

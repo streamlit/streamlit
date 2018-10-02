@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "Audio.proto";
 import "Balloons.proto";
 import "Chart.proto";
 import "DataFrame.proto";
@@ -8,9 +9,10 @@ import "Empty.proto";
 import "Exception.proto";
 import "Image.proto";
 import "Map.proto";
-import "VegaLiteChart.proto";
 import "Progress.proto";
 import "Text.proto";
+import "VegaLiteChart.proto";
+import "Video.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -29,5 +31,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     DataFrame table = 11;
     Balloons balloons = 12;
+    Audio audio = 13;
+    Video video = 14;
   }
 }
