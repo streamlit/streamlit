@@ -84,6 +84,24 @@ df = pd.DataFrame({
 })
 
 def stack_dataframe(df):
+    """Stacks a dataframe.
+
+    Takes a dataframe like:
+    
+      col1 col2 col3
+      10   20   30
+      11   21   31
+    
+    And returns the same data but stacked, like:
+    
+      keys values
+      col1 10
+      col1 11
+      col2 20
+      col2 21
+      col3 30
+      col3 31
+    """
     df = df.stack()
     df = df.reset_index(level=1)
     df.columns = ['keys', 'values']
