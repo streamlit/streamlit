@@ -4,6 +4,7 @@
 import ast
 import json
 import os
+import platform
 import socket
 import yaml
 
@@ -98,7 +99,7 @@ class Config(object):
                 ),
                 isRemote = dict(
                     _comment = 'Is the proxy running remotely.',
-                    value = False,
+                    value = autodetect_remote_machine(),
                 ),
                 externalIP = dict(
                     _comment = ('IP address of the machine where Streamlit is '
@@ -279,3 +280,9 @@ def get_default_creds():
     finally:
         if http_client is not None:
             http_client.close()
+
+
+def autodetect_remote_machine():
+    is_linux = platform.system() == 'Linux'
+    is_headless = not os.getenv('DISPLAY')
+    return is_linux and is_headless

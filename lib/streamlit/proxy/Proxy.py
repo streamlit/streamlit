@@ -100,9 +100,6 @@ def _launch_web_client(name):
     if headless:
         _print_remote_url(port, quoted_name)
     else:
-        if platform.system() == 'Linux' and not os.getenv('DISPLAY'):
-            LOGGER.warning('Attempting to run Streamlit in a headless system. '\
-                'Please consider setting proxy.isRemote to "true" in streamlit/config.yaml.')
         webbrowser.open(url)
 
 def stop_proxy_on_exception(is_coroutine=False):
