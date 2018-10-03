@@ -191,19 +191,23 @@ def display_reference():
         except urllib.error.URLError:
             st.error(f'Unable to load file from {image_url}. '
                 'Is the internet connected?')
+        except Exception as e:
+            st.exception(e)
+        return None
 
     image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'
     image_bytes = read_file_from_url(image_url)
 
-    with st.echo():
-        image = Image.open(BytesIO(image_bytes))
+    if image_bytes is not None:
+        with st.echo():
+            image = Image.open(BytesIO(image_bytes))
 
-        st.image(image, caption="Sunset", use_column_width=True)
+            st.image(image, caption="Sunset", use_column_width=True)
 
-        array = np.array(image).transpose((2, 0, 1))
-        channels = array.reshape(array.shape + (1,))
+            array = np.array(image).transpose((2, 0, 1))
+            channels = array.reshape(array.shape + (1,))
 
-        st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
+            st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
     st.header('Playing audio')
 
@@ -215,8 +219,9 @@ def display_reference():
         browsers. Below is an example of an _ogg_-formatted file:
         ''')
 
-    with st.echo():
-        st.audio(audio_bytes, format='audio/ogg')
+    if audio_bytes is not None:
+        with st.echo():
+            st.audio(audio_bytes, format='audio/ogg')
 
     st.header('Playing video')
 
@@ -228,8 +233,9 @@ def display_reference():
     video_url = 'https://www.sample-videos.com/video/mp4/480/big_buck_bunny_480p_2mb.mp4'
     video_bytes = read_file_from_url(video_url)
 
-    with st.echo():
-        st.video(video_bytes, format='video/webm')
+    if video_bytes is not None:
+        with st.echo():
+            st.video(video_bytes, format='video/webm')
 
     st.header('Inserting headers')
 
