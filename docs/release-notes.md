@@ -1,5 +1,48 @@
 # Release Notes
 
+#### v0.16.0
+October 2, 2018
+```
+Version 0.16 of Streamlit is fresh off the oven with better AWS supppert,
+audio/video support, wide mode, and more! Get it while it's hottt 🔥
+
+To upgrade, please run:
+
+   pip install --upgrade streamlit
+
+IMPORTANT: With this version, we start remotely logging statistics about how
+often you use different Streamlit features. These will be used to help improve
+our product and help us understand how we're growing. If you'd like to opt out,
+add the following 2 lines to ~/.streamlit/config.yaml:
+
+client:
+  remotelyTrackUsage: False
+
+Other than that, here's what else is new in this release:
+
+1. Easier to use in AWS! Streamlit now auto-configures itself for use
+   on AWS. No more juggling config files to get Streamlit to work.
+
+2. We added support for audio and video in Streamlit reports with
+   st.audio(audio_bytes, format='audio/wav') and
+   st.video(video_bytes, format='video/mp4'). To see code examples, run:
+
+     streamlit help
+
+3. Go big or go home: you can now make your reports wider by clicking on the
+   hamburger menu, then "Settings" > "Show reports in wide mode".
+
+4. Introduced a new command to close Streamlit's background process, in the
+   unlikely event it's misbehaving: just run:
+
+     streamlit kill_proxy
+
+5. Published some tutorials at http://streamlit.io/docs
+
+6. Fixed a few important bugs, such as Vega Lite support in Python 2.7, support
+   for argument-free @st.cache, and support for tiny scripts that end before the Streamlit proxy has a chance to start. 
+```
+
 #### v0.14.2
 August 16, 2018
 ```
