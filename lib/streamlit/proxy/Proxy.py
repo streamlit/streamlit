@@ -320,6 +320,7 @@ def get_external_ip():
         external_ip = response.body.strip()
     except (httpclient.HTTPError, RuntimeError) as e:
         LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
+        external_ip = None
     finally:
         if http_client is not None:
             http_client.close()
@@ -339,12 +340,12 @@ def get_lan_ip():
     try:
         # Doesn't even have to be reachable
         s.connect(('8.8.8.8', 1))
-        IP = s.getsockname()[0]
+        lan_ip = s.getsockname()[0]
     except:
-        IP = '127.0.0.1'
+        lan_ip = '127.0.0.1'
     finally:
         s.close()
-    return IP
+    return lan_ip
 
 
 def get_report_url(host, port, name):
