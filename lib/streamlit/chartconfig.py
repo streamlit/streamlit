@@ -1,11 +1,11 @@
 # -*- coding: future_fstrings -*-
+"""Declarative configuration for Streamlit's native ReCharts-based charts."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.ChartComponent import ChartComponent
 from streamlit.DictBuilder import ForEachColumn, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
 from streamlit.caseconverters import to_snake_case
 
