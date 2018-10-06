@@ -1,0 +1,134 @@
+html {
+  font-size: 21px;
+}
+
+header .contents,
+footer .contents,
+main .contents {
+  width: 50rem;
+}
+
+main {
+  margin-top: 0;
+}
+
+h1 {
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.25em;
+}
+
+p {
+  line-height: 1.5em;
+  color: #768096;
+}
+
+#signup-email {
+  vertical-align: baseline;
+  padding: 12px 0;
+  font-size: 1rem;
+  margin-bottom: 0.66em;
+  width: 15em;
+  border: solid #cbcbcb;
+  border-width: 0 0 1px;
+  color: #768096;
+  max-width: 80vw;
+}
+
+#signup-email:focus {
+  outline: none;
+  border-color: #bbb;
+}
+
+#signup-email::placeholder {
+  color: #bbb;
+}
+
+#signup-button {
+  background-color: #f1516c;
+  border: none;
+  border-radius: 1.5rem;
+  box-shadow: 0 0.66rem 1.15rem #f8dbe2;
+  font-size: 0.833rem;
+  font-weight: 500;
+  color: #ffffff;
+  box-sizing: border-box;
+  padding: 0 2em;
+  margin: 20px 0;
+  height: 2.75rem;
+  display: flex;
+  justify-content: center;
+  align-child: center;
+  transition: 300ms box-shadow;
+  max-width: 80vw;
+}
+
+#signup-button:focus {
+  outline: none;
+  background-color: #e1415c;
+}
+
+#signup-button:active {
+  box-shadow: 0 0.125rem 1rem #f8dbe2;
+}
+
+.main-text {
+  margin-right: 1rem;
+}
+
+.secondary-image {
+  position: relative;
+  max-width: 22rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+#circles {
+  transition: 300ms transform;
+}
+
+#circles.split {
+  transform: scale(0.5);
+}
+
+.split .pink {
+  margin-top: -8rem;
+  margin-left: -8rem;
+}
+
+.split .green {
+  margin-top: 8rem;
+  margin-left: 8rem;
+}
+
+.circle {
+  border-radius: 100%;
+  height: 400px;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  position: absolute;
+  width: 20rem;
+  transition: 300ms margin;
+}
+
+.pink { 
+  background: rgb(232,162,163);
+  background: linear-gradient(308deg, rgba(232,162,163,1) 0%, rgba(221,90,112,1) 100%);
+}
+
+.green { 
+  background: rgb(102,173,189);
+  background: linear-gradient(308deg, rgba(102,173,189,1) 0%, rgba(200,185,185,1) 100%);
+}
+
+.purple {
+  background: rgb(200,158,192);
+  background: linear-gradient(308deg, rgba(200,158,192,1) 0%, rgba(99,71,219,1) 100%);
+}
+
+@media (max-width: 480px) {
+  #circles {
+    display: none;
+  }
+}

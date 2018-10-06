@@ -1,23 +1,94 @@
 {{ define "main" }}
-<main id="home">
-  <section id="fullbleed" class="parallax dark">
-    <h1 class="logo"><strong>stream</strong><span>lit</span></h1>
-  </section>
+  <div class="contents">
 
-  {{/* partial "quickstart" . */}}
-  {{ partial "contact" . }}
-</main>
+    <section class="row">
+      <div class="main-text">
+        <h1>What if there was a new way to do interactive data science?</h1>
+        <p>
+          Introducing Streamlit — we’re building a new architecture for data
+          science and machine learning. Sound interesting? Stay updated.
+        </p>
+        <form
+            action="https://script.google.com/macros/s/AKfycbybsXsHyw_NjgLr5LupCGh8AAZTp6U00eiWd5TA3L4roSvI4ES8/exec"
+            method="POST"
+            target="hiddenFrame"
+            >
+          <div>
+            <input
+                id="signup-email"
+                name="email"
+                placeholder="something@probablygmail.com"
+                required="true"
+                type="email"
+                />
+          </div>
+          <div>
+            <input
+                id="signup-button"
+                type="submit"
+                value="Keep me posted"
+                onclick="window.setTimeout(function() {document.location.href = '/success?redirectTo=/'}, 500)"
+                />
+          </div>
+        </form>
+      </div>
 
-<script>
-  if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
-    var els = document.getElementsByClassName('parallax');
-    for (var i = 0; i < els.length; i++) {
-      els[i].classList.add('chrome');
+      <div
+          id="circles"
+          class="secondary-image"
+          onmouseover="splitCircles()"
+          onmouseout="joinCircles()"
+          >
+        <div class="circle pink"></div>
+        <div class="circle green"></div>
+        <div class="circle purple"></div>
+      </div>
+    </section>
+
+  </div>
+
+
+  <iframe name="hiddenFrame" width="0" height="0" border="0" style="display: none;"></iframe>
+  <script src="{{ .Site.BaseURL }}scripts/anime.min.js"></script>
+  <script>
+    function animate(selector) {
+      anime({
+        targets: selector,
+        translateX: 1.5*(Math.random() - 0.5) * 10,
+        translateY: 1.5*(Math.random() - 0.5) * 10,
+        direction: 'alternate',
+        easing: 'easeInOutSine',
+        duration: Math.random() * 1200 + 1200,
+        delay: 0
+      }).finished.then(function() { animate(selector) });
     }
-  }
-</script>
+
+    animate('.pink');
+    animate('.green');
+
+    var mouseOutTime = null;
+
+    function splitCircles() {
+      mouseOutTime = null;
+      updateCircleState();
+    }
+
+    function joinCircles() {
+      mouseOutTime = Date.now();
+      updateCircleState();
+    }
+
+    function updateCircleState() {
+      const el = document.getElementById('circles');
+      if (mouseOutTime) {
+        if (Date.now() - mouseOutTime > 3000) {
+          el.classList.remove('split');
+        } else {
+          setTimeout(updateCircleState, 300);
+        }
+      } else {
+        el.classList.add('split');
+      }
+    }
+  </script>
 {{ end }}
-
-
-{{ define "header" }}<!-- -->{{ end }}
-{{ define "footer" }}<!-- -->{{ end }}
