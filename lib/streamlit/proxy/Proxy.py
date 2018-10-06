@@ -314,7 +314,7 @@ def get_external_ip():
     try:
         http_client = httpclient.HTTPClient()
         response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
-        external_ip = response.body.strip()
+        external_ip = response.body.strip().decode('utf-8')
     except (httpclient.HTTPError, RuntimeError) as e:
         LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
         external_ip = None
