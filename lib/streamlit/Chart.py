@@ -94,6 +94,7 @@ class Chart(object):
         kwargs : anything
             Keyword arguments containg properties to be added to the ReChart's
             top-level element.
+
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
@@ -112,6 +113,7 @@ class Chart(object):
             A snake-case string with the ReCharts component name.
         props : anything
             The ReCharts component value.
+
         """
         self._components.append(ChartComponent(component_name, props))
 
@@ -184,6 +186,7 @@ class Chart(object):
         currCycle : int
             For repeated fields (denoted via ForEachColumn) this is the number
             of the current column.
+
         """
         if value == CURRENT_COLUMN_NAME:
             i = currCycle
@@ -252,6 +255,7 @@ def register_type_builder(chart_type):
     ----------
     chart_type : string
         A string with the upper-camel-case name of the chart type to add.
+
     """
     chart_type_snake = to_snake_case(chart_type)
 
