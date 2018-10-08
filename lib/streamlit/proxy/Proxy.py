@@ -21,7 +21,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
-from streamlit import protobuf
 from streamlit.logger import get_logger
 from streamlit.util import get_static_dir
 
@@ -34,8 +33,6 @@ from tornado import httpclient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import functools
-import os
-import platform
 import socket
 import textwrap
 import traceback
@@ -55,8 +52,8 @@ def _print_remote_url(port, quoted_name):
         LOGGER.debug(f'proxy.externalIP set to {external_ip}')
     else:
         print('proxy.externalIP not set, attempting to autodetect IP')
-        external_ip = get_external_ip()
-        lan_ip = get_lan_ip()
+        external_ip = _get_external_ip()
+        lan_ip = _get_lan_ip()
 
     timeout_secs = config.get_option('proxy.waitForConnectionSecs')
 
@@ -65,8 +62,8 @@ def _print_remote_url(port, quoted_name):
               f'{HELP_DOC} for debugging hints.')
         return
 
-    external_url = get_report_url(external_ip, port, quoted_name)
-    lan_url = get_report_url(lan_ip, port, quoted_name)
+    external_url = _get_report_url(external_ip, port, quoted_name)
+    lan_url = _get_report_url(lan_ip, port, quoted_name)
 
     print(textwrap.dedent(f'''
         =============================================================
@@ -76,14 +73,15 @@ def _print_remote_url(port, quoted_name):
         =============================================================
     '''))
 
-def _launch_web_client(name):
-    """Launches a web browser to connect to the proxy to get the named
-    report.
 
-    Args
-    ----
+def _launch_web_client(name):
+    """Launch a web browser to connect to the proxy to get the named report.
+
+    Parameters
+    ----------
     name : string
         The name of the report to which the web browser should connect.
+
     """
     if config.get_option('proxy.useNode'):
         # If changing this, also change frontend/src/baseconsts.js
@@ -102,8 +100,9 @@ def _launch_web_client(name):
     else:
         webbrowser.open(url)
 
+
 def stop_proxy_on_exception(is_coroutine=False):
-    """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
+    """Decorate WebSocketHandler callbacks to stop the proxy on exception."""
     def stop_proxy_decorator(callback):
         if is_coroutine:
             @functools.wraps(callback)
@@ -125,6 +124,7 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug('Stopped the proxy.')
                     raise
             return wrapped_coroutine
+
         else:
             @functools.wraps(callback)
             def wrapped_callback(web_socket_handler, *args, **kwargs):
@@ -138,8 +138,11 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug('Stopped the proxy.')
                     raise
             return wrapped_callback
+
         return functools.wraps(callback)(wrapped_callback)
+
     return stop_proxy_decorator
+
 
 class Proxy(object):
     """The main base class for the streamlit server."""
@@ -202,10 +205,6 @@ class Proxy(object):
 
     def run_app(self):
         """Run web app."""
-        '''
-        port = config.get_option('proxy.port')
-        web.run_app(self._app, port=port)
-        '''
         LOGGER.debug('About to start the proxy.')
         IOLoop.current().start()
         LOGGER.debug('IOLoop closed.')
@@ -215,7 +214,7 @@ class Proxy(object):
         if headless and not self._received_client_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
-                f'Please go to {HELP_DOC} for debugging hints.')
+                  f'Please go to {HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -239,7 +238,9 @@ class Proxy(object):
         So that client connections can connect to it.
         """
         LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
-        LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
+        LOGGER.debug(
+            f'About to start registration: '
+            f'{list(self._connections.keys())} ({id(self._connections)})')
 
         # Register the connection and launch a web client if this is a new name.
         new_name = connection.name not in self._connections
@@ -258,7 +259,9 @@ class Proxy(object):
         loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
         LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
-        LOGGER.debug(f'Finished resistering connection: {list(self._connections.keys())} ({id(self._connections)})')
+        LOGGER.debug(
+            f'Finished resistering connection: '
+            f'{list(self._connections.keys())} ({id(self._connections)})')
 
     def try_to_deregister_proxy_connection(self, connection):
         """Try to deregister proxy connection.
@@ -279,21 +282,32 @@ class Proxy(object):
 
     def potentially_stop(self):
         """Stop proxy if no open connections."""
-        LOGGER.debug('Stopping if there are no more connections: ' +
+        LOGGER.debug(
+            'Stopping if there are no more connections: ' +
             str(list(self._connections.keys())))
         if not self._connections:
             self.stop()
 
     @gen.coroutine
     def add_client(self, report_name, ws):
-        """Adds a queue to the connection for the given report_name."""
+        """Add a queue to the connection for the given report_name.
+
+        Parameters
+        ----------
+        report_name : string
+            The name of the report
+        ws
+            The websocket object.
+
+        """
         self._received_client_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
-        yield new_report_msg(connection.id,
-            connection.cwd, connection.command_line, ws)
+        yield new_report_msg(
+            connection.id, connection.cwd, connection.command_line, ws)
         LOGGER.debug('Added new client. Id: ' + connection.id)
-        LOGGER.debug('Added new client. Command line: ' + \
+        LOGGER.debug(
+            'Added new client. Command line: ' +
             str(connection.command_line))
         raise gen.Return((connection, queue))
 
@@ -304,11 +318,14 @@ class Proxy(object):
         self.potentially_stop()
 
 
-def get_external_ip():
-    """Gets the *external* IP address of the current machine.
+def _get_external_ip():
+    """Get the *external* IP address of the current machine.
 
-    Returns:
-        IPv4 address as a string.
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
     """
     http_client = None
     try:
@@ -325,27 +342,49 @@ def get_external_ip():
     return external_ip
 
 
-def get_lan_ip():
-    """Gets the *local* IP address of the current machine.
+def _get_lan_ip():
+    """Get the *local* IP address of the current machine.
 
     From: https://stackoverflow.com/a/28950776
 
-    Returns:
-        IPv4 address as a string.
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # Doesn't even have to be reachable
         s.connect(('8.8.8.8', 1))
         lan_ip = s.getsockname()[0]
-    except:
+    except Exception:
         lan_ip = '127.0.0.1'
     finally:
         s.close()
     return lan_ip
 
 
-def get_report_url(host, port, name):
+def _get_report_url(host, port, name):
+    """Return the URL of report defined by (host, port, name).
+
+    Parameters
+    ----------
+    host : string
+        The hostname or IP address of the current machine.
+
+    port : int
+        The port where Streamlit is running.
+
+    name : string
+        The name of the report.
+
+    Returns
+    -------
+    string
+        The remote IPv4 address.
+
+    """
     if host is None:
         return 'Unable to detect'
     return 'http://{}:{}/?name={}'.format(host, port, name)
