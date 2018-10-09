@@ -272,6 +272,7 @@ class Proxy(object):
         if not self.proxy_connection_is_registered(connection):
             return
         if connection.can_be_deregistered():
+            connection.close()
             del self._connections[connection.name]
             LOGGER.debug('Got rid of connection "%s".' % connection.name)
 
