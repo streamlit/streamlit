@@ -20,6 +20,7 @@ LOG_LEVEL = logging.DEBUG
 # This boolean is True iff this is the proxy.
 THIS_IS_PROXY = False
 
+
 def set_log_level(level):
     """Set log level."""
     logger = get_logger()
@@ -47,14 +48,17 @@ def set_log_level(level):
     global LOG_LEVEL
     LOG_LEVEL = log_level
 
+
 def set_this_is_proxy():
+    """Set the local boolean THIS_IS_PROXY."""
     global THIS_IS_PROXY
     THIS_IS_PROXY = True
     for log in LOGGERS.values():
         setup_formatter(log)
 
+
 def setup_formatter(logger):
-    """Sets up the console formatter for a given logger."""
+    """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
     if hasattr(logger, 'streamlit_console_handler'):
         logger.removeHandler(logger.streamlit_console_handler)
@@ -71,6 +75,7 @@ def setup_formatter(logger):
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
 
+
 def init_aiohttp_logs():
     """Initialize aiohttp logs."""
     global LOGGER
@@ -83,6 +88,7 @@ def init_aiohttp_logs():
 
     logger = get_logger()
     logger.debug('Initialized aiohttp logs')
+
 
 def init_tornado_logs():
     """Initialize tornado logs."""
@@ -140,4 +146,6 @@ def get_logger(name=None):
 
     return log
 
-import streamlit.proxy
+
+# Avoid dependency loop in 2.7 by importing this at the bottom.
+import streamlit.proxy  # noqa: F401
