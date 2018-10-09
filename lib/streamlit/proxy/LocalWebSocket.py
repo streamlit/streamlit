@@ -69,6 +69,6 @@ class LocalWebSocket(WebSocketHandler):
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
-            self._connection.finished_local_connection()
+            self._connection.close_local_connection()
             self._proxy.try_to_deregister_proxy_connection(self._connection)
         self._proxy.potentially_stop()
