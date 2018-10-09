@@ -107,6 +107,26 @@ class Config(object):
                     # Must be None, so the autodetection in Proxy.py takes place
                     value = None,
                 ),
+                watchFileSystem = dict(
+                    _comment = 'Watch for filesystem changes and rerun reports',
+                    value = True,
+                ),
+                watchRecursively = dict(
+                    _comment = 'If true, will watch the filesystem recursively',
+                    value = True,
+                ),
+                watchPatterns = dict(
+                    _comment = 'File patterns to watch',
+                    value = ['*.py'],
+                ),
+                ignorePatterns = dict(
+                    _comment = 'File patterns to ignore when watching the filesystem',
+                    value = [],
+                ),
+                ignoreSubfolders = dict(
+                    _comment = 'Paths of folders to ignore when watching the filesystem',
+                    value = [],
+                ),
             ),
             s3 = dict(
                 _comment = 'S3 Configuration',
