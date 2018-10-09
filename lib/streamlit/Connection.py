@@ -188,7 +188,7 @@ class Connection(object):
             self._loop.run_sync(self._attempt_connection)
             self._loop.close()
             self.unregister()
-            LOGGER.debug('Exit.. (deltas remaining = %s)' % len(self._queue._deltas))
+            LOGGER.debug('Exit. (deltas remaining = %s)' % len(self._queue._deltas))
 
         connection_thread = threading.Thread(target=connection_thread)
         connection_thread.daemon = False
