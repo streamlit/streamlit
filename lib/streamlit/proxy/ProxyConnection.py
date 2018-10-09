@@ -94,7 +94,9 @@ class ProxyConnection(object):
                 f'Observing file system recursively at: {path_to_observe}')
         except OSError as e:
             file_system_observer = None
-            LOGGER.error(f'Could not start file system observer: {e}')
+            LOGGER.error(
+                f'Could not start file system observer: {e}\n'
+                'See http://streamlit.io/docs/help')
 
         return file_system_observer
 
@@ -196,4 +198,3 @@ class FSEventHandler(PatternMatchingEventHandler):
 
         """
         self._fn_to_run(event)
-
