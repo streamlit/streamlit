@@ -244,11 +244,15 @@ class Proxy(object):
         LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
 
         # Register the connection and launch a web client if this is a new name.
-        new_name = connection.name not in self._connections
-        self._connections[connection.name] = connection
-        if new_name:
+        old_connection = self._connections.get(connection.name, None)
+
+        if old_connection:
+            self.deregister_proxy_connection(old_connection)
+        else:
             _launch_web_client(connection.name)
             # self._cloud.create(connection.name)
+
+        self._connections[connection.name] = connection
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -272,9 +276,20 @@ class Proxy(object):
         if not self.proxy_connection_is_registered(connection):
             return
         if connection.can_be_deregistered():
-            connection.close()
-            del self._connections[connection.name]
-            LOGGER.debug('Got rid of connection "%s".' % connection.name)
+            self.deregister_proxy_connection(connection)
+
+    def deregister_proxy_connection(self, connection):
+        """Deregister proxy connection irrespective of whether it's in use.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            The connection to deregister. It will be properly shutdown before
+            deregistering.
+        """
+        connection.close()
+        del self._connections[connection.name]
+        LOGGER.debug('Got rid of connection "%s".' % connection.name)
 
     def proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
