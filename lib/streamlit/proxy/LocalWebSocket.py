@@ -2,7 +2,6 @@
 from tornado.websocket import WebSocketHandler
 import urllib
 
-from streamlit import config
 from streamlit import protobuf
 from streamlit.proxy import Proxy, ProxyConnection
 from streamlit.logger import get_logger
@@ -24,14 +23,20 @@ class LocalWebSocket(WebSocketHandler):
         return True
 
     @Proxy.stop_proxy_on_exception()
-    def open(self, *args):
-        """Handle connection to "local" instance of Streamlit.
+    def open(self, local_id, report_name):
+        """Handle connection to *local* instance of Streamlit.
 
-        i.e. one producing deltas to display on the client.
+        Parameters
+        ----------
+        local_id : string
+            Vestigial stuff. Deprecated.
+        report_name : string
+            The name of the report.
+
         """
         # Parse out the control information.
-        self._local_id = args[0]
-        self._report_name = args[1]
+        self._local_id = local_id
+        self._report_name = report_name
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
         LOGGER.info('Local websocket opened for %s', self._report_name)
