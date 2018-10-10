@@ -69,8 +69,13 @@ class Connection(object):
         self._loop = IOLoop(make_current=False)
         LOGGER.debug(f'Created io loop {self._loop}.')
 
+        root_frame = inspect.stack()[-1]
+
         # Full path of the file that caused this connection to be created.
-        self._source_file_path = inspect.stack()[-1].filename
+        self._source_file_path = os.path.realpath(
+            root_frame[1])  # 1 is the filename field in this tuple.
+
+        LOGGER.debug(f'source_file_path: {self._source_file_path}.')
 
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
@@ -133,15 +138,16 @@ class Connection(object):
             LOGGER.debug('Cleanup thread waiting for main thread to end.')
             current_thread.join()
             LOGGER.debug('Cleanup thread waiting for main thread to end.')
-            # TODO(armando): Fix with something that checks if the proxy
-            #                ran once and only sleep if we're waiting
-            #                for the proxy to startup.  https://trello.com/c/1WECpDht
+            # TODO(armando): Fix with something that checks if the proxy ran
+            # once and only sleep if we're waiting for the proxy to startup.
+            # https://trello.com/c/1WECpDht
             LOGGER.debug('Sleeping 5 seconds in case the local script ran very quickly.')
             time.sleep(5)
             LOGGER.debug('Main thread ended. Restoring excepthook.')
             sys.excepthook = original_excepthook
             self._loop.add_callback(setattr, self, '_is_open', False)
             LOGGER.debug('Submitted callback to stop the connection thread.')
+
         cleanup_thread = threading.Thread(target=cleanup_on_exit)
         cleanup_thread.daemon = False
         cleanup_thread.start()
