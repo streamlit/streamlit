@@ -86,7 +86,6 @@ class ProxyConnection(object):
         recursive = config.get_option('proxy.watchUpdatesRecursively')
         patterns = config.get_option('proxy.watchPatterns')
         ignore_patterns = config.get_option('proxy.ignorePatterns')
-        ignore_directories = config.get_option('proxy.ignoreSubfolders')
 
         path_to_observe = os.path.dirname(self.source_file_path)
 
@@ -96,7 +95,6 @@ class ProxyConnection(object):
             recursive=recursive,
             patterns=patterns,
             ignore_patterns=ignore_patterns,
-            ignore_directories=ignore_directories,
         )
 
         # If the previous command errors out, try a fallback command that is
@@ -108,7 +106,6 @@ class ProxyConnection(object):
                 recursive=False,  # No longer recursive.
                 patterns=patterns,
                 ignore_patterns=ignore_patterns,
-                ignore_directories=ignore_directories,
             )
 
         return fs_observer
@@ -224,8 +221,8 @@ class FSEventHandler(PatternMatchingEventHandler):
             The function to call whenever a watched file changes. Takes the
             FileSystemEvent as a parameter.
 
-        Also accepts all parameters from PatternMatchingEventHandler, such as:
-        patterns, ignore_patterns, ignore_directories.
+        Also accepts the following parameters from PatternMatchingEventHandler:
+        patterns and ignore_patterns.
 
         More information at https://pythonhosted.org/watchdog/api.html#watchdog.events.PatternMatchingEventHandler
         """
