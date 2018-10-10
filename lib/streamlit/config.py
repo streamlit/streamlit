@@ -123,10 +123,6 @@ class Config(object):
                     _comment = 'File patterns to ignore when watching the filesystem',
                     value = [],
                 ),
-                ignoreSubfolders = dict(
-                    _comment = 'Paths of folders to ignore when watching the filesystem',
-                    value = [],
-                ),
             ),
             s3 = dict(
                 _comment = 'S3 Configuration',
