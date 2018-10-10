@@ -4,6 +4,8 @@
 import ast
 import json
 import os
+import platform
+import socket
 import yaml
 
 from tornado import gen, httpclient
@@ -76,7 +78,7 @@ class Config(object):
                 ),
                 waitForProxySecs = dict(
                     _comment = 'How long to wait for the proxy server to start up.',
-                    value = 2.0,
+                    value = 3.0,
                 ),
             ),
             proxy = dict(
@@ -97,7 +99,13 @@ class Config(object):
                 ),
                 isRemote = dict(
                     _comment = 'Is the proxy running remotely.',
-                    value = False,
+                    value = autodetect_remote_machine(),
+                ),
+                externalIP = dict(
+                    _comment = ('IP address of the machine where Streamlit is '
+                        'running.'),
+                    # Must be None, so the autodetection in Proxy.py takes place
+                    value = None,
                 ),
                 watchFileSystem = dict(
                     _comment = 'Watch for filesystem changes and rerun reports',
@@ -142,6 +150,13 @@ class Config(object):
                     bucket = dict(
                         value = None,
                     ),
+                ),
+            ),
+            client = dict(
+                remotelyTrackUsage = dict(
+                    _comment = (
+                        'Whether Streamlit should remotely record usage stats'),
+                    value = True,
                 ),
             ),
         )
@@ -250,6 +265,17 @@ def saving_is_configured():
     return (get_s3_option('bucket') is not None)
 
 
+def remotely_track_usage():
+    """Returns true if we should log user events remotely for our own stats"""
+    val = get_option('client.remotelyTrackUsage')
+    LOGGER.debug('remotelyTrackUsage: %s' % val)
+
+    if type(val) is bool:
+        return val
+
+    return True  # default to True. See also /frontend/src/remotelogging.js
+
+
 def get_default_creds():
     # TODO(armando): Should we always fetch this or should we write
     # credentials to disk and then if the user deletes it, refetch?
@@ -269,8 +295,14 @@ def get_default_creds():
         # Replace whatever is in the config with the default credentials
         c['storage']['s3'].update(creds)
 
-    except (httpclient.HTTPError, RuntimeError) as e:
-        pass
+    except (httpclient.HTTPError, RuntimeError, socket.gaierror) as e:
+        LOGGER.debug('Not using default credentials.  Error getting default credentials from %s: %s', endpoint, e)
     finally:
         if http_client is not None:
             http_client.close()
+
+
+def autodetect_remote_machine():
+    is_linux = platform.system() == 'Linux'
+    is_headless = not os.getenv('DISPLAY')
+    return is_linux and is_headless

@@ -1,5 +1,48 @@
 # Release Notes
 
+#### v0.16.1
+October 2, 2018
+```
+Version 0.16 of Streamlit is fresh off the oven with better AWS supppert,
+audio/video support, wide mode, and more! Get it while it's hottt 🔥
+
+To upgrade, please run:
+
+   pip install --upgrade streamlit
+
+IMPORTANT: With this version, we start remotely logging statistics about how
+often you use different Streamlit features. These will be used to help improve
+our product and help us understand how we're growing. If you'd like to opt out,
+add the following 2 lines to ~/.streamlit/config.yaml:
+
+client:
+  remotelyTrackUsage: False
+
+Other than that, here's what else is new in this release:
+
+1. Easier to use in AWS! Streamlit now auto-configures itself for use
+   on AWS. No more juggling config files to get Streamlit to work.
+
+2. We added support for audio and video in Streamlit reports with
+   st.audio(audio_bytes, format='audio/wav') and
+   st.video(video_bytes, format='video/mp4'). To see code examples, run:
+
+     streamlit help
+
+3. Go big or go home: you can now make your reports wider by clicking on the
+   hamburger menu, then "Settings" > "Show reports in wide mode".
+
+4. Introduced a new command to close Streamlit's background process, in the
+   unlikely event it's misbehaving: just run:
+
+     streamlit kill_proxy
+
+5. Published some tutorials at http://streamlit.io/docs
+
+6. Fixed a few important bugs, such as Vega Lite support in Python 2.7, support
+   for argument-free @st.cache, and support for tiny scripts that end before the Streamlit proxy has a chance to start. 
+```
+
 #### v0.14.2
 August 16, 2018
 ```
@@ -15,7 +58,7 @@ See our beautiful new docs!
 
 Get complete help and API documentation:
 
-    python -m streamlit help
+    streamlit help
 
 New features are:
 
@@ -35,7 +78,7 @@ New features are:
 
    See examples of the use of Vega Lite in Streamlit by running
 
-     python -m streamlit help
+     streamlit help
 
 4. Caching with @st.cache is now orders-of-magnitudes faster. You can now
    skip redundant data fetches and computation even faster!
@@ -68,7 +111,7 @@ We are thrilled to announce version 0.13 of Streamlit. To upgrade, please run:
 
 Get complete help and API documentation with:
 
-    python -m streamlit help
+    streamlit help
 
 New features are:
 
@@ -100,7 +143,7 @@ We are thrilled to announce version 0.12 of Streamlit. To upgrade, please run:
 
 Get complete help and API documentation with:
 
-    python -m streamlit help
+    streamlit help
 
 MAJOR API CHANGE!
 
@@ -145,7 +188,7 @@ We are thrilled to announce version 0.11 of Streamlit. To upgrade, please run:
 
 Get complete help and API documentation with:
 
-    python -m streamlit help
+    streamlit help
 
 New features and bug fixes are:
 
@@ -174,11 +217,11 @@ We are thrilled to announce version 0.9 of Streamlit. To upgrade, please run:
 
 Check the version with:
 
-    python -m streamlit version
+    streamlit version
 
 Get complete help and API documentation with:
 
-    python -m streamlit help
+    streamlit help
 
 New features are:
 
@@ -224,7 +267,7 @@ New features are:
 
 1. Help now opens in a separate tab. So running
 
-    python -m streamlit help
+    streamlit help
 
   opens a new tab named "help." Useful for flipping between help and
   your work!
@@ -256,7 +299,7 @@ In addition, we have a couple bug fixes:
 2. Exceptions will be printed to the report even before the first call to an
    io.* function.
 
-Remember if you get lost, just run `python -m streamlit help`. We look forward
+Remember if you get lost, just run `streamlit help`. We look forward
 to hearing how you use these powerful new features!
 ```
 
@@ -270,7 +313,7 @@ We are thrilled to announce the v0.6 of Streamlit. To upgrade, please run:
 
 Streamlit now has a built-in help manual! To access it run:
 
-    python -m streamlit help
+    streamlit help
 
 Other new features include:
 
@@ -321,7 +364,7 @@ Other new features include:
 
     (You can also use the @streamlit.cache decorator to speed these up!)
 
-Remember if you get lost, just run `python -m streamlit help`. We look forward
+Remember if you get lost, just run `streamlit help`. We look forward
 to hearing how you use these powerful new features!
 ```
 

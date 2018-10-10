@@ -1,6 +1,10 @@
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 from copy import deepcopy
 import numpy as np
-
 
 CURRENT_COLUMN_NAME = '__current_column_name__'
 CURRENT_COLUMN_NUMBER = '__current_column_number__'

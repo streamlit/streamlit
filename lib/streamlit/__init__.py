@@ -26,6 +26,7 @@ LOGGER = logger.get_logger('root')
 import contextlib
 import functools
 import numpy as np
+import os
 import pandas as pd
 import re
 import sys
@@ -36,7 +37,7 @@ import types
 
 # Import some files directly from this module
 from streamlit.caching import cache
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG, _VegaLite
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG 
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 # import streamlit as st
@@ -60,17 +61,6 @@ for name in dir(DeltaGenerator):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
         setattr(this_module, name, _wrap_delta_generator_method(method))
-
-    if isinstance(member, _VegaLite):
-        orig_ns = member
-        ns = _VegaLite()
-        setattr(this_module, name, ns)
-
-        for subname in dir(orig_ns):
-            if subname.startswith('_'):
-                continue
-            method = getattr(orig_ns, subname)
-            setattr(ns, subname, _wrap_delta_generator_method(method))
 
 def write(*args):
     """Writes its arguments to the Report.
@@ -227,6 +217,7 @@ def echo():
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
+#
 # For whatever reason, sys.argv[0] is different based on python version.
 # * Python 2.7 = '-c'
 # * Python 3.6 = '-m'
@@ -234,12 +225,18 @@ _this_may_be_proxy = False
 if sys.argv[0] in ('-m', '-c'):
     _this_may_be_proxy = True
 
+# Test whether this is the 'streamlit' command.
+_this_may_be_streamlit_command = os.path.split(sys.argv[0])[1] == 'streamlit'
+
 # In order to log all exceptions etc to the streamlit report after
 # `import streamlit` we establish the proxy by calling get_connection().
-# If there's any chance that this is the proxy (i.e. _this_may_be_proxy) then we
-# skip this step. Overcautiously skipping this step isn't fatal in general as
-# it simply implies that the connection may be established later.
-if not _this_may_be_proxy:
+# If there's any chance that this is the proxy (i.e. _this_may_be_proxy) or the
+# streamlit command (i.e. _this_may_be_streamlit_command), then we skip this
+# step.
+#
+# Overcautiously skipping this step isn't fatal in general as it simply implies
+# that the connection may be established later.
+if not (_this_may_be_proxy or _this_may_be_streamlit_command):
     Connection.get_connection().get_delta_generator()
 
 ### DEPRECATION WARNING ###
@@ -261,34 +258,36 @@ class _IO(object):
     def __init__(self):
         self._emitted_deprecation_warning = False
 
-    text = _IO_show_warning(text)
-    markdown = _IO_show_warning(markdown)
-    json = _IO_show_warning(json)
-    title = _IO_show_warning(title)
-    header = _IO_show_warning(header)
-    subheader = _IO_show_warning(subheader)
-    error = _IO_show_warning(error)
-    warning = _IO_show_warning(warning)
-    info = _IO_show_warning(info)
-    success = _IO_show_warning(success)
-    help = _IO_show_warning(help)
-    exception = _IO_show_warning(exception)
-    dataframe = _IO_show_warning(dataframe)
+    area_chart = _IO_show_warning(area_chart)
+    audio = _IO_show_warning(audio)
+    bar_chart = _IO_show_warning(bar_chart)
     chart = _IO_show_warning(
         lambda *args: error('Private method "chart" was removed'))
+    dataframe = _IO_show_warning(dataframe)
+    echo = _IO_show_warning(lambda *args: error('Please use st.echo()'))
+    empty = _IO_show_warning(empty)
+    error = _IO_show_warning(error)
+    exception = _IO_show_warning(exception)
+    header = _IO_show_warning(header)
+    help = _IO_show_warning(help)
     image = _IO_show_warning(image)
     img = _IO_show_warning(img)
-    progress = _IO_show_warning(progress)
-    link = _IO_show_warning(link)
-    empty = _IO_show_warning(empty)
-    map = _IO_show_warning(map)
-    table = _IO_show_warning(table)
-    write = _IO_show_warning(write)
-    echo = _IO_show_warning(lambda *args: error('Please use st.echo()'))
-    spinner = _IO_show_warning(lambda *args: error('Please use st.spinner()'))
-    area_chart = _IO_show_warning(area_chart)
-    bar_chart = _IO_show_warning(bar_chart)
+    info = _IO_show_warning(info)
+    json = _IO_show_warning(json)
     line_chart = _IO_show_warning(line_chart)
+    link = _IO_show_warning(link)
+    map = _IO_show_warning(map)
+    markdown = _IO_show_warning(markdown)
+    progress = _IO_show_warning(progress)
+    spinner = _IO_show_warning(lambda *args: error('Please use st.spinner()'))
+    subheader = _IO_show_warning(subheader)
+    success = _IO_show_warning(success)
+    table = _IO_show_warning(table)
+    text = _IO_show_warning(text)
+    title = _IO_show_warning(title)
+    video = _IO_show_warning(video)
+    warning = _IO_show_warning(warning)
+    write = _IO_show_warning(write)
 
 # This class is a pseudo-package which exists to emit deprecation warnings.
 io = _IO()

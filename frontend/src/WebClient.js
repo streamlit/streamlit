@@ -14,16 +14,18 @@ import { fromJS } from 'immutable';
 import url from 'url';
 
 // Display Elements
+import Audio from './elements/Audio';
 import Balloons from './elements/Balloons';
 import Chart from './elements/Chart';
 import DataFrame from './elements/DataFrame';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
-import VegaLiteChart from './elements/VegaLiteChart';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import Table from './elements/Table';
 import Text from './elements/Text';
+import VegaLiteChart from './elements/VegaLiteChart';
+import Video from './elements/Video';
 
 // Other local imports.
 import MainMenu from './MainMenu';
@@ -33,17 +35,13 @@ import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
-import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
+import { ForwardMsg, Text as TextProto } from './protobuf';
+import { PROXY_PORT_PROD } from './baseconsts';
 import { addRows } from './dataFrameProto';
+import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
-
-/**
- * Port used to connect to the proxy server.
- */
-const PROXY_PORT = 8501;
-
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -60,12 +58,16 @@ class WebClient extends PureComponent {
           body: 'Ready to receive data',
         }
       }]),
+      userSettings: {
+        wideMode: false,
+      },
     };
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
     this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
@@ -106,7 +108,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://${window.location.hostname}:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
@@ -163,13 +165,19 @@ class WebClient extends PureComponent {
    */
   handleMessage(msgProto) {
     const msg = toImmutableProto(ForwardMsg, msgProto);
+
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
+        initRemoteTracker({
+          remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
+        });
+        trackEventRemotely('newConnection', 'newMessage');
         this.setState({
           savingConfigured: connectionProperties.get('savingConfigured'),
         });
       },
       newReport: (newReportMsg) => {
+        trackEventRemotely('newReport', 'newMessage');
         this.setState({
           reportId: newReportMsg.get('id'),
           commandLine: newReportMsg.get('commandLine').toJS().join(' '),
@@ -210,6 +218,18 @@ class WebClient extends PureComponent {
   }
 
   /**
+   * Saves a settings object.
+   */
+  saveSettings(settings) {
+    this.setState({
+      userSettings: {
+        ...this.state.userSettings,
+        wideMode: settings.wideMode,
+      },
+    });
+  }
+
+  /**
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
@@ -247,6 +267,7 @@ class WebClient extends PureComponent {
    */
   saveReport() {
     if (this.state.savingConfigured) {
+      trackEventRemotely('saveReport', 'newInteraction');
       this.sendBackMsg({
         type: 'cloudUpload',
         cloudUpload: true,
@@ -291,6 +312,7 @@ class WebClient extends PureComponent {
   rerunScript() {
     this.closeDialog();
     if (this.isProxyConnected()) {
+      trackEventRemotely('rerunScript', 'newInteraction');
       this.sendBackMsg({
         type: 'rerunScript',
         rerunScript: this.state.commandLine
@@ -304,6 +326,7 @@ class WebClient extends PureComponent {
    * Tells the proxy to display the inline help dialog.
    */
   displayHelp() {
+    trackEventRemotely('displayHelp', 'newInteraction');
     this.sendBackMsg({
       type: 'help',
       help: true
@@ -353,9 +376,8 @@ class WebClient extends PureComponent {
   }
 
   render() {
-    // Return the tree
     return (
-      <div>
+      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
         <header>
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
@@ -368,11 +390,18 @@ class WebClient extends PureComponent {
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
+            settingsCallback={() => this.openDialog({
+              type: 'settings',
+              isOpen: true,
+              settings: this.state.userSettings,
+              onSave: this.saveSettings,
+            })}
           />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
-            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
+            <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
@@ -393,6 +422,7 @@ class WebClient extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
+          audio: (audio) => <Audio audio={audio} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
@@ -405,6 +435,7 @@ class WebClient extends PureComponent {
           map: (map) => <Map map={map} width={width}/>,
           table: (df) => <Table df={df} width={width}/>,
           balloons: (balloons) => <Balloons balloons={balloons}/>,
+          video: (video) => <Video video={video} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;

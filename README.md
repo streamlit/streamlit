@@ -34,5 +34,5 @@ for i in range(100):
 
 For more help and a complete API documentation, please run:
 ```bash
-python -m streamlit help
+streamlit help
 ```

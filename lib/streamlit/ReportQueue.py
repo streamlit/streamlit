@@ -20,6 +20,13 @@ from tornado import gen
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
+
+# Largest message that can be sent via the WebSocket connection.
+# (Limit was picked by trial and error)
+# TODO: Break message in several chunks if too large.
+MESSAGE_SIZE_LIMIT = 10466493
+
+
 class QueueState(object):
     # Indicates that the queue is accepting deltas.
     OPEN = 0
@@ -29,6 +36,7 @@ class QueueState(object):
 
     # Indicates that the queue is now closed.
     CLOSED = 2
+
 
 class ReportQueue(object):
     """Accumulates a bunch of deltas."""
@@ -81,7 +89,7 @@ class ReportQueue(object):
             for delta in deltas:
                 msg = protobuf.ForwardMsg()
                 msg.delta.CopyFrom(delta)
-                yield ws.write_message(msg.SerializeToString(), binary=True)
+                yield send_message(ws, msg)
             raise gen.Return(len(deltas) > 0)
         yield send_deltas()
 
@@ -98,7 +106,7 @@ class ReportQueue(object):
             self._state = QueueState.CLOSED
             msg = protobuf.ForwardMsg()
             msg.report_finished = True
-            yield ws.write_message(msg.SerializeToString(), binary=True)
+            yield send_message(ws, msg)
             LOGGER.debug('Sent report_finished message.')
 
     def clone(self):
@@ -136,8 +144,33 @@ class ReportQueue(object):
             data_frame_proto.add_rows(delta1, delta2)
             return delta1
 
-        print('delta1')
-        print(delta1)
-        print('delta2')
-        print(delta2)
         raise NotImplementedError('Need to implement the compose code.')
+
+
+def send_message(ws, msg):
+    """Sends msg via the websocket"""
+    msg_str = msg.SerializeToString()
+
+    if len(msg_str) > MESSAGE_SIZE_LIMIT:
+        send_exception(ws, msg, 'RuntimeError', 'Data too large')
+        return
+
+    try:
+        ws.write_message(msg_str, binary=True)
+    except Exception as e:
+        send_exception(ws, msg, type(e), e.message)
+
+
+def send_exception(ws, msg, exception_type, exception_message):
+    """Sends an exception via websocket in place of msg"""
+    if msg.delta is not None:
+        delta_id = msg.delta.id
+    else:
+        delta_id = 0
+
+    emsg = protobuf.ForwardMsg()
+    emsg.delta.id = delta_id
+    emsg.delta.new_element.exception.type = exception_type
+    emsg.delta.new_element.exception.message = exception_message
+
+    ws.write_message(emsg.SerializeToString(), binary=True)

@@ -4,7 +4,6 @@
  */
 
 import React, {Component} from 'react';
-import ConnectionState from './ConnectionState';
 import {
   Dropdown,
   DropdownItem,
@@ -68,7 +67,12 @@ class MainMenu extends Component {
           <DropdownItem
               disabled={!this.props.isProxyConnected}
               onClick={this.props.saveCallback}>
-            Save report
+            Share report
+          </DropdownItem>
+
+          <DropdownItem
+              onClick={() => this.props.settingsCallback()}>
+            Settings
           </DropdownItem>
 
           <DropdownItem divider/>

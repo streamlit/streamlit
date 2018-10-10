@@ -3,7 +3,9 @@ title: "Streamlit tutorial: the basics"
 weight: 100
 ---
 
-Now that you have [already set Streamlit up](/docs/getting_started/), open up a
+*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
+
+Now that you have [already set up Streamlit](/docs/installation/), open up a
 text editor and paste this in:
 
 ```python
@@ -44,6 +46,9 @@ Bam! Now your report says “Hello, Streamlit!” rather than “Hello, World.�
 the word “Streamlit” is now **bold**. The way we did that was by adding those
 asterisks `**` on each side of the word we wanted to bold. That works because
 **`st.write()` supports Markdown!**
+
+_**PRO TIP:** You can also re-run your program from within your web browser! Simply press 'r'._
+
 
 ## Enter the data
 
@@ -146,12 +151,12 @@ import time
 st.write('Starting a long computation...')
 
 # Place some widgets on the page
-latest_iteration = st.write('')
+latest_iteration = st.empty()
 bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration ', i)
+  latest_iteration.text('Iteration %d' % i)
   bar.progress(i + 1)
   time.sleep(0.1)
 
@@ -176,7 +181,7 @@ st.balloons()
 Now you should have a basic idea of how to use Streamlit in your own scripts:
 just `import streamlit as st` and experiment away from there! A good way to
 start is by copy/pasting code snippets straight from the Streamlit cheatsheet.
-Just run `python -m streamlit help` on a terminal to see it, or click the *Quick
+Just run `streamlit help` on a terminal to see it, or click the *Quick
 help* item in Streamlit's top-right menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
@@ -212,12 +217,12 @@ import time
 st.write('Starting a long computation...')
 
 # Place some widgets on the page
-latest_iteration = st.write('')
+latest_iteration = st.empty()
 bar = st.progress(0)
 
 for i in range(100):
   # Update the widgets in each iteration.
-  latest_iteration.write('Iteration ', i)
+  latest_iteration.text('Iteration %d' % i)
   bar.progress(i + 1)
   time.sleep(0.1)
 

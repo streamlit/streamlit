@@ -16,16 +16,16 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import image_proto
-from streamlit.Chart import Chart
-from streamlit.chartconfig import CHART_TYPES
-from streamlit.caseconverters import to_snake_case
-from streamlit.VegaLiteChart import VegaLiteChart, transform_dataframe, VEGA_LITE_BUILDERS
-from streamlit.logger import get_logger
 from streamlit import data_frame_proto
+from streamlit import image_proto
+from streamlit import generic_binary_proto
 from streamlit import protobuf
+from streamlit.Chart import Chart
+from streamlit.VegaLiteChart import VegaLiteChart
+from streamlit.caseconverters import to_snake_case
+from streamlit.chartconfig import CHART_TYPES
+from streamlit.logger import get_logger
 
-MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
 EXPORT_TO_IO_FLAG = '__export_to_io__'
 
 # setup logging
@@ -71,10 +71,6 @@ def _create_element(method):
             traceback.print_tb(exc_traceback, file=sys.stderr)
 
     return wrapped_method
-
-class _VegaLite(object):
-    """An empty class to hold Vega Lite objects."""
-    pass
 
 class DeltaGenerator(object):
     """
@@ -400,11 +396,12 @@ class DeltaGenerator(object):
         fig.savefig(image, format='png')
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
+    # TODO: Make this accept files and strings/bytes as input.
     @_export_to_io
     @_create_element
     def image(self, element, image, caption=None, width=None,
             use_column_width=False, clamp=False):
-        """Displays an image.
+        """Displays an image or images.
 
         Args
         ----
@@ -439,6 +436,42 @@ class DeltaGenerator(object):
 
     @_export_to_io
     @_create_element
+    def audio(self, element, data, format='audio/wav'):
+        """Inserts an audio player.
+
+        Args
+        ----
+        data : The audio bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the audio file. Defaults to 'audio/wav'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        """
+        # TODO: Provide API to convert raw NumPy arrays to audio file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.audio, data)
+        element.audio.format=format
+
+    @_export_to_io
+    @_create_element
+    def video(self, element, data, format='video/mp4'):
+        """Inserts a video player.
+
+        Args
+        ----
+        data : The video bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the video file. Defaults to 'video/mp4'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        """
+        # TODO: Provide API to convert raw NumPy arrays to video file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.video, data)
+        element.video.format=format
+
+    @_export_to_io
+    @_create_element
     def progress(self, element, value):
         """Displays the string as a h3 header.
 
@@ -453,7 +486,7 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        Here is an example of a progress bar increasing over time::
+        Here is an example of a progress bar increasing over time:
             import time
             my_bar = st.progress(0)
             for percent_complete in range(100):
@@ -505,8 +538,6 @@ class DeltaGenerator(object):
         if type(df) != pd.DataFrame:
             df = pd.DataFrame(df)
 
-        df = self._maybe_transform_dataframe(df)
-
         delta = protobuf.Delta()
         delta.id = self._id
         data_frame_proto.marshall_data_frame(df, delta.add_rows)
@@ -525,12 +556,6 @@ class DeltaGenerator(object):
         delta = protobuf.Delta()
         set_element(delta.new_element)
 
-        # # Make sure that the element isn't too big.
-        # if len(delta.new_element.SerializeToString()) > MAX_DELTA_BYTES:
-        #     alert_msg = 'Cannot transmit element larger than %s MB.' % \
-        #         (MAX_DELTA_BYTES // (1024 ** 2))
-        #     return self.error(alert_msg)
-
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:
             delta.id = self._next_id
@@ -543,41 +568,11 @@ class DeltaGenerator(object):
         self._queue(delta)
         return generator
 
-    def _maybe_transform_dataframe(self, df):
-        # TODO(tvst): what is up with this _latest_element thing? ~ Adrien
-        try:
-            element_type = self._latest_element.WhichOneof('type')
-            if element_type == 'vega_lite_chart':
-                return transform_dataframe(
-                    df, self._latest_element.vega_lite_chart.data_transform)
-        except AttributeError:
-            pass
-        return df
 
-    vega_lite = _VegaLite()
-
-
-def register_vega_lite_chart_method(chart_type, chart_builder):
-    """Adds a chart-building method to DeltaGenerator for a specific chart type.
-
-    Args:
-        chart_type -- A string with the snake-case name of the chart type to
-        add. This will be the method name.
-
-        chart_builder -- A function that returns an object that can marshall
-        chart protos.
-    """
-    @_export_to_io
-    @_create_element
-    def vega_lite_chart_method(self, element, data=None, *args, **kwargs):
-        vc = chart_builder(data, *args, **kwargs)
-        vc.marshall(element.vega_lite_chart)
-
-    setattr(DeltaGenerator.vega_lite, chart_type, vega_lite_chart_method)
-
-# Add chart-building methods to DeltaGenerator
-for k, v in VEGA_LITE_BUILDERS:
-    register_vega_lite_chart_method(k, v)
+def createNewDelta():
+    """Creates a new DeltaGenerator and sets up some basic info."""
+    delta = protobuf.Delta()
+    return delta
 
 
 def register_native_chart_method(chart_type):
@@ -592,6 +587,7 @@ def register_native_chart_method(chart_type):
         return self._native_chart(Chart(data, type=chart_type, **kwargs))
 
     setattr(DeltaGenerator, chart_type, chart_method)
+
 
 # Add chart-building methods to DeltaGenerator
 for chart_type in CHART_TYPES:
