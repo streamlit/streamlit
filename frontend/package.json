@@ -1,6 +1,6 @@
 {
   "name": "streamlit-client",
-  "version": "0.15.1",
+  "version": "0.16.1",
   "private": true,
   "dependencies": {
     "bootstrap": "^4.1.3",

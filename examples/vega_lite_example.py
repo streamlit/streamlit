@@ -6,32 +6,7 @@ from dateutil.parser import parse
 
 st.title('Vega Lite support')
 
-# --
-
-st.header('Basic charts')
-
-df = pd.DataFrame({'a': np.random.randn(50), 'b': np.random.randn(50)})
-
-st.vega_lite.line_chart(df)
-st.vega_lite.area_chart(df)
-
-df = pd.DataFrame(np.random.randn(200, 3), columns=['a', 'b', 'c'])
-st.vega_lite.scatter_chart(df)
-
-# --
-
-st.header('Custom charts')
-
-st.subheader('Override basic chart')
-
-df = pd.DataFrame({'a': np.random.randn(50), 'b': np.random.randn(50)})
-
-st.vega_lite.line_chart(df,
-    x_axis_title='My X title!')
-
-# -
-
-st.subheader('Bar chart')
+st.header('Bar chart')
 
 df = pd.DataFrame([['A', 'B', 'C', 'D'], [28, 55, 43, 91]], index=['a', 'b']).T
 
@@ -56,7 +31,99 @@ st.vega_lite_chart(df, {
 
 # -
 
-st.subheader('Scatter plot')
+st.header('Line chart')
+
+st.subheader('Single line')
+
+st.write('The plot below also tests `st.add_rows()`')
+
+df = pd.DataFrame({
+    'day': range(100),
+    'stock price': np.random.randn(100),
+})
+
+c = st.vega_lite_chart(df,
+    mark='line',
+    x_field='day',
+    x_type='ordinal',
+    y_field='stock price',
+    y_type='quantitative')
+
+# Testing add_rows support
+df = pd.DataFrame({
+    'day': range(100, 150),
+    'stock price': np.zeros(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(150, 200),
+    'stock price': np.ones(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(200, 250),
+    'stock price': np.zeros(50),
+})
+c.add_rows(df)
+
+df = pd.DataFrame({
+    'day': range(250, 300),
+    'stock price': np.ones(50),
+})
+c.add_rows(df)
+
+
+st.subheader('Multiple lines')
+
+df = pd.DataFrame({
+    'stock A price': np.random.randn(100),
+    'stock B price': np.random.randn(100),
+    'stock C price': np.random.randn(100),
+})
+
+def stack_dataframe(df):
+    """Stacks a dataframe.
+
+    Takes a dataframe like:
+
+      col1 col2 col3
+      10   20   30
+      11   21   31
+
+    And returns the same data but stacked, like:
+
+      keys values
+      col1 10
+      col1 11
+      col2 20
+      col2 21
+      col3 30
+      col3 31
+    """
+    df = df.stack()
+    df = df.reset_index(level=1)
+    df.columns = ['keys', 'values']
+    df = df[['values', 'keys']]
+    return df
+
+df = stack_dataframe(df)
+
+st.vega_lite_chart(df,
+    mark='line',
+    x_field='(index)',  # Magic field name. TODO: Support named indices in JS.
+    x_type='ordinal',
+    y_field='values',
+    y_type='quantitative',
+    color_field='keys',
+    color_type='nominal',
+)
+
+
+# -
+
+st.header('Scatter plot')
 
 df = pd.DataFrame(np.random.randn(200, 3), columns=['a', 'b', 'c'])
 
@@ -72,7 +139,7 @@ st.vega_lite_chart(df, {
 
 # -
 
-st.subheader('Box plot')
+st.header('Box plot')
 
 st.write(
     'This example is straight from the [Vega Lite docs]'
@@ -100,7 +167,7 @@ st.vega_lite_chart(None,
 
 # -
 
-st.subheader('Query widgets')
+st.header('Query widgets')
 
 st.write(
     'This example is straight from the [Vega Lite docs]'
@@ -146,7 +213,7 @@ st.vega_lite_chart(None,
 
 # -
 
-st.subheader('Geo chart (WIP)')
+st.header('Geo chart (WIP)')
 
 DATA_URL = 'https://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data-sep14.csv.gz'
 df = pd.read_csv(DATA_URL, nrows=1000)
@@ -173,8 +240,3 @@ st.vega_lite_chart(df, {
     "color": {"field": "hour", "type": "quantitative"}
   }
 })
-
-st.vega_lite.geo_scatter_chart(df,
-    map='https://raw.githubusercontent.com/bsmithgall/bsmithgall.github.io/master/js/json/nyc-boroughs.topojson',
-    feature='nyc-borough-boundaries-polygon',
-)

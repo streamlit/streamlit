@@ -12,7 +12,7 @@ message ImageList {
 
   // The width of each image.
   // >0 sets the image width explicitly
-  // -1 means ues the image width
+  // -1 means use the image width
   // -2 means use the column width
   int32 width = 2;
 }

@@ -55,34 +55,42 @@ import pandas as pd
 
 from streamlit import data_frame_proto
 from streamlit.ChartComponent import ChartComponent
-from streamlit.DictBuilder import ForEachColumn, ValueCycler, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME, INDEX_COLUMN_DESIGNATOR
+from streamlit.DictBuilder import ForEachColumn, ValueCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME, INDEX_COLUMN_DESIGNATOR
 from streamlit.caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
-from streamlit.chartconfig import *
+from streamlit.chartconfig import CHART_TYPES, CHART_COMPONENTS, CHART_TYPES_SNAKE, REQUIRED_COMPONENTS
 from streamlit.logger import get_logger
 
 current_module = __import__(__name__)
 
 LOGGER = get_logger()
 
+
 class Chart(object):
+    """Chart object."""
+
     def __init__(self, data, type, width=0, height=0, **kwargs):
-        """Constructs a chart object.
+        """Construct a chart object.
 
-        Args:
-            type -- a string with the snake-case chart type. Example:
-            'area_chart', 'bar_chart', etc...
+        Args
+        ----
+        type: string
+            A string with the snake-case chart type. Example: 'area_chart',
+            'bar_chart', etc...
 
-            data -- a np.Array or pd.DataFrame containg the data to be plotted.
-            Series are referenced by column name.
+        data: np.Array or pd.DataFrame
+            Data to be plotted. Series are referenced by column name.
 
-            width -- a number with the chart width. Defaults to 0, which means
-            "the default width" rather than actually 0px.
+        width: int
+            The chart's width. Defaults to 0, which means "the default width"
+            rather than actually 0px.
 
-            height -- a number with the chart height. Defaults to 0, which means
-            "the default height" rather than actually 0px.
+        height: int
+            The chart's height. Defaults to 0, which means "the default height"
+            rather than actually 0px.
 
-            kwargs -- keyword arguments containg properties to be added to the
-            ReChart's top-level element
+        kwargs: anything
+            Keyword arguments containg properties to be added to the ReChart's
+            top-level element.
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
@@ -90,20 +98,22 @@ class Chart(object):
         self._width = width
         self._height = height
         self._components = list()
-        self._props = [(str(k), str(v)) for (k,v) in kwargs.items()]
+        self._props = [(str(k), str(v)) for (k, v) in kwargs.items()]
 
     def append_component(self, component_name, props):
-        """Sets a chart component
+        """Set a chart component.
 
-        Args:
-            component_name -- a snake-case string with the ReCharts component
-            name.
-            props -- the ReCharts component value.
+        Args
+        ----
+        component_name: string
+            A snake-case string with the ReCharts component name.
+        props: anything
+            The ReCharts component value.
         """
         self._components.append(ChartComponent(component_name, props))
 
     def marshall(self, proto_chart):
-        """Loads this chart data into that proto_chart."""
+        """Load this chart data into that proto_chart."""
         proto_chart.type = to_upper_camel_case(self._type)
         data_frame_proto.marshall_data_frame(self._data, proto_chart.data)
         proto_chart.width = self._width
@@ -121,7 +131,7 @@ class Chart(object):
             proto_prop.value = value
 
     def _append_missing_data_components(self):
-        """Appends all required data components that have not been specified.
+        """Append all required data components that have not been specified.
 
         This uses the REQUIRED_COMPONENTS dict, which points each chart type to
         a tuple of all components that are required for that chart. Required
@@ -159,16 +169,18 @@ class Chart(object):
                 self.append_component(comp_name, props)
 
     def _materializeValue(self, value, currCycle):
-        """Replaces ColumnAtCurrentIndex, etc, with a column name if needed.
+        """Replace ColumnAtCurrentIndex, etc with a column name if needed.
 
-        Args:
-            value -- anything. If value is a ColumnAtCurrentIndex then it gets
-            replaces with a column name. If ValueCycler, it returns the current
-            item in the cycler's list. If it's anything else, it just passes
-            through.
+        Args
+        ----
+        value: anything
+            If value is a ColumnAtCurrentIndex then it gets replaces with a
+            column name. If ValueCycler, it returns the current item in the
+            cycler's list. If it's anything else, it just passes through.
 
-            currCycle -- an integer. For repeated fields (denoted via
-            ForEachColumn) this is the number of the current column.
+        currCycle: int
+            For repeated fields (denoted via ForEachColumn) this is the number
+            of the current column.
         """
         if value == CURRENT_COLUMN_NAME:
             i = currCycle
@@ -187,26 +199,31 @@ class Chart(object):
 
 
 def register_component(component_name, implemented):
-    """Adds a method to the Chart class, to set the given component.
+    """Add a method to the Chart class to set the given component.
 
-    Args:
-        component_name -- A snake-case string containing the name of a chart
-        component accepted by ReCharts.
+    Args
+    ----
+    component_name: string
+        A snake-case string containing the name of a chart component accepted by
+        ReCharts.
 
-        implemented -- a boolean that is true/false depending on whether Streamlit
-        supports the given component_name or not.
+    implemented: boolean
+        True/false depending on whether Streamlit supports the given
+        component_name or not.
 
-    Example:
-        register_component('foo_bar')
-        c = Chart(myData, 'line_chart')
-        c.foo_bar(stuff='other stuff', etc='you get the gist')
+    Examples
+    --------
+    >>> register_component('foo_bar')
+    >>> c = Chart(myData, 'line_chart')
+    >>> c.foo_bar(stuff='other stuff', etc='you get the gist')
 
     In addition, the methods created by this function return the Chart
     instance for builder-style chaining:
 
-        register_component('baz')
-        c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
+    >>> register_component('baz')
+    >>> c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
     """
+
     def append_component_method(self, **props):
         if implemented:
             self.append_component(component_name, props)
@@ -223,14 +240,15 @@ for component_name, implemented in CHART_COMPONENTS.items():
 
 
 def register_type_builder(chart_type):
-    """Adds a builder function to this module, to build specific chart types.
+    """Add a builder function to this module to build a specific chart type.
 
     These sugary builders also set up some nice defaults from the
     DEFAULT_COMPONENTS dict, that can be overriden after the instance is built.
 
-    Args:
-        chart_type -- A string with the upper-camel-case name of the chart type
-        to add.
+    Args
+    ----
+    chart_type: string
+        A string with the upper-camel-case name of the chart type to add.
     """
     chart_type_snake = to_snake_case(chart_type)
 
@@ -245,4 +263,3 @@ def register_type_builder(chart_type):
 # like FooChart(data) instead of Chart(data, 'foo_chart').
 for chart_type in CHART_TYPES:
     register_type_builder(chart_type)
-

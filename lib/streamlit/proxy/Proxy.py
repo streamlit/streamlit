@@ -37,44 +37,44 @@ import functools
 import os
 import platform
 import socket
+import textwrap
 import traceback
 import urllib
 import webbrowser
 
 LOGGER = get_logger()
 AWS_CHECK_IP = 'http://checkip.amazonaws.com'
-REMOTE_DOC = 'http://streamlit.io/docs/remote-operation/'
+HELP_DOC = 'http://streamlit.io/docs/help/'
 
-# def set_remote(val):
-#     config.set_option('proxy.isRemote', val)
 
 def _print_remote_url(port, quoted_name):
     external_ip = config.get_option('proxy.externalIP')
+    lan_ip = None
 
     if external_ip:
         LOGGER.debug(f'proxy.externalIP set to {external_ip}')
     else:
-        print('proxy.externalIP not set, attempting autodetect of external IP')
-
-        http_client = None
-        try:
-            http_client = httpclient.HTTPClient()
-            response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
-            external_ip = response.body.strip()
-        except (httpclient.HTTPError, RuntimeError) as e:
-            LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
-        finally:
-            if http_client is not None:
-                http_client.close()
-
-    if external_ip is None:
-        print('Did not auto detect external ip. Please go to '
-              f'{REMOTE_DOC} for debugging hints.')
-        return
+        print('proxy.externalIP not set, attempting to autodetect IP')
+        external_ip = get_external_ip()
+        lan_ip = get_lan_ip()
 
     timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-    url = 'http://{}:{}/?name={}'.format(external_ip, port, quoted_name)
-    print('Please connect to %s within %s seconds.' % (url, timeout_secs))
+
+    if external_ip is None and lan_ip is None:
+        print('Did not auto detect external ip. Please go to '
+              f'{HELP_DOC} for debugging hints.')
+        return
+
+    external_url = get_report_url(external_ip, port, quoted_name)
+    lan_url = get_report_url(lan_ip, port, quoted_name)
+
+    print(textwrap.dedent(f'''
+        =============================================================
+        Open one of the URLs below in your browser within {int(timeout_secs)} seconds
+        External URL: {external_url}
+        Internal URL: {lan_url}
+        =============================================================
+    '''))
 
 def _launch_web_client(name):
     """Launches a web browser to connect to the proxy to get the named
@@ -86,6 +86,7 @@ def _launch_web_client(name):
         The name of the report to which the web browser should connect.
     """
     if config.get_option('proxy.useNode'):
+        # If changing this, also change frontend/src/baseconsts.js
         host, port = 'localhost', '3000'
     else:
         host = config.get_option('proxy.server')
@@ -99,9 +100,6 @@ def _launch_web_client(name):
     if headless:
         _print_remote_url(port, quoted_name)
     else:
-        if platform.system() == 'Linux' and not os.getenv('DISPLAY'):
-            LOGGER.warning('Attempting to run Streamlit in a headless system. '\
-                'Please consider setting proxy.isRemote to "true" in streamlit/config.yaml.')
         webbrowser.open(url)
 
 def stop_proxy_on_exception(is_coroutine=False):
@@ -217,7 +215,7 @@ class Proxy(object):
         if headless and not self._received_client_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
-                f'Please go to {REMOTE_DOC} for debugging hints.')
+                f'Please go to {HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -240,7 +238,7 @@ class Proxy(object):
 
         So that client connections can connect to it.
         """
-        LOGGER.debug(f'Regisering proxy connection for "{connection.name}"')
+        LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
         LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
 
         # Register the connection and launch a web client if this is a new name.
@@ -304,3 +302,50 @@ class Proxy(object):
         connection.remove_client_queue(queue)
         self.try_to_deregister_proxy_connection(connection)
         self.potentially_stop()
+
+
+def get_external_ip():
+    """Gets the *external* IP address of the current machine.
+
+    Returns:
+        IPv4 address as a string.
+    """
+    http_client = None
+    try:
+        http_client = httpclient.HTTPClient()
+        response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
+        external_ip = response.body.strip().decode('utf-8')
+    except (httpclient.HTTPError, RuntimeError) as e:
+        LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
+        external_ip = None
+    finally:
+        if http_client is not None:
+            http_client.close()
+
+    return external_ip
+
+
+def get_lan_ip():
+    """Gets the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns:
+        IPv4 address as a string.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        lan_ip = s.getsockname()[0]
+    except:
+        lan_ip = '127.0.0.1'
+    finally:
+        s.close()
+    return lan_ip
+
+
+def get_report_url(host, port, name):
+    if host is None:
+        return 'Unable to detect'
+    return 'http://{}:{}/?name={}'.format(host, port, name)

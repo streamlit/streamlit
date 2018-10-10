@@ -1,7 +1,6 @@
 # -*- coding: future_fstrings -*-
 
-"""A Report Object which exposes a print method which can be used to
-write objects out to a wbpage."""
+"""Connection management methods."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -13,7 +12,6 @@ import os
 import sys
 import threading
 import time
-import traceback
 import urllib
 import uuid
 
@@ -26,16 +24,22 @@ from tornado.websocket import websocket_connect
 from streamlit.util import get_local_id
 from streamlit import config
 from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
+from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit import protobuf
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
+# Websocket arguments.
+WS_ARGS = {
+    # Max size of the message to send via the websocket.
+    'max_message_size': MESSAGE_SIZE_LIMIT,
+}
+
+
 def _assert_singleton(method):
-    """Asserts that this method is called on the singleton instance of
-    Connection."""
+    """Assert that method is called on singleton instance of Connection."""
     @wraps(method)
     def inner(self, *args, **kwargs):
         assert self == Connection._connection, \
@@ -43,31 +47,16 @@ def _assert_singleton(method):
         return method(self, *args, **kwargs)
     return inner
 
-'''
-def _assert_singleton_async(method):
-    """Asserts that this coroutine is called on the singleton instance of
-    Connection."""
-    async def inner(self, *args, **kwargs):
-        assert self == Connection._connection, \
-            f'Can only call {method.__name__}() on the singleton Connection.'
-        return await method(self, *args, **kwargs)
-    inner.__name__ = method.__name__
-    inner.__doc__ = method.__doc__
-    return inner
-'''
 
 class Connection(object):
-    """This encapsulates a single connection the to the server for a single
-    report."""
+    """Represents a single connection to the server for a single report."""
 
     # This is the singleton connection object.
     _connection = None
 
     # This is the class through which we can add elements to the Report
     def __init__(self):
-        """
-        Creates a new connection to the server.
-        """
+        """Create a new connection to the server."""
         # Create an ID for this Report
         self._report_id = base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
@@ -108,10 +97,12 @@ class Connection(object):
 
     @classmethod
     def get_connection(cls):
-        """Returns the singleton Connection object, instantiating one if
-        necessary."""
+        """Return the singleton Connection object.
+
+        Instantiates one if necessary.
+        """
         # Instantiate the singleton connection if necessary.
-        if cls._connection == None:
+        if cls._connection is None:
             LOGGER.debug('No connection. Registering one.')
 
             # Create the new connection.
@@ -121,15 +112,15 @@ class Connection(object):
         return cls._connection
 
     def register(self):
-        """Sets up this connection to be the singelton connection."""
+        """Set up this connection to be the singleton connection."""
         # Establish this connection and connect to the proxy server.
-        assert type(self)._connection == None, \
-            'Cannot register two connections'
+        assert type(self)._connection is None, 'Cannot register two connections'
         Connection._connection = self
         self._connect_to_proxy()
 
         # Override the default exception handler.
         original_excepthook = sys.excepthook
+
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
             self.get_delta_generator().exception(exc_value, exc_tb)
             original_excepthook(exc_type, exc_value, exc_tb)
@@ -137,6 +128,7 @@ class Connection(object):
 
         # When the current thread closes, then close down the connection.
         current_thread = threading.current_thread()
+
         def cleanup_on_exit():
             LOGGER.debug('Cleanup thread waiting for main thread to end.')
             current_thread.join()
@@ -155,18 +147,20 @@ class Connection(object):
 
     @_assert_singleton
     def unregister(self):
-        """Removes this connection from being the singleton connection."""
+        """Remove this connection from being the singleton connection."""
         Connection._connection = None
 
     @_assert_singleton
     def get_delta_generator(self):
-        """Returns the DeltaGenerator for this report. This is the object
-        that allows you to dispatch toplevel deltas to the Report, e.g.
-        adding new elements."""
+        """Return the DeltaGenerator for this connection.
+
+        This is the object that allows you to dispatch toplevel deltas to the
+        Report, e.g. adding new elements.
+        """
         return self._delta_generator
 
     def _create_name(self):
-        """Creates a name for this report."""
+        """Create a name for this report."""
         name = ''
         if len(sys.argv) >= 2 and sys.argv[0] == '-m':
             name = sys.argv[1]
@@ -183,15 +177,14 @@ class Connection(object):
 
     @_assert_singleton
     def _enqueue_delta(self, delta):
-        """Enqueues the given delta for transmission to the server."""
+        """Enqueue the given delta for transmission to the server."""
         def queue_the_delta():
             self._queue(delta)
         self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
-        """Opens a connection to the server in a separate thread. Returns
-        the event loop for that thread."""
+        """Open a connection to the server in a separate thread."""
         def connection_thread():
             self._loop.make_current()
             LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
@@ -199,6 +192,7 @@ class Connection(object):
             self._loop.close()
             self.unregister()
             LOGGER.debug('Exit.. (deltas remaining = %s)' % len(self._queue._deltas))
+
         connection_thread = threading.Thread(target=connection_thread)
         connection_thread.daemon = False
         connection_thread.start()
@@ -206,8 +200,11 @@ class Connection(object):
     @_assert_singleton
     @gen.coroutine
     def _attempt_connection(self):
-        """Tries to establish a connection to the proxy (launching the
-        proxy if necessary). Then, pumps deltas through the connection."""
+        """Try to establish a connection to the proxy.
+
+        Launches the proxy (if necessary), then pumps deltas through the
+        connection.
+        """
         # Create a connection URI.
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
@@ -217,8 +214,12 @@ class Connection(object):
 
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
+<<<<<<< HEAD
             ws = yield websocket_connect(uri)
             self._connected_to_proxy_once = True
+=======
+            ws = yield websocket_connect(uri, **WS_ARGS)
+>>>>>>> develop
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -229,8 +230,12 @@ class Connection(object):
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
+<<<<<<< HEAD
             ws = yield websocket_connect(uri)
             self._connected_to_proxy_once = True
+=======
+            ws = yield websocket_connect(uri, **WS_ARGS)
+>>>>>>> develop
             yield self._transmit_through_websocket(ws)
         except IOError:
             raise ProxyConnectionError(uri)
@@ -238,7 +243,7 @@ class Connection(object):
     @_assert_singleton
     @gen.coroutine
     def _launch_proxy(self):
-        """Launches the proxy server."""
+        """Launch the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
         os.system('python -m streamlit.proxy &')
         LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
@@ -247,35 +252,43 @@ class Connection(object):
     @_assert_singleton
     @gen.coroutine
     def _transmit_through_websocket(self, ws):
-        """Sends queue data across the websocket as it becomes available."""
+        """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
-        yield new_report_msg(self._report_id,
-            os.getcwd(), ['python'] + sys.argv, ws)
+        yield new_report_msg(
+            self._report_id, os.getcwd(), ['python'] + sys.argv, ws)
         LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
         LOGGER.debug(f'Websocket Transmit ws = {ws}')
         LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
+
         while self._is_open:
             yield self._queue.flush_queue(ws)
             yield gen.sleep(throttle_secs)
+
         LOGGER.debug('Connection closing. Flushing queue for the last time.')
         yield self._queue.flush_queue(ws)
         LOGGER.debug('Finished flusing the queue writing=%s' % ws.stream.writing())
         yield ws.close()
         LOGGER.debug('Closed the connection object.')
 
+
 class ProxyConnectionError(Exception):
+    """Error raised whenever something goes wrong in the Connection."""
+
     def __init__(self, uri):
+        """Constructor."""
         msg = f'Unable to connect to proxy at {uri}.'
         super(ProxyConnectionError, self).__init__(msg)
+
 
 if __name__ == '__main__':
     c = Connection().get_connection()
     queue = Connection()._queue
     _id = 0
     LOGGER.debug(queue)
+
     while True:
         delta = protobuf.Delta()
         delta.id = _id

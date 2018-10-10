@@ -14,10 +14,10 @@ class ImageList extends PureComponent {
       // cases for -1 and -2.
       let imgWidth;
       const protoWidth = imgs.get('width');
-      if (protoWidth == -1) {
+      if (protoWidth === -1) {
         // Use the original image width.
         imgWidth = undefined;
-      } else if (protoWidth == -2) {
+      } else if (protoWidth === -2) {
         // Use the column width
         imgWidth = width;
       } else if (protoWidth > 0) {

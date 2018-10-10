@@ -36,6 +36,7 @@ class Balloons extends PureComponent {
             className="balloon"
             key={i}
             src={getBalloonUrl(this.props.balloons)}
+            alt=''
             style={{
               left: Math.random() * (POS_MAX_VW - POS_MIN_VW)
                   + POS_MIN_VW + 'vw',

@@ -3,6 +3,8 @@ title: "Running Streamlit remotely"
 weight: 102
 ---
 
+*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
+
 Sometimes, you need to run Streamlit remotely --- be it on AWS, or GCS --- we've got you! In this tutorial,
 we're going to show you how to set up remote operation with AWS. The steps are similar for other services.
 
@@ -33,7 +35,7 @@ proxy:
     externalIP: EXTERNAL_IP
 ```
 
-_NOTE: You may have to create this file if it doesn't exist yet._
+_NOTE: You may have to create the ~/.streamlit directory if it doesn't exist yet._
 
 Finally, to make sure everything worked, run the Streamlit cheat sheet and try
 to access it in your local browser:
@@ -111,21 +113,6 @@ There are two ways to edit remote files in Vi/Emacs:
 
 Simple!
 
-## Debugging
-Here are a few problems we have seen and how to solve them.
-
-### Opening the Streamlit report in my browser doesn't work
-You ran `streamlit help` or `python my_script.py` and it printed out the URL where you should find your report - but it doesn't seem to work when you open that link! One case where this happens is if you haven't opened up port 8501 on your instance.
-
-How do you fix this? First, click on your instance in the [AWS Console](https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Instances:sort=instanceId). Then scroll down until you see the "Security Groups" & click on that. Click on "Inbound" & "Edit". Next, add a "Custom TCP" rule that allows the Port Range "8501" with Source "0.0.0.0/0". 
-
-### It just hangs when I run my script
-Sometimes there is a hanging proxy from your previous run. A quick way to fix that is by running this command:
-```bash
-$ streamlit kill_proxy
-```
-
-If that doesn't fix it, please contact us!
 
 
 

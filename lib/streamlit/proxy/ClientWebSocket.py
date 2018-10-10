@@ -123,9 +123,13 @@ class ClientWebSocket(WebSocketHandler):
         settings."""
         msg = protobuf.ForwardMsg()
 
-        LOGGER.debug('New Client Connection: saving_is_configured=%s' % \
-            config.saving_is_configured())
         msg.new_connection.saving_configured = config.saving_is_configured()
+        LOGGER.debug('New Client Connection: saving_is_configured=%s' % \
+            msg.new_connection.saving_configured)
+
+        msg.new_connection.remotely_track_usage = config.remotely_track_usage()
+        LOGGER.debug('New Client Connection: remotely_track_usage=%s' % \
+            msg.new_connection.remotely_track_usage)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
 
