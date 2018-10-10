@@ -37,7 +37,6 @@ WS_ARGS = {
     'max_message_size': MESSAGE_SIZE_LIMIT,
 }
 
-
 def _assert_singleton(method):
     """Assert that method is called on singleton instance of Connection."""
     @wraps(method)
@@ -53,6 +52,11 @@ class Connection(object):
 
     # This is the singleton connection object.
     _connection = None
+
+    # The _proxy_connection_status can take one of these three values:
+    _PROXY_CONNECTION_DISCONNECTED = 'disconnected'
+    _PROXY_CONNECTION_CONNECTED = 'connected'
+    _PROXY_CONNECTION_FAILED = 'failed'
 
     # This is the class through which we can add elements to the Report
     def __init__(self):
@@ -88,9 +92,13 @@ class Connection(object):
         # is only ever accessed
         self._is_open = True
 
-        # Needed for very short lived scripts that terminate before the
-        # proxy is even started.
-        self._connected_to_proxy_once = False
+        # Keep track of whether we've connected to the proxy.
+        #
+        # Necessary for very short lived scripts that terminate before the
+        # proxy is even started. In this case, we try to delay the cleanup
+        # thread until the proxy has started.
+        self._proxy_connection_status = \
+            Connection._PROXY_CONNECTION_DISCONNECTED
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
@@ -127,21 +135,9 @@ class Connection(object):
         sys.excepthook = streamlit_excepthook
 
         # When the current thread closes, then close down the connection.
-        current_thread = threading.current_thread()
-
-        def cleanup_on_exit():
-            LOGGER.debug('Cleanup thread waiting for main thread to end.')
-            current_thread.join()
-            if not self._connected_to_proxy_once:
-                LOGGER.debug('Local script started and exited too fast before proxy started')
-                LOGGER.debug('Waiting for proxy to start once and receive deletas before exiting.')
-                while not self._connected_to_proxy_once:
-                    time.sleep(1)
-            LOGGER.debug('Main thread ended. Restoring excepthook.')
-            sys.excepthook = original_excepthook
-            self._loop.add_callback(setattr, self, '_is_open', False)
-            LOGGER.debug('Submitted callback to stop the connection thread.')
-        cleanup_thread = threading.Thread(target=cleanup_on_exit)
+        main_thread = threading.current_thread()
+        cleanup_thread = threading.Thread(target=self._cleanup_on_exit,
+            args=(main_thread, original_excepthook))
         cleanup_thread.daemon = False
         cleanup_thread.start()
 
@@ -214,12 +210,7 @@ class Connection(object):
 
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
-<<<<<<< HEAD
-            ws = yield websocket_connect(uri)
-            self._connected_to_proxy_once = True
-=======
             ws = yield websocket_connect(uri, **WS_ARGS)
->>>>>>> develop
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -230,14 +221,12 @@ class Connection(object):
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
-<<<<<<< HEAD
-            ws = yield websocket_connect(uri)
-            self._connected_to_proxy_once = True
-=======
             ws = yield websocket_connect(uri, **WS_ARGS)
->>>>>>> develop
             yield self._transmit_through_websocket(ws)
         except IOError:
+            # Indicate that we failed to connect to the proxy so that the
+            # cleanup thread can now run.
+            self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
     @_assert_singleton
@@ -253,6 +242,10 @@ class Connection(object):
     @gen.coroutine
     def _transmit_through_websocket(self, ws):
         """Send queue data across the websocket as it becomes available."""
+        # Indicate that we successfully connected to the proxy so that the
+        # cleanup thread can run..
+        self._proxy_connection_status = Connection._PROXY_CONNECTION_CONNECTED
+
         # Send the header information across.
         yield new_report_msg(
             self._report_id, os.getcwd(), ['python'] + sys.argv, ws)
@@ -273,6 +266,34 @@ class Connection(object):
         yield ws.close()
         LOGGER.debug('Closed the connection object.')
 
+    def _cleanup_on_exit(self, main_thread, original_excepthook):
+        """
+        This is the cleanup thread.
+
+        It waits for the main thread to exit, then does some final cleanup.
+        """
+        LOGGER.debug('Cleanup thread waiting for main thread to end.')
+        main_thread.join()
+        FINAL_WAIT_SECONDS = 5
+        for i in range(FINAL_WAIT_SECONDS):
+            LOGGER.debug(f'Checking proxy connection status: {self._proxy_connection_status}')
+            if self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
+                LOGGER.debug('Local script started and exited too fast before proxy started. Waiting 1 second...')
+                time.sleep(1)
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_CONNECTED:
+                # Sleep for a tiny bit to make sure we flush everything to the proxy.
+                time.sleep(0.1)
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
+                LOGGER.debug('Proxy connection failed. Ending the local script.')
+                break
+            else:
+                LOGGER.error(f'_proxy_connection_status illegal value: {self._proxy_connection_status}')
+                break
+        LOGGER.debug('Main thread ended. Restoring excepthook.')
+        sys.excepthook = original_excepthook
+        self._loop.add_callback(setattr, self, '_is_open', False)
+        LOGGER.debug('Submitted callback to stop the connection thread.')
 
 class ProxyConnectionError(Exception):
     """Error raised whenever something goes wrong in the Connection."""
