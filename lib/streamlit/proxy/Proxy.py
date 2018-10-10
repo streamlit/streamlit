@@ -245,10 +245,12 @@ class Proxy(object):
         old_connection = self._connections.get(connection.name, None)
 
         if old_connection:
+            # TODO(thiago): Try to optimize this by NOT deregistering the old
+            # connection, but instead transfering the old connection's
+            # fs_observer to the new one.
             self.deregister_proxy_connection(old_connection)
         else:
             _launch_web_client(connection.name)
-            # self._cloud.create(connection.name)
 
         self._connections[connection.name] = connection
 
@@ -306,8 +308,9 @@ class Proxy(object):
         self._received_client_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
-        yield new_report_msg(connection.id,
-            connection.cwd, connection.command_line, ws)
+        yield new_report_msg(
+            connection.id, connection.cwd, connection.command_line,
+            connection.source_file_path, ws)
         LOGGER.debug('Added new client. Id: ' + connection.id)
         LOGGER.debug('Added new client. Command line: ' + \
             str(connection.command_line))

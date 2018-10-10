@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import base58
+import inspect
 import os
 import sys
 import threading
@@ -71,6 +72,9 @@ class Connection(object):
         # This is the event loop to talk with the proxy.
         self._loop = IOLoop(make_current=False)
         LOGGER.debug(f'Created io loop {self._loop}.')
+
+        # Full path of the file that caused this connection to be created.
+        self._source_file_path = inspect.stack()[-1].filename
 
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
@@ -247,8 +251,8 @@ class Connection(object):
         self._proxy_connection_status = Connection._PROXY_CONNECTION_CONNECTED
 
         # Send the header information across.
-        yield new_report_msg(
-            self._report_id, os.getcwd(), ['python'] + sys.argv, ws)
+        yield new_report_msg(self._report_id,
+            os.getcwd(), ['python'] + sys.argv, self._source_file_path, ws)
         LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
 
         # Send other information across.

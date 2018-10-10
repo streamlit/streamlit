@@ -10,7 +10,7 @@ from tornado import gen
 import sys
 
 @gen.coroutine
-def new_report_msg(report_id, cwd, command_line, ws):
+def new_report_msg(report_id, cwd, command_line, source_file_path, ws):
     """
     Sends a message indicating a new report across the websocket wire.
 
@@ -21,7 +21,9 @@ def new_report_msg(report_id, cwd, command_line, ws):
     cwd : string
         The current working directory from which this report was launched.
     command_line : list of strings
-        the command line arguments used to launch the report
+        The command line arguments used to launch the report.
+    source_file_path: string
+        Full path of the file that initiated the new report.
     ws : websocket
         the websocket
     """
@@ -30,4 +32,5 @@ def new_report_msg(report_id, cwd, command_line, ws):
     msg.new_report.id = str(report_id)
     msg.new_report.cwd = cwd
     msg.new_report.command_line.extend(command_line)
+    msg.new_report.source_file_path = source_file_path
     yield ws.write_message(msg.SerializeToString(), binary=True)
