@@ -78,12 +78,17 @@ class ProxyConnection(object):
 
         Fall back to non-recursive mode if needed.
         """
-        path_to_observe = os.path.dirname(self.source_file_path)
+        do_watch = config.get_option('proxy.watchFileSystem')
 
-        recursive = config.get_option('proxy.watchRecursively')
+        if not do_watch:
+            return None
+
+        recursive = config.get_option('proxy.watchUpdatesRecursively')
         patterns = config.get_option('proxy.watchPatterns')
         ignore_patterns = config.get_option('proxy.ignorePatterns')
         ignore_directories = config.get_option('proxy.ignoreSubfolders')
+
+        path_to_observe = os.path.dirname(self.source_file_path)
 
         fs_observer = _initialize_fs_observer(
             fn_to_run=self._on_fs_event,
