@@ -73,8 +73,13 @@ class Connection(object):
         self._loop = IOLoop(make_current=False)
         LOGGER.debug(f'Created io loop {self._loop}.')
 
+        root_frame = inspect.stack()[-1]
+
         # Full path of the file that caused this connection to be created.
-        self._source_file_path = inspect.stack()[-1].filename
+        self._source_file_path = os.path.realpath(
+            root_frame[1])  # 1 is the filename field in this tuple.
+
+        LOGGER.debug(f'source_file_path: {self._source_file_path}.')
 
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
