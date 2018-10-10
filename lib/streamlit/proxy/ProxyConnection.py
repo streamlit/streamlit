@@ -9,6 +9,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import os
 import subprocess
 
 from watchdog.observers import Observer
@@ -35,8 +36,11 @@ class ProxyConnection(object):
         # The current working directory from which this report was launched.
         self.cwd = new_report_msg.cwd
 
-        # The command line arguments used to launch this message
+        # The command and command-line arguments used to launch this connection.
         self.command_line = list(new_report_msg.command_line)
+
+        # Full path of the file that cause this connection to be initiated.
+        self.source_file_path = new_report_msg.source_file_path
 
         # The name for this report.
         self.name = name
@@ -54,57 +58,66 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._client_queues = []
 
-        self._file_system_observer = self._initialize_file_system_observer()
+        # File system observer.
+        self._fs_observer = self._initialize_fs_observer_with_fallback()
 
     def close(self):
         """Close the connection."""
         LOGGER.info('Closing ProxyConnection')
 
-        if self._file_system_observer is not None:
+        if self._fs_observer is not None:
             LOGGER.info('Closing file system observer')
-            self._file_system_observer.stop()
+            self._fs_observer.stop()
 
-            # Wait til thread terminates. Should be quick.
-            self._file_system_observer.join(timeout=5)
+            # Wait til thread terminates.
+            # TODO(thiago): This could be slow. Is this really needed?
+            self._fs_observer.join(timeout=5)
 
-    def _initialize_file_system_observer(self):
-        path_to_observe = self.cwd
+    def _initialize_fs_observer_with_fallback(self):
+        """Start the filesystem observer.
+
+        Fall back to non-recursive mode if needed.
+        """
+        path_to_observe = os.path.dirname(self.source_file_path)
+
         recursive = config.get_option('proxy.watchRecursively')
         patterns = config.get_option('proxy.watchPatterns')
         ignore_patterns = config.get_option('proxy.ignorePatterns')
         ignore_directories = config.get_option('proxy.ignoreSubfolders')
 
-        handler = FSEventHandler(
-            fn_to_run=self._on_file_system_event,
+        fs_observer = _initialize_fs_observer(
+            fn_to_run=self._on_fs_event,
+            path_to_observe=path_to_observe,
+            recursive=recursive,
             patterns=patterns,
             ignore_patterns=ignore_patterns,
             ignore_directories=ignore_directories,
         )
 
-        file_system_observer = Observer()
-        file_system_observer.schedule(
-            handler, path_to_observe, recursive=recursive)
+        # If the previous command errors out, try a fallback command that is
+        # less useful but also less likely to fail.
+        if fs_observer is None and recursive is True:
+            fs_observer = _initialize_fs_observer(
+                fn_to_run=self._on_fs_event,
+                path_to_observe=path_to_observe,
+                recursive=False,  # No longer recursive.
+                patterns=patterns,
+                ignore_patterns=ignore_patterns,
+                ignore_directories=ignore_directories,
+            )
 
-        LOGGER.info(
-            f'Will observe file system recursively at: {path_to_observe}')
+        return fs_observer
 
-        try:
-            file_system_observer.start()
-            LOGGER.info(
-                f'Observing file system recursively at: {path_to_observe}')
-        except OSError as e:
-            file_system_observer = None
-            LOGGER.error(
-                f'Could not start file system observer: {e}\n'
-                'See http://streamlit.io/docs/help')
-
-        return file_system_observer
-
-    def _on_file_system_event(self, event):
+    # TODO(thiago): Open this using a separate thread, for speed.
+    def _on_fs_event(self, event):
         LOGGER.info(f'File system event: [{event.event_type}] {event.src_path}')
-        # TODO(tvst): Move this and similar code from ClientWebSocket.py to a
+
+        # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
         # single file.
         process = subprocess.Popen(self.command_line, cwd=self.cwd)
+
+        # Required! Otherwise we end up with defunct processes.
+        # (See ps -Al | grep python)
         process.wait()
 
     def finished_local_connection(self):
@@ -162,6 +175,36 @@ class ProxyConnection(object):
             [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] + \
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
                 for idx, delta in enumerate(deltas)]
+
+
+def _initialize_fs_observer(path_to_observe, recursive, **kwargs):
+    """Initialize the filesystem observer.
+
+    Parameters
+    ----------
+    path_to_observe : string
+        The file system path to observe.
+    recursive : boolean
+        If true, will observe path_to_observe and its subfolders recursively.
+
+    Passes kwargs to FSEventHandler.
+
+    """
+    handler = FSEventHandler(**kwargs)
+
+    fs_observer = Observer()
+    fs_observer.schedule(handler, path_to_observe, recursive)
+
+    LOGGER.info(f'Will observe file system at: {path_to_observe}')
+
+    try:
+        fs_observer.start()
+        LOGGER.info(f'Observing file system at: {path_to_observe}')
+    except OSError as e:
+        fs_observer = None
+        LOGGER.error(f'Could not start file system observer: {e}')
+
+    return fs_observer
 
 
 class FSEventHandler(PatternMatchingEventHandler):

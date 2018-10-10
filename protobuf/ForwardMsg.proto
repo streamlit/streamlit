@@ -42,4 +42,7 @@ message NewReportMessage {
 
   // The command line that launched this report.
   repeated string command_line = 3;
+
+  // Full path of the file that initiated the new report.
+  string source_file_path = 4;
 }
