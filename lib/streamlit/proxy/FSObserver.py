@@ -38,7 +38,8 @@ class FSObserver(object):
             The connection that is asking for an observer to be created.
         callback: function(FSObserver, FileSystemEvent)
             The function that should get called when something changes in
-            path_to_observe.
+            path_to_observe. This function will be called on the observer
+            thread, which is created by the watchdog module.
 
         This object also takes into account the following config settings:
 
@@ -52,6 +53,7 @@ class FSObserver(object):
 
         self._observer = None
         self._callback = callback
+        self._is_closed = False
 
         self.command_line = connection.command_line
         self.cwd = connection.cwd
@@ -162,11 +164,22 @@ class FSObserver(object):
         if len(self._consumers) == 0:
             self._close()
 
+    def is_closed(self):
+        """Return whether this observer is "closed" (i.e. no longer observing).
+
+        Returns
+        -------
+        boolean
+            True if closed.
+        """
+        return self._is_closed
+
     def _close(self):
         """Stops observing the file system."""
         LOGGER.info(f'Closing file system observer for {self.key}')
 
         if self._observer is not None:
+            self._is_closed = True
             self._observer.stop()
 
             # Wait til thread terminates.

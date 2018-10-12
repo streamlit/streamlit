@@ -219,20 +219,6 @@ class Proxy(object):
             IOLoop.current().stop()
         self._stopped = True
 
-    # TODO(thiago): Open this using a separate thread, for speed.
-    def _on_fs_event(self, observer, event):
-        LOGGER.info(
-            f'File system event: [{event.event_type}] {event.src_path}. '
-            f'Calling: {observer.key}')
-
-        # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
-        # single file.
-        process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
-
-        # Required! Otherwise we end up with defunct processes.
-        # (See ps -Al | grep python)
-        process.wait()
-
     def register_proxy_connection(self, connection):
         """Register this connection's name.
 
@@ -386,7 +372,7 @@ class Proxy(object):
         observer = self._fs_observers.get(key)
 
         if observer is None:
-            observer = FSObserver(connection, self._on_fs_event)
+            observer = FSObserver(connection, _on_fs_event)
             self._fs_observers[key] = observer
         else:
             observer.register_consumer(connection)
@@ -405,7 +391,26 @@ class Proxy(object):
 
         if observer is not None:
             observer.deregister_consumer(connection)
-            del self._fs_observers[key]
+            if observer.is_closed():
+                del self._fs_observers[key]
+
+
+def _on_fs_event(observer, event):
+    """Function to call when an FS event is called.
+
+    Note: this will run in the Observer thread (created by the watchdog module).
+    """
+    LOGGER.info(
+        f'File system event: [{event.event_type}] {event.src_path}. '
+        f'Calling: {observer.key}')
+
+    # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
+    # single file.
+    process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
+
+    # Required! Otherwise we end up with defunct processes.
+    # (See ps -Al | grep python)
+    process.wait()
 
 
 def get_external_ip():
