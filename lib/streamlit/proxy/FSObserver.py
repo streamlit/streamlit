@@ -58,50 +58,57 @@ class FSObserver(object):
         self.command_line = connection.command_line
         self.cwd = connection.cwd
 
-        source_file_dirname = os.path.dirname(connection.source_file_path)
-        self._initialize_observer_with_fallback(source_file_dirname)
+        self._initialize_observer_with_fallback(connection.source_file_path)
 
         # Set of clients who are interested in this observer being up.  When
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()
 
-    def _initialize_observer_with_fallback(self, path_to_observe):
+    def _initialize_observer_with_fallback(self, source_file_path):
         """Start the filesystem observer.
 
         Fall back to non-recursive mode if needed.
 
         Parameters
         ----------
-        path_to_observe : str
-            The file system path to observe.
+        source_file_path : str
+            Full path of the file that initiated the report.
         """
         LOGGER.info(f'Opening file system observer for {self.key}')
 
         recursive = config.get_option('proxy.watchUpdatesRecursively')
-        self._observer = self._initialize_observer(path_to_observe, recursive)
+        self._observer = self._initialize_observer(source_file_path, recursive)
 
         # If the previous command errors out, try a fallback command that is
         # less useful but also less likely to fail.
         if self._observer is None and recursive is True:
             self._observer = self._initialize_observer(
-                path_to_observe, recursive=False)  # No longer recursive.
+                source_file_path, recursive=False)  # No longer recursive.
 
-    def _initialize_observer(self, path_to_observe, recursive=True):
+    def _initialize_observer(self, source_file_path, recursive=True):
         """Initialize the filesystem observer.
 
         Parameters
         ----------
-        path_to_observe : str
-            The file system path to observe.
+        source_file_path : str
+            Full path of the file that initiated the report.
         recursive : boolean
             If true, will observe path_to_observe and its subfolders recursively.
 
         Passes kwargs to FSEventHandler.
 
         """
+        path_to_observe = os.path.dirname(source_file_path)
+
         patterns = config.get_option('proxy.watchPatterns')
         ignore_patterns = config.get_option('proxy.ignorePatterns')
+        watch_file_only = config.get_option('proxy.watchFileOnly')
+
+        if watch_file_only:
+            # proxy.watchFileOnly takes precedence over the following:
+            patterns = [source_file_path]
+            ignore_patterns = []
 
         fsev_handler = FSEventHandler(
             fn_to_run=self._on_event,
