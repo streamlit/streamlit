@@ -208,7 +208,8 @@ class Connection(object):
         """Try to establish a connection to the proxy.
 
         Launches the proxy (if necessary), then pumps deltas through the
-        connection.
+        connection. Updates self._proxy_connection_status to indicate whether
+        we succeeded in connecting to the proxy.
         """
         # Create a connection URI.
         server = config.get_option('proxy.server')
@@ -217,9 +218,15 @@ class Connection(object):
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
+        assert (self._proxy_connection_status ==
+            Connection._PROXY_CONNECTION_DISCONNECTED), \
+            'Already connectd to the proxy.'
+
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -231,10 +238,13 @@ class Connection(object):
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
             yield self._transmit_through_websocket(ws)
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
             # cleanup thread can now run.
+            LOGGER.info(f'Failed to connect to proxy at {uri}.')
             self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
@@ -251,10 +261,6 @@ class Connection(object):
     @gen.coroutine
     def _transmit_through_websocket(self, ws):
         """Send queue data across the websocket as it becomes available."""
-        # Indicate that we successfully connected to the proxy so that the
-        # cleanup thread can run..
-        self._proxy_connection_status = Connection._PROXY_CONNECTION_CONNECTED
-
         # Send the header information across.
         yield new_report_msg(self._report_id,
             os.getcwd(), ['python'] + sys.argv, self._source_file_path, ws)
@@ -281,23 +287,36 @@ class Connection(object):
 
         It waits for the main thread to exit, then does some final cleanup.
         """
+        # Wait for the main thread to end.
         LOGGER.debug('Cleanup thread waiting for main thread to end.')
         main_thread.join()
-        FINAL_WAIT_SECONDS = 5
-        for i in range(FINAL_WAIT_SECONDS):
-            LOGGER.debug(f'Checking proxy connection status: {self._proxy_connection_status}')
-            if self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
-                LOGGER.debug('Local script started and exited too fast before proxy started. Waiting 1 second...')
-                time.sleep(1)
+
+        # Then wait for a certain number of seconds to connect to the proxy
+        # to make sure that we can flush the connection queue.
+        start_time = time.time()
+        FINAL_WAIT_SECONDS = 5.0
+        PROXY_CONNECTION_POLL_INTERVAL_SECONDS = 0.1
+        FLUSH_QUEUE_SECONDS = 0.1
+        while True:
+            elapsed_time = time.time() - start_time
+
+            if elapsed_time > FINAL_WAIT_SECONDS:
+                LOGGER.debug(f'Waited {FINAL_WAIT_SECONDS} for proxy '
+                    'to connect. Exiting.')
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
+                time.sleep(PROXY_CONNECTION_POLL_INTERVAL_SECONDS)
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_CONNECTED:
                 # Sleep for a tiny bit to make sure we flush everything to the proxy.
-                time.sleep(0.1)
+                LOGGER.debug('The proxy was connected. Preparing to cleanup.')
+                time.sleep(FLUSH_QUEUE_SECONDS)
                 break
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
                 LOGGER.debug('Proxy connection failed. Ending the local script.')
                 break
             else:
-                LOGGER.error(f'_proxy_connection_status illegal value: {self._proxy_connection_status}')
+                LOGGER.error('_proxy_connection_status illegal value: ' +
+                    str(self._proxy_connection_status))
                 break
         LOGGER.debug('Main thread ended. Restoring excepthook.')
         sys.excepthook = original_excepthook
