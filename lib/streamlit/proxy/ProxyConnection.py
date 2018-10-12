@@ -9,13 +9,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import os
-import subprocess
 
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
-
-from streamlit import config
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 
@@ -24,10 +18,7 @@ from streamlit.util import get_local_id
 LOGGER = get_logger()
 
 class ProxyConnection(object):
-    """Represents a connection.
-
-    IMPORTANT: Always call .close() on this object when you're done with it.
-    """
+    """Represents a connection."""
 
     def __init__(self, new_report_msg, name):
         # The uuid of this report.
@@ -57,70 +48,6 @@ class ProxyConnection(object):
 
         # Each connection additionally gets its own queue.
         self._client_queues = []
-
-        # File system observer.
-        self._fs_observer = self._initialize_fs_observer_with_fallback()
-
-    def close(self):
-        """Close the connection."""
-        LOGGER.info('Closing ProxyConnection')
-
-        if self._fs_observer is not None:
-            LOGGER.info('Closing file system observer')
-            self._fs_observer.stop()
-
-            # Wait til thread terminates.
-            # TODO(thiago): This could be slow. Is this really needed?
-            self._fs_observer.join(timeout=5)
-
-    def _initialize_fs_observer_with_fallback(self):
-        """Start the filesystem observer.
-
-        Fall back to non-recursive mode if needed.
-        """
-        do_watch = config.get_option('proxy.watchFileSystem')
-
-        if not do_watch:
-            return None
-
-        recursive = config.get_option('proxy.watchUpdatesRecursively')
-        patterns = config.get_option('proxy.watchPatterns')
-        ignore_patterns = config.get_option('proxy.ignorePatterns')
-
-        path_to_observe = os.path.dirname(self.source_file_path)
-
-        fs_observer = _initialize_fs_observer(
-            fn_to_run=self._on_fs_event,
-            path_to_observe=path_to_observe,
-            recursive=recursive,
-            patterns=patterns,
-            ignore_patterns=ignore_patterns,
-        )
-
-        # If the previous command errors out, try a fallback command that is
-        # less useful but also less likely to fail.
-        if fs_observer is None and recursive is True:
-            fs_observer = _initialize_fs_observer(
-                fn_to_run=self._on_fs_event,
-                path_to_observe=path_to_observe,
-                recursive=False,  # No longer recursive.
-                patterns=patterns,
-                ignore_patterns=ignore_patterns,
-            )
-
-        return fs_observer
-
-    # TODO(thiago): Open this using a separate thread, for speed.
-    def _on_fs_event(self, event):
-        LOGGER.info(f'File system event: [{event.event_type}] {event.src_path}')
-
-        # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
-        # single file.
-        process = subprocess.Popen(self.command_line, cwd=self.cwd)
-
-        # Required! Otherwise we end up with defunct processes.
-        # (See ps -Al | grep python)
-        process.wait()
 
     def finished_local_connection(self):
         """Removes the flag indicating an active local connection."""
@@ -177,69 +104,3 @@ class ProxyConnection(object):
             [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] + \
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
                 for idx, delta in enumerate(deltas)]
-
-
-def _initialize_fs_observer(path_to_observe, recursive, **kwargs):
-    """Initialize the filesystem observer.
-
-    Parameters
-    ----------
-    path_to_observe : string
-        The file system path to observe.
-    recursive : boolean
-        If true, will observe path_to_observe and its subfolders recursively.
-
-    Passes kwargs to FSEventHandler.
-
-    """
-    handler = FSEventHandler(**kwargs)
-
-    fs_observer = Observer()
-    fs_observer.schedule(handler, path_to_observe, recursive)
-
-    LOGGER.info(f'Will observe file system at: {path_to_observe}')
-
-    try:
-        fs_observer.start()
-        LOGGER.info(f'Observing file system at: {path_to_observe}')
-    except OSError as e:
-        fs_observer = None
-        LOGGER.error(f'Could not start file system observer: {e}')
-
-    return fs_observer
-
-
-class FSEventHandler(PatternMatchingEventHandler):
-    """Calls a function whenever a watched file changes."""
-
-    def __init__(self, fn_to_run, *args, **kwargs):
-        """Constructor.
-
-        Parameters
-        ----------
-        fn_to_run : function
-            The function to call whenever a watched file changes. Takes the
-            FileSystemEvent as a parameter.
-
-        Also accepts the following parameters from PatternMatchingEventHandler:
-        patterns and ignore_patterns.
-
-        More information at https://pythonhosted.org/watchdog/api.html#watchdog.events.PatternMatchingEventHandler
-        """
-        LOGGER.info(f'Starting FSEventHandler with args={args} kwargs={kwargs}')
-
-        super(FSEventHandler, self).__init__(*args, **kwargs)
-        self._fn_to_run = fn_to_run
-
-    def on_any_event(self, event):
-        """Catch-all event handler.
-
-        See https://pythonhosted.org/watchdog/api.html#watchdog.events.FileSystemEventHandler.on_any_event
-
-        Parameters
-        ----------
-        event : FileSystemEvent
-            The event object representing the file system event.
-
-        """
-        self._fn_to_run(event)

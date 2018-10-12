@@ -51,7 +51,8 @@ class ClientWebSocket(WebSocketHandler):
             self._send_new_connection_msg()
 
             # Get a ProxyConnection object to coordinate sending deltas over this report name.
-            self._connection, self._queue = yield self._proxy.add_client(self._report_name, self)
+            self._connection, self._queue = (
+                yield self._proxy.on_client_opened(self._report_name, self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
@@ -80,9 +81,10 @@ class ClientWebSocket(WebSocketHandler):
                 if not self._proxy.proxy_connection_is_registered(self._connection):
                     LOGGER.debug('The proxy connection for "%s" is not registered.',
                                  self._report_name)
-                    self._proxy.remove_client(self._connection, self._queue)
-                    self._connection, self._queue = yield self._proxy.add_client(
-                        self._report_name, self)
+                    self._connection, self._queue = (
+                        yield self._proxy.on_client_waiting_for_proxy_conn(
+                                self._report_name, self,
+                                self._connection, self._queue))
                     LOGGER.debug('Got a new connection ("%s") : %s',
                                  self._connection.name, self._connection)
                     LOGGER.debug('Got a new queue : "%s"', self._queue)
@@ -101,8 +103,7 @@ class ClientWebSocket(WebSocketHandler):
             pass
 
         if self._connection is not None:
-            self._proxy.remove_client(self._connection, self._queue)
-            LOGGER.debug('Removed the client for "%s"', self._connection.name)
+            self._proxy.on_client_closed(self._connection, self._queue)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
