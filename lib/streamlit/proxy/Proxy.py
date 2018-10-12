@@ -30,7 +30,6 @@ from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.proxy import ProxyConnection
 
 from tornado import gen, web
-from tornado import httpclient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import functools
@@ -310,17 +309,12 @@ def get_external_ip():
     Returns:
         IPv4 address as a string.
     """
-    http_client = None
     try:
-        http_client = httpclient.HTTPClient()
-        response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
-        external_ip = response.body.strip().decode('utf-8')
-    except (httpclient.HTTPError, RuntimeError) as e:
+        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
+        external_ip = response.decode('utf-8').strip()
+    except (urllib.URLError, RuntimeError) as e:
         LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
         external_ip = None
-    finally:
-        if http_client is not None:
-            http_client.close()
 
     return external_ip
 
