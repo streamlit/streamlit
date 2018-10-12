@@ -8,11 +8,10 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import os
+import hashlib
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-
-from streamlit import config
 
 from streamlit.logger import get_logger
 from streamlit.util import get_local_id
@@ -40,13 +39,6 @@ class FSObserver(object):
             The function that should get called when something changes in
             path_to_observe. This function will be called on the observer
             thread, which is created by the watchdog module.
-
-        This object also takes into account the following config settings:
-
-            - proxy.watchUpdatesRecursively
-            - proxy.watchPatterns
-            - proxy.ignorePatterns
-
         """
         self.key = FSObserver.get_key(connection)
         LOGGER.info(f'Will observe file system for: {self.key}')
@@ -58,66 +50,31 @@ class FSObserver(object):
         self.command_line = connection.command_line
         self.cwd = connection.cwd
 
-        self._initialize_observer_with_fallback(connection.source_file_path)
+        self._initialize_observer(connection.source_file_path)
 
         # Set of clients who are interested in this observer being up.  When
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()
 
-    def _initialize_observer_with_fallback(self, source_file_path):
-        """Start the filesystem observer.
-
-        Fall back to non-recursive mode if needed.
-
-        Parameters
-        ----------
-        source_file_path : str
-            Full path of the file that initiated the report.
-        """
-        LOGGER.info(f'Opening file system observer for {self.key}')
-
-        recursive = config.get_option('proxy.watchUpdatesRecursively')
-        self._observer = self._initialize_observer(source_file_path, recursive)
-
-        # If the previous command errors out, try a fallback command that is
-        # less useful but also less likely to fail.
-        if self._observer is None and recursive is True:
-            self._observer = self._initialize_observer(
-                source_file_path, recursive=False)  # No longer recursive.
-
-    def _initialize_observer(self, source_file_path, recursive=True):
+    def _initialize_observer(self, source_file_path):
         """Initialize the filesystem observer.
 
         Parameters
         ----------
         source_file_path : str
             Full path of the file that initiated the report.
-        recursive : boolean
-            If true, will observe path_to_observe and its subfolders recursively.
-
-        Passes kwargs to FSEventHandler.
 
         """
         path_to_observe = os.path.dirname(source_file_path)
 
-        patterns = config.get_option('proxy.watchPatterns')
-        ignore_patterns = config.get_option('proxy.ignorePatterns')
-        watch_file_only = config.get_option('proxy.watchFileOnly')
-
-        if watch_file_only:
-            # proxy.watchFileOnly takes precedence over the following:
-            patterns = [source_file_path]
-            ignore_patterns = []
-
         fsev_handler = FSEventHandler(
             fn_to_run=self._on_event,
-            patterns=patterns,
-            ignore_patterns=ignore_patterns,
+            source_file_path=source_file_path,
         )
 
         observer = Observer()
-        observer.schedule(fsev_handler, path_to_observe, recursive)
+        observer.schedule(fsev_handler, path_to_observe, recursive=False)
 
         try:
             observer.start()
@@ -196,7 +153,7 @@ class FSObserver(object):
 class FSEventHandler(PatternMatchingEventHandler):
     """Calls a function whenever a watched file changes."""
 
-    def __init__(self, fn_to_run, *args, **kwargs):
+    def __init__(self, fn_to_run, source_file_path):
         """Constructor.
 
         Parameters
@@ -205,15 +162,12 @@ class FSEventHandler(PatternMatchingEventHandler):
             The function to call whenever a watched file changes. Takes the
             FileSystemEvent as a parameter.
 
-        Also accepts the following parameters from PatternMatchingEventHandler:
-        patterns and ignore_patterns.
-
         More information at https://pythonhosted.org/watchdog/api.html#watchdog.events.PatternMatchingEventHandler
         """
-        LOGGER.info(f'Starting FSEventHandler with args={args} kwargs={kwargs}')
-
-        super(FSEventHandler, self).__init__(*args, **kwargs)
+        super(FSEventHandler, self).__init__(patterns=[source_file_path])
         self._fn_to_run = fn_to_run
+        self._source_file_path = source_file_path
+        self._prev_md5 = _calc_md5(source_file_path)
 
     def on_any_event(self, event):
         """Catch-all event handler.
@@ -226,4 +180,28 @@ class FSEventHandler(PatternMatchingEventHandler):
             The event object representing the file system event.
 
         """
-        self._fn_to_run(event)
+        new_md5 = _calc_md5(self._source_file_path)
+        if new_md5 != self._prev_md5:
+            LOGGER.info(f'File MD5 changed. Rerunning source script.')
+            self._prev_md5 = new_md5
+            self._fn_to_run(event)
+        else:
+            LOGGER.info(f'File MD5 did not change.')
+
+
+def _calc_md5(file_path):
+    """Calculate the MD5 checksum of the given file.
+
+    Parameters
+    ----------
+    file_path : str
+        The path of the file to check.
+
+    Returns
+    -------
+    str
+        The MD5 checksum.
+    """
+    md5 = hashlib.md5()
+    md5.update(file(file_path).read())
+    return md5.digest()

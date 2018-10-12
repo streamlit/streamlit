@@ -111,25 +111,6 @@ class Config(object):
                     _comment = 'Watch for filesystem changes and rerun reports',
                     value = True,
                 ),
-                watchFileOnly = dict(
-                    _comment = (
-                        'If true, only watch for changes in the main script '
-                        "file. If false, watch for changes in that file's "
-                        'whole folder'),
-                    value = True,
-                ),
-                watchRecursively = dict(
-                    _comment = 'If true, will watch the filesystem recursively',
-                    value = True,
-                ),
-                watchPatterns = dict(
-                    _comment = 'File patterns to watch',
-                    value = ['*.py'],
-                ),
-                ignorePatterns = dict(
-                    _comment = 'File patterns to ignore when watching the filesystem',
-                    value = [],
-                ),
             ),
             s3 = dict(
                 _comment = 'S3 Configuration',
