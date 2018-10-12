@@ -21,26 +21,23 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import functools
-import os
-import platform
 import socket
+import subprocess
 import textwrap
 import traceback
 import urllib
 import webbrowser
-import subprocess
 
 from tornado import gen, web
-from tornado import httpclient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
 from streamlit import config
-from streamlit import protobuf
 from streamlit.logger import get_logger
 from streamlit.proxy.FSObserver import FSObserver
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.util import get_static_dir
+
 
 LOGGER = get_logger()
 AWS_CHECK_IP = 'http://checkip.amazonaws.com'
@@ -417,17 +414,12 @@ def get_external_ip():
     Returns:
         IPv4 address as a string.
     """
-    http_client = None
     try:
-        http_client = httpclient.HTTPClient()
-        response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
-        external_ip = response.body.strip().decode('utf-8')
-    except (httpclient.HTTPError, RuntimeError) as e:
+        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
+        external_ip = response.decode('utf-8').strip()
+    except (urllib.URLError, RuntimeError) as e:
         LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
         external_ip = None
-    finally:
-        if http_client is not None:
-            http_client.close()
 
     return external_ip
 
