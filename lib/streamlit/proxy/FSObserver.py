@@ -94,7 +94,11 @@ class FSObserver(object):
         ----------
         event : FileSystemEvent
         """
-        self._callback(self, event)
+        if self._is_closed:
+            LOGGER.info(f'Will not rerun source script.')
+        else:
+            LOGGER.info(f'Rerunning source script.')
+            self._callback(self, event)
 
     def register_consumer(self, key):
         """Tell observer that it's in use by consumer identified by key.
@@ -125,6 +129,8 @@ class FSObserver(object):
         if key in self._consumers:
             self._consumers.remove(key)
 
+        LOGGER.info(f'Deregistered consumers. Now have {len(self._consumers)}')
+
         if len(self._consumers) == 0:
             self._close()
 
@@ -141,9 +147,9 @@ class FSObserver(object):
     def _close(self):
         """Stops observing the file system."""
         LOGGER.info(f'Closing file system observer for {self.key}')
+        self._is_closed = True
 
         if self._observer is not None:
-            self._is_closed = True
             self._observer.stop()
 
             # Wait til thread terminates.
@@ -182,7 +188,7 @@ class FSEventHandler(PatternMatchingEventHandler):
         """
         new_md5 = _calc_md5(self._source_file_path)
         if new_md5 != self._prev_md5:
-            LOGGER.info(f'File MD5 changed. Rerunning source script.')
+            LOGGER.info(f'File MD5 changed.')
             self._prev_md5 = new_md5
             self._fn_to_run(event)
         else:
