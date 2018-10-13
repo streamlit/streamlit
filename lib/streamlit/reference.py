@@ -16,13 +16,6 @@ from io import BytesIO
 
 # import sys
 
-import inspect
-import numpy as np
-import pandas as pd
-import textwrap
-import threading
-
-import streamlit
 import streamlit as st
 
 try:
@@ -30,9 +23,9 @@ try:
 except NameError:
     FileNotFoundError = IOError
 
-def display_reference():
-    """Displays Streamlit's internal help in the browser."""
 
+def display_reference():
+    """Display Streamlit's internal help in the browser."""
     st.title('Streamlit Quick Reference')
 
     st.header('The Basics')
@@ -46,13 +39,12 @@ def display_reference():
         """)
 
     with st.echo():
-        the_meaning_of_life = 40 + 2;
+        the_meaning_of_life = 40 + 2
 
         st.write(
             'You can also pass in comma-separated values into `write` just like '
             'with Python\'s `print`. So you can easily interpolate the values of '
             'variables like this: ', the_meaning_of_life)
-
 
     st.header('Visualizing data as tables')
 
@@ -75,8 +67,15 @@ def display_reference():
             np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
             np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', None])]
 
-        df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-            columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
+        df = pd.DataFrame(
+            np.random.randn(8, 4),
+            index=arrays,
+            columns=[
+                datetime(2012, 5, 1),
+                datetime(2012, 5, 2),
+                datetime(2012, 5, 3),
+                datetime(2012, 5, 4),
+            ])
 
         st.write(df, '...and its transpose:', df.T)
 
@@ -94,7 +93,6 @@ def display_reference():
         )
 
     st.write('...you can easily draw the charts below:')
-
 
     st.subheader('Example of line chart')
 
@@ -114,12 +112,10 @@ def display_reference():
 
         st.line_chart(chart_data2)
 
-
     st.subheader('Example of area chart')
 
     with st.echo():
         st.area_chart(chart_data)
-
 
     st.subheader('Example of bar chart')
 
@@ -130,8 +126,9 @@ def display_reference():
     st.subheader('Matplotlib')
 
     st.write('You can use Matplotlib in Streamlit. '
-        'Just use `st.pyplot()` instead of `plt.show()`.')
+             'Just use `st.pyplot()` instead of `plt.show()`.')
     try:
+        # noqa: F401
         with st.echo():
             from matplotlib import cm, pyplot as plt
             from mpl_toolkits.mplot3d import Axes3D
@@ -143,7 +140,7 @@ def display_reference():
             # Plot the surface.
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
+            ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
 
             st.pyplot()
     except Exception as e:
@@ -167,10 +164,10 @@ def display_reference():
         st.vega_lite_chart(df, {
             'mark': 'circle',
             'encoding': {
-              'x': {'field': 'a', 'type': 'quantitative'},
-              'y': {'field': 'b', 'type': 'quantitative'},
-              'size': {'field': 'c', 'type': 'quantitative'},
-              'color': {'field': 'c', 'type': 'quantitative'},
+                'x': {'field': 'a', 'type': 'quantitative'},
+                'y': {'field': 'b', 'type': 'quantitative'},
+                'size': {'field': 'c', 'type': 'quantitative'},
+                'color': {'field': 'c', 'type': 'quantitative'},
             },
 
             # Add zooming/panning:
@@ -180,7 +177,7 @@ def display_reference():
                     'bind': 'scales',
                 },
             },
-          })
+        })
 
     st.header('Visualizing data as images')
 
@@ -190,12 +187,13 @@ def display_reference():
             return urllib.request.urlopen(url).read()
         except urllib.error.URLError:
             st.error(f'Unable to load file from {image_url}. '
-                'Is the internet connected?')
+                     'Is the internet connected?')
         except Exception as e:
             st.exception(e)
         return None
 
-    image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'
+    image_url = ('https://images.fineartamerica.com/images/artworkimages/'
+                 'mediumlarge/1/serene-sunset-robert-bynum.jpg')
     image_bytes = read_file_from_url(image_url)
 
     if image_bytes is not None:
@@ -211,7 +209,8 @@ def display_reference():
 
     st.header('Playing audio')
 
-    audio_url = 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg'
+    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
+                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
     audio_bytes = read_file_from_url(audio_url)
 
     st.write('''
@@ -230,7 +229,8 @@ def display_reference():
         browsers. Below is an example of an _mp4_-formatted file:
         ''')
 
-    video_url = 'https://www.sample-videos.com/video/mp4/480/big_buck_bunny_480p_2mb.mp4'
+    video_url = ('https://www.sample-videos.com/video/mp4/480/'
+                 'big_buck_bunny_480p_2mb.mp4')
     video_bytes = read_file_from_url(video_url)
 
     if video_bytes is not None:
@@ -242,7 +242,6 @@ def display_reference():
     st.write(
         'To insert titles and headers like the ones on this page, use the `title`, '
         '`header`, and `subheader` functions.')
-
 
     st.header('Preformatted text')
 
@@ -295,7 +294,6 @@ def display_reference():
         st.text('C')
         placeholder.text('B')
 
-
     st.header('Exceptions')
     st.write('You can print out exceptions using `st.exception()`:')
 
@@ -324,7 +322,9 @@ def display_reference():
     """)
     st.subheader('Spinners')
     st.write('A visual way of showing long computation is with a spinner:')
-    lengthy_computation = lambda: None # noop for demsontration purposes
+
+    def lengthy_computation():
+        pass  # noop for demsontration purposes.
 
     with st.echo():
         with st.spinner('Computing something time consuming...'):
