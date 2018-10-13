@@ -74,10 +74,13 @@ class Connection(object):
         LOGGER.debug(f'Created io loop {self._loop}.')
 
         root_frame = inspect.stack()[-1]
+        filename = root_frame[1]  # 1 is the filename field in this tuple.
 
         # Full path of the file that caused this connection to be created.
-        self._source_file_path = os.path.realpath(
-            root_frame[1])  # 1 is the filename field in this tuple.
+        self._source_file_path = ''  # Empty string means "no file" to us.
+
+        if filename != '<stdin>':  # Magic filename when in REPL.
+            self._source_file_path = os.path.realpath(filename)
 
         LOGGER.debug(f'source_file_path: {self._source_file_path}.')
 

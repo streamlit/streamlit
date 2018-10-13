@@ -66,6 +66,10 @@ class FSObserver(object):
             Full path of the file that initiated the report.
 
         """
+        if len(source_file_path) == 0:
+            LOGGER.info(f'No source file to watch. Running from REPL?')
+            return
+
         path_to_observe = os.path.dirname(source_file_path)
 
         fsev_handler = FSEventHandler(
@@ -82,8 +86,6 @@ class FSObserver(object):
         except OSError as e:
             observer = None
             LOGGER.error(f'Could not start file system observer: {e}')
-
-        return observer
 
     def _on_event(self, event):
         """Function that gets called when filesystem changes are detected.
