@@ -101,7 +101,7 @@ this:
 def load_data(nrows):
 ```
 
-And then rerun the script.
+And then just save the script to have Streamlit automatically rerun it for you.
 
 Since this is the first time you're running the script with `@st.cache` in it,
 you'll see no change. But let's continue tweaking our file so you can see what
@@ -113,8 +113,7 @@ Replace the line `st.write('Done!')` with this:
 st.write('Done! (using st.cache)')
 ```
 
-...then rerun the script and notice how **the line you just added appears
-_immediately_**.
+...then save and notice how **the line you just added appears _immediately_**.
 
 If you take a step back for a second, this is actually quite amazing. Something
 magical is happening behind the scenes, and it's just a single line of code to
@@ -184,7 +183,7 @@ hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0, 24))[0]
 st.bar_chart(hist_values)
 ```
 
-Rerun the script, and a histogram will appear immediately.
+Save the script and a histogram will appear immediately.
 What the chart tells us is that **Uber is busiest around 17:00 (i.e. 5pm)**.
 Cool!
 
