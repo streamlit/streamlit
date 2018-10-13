@@ -209,5 +209,5 @@ def _calc_md5(file_path):
         The MD5 checksum.
     """
     md5 = hashlib.md5()
-    md5.update(file(file_path).read())
+    md5.update(open(file_path).read().encode('utf-8'))
     return md5.digest()
