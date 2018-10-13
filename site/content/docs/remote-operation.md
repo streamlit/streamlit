@@ -19,7 +19,7 @@ We assume that:
 * your instance allows incoming TCP connections at port 8501,
 * and your code is already on the instance, in a file called `my_script.py`
 
-## Configuration
+## Setup
 
 To start with, SSH into your instance. You can find the command to do this by
 right-clicking on your
