@@ -76,9 +76,6 @@ const COMPONENTS = {
   // Sector         <- not implemented
 }
 
-/** Column name used to designate the dataframe index. */
-const INDEX0_COLUMN_DESIGNATOR = INDEX_COLUMN_DESIGNATOR + '[0]';
-
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
   'plainIndex', 'int_64Index', 'uint_64Index', 'float_64Index',
@@ -129,11 +126,11 @@ class Chart extends PureComponent {
         let rowData = {};
 
         if (hasSupportedIndex) {
-          rowData[INDEX0_COLUMN_DESIGNATOR] =
+          rowData[INDEX_COLUMN_DESIGNATOR] =
               indexGet(dataFrame.get('index'), 0, rowIndex);
           if (indexTransform) {
-            rowData[INDEX0_COLUMN_DESIGNATOR] =
-                indexTransform(rowData[INDEX0_COLUMN_DESIGNATOR])
+            rowData[INDEX_COLUMN_DESIGNATOR] =
+                indexTransform(rowData[INDEX_COLUMN_DESIGNATOR])
           }
         }
 

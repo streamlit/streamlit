@@ -154,7 +154,11 @@ export function indexGet(index, level, i) {
     multiIndex: (idx) => {
       const levels = idx.getIn(['levels', level]);
       const labels = idx.getIn(['labels', level]);
-      return indexGet(levels, 0, labels.getIn(['data', i]));
+      const label = labels.getIn(['data', i]);
+      if (label < 0)
+        return "NaN";
+      else
+        return indexGet(levels, 0, label);
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
     float_64Index: (idx) => idx.getIn(['data', 'data', i]),
@@ -280,9 +284,10 @@ function concatAnyArray(anyArray1, anyArray2) {
  */
 function getDataFrame(element) {
   return dispatchOneOf(element, 'type', {
-    dataFrame: (df) => df,
     chart: (chart) => chart.get('data'),
+    dataFrame: (df) => df,
     deckGlMap: (el) => el.get('data'),
+    vegaLiteChart: (chart) => chart.get('data'),
   });
 }
 
@@ -291,9 +296,10 @@ function getDataFrame(element) {
  */
 function setDataFrame(element, df) {
   return updateOneOf(element, 'type', {
-    dataFrame: () => df,
     chart: (chart) => chart.set('data', df),
+    dataFrame: () => df,
     deckGlMap: (el) => el.set('data', df),
+    vegaLiteChart: (chart) => chart.set('data', df),
   });
 }
 

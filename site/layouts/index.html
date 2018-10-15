@@ -1,0 +1,23 @@
+{{ define "main" }}
+<main id="home">
+  <section id="fullbleed" class="parallax dark">
+    <h1 class="logo"><strong>stream</strong><span>lit</span></h1>
+  </section>
+
+  {{/* partial "quickstart" . */}}
+  {{ partial "contact" . }}
+</main>
+
+<script>
+  if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+    var els = document.getElementsByClassName('parallax');
+    for (var i = 0; i < els.length; i++) {
+      els[i].classList.add('chrome');
+    }
+  }
+</script>
+{{ end }}
+
+
+{{ define "header" }}<!-- -->{{ end }}
+{{ define "footer" }}<!-- -->{{ end }}

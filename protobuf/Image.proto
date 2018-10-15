@@ -11,5 +11,8 @@ message ImageList {
   repeated Image imgs = 1;
 
   // The width of each image.
-  uint32 width = 2;
+  // >0 sets the image width explicitly
+  // -1 means use the image width
+  // -2 means use the column width
+  int32 width = 2;
 }

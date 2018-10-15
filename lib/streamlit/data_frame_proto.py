@@ -1,9 +1,19 @@
+# -*- coding: future_fstrings -*-
+
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+from streamlit.logger import get_logger
 
 import numpy as np
 import pandas as pd
 import tzlocal
-# from tiny_report import protobuf
+
+LOGGER = get_logger()
 
 def marshall_data_frame(pandas_df, proto_df):
     """
@@ -26,7 +36,7 @@ def marshall_index(pandas_index, proto_index):
     proto_index  - Protobuf.Index (output)
     """
     if type(pandas_index) == pd.Index:
-        marshall_any_array(pandas_index.data, proto_index.plain_index.data)
+        marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         proto_index.range_index.start = pandas_index.min()
         proto_index.range_index.stop = pandas_index.max() + 1
@@ -161,6 +171,8 @@ def get_data_frame(delta):
             return delta.new_element.data_frame
         elif element_type == 'chart':
             return delta.new_element.chart.data
+        elif element_type == 'vega_lite_chart':
+            return delta.new_element.vega_lite_chart.data
     elif delta_type == 'add_rows':
         return delta.add_rows
     else:

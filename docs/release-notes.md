@@ -1,5 +1,213 @@
 # Release Notes
 
+#### v0.16.1
+October 2, 2018
+```
+Version 0.16 of Streamlit is fresh off the oven with better AWS supppert,
+audio/video support, wide mode, and more! Get it while it's hottt 🔥
+
+To upgrade, please run:
+
+   pip install --upgrade streamlit
+
+IMPORTANT: With this version, we start remotely logging statistics about how
+often you use different Streamlit features. These will be used to help improve
+our product and help us understand how we're growing. If you'd like to opt out,
+add the following 2 lines to ~/.streamlit/config.yaml:
+
+client:
+  remotelyTrackUsage: False
+
+Other than that, here's what else is new in this release:
+
+1. Easier to use in AWS! Streamlit now auto-configures itself for use
+   on AWS. No more juggling config files to get Streamlit to work.
+
+2. We added support for audio and video in Streamlit reports with
+   st.audio(audio_bytes, format='audio/wav') and
+   st.video(video_bytes, format='video/mp4'). To see code examples, run:
+
+     streamlit help
+
+3. Go big or go home: you can now make your reports wider by clicking on the
+   hamburger menu, then "Settings" > "Show reports in wide mode".
+
+4. Introduced a new command to close Streamlit's background process, in the
+   unlikely event it's misbehaving: just run:
+
+     streamlit kill_proxy
+
+5. Published some tutorials at http://streamlit.io/docs
+
+6. Fixed a few important bugs, such as Vega Lite support in Python 2.7, support
+   for argument-free @st.cache, and support for tiny scripts that end before the Streamlit proxy has a chance to start. 
+```
+
+#### v0.14.2
+August 16, 2018
+```
+We are thrilled to announce version 0.14 of Streamlit including public saving,
+fast script rerunning, and more! To upgrade, please run:
+
+    pkill -9 -f streamlit.proxy # make sure the old proxy isn't running
+    pip install --upgrade --no-cache-dir streamlit
+
+See our beautiful new docs!
+
+    http://streamlit.io/docs
+
+Get complete help and API documentation:
+
+    streamlit help
+
+New features are:
+
+1. Anyone can now publicly share Streamlit reports! You all get unlimited free
+   cloud space to share your beautiful reports (at least for now while we're
+   in beta). Just click "Save Report" in the upper-right-hand menu.
+
+2. You can now rerun you scripts from within the Streamlit interface -- a
+   buttery smooth and lightning fast new eval-run interaction. Just type 'r'
+   from the Streamlit webpage (or shift+r to change command line arguments).
+   You can also access these options from the menu.
+
+3. Streamlit not supports Vega Lite charts (including zoomable charts)! Check
+   out the power and beauty of this powerful library here:
+
+     https://vega.github.io/vega-lite/examples/
+
+   See examples of the use of Vega Lite in Streamlit by running
+
+     streamlit help
+
+4. Caching with @st.cache is now orders-of-magnitudes faster. You can now
+   skip redundant data fetches and computation even faster!
+
+5. Matplotlib support with st.pyplot() now lets you pass an explicit plot
+   argument.
+
+6. Running Streamlit remotely (say in AWS)? We improved auto-detection of the
+   server's IP. If that doesn't work, you can also manually set the IP by
+   setting:
+
+     proxy:
+       externalIP: EXTERNAL_IP_ADDRESS
+
+  in your ~/.streamlit/config.yaml.
+
+7. We fixed a serious bug which caused Streamlit to hang when using the
+   latest version of tornado.
+
+Please enjoy and we always love feedback!
+```
+
+
+#### v0.13
+July 20, 2018
+```
+We are thrilled to announce version 0.13 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    streamlit help
+
+New features are:
+
+1. Streamlit now supports remote operation! Get all the buttery goodness of
+   Streamlit from AWS instances or in your private cloud. To do this:
+
+     1. Install streamlit on your cloud instance (as shown above).
+     2. Add the following to your ~/.streamlit/config.yaml:
+
+          proxy:
+            isRemote: true
+            waitForConnectionSecs: 60
+
+2. Saving static reports to S3 and loading them is now progressive and much
+   faster!
+
+3. There were also numerous bug fixes, including one which causes st.cache() to
+   hang.
+
+Please enjoy and we always love feedback!
+```
+
+#### v0.12
+June 25, 2018
+```
+We are thrilled to announce version 0.12 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    streamlit help
+
+MAJOR API CHANGE!
+
+We have deprecated the `streamlit.io` package. Please import Streamlit like so:
+
+    import streamlit as st
+
+    st.write(...) etc.
+
+The `streamlit.io` package will be removed in future versions of Streamlit.
+
+New features are:
+
+1. Streamlit now supports Matplotlib! Please use st.pyplot() where you would
+   normally use plt.show()
+
+3. Streamlit now runs on Python 2.7.10 and above!
+
+3. You can now save reports to Amazon S3. Please contact Adrien at
+   adrien.g.treuille@gmail.com to set this up.
+
+4. If your text editor supports go-to-definition for functions and classes,
+   these now work properly for functions in the `streamlit` package.
+
+Bug fixes are:
+
+1. Debug logging messages no longer displayed when Streamlit is launched.
+
+2. You can now pass an array of PIL images to st.image().
+
+3. Streamlit provides more intelligent warnings when floating point arrays are
+   passed to st.image() whose bounds are not on the range [0, 1].
+```
+
+
+#### v0.11
+June 8, 2018
+```
+We are thrilled to announce version 0.11 of Streamlit. To upgrade, please run:
+
+    pip install --upgrade --no-cache-dir streamlit
+
+Get complete help and API documentation with:
+
+    streamlit help
+
+New features and bug fixes are:
+
+1. You can now get help within the UI. Click the hamburger icon in the upper
+   right-hand corner.
+
+2. We changed the default color palette for charts to make them more readable.
+
+3. DataFrames now render properly when the number of columns change.
+
+4. Fixed a crash when rending DataFrame MultiIndices including Nones.
+
+5. Images with alpha channels now display correctly using io.image.
+
+Streamlit also now supports saving to S3 and GCS buckets however this
+functionality is not yet exposed. Please contact @adrien if you're interested
+in testing this.
+```
+
 #### v0.9
 May 17, 2018
 ```
@@ -9,11 +217,11 @@ We are thrilled to announce version 0.9 of Streamlit. To upgrade, please run:
 
 Check the version with:
 
-    python -m streamlit version
+    streamlit version
 
 Get complete help and API documentation with:
 
-    python -m streamlit help
+    streamlit help
 
 New features are:
 
@@ -59,7 +267,7 @@ New features are:
 
 1. Help now opens in a separate tab. So running
 
-    python -m streamlit help
+    streamlit help
 
   opens a new tab named "help." Useful for flipping between help and
   your work!
@@ -91,7 +299,7 @@ In addition, we have a couple bug fixes:
 2. Exceptions will be printed to the report even before the first call to an
    io.* function.
 
-Remember if you get lost, just run `python -m streamlit help`. We look forward
+Remember if you get lost, just run `streamlit help`. We look forward
 to hearing how you use these powerful new features!
 ```
 
@@ -105,7 +313,7 @@ We are thrilled to announce the v0.6 of Streamlit. To upgrade, please run:
 
 Streamlit now has a built-in help manual! To access it run:
 
-    python -m streamlit help
+    streamlit help
 
 Other new features include:
 
@@ -156,7 +364,7 @@ Other new features include:
 
     (You can also use the @streamlit.cache decorator to speed these up!)
 
-Remember if you get lost, just run `python -m streamlit help`. We look forward
+Remember if you get lost, just run `streamlit help`. We look forward
 to hearing how you use these powerful new features!
 ```
 

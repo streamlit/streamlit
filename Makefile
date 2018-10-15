@@ -3,13 +3,16 @@ modules := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)
 
 help:
 	@echo "Streamlit Make Commands:"
-	@echo " init     - Run once to install python and js dependencies."
-	@echo " protobuf - Recompile Protobufs for Python and Javascript."
-	@echo " develop  - Install streamlit pointing to local workspace."
-	@echo " install  - Install streamlit pointing to PYTHONPATH."
-	@echo " build    - build the static version of Streamlit (without Node)"
-	@echo " wheel    - Create a wheel file in dist/."
-	@echo " loc      - Count lines of code."
+	@echo " init         - Run once to install python and js dependencies."
+	@echo " build        - build the static version of Streamlit (without Node)"
+	@echo " protobuf     - Recompile Protobufs for Python and Javascript."
+	@echo " develop      - Install streamlit pointing to local workspace."
+	@echo " install      - Install streamlit pointing to PYTHONPATH."
+	@echo " wheel        - Create a wheel file in dist/."
+	@echo " loc          - Count lines of code."
+	@echo " site         - Builds the site at /site/public."
+	@echo " devel-site   - Starts the dev server for the site."
+	@echo " publish-site - Builds and pushes the site to prod."
 
 .PHONY: init
 init: setup requirements react-init protobuf # react-build release
@@ -20,8 +23,9 @@ build: react-build
 setup:
 	pip install pip-tools
 
-lib/install_requirements.txt: lib/install_requirements.in
-	pip-compile lib/install_requirements.in
+# Got rid of this step because pip-compile is too strict about versions.
+# lib/install_requirements.txt: lib/install_requirements.in
+# 	pip-compile lib/install_requirements.in
 
 lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
 	pip-compile lib/requirements.in
@@ -29,11 +33,12 @@ lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
 requirements: lib/requirements.txt lib/install_requirements.txt
 	pip install -r lib/requirements.txt
 
-lint:
-	# linting
-	cd lib; flake8 $(modules) tests/
+pylint:
+	# Linting
+	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
+	cd lib; flake8 --ignore=E402 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
 
-test:
+pytest:
 	# testing + code coverage
 	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
@@ -50,7 +55,10 @@ develop:
 # 	@echo
 
 wheel:
-	cd lib ; python setup.py bdist_wheel sdist
+	# Get rid of the old build folder to make sure that we delete old js and css.
+	rm -rfv lib/build
+	cd lib ; python setup.py bdist_wheel --universal
+	# cd lib ; python setup.py bdist_wheel sdist
 
 clean:
 	@echo FIXME: This needs to be fixed!
@@ -63,7 +71,20 @@ clean:
 	rm -f frontend/src/protobuf.js
 	rm -rf lib/streamlit/static
 	find . -name .streamlit -type d -exec rm -rf {} \;
-	cd lib; rm -rf .coverage*
+	cd lib; rm -rf .coverage .coverage\.*
+
+.PHONY: site
+site:
+	cd site; hugo
+
+.PHONY: site
+devel-site:
+	cd site; hugo server -D
+
+.PHONY: publish-site
+publish-site:
+	cd site; hugo
+	cd site; aws s3 sync --acl public-read public s3://streamlit.io/ --profile streamlit
 
 .PHONY: protobuf
 protobuf:
@@ -83,6 +104,7 @@ react-build:
 	cd frontend/ ; npm run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
+	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
 js-lint:
 	cd frontend; ./node_modules/.bin/eslint src

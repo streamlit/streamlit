@@ -1,0 +1,77 @@
+/* Mono */
+
+@font-face
+{
+  font-family: "IBM Plex Mono";
+  font-weight: 400;
+  font-style: regular;
+  src: url("IBM_Plex_Mono/IBMPlexMono-Regular.ttf");
+}
+
+/* Sans, regular */
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 300;
+  font-style: regular;
+  src: url("IBM_Plex_Sans/IBMPlexSans-Light.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 400;
+  font-style: regular;
+  src: url("IBM_Plex_Sans/IBMPlexSans-Regular.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 500;
+  font-style: regular;
+  src: url("IBM_Plex_Sans/IBMPlexSans-Medium.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 700;
+  font-style: regular;
+  src: url("IBM_Plex_Sans/IBMPlexSans-Bold.ttf");
+}
+
+/* Sans, italic */
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 300;
+  font-style: italic;
+  src: url("IBM_Plex_Sans/IBMPlexSans-LightItalic.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 400;
+  font-style: italic;
+  src: url("IBM_Plex_Sans/IBMPlexSans-Italic.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 500;
+  font-style: italic;
+  src: url("IBM_Plex_Sans/IBMPlexSans-MediumItalic.ttf");
+}
+
+@font-face
+{
+  font-family: "IBM Plex Sans";
+  font-weight: 700;
+  font-style: italic;
+  src: url("IBM_Plex_Sans/IBMPlexSans-BoldItalic.ttf");
+}

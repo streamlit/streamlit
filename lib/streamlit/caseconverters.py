@@ -1,3 +1,10 @@
+# -*- coding: future_fstrings -*-
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import re
 
 def to_upper_camel_case(snake_case_str):
@@ -16,7 +23,7 @@ def to_lower_camel_case(snake_case_str):
     """
     titleCaseWords = [w for w in snake_case_str.title().split('_')]
     if titleCaseWords:
-        return titleCaseWords[0].lower() + titleCaseWords[1:]
+        return titleCaseWords[0].lower() + ''.join(titleCaseWords[1:])
     else:
         return ''
 

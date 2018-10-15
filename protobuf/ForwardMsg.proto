@@ -9,18 +9,45 @@ message ForwardMsg {
     // Report Deltas
     ////
 
-    string new_report = 1;
-    DeltaList delta_list = 2;
-    bool report_finished = 3;
+    NewConnection new_connection = 1;
+    NewReportMessage new_report = 2;
+    Delta delta = 3;
+    bool report_finished = 4;
 
     ////
-    // Upload Progress
+    // Upload Progresst
     ////
 
     // Indicates the % progres of a report upload.
-    uint32 upload_report_progress = 4;
+    uint32 upload_report_progress = 5;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 5;
+    string report_uploaded = 6;
   }
+}
+
+// This is the first message that is sent when the connection is opened.
+message NewConnection {
+  // True if saving is properly configured.
+  bool saving_configured = 1;
+
+  // If true, tells Streamlit to log datpoints for our own stats when the user
+  // performs certain actions.
+  bool remotely_track_usage = 2;
+}
+
+// This is the first message that is sent when the connection is opened.
+message NewReportMessage {
+  // The report ID
+  string id = 1;
+
+  // The current working directory from which this report was launched.
+  string cwd = 2;
+
+  // The command line that launched this report.
+  repeated string command_line = 3;
+
+  // Full path of the file that initiated the new report. When report is created
+  // from the REPL, this will be an empty string.
+  string source_file_path = 4;
 }

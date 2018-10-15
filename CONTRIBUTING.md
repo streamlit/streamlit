@@ -91,6 +91,10 @@ open http://localhost:3000/?id=example
 ```
 Then load a page and click the save icon.
 
+## Coding Conventions
+
+Streamlit coding conventions can be found [here](docs/conventions.md).
+
 ## Publishing to `PyPi`
 
 #### Write The Release notes
@@ -102,23 +106,24 @@ Place them [here](docs/release-notes.md). Then:
 Run:
 
 ```
+streamlit kill_proxy
 ps -ef | grep -i python
 ```
 and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.10.1`.
+**Note:** The current version is `0.16.3`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (*In two places! Above and below*)
   - `lib/setup.py`
   - `frontend/package.json`
-  - **Update the proxy port** to `5Mmm` where `M` is the major version number and `mm` is the minor version number. For example for `v0.14` set `proxy.port` to `5014`. _(Updating this number with each version ensures that we don't run into browser caching issues.)_
-    - `lib/streamlit/config/config.yaml` : set the `proxy.port`
-    - `frontend/src/WebClient.js` : set the `PROXY_PORT`.
 
-Run `make init` so things like `package-lock.json` get updated.
+Then, so things like `package-lock.json` get updated, run:
+```
+make init
+```
 
 #### Test that Static Loading works
 
@@ -135,46 +140,38 @@ make build
 Test that it works:
 ```
 make install
-python -m streamlit version
-python -m streamlit help
+streamlit version
+streamlit help
 python examples/mnist-cnn.py
 python examples/apocrypha.py
 python examples/uber.py
+python examples/tables.py
 ```
 Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
 
-If everything works and you want to go back to coding, then revert to
-development mode by typing:
-```
-make develop
-```
-
 #### Build the Wheel and Test That
 
-First, make sure you're not in development mode:
+Make the wheel:
 
 ```
-make install
-```
-
-Now go through the following steps:
-
-(Note: this assumes that the current working directory is called `streamlit` and
-you have a parallel folder called `streamlit-staging` to test this version.)
-
-```
+make install   # must be in 'install' mode before making wheel
 make wheel
+```
+Test in in a **fresh 2.7 install**:
+```
 cd ../streamlit-staging
-pip install --upgrade ../streamlit/lib/dist/streamlit-0.10.1-py3-none-any.whl
-python -m streamlit help
+pip install ../streamlit/lib/dist/streamlit-0.15.6-py3-none-any.whl
+streamlit help
 python -m streamlit clear_cache
 python -m streamlit clear_cache
-python -m streamlit help
-python -m streamlit help
+streamlit help
+streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 ```
-Also, if possible, test the wheel in Mac and Linux.
+Also, if possible, test the wheel in:
+- A fresh 3.6 install.
+- On Linux
 
 #### Distribute the Wheel
 ```
@@ -183,7 +180,6 @@ make distribute
 Then test it on Mac and Linux.
 
 #### Post the Release Notes to Slack
-
 Post the release notes and declare victory!
 
 #### Create a New Tag for this Version
@@ -194,38 +190,10 @@ git tag <version number>
 git push origin <version number>
 ```
 
-## Refactored Notes
+#### Go Back to Develop Mode
 
-### TL;DR
-
-#### General development
-- go to branch - `git checkout armando/refactor`
-- make virtualenv using virtualenvwrapper.
-  `$ mkvirtualenv -p /usr/bin/python3.6 streamlit-refactor` or `workon streamlit-refactor`
-- `make` - to npm build, pip install and just generally setup everything.
-- `make develop` - allows python to find streamlit in your code directory.
-
-#### Python
-- make lint
-- make test
-
-#### Javascript
-- make js-lint
-- make js-test
-
-This isnt necessary for development but if you want to see where the
-files would go from the 'wheel' file.
-* `make release` - wheel  in dist/ directory.
-* `make install` - python will find streamlit in $VIRTUAL_ENV/lib/python3.6/site-packages/streamlit-*/streamlit
-
-### Unsorted notes.
-- With `MANIFEST.in` when you do a `python setup.py install` or `python
-  setup.py bdist_wheel` it will copy things in MANIFEST.in under the
-  streamlit/ directory only.  Things that are not under that directory
-  that are included ie root level things like `README.md`, will only be
-  copied in the source distribution ie `python setup sdist`
-
-- Now all you have to do is run `make`
-- To edit the python code and have it point to the src files use `make develop`
-- To install it in the python environment use `make install`
-- `make release` builds the wheel file.
+If everything works and you want to go back to coding, then revert to
+development mode by typing:
+```
+make develop
+```

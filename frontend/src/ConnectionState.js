@@ -4,3 +4,5 @@ export const ConnectionState = {
   ERROR: 'error',
   STATIC: 'static',
 };
+
+export default ConnectionState;

@@ -1,4 +1,11 @@
+# -*- coding: future_fstrings -*-
+
 """A bunch of useful utilites."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 # flake8: noqa
 import uuid
@@ -6,9 +13,10 @@ import contextlib
 import os
 import yaml
 import threading
+import pwd
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
-__CACHE = {}
+__CACHE = dict() # use insead of {} for 2/3 compatibility
 
 def __cache(path, serialize, deserialize):
     """Performs two levels of caching:
@@ -41,9 +49,16 @@ def __cache(path, serialize, deserialize):
         return wrapped_func
     return decorator
 
+def _decode_ascii(str):
+    """Decodes a string as ascii."""
+    return str.decode('ascii')
+
 @__cache('local_uuid.txt', str, uuid.UUID)
 def get_local_id():
     """Returns a local id which identifies this user to the database."""
+    # mac = str(uuid.getnode())
+    # user = pwd.getpwuid(os.geteuid()).pw_name
+    # return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
     return uuid.uuid4()
 
 @contextlib.contextmanager
@@ -164,3 +179,7 @@ def escape_markdown(raw_string):
 #     except FileNotFoundError:
 #         pass
 #     return __LOCAL_CONFIG
+
+def get_static_dir():
+    dirname = os.path.dirname(os.path.normpath(__file__))
+    return os.path.normpath(os.path.join(dirname, 'static'))

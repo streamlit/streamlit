@@ -1,32 +1,41 @@
 syntax = "proto3";
 
-import "Text.proto";
-import "DataFrame.proto";
+import "Audio.proto";
+import "Balloons.proto";
 import "Chart.proto";
-import "Image.proto";
-import "Progress.proto";
-import "DocString.proto";
-import "Exception.proto";
-import "Empty.proto";
-import "Map.proto";
+import "DataFrame.proto";
 import "DeckGlMap.proto";
+import "DocString.proto";
+import "Empty.proto";
+import "Exception.proto";
+import "Image.proto";
+import "Map.proto";
+import "Progress.proto";
+import "Text.proto";
+import "VegaLiteChart.proto";
+import "Video.proto";
 
 // An element which can be displayed on the screen.
 message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Text text = 1;
-    Empty empty = 2;
-    DataFrame data_frame = 3;
+    Audio audio = 13;
+    Balloons balloons = 12;
     Chart chart = 4;
-    Progress progress = 5;
-    ImageList imgs = 6;
-    DocString doc_string = 7;
-    Exception exception = 8;
-    Map map = 9;
-    // VegaLiteChart = 10;
+    DataFrame data_frame = 3;
     DataFrame table = 11;
-    DeckGlMap deck_gl_map = 12;
+    DeckGlMap deck_gl_map = 15;
+    DocString doc_string = 7;
+    Empty empty = 2;
+    Exception exception = 8;
+    ImageList imgs = 6;
+    Map map = 9;
+    Progress progress = 5;
+    Text text = 1;
+    VegaLiteChart vega_lite_chart = 10;
+    Video video = 14;
+
+    // Next ID: 16
   }
 }

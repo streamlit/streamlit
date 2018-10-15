@@ -1,1 +1,0 @@
-PYTHONPATH=local/server python $*

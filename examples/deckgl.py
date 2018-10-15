@@ -1,15 +1,21 @@
-from streamlit import io, cache
+import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 
-io.title('DeckGL example')
+st.title('DeckGL example')
+
+@st.cache
+def from_data_file(filename):
+    dirname = os.path.dirname(__file__)
+    return pd.read_json(os.path.join(dirname, 'data', filename))
 
 # Grab some data
-bart_stop_stats = pd.read_json('./examples/bart_stop_stats.json')
-bart_path_stats = pd.read_json('./examples/bart_path_stats.json')
-bike_rental_stats = pd.read_json('./examples/bike_rental_stats.json')
+bart_stop_stats = from_data_file('bart_stop_stats.json')
+bart_path_stats = from_data_file('bart_path_stats.json')
+bike_rental_stats = from_data_file('bike_rental_stats.json')
 
-io.deck_gl_map(
+st.deck_gl_map(
     viewport={
         'latitude': 37.76,
         'longitude': -122.4,

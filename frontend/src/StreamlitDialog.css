@@ -1,0 +1,21 @@
+.streamlit-upload-first-line {
+  margin-bottom: 0.5rem;
+}
+
+.streamlit-dialog .rerun-header {
+  margin-bottom: 0.5rem;
+}
+
+.streamlit-dialog .command-line {
+  width: 100%;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  height: 6rem;
+}
+
+/* We make this an id instead of a class to enable clipboard copy */
+#streamlit-upload-url {
+  word-wrap: break-word;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+}

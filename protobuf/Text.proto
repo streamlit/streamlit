@@ -37,9 +37,6 @@ message Text {
 
     // Shows a success message.
     SUCCESS = 9;
-
-    // Displays a link
-    LINK = 10;
   }
   Format format = 2;
 }

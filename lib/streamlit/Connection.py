@@ -1,80 +1,130 @@
-"""A Report Object which exposes a print method which can be used to
-write objects out to a wbpage."""
+# -*- coding: future_fstrings -*-
 
-from aiohttp import web, ClientSession
-from aiohttp.client_exceptions import ClientConnectorError
+"""Connection management methods."""
 
-import asyncio
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+import base58
+import inspect
 import os
 import sys
 import threading
-import traceback
+import time
 import urllib
 import uuid
+
+from functools import wraps
+
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.websocket import websocket_connect
 
 from streamlit.util import get_local_id
 from streamlit import config
 from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
+from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 from streamlit.streamlit_msg_proto import new_report_msg
+from streamlit import protobuf
+
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
+# Websocket arguments.
+WS_ARGS = {
+    # Max size of the message to send via the websocket.
+    'max_message_size': MESSAGE_SIZE_LIMIT,
+}
 
 def _assert_singleton(method):
-    """Asserts that this method is called on the singleton instance of
-    Connection."""
+    """Assert that method is called on singleton instance of Connection."""
+    @wraps(method)
     def inner(self, *args, **kwargs):
         assert self == Connection._connection, \
             f'Can only call {method.__name__}() on the singleton Connection.'
         return method(self, *args, **kwargs)
-    inner.__name__ = method.__name__
-    inner.__doc__ = method.__doc__
     return inner
 
-def _assert_singleton_async(method):
-    """Asserts that this coroutine is called on the singleton instance of
-    Connection."""
-    async def inner(self, *args, **kwargs):
-        assert self == Connection._connection, \
-            f'Can only call {method.__name__}() on the singleton Connection.'
-        return await method(self, *args, **kwargs)
-    inner.__name__ = method.__name__
-    inner.__doc__ = method.__doc__
-    return inner
 
-class Connection:
-    """This encapsulates a single connection the to the server for a single
-    report."""
+class Connection(object):
+    """Represents a single connection to the server for a single report."""
 
     # This is the singleton connection object.
     _connection = None
 
+    # The _proxy_connection_status can take one of these three values:
+    _PROXY_CONNECTION_DISCONNECTED = 'disconnected'
+    _PROXY_CONNECTION_CONNECTED = 'connected'
+    _PROXY_CONNECTION_FAILED = 'failed'
+
+    # This is the class through which we can add elements to the Report
     def __init__(self):
-        """
-        Creates a new connection to the server.
-        """
+        """Create a new connection to the server."""
         # Create an ID for this Report
-        self._report_id = uuid.uuid4()
+        self._report_id = base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
         # Create a name for this report.
         self._name = self._create_name()
+        LOGGER.debug(f'Created a connection with name "{self._name}"')
 
-        # Queue to store deltas as they flow across.
+        # This is the event loop to talk with the proxy.
+        self._loop = IOLoop(make_current=False)
+        LOGGER.debug(f'Created io loop {self._loop}.')
+
+        root_frame = inspect.stack()[-1]
+        filename = root_frame[1]  # 1 is the filename field in this tuple.
+
+        # Full path of the file that caused this connection to be created.
+        self._source_file_path = ''  # Empty string means "no file" to us.
+
+        if filename != '<stdin>':  # Magic filename when in REPL.
+            self._source_file_path = os.path.realpath(filename)
+
+        LOGGER.debug(f'source_file_path: {self._source_file_path}.')
+
+        # This ReportQueue stores deltas until they're ready to be transmitted
+        # over the websocket.
+        #
+        # VERY IMPORTANT: The key to understanding local threading in Streamlit
+        # is that self._queue acts like a thread-safe channel for data (in this
+        # case deltas) from the main thread (e.g. st.write()) to the proxy
+        # connection thread (e.g. flush_queue()). To ensure the thread-safety of
+        # this channel, ALL methods called on this ReportQueue must happen in a
+        # coroutine executed on self._loop. For example, the ReportQueue is
+        # filled by calling _enqueue_delta which schedules a callback on
+        # self._loop. The ReportQueue is drained in _transmit_through_websocket
+        # which also runs on self._loop. Directly manipulating self._queue
+        # from other threads could cause rare, subtle race conditions!
         self._queue = ReportQueue()
 
-        # Set to false when the connection should close.
+        # Will stay open until the main thread closes. Then gets set to false to
+        # cleanly close down the connection. Like self._queue, this variable
+        # is only ever accessed
         self._is_open = True
 
-        # This is the event loop to talk with the serverself.
-        self._loop = asyncio.new_event_loop()
+        # Keep track of whether we've connected to the proxy.
+        #
+        # Necessary for very short lived scripts that terminate before the
+        # proxy is even started. In this case, we try to delay the cleanup
+        # thread until the proxy has started.
+        self._proxy_connection_status = \
+            Connection._PROXY_CONNECTION_DISCONNECTED
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
 
     @classmethod
     def get_connection(cls):
-        """Returns the singleton Connection object, instantiating one if
-        necessary."""
+        """Return the singleton Connection object.
+
+        Instantiates one if necessary.
+        """
         # Instantiate the singleton connection if necessary.
-        if cls._connection == None:
+        if cls._connection is None:
+            LOGGER.debug('No connection. Registering one.')
+
             # Create the new connection.
             Connection().register()
 
@@ -82,42 +132,43 @@ class Connection:
         return cls._connection
 
     def register(self):
-        """Sets up this connection to be the singelton connection."""
+        """Set up this connection to be the singleton connection."""
         # Establish this connection and connect to the proxy server.
-        assert type(self)._connection == None, \
-            'Cannot register two connections'
-        type(self)._connection = self
+        assert type(self)._connection is None, 'Cannot register two connections'
+        Connection._connection = self
         self._connect_to_proxy()
 
         # Override the default exception handler.
         original_excepthook = sys.excepthook
+
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
-            self.get_delta_generator().exception(exc_value)
+            self.get_delta_generator().exception(exc_value, exc_tb)
             original_excepthook(exc_type, exc_value, exc_tb)
         sys.excepthook = streamlit_excepthook
 
         # When the current thread closes, then close down the connection.
-        current_thread = threading.current_thread()
-        def cleanup_on_exit():
-            current_thread.join()
-            sys.excepthook = original_excepthook
-            self._loop.call_soon_threadsafe(setattr, self, '_is_open', False)
-        threading.Thread(target=cleanup_on_exit, daemon=False).start()
+        main_thread = threading.current_thread()
+        cleanup_thread = threading.Thread(target=self._cleanup_on_exit,
+            args=(main_thread, original_excepthook))
+        cleanup_thread.daemon = False
+        cleanup_thread.start()
 
     @_assert_singleton
     def unregister(self):
-        """Removes this connection from being the singleton connection."""
+        """Remove this connection from being the singleton connection."""
         Connection._connection = None
 
     @_assert_singleton
     def get_delta_generator(self):
-        """Returns the DeltaGenerator for this report. This is the object
-        that allows you to dispatch toplevel deltas to the Report, e.g.
-        adding new elements."""
+        """Return the DeltaGenerator for this connection.
+
+        This is the object that allows you to dispatch toplevel deltas to the
+        Report, e.g. adding new elements.
+        """
         return self._delta_generator
 
     def _create_name(self):
-        """Creates a name for this report."""
+        """Create a name for this report."""
         name = ''
         if len(sys.argv) >= 2 and sys.argv[0] == '-m':
             name = sys.argv[1]
@@ -134,71 +185,170 @@ class Connection:
 
     @_assert_singleton
     def _enqueue_delta(self, delta):
-        """Enqueues the given delta for transmission to the server."""
-        self._loop.call_soon_threadsafe(self._queue, delta)
+        """Enqueue the given delta for transmission to the server."""
+        def queue_the_delta():
+            self._queue(delta)
+        self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
     def _connect_to_proxy(self):
-        """Opens a connection to the server in a separate thread. Returns
-        the event loop for that thread."""
+        """Open a connection to the server in a separate thread."""
         def connection_thread():
-            self._loop.run_until_complete(self._attempt_connection())
+            self._loop.make_current()
+            LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
+            self._loop.run_sync(self._attempt_connection)
             self._loop.close()
             self.unregister()
-        threading.Thread(target=connection_thread, daemon=False).start()
+            LOGGER.debug('Exit.. (deltas remaining = %s)' % len(self._queue._deltas))
 
-    @_assert_singleton_async
-    async def _attempt_connection(self):
-        """Tries to establish a connection to the proxy (launching the
-        proxy if necessary). Then, pumps deltas through the connection."""
+        connection_thread = threading.Thread(target=connection_thread)
+        connection_thread.daemon = False
+        connection_thread.start()
+
+    @_assert_singleton
+    @gen.coroutine
+    def _attempt_connection(self):
+        """Try to establish a connection to the proxy.
+
+        Launches the proxy (if necessary), then pumps deltas through the
+        connection. Updates self._proxy_connection_status to indicate whether
+        we succeeded in connecting to the proxy.
+        """
         # Create a connection URI.
         server = config.get_option('proxy.server')
         port = config.get_option('proxy.port')
         local_id = get_local_id()
         report_name = urllib.parse.quote_plus(self._name)
-        uri = f'http://{server}:{port}/new/{local_id}/{report_name}'
+        uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
-        # Try to connect twice to the websocket
-        session = ClientSession(loop=self._loop)
+        assert (self._proxy_connection_status ==
+            Connection._PROXY_CONNECTION_DISCONNECTED), \
+            'Already connectd to the proxy.'
+
+        LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
-            # Try to connect to the proxy for the first time.
-            try:
-                async with session.ws_connect(uri) as ws:
-                    await self._transmit_through_websocket(ws)
-                    return
-            except ClientConnectorError:
-                pass
+            ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
+            yield self._transmit_through_websocket(ws)
+            return
+        except IOError:
+            LOGGER.info(f'First connection to {uri} failed.')
 
-            # Connecting to the proxy failed, so let's start the proxy manually.
-            await self._launch_proxy()
+        LOGGER.info('Starting the proxy manually.')
+        yield self._launch_proxy()
 
-            # Try again to transmit data through the proxy
-            try:
-                async with session.ws_connect(uri) as ws:
-                    await self._transmit_through_websocket(ws)
-            except ClientConnectorError:
-                print(f'Failed to connect to {uri}.')
+        LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
+        try:
+            ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
+            yield self._transmit_through_websocket(ws)
+        except IOError:
+            # Indicate that we failed to connect to the proxy so that the
+            # cleanup thread can now run.
+            LOGGER.info(f'Failed to connect to proxy at {uri}.')
+            self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
+            raise ProxyConnectionError(uri)
 
-        finally:
-            # Closing the session.
-            await session.close()
-
-    @_assert_singleton_async
-    async def _launch_proxy(self):
-        """Launches the proxy server."""
+    @_assert_singleton
+    @gen.coroutine
+    def _launch_proxy(self):
+        """Launch the proxy server."""
         wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
-        os.system('python -m streamlit.Proxy &')
-        await asyncio.sleep(wait_for_proxy_secs)
+        os.system('python -m streamlit.proxy &')
+        LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
+        yield gen.sleep(wait_for_proxy_secs)
 
-    @_assert_singleton_async
-    async def _transmit_through_websocket(self, ws):
-        """Sends queue data across the websocket as it becomes available."""
+    @_assert_singleton
+    @gen.coroutine
+    def _transmit_through_websocket(self, ws):
+        """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
-        await new_report_msg(self._report_id, ws)
+        yield new_report_msg(
+            self._report_id, os.getcwd(), ['python'] + sys.argv,
+            self._source_file_path, ws)
+        LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')
+        LOGGER.debug(f'Websocket Transmit ws = {ws}')
+        LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
+
         while self._is_open:
-            await self._queue.flush_queue(ws)
-            await asyncio.sleep(throttle_secs)
-        await self._queue.flush_queue(ws)
+            yield self._queue.flush_queue(ws)
+            yield gen.sleep(throttle_secs)
+
+        LOGGER.debug('Connection closing. Flushing queue for the last time.')
+        yield self._queue.flush_queue(ws)
+        LOGGER.debug('Finished flusing the queue writing=%s' % ws.stream.writing())
+        yield ws.close()
+        LOGGER.debug('Closed the connection object.')
+
+    def _cleanup_on_exit(self, main_thread, original_excepthook):
+        """
+        This is the cleanup thread.
+
+        It waits for the main thread to exit, then does some final cleanup.
+        """
+        # Wait for the main thread to end.
+        LOGGER.debug('Cleanup thread waiting for main thread to end.')
+        main_thread.join()
+
+        # Then wait for a certain number of seconds to connect to the proxy
+        # to make sure that we can flush the connection queue.
+        start_time = time.time()
+        FINAL_WAIT_SECONDS = 5.0
+        PROXY_CONNECTION_POLL_INTERVAL_SECONDS = 0.1
+        FLUSH_QUEUE_SECONDS = 0.1
+        while True:
+            elapsed_time = time.time() - start_time
+
+            if elapsed_time > FINAL_WAIT_SECONDS:
+                LOGGER.debug(f'Waited {FINAL_WAIT_SECONDS} for proxy '
+                    'to connect. Exiting.')
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
+                time.sleep(PROXY_CONNECTION_POLL_INTERVAL_SECONDS)
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_CONNECTED:
+                # Sleep for a tiny bit to make sure we flush everything to the proxy.
+                LOGGER.debug('The proxy was connected. Preparing to cleanup.')
+                time.sleep(FLUSH_QUEUE_SECONDS)
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
+                LOGGER.debug('Proxy connection failed. Ending the local script.')
+                break
+            else:
+                LOGGER.error('_proxy_connection_status illegal value: ' +
+                    str(self._proxy_connection_status))
+                break
+        LOGGER.debug('Main thread ended. Restoring excepthook.')
+        sys.excepthook = original_excepthook
+        self._loop.add_callback(setattr, self, '_is_open', False)
+        LOGGER.debug('Submitted callback to stop the connection thread.')
+
+class ProxyConnectionError(Exception):
+    """Error raised whenever something goes wrong in the Connection."""
+
+    def __init__(self, uri):
+        """Constructor."""
+        msg = f'Unable to connect to proxy at {uri}.'
+        super(ProxyConnectionError, self).__init__(msg)
+
+
+if __name__ == '__main__':
+    c = Connection().get_connection()
+    queue = Connection()._queue
+    _id = 0
+    LOGGER.debug(queue)
+
+    while True:
+        delta = protobuf.Delta()
+        delta.id = _id
+        delta.new_element.text.format = protobuf.Text.MARKDOWN
+        delta.new_element.text.body = '{}'.format(
+            time.time())
+        queue(delta)
+        _id += 1
+
+        time.sleep(5)

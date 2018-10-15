@@ -3,7 +3,7 @@
  * Google protocol buffers. It guarnatees message arrival order.
  */
 
-import {ForwardMsg, BackMsg, Text as TextProto} from './protobuf';
+import {ForwardMsg, BackMsg} from './protobuf';
 import {ConnectionState} from './ConnectionState';
 
 
@@ -85,14 +85,6 @@ class WebsocketConnection {
         this.lastDispatchedMessageIndex = dispatchMessageIndex;
       }
     }
-  }
-
-  handleClose() {
-    this.state = ConnectionState.DISCONNECTED;
-  }
-
-  handleError(event) {
-    this.state = ConnectionState.ERROR;
   }
 };
 
