@@ -43,9 +43,9 @@ class DataFrame extends PureComponent {
       // Get the cell renderer.
       const cellContents = getCellContents(df, headerRows, headerCols);
       const cellRenderer = getCellRenderer(cellContents);
-      const {columnWidth, headerWidth} =
-        getWidths(cols, rows, headerCols, width - border, cellContents);
-      // width = tableWidth + border;
+      const {elementWidth, columnWidth, headerWidth} =
+        getWidths(cols, rows, headerCols, headerRows, width - border,
+          cellContents);
 
       // Since this is a PureComponent, finding ourselves in this method
       // means that the props have chaged, so we should force a rerender of the
@@ -58,8 +58,8 @@ class DataFrame extends PureComponent {
 
       // Put it all together.
       return (
-        <div style={{width, height}}>
-          <div style={{width, height, position: 'absolute'}}
+        <div style={{width: elementWidth, height}}>
+          <div style={{width: elementWidth, height, position: 'absolute'}}
             className="dataframe-container">
               <MultiGrid
                 className="dataFrame"
@@ -73,7 +73,7 @@ class DataFrame extends PureComponent {
                 height={height - border}
                 rowHeight={rowHeight}
                 rowCount={rows}
-                width={width - border}
+                width={elementWidth}
                 classNameBottomLeftGrid='table-bottom-left'
                 classNameTopRightGrid='table-top-right'
                 ref={this.multGridRef}
@@ -149,7 +149,7 @@ function getCellRenderer(cellContents) {
 /**
  * Computes various dimensions for the table.
  */
-function getWidths(cols, rows, headerCols, width, cellContents) {
+function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
   // Calculate column width based on character count alone.
    let columnWidth = ({index}) => {
     const colIndex = index;
@@ -158,12 +158,21 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
     const padding = 14;
     const [minWidth, maxWidth] = [25, 400];
 
-    // Set the colWidth to the maximum width of a column. If more than maxRows
-    // then select maxRows at random to measure.
+    // Set the colWidth to the maximum width of a column.
     const maxRows = 100;
     let colWidth = minWidth;
     for (var i = 0 ; i < Math.min(rows, maxRows) ; i++) {
-      const rowIndex = rows > maxRows ? Math.floor(Math.random() * rows) : i;
+      let rowIndex = -1;
+      if (i < headerRows) {
+        // Always measure all the header rows.
+        rowIndex = i;
+      } else if (rows > maxRows) {
+        // If there are a lot of rows, then pick some at random.
+        rowIndex = Math.floor(Math.random() * rows);
+      } else {
+        // Otherwise, just measure every row.
+        rowIndex = i;
+      }
       const nChars = cellContents(colIndex, rowIndex).contents.length;
       const cellWidth = nChars * charWidth + padding;
       if (cellWidth > maxWidth)
@@ -174,24 +183,33 @@ function getWidths(cols, rows, headerCols, width, cellContents) {
     return colWidth;
   };
 
-  // Increase column with if the table is too narrow.
-  let [tableWidth, headerWidth] = [0,0];
+  // Increase column with if the table is somewhat narrow (but not super narrow)
+
+  let tableWidth = 0;
+  let headerWidth = 0;
+
   for (var colIndex = 0 ; colIndex < cols ; colIndex++) {
     const colWidth = columnWidth({index: colIndex});
     tableWidth += colWidth;
-    if (colIndex < headerCols)
+    if (colIndex < headerCols) {
       headerWidth += colWidth;
-    else if (tableWidth >= width)
+    } else if (tableWidth >= width) {
+      // No need to continue. We already know the followign "if" condition will fail.
       break;
+    }
   }
-  if (tableWidth < width) {
+
+  let elementWidth = Math.min(tableWidth, width);
+
+  if (tableWidth > width * 2/3 && tableWidth < width) {
     const widthArray = Array.from({length: cols}, (_, colIndex) => (
       columnWidth({index: colIndex}) + (width - tableWidth) / cols
     ));
     columnWidth = ({index}) => widthArray[index];
+    elementWidth = width;
   }
 
-  return {columnWidth, headerWidth};
+  return {elementWidth, columnWidth, headerWidth};
 }
 
 

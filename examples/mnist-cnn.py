@@ -1,4 +1,14 @@
-from streamlit import io, Chart
+# -*- coding: future_fstrings -*-
+
+"""An example of monitoring a simple neural net as it trains."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+import streamlit as st
+from streamlit.Chart import Chart
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -16,17 +26,17 @@ class MyCallback(keras.callbacks.Callback):
         self._x_test = x_test
 
     def on_train_begin(self, logs=None):
-        io.header('Summary')
+        st.header('Summary')
         self._summary_chart = self._create_chart('area', 300)
-        self._summary_stats = io.text(f'{"epoch":>8s} :  0')
-        io.header('Training Log')
+        self._summary_stats = st.text(f'{"epoch":>8s} :  0')
+        st.header('Training Log')
 
     def on_epoch_begin(self, epoch, logs=None):
         self._epoch = epoch
-        io.subheader(f'Epoch {epoch}')
+        st.subheader(f'Epoch {epoch}')
         self._epoch_chart = self._create_chart('line')
-        self._epoch_progress = io.info('No stats yet.')
-        self._epoch_summary = io.empty()
+        self._epoch_progress = st.info('No stats yet.')
+        self._epoch_summary = st.empty()
 
     def on_batch_end(self, batch, logs=None):
         rows = pd.DataFrame([[logs['loss'], logs['acc']]],
@@ -42,13 +52,13 @@ class MyCallback(keras.callbacks.Callback):
             f"loss: {logs['loss']:>7.5f} | acc: {logs['acc']:>7.5f}")
 
     def on_epoch_end(self, epoch, logs=None):
-        # io.write('**Summary**')
+        # st.write('**Summary**')
         indices = np.random.choice(len(self._x_test), 36)
         test_data = self._x_test[indices]
         prediction = np.argmax(self.model.predict(test_data), axis=1)
-        io.img(1.0 - test_data, caption=prediction)
+        st.image(1.0 - test_data, caption=prediction)
         summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
-        io.text(summary)
+        st.text(summary)
         self._summary_stats.text(f'{"epoch":>8s} :  {epoch}\n{summary}')
 
     def _create_chart(self, type='line', height=0):
@@ -66,9 +76,9 @@ class MyCallback(keras.callbacks.Callback):
         getattr(epoch_chart, type)(type='monotone', data_key='acc',
             stroke='#82ca9d', fill='#82ca9d',
             dot="false", y_axis_id='acc_axis')
-        return io.chart(epoch_chart)
+        return st.Connection.get_connection().get_delta_generator()._native_chart(epoch_chart)
 
-io.title('MNIST CNN')
+st.title('MNIST CNN')
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -108,9 +118,10 @@ model.add(Dense(num_classes, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
+
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
     epochs=epochs, callbacks=[MyCallback(x_test)])
 
-io.success('Finished training!')
+st.success('Finished training!')
 
     # model.save("convnet.h5")

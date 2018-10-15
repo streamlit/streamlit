@@ -1,25 +1,41 @@
+# -*- coding: future_fstrings -*-
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+import io
 import json
 import math
 import numpy as np
 import pandas as pd
+import random
+import sys
 import textwrap
 import traceback
 
-from streamlit import image_proto
-from streamlit.Chart import Chart
-from streamlit.chartconfig import CHART_TYPES
-from streamlit.caseconverters import to_snake_case
 from streamlit import data_frame_proto
+from streamlit import image_proto
+from streamlit import generic_binary_proto
 from streamlit import protobuf
-
-MAX_DELTA_BYTES = 14 * 1024 * 1024 # 14MB
+from streamlit.Chart import Chart
+from streamlit.VegaLiteChart import VegaLiteChart
+from streamlit.caseconverters import to_snake_case
+from streamlit.chartconfig import CHART_TYPES
+from streamlit.logger import get_logger
 
 EXPORT_TO_IO_FLAG = '__export_to_io__'
 
+# setup logging
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
+from functools import wraps
+
 def _export_to_io(method):
-    """Flag this DeltaGenerator method to be exported to the streamlit.io
+    """Flag this DeltaGenerator method to be exported to the streamlit
     package.
 
     This should be the outermost decorator, i.e. before all others.
@@ -28,7 +44,7 @@ def _export_to_io(method):
     return method
 
 def _create_element(method):
-    """Allows you to easily create a method which creates a new element deltaself.
+    """Allows you to easily create a method which creates a new element delta.
 
     Converts a method of the with arguments (self, element, ...) into a method
     with arguments (self, ...). Thus, the intantiation of the element proto
@@ -42,6 +58,7 @@ def _create_element(method):
     -------
     A new DeltaGenerator method with arguments (self, ...)
     """
+    @wraps(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def create_element(element):
@@ -49,11 +66,13 @@ def _create_element(method):
             return self._new_element(create_element)
         except Exception as e:
             self.exception(e)
-    wrapped_method.__name__ = method.__name__
-    wrapped_method.__doc__ = method.__doc__
+            import sys
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_tb(exc_traceback, file=sys.stderr)
+
     return wrapped_method
 
-class DeltaGenerator:
+class DeltaGenerator(object):
     """
     Creates delta messages. If id is set to none, then an id is created for each
     message and a new Generator with that id is created."
@@ -73,6 +92,58 @@ class DeltaGenerator:
         else:
             self._generate_new_ids = False
             self._id = id
+
+    @_export_to_io
+    @_create_element
+    def balloons(self, element):
+        """Draws celebratory balloons!
+        """
+        element.balloons.type = protobuf.Balloons.DEFAULT
+        element.balloons.execution_id = random.randrange(0xFFFFFFFF)
+
+    @_export_to_io
+    @_create_element
+    def text(self, element, body):
+        """Writes fixed width text.
+
+        Args
+        ----
+        body : string
+            The string to display.
+        """
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.PLAIN
+
+    @_export_to_io
+    @_create_element
+    def markdown(self, element, body):
+        """Displays the string, formatted as markdown.
+
+        Args
+        ----
+        string : string
+            The string to display as markdown.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+        """
+        element.text.body = textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
+
+    @_export_to_io
+    @_create_element
+    def json(self, element, body):
+        """Displays the object as a pretty JSON string.
+
+        Args
+        ----
+        object : object
+            The object to stringify. All referenced objects should have JSON counterpart.
+            If object is a string, we assume it is already JSON formatted.
+        """
+        element.text.body = (body if isinstance(body, string_types) else json.dumps(body))
+        element.text.format = protobuf.Text.JSON
 
     @_export_to_io
     @_create_element
@@ -124,70 +195,6 @@ class DeltaGenerator:
         """
         element.text.body = str(string)
         element.text.format = protobuf.Text.SUB_HEADER
-
-    @_export_to_io
-    @_create_element
-    def text(self, element, body):
-        """Writes fixed width text.
-
-        Args
-        ----
-        body : string
-            The string to display.
-        """
-        element.text.body = str(body)
-        element.text.format = protobuf.Text.PLAIN
-
-    @_export_to_io
-    @_create_element
-    def help(self, element, obj):
-        """Displays the doc string for this object, nicely formatted.
-
-        Displays the doc string for this object. If the doc string is
-        represented as ReStructuredText, then it will be converted to
-        Markdown on the client before display.
-
-        Args
-        ----
-        obj: Object
-            The object to display.
-
-        Returns
-        -------
-        A DeltaGenerator object which allows you to overwrite this element.
-
-        Example
-        -------
-        To learn how the io.write function works, call::
-            io.help(io.write)
-        """
-        if not hasattr(obj, '__name__'):
-            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
-        element.doc_string.name = obj.__name__
-        try:
-            element.doc_string.module = obj.__module__
-        except AttributeError:
-            pass
-        doc_string = obj.__doc__
-        if type(doc_string) is not str:
-            doc_string = f'No docs available.'
-        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
-
-    @_export_to_io
-    @_create_element
-    def exception(self, element, exception):
-        """
-        Prints this exception to the Report.
-
-        Args
-        ----
-        exception: Exception
-            The exception to display.
-        """
-        tb = traceback.extract_tb(exception.__traceback__)
-        element.exception.type = type(exception).__name__
-        element.exception.message = str(exception)
-        element.exception.stack_trace.extend(traceback.format_list(tb))
 
     @_export_to_io
     @_create_element
@@ -246,6 +253,95 @@ class DeltaGenerator:
         element.text.format = protobuf.Text.SUCCESS
 
     @_export_to_io
+    def link(self, *args, **kwargs):
+        """
+        Creates an element showing a link
+
+        Args
+        ----
+        body: str
+            The link.
+        """
+        raise RuntimeError('Link() is deprecated. Please use markdown() instead.')
+
+    @_export_to_io
+    @_create_element
+    def help(self, element, obj):
+        """Displays the doc string for this object, nicely formatted.
+
+        Displays the doc string for this object. If the doc string is
+        represented as ReStructuredText, then it will be converted to
+        Markdown on the client before display.
+
+        Args
+        ----
+        obj: Object
+            The object to display.
+
+        Returns
+        -------
+        A DeltaGenerator object which allows you to overwrite this element.
+
+        Example
+        -------
+        To learn how the st.write function works, call::
+            st.help(st.write)
+        """
+        if not hasattr(obj, '__name__'):
+            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
+        element.doc_string.name = obj.__name__
+        try:
+            element.doc_string.module = obj.__module__
+        except AttributeError:
+            pass
+        doc_string = obj.__doc__
+        if not isinstance(doc_string, string_types):
+            doc_string = f'No docs available.'
+        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
+
+    @_export_to_io
+    @_create_element
+    def exception(self, element, exception, exception_traceback=None):
+        """
+        Prints this exception to the Report.
+
+        Args
+        ----
+        exception: Exception
+            The exception to display.
+        exception_traceback: Exception Traceback or None
+            Set to non-None to force the display of this traceback. Otherwise,
+            the traceback will be figure out implicitly.
+        """
+        element.exception.type = type(exception).__name__
+        element.exception.message = str(exception)
+
+        # Get and extract the traceback for the exception.
+        if exception_traceback != None:
+            extracted_traceback = traceback.extract_tb(exception_traceback)
+        elif hasattr(exception, '__traceback__'):
+            # This is the Python 3 way to get the traceback.
+            extracted_traceback = traceback.extract_tb(exception.__traceback__)
+        else:
+            # Hack for Python 2 which will extract the traceback as long as this
+            # method was called on the exception as it was caught, which is
+            # likely what the user would do.
+            _, live_exception, live_traceback = sys.exc_info()
+            if exception == live_exception:
+                extracted_traceback = traceback.extract_tb(live_traceback)
+            else:
+                extracted_traceback = None
+
+        # Format the extracted traceback and add it to the protobuf element.
+        if extracted_traceback == None:
+            stack_trace = [
+                'Cannot extract the stack trace for this exception. '\
+                'Try calling exception() within the `catch` block.']
+        else:
+            stack_trace = traceback.format_list(extracted_traceback)
+        element.exception.stack_trace.extend(stack_trace)
+
+    @_export_to_io
     def dataframe(self, pandas_df):
         """
         Renders a dataframe to the client.
@@ -258,8 +354,7 @@ class DeltaGenerator:
             data_frame_proto.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
 
-    @_export_to_io
-    def chart(self, chart):
+    def _native_chart(self, chart):
         """Displays a chart.
         """
         def set_chart(element):
@@ -268,35 +363,112 @@ class DeltaGenerator:
 
     @_export_to_io
     @_create_element
-    def image(self, element, image, caption=None, width=0):
-        """Displays an image.
+    def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
+        """Displays a chart.
+        """
+        vc = VegaLiteChart(data, spec, **kwargs)
+        vc.marshall(element.vega_lite_chart)
+
+    @_export_to_io
+    @_create_element
+    def pyplot(self, element, fig=None):
+        """Displays a matplotlib.pyplot image.
 
         Args
         ----
-        image: image or array
+        fig : Matplotlib Figure
+            The figure to plot. When this argument isn't specified, which is
+            the usual case, this function will render the global plot.
+        """
+        try:
+            import matplotlib
+            import matplotlib.pyplot as plt
+            plt.ioff()
+        except ImportError:
+            raise ImportError(f'pyplot() command requires matplotlib')
+
+        # You can call .savefig() on a Figure object or directly on the pyplot
+        # module, in which case you're doing it to the latest Figure.
+        if not fig:
+            fig = plt
+
+        image = io.BytesIO()
+        fig.savefig(image, format='png')
+        image_proto.marshall_images(image, None, -2, element.imgs, False)
+
+    # TODO: Make this accept files and strings/bytes as input.
+    @_export_to_io
+    @_create_element
+    def image(self, element, image, caption=None, width=None,
+            use_column_width=False, clamp=False):
+        """Displays an image or images.
+
+        Args
+        ----
+        image : image or array of images
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
-        caption:
+            OR an RGBA image of shape (w,h,4)
+            OR a list of one of the above
+        caption : string or list of strings
             String caption
-        width:
-            Image width. 0 means use original width.
+        width : int or None
+            Image width. 'None' means use the image width.
+        use_column_width : bool
+            If True, set the image width to the column width. This overrides
+            the `width` parameter.
+        clamp : bool
+            Clamp the image to the given range.
         """
-        image_proto.marshall_images(image, caption, width, element.imgs)
+        if use_column_width:
+            width = -2
+        elif width == None:
+            width = -1
+        elif width <= 0:
+            raise RuntimeError('Image width must be positive.')
+        image_proto.marshall_images(image, caption, width, element.imgs, clamp)
 
     # TODO: remove `img()`, now replaced by `image()`
     @_export_to_io
-    def img(self, imgs, caption=None, width=0):
-        """Displays an image or horizontal array of images.
+    def img(self, *args, **kwargs):
+        """DEPRECATED. Use st.image() instead."""
+        raise RuntimeError('DEPRECATED. Please use image() instead.')
 
-        imgs     - a monochrom image of shape (w,h) or (w,h,1)
-                   OR a color image of shape (w,h,3)
-                   OR an array of such images
-        caption  - string caption, or string array for multiple images
-        width    - Image width. 0 means use original width.
+    @_export_to_io
+    @_create_element
+    def audio(self, element, data, format='audio/wav'):
+        """Inserts an audio player.
+
+        Args
+        ----
+        data : The audio bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the audio file. Defaults to 'audio/wav'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
         """
-        def set_images(element):
-            image_proto.marshall_images(imgs, caption, width, element.imgs)
-        return self._new_element(set_images)
+        # TODO: Provide API to convert raw NumPy arrays to audio file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.audio, data)
+        element.audio.format=format
+
+    @_export_to_io
+    @_create_element
+    def video(self, element, data, format='video/mp4'):
+        """Inserts a video player.
+
+        Args
+        ----
+        data : The video bytes as a str, bytes, BytesIO, NumPy array, or a file
+            opened with io.open(). Must include headers and any other bytes
+            required in the actual file.
+        format : The mime type for the video file. Defaults to 'video/mp4'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        """
+        # TODO: Provide API to convert raw NumPy arrays to video file (with
+        # proper headers, etc)?
+        generic_binary_proto.marshall(element.video, data)
+        element.video.format=format
 
     @_export_to_io
     @_create_element
@@ -314,58 +486,13 @@ class DeltaGenerator:
 
         Examples
         --------
-        Here is an example of a progress bar increasing over time::
+        Here is an example of a progress bar increasing over time:
             import time
-            my_bar = io.progress(0)
+            my_bar = st.progress(0)
             for percent_complete in range(100):
                 my_bar.progress(percent_complete + 1)
         """
         element.progress.value = value
-
-    @_export_to_io
-    @_create_element
-    def markdown(self, element, body):
-        """Displays the string, formatted as markdown.
-
-        Args
-        ----
-        string : string
-            The string to display as markdown.
-
-        Returns
-        -------
-        A DeltaGenerator object which allows you to overwrite this element.
-        """
-        element.text.body = textwrap.dedent(body).strip()
-        element.text.format = protobuf.Text.MARKDOWN
-
-    @_export_to_io
-    @_create_element
-    def link(self, element, body):
-        """
-        Creates an element showing a link
-
-        Args
-        ----
-        body: str
-            The link.
-        """
-        element.text.body = str(body)
-        element.text.format = protobuf.Text.LINK
-
-    @_export_to_io
-    @_create_element
-    def json(self, element, body):
-        """Displays the object as a pretty JSON string.
-
-        Args
-        ----
-        object : object
-            The object to stringify. All referenced objects should have JSON counterpart.
-            If object is a string, we assume it is already JSON formatted.
-        """
-        element.text.body = (body if isinstance(body, str) else json.dumps(body))
-        element.text.format = protobuf.Text.JSON
 
     @_export_to_io
     @_create_element
@@ -410,6 +537,7 @@ class DeltaGenerator:
             'Only existing elements can add_rows.'
         if type(df) != pd.DataFrame:
             df = pd.DataFrame(df)
+
         delta = protobuf.Delta()
         delta.id = self._id
         data_frame_proto.marshall_data_frame(df, delta.add_rows)
@@ -422,17 +550,11 @@ class DeltaGenerator:
         sends the new element to the delta queue, and finally
         returns a generator for that element ID.
 
-        set_element - Function which sets the feilds for a protobuf.Element
+        set_element - Function which sets the fields for a protobuf.Element
         """
         # Create a delta message.
         delta = protobuf.Delta()
         set_element(delta.new_element)
-
-        # # Make sure that the element isn't too big.
-        # if len(delta.new_element.SerializeToString()) > MAX_DELTA_BYTES:
-        #     alert_msg = 'Cannot transmit element larger than %s MB.' % \
-        #         (MAX_DELTA_BYTES // (1024 ** 2))
-        #     return self.error(alert_msg)
 
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:
@@ -446,7 +568,14 @@ class DeltaGenerator:
         self._queue(delta)
         return generator
 
-def register_chart_method(chart_type):
+
+def createNewDelta():
+    """Creates a new DeltaGenerator and sets up some basic info."""
+    delta = protobuf.Delta()
+    return delta
+
+
+def register_native_chart_method(chart_type):
     """Adds a chart-building method to DeltaGenerator for a specific chart type.
 
     Args:
@@ -455,10 +584,11 @@ def register_chart_method(chart_type):
     """
     @_export_to_io
     def chart_method(self, data, **kwargs):
-        return self.chart(Chart(data, type=chart_type, **kwargs))
+        return self._native_chart(Chart(data, type=chart_type, **kwargs))
 
     setattr(DeltaGenerator, chart_type, chart_method)
 
+
 # Add chart-building methods to DeltaGenerator
 for chart_type in CHART_TYPES:
-    register_chart_method(to_snake_case(chart_type))
+    register_native_chart_method(to_snake_case(chart_type))

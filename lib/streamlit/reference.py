@@ -1,6 +1,13 @@
+# -*- coding: future_fstrings -*-
+
 #!./streamlit_run
 
 """Example of everything that's possible in streamlit."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 # import numpy as np
 from PIL import Image
@@ -9,53 +16,50 @@ from io import BytesIO
 
 # import sys
 
-import inspect
-import numpy as np
-import pandas as pd
-import textwrap
-import threading
+import streamlit as st
 
-import streamlit
-from streamlit import io
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 
 def display_reference():
-    """Displays Streamlit's internal help in the browser."""
+    """Display Streamlit's internal help in the browser."""
+    st.title('Streamlit Quick Reference')
 
-    io.title('Streamlit Quick Reference')
+    st.header('The Basics')
 
-    io.header('The Basics')
+    st.write('Import streamlit with `import streamlit as st`.')
 
-    io.write('Import streamlit with `from streamlit import io`.')
-
-    with io.echo():
-        io.write("""
+    with st.echo():
+        st.write("""
             The `write` function is Streamlit\'s bread and butter. You can use
             it to write _markdown-formatted_ text in your Streamlit report.
         """)
 
-    with io.echo():
-        the_meaning_of_life = 40 + 2;
+    with st.echo():
+        the_meaning_of_life = 40 + 2
 
-        io.write(
+        st.write(
             'You can also pass in comma-separated values into `write` just like '
             'with Python\'s `print`. So you can easily interpolate the values of '
             'variables like this: ', the_meaning_of_life)
 
+    st.header('Visualizing data as tables')
 
-    io.header('Visualizing data as tables')
-
-    io.write('The `write` function also knows what to do when you pass a NumPy '
+    st.write('The `write` function also knows what to do when you pass a NumPy '
              'array or Pandas dataframe.')
 
-    with io.echo():
+    with st.echo():
         import numpy as np
         a_random_array = np.random.randn(200, 200)
 
-        io.write('Here\'s a NumPy example:', a_random_array)
+        st.write('Here\'s a NumPy example:', a_random_array)
 
-    io.write('And here is a dataframe example:')
+    st.write('And here is a dataframe example:')
 
-    with io.echo():
+    with st.echo():
         import pandas as pd
         from datetime import datetime
 
@@ -63,151 +67,244 @@ def display_reference():
             np.array(['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux']),
             np.array(['one', 'two', 'one', 'two', 'one', 'two', 'one', None])]
 
-        df = pd.DataFrame(np.random.randn(8, 4), index=arrays,
-            columns=[datetime(2012, 5, 1), datetime(2012, 5, 2), datetime(2012, 5, 3), datetime(2012, 5, 4)])
+        df = pd.DataFrame(
+            np.random.randn(8, 4),
+            index=arrays,
+            columns=[
+                datetime(2012, 5, 1),
+                datetime(2012, 5, 2),
+                datetime(2012, 5, 3),
+                datetime(2012, 5, 4),
+            ])
 
-        io.write(df, '...and its transpose:', df.T)
+        st.write(df, '...and its transpose:', df.T)
 
-    io.header('Visualizing data as charts')
+    st.header('Visualizing data as charts')
 
-    io.write('Charts are just as simple, but they require us to introduce some '
+    st.write('Charts are just as simple, but they require us to introduce some '
              'special functions first.')
 
-    io.write('So assuming `data_frame` has been defined as...')
+    st.write('So assuming `data_frame` has been defined as...')
 
-    with io.echo():
+    with st.echo():
         chart_data = pd.DataFrame(
             np.random.randn(20, 5),
             columns=['pv', 'uv', 'a', 'b', 'c']
         )
 
-    io.write('...you can easily draw the charts below:')
+    st.write('...you can easily draw the charts below:')
 
+    st.subheader('Example of line chart')
 
-    io.subheader('Example of line chart')
+    with st.echo():
+        st.line_chart(chart_data)
 
-    with io.echo():
-        io.line_chart(chart_data)
-
-    io.write('As you can see, each column in the dataframe becomes a different '
+    st.write('As you can see, each column in the dataframe becomes a different '
              'line. Also, values on the _x_ axis are the dataframe\'s indices. '
              'Which means we can customize them this way:')
 
-    with io.echo():
+    with st.echo():
         chart_data2 = pd.DataFrame(
             np.random.randn(20, 2),
             columns=['stock 1', 'stock 2'],
             index=pd.date_range('1/2/2011', periods=20, freq='M')
         )
 
-        io.line_chart(chart_data2)
+        st.line_chart(chart_data2)
 
+    st.subheader('Example of area chart')
 
-    io.subheader('Example of area chart')
+    with st.echo():
+        st.area_chart(chart_data)
 
-    with io.echo():
-        io.area_chart(chart_data)
+    st.subheader('Example of bar chart')
 
-
-    io.subheader('Example of bar chart')
-
-    with io.echo():
+    with st.echo():
         trimmed_data = chart_data[['pv', 'uv']].iloc[:10]
-        io.bar_chart(trimmed_data)
+        st.bar_chart(trimmed_data)
 
+    st.subheader('Matplotlib')
 
-    io.header('Visualizing data as images')
-
-    @streamlit.cache
-    def read_image(url):
-        return urllib.request.urlopen(url).read()
-    image_url = 'https://images.fineartamerica.com/images/artworkimages/mediumlarge/1/serene-sunset-robert-bynum.jpg'
+    st.write('You can use Matplotlib in Streamlit. '
+             'Just use `st.pyplot()` instead of `plt.show()`.')
     try:
-        image_bytes = read_image(image_url)
+        # noqa: F401
+        with st.echo():
+            from matplotlib import cm, pyplot as plt
+            from mpl_toolkits.mplot3d import Axes3D
 
-        with io.echo():
+            # Create some data
+            X, Y = np.meshgrid(np.arange(-5, 5, 0.25), np.arange(-5, 5, 0.25))
+            Z = np.sin(np.sqrt(X**2 + Y**2))
+
+            # Plot the surface.
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
+
+            st.pyplot()
+    except Exception as e:
+        err_str = str(e)
+        if err_str.startswith('Python is not installed as a framework.'):
+            err_str = 'Matplotlib backend is not compatible with your Python ' \
+                'installation. Please consider adding "backend: TkAgg" to your ' \
+                ' ~/.matplitlib/matplotlibrc. For more information, please see ' \
+                '"Working with Matplotlib on OSX" in the Matplotlib FAQ.'
+        st.warning('Error running matplotlib: ' + err_str)
+
+    st.subheader('Vega Lite')
+
+    st.write(
+        'For complex interactive charts, you can use '
+        '[Vega Lite](https://vega.github.io/vega-lite/):')
+
+    with st.echo():
+        df = pd.DataFrame(np.random.randn(200, 3), columns=['a', 'b', 'c'])
+
+        st.vega_lite_chart(df, {
+            'mark': 'circle',
+            'encoding': {
+                'x': {'field': 'a', 'type': 'quantitative'},
+                'y': {'field': 'b', 'type': 'quantitative'},
+                'size': {'field': 'c', 'type': 'quantitative'},
+                'color': {'field': 'c', 'type': 'quantitative'},
+            },
+
+            # Add zooming/panning:
+            'selection': {
+                'grid': {
+                    'type': 'interval',
+                    'bind': 'scales',
+                },
+            },
+        })
+
+    st.header('Visualizing data as images')
+
+    @st.cache
+    def read_file_from_url(url):
+        try:
+            return urllib.request.urlopen(url).read()
+        except urllib.error.URLError:
+            st.error(f'Unable to load file from {image_url}. '
+                     'Is the internet connected?')
+        except Exception as e:
+            st.exception(e)
+        return None
+
+    image_url = ('https://images.fineartamerica.com/images/artworkimages/'
+                 'mediumlarge/1/serene-sunset-robert-bynum.jpg')
+    image_bytes = read_file_from_url(image_url)
+
+    if image_bytes is not None:
+        with st.echo():
             image = Image.open(BytesIO(image_bytes))
 
-            io.image(image, caption="Sunset", width=400)
+            st.image(image, caption="Sunset", use_column_width=True)
 
             array = np.array(image).transpose((2, 0, 1))
             channels = array.reshape(array.shape + (1,))
 
-            io.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
-    except urllib.error.URLError:
-        io.error(f'Unable to load image from {image_url}. '
-            'Is the internet connected?')
+            st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
-    io.header('Inserting headers')
+    st.header('Playing audio')
 
-    io.write(
+    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
+                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
+    audio_bytes = read_file_from_url(audio_url)
+
+    st.write('''
+        Streamlit can play audio in all formats supported by modern
+        browsers. Below is an example of an _ogg_-formatted file:
+        ''')
+
+    if audio_bytes is not None:
+        with st.echo():
+            st.audio(audio_bytes, format='audio/ogg')
+
+    st.header('Playing video')
+
+    st.write('''
+        Streamlit can play video in all formats supported by modern
+        browsers. Below is an example of an _mp4_-formatted file:
+        ''')
+
+    video_url = ('https://www.sample-videos.com/video/mp4/480/'
+                 'big_buck_bunny_480p_2mb.mp4')
+    video_bytes = read_file_from_url(video_url)
+
+    if video_bytes is not None:
+        with st.echo():
+            st.video(video_bytes, format='video/webm')
+
+    st.header('Inserting headers')
+
+    st.write(
         'To insert titles and headers like the ones on this page, use the `title`, '
         '`header`, and `subheader` functions.')
 
+    st.header('Preformatted text')
 
-    io.header('Preformatted text')
-
-    with io.echo():
-        io.text("Here's preformatted text instead of _Markdown_!\n"
+    with st.echo():
+        st.text("Here's preformatted text instead of _Markdown_!\n"
                 "       ^^^^^^^^^^^^\n"
                 "Rock on! \m/(^_^)\m/ ")
 
-    io.header('JSON')
+    st.header('JSON')
 
-    with io.echo():
-        io.json({'hello': 'world'})
+    with st.echo():
+        st.json({'hello': 'world'})
 
-    with io.echo():
-        io.json('{"object":{"array":[1,true,"3"]}}')
+    with st.echo():
+        st.json('{"object":{"array":[1,true,"3"]}}')
 
-    io.header('Inline Code Blocks')
+    st.header('Inline Code Blocks')
 
-    with io.echo():
-        with io.echo():
-            io.write('Use `io.echo()` to display inline code blocks.')
+    with st.echo():
+        with st.echo():
+            st.write('Use `st.echo()` to display inline code blocks.')
 
-    io.header('Alert boxes')
+    st.header('Alert boxes')
 
-    with io.echo():
-        io.error("This is an error message")
-        io.warning("This is a warning message")
-        io.info("This is an info message")
-        io.success("This is a success message")
+    with st.echo():
+        st.error("This is an error message")
+        st.warning("This is a warning message")
+        st.info("This is an info message")
+        st.success("This is a success message")
 
-    io.header('Progress Bars')
+    st.header('Progress Bars')
 
-    with io.echo():
+    with st.echo():
         for percent in [0, 25, 50, 75, 100]:
-            io.write(f'{percent}% progress:')
-            io.progress(percent)
+            st.write(f'{percent}% progress:')
+            st.progress(percent)
 
-    io.header('Help')
+    st.header('Help')
 
-    with io.echo():
-        io.help(dir)
+    with st.echo():
+        st.help(dir)
 
-    io.header('Out-of-Order Writing')
+    st.header('Out-of-Order Writing')
 
-    io.write('Placeholders allow you to draw items out-of-order. For example:')
+    st.write('Placeholders allow you to draw items out-of-order. For example:')
 
-    with io.echo():
-        io.text('A')
-        placeholder = io.empty()
-        io.text('C')
+    with st.echo():
+        st.text('A')
+        placeholder = st.empty()
+        st.text('C')
         placeholder.text('B')
 
+    st.header('Exceptions')
+    st.write('You can print out exceptions using `st.exception()`:')
 
-    io.header('Exceptions')
-    io.write('You can print out exceptions using `io.exception()`:')
-
-    with io.echo():
+    with st.echo():
         try:
             raise RuntimeError('An exception')
         except Exception as e:
-            io.exception(e)
+            st.exception(e)
 
-    io.header('Lengthy Computations')
-    io.write("""
+    st.header('Lengthy Computations')
+    st.write("""
         If you're repeatedly running length computations, try caching the
         solution.
 
@@ -223,22 +320,24 @@ def display_reference():
         depends *only* on its input arguments. For example, you can cache
         calls to API endpoints, but only do so if the data you get won't change.
     """)
-    io.subheader('Spinners')
-    io.write('A visual way of showing long computation is with a spinner:')
-    lengthy_computation = lambda: None # noop for demsontration purposes
+    st.subheader('Spinners')
+    st.write('A visual way of showing long computation is with a spinner:')
 
-    with io.echo():
-        with io.spinner('Computing something time consuming...'):
+    def lengthy_computation():
+        pass  # noop for demsontration purposes.
+
+    with st.echo():
+        with st.spinner('Computing something time consuming...'):
             lengthy_computation()
 
-    io.header('Animation')
-    io.write(
-        'Every `streamlit.io` method (except `io.write`) returns a handle '
+    st.header('Animation')
+    st.write(
+        'Every `streamlit.io` method (except `st.write`) returns a handle '
         'which can be used for animation.')
 
-    with io.echo():
+    with st.echo():
         import time
-        my_bar = io.progress(0)
+        my_bar = st.progress(0)
 
         for percent_complete in range(100):
             my_bar.progress(percent_complete + 1)

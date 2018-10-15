@@ -1,16 +1,33 @@
+# -*- coding: future_fstrings -*-
 
 """
 A queue of deltas associated with a particular Report.
 Whenever possible, deltas are combined.
 """
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import copy
 import enum
 
 from streamlit import data_frame_proto
 from streamlit import protobuf
+from tornado import gen
 
-class QueueState(enum.Enum):
+from streamlit.logger import get_logger
+LOGGER = get_logger()
+
+
+# Largest message that can be sent via the WebSocket connection.
+# (Limit was picked by trial and error)
+# TODO: Break message in several chunks if too large.
+MESSAGE_SIZE_LIMIT = 10466493
+
+
+class QueueState(object):
     # Indicates that the queue is accepting deltas.
     OPEN = 0
 
@@ -20,7 +37,8 @@ class QueueState(enum.Enum):
     # Indicates that the queue is now closed.
     CLOSED = 2
 
-class ReportQueue:
+
+class ReportQueue(object):
     """Accumulates a bunch of deltas."""
 
     def __init__(self):
@@ -32,6 +50,9 @@ class ReportQueue:
         """Adds a delta into this queue."""
         assert self._state != QueueState.CLOSED, \
             'Cannot add deltas after the queue closes.'
+
+        if self._state == QueueState.CLOSING:
+            LOGGER.debug('Warning: Enqueing a delta in a closing queue.')
 
         # Store the index if necessary.
         if (delta.id in self._id_map):
@@ -54,29 +75,39 @@ class ReportQueue:
 
         return deltas
 
-    def write_to_report(self, report):
-        """Copies this queue's deltas into the report protobuf."""
-        report.delta_list.deltas.extend(self._deltas)
-
-    async def flush_queue(self, ws):
-        """Sends the deltas across the websocket in a DeltaList, clearing the
-        queue afterwards."""
+    @gen.coroutine
+    def flush_queue(self, ws):
+        """Sends the deltas across the websocket in a series of delta messages,
+        clearing the queue afterwards."""
         assert self._state != QueueState.CLOSED, \
             'Cannot get deltas after the queue closes.'
 
         # Send any remaining deltas.
-        deltas = self.get_deltas()
-        if deltas:
-            msg = protobuf.ForwardMsg()
-            msg.delta_list.deltas.extend(deltas)
-            await ws.send_bytes(msg.SerializeToString())
+        @gen.coroutine
+        def send_deltas():
+            deltas = self.get_deltas()
+            for delta in deltas:
+                msg = protobuf.ForwardMsg()
+                msg.delta.CopyFrom(delta)
+                yield send_message(ws, msg)
+            raise gen.Return(len(deltas) > 0)
+        yield send_deltas()
 
         # Send report_finished method if this queue is closed.
         if self._state == QueueState.CLOSING:
+            # Keep flushing the deltas until the queue is empty
+            while True:
+                sent_more_deltas = yield send_deltas()
+                LOGGER.debug('Sent a final set of deltas: %s' % sent_more_deltas)
+                if not sent_more_deltas:
+                    LOGGER.debug('No more deltas to send.')
+                    break
+            LOGGER.debug('This client queue is closing.')
             self._state = QueueState.CLOSED
             msg = protobuf.ForwardMsg()
             msg.report_finished = True
-            await ws.send_bytes(msg.SerializeToString())
+            yield send_message(ws, msg)
+            LOGGER.debug('Sent report_finished message.')
 
     def clone(self):
         """Returns a clone of this ReportQueue."""
@@ -100,7 +131,7 @@ class ReportQueue:
         assert self._state != QueueState.CLOSED, \
             'Cannot empty a closed queue.'
         self._deltas = []
-        self._id_map = {}
+        self._id_map = dict() # use insead of {} for 2/3 compatibility
 
     @staticmethod
     def compose(delta1, delta2):
@@ -113,8 +144,33 @@ class ReportQueue:
             data_frame_proto.add_rows(delta1, delta2)
             return delta1
 
-        print('delta1')
-        print(delta1)
-        print('delta2')
-        print(delta2)
         raise NotImplementedError('Need to implement the compose code.')
+
+
+def send_message(ws, msg):
+    """Sends msg via the websocket"""
+    msg_str = msg.SerializeToString()
+
+    if len(msg_str) > MESSAGE_SIZE_LIMIT:
+        send_exception(ws, msg, 'RuntimeError', 'Data too large')
+        return
+
+    try:
+        ws.write_message(msg_str, binary=True)
+    except Exception as e:
+        send_exception(ws, msg, type(e), e.message)
+
+
+def send_exception(ws, msg, exception_type, exception_message):
+    """Sends an exception via websocket in place of msg"""
+    if msg.delta is not None:
+        delta_id = msg.delta.id
+    else:
+        delta_id = 0
+
+    emsg = protobuf.ForwardMsg()
+    emsg.delta.id = delta_id
+    emsg.delta.new_element.exception.type = exception_type
+    emsg.delta.new_element.exception.message = exception_message
+
+    ws.write_message(emsg.SerializeToString(), binary=True)

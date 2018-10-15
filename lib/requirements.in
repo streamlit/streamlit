@@ -1,8 +1,8 @@
 -r install_requirements.txt
-pytest
-pytest-cov
 flake8
 flake8-docstrings
+pytest
+pytest-cov
 testfixtures
 twine
-aiobotocore[awscli]
+six

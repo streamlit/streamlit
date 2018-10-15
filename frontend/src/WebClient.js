@@ -1,6 +1,7 @@
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react';
+import { hotkeys } from 'react-keyboard-shortcuts';
 import { AutoSizer } from 'react-virtualized';
 import {
   Alert,
@@ -13,32 +14,34 @@ import { fromJS } from 'immutable';
 import url from 'url';
 
 // Display Elements
-import DataFrame from './elements/DataFrame';
+import Audio from './elements/Audio';
+import Balloons from './elements/Balloons';
 import Chart from './elements/Chart';
-import ImageList from './elements/ImageList';
-import Text from './elements/Text';
+import DataFrame from './elements/DataFrame';
 import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
+import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import Table from './elements/Table';
+import Text from './elements/Text';
+import VegaLiteChart from './elements/VegaLiteChart';
+import Video from './elements/Video';
 
 // Other local imports.
 import MainMenu from './MainMenu';
+import ConnectionState from './ConnectionState';
 import ConnectionStatus from './ConnectionStatus';
 import WebsocketConnection from './WebsocketConnection';
 import StaticConnection from './StaticConnection';
-import UploadDialog from './UploadDialog';
+import StreamlitDialog from './StreamlitDialog';
 
-import { ForwardMsg, BackMsg, Text as TextProto } from './protobuf';
+import { ForwardMsg, Text as TextProto } from './protobuf';
+import { PROXY_PORT_PROD } from './baseconsts';
 import { addRows } from './dataFrameProto';
+import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './WebClient.css';
-
-/**
- * Port used to connect to the proxy server.
- */
-const PROXY_PORT = 5011;
 
 class WebClient extends PureComponent {
   constructor(props) {
@@ -51,18 +54,53 @@ class WebClient extends PureComponent {
       elements: fromJS([{
         type: 'text',
         text: {
-          format: 8,  // info
+          format: TextProto.Format.INFO,
           body: 'Ready to receive data',
         }
       }]),
+      userSettings: {
+        wideMode: false,
+      },
     };
 
     // Bind event handlers.
     this.handleReconnect = this.handleReconnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
-    this.closeUploadDialog = this.closeUploadDialog.bind(this);
+    this.closeDialog = this.closeDialog.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
     this.setConnectionState = this.setConnectionState.bind(this);
+    this.isProxyConnected = this.isProxyConnected.bind(this);
     this.setReportName = this.setReportName.bind(this);
+    this.saveReport = this.saveReport.bind(this);
+    this.displayHelp = this.displayHelp.bind(this);
+    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
+    this.rerunScript = this.rerunScript.bind(this);
+  }
+
+  /**
+   * Global keyboard shortcuts.
+   */
+  hot_keys = {
+    // The r key reruns the script.
+    'r': {
+      priority: 1,
+      handler: () => this.rerunScript(),
+    },
+
+    // The shift+r key opens the rerun script dialog.
+    'shift+r': {
+      priority: 1,
+      handler: () => this.openRerunScriptDialog(),
+    },
+
+    // The enter key runs the "default action" of the dialog.
+    'enter': {
+      priority: 1,
+      handler: () => {
+        if (this.state.dialog && this.state.dialog.defaultAction)
+          this.state.dialog.defaultAction();
+      },
+    }
   }
 
   componentDidMount() {
@@ -70,7 +108,7 @@ class WebClient extends PureComponent {
     if (query.name !== undefined) {
         const reportName = query.name;
         this.setReportName(reportName);
-        let uri = `ws://localhost:${PROXY_PORT}/stream/${encodeURIComponent(reportName)}`
+        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
         this.connection = new WebsocketConnection({
           uri: uri,
           onMessage: this.handleMessage,
@@ -127,59 +165,81 @@ class WebClient extends PureComponent {
    */
   handleMessage(msgProto) {
     const msg = toImmutableProto(ForwardMsg, msgProto);
+
     dispatchOneOf(msg, 'type', {
-      newReport: (id) => {
-        this.setState({reportId: id});
+      newConnection: (connectionProperties) => {
+        initRemoteTracker({
+          remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
+        });
+        trackEventRemotely('newConnection', 'newMessage');
+        this.setState({
+          savingConfigured: connectionProperties.get('savingConfigured'),
+        });
+      },
+      newReport: (newReportMsg) => {
+        trackEventRemotely('newReport', 'newMessage');
+        this.setState({
+          reportId: newReportMsg.get('id'),
+          commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+        });
         setTimeout(() => {
-          if (id === this.state.reportId) {
+          if (newReportMsg.get('id') === this.state.reportId) {
             this.clearOldElements();
           }
-        }, 2000);
+        }, 3000);
       },
-      deltaList: (deltaList) => {
-        this.applyDeltas(deltaList);
+      delta: (delta) => {
+        this.applyDelta(delta);
       },
       reportFinished: () => {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.setState({
-          uploadProgress: progress,
-          uploadUrl: undefined
-        });
+        this.openDialog({type: 'uploadProgress', progress: progress});
       },
       reportUploaded: (url) => {
-        console.log('Copied text to clipboard', url);
-        this.setState({
-          uploadProgress: undefined,
-          uploadUrl: url,
-        });
+        this.openDialog({type: 'uploaded', url: url})
       },
     });
   }
 
   /**
+   * Opens a dialog with the specified state.
+   */
+  openDialog(dialogProps) {
+    this.setState({dialog: dialogProps});
+  }
+
+  /**
    * Closes the upload dialog if it's open.
    */
-  closeUploadDialog() {
+  closeDialog() {
+    this.setState({dialog: undefined});
+  }
+
+  /**
+   * Saves a settings object.
+   */
+  saveSettings(settings) {
     this.setState({
-      uploadProgress: undefined,
-      uploadUrl: undefined,
+      userSettings: {
+        ...this.state.userSettings,
+        wideMode: settings.wideMode,
+      },
     });
   }
 
   /**
    * Applies a list of deltas to the elements.
    */
-  applyDeltas(deltaList) {
+  applyDelta(delta) {
     const reportId = this.state.reportId;
     this.setState(({elements}) => ({
-      elements: deltaList.get('deltas').reduce((elements, delta) => (
-        elements.update(delta.get('id'), (element) =>
+      elements: elements.update(delta.get('id'), (element) =>
           dispatchOneOf(delta, 'type', {
             newElement: (newElement) => newElement.set('reportId', reportId),
             addRows: (newRows) => addRows(element, newRows),
-        }))), elements)
+        }))
     }));
   }
 
@@ -202,10 +262,89 @@ class WebClient extends PureComponent {
     }));
   }
 
-  sendBackMsg(command) {
-    if (!this.connection) return;
-    const msg = {command: BackMsg.Command[command]};
-    this.connection.sendToProxy(msg);
+  /**
+   * Callback to call when we want to save the report.
+   */
+  saveReport() {
+    if (this.state.savingConfigured) {
+      trackEventRemotely('saveReport', 'newInteraction');
+      this.sendBackMsg({
+        type: 'cloudUpload',
+        cloudUpload: true,
+      });
+    } else {
+      this.openDialog({
+        type: "warning",
+        msg: (
+          <div>
+            You do not have Amazon S3 or Google GCS sharing configured.
+            Please contact&nbsp;
+              <a href="mailto:adrien@streamlit.io">Adrien</a>
+            &nbsp;to setup sharing.
+          </div>
+        ),
+      });
+    }
+  }
+
+  /**
+   * Opens the dialog to rerun the script.
+   */
+  openRerunScriptDialog() {
+    if (this.isProxyConnected()) {
+      this.openDialog({
+        type: "rerunScript",
+        getCommandLine: (() => this.state.commandLine),
+        setCommandLine: ((commandLine) => this.setState({commandLine})),
+        rerunCallback: this.rerunScript,
+
+        // This will be called if enter is pressed.
+        defaultAction: this.rerunScript,
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
+  }
+
+  /**
+   * Reruns the script (given by this.state.commandLine).
+   */
+  rerunScript() {
+    this.closeDialog();
+    if (this.isProxyConnected()) {
+      trackEventRemotely('rerunScript', 'newInteraction');
+      this.sendBackMsg({
+        type: 'rerunScript',
+        rerunScript: this.state.commandLine
+      });
+    } else {
+      console.warn('Cannot rerun script when proxy is disconnected.');
+    }
+  }
+
+  /**
+   * Tells the proxy to display the inline help dialog.
+   */
+  displayHelp() {
+    trackEventRemotely('displayHelp', 'newInteraction');
+    this.sendBackMsg({
+      type: 'help',
+      help: true
+    });
+  }
+
+  /**
+   * Sends a message back to the proxy.
+   */
+  sendBackMsg(msg) {
+    if (this.connection) {
+      console.error('Sending back message:');
+      console.error(msg);
+      this.connection.sendToProxy(msg);
+    } else {
+      console.error('Cannot send a back message without a connection:');
+      console.error(msg);
+    }
   }
 
   /**
@@ -219,6 +358,16 @@ class WebClient extends PureComponent {
   }
 
   /**
+   * Indicates whether we're connect to the proxy.
+   */
+  isProxyConnected() {
+    return !(
+      this.state.connectionState === ConnectionState.STATIC ||
+      this.state.connectionState === ConnectionState.DISCONNECTED ||
+      this.state.connectionState === null);
+  }
+
+  /**
    * Sets the reportName in state and upates the title bar.
    */
   setReportName(reportName) {
@@ -227,34 +376,40 @@ class WebClient extends PureComponent {
   }
 
   render() {
-    // Return the tree
     return (
-      <div>
+      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
         <header>
           <div id="brand">
-            <a href="/">Streamlit</a>
+            <a href="http://streamlit.io">Streamlit</a>
           </div>
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
-            connectionState={this.state.connectionState}
-            helpButtonCallback={() => this.sendBackMsg('HELP')}
-            saveButtonCallback={() => this.sendBackMsg('CLOUD_UPLOAD')}
-            />
+            isProxyConnected={this.isProxyConnected()}
+            helpCallback={this.displayHelp}
+            saveCallback={this.saveReport}
+            quickRerunCallback={this.rerunScript}
+            rerunCallback={this.openRerunScriptDialog}
+            settingsCallback={() => this.openDialog({
+              type: 'settings',
+              isOpen: true,
+              settings: this.state.userSettings,
+              onSave: this.saveSettings,
+            })}
+          />
         </header>
         <Container className="streamlit-container">
           <Row className="justify-content-center">
-            <Col className="col-lg-8 col-md-9 col-sm-12 col-xs-12">
+            <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
                 { ({width}) => this.renderElements(width) }
               </AutoSizer>
             </Col>
           </Row>
 
-          <UploadDialog
-            progress={this.state.uploadProgress}
-            url={this.state.uploadUrl}
-            onClose={this.closeUploadDialog}
+          <StreamlitDialog
+            dialogProps={{...this.state.dialog, onClose: this.closeDialog}}
           />
 
         </Container>
@@ -267,8 +422,10 @@ class WebClient extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
+          audio: (audio) => <Audio audio={audio} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
+          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
           imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
           progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
           text: (text) => <Text element={text} width={width}/>,
@@ -277,6 +434,8 @@ class WebClient extends PureComponent {
           empty: (empty) => undefined,
           map: (map) => <Map map={map} width={width}/>,
           table: (df) => <Table df={df} width={width}/>,
+          balloons: (balloons) => <Balloons balloons={balloons}/>,
+          video: (video) => <Video video={video} width={width}/>,
         });
       } catch (err) {
         return <Alert color="warning" style={{width}}>{err.message}</Alert>;
@@ -293,4 +452,4 @@ class WebClient extends PureComponent {
   }
 }
 
-export default WebClient;
+export default hotkeys(WebClient);

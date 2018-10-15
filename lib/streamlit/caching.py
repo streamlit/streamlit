@@ -1,15 +1,27 @@
+# -*- coding: future_fstrings -*-
+
 """A library of useful utilities."""
 
-import dis
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import hashlib
+import inspect
 import os
 import pickle
 import re
 import shutil
 
-from streamlit import io
+from functools import wraps
+
+import streamlit as st
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
+from streamlit.logger import get_logger
+
+LOGGER = get_logger()
 
 def cache(func):
 	"""A function decorator which enables the function to cache its
@@ -17,49 +29,41 @@ def cache(func):
 
 	CACHE_PATH = '.streamlit'
 
+	@wraps(func)
 	def wrapped_func(*argc, **argv):
 		"""This function wrapper will only call the underlying function in
 		the case of a cache miss. Cached objects are stored in the cache/
 		directory."""
-		# Come up with a message to display when computing the cached function.
-		try:
-			args = [str(arg)[:10] for arg in argc] + \
-				[f'{k}={str(v)[:10]}' for (k,v) in argv]
-			message = f'Caching:\n{func.__name__}({", ".join(args)}).'
-		except:
-			message = f'Caching:\n{func.__name__}()'
-
-		# This
-
 		# Temporarily display this message while computing this function.
-		with io.spinner(message):
-			# Searches for addresses like "object <listcomp> at 0x1052cca50"
-			address = re.compile(r'at\ 0x[0-9a-f]+')
-			instr_to_str = lambda i: address.sub('ADDRESS', str(i))
-
+		if len(argc) == 0 and len(argv) == 0:
+			message = f'Caching {func.__name__}().'
+		else:
+			message = f'Caching {func.__name__}(...).'
+		with st.spinner(message):
 			# Calculate the filename hash.
 			hasher = hashlib.new('md5')
-			hasher.update(pickle.dumps([argc, argv] +
-				[instr_to_str(i) for i in dis.get_instructions(func)],
-				pickle.HIGHEST_PROTOCOL))
+			LOGGER.debug('Created the hasher. (%s)' % func.__name__)
+			arg_string = pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL)
+			LOGGER.debug('Hashing %i bytes. (%s)' % (len(arg_string), func.__name__))
+			hasher.update(arg_string)
+			hasher.update(inspect.getsource(func).encode('utf-8'))
 			path = f'cache/f{hasher.hexdigest()}.pickle'
+			LOGGER.debug('Cache filename: ' + path)
 
 			# Load the file (hit) or compute the function (miss)
 			try:
 				with streamlit_read(path, binary=True) as input:
 					rv = pickle.load(input)
-					# print('%s (HIT)' % path)
+					LOGGER.debug('Cache HIT: ' + str(type(rv)))
 			except FileNotFoundError:
 				rv = func(*argc, **argv)
 				with streamlit_write(path, binary=True) as output:
 					pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-				# print('%s (MISS)' % path)
-			return rv
+				LOGGER.debug('Cache MISS: ' + str(type(rv)))
+		return rv
 
 	# make this a well-behaved decorator by preserving important function attributes
 	try:
-		wrapped_func.__name__ = func.__name__
-		wrapped_func.__doc__ = func.__doc__
 		wrapped_func.__dict__.update(func.__dict__)
 	except AttributeError:
 		pass

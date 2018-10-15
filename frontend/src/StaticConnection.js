@@ -9,8 +9,7 @@
  */
 
 import {ConnectionState} from './ConnectionState';
-import {Report} from './protobuf';
-
+import {Text as TextProto, Delta} from './protobuf';
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
@@ -23,27 +22,70 @@ import {Report} from './protobuf';
 */
 class StaticConnection {
   constructor({reportId, onMessage, setConnectionState, setReportName}) {
-    const uri = `reports/${reportId}.protobuf`;
+    const manifestUri = `reports/${reportId}/manifest.json`;
 
     this.state = ConnectionState.STATIC;
+    const fetchParams = {
+        redirect: 'follow',
+        credentials: 'same-origin',
+        mode: 'no-cors'
+    };
 
-    // Load the report and display it.
-    fetch(uri).then((response) => {
-      return response.arrayBuffer();
-    }).then((arrayBuffer) => {
-      const report = Report.decode(new Uint8Array(arrayBuffer));
+    // Load the report and display it
+    fetch(manifestUri, fetchParams).then((response) => {
+      return response.json();
+    }).then(({name, nDeltas}) => {
       setConnectionState({connectionState: ConnectionState.STATIC});
-      setReportName(report.name);
-      onMessage({
-        type: 'deltaList',
-        deltaList: report.deltaList,
-      });
+      setReportName(name);
+      for (let id = 0 ; id < nDeltas ; id++) {
+        // Insert a loading message for this element.
+        onMessage(textElement({id,
+          body: `Loading element ${id}...`,
+          format: TextProto.Format.INFO
+        }));
+        const deltaUri = `reports/${reportId}/${id}.delta`;
+        fetch(deltaUri, fetchParams).then((response) => {
+          return response.arrayBuffer();
+        }).then((arrayBuffer) => {
+          onMessage({
+            type: 'delta',
+            delta: Delta.decode(new Uint8Array(arrayBuffer))
+          });
+        }).catch((error) => {
+          onMessage(textElement({id,
+            body: `Error loading element ${id}: ${error}`,
+            format: TextProto.Format.ERROR
+          }));
+        });
+      }
     }).catch((error) => {
       setConnectionState({
         connectionState: ConnectionState.ERROR,
-        errMsg: `Unable to find or parse report with ID "${reportId}".`});
+        errMsg: `Unable to find or parse report with ID "${reportId}": ${error}`
+      });
     })
   }
 };
+
+/**
+ * Returns the json to construct a message which places an element at a
+ * particular location in the document.
+ */
+function textElement({id, body, format}) {
+  return {
+    type: 'delta',
+    delta: {
+      id: id,
+      type: 'newElement',
+      newElement: {
+        type: 'text',
+        text: {
+          body: body,
+          format: format,
+        }
+      }
+    }
+  };
+}
 
 export default StaticConnection;

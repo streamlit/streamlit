@@ -100,16 +100,6 @@ class Text extends PureComponent {
             {body}
           </div>
         );
-
-      // Link
-      case TextProto.Format.LINK:
-        return (
-          <div style={{width}}>
-            <a href={body}>{body}</a>
-          </div>
-        );
-
-
       // Default
       default:
         return (

@@ -1,0 +1,7 @@
+title = "Streamlit"
+baseURL = "http://streamlit.io/"
+languageCode = "en-us"
+MetaDataFormat = "yaml"
+Paginate = 20
+pygmentsUseClasses=true
+pygmentsCodeFences=true

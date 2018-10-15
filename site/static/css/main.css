@@ -1,0 +1,308 @@
+html {
+  color: #101620;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a,
+a:visited {
+  color: #2979E9;
+  transition: color 400ms;
+}
+
+a:hover,
+a:active {
+  color: #F63366;
+  text-decoration: underline;
+  transition: none;
+}
+
+.dark a {
+  color: #49C9F9;
+}
+
+a:hover,
+.dark a:hover {
+  color: #F65376;
+  transition: none;
+}
+
+h1 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin: 2.5rem 0 0 0;
+}
+
+h1:first-child, .h1:first-child {
+  margin-top: 0;
+}
+
+h2 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: 2.0rem;
+  margin: 3rem 0 0 0;
+}
+
+h3 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0 0;
+}
+
+.logo,
+a.logo {
+  font-family: 'PT Sans', sans-serif;
+  font-weight: 800;
+  color: inherit;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+a.logo {
+  border-bottom: 1px solid transparent;
+  margin-bottom: -1px;
+}
+
+a.logo:hover {
+  border-bottom: 1px solid;
+}
+
+.dark .logo,
+.dark a.logo {
+  color: white;
+}
+
+.logo strong {
+  opacity: 1;
+}
+
+.dark .logo span {
+  opacity: 0.67;
+}
+
+.logo span {
+  opacity: 0.5;
+}
+
+header {
+  padding: 0.25rem;
+  color: #fff;
+  font-size: 1rem;
+  background-color: #262c39;
+}
+
+footer {
+  padding: 0.5rem;
+  color: #fff;
+  background-color: #262c39;
+  font-size: 0.75rem;
+}
+
+p {
+  margin: 0 0 1rem 0;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  border: 1px solid #E6E9EE;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #F63366;
+}
+
+pre {
+  border: 1px solid #E6E9EE;
+  border-left: 1px solid #F63366;
+  border-radius: 3px;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
+}
+
+pre > code {
+  background: transparent;
+  border: 0;
+  display: inline;
+  font-size: 0.8rem;
+  line-height: inherit;
+  margin: 0;
+  max-width: auto;
+  overflow: visible;
+  padding: 0;
+  white-space: pre;
+  word-break: normal;
+  word-wrap: normal;
+  color: inherit;
+}
+
+blockquote {
+  margin: 0;
+  border-left: 0.5em #E6E9EE solid;
+  padding: 1rem 0 1rem 1rem;
+  margin: 0 0 1rem 0;
+}
+
+header .contents,
+footer .contents,
+main .contents {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+main#single,
+main#list {
+  padding: 5rem 0;
+  flex: 1 0 0;
+}
+
+html.kind-home {
+  font-size: 2.75vmin;
+}
+
+#home h1,
+#home h2 {
+  padding: 0;
+  margin: 0;
+}
+
+#home h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-top: -0.5rem;
+}
+
+#home {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  perspective: 1px;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  transform-style: preserve-3d;
+}
+
+#home section {
+  color: #111;
+  padding: 6rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+#home section.dark {
+  color: #fff;
+  background-color: #262c39;
+}
+
+#home section > .content {
+  width: 60rem;
+  max-width: 80vw;
+  font-size: 1rem;
+}
+
+#home #fullbleed {
+  color: #ffffff;
+  position: relative;
+  z-index: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  background: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 6rem 0;
+}
+
+#home #fullbleed::before {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  background-color: #1c2339;
+  background-image: url('../images/cave.jpg');
+  background-size: cover;
+  background-position-x: 20%;
+  background-position-y: 70%;
+  background-repeat: no-repeat;
+}
+
+#home #fullbleed.chrome::before {
+  transform: translateZ(-1px) scale(2.2);
+}
+
+#home #fullbleed .logo {
+  font-size: 9vmin;
+  width: 60rem;
+  max-width: 80vw;
+  line-height: 1;
+}
+
+#home dl,
+#home dd,
+#home dt {
+  padding: 0;
+  margin: 0;
+  font-size: 1rem;
+}
+
+
+#home dl {
+  margin: 0 0 1rem 0;
+}
+
+#home #contact {
+  background-image: linear-gradient(180deg, #ecf6ff, #fff 5rem);
+}
+
+#home #quickstart dl {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+#home #quickstart dt {
+  color: #F63366;
+  margin-top: 1rem;
+}
+
+#home #quickstart dt::before {
+  content: '# ';
+}
+
+#home #quickstart dd {
+  font-weight: bold;
+  color: #333;
+}
+
+#home #quickstart dd::before {
+  content: '$ ';
+  font-weight: normal;
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 5vmin;
+  }
+}

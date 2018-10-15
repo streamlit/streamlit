@@ -1,6 +1,13 @@
+# -*- coding: future_fstrings -*-
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 from .caseconverters import to_upper_camel_case, to_lower_camel_case
 
-class ChartComponent:
+class ChartComponent(object):
     def __init__(self, type, props):
         """Constructor.
 

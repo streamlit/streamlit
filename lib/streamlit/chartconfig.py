@@ -1,17 +1,25 @@
-from .caseconverters import to_snake_case
-from .ChartComponent import ChartComponent
+# -*- coding: future_fstrings -*-
+"""Declarative configuration for Streamlit's native ReCharts-based charts."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
+from streamlit.DictBuilder import ForEachColumn, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
+from streamlit.caseconverters import to_snake_case
 
 # Set of ReChart chart types accepted by Streamlit.
 CHART_TYPES = set([
     'AreaChart',
     'BarChart',
     'LineChart',
-    'ComposedChart',
+    # 'ComposedChart',
     # 'PieChart',
-    'RadarChart',
+    # 'RadarChart',
     # 'RadialBarChart',
     # 'ScatterChart',
-    'Treemap',
+    # 'Treemap',
 ])
 
 # Set of snake-case strings containing the ReChart chart types accepted by
@@ -68,72 +76,18 @@ CHART_COMPONENTS = {
     'Sector': False,
 }
 
-class ForEachColumn:
-    """
-    This is used to include a certain component as many times as there are
-    columns in the dataset.
-    """
-    def __init__(self, comp):
-        self.comp = comp
-
-class ColumnAtIndex:
-    """
-    This is used to specify that a certain property should point to whichever
-    column is at this index.
-    """
-    def __init__(self, index):
-        self.index = index
-
-class ColumnAtCurrentIndex:
-    """
-    This is used within a ForEachColumn to specify that a certain property
-    should point to the column that the ForEachColumn is cycling through right
-    now.
-    """
-    pass
-
-class IndexColumn:
-    """
-    This is used to specify that a certain property should point to the index of
-    the dataframe.
-    """
-    pass
-
-class ValueCycler:
-    """
-    This is used within a ForEachColumn to specify values that should be cycled
-    through, as we iterate through the columns.
-    """
-    def __init__(self, *items):
-        self._items = items
-
-    def get(self, index):
-        return self._items[index % len(self._items)]
-
-class ColorCycler(ValueCycler):
-    """
-    Cycles some pretty colors.
-    """
-    def __init__(self):
-        super().__init__(
-            '#e41a1c',
-            '#377eb8',
-            '#4daf4a',
-            '#984ea3',
-            '#ff7f00',
-            '#cccc33',
-            '#a65628',
-            '#f781bf')
-
-DASH_STR = '3 3'
-
 
 BASIC_REQUIRED_COMPONENTS = (
-    ('cartesian_grid', {'stroke_dasharray': DASH_STR}),
-    ('x_axis', {
-        'data_key': IndexColumn(),
+    ('cartesian_grid', {
+        'stroke': '#E6E9EF',
     }),
-    ('y_axis', {}),
+    ('x_axis', {
+        'stroke': '#101620',
+        'data_key': INDEX_COLUMN_NAME,
+    }),
+    ('y_axis', {
+        'stroke': '#101620',
+    }),
     ('tooltip', {}),
     ('legend', {}),
 )
@@ -141,41 +95,41 @@ BASIC_REQUIRED_COMPONENTS = (
 
 # A dict mapping each chart type to a tuple with all components that are
 # required for that chart type. The components themselves are expressed here as
-# 2-tuples. Here you can use special types ColumnAtIndex, ColumnAtCurrentIndex,
+# 2-tuples. Here you can use special types CURRENT_COLUMN_NAME,
 # ForEachColumn, ValueCycler, etc.
 REQUIRED_COMPONENTS = {
     'line_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('line', {
-            'data_key': ColumnAtCurrentIndex(),
+        BASIC_REQUIRED_COMPONENTS +
+        (ForEachColumn(('line', {
+            'data_key': CURRENT_COLUMN_NAME,
             'dot': 'false',
             'stroke': ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'area_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('area', {
-            'data_key': ColumnAtCurrentIndex(),
+        BASIC_REQUIRED_COMPONENTS +
+        (ForEachColumn(('area', {
+            'data_key': CURRENT_COLUMN_NAME,
             'fill': ColorCycler(),
             'stroke': ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'bar_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
-        ForEachColumn(('bar', {
-            'data_key': ColumnAtCurrentIndex(),
+        BASIC_REQUIRED_COMPONENTS +
+        (ForEachColumn(('bar', {
+            'data_key': CURRENT_COLUMN_NAME,
             'fill': ColorCycler(),
             'is_animation_active': 'false',
-        })),
+        })),)
     ),
 
     'composed_chart': (
-        *BASIC_REQUIRED_COMPONENTS,
+        BASIC_REQUIRED_COMPONENTS,
     ),
 }
