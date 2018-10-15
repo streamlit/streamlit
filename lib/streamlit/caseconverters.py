@@ -14,7 +14,7 @@ def to_lower_camel_case(snake_case_str):
         foo_bar -> fooBar
         fooBar -> foobar
     """
-    titleCaseWords = (w for w in snake_case_str.title().split('_'))
+    titleCaseWords = [w for w in snake_case_str.title().split('_')]
     if titleCaseWords:
         return titleCaseWords[0].lower() + titleCaseWords[1:]
     else:
