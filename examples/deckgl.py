@@ -4,43 +4,57 @@ import numpy as np
 
 io.title('DeckGL example')
 
-DATE_TIME = 'date/time'
-DATA_URL = 'https://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data-sep14.csv.gz'
-
-@cache
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
-    data.rename(str.lower, axis='columns', inplace=True)
-    data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
-    return data
-
-hour = 0
-data = load_data(100000)
-data = data[data[DATE_TIME].dt.hour == hour]
-
-
-io.write("Here's a scatterplot map using the default layerless API")
-
-io.deck_gl_map(data,
-    viewport={
-        'latitude': 40.77,
-        'longitude': -73.97,
-        'zoom': 11,
-    })
-
-io.write("Here's the same scatterplot map using the layer API")
+# Grab some data
+bart_stop_stats = pd.read_json('./examples/bart_stop_stats.json')
+bart_path_stats = pd.read_json('./examples/bart_path_stats.json')
+bike_rental_stats = pd.read_json('./examples/bike_rental_stats.json')
 
 io.deck_gl_map(
     viewport={
-        'latitude': 40.77,
-        'longitude': -73.97,
+        'latitude': 37.76,
+        'longitude': -122.4,
         'zoom': 11,
+        'pitch': 50,
     },
-    layers=[
-        {
-            'type': 'ScatterplotLayer',
-            'data': data,
-        },
-    ])
 
-# TODO: Add other layer types to this file.
+    # Plot number of bike rentals throughtout the city
+    layers=[{
+        'type': 'HexagonLayer',
+        'data': bike_rental_stats,
+        'radius': 200,
+        'elevationScale': 4,
+        'elevationRange': [0, 1000],
+        'pickable': True,
+        'extruded': True,
+
+    # Now plot locations of Bart stops
+    # ...and let's size the stops according to traffic
+    }, {
+        'type': 'ScatterplotLayer',
+        'data': bart_stop_stats,
+        'pickable': True,
+        'autoHighlight': True,
+        'radiusScale': 0.02,
+        'encoding': {
+            'radius': 'exits',
+        },
+
+    # Now Add names of Bart stops
+    }, {
+        'type': 'TextLayer',
+        'data': bart_stop_stats,
+        'encoding': {
+            'text': 'name',
+            'color': [0, 0, 0, 200],
+            'size': 15,
+        },
+
+    # And draw some arcs connecting the stops
+    }, {
+        'type': 'ArcLayer',
+        'data': bart_path_stats,
+        'pickable': True,
+        'autoHighlight': True,
+        'strokeWidth': 10,
+    }])
+
