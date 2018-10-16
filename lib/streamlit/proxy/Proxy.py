@@ -280,6 +280,7 @@ class Proxy(object):
         connection : ProxyConnection
             The connection to deregister. It will be properly shutdown before
             deregistering.
+
         """
         del self._connections[connection.name]
         LOGGER.debug('Got rid of connection "%s".' % connection.name)
@@ -297,7 +298,7 @@ class Proxy(object):
             self.stop()
 
     @gen.coroutine
-    def on_client_opened(self, report_name, ws):
+    def on_client_opened(self, report_name, ws):  # noqa: D401
         """Called when a client connection is opened.
 
         Parameters
@@ -306,12 +307,13 @@ class Proxy(object):
             The name of the report the client connection is for.
         ws : ClientWebSocket
             The ClientWebSocket instance that just got opened.
+
         """
         connection, queue = yield self._add_client(report_name, ws)
         self._maybe_add_fs_observer(connection)
         raise gen.Return((connection, queue))
 
-    def on_client_closed(self, connection, queue):
+    def on_client_closed(self, connection, queue):  # noqa: D401
         """Called when a client connection is closed.
 
         Parameters
@@ -320,12 +322,13 @@ class Proxy(object):
             The connection object for the client that just got closed.
         queue : ReportQueue
             The queue for the closed client.
+
         """
         self._remove_fs_observer(connection)
         self._remove_client(connection, queue)
 
     @gen.coroutine
-    def on_client_waiting_for_proxy_conn(
+    def on_client_waiting_for_proxy_conn(  # noqa: D401
             self, report_name, ws, old_connection, old_queue):
         """Called when a client detects it has no corresponding ProxyConnection.
 
@@ -339,6 +342,7 @@ class Proxy(object):
             The connection object that just got closed.
         queue : ReportQueue
             The client queue corresponding to the closed connection.
+
         """
         self._remove_client(old_connection, old_queue)
         new_connection, new_queue = (
@@ -389,6 +393,7 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder to
             observe.
+
         """
         if not config.get_option('proxy.watchFileSystem'):
             return
@@ -410,6 +415,7 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder we should
             stop observing.
+
         """
         key = FSObserver.get_key(connection)
         observer = self._fs_observers.get(key)
@@ -420,8 +426,8 @@ class Proxy(object):
                 del self._fs_observers[key]
 
 
-def _on_fs_event(observer, event):
-    """Function to call when an FS event is called.
+def _on_fs_event(observer, event):  # noqa: D401
+    """Callback for FS events.
 
     Note: this will run in the Observer thread (created by the watchdog module).
     """

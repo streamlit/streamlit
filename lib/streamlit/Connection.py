@@ -38,6 +38,7 @@ WS_ARGS = {
     'max_message_size': MESSAGE_SIZE_LIMIT,
 }
 
+
 def _assert_singleton(method):
     """Assert that method is called on singleton instance of Connection."""
     @wraps(method)
@@ -109,8 +110,8 @@ class Connection(object):
         # Necessary for very short lived scripts that terminate before the
         # proxy is even started. In this case, we try to delay the cleanup
         # thread until the proxy has started.
-        self._proxy_connection_status = \
-            Connection._PROXY_CONNECTION_DISCONNECTED
+        self._proxy_connection_status = (
+            Connection._PROXY_CONNECTION_DISCONNECTED)
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
@@ -148,8 +149,10 @@ class Connection(object):
 
         # When the current thread closes, then close down the connection.
         main_thread = threading.current_thread()
-        cleanup_thread = threading.Thread(target=self._cleanup_on_exit,
-            args=(main_thread, original_excepthook))
+        cleanup_thread = threading.Thread(
+            target=self._cleanup_on_exit,
+            args=(main_thread, original_excepthook),
+        )
         cleanup_thread.daemon = False
         cleanup_thread.start()
 
@@ -221,15 +224,16 @@ class Connection(object):
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
-        assert (self._proxy_connection_status ==
-            Connection._PROXY_CONNECTION_DISCONNECTED), \
-            'Already connectd to the proxy.'
+        already_connected = (
+            self._proxy_connection_status ==
+            Connection._PROXY_CONNECTION_DISCONNECTED)
+        assert already_connected, 'Already connectd to the proxy.'
 
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
-            self._proxy_connection_status = \
-                Connection._PROXY_CONNECTION_CONNECTED
+            self._proxy_connection_status = (
+                Connection._PROXY_CONNECTION_CONNECTED)
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -241,8 +245,8 @@ class Connection(object):
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
-            self._proxy_connection_status = \
-                Connection._PROXY_CONNECTION_CONNECTED
+            self._proxy_connection_status = (
+                Connection._PROXY_CONNECTION_CONNECTED)
             yield self._transmit_through_websocket(ws)
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
@@ -286,10 +290,9 @@ class Connection(object):
         LOGGER.debug('Closed the connection object.')
 
     def _cleanup_on_exit(self, main_thread, original_excepthook):
-        """
-        This is the cleanup thread.
+        """Cleanup the thread.
 
-        It waits for the main thread to exit, then does some final cleanup.
+        This waits for the main thread to exit, then does some final cleanup.
         """
         # Wait for the main thread to end.
         LOGGER.debug('Cleanup thread waiting for main thread to end.')
@@ -305,8 +308,8 @@ class Connection(object):
             elapsed_time = time.time() - start_time
 
             if elapsed_time > FINAL_WAIT_SECONDS:
-                LOGGER.debug(f'Waited {FINAL_WAIT_SECONDS} for proxy '
-                    'to connect. Exiting.')
+                LOGGER.debug(
+                    f'Waited {FINAL_WAIT_SECONDS} for proxy to connect. Exiting.')
                 break
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
                 time.sleep(PROXY_CONNECTION_POLL_INTERVAL_SECONDS)
@@ -319,7 +322,8 @@ class Connection(object):
                 LOGGER.debug('Proxy connection failed. Ending the local script.')
                 break
             else:
-                LOGGER.error('_proxy_connection_status illegal value: ' +
+                LOGGER.error(
+                    '_proxy_connection_status illegal value: ' +
                     str(self._proxy_connection_status))
                 break
         LOGGER.debug('Main thread ended. Restoring excepthook.')
@@ -327,11 +331,19 @@ class Connection(object):
         self._loop.add_callback(setattr, self, '_is_open', False)
         LOGGER.debug('Submitted callback to stop the connection thread.')
 
+
 class ProxyConnectionError(Exception):
     """Error raised whenever something goes wrong in the Connection."""
 
     def __init__(self, uri):
-        """Constructor."""
+        """Constructor.
+
+        Parameters
+        ----------
+        uri : string
+            The URI of the Streamlit Proxy that errored out.
+
+        """
         msg = f'Unable to connect to proxy at {uri}.'
         super(ProxyConnectionError, self).__init__(msg)
 
