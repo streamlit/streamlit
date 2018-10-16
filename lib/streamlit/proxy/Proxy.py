@@ -493,10 +493,8 @@ def _get_report_url(host, port, name):
     ----------
     host : string
         The hostname or IP address of the current machine.
-
     port : int
         The port where Streamlit is running.
-
     name : string
         The name of the report.
 

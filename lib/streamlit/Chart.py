@@ -6,8 +6,7 @@ See: recharts.org
 
 Usage
 -----
-
-All CamelCase names from ReCharts are converted to snake_case, for example:
+All CamelCase names from ReCharts are converted to snake_case, for example::
 
     AreaChart -> area_chart
     CartesianGrid -> cartesian_grid
@@ -25,7 +24,7 @@ For example this React code:
             <Line type='monotone' dataKey='uv' stroke='#82ca9d' strokeDasharray='3 4 5 2'/>
     </LineChart>
 
-Becomes:
+Becomes::
 
     line_chart = Chart(data, 'line_chart', width=600, height=300)
     line_chart.x_axis(data_key='name')
@@ -38,7 +37,7 @@ Becomes:
     line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d',
         stroke_dasharray='3 4 5 2')
 
-Or, with syntax sugar type-specific builders:
+Or, with syntax sugar type-specific builders::
 
     LineChart(data, width=600, height=300).x_axis(data_key='name')
     # These sugary builders already have all sorts of defaults set
