@@ -8,6 +8,10 @@ DeltaGenerator from the singleton connection object (in streamlit.connection)
 and then call the corresponding function on that DeltaGenerator.
 """
 
+# NOTE: You'll see lots of "noqa: F821" in this file. That's because we
+# manually mess with the local namespace so the linter can't know that some
+# identifiers actually exist in the namespace.
+
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
@@ -19,6 +23,7 @@ __version__ = pkg_resources.require("streamlit")[0].version
 
 # Must be at the top, to avoid circular dependency.
 from . import logger
+from streamlit import config
 logger.set_log_level(config.get_option('log_level').upper())
 logger.init_tornado_logs()
 LOGGER = logger.get_logger('root')
@@ -35,10 +40,9 @@ import threading
 import traceback
 import types
 
-from streamlit import config
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
-from streamlit.caching import cache  # noqa: F401 (just for export)
+from streamlit.caching import cache  # Just for export.
 from streamlit.util import escape_markdown
 
 

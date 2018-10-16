@@ -24,8 +24,6 @@ from streamlit import config
 from streamlit.util import get_static_dir
 
 from streamlit.streamlit_msg_proto import new_report_msg
-# from streamlit.streamlit_msg_proto import streamlit_msg_iter
-# from streamlit.proxy import ProxyConnection
 
 from tornado import gen, web
 from tornado.httpserver import HTTPServer

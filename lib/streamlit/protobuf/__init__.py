@@ -18,16 +18,16 @@ import sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-from BackMsg_pb2 import BackMsg  # noqa: F401
-from Balloons_pb2 import Balloons  # noqa: F401
-from Chart_pb2 import Chart  # noqa: F401
-from DataFrame_pb2 import DataFrame, Index, Table, AnyArray  # noqa: F401
-from Delta_pb2 import Delta  # noqa: F401
-from Element_pb2 import Element  # noqa: F401
-from ForwardMsg_pb2 import ForwardMsg  # noqa: F401
-from Text_pb2 import Text  # noqa: F401
+from BackMsg_pb2 import BackMsg
+from Balloons_pb2 import Balloons
+from Chart_pb2 import Chart
+from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
+from Delta_pb2 import Delta
+from Element_pb2 import Element
+from ForwardMsg_pb2 import ForwardMsg
+from Text_pb2 import Text
 
-import DataTransform_pb2 as DataTransform  # noqa: F401
+import DataTransform_pb2 as DataTransform
 
 # Clear out all temporary variables.
 sys.path.pop()
