@@ -17,6 +17,12 @@ setup_2_3_shims(globals())
 import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version
 
+# Must be at the top, to avoid circular dependency.
+from . import logger
+logger.set_log_level(config.get_option('log_level').upper())
+logger.init_tornado_logs()
+LOGGER = logger.get_logger('root')
+
 import contextlib
 import functools
 import numpy as np
@@ -34,11 +40,6 @@ from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 from streamlit.caching import cache  # noqa: F401 (just for export)
 from streamlit.util import escape_markdown
-
-from . import logger
-logger.set_log_level(config.get_option('log_level').upper())
-logger.init_tornado_logs()
-LOGGER = logger.get_logger('root')
 
 
 this_module = sys.modules[__name__]

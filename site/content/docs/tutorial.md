@@ -36,18 +36,17 @@ change the text inside `st.write()` to:
 st.write('Hello, **Streamlit**!')
 ```
 
-Now run the program again, and look at your web browser:
+Now save the file, and look at your web browser...
 
-```bash
-$ python hello.py
-```
-
-Bam! Now your report says “Hello, Streamlit!” rather than “Hello, World.” Also
+**...AND BAM!** Now your report says “Hello, Streamlit!” rather than “Hello, World.” Also
 the word “Streamlit” is now **bold**. The way we did that was by adding those
 asterisks `**` on each side of the word we wanted to bold. That works because
-**`st.write()` supports Markdown!**
+`st.write()` supports Markdown!
 
-_**PRO TIP:** You can also re-run your program from within your web browser! Simply press 'r'._
+Also: did you notice that **things just magically updated in your browser when
+you saved your script?** That's because Streamlit intelligently watches your
+script for changes and reruns it when needed. This has the same effect as
+running `python hello.py` by hand, except much more convenient.
 
 
 ## Enter the data
@@ -66,15 +65,21 @@ df = np.random.randn(50, 7)
 st.write(df)
 ```
 
-_**NOTE:** From now on, I won't tell you to run your program again. Just assume
+_**NOTE:** From now on, I won't tell you to save your program again. Just assume
 that's what you should do whenever you want your report to update. And right now
-is one of those times: go ahead and re-run `hello.py` to see the latest changes!_
+is one of those times: go ahead and save `hello.py` to see the latest
+changes!_
 
 As you can see, you can use `st.write()` on a Numpy array to render a dataset
 into a table in your report. What's more, Streamlit also supports plain Python
 lists and Pandas datatables.
 
-Now, tables are cool and all, but what I really like are axes and lines. Know
+You can also re-run your program directly from within your web browser.
+Just type `r` anytime, or choose "Rerun" from the top-right menu. If you try it
+right now, you'll see the random numbers on the table you just created changing
+right before your eyes.
+
+OK, so tables are cool and all, but what I really like are axes and lines. Know
 what I'm talking about? So let's **draw ourselves a nice line chart** from the
 same dataset:
 

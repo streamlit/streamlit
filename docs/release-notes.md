@@ -1,6 +1,6 @@
 # Release Notes
 
-#### v0.16.0
+#### v0.16.1
 October 2, 2018
 ```
 Version 0.16 of Streamlit is fresh off the oven with better AWS supppert,

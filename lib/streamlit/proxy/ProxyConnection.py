@@ -16,7 +16,11 @@ LOGGER = get_logger()
 
 
 class ProxyConnection(object):
-    """Stores information about local and client connections for a report."""
+    """Represents a connection.
+
+    The lifetime of a ProxyConnection is tied to the lifetime of client
+    connections.
+    """
 
     def __init__(self, new_report_msg, name):
         """Constructor.
@@ -35,8 +39,13 @@ class ProxyConnection(object):
         # The current working directory from which this report was launched.
         self.cwd = new_report_msg.cwd
 
-        # The command line arguments used to launch this message
+        # The command and command-line arguments used to launch this
+        # connection.
         self.command_line = list(new_report_msg.command_line)
+
+        # Full path of the file that caused this connection to be initiated,
+        # or empty string if in REPL.
+        self.source_file_path = new_report_msg.source_file_path
 
         # The name for this report.
         self.name = name

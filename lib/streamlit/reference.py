@@ -256,7 +256,7 @@ def display_reference():
         st.json({'hello': 'world'})
 
     with st.echo():
-        st.json("{'object':{'array':[1,true,'3']}}")
+        st.json('{"object":{"array":[1,true,"3"]}}')
 
     st.header('Inline Code Blocks')
 

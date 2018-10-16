@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import base58
+import inspect
 import os
 import sys
 import threading
@@ -37,7 +38,6 @@ WS_ARGS = {
     'max_message_size': MESSAGE_SIZE_LIMIT,
 }
 
-
 def _assert_singleton(method):
     """Assert that method is called on singleton instance of Connection."""
     @wraps(method)
@@ -54,6 +54,11 @@ class Connection(object):
     # This is the singleton connection object.
     _connection = None
 
+    # The _proxy_connection_status can take one of these three values:
+    _PROXY_CONNECTION_DISCONNECTED = 'disconnected'
+    _PROXY_CONNECTION_CONNECTED = 'connected'
+    _PROXY_CONNECTION_FAILED = 'failed'
+
     # This is the class through which we can add elements to the Report
     def __init__(self):
         """Create a new connection to the server."""
@@ -67,6 +72,17 @@ class Connection(object):
         # This is the event loop to talk with the proxy.
         self._loop = IOLoop(make_current=False)
         LOGGER.debug(f'Created io loop {self._loop}.')
+
+        root_frame = inspect.stack()[-1]
+        filename = root_frame[1]  # 1 is the filename field in this tuple.
+
+        # Full path of the file that caused this connection to be created.
+        self._source_file_path = ''  # Empty string means "no file" to us.
+
+        if filename != '<stdin>':  # Magic filename when in REPL.
+            self._source_file_path = os.path.realpath(filename)
+
+        LOGGER.debug(f'source_file_path: {self._source_file_path}.')
 
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
@@ -87,6 +103,14 @@ class Connection(object):
         # cleanly close down the connection. Like self._queue, this variable
         # is only ever accessed
         self._is_open = True
+
+        # Keep track of whether we've connected to the proxy.
+        #
+        # Necessary for very short lived scripts that terminate before the
+        # proxy is even started. In this case, we try to delay the cleanup
+        # thread until the proxy has started.
+        self._proxy_connection_status = \
+            Connection._PROXY_CONNECTION_DISCONNECTED
 
         # This is the class through which we can add elements to the Report
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
@@ -123,22 +147,9 @@ class Connection(object):
         sys.excepthook = streamlit_excepthook
 
         # When the current thread closes, then close down the connection.
-        current_thread = threading.current_thread()
-
-        def cleanup_on_exit():
-            LOGGER.debug('Cleanup thread waiting for main thread to end.')
-            current_thread.join()
-            LOGGER.debug('Cleanup thread waiting for main thread to end.')
-            # TODO(armando): Fix with something that checks if the proxy
-            #                ran once and only sleep if we're waiting
-            #                for the proxy to startup.  https://trello.com/c/1WECpDht
-            LOGGER.debug('Sleeping 5 seconds in case the local script ran very quickly.')
-            time.sleep(5)
-            LOGGER.debug('Main thread ended. Restoring excepthook.')
-            sys.excepthook = original_excepthook
-            self._loop.add_callback(setattr, self, '_is_open', False)
-            LOGGER.debug('Submitted callback to stop the connection thread.')
-        cleanup_thread = threading.Thread(target=cleanup_on_exit)
+        main_thread = threading.current_thread()
+        cleanup_thread = threading.Thread(target=self._cleanup_on_exit,
+            args=(main_thread, original_excepthook))
         cleanup_thread.daemon = False
         cleanup_thread.start()
 
@@ -200,7 +211,8 @@ class Connection(object):
         """Try to establish a connection to the proxy.
 
         Launches the proxy (if necessary), then pumps deltas through the
-        connection.
+        connection. Updates self._proxy_connection_status to indicate whether
+        we succeeded in connecting to the proxy.
         """
         # Create a connection URI.
         server = config.get_option('proxy.server')
@@ -209,9 +221,15 @@ class Connection(object):
         report_name = urllib.parse.quote_plus(self._name)
         uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
+        assert (self._proxy_connection_status ==
+            Connection._PROXY_CONNECTION_DISCONNECTED), \
+            'Already connectd to the proxy.'
+
         LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
             yield self._transmit_through_websocket(ws)
             return
         except IOError:
@@ -223,8 +241,14 @@ class Connection(object):
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
+            self._proxy_connection_status = \
+                Connection._PROXY_CONNECTION_CONNECTED
             yield self._transmit_through_websocket(ws)
         except IOError:
+            # Indicate that we failed to connect to the proxy so that the
+            # cleanup thread can now run.
+            LOGGER.info(f'Failed to connect to proxy at {uri}.')
+            self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
     @_assert_singleton
@@ -242,7 +266,8 @@ class Connection(object):
         """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
         yield new_report_msg(
-            self._report_id, os.getcwd(), ['python'] + sys.argv, ws)
+            self._report_id, os.getcwd(), ['python'] + sys.argv,
+            self._source_file_path, ws)
         LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
 
         # Send other information across.
@@ -260,6 +285,47 @@ class Connection(object):
         yield ws.close()
         LOGGER.debug('Closed the connection object.')
 
+    def _cleanup_on_exit(self, main_thread, original_excepthook):
+        """
+        This is the cleanup thread.
+
+        It waits for the main thread to exit, then does some final cleanup.
+        """
+        # Wait for the main thread to end.
+        LOGGER.debug('Cleanup thread waiting for main thread to end.')
+        main_thread.join()
+
+        # Then wait for a certain number of seconds to connect to the proxy
+        # to make sure that we can flush the connection queue.
+        start_time = time.time()
+        FINAL_WAIT_SECONDS = 5.0
+        PROXY_CONNECTION_POLL_INTERVAL_SECONDS = 0.1
+        FLUSH_QUEUE_SECONDS = 0.1
+        while True:
+            elapsed_time = time.time() - start_time
+
+            if elapsed_time > FINAL_WAIT_SECONDS:
+                LOGGER.debug(f'Waited {FINAL_WAIT_SECONDS} for proxy '
+                    'to connect. Exiting.')
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
+                time.sleep(PROXY_CONNECTION_POLL_INTERVAL_SECONDS)
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_CONNECTED:
+                # Sleep for a tiny bit to make sure we flush everything to the proxy.
+                LOGGER.debug('The proxy was connected. Preparing to cleanup.')
+                time.sleep(FLUSH_QUEUE_SECONDS)
+                break
+            elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
+                LOGGER.debug('Proxy connection failed. Ending the local script.')
+                break
+            else:
+                LOGGER.error('_proxy_connection_status illegal value: ' +
+                    str(self._proxy_connection_status))
+                break
+        LOGGER.debug('Main thread ended. Restoring excepthook.')
+        sys.excepthook = original_excepthook
+        self._loop.add_callback(setattr, self, '_is_open', False)
+        LOGGER.debug('Submitted callback to stop the connection thread.')
 
 class ProxyConnectionError(Exception):
     """Error raised whenever something goes wrong in the Connection."""

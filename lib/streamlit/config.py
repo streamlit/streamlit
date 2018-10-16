@@ -11,9 +11,7 @@ import yaml
 from tornado import gen, httpclient
 from tornado.concurrent import run_on_executor, futures
 
-import streamlit
 from streamlit.logger import get_logger
-
 LOGGER = get_logger()
 
 class Config(object):
@@ -106,6 +104,10 @@ class Config(object):
                         'running.'),
                     # Must be None, so the autodetection in Proxy.py takes place
                     value = None,
+                ),
+                watchFileSystem = dict(
+                    _comment = 'Watch for filesystem changes and rerun reports',
+                    value = True,
                 ),
             ),
             s3 = dict(

@@ -21,7 +21,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.util import get_static_dir
 
 from streamlit.streamlit_msg_proto import new_report_msg
@@ -29,17 +28,23 @@ from streamlit.streamlit_msg_proto import new_report_msg
 # from streamlit.proxy import ProxyConnection
 
 from tornado import gen, web
-from tornado import httpclient
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import functools
+import os
+import platform
 import socket
+import subprocess
 import textwrap
 import traceback
 import urllib
 import webbrowser
 
+from streamlit.proxy.FSObserver import FSObserver
+
+from streamlit.logger import get_logger
 LOGGER = get_logger()
+
 AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
@@ -152,7 +157,12 @@ class Proxy(object):
         # This table from names to ProxyConnections stores all the information
         # about our connections. When the number of connections drops to zero,
         # then the proxy shuts down.
-        self._connections = dict()  # use instead of {} for 2/3 compatibility
+        self._connections = dict()
+
+        # Map of key->FSObserver, where key is a tuple obtained with
+        # FSObserver.get_key(proxy_connection).
+        self._fs_observers = dict()
+
         LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
         # We have to import these in here to break a circular import reference
@@ -195,11 +205,6 @@ class Proxy(object):
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
 
-        # # This table from names to ProxyConnections stores all the information
-        # # about our connections. When the number of connections drops to zero,
-        # # then the proxy shuts down.
-        # self._connections = dict()  # use instead of {} for 2/3 compatibility
-
         # Initialized things that the proxy will need to do cloud things.
         self._cloud = None  # S3Connection()
 
@@ -225,13 +230,6 @@ class Proxy(object):
             IOLoop.current().stop()
         self._stopped = True
 
-    '''
-    @_stop_proxy_on_exception
-    async def _client_html_handler(self, request):
-        static_root = config.get_path('proxy.staticRoot')
-        return web.FileResponse(os.path.join(static_root, 'index.html'))
-    '''
-
     def register_proxy_connection(self, connection):
         """Register this connection's name.
 
@@ -247,7 +245,6 @@ class Proxy(object):
         self._connections[connection.name] = connection
         if new_name:
             _launch_web_client(connection.name)
-            # self._cloud.create(connection.name)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -273,8 +270,19 @@ class Proxy(object):
         if not self.proxy_connection_is_registered(connection):
             return
         if connection.can_be_deregistered():
-            del self._connections[connection.name]
-            LOGGER.debug('Got rid of connection "%s".' % connection.name)
+            self.deregister_proxy_connection(connection)
+
+    def deregister_proxy_connection(self, connection):
+        """Deregister proxy connection irrespective of whether it's in use.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            The connection to deregister. It will be properly shutdown before
+            deregistering.
+        """
+        del self._connections[connection.name]
+        LOGGER.debug('Got rid of connection "%s".' % connection.name)
 
     def proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
@@ -289,7 +297,56 @@ class Proxy(object):
             self.stop()
 
     @gen.coroutine
-    def add_client(self, report_name, ws):
+    def on_client_opened(self, report_name, ws):
+        """Called when a client connection is opened.
+
+        Parameters
+        ----------
+        report_name : str
+            The name of the report the client connection is for.
+        ws : ClientWebSocket
+            The ClientWebSocket instance that just got opened.
+        """
+        connection, queue = yield self._add_client(report_name, ws)
+        self._maybe_add_fs_observer(connection)
+        raise gen.Return((connection, queue))
+
+    def on_client_closed(self, connection, queue):
+        """Called when a client connection is closed.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            The connection object for the client that just got closed.
+        queue : ReportQueue
+            The queue for the closed client.
+        """
+        self._remove_fs_observer(connection)
+        self._remove_client(connection, queue)
+
+    @gen.coroutine
+    def on_client_waiting_for_proxy_conn(
+            self, report_name, ws, old_connection, old_queue):
+        """Called when a client detects it has no corresponding ProxyConnection.
+
+        Parameters
+        ----------
+        report_name : str
+            The name of the report the client connection is for.
+        ws : ClientWebSocket
+            The ClientWebSocket instance that just got opened.
+        connection : ProxyConnection
+            The connection object that just got closed.
+        queue : ReportQueue
+            The client queue corresponding to the closed connection.
+        """
+        self._remove_client(old_connection, old_queue)
+        new_connection, new_queue = (
+            yield self._add_client(report_name, ws))
+        raise gen.Return((new_connection, new_queue))
+
+    @gen.coroutine
+    def _add_client(self, report_name, ws):
         """Add a queue to the connection for the given report_name.
 
         Parameters
@@ -303,19 +360,82 @@ class Proxy(object):
         self._received_client_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
+
         yield new_report_msg(
-            connection.id, connection.cwd, connection.command_line, ws)
-        LOGGER.debug('Added new client. Id: ' + connection.id)
+            connection.id, connection.cwd, connection.command_line,
+            connection.source_file_path, ws)
+
         LOGGER.debug(
-            'Added new client. Command line: ' +
-            str(connection.command_line))
+            'Added new client. '
+            f'Id: {connection.id}, '
+            f'Command line: {connection.command_line}')
+
         raise gen.Return((connection, queue))
 
-    def remove_client(self, connection, queue):
+    def _remove_client(self, connection, queue):
         """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
+        LOGGER.debug('Removed the client for "%s"', connection.name)
         self.try_to_deregister_proxy_connection(connection)
         self.potentially_stop()
+
+    def _maybe_add_fs_observer(self, connection):
+        """Start observing filesystem and store observer in local map.
+
+        Obeys config option proxy.watchFileSystem. If False, does not observe.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            Connection object containing information about the folder to
+            observe.
+        """
+        if not config.get_option('proxy.watchFileSystem'):
+            return
+
+        key = FSObserver.get_key(connection)
+        observer = self._fs_observers.get(key)
+
+        if observer is None:
+            observer = FSObserver(connection, _on_fs_event)
+            self._fs_observers[key] = observer
+        else:
+            observer.register_consumer(connection)
+
+    def _remove_fs_observer(self, connection):
+        """Stop observing filesystem.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            Connection object containing information about the folder we should
+            stop observing.
+        """
+        key = FSObserver.get_key(connection)
+        observer = self._fs_observers.get(key)
+
+        if observer is not None:
+            observer.deregister_consumer(connection)
+            if observer.is_closed():
+                del self._fs_observers[key]
+
+
+def _on_fs_event(observer, event):
+    """Function to call when an FS event is called.
+
+    Note: this will run in the Observer thread (created by the watchdog module).
+    """
+    LOGGER.info(
+        f'File system event: [{event.event_type}] {event.src_path}. '
+        f'Calling: {observer.key}')
+
+    # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
+    # single file.
+    process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
+
+    # Required! Otherwise we end up with defunct processes.
+    # (See ps -Al | grep python)
+    process.wait()
 
 
 def _get_external_ip():
@@ -327,17 +447,12 @@ def _get_external_ip():
         The external IPv4 address of the current machine.
 
     """
-    http_client = None
     try:
-        http_client = httpclient.HTTPClient()
-        response = http_client.fetch(AWS_CHECK_IP, request_timeout=1)
-        external_ip = response.body.strip()
-    except (httpclient.HTTPError, RuntimeError) as e:
+        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
+        external_ip = response.decode('utf-8').strip()
+    except (urllib.URLError, RuntimeError) as e:
         LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
         external_ip = None
-    finally:
-        if http_client is not None:
-            http_client.close()
 
     return external_ip
 
