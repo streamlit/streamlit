@@ -26,7 +26,7 @@ from streamlit.caseconverters import to_snake_case
 from streamlit.chartconfig import CHART_TYPES
 from streamlit.logger import get_logger
 
-EXPORT_TO_IO_FLAG = '__export_to_io__'
+EXPORT_FLAG = '__export__'
 
 # setup logging
 from streamlit.logger import get_logger
@@ -34,13 +34,13 @@ LOGGER = get_logger()
 
 from functools import wraps
 
-def _export_to_io(method):
+def _export(method):
     """Flag this DeltaGenerator method to be exported to the streamlit
     package.
 
     This should be the outermost decorator, i.e. before all others.
     """
-    setattr(method, EXPORT_TO_IO_FLAG, True)
+    setattr(method, EXPORT_FLAG, True)
     return method
 
 def _create_element(method):
@@ -93,7 +93,7 @@ class DeltaGenerator(object):
             self._generate_new_ids = False
             self._id = id
 
-    @_export_to_io
+    @_export
     @_create_element
     def balloons(self, element):
         """Draws celebratory balloons!
@@ -101,7 +101,7 @@ class DeltaGenerator(object):
         element.balloons.type = protobuf.Balloons.DEFAULT
         element.balloons.execution_id = random.randrange(0xFFFFFFFF)
 
-    @_export_to_io
+    @_export
     @_create_element
     def text(self, element, body):
         """Writes fixed width text.
@@ -114,7 +114,7 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.PLAIN
 
-    @_export_to_io
+    @_export
     @_create_element
     def markdown(self, element, body):
         """Displays the string, formatted as markdown.
@@ -131,7 +131,7 @@ class DeltaGenerator(object):
         element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
-    @_export_to_io
+    @_export
     @_create_element
     def json(self, element, body):
         """Displays the object as a pretty JSON string.
@@ -145,7 +145,7 @@ class DeltaGenerator(object):
         element.text.body = (body if isinstance(body, string_types) else json.dumps(body))
         element.text.format = protobuf.Text.JSON
 
-    @_export_to_io
+    @_export
     @_create_element
     def title(self, element, string):
         """Displays the string as a title (h1) header.
@@ -162,7 +162,7 @@ class DeltaGenerator(object):
         element.text.body = str(string)
         element.text.format = protobuf.Text.TITLE
 
-    @_export_to_io
+    @_export
     @_create_element
     def header(self, element, string):
         """Displays the string as a h2 header.
@@ -179,7 +179,7 @@ class DeltaGenerator(object):
         element.text.body = str(string)
         element.text.format = protobuf.Text.HEADER
 
-    @_export_to_io
+    @_export
     @_create_element
     def subheader(self, element, string):
         """Displays the string as a h3 header.
@@ -196,7 +196,7 @@ class DeltaGenerator(object):
         element.text.body = str(string)
         element.text.format = protobuf.Text.SUB_HEADER
 
-    @_export_to_io
+    @_export
     @_create_element
     def error(self, element, body):
         """
@@ -210,7 +210,7 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.ERROR
 
-    @_export_to_io
+    @_export
     @_create_element
     def warning(self, element, body):
         """
@@ -224,7 +224,7 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.WARNING
 
-    @_export_to_io
+    @_export
     @_create_element
     def info(self, element, body):
         """
@@ -238,7 +238,7 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.INFO
 
-    @_export_to_io
+    @_export
     @_create_element
     def success(self, element, body):
         """
@@ -252,7 +252,7 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.SUCCESS
 
-    @_export_to_io
+    @_export
     def link(self, *args, **kwargs):
         """
         Creates an element showing a link
@@ -264,7 +264,7 @@ class DeltaGenerator(object):
         """
         raise RuntimeError('Link() is deprecated. Please use markdown() instead.')
 
-    @_export_to_io
+    @_export
     @_create_element
     def help(self, element, obj):
         """Displays the doc string for this object, nicely formatted.
@@ -299,7 +299,7 @@ class DeltaGenerator(object):
             doc_string = f'No docs available.'
         element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
 
-    @_export_to_io
+    @_export
     @_create_element
     def exception(self, element, exception, exception_traceback=None):
         """
@@ -341,7 +341,7 @@ class DeltaGenerator(object):
             stack_trace = traceback.format_list(extracted_traceback)
         element.exception.stack_trace.extend(stack_trace)
 
-    @_export_to_io
+    @_export
     def dataframe(self, pandas_df):
         """
         Renders a dataframe to the client.
@@ -361,7 +361,7 @@ class DeltaGenerator(object):
             chart.marshall(element.chart)
         return self._new_element(set_chart)
 
-    @_export_to_io
+    @_export
     @_create_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
         """Displays a chart.
@@ -369,7 +369,7 @@ class DeltaGenerator(object):
         vc = VegaLiteChart(data, spec, **kwargs)
         vc.marshall(element.vega_lite_chart)
 
-    @_export_to_io
+    @_export
     @_create_element
     def pyplot(self, element, fig=None):
         """Displays a matplotlib.pyplot image.
@@ -397,7 +397,7 @@ class DeltaGenerator(object):
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
     # TODO: Make this accept files and strings/bytes as input.
-    @_export_to_io
+    @_export
     @_create_element
     def image(self, element, image, caption=None, width=None,
             use_column_width=False, clamp=False):
@@ -429,12 +429,12 @@ class DeltaGenerator(object):
         image_proto.marshall_images(image, caption, width, element.imgs, clamp)
 
     # TODO: remove `img()`, now replaced by `image()`
-    @_export_to_io
+    @_export
     def img(self, *args, **kwargs):
         """DEPRECATED. Use st.image() instead."""
         raise RuntimeError('DEPRECATED. Please use image() instead.')
 
-    @_export_to_io
+    @_export
     @_create_element
     def audio(self, element, data, format='audio/wav'):
         """Inserts an audio player.
@@ -452,7 +452,7 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.audio, data)
         element.audio.format=format
 
-    @_export_to_io
+    @_export
     @_create_element
     def video(self, element, data, format='video/mp4'):
         """Inserts a video player.
@@ -470,7 +470,7 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format=format
 
-    @_export_to_io
+    @_export
     @_create_element
     def progress(self, element, value):
         """Displays the string as a h3 header.
@@ -494,7 +494,7 @@ class DeltaGenerator(object):
         """
         element.progress.value = value
 
-    @_export_to_io
+    @_export
     @_create_element
     def empty(self, element):
         """Adds an element that will not be rendered.
@@ -502,7 +502,7 @@ class DeltaGenerator(object):
         # NOTE: protobuf needs something to be set
         element.empty.unused = True
 
-    @_export_to_io
+    @_export
     @_create_element
     def map(self, element, points):
         """Creates a map element.
@@ -518,7 +518,7 @@ class DeltaGenerator(object):
         data_frame_proto.marshall_data_frame(points[LAT_LON],
             element.map.points)
 
-    @_export_to_io
+    @_export
     @_create_element
     def table(self, element, df):
         """Creates a map element.
@@ -582,7 +582,7 @@ def register_native_chart_method(chart_type):
         chart_type -- A string with the snake-case name of the chart type to
         add.
     """
-    @_export_to_io
+    @_export
     def chart_method(self, data, **kwargs):
         return self._native_chart(Chart(data, type=chart_type, **kwargs))
 

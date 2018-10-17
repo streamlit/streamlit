@@ -41,7 +41,7 @@ import traceback
 import types
 
 from streamlit.Connection import Connection
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
 from streamlit.util import escape_markdown
 
@@ -60,7 +60,7 @@ def _wrap_delta_generator_method(method):
 for name in dir(DeltaGenerator):
     member = getattr(DeltaGenerator, name)
 
-    if hasattr(member, EXPORT_TO_IO_FLAG):
+    if hasattr(member, EXPORT_FLAG):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
         setattr(this_module, name, _wrap_delta_generator_method(method))
