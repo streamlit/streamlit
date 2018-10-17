@@ -7,12 +7,14 @@ setup_2_3_shims(globals())
 
 import re
 
+
 def to_upper_camel_case(snake_case_str):
     """Converts snake_case to UpperCamelCase.
     Example:
         foo_bar -> FooBar
     """
     return ''.join(map(str.title, snake_case_str.split('_')))
+
 
 def to_lower_camel_case(snake_case_str):
     """Converts snake_case to lowerCamelCase.
@@ -27,18 +29,6 @@ def to_lower_camel_case(snake_case_str):
     else:
         return ''
 
-def to_lower_camel_case_if_no_underscores(snake_case_str):
-    """Converts snake_case to lowerCamelCase if there is no "_" in input.
-
-    If input has underscores, does nothing.
-
-    Example:
-        foo_bar -> fooBar
-        fooBar -> fooBar
-    """
-    if '_' in snake_case_str:
-        return to_lower_camel_case(snake_case_str)
-    return snake_case_str
 
 def to_snake_case(camel_case_str):
     """Converts UpperCamelCase and lowerCamelCase to snake_case.
@@ -50,21 +40,31 @@ def to_snake_case(camel_case_str):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camel_case_str)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def convert_dict_keys(func, dic):
-    """Applies a conversion function to all keys in a dict.
 
-    Args 
-    ----
-    func : a conversion function from string to string.
-    dic : the dictionary to convert in place.
+def convert_dict_keys(func, in_dict):
+    """Apply a conversion function to all keys in a dict.
+
+    Parameters
+    ----------
+    func : callable
+        The function to apply. Takes a str and returns a str.
+    in_dict : dict
+        The dictionary to convert. If some value in this dict is itself a dict,
+        it also gets recursively converted.
+
+    Returns
+    -------
+    dict
+        A new dict with all the contents of `in_dict`, but with the keys
+        converted by `func`.
+
     """
-    for k, v in dic.items():
+    out_dict = dict()
+    for k, v in in_dict.items():
         converted_key = func(k)
-        if converted_key == k: continue
-
-        dic.pop(k)
 
         if type(v) is dict:
-            dic[converted_key] = convert_dict_keys(func, v)
+            out_dict[converted_key] = convert_dict_keys(func, v)
         else:
-            dic[converted_key] = v
+            out_dict[converted_key] = v
+    return out_dict

@@ -4,7 +4,7 @@ import "Audio.proto";
 import "Balloons.proto";
 import "Chart.proto";
 import "DataFrame.proto";
-import "DeckGlMap.proto";
+import "DeckGlChart.proto";
 import "DocString.proto";
 import "Empty.proto";
 import "Exception.proto";
@@ -25,7 +25,7 @@ message Element {
     Chart chart = 4;
     DataFrame data_frame = 3;
     DataFrame table = 11;
-    DeckGlMap deck_gl_map = 15;
+    DeckGlChart deck_gl_chart = 15;
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;

@@ -14,12 +14,12 @@ import {dataFrameToArrayOfDicts} from '../dataFrameProto';
 
 import {Alert}  from 'reactstrap';
 
-// import './DeckGlMap.css';
+// import './DeckGlChart.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
 
-class DeckGlMap extends PureComponent {
+class DeckGlChart extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -27,9 +27,9 @@ class DeckGlMap extends PureComponent {
     this.mapStyle = 'grey';
 
     // TODO: Set lat/lon/zoom based on data, if not set explicitly.
-    const optStr = this.props.element.get('options');
-    const opt = optStr ? JSON.parse(optStr) : {};
-    const v = opt.viewport || {};
+    const specStr = this.props.element.get('spec');
+    const spec = specStr ? JSON.parse(specStr) : {};
+    const v = spec.viewport || {};
 
     this.state = {
       viewport: {
@@ -291,4 +291,4 @@ const Defaults = {
 };
 
 
-export default DeckGlMap;
+export default DeckGlChart;

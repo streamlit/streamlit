@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "bootstrap": "^4.1.3",
+    "deck.gl": "^6.0.5",
     "immutable": "^3.8.2",
     "leaflet": "^1.3.3",
     "moment": "^2.22.2",

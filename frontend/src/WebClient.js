@@ -22,7 +22,7 @@ import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
-import DeckGlMap from './elements/DeckGlMap';
+import DeckGlChart from './elements/DeckGlChart';
 import Table from './elements/Table';
 import Text from './elements/Text';
 import VegaLiteChart from './elements/VegaLiteChart';
@@ -428,7 +428,7 @@ class WebClient extends PureComponent {
           balloons: (balloons) => <Balloons balloons={balloons}/>,
           chart: (chart) => <Chart chart={chart} width={width}/>,
           dataFrame: (df) => <DataFrame df={df} width={width}/>,
-          deckGlMap: (el) => <DeckGlMap element={el} width={width}/>,
+          deckGlChart: (el) => <DeckGlChart element={el} width={width}/>,
           docString: (doc) => <DocString element={doc} width={width}/>,
           empty: (empty) => undefined,
           exception: (exc) => <ExceptionElement element={exc} width={width}/>,
