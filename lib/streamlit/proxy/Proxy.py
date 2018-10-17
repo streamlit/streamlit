@@ -20,39 +20,29 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+from streamlit import config
+from streamlit.util import get_static_dir
+
+from streamlit.streamlit_msg_proto import new_report_msg
+
+from tornado import gen, web
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
 import functools
+import os
+import platform
 import socket
 import subprocess
 import textwrap
 import traceback
 import urllib
 import webbrowser
-import subprocess
 
-from tornado import gen, web
-from tornado import httpclient
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-
-from streamlit import config
-from streamlit import protobuf
-from streamlit.logger import get_logger
 from streamlit.proxy.FSObserver import FSObserver
-from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_static_dir
 
-from tornado import gen, web
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-
-from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.proxy.FSObserver import FSObserver
-from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_static_dir
-
-
 LOGGER = get_logger()
+
 AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
@@ -65,8 +55,8 @@ def _print_remote_url(port, quoted_name):
         LOGGER.debug(f'proxy.externalIP set to {external_ip}')
     else:
         print('proxy.externalIP not set, attempting to autodetect IP')
-        external_ip = get_external_ip()
-        lan_ip = get_lan_ip()
+        external_ip = _get_external_ip()
+        lan_ip = _get_lan_ip()
 
     timeout_secs = config.get_option('proxy.waitForConnectionSecs')
 
@@ -75,8 +65,8 @@ def _print_remote_url(port, quoted_name):
               f'{HELP_DOC} for debugging hints.')
         return
 
-    external_url = get_report_url(external_ip, port, quoted_name)
-    lan_url = get_report_url(lan_ip, port, quoted_name)
+    external_url = _get_report_url(external_ip, port, quoted_name)
+    lan_url = _get_report_url(lan_ip, port, quoted_name)
 
     print(textwrap.dedent(f'''
         =============================================================
@@ -86,14 +76,15 @@ def _print_remote_url(port, quoted_name):
         =============================================================
     '''))
 
-def _launch_web_client(name):
-    """Launches a web browser to connect to the proxy to get the named
-    report.
 
-    Args
-    ----
+def _launch_web_client(name):
+    """Launch a web browser to connect to the proxy to get the named report.
+
+    Parameters
+    ----------
     name : string
         The name of the report to which the web browser should connect.
+
     """
     if config.get_option('proxy.useNode'):
         # If changing this, also change frontend/src/baseconsts.js
@@ -112,8 +103,9 @@ def _launch_web_client(name):
     else:
         webbrowser.open(url)
 
+
 def stop_proxy_on_exception(is_coroutine=False):
-    """Decorates WebSocketHandler callbacks to stop the proxy on exception."""
+    """Decorate WebSocketHandler callbacks to stop the proxy on exception."""
     def stop_proxy_decorator(callback):
         if is_coroutine:
             @functools.wraps(callback)
@@ -135,6 +127,7 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug('Stopped the proxy.')
                     raise
             return wrapped_coroutine
+
         else:
             @functools.wraps(callback)
             def wrapped_callback(web_socket_handler, *args, **kwargs):
@@ -148,8 +141,11 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug('Stopped the proxy.')
                     raise
             return wrapped_callback
+
         return functools.wraps(callback)(wrapped_callback)
+
     return stop_proxy_decorator
+
 
 class Proxy(object):
     """The main base class for the streamlit server."""
@@ -221,7 +217,7 @@ class Proxy(object):
         if headless and not self._received_client_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
-                f'Please go to {HELP_DOC} for debugging hints.')
+                  f'Please go to {HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -238,7 +234,9 @@ class Proxy(object):
         So that client connections can connect to it.
         """
         LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
-        LOGGER.debug(f'About to start registration: {list(self._connections.keys())} ({id(self._connections)})')
+        LOGGER.debug(
+            f'About to start registration: '
+            f'{list(self._connections.keys())} ({id(self._connections)})')
 
         # Register the connection and launch a web client if this is a new name.
         new_name = connection.name not in self._connections
@@ -256,7 +254,9 @@ class Proxy(object):
         loop = IOLoop.current()
         loop.call_later(timeout_secs, connection_timeout)
         LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
-        LOGGER.debug(f'Finished resistering connection: {list(self._connections.keys())} ({id(self._connections)})')
+        LOGGER.debug(
+            f'Finished resistering connection: '
+            f'{list(self._connections.keys())} ({id(self._connections)})')
 
     def try_to_deregister_proxy_connection(self, connection):
         """Try to deregister proxy connection.
@@ -278,6 +278,7 @@ class Proxy(object):
         connection : ProxyConnection
             The connection to deregister. It will be properly shutdown before
             deregistering.
+
         """
         del self._connections[connection.name]
         LOGGER.debug('Got rid of connection "%s".' % connection.name)
@@ -288,13 +289,14 @@ class Proxy(object):
 
     def potentially_stop(self):
         """Stop proxy if no open connections."""
-        LOGGER.debug('Stopping if there are no more connections: ' +
+        LOGGER.debug(
+            'Stopping if there are no more connections: ' +
             str(list(self._connections.keys())))
         if not self._connections:
             self.stop()
 
     @gen.coroutine
-    def on_client_opened(self, report_name, ws):
+    def on_client_opened(self, report_name, ws):  # noqa: D401
         """Called when a client connection is opened.
 
         Parameters
@@ -303,12 +305,13 @@ class Proxy(object):
             The name of the report the client connection is for.
         ws : ClientWebSocket
             The ClientWebSocket instance that just got opened.
+
         """
         connection, queue = yield self._add_client(report_name, ws)
         self._maybe_add_fs_observer(connection)
         raise gen.Return((connection, queue))
 
-    def on_client_closed(self, connection, queue):
+    def on_client_closed(self, connection, queue):  # noqa: D401
         """Called when a client connection is closed.
 
         Parameters
@@ -317,12 +320,13 @@ class Proxy(object):
             The connection object for the client that just got closed.
         queue : ReportQueue
             The queue for the closed client.
+
         """
         self._remove_fs_observer(connection)
         self._remove_client(connection, queue)
 
     @gen.coroutine
-    def on_client_waiting_for_proxy_conn(
+    def on_client_waiting_for_proxy_conn(  # noqa: D401
             self, report_name, ws, old_connection, old_queue):
         """Called when a client detects it has no corresponding ProxyConnection.
 
@@ -336,6 +340,7 @@ class Proxy(object):
             The connection object that just got closed.
         queue : ReportQueue
             The client queue corresponding to the closed connection.
+
         """
         self._remove_client(old_connection, old_queue)
         new_connection, new_queue = (
@@ -344,7 +349,16 @@ class Proxy(object):
 
     @gen.coroutine
     def _add_client(self, report_name, ws):
-        """Adds a queue to the connection for the given report_name."""
+        """Add a queue to the connection for the given report_name.
+
+        Parameters
+        ----------
+        report_name : string
+            The name of the report
+        ws
+            The websocket object.
+
+        """
         self._received_client_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
@@ -377,6 +391,7 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder to
             observe.
+
         """
         if not config.get_option('proxy.watchFileSystem'):
             return
@@ -398,6 +413,7 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder we should
             stop observing.
+
         """
         key = FSObserver.get_key(connection)
         observer = self._fs_observers.get(key)
@@ -408,8 +424,8 @@ class Proxy(object):
                 del self._fs_observers[key]
 
 
-def _on_fs_event(observer, event):
-    """Function to call when an FS event is called.
+def _on_fs_event(observer, event):  # noqa: D401
+    """Callback for FS events.
 
     Note: this will run in the Observer thread (created by the watchdog module).
     """
@@ -426,11 +442,14 @@ def _on_fs_event(observer, event):
     process.wait()
 
 
-def get_external_ip():
-    """Gets the *external* IP address of the current machine.
+def _get_external_ip():
+    """Get the *external* IP address of the current machine.
 
-    Returns:
-        IPv4 address as a string.
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
     """
     try:
         response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
@@ -442,27 +461,47 @@ def get_external_ip():
     return external_ip
 
 
-def get_lan_ip():
-    """Gets the *local* IP address of the current machine.
+def _get_lan_ip():
+    """Get the *local* IP address of the current machine.
 
     From: https://stackoverflow.com/a/28950776
 
-    Returns:
-        IPv4 address as a string.
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # Doesn't even have to be reachable
         s.connect(('8.8.8.8', 1))
         lan_ip = s.getsockname()[0]
-    except:
+    except Exception:
         lan_ip = '127.0.0.1'
     finally:
         s.close()
     return lan_ip
 
 
-def get_report_url(host, port, name):
+def _get_report_url(host, port, name):
+    """Return the URL of report defined by (host, port, name).
+
+    Parameters
+    ----------
+    host : string
+        The hostname or IP address of the current machine.
+    port : int
+        The port where Streamlit is running.
+    name : string
+        The name of the report.
+
+    Returns
+    -------
+    string
+        The remote IPv4 address.
+
+    """
     if host is None:
         return 'Unable to detect'
     return 'http://{}:{}/?name={}'.format(host, port, name)

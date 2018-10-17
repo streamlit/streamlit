@@ -4,7 +4,9 @@
 
 See: recharts.org
 
-All CamelCase names are convert to snake_case, for example:
+Usage
+-----
+All CamelCase names from ReCharts are converted to snake_case, for example::
 
     AreaChart -> area_chart
     CartesianGrid -> cartesian_grid
@@ -22,7 +24,7 @@ For example this React code:
             <Line type='monotone' dataKey='uv' stroke='#82ca9d' strokeDasharray='3 4 5 2'/>
     </LineChart>
 
-Would become:
+Becomes::
 
     line_chart = Chart(data, 'line_chart', width=600, height=300)
     line_chart.x_axis(data_key='name')
@@ -35,7 +37,7 @@ Would become:
     line_chart.line(type='monotone', data_key='uv', stroke='#82ca9d',
         stroke_dasharray='3 4 5 2')
 
-Or, with syntax sugar type-specific builders:
+Or, with syntax sugar type-specific builders::
 
     LineChart(data, width=600, height=300).x_axis(data_key='name')
     # These sugary builders already have all sorts of defaults set
@@ -71,26 +73,27 @@ class Chart(object):
     def __init__(self, data, type, width=0, height=0, **kwargs):
         """Construct a chart object.
 
-        Args
-        ----
-        type: string
+        Parameters
+        ----------
+        type : string
             A string with the snake-case chart type. Example: 'area_chart',
             'bar_chart', etc...
 
-        data: np.Array or pd.DataFrame
+        data : np.Array or pd.DataFrame
             Data to be plotted. Series are referenced by column name.
 
-        width: int
+        width : int
             The chart's width. Defaults to 0, which means "the default width"
             rather than actually 0px.
 
-        height: int
+        height : int
             The chart's height. Defaults to 0, which means "the default height"
             rather than actually 0px.
 
-        kwargs: anything
+        kwargs : anything
             Keyword arguments containg properties to be added to the ReChart's
             top-level element.
+
         """
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
@@ -103,12 +106,13 @@ class Chart(object):
     def append_component(self, component_name, props):
         """Set a chart component.
 
-        Args
-        ----
-        component_name: string
+        Parameters
+        ----------
+        component_name : string
             A snake-case string with the ReCharts component name.
-        props: anything
+        props : anything
             The ReCharts component value.
+
         """
         self._components.append(ChartComponent(component_name, props))
 
@@ -159,7 +163,7 @@ class Chart(object):
                 continue
 
             for i in range(numRepeats):
-                if isinstance(comp_value, dict_types):
+                if isinstance(comp_value, dict_types):  # noqa: F821
                     props = dict(
                         (k, self._materializeValue(v, i))
                         for (k, v) in comp_value.items()
@@ -171,16 +175,17 @@ class Chart(object):
     def _materializeValue(self, value, currCycle):
         """Replace ColumnAtCurrentIndex, etc with a column name if needed.
 
-        Args
-        ----
-        value: anything
+        Parameters
+        ----------
+        value : anything
             If value is a ColumnAtCurrentIndex then it gets replaces with a
             column name. If ValueCycler, it returns the current item in the
             cycler's list. If it's anything else, it just passes through.
 
-        currCycle: int
+        currCycle : int
             For repeated fields (denoted via ForEachColumn) this is the number
             of the current column.
+
         """
         if value == CURRENT_COLUMN_NAME:
             i = currCycle
@@ -201,13 +206,13 @@ class Chart(object):
 def register_component(component_name, implemented):
     """Add a method to the Chart class to set the given component.
 
-    Args
-    ----
-    component_name: string
+    Parameters
+    ----------
+    component_name : string
         A snake-case string containing the name of a chart component accepted by
         ReCharts.
 
-    implemented: boolean
+    implemented : boolean
         True/false depending on whether Streamlit supports the given
         component_name or not.
 
@@ -222,8 +227,8 @@ def register_component(component_name, implemented):
 
     >>> register_component('baz')
     >>> c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
-    """
 
+    """
     def append_component_method(self, **props):
         if implemented:
             self.append_component(component_name, props)
@@ -245,10 +250,11 @@ def register_type_builder(chart_type):
     These sugary builders also set up some nice defaults from the
     DEFAULT_COMPONENTS dict, that can be overriden after the instance is built.
 
-    Args
-    ----
-    chart_type: string
+    Parameters
+    ----------
+    chart_type : string
         A string with the upper-camel-case name of the chart type to add.
+
     """
     chart_type_snake = to_snake_case(chart_type)
 
