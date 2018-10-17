@@ -290,7 +290,7 @@ class Connection(object):
         LOGGER.debug('Closed the connection object.')
 
     def _cleanup_on_exit(self, main_thread, original_excepthook):
-        """Cleanup the thread.
+        """Perform final cleanup after main thread finishes.
 
         This waits for the main thread to exit, then does some final cleanup.
         """
