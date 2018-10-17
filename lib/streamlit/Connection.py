@@ -292,7 +292,8 @@ class Connection(object):
     def _cleanup_on_exit(self, main_thread, original_excepthook):
         """Perform final cleanup after main thread finishes.
 
-        This waits for the main thread to exit, then does some final cleanup.
+        This thread waits for the main thread to exit, then does some final
+        cleanup.
         """
         # Wait for the main thread to end.
         LOGGER.debug('Cleanup thread waiting for main thread to end.')
