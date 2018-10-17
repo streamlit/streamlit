@@ -330,7 +330,7 @@ def display_reference():
 
     st.header('Animation')
     st.write(
-        'Every `streamlit.io` method (except `st.write`) returns a handle '
+        'Every Streamlit method (except `st.write`) returns a handle '
         'which can be used for animation.')
 
     with st.echo():
