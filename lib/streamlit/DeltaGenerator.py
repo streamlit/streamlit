@@ -18,12 +18,12 @@ import textwrap
 import traceback
 
 from streamlit import DeckGlChart
+from streamlit import VegaLiteChart
 from streamlit import data_frame_proto
 from streamlit import generic_binary_proto
 from streamlit import image_proto
 from streamlit import protobuf
 from streamlit.Chart import Chart
-from streamlit.VegaLiteChart import VegaLiteChart
 from streamlit.caseconverters import to_snake_case
 from streamlit.chartconfig import CHART_TYPES
 from streamlit.logger import get_logger
@@ -370,8 +370,7 @@ class DeltaGenerator(object):
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
         """Displays a chart using the Vega Lite library.
         """
-        vc = VegaLiteChart(data, spec, **kwargs)
-        vc.marshall(element.vega_lite_chart)
+        VegaLiteChart.marshall(element.vega_lite_chart, data, spec, **kwargs)
 
     @_export_to_io
     @_create_element
@@ -579,7 +578,7 @@ class DeltaGenerator(object):
                 }])
 
         """
-        DeckGlChart.marshall(element, data, layers, kwargs)
+        DeckGlChart.marshall(element.deck_gl_chart, data, layers, **kwargs)
 
     @_export_to_io
     @_create_element

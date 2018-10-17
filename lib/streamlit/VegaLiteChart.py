@@ -18,44 +18,37 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class VegaLiteChart:
-    def __init__(self, data=None, spec=None, **kwargs):
-        """Constructs a Vega Lite chart object.
+def marshall(proto, data=None, spec=None, **kwargs):
+    """Constructs a Vega Lite chart object.
 
-        Args
-        ----
-        data : np.Array or pd.DataFrame or None
-            Data to be plotted.
+    Args
+    ----
+    data : np.Array or pd.DataFrame or None
+        Data to be plotted.
 
-        spec : Dict
-            The Vega Lite spec for the chart.
+    spec : Dict
+        The Vega Lite spec for the chart.
 
-        **kwargs : any type
-            Syntactic sugar notation to add items to the Vega Lite spec. Keys
-            are "unflattened" at the underscore characters. For example,
-            foo_bar_baz=123 becomes foo={'bar': {'bar': 123}}.
-        """
-        if data is None:
-            data = pd.DataFrame([])
+    **kwargs : any type
+        Syntactic sugar notation to add items to the Vega Lite spec. Keys
+        are "unflattened" at the underscore characters. For example,
+        foo_bar_baz=123 becomes foo={'bar': {'bar': 123}}.
+    """
+    if data is None:
+        data = pd.DataFrame([])
 
-        elif type(data) is not pd.DataFrame:
-            data = pd.DataFrame(data)
+    elif type(data) is not pd.DataFrame:
+        data = pd.DataFrame(data)
 
-        if spec is None:
-            spec = dict()
+    if spec is None:
+        spec = dict()
 
-        # Merge spec with unflattened kwargs, where kwargs take precedence.
-        # This only works for string keys, but kwarg keys are strings anyways.
-        spec = dict(spec, **vega_unflatten(kwargs))
+    # Merge spec with unflattened kwargs, where kwargs take precedence.
+    # This only works for string keys, but kwarg keys are strings anyways.
+    spec = dict(spec, **vega_unflatten(kwargs))
+    proto.spec = json.dumps(spec)
 
-        self._data = data
-        self._spec = json.dumps(spec)
-
-    def marshall(self, proto):
-        """Loads this chart data into a vega_lite_chart protobuf."""
-        proto.spec = self._spec
-
-        data_frame_proto.marshall_data_frame(self._data, proto.data)
+    data_frame_proto.marshall_data_frame(data, proto.data)
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
