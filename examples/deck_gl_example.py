@@ -3,10 +3,11 @@ import os
 import pandas as pd
 import streamlit as st
 
+
 st.title('DeckGL example')
 
 random_points = pd.DataFrame(
-    np.random.randn(1000, 2) / 25 + [37.76, -122.4],
+    np.random.randn(1000, 2) / 50 + [37.76, -122.4],
     columns=['lat', 'lon'])
 
 
@@ -39,7 +40,7 @@ st.deck_gl_chart(
     layers=[{
         'data': random_points,
         'type': 'HexagonLayer',
-        'radius': 500,
+        'radius': 250,
         'extruded': True,
     }],
 )
@@ -98,14 +99,14 @@ st.deck_gl_chart(
         'pickable': True,
         'extruded': True,
 
-    # Now plot locations of Bart stops
-    # ...and let's size the stops according to traffic
+    # # Now plot locations of Bart stops
+    # # ...and let's size the stops according to traffic
     # }, {
     #     'type': 'ScatterplotLayer',
     #     'data': bart_stop_stats,
     #     'pickable': True,
     #     'autoHighlight': True,
-    #     'radiusScale': 0.02,
+    #     'radiusScale': 0.002,  # XXX
     #     'encoding': {
     #         'radius': 'exits',
     #     },
@@ -126,5 +127,7 @@ st.deck_gl_chart(
         'data': bart_path_stats,
         'pickable': True,
         'autoHighlight': True,
-        'strokeWidth': 10,
+        'encoding': {
+            'strokeWidth': 10,
+        },
     }])

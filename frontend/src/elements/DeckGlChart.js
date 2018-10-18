@@ -9,12 +9,12 @@ import DeckGL, {
   ScreenGridLayer,
   TextLayer,
 } from 'deck.gl';
-import MapGL from 'react-map-gl';
+import {StaticMap} from 'react-map-gl';
 import {dataFrameToArrayOfDicts} from '../dataFrameProto';
 
 import {Alert}  from 'reactstrap';
 
-// import './DeckGlChart.css';
+import './DeckGlChart.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
@@ -23,16 +23,11 @@ class DeckGlChart extends PureComponent {
   constructor(props) {
     super(props);
 
-    // TODO: Grab map style from props.
-    this.mapStyle = 'grey';
-
-    // TODO: Set lat/lon/zoom based on data, if not set explicitly.
     const specStr = this.props.element.get('spec');
     const spec = specStr ? JSON.parse(specStr) : {};
     const v = spec.viewport || {};
 
-    this.state = {
-      viewport: {
+    this.initialViewState = {
         width: v.width || props.width,
         height: v.height || 500,
         longitude: v.longitude || 0,
@@ -40,38 +35,51 @@ class DeckGlChart extends PureComponent {
         pitch: v.pitch || 0,
         bearing: v.bearing || 0,
         zoom: v.zoom || 1,
-      },
     };
+
+    this.mapStyle = getStyleUrl(v.mapStyle);
+
+    this._fixHexLayerBug_bound = this._fixHexLayerBug.bind(this);
+    this.state = {initialized: false};
+
+    // HACK: Load layers a little after loading the map, to hack around a bug
+    // where HexagonLayers were not drawing on first load but did load when the
+    // script got re-executed.
+    window.setTimeout(this._fixHexLayerBug_bound, 0);
   }
 
-  _onViewportChange(viewport) {
-    this.setState({
-      viewport: {...this.state.viewport, ...viewport},
-    });
+  _fixHexLayerBug() {
+    this.setState({initialized: true});
   }
 
   render() {
     try {
-      if (this.mapStyle) {
-        return (
-          <MapGL
-            {...this.state.viewport}
-            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-            onViewportChange={this._onViewportChange.bind(this)}
+      return (
+        <div
+            className='deckglchart'
+            style={{
+              height: this.initialViewState.height,
+              width: this.initialViewState.width,
+            }}
             >
-            <DeckGL
-              {...this.state.viewport}
-              layers={this.buildLayers()} />
-          </MapGL>
-        );
-
-      } else {
-        return (
           <DeckGL
-            {...this.state.viewport}
-            layers={this.buildLayers()} />
-        );
-      }
+              initialViewState={this.initialViewState}
+              height={this.initialViewState.height}
+              width={this.initialViewState.width}
+              controller={true}
+              layers={this.state.initialized ? this.buildLayers() : []}
+              //onWebGLInitialized={this._fixHexLayerBug_bound}
+              //onViewportChange={this._fixHexLayerBug_bound}
+              >
+            <StaticMap
+                height={this.initialViewState.height}
+                width={this.initialViewState.width}
+                mapStyle={this.mapStyle}
+                mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+                />
+          </DeckGL>
+        </div>
+      );
     } catch (e) {
       console.error(e.stack);
       return (
@@ -151,6 +159,9 @@ function fallback() {
   return null;
 }
 
+
+/* Define a bunch of getters */
+
 function getPositionFromLatLonColumns(d) {
   return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)];
 }
@@ -195,20 +206,22 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
 
 /**
  * Converts spec from
- * {
- *   ...
- *   encoding: {
- *     foo: 'bar',
- *   },
- *   ...
- * }
  *
- * to
- * {
- *   ...
- *   getFoo: d => d.bar,
- *   ...
- * }
+ *     {
+ *       ...
+ *       encoding: {
+ *         foo: 'bar',
+ *       },
+ *       ...
+ *     }
+ *
+ * to:
+ *
+ *     {
+ *       ...
+ *       getFoo: d => d.bar,
+ *       ...
+ *     }
  */
 function parseEncodings(spec) {
   const encoding = spec.encoding;
@@ -227,16 +240,20 @@ function parseEncodings(spec) {
 
 
 /**
- * Takes a string 'foo' and returns 'getFoo'.
+ * Convert a string 'foo' to its getter name 'getFoo'.
  */
 function makeGetterName(key) {
-  if (typeof key !== 'string' || key.length === 0)
+  if (typeof key !== 'string' || key.length === 0) {
     throw new Error('Encodings must be strings');
+  }
 
   return 'get' + key.charAt(0).toUpperCase() + key.slice(1);
 }
 
 
+/**
+ * Defines default getters for columns.
+ */
 const Defaults = {
   ArcLayer: {
     getSourceColor: getSourceColorFromSourceColorRGBAColumns,
@@ -289,6 +306,27 @@ const Defaults = {
     getPosition: getPositionFromLatLonColumns,
   },
 };
+
+
+/**
+ * Take a short "map style" string and convert to the full URL for the style.
+ * (And it only does this if the input string is not already a URL.)
+ *
+ * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
+ */
+function getStyleUrl(styleStr) {
+  if (!styleStr) {
+    styleStr = 'light-v9';
+
+  } else if (
+      styleStr.startsWith('http://') ||
+      styleStr.startsWith('https://') ||
+      styleStr.startsWith('mapbox://')) {
+    return styleStr;
+  }
+
+  return `mapbox://styles/mapbox/${styleStr}`;
+}
 
 
 export default DeckGlChart;
