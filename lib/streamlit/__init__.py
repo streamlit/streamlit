@@ -37,7 +37,7 @@ import types
 
 # Import some files directly from this module
 from streamlit.caching import cache
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG 
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 from streamlit.Connection import Connection
 from streamlit.util import escape_markdown
 # import streamlit as st

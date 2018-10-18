@@ -115,7 +115,7 @@ def vega_unflatten(flat_dict):
     for k, v in list(out_dict.items()):
         if k in _ENCODINGS:
             if 'encoding' not in out_dict:
-                out_dict['encoding'] = dict() 
+                out_dict['encoding'] = dict()
             out_dict['encoding'][k] = v
             out_dict.pop(k)
 
