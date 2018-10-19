@@ -11,9 +11,7 @@ import yaml
 from tornado import gen, httpclient
 from tornado.concurrent import run_on_executor, futures
 
-import streamlit
 from streamlit.logger import get_logger
-
 LOGGER = get_logger()
 
 class Config(object):

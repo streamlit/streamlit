@@ -9,9 +9,9 @@ import os
 from streamlit import config
 from streamlit import protobuf
 from streamlit.S3Connection import S3
-from streamlit.logger import get_logger
 from streamlit.proxy import Proxy
 
+from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
