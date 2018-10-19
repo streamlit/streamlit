@@ -1,7 +1,5 @@
 # -*- coding: future_fstrings -*-
-
-"""Stores information shared by both local_connections and
-client_connections related to a particular report."""
+"""Stores information about local and client connections for a report."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -11,23 +9,38 @@ setup_2_3_shims(globals())
 import json
 
 from streamlit.ReportQueue import ReportQueue
-from streamlit import protobuf
 
 from streamlit.logger import get_logger
 from streamlit.util import get_local_id
 LOGGER = get_logger()
 
+
 class ProxyConnection(object):
-    """Represents a connection."""
+    """Represents a connection.
+
+    The lifetime of a ProxyConnection is tied to the lifetime of client
+    connections.
+    """
 
     def __init__(self, new_report_msg, name):
+        """Constructor.
+
+        Parameters
+        ----------
+        new_report_msg : NewReport proto
+            Protobuf with all sorts of useful information about this report.
+        name : string
+            The report's name.
+
+        """
         # The uuid of this report.
         self.id = new_report_msg.id
 
         # The current working directory from which this report was launched.
         self.cwd = new_report_msg.cwd
 
-        # The command and command-line arguments used to launch this connection.
+        # The command and command-line arguments used to launch this
+        # connection.
         self.command_line = list(new_report_msg.command_line)
 
         # Full path of the file that caused this connection to be initiated,
@@ -50,58 +63,98 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._client_queues = []
 
-    def finished_local_connection(self):
-        """Removes the flag indicating an active local connection."""
+    def close_local_connection(self):
+        """Close local connection."""
         self._has_local = False
         self._master_queue.close()
         for queue in self._client_queues:
             queue.close()
 
     def end_grace_period(self):
-        """Inicates that the grace period is over and the connection can be
-        closed when it no longer has any local or client connections."""
+        """End the grace period, during which we don't close the connection.
+
+        This indicates that the connection can be closed when it no longer has
+        any local or client connections.
+        """
         self._in_grace_period = False
 
     def can_be_deregistered(self):
-        """Indicates whether we can deregister this connection."""
+        """Check whether we can deregister this connection.
+
+        Returns
+        -------
+        boolean
+            True iff the connectionn has no clients.
+
+        """
         has_clients = len(self._client_queues) > 0
         return not (self._in_grace_period or self._has_local or has_clients)
 
     def enqueue(self, delta):
-        """Stores the delta in the master queue and transmits to all clients
-        via client_queues."""
+        """Enqueue a delta.
+
+        Stores the delta in the master queue and transmits to all clients
+        via client_queues.
+
+        Parameters
+        ----------
+        delta : Delta
+            The delta protobuf to enqueue.
+
+        """
         self._master_queue(delta)
         for queue in self._client_queues:
             queue(delta)
 
     def add_client_queue(self):
-        """Adds a queue for a new client by cloning the master queue."""
+        """Add a queue for a new client by cloning the master queue.
+
+        Returns
+        -------
+        ReportQueue
+            The new queue.
+
+        """
         self.end_grace_period()
         new_queue = self._master_queue.clone()
         self._client_queues.append(new_queue)
         return new_queue
 
     def remove_client_queue(self, queue):
-        """Removes the client queue. Returns True iff the client queue list is
-        empty."""
+        """Remove the client queue.
+
+        Returns
+        -------
+        boolean
+            True iff the client queue list is empty.
+
+        """
         self._client_queues.remove(queue)
 
     def serialize_report_to_files(self):
-        """Returns a list of pairs to be serialized of the form:
+        """Return the report as an easily-serializable list of tuples.
+
+        Returns
+        -------
+        list of tuples
+            A list of pairs of the form:
+
             [
                 (filename_1, data_1),
                 (filename_2, data_2), etc..
             ]
+
         """
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
         local_id = str(get_local_id())
         manifest = dict(
-            name = self.name,
-            local_id = local_id,
-            nDeltas = len(deltas)
+            name=self.name,
+            local_id=local_id,
+            nDeltas=len(deltas)
         )
-        return \
-            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] + \
+        return (
+            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] +
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
                 for idx, delta in enumerate(deltas)]
+        )

@@ -1,7 +1,5 @@
 # -*- coding: future_fstrings -*-
-
 #!./streamlit_run
-
 """Example of everything that's possible in streamlit."""
 
 # Python 2/3 compatibility
@@ -200,7 +198,7 @@ def display_reference():
         with st.echo():
             image = Image.open(BytesIO(image_bytes))
 
-            st.image(image, caption="Sunset", use_column_width=True)
+            st.image(image, caption='Sunset', use_column_width=True)
 
             array = np.array(image).transpose((2, 0, 1))
             channels = array.reshape(array.shape + (1,))
@@ -213,10 +211,10 @@ def display_reference():
                  'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
     audio_bytes = read_file_from_url(audio_url)
 
-    st.write('''
+    st.write("""
         Streamlit can play audio in all formats supported by modern
         browsers. Below is an example of an _ogg_-formatted file:
-        ''')
+        """)
 
     if audio_bytes is not None:
         with st.echo():
@@ -224,10 +222,10 @@ def display_reference():
 
     st.header('Playing video')
 
-    st.write('''
+    st.write("""
         Streamlit can play video in all formats supported by modern
         browsers. Below is an example of an _mp4_-formatted file:
-        ''')
+        """)
 
     video_url = ('https://www.sample-videos.com/video/mp4/480/'
                  'big_buck_bunny_480p_2mb.mp4')
@@ -247,8 +245,8 @@ def display_reference():
 
     with st.echo():
         st.text("Here's preformatted text instead of _Markdown_!\n"
-                "       ^^^^^^^^^^^^\n"
-                "Rock on! \m/(^_^)\m/ ")
+                '       ^^^^^^^^^^^^\n'
+                'Rock on! \m/(^_^)\m/ ')
 
     st.header('JSON')
 
@@ -267,10 +265,10 @@ def display_reference():
     st.header('Alert boxes')
 
     with st.echo():
-        st.error("This is an error message")
-        st.warning("This is a warning message")
-        st.info("This is an info message")
-        st.success("This is a success message")
+        st.error('This is an error message')
+        st.warning('This is a warning message')
+        st.info('This is an info message')
+        st.success('This is a success message')
 
     st.header('Progress Bars')
 
@@ -332,7 +330,7 @@ def display_reference():
 
     st.header('Animation')
     st.write(
-        'Every `streamlit.io` method (except `st.write`) returns a handle '
+        'Every Streamlit method (except `st.write`) returns a handle '
         'which can be used for animation.')
 
     with st.echo():

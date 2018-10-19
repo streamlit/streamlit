@@ -8,6 +8,10 @@ DeltaGenerator from the singleton connection object (in streamlit.connection)
 and then call the corresponding function on that DeltaGenerator.
 """
 
+# NOTE: You'll see lots of "noqa: F821" in this file. That's because we
+# manually mess with the local namespace so the linter can't know that some
+# identifiers actually exist in the namespace.
+
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
@@ -17,12 +21,13 @@ setup_2_3_shims(globals())
 import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version
 
+# Must be at the top, to avoid circular dependency.
 from . import logger
+from streamlit import config
 logger.set_log_level(config.get_option('log_level').upper())
 logger.init_tornado_logs()
 LOGGER = logger.get_logger('root')
 
-# Python libraries we need.
 import contextlib
 import functools
 import numpy as np
@@ -35,17 +40,14 @@ import threading
 import traceback
 import types
 
-# Import some files directly from this module
-from streamlit.caching import cache
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_TO_IO_FLAG
 from streamlit.Connection import Connection
+from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
+from streamlit.caching import cache  # Just for export.
 from streamlit.util import escape_markdown
-# import streamlit as st
-# from streamlit import config
-# from types import SimpleNamespace
 
 
 this_module = sys.modules[__name__]
+
 
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
@@ -54,25 +56,27 @@ def _wrap_delta_generator_method(method):
         return method(dg, *args, **kwargs)
     return wrapped_method
 
+
 for name in dir(DeltaGenerator):
     member = getattr(DeltaGenerator, name)
 
-    if hasattr(member, EXPORT_TO_IO_FLAG):
+    if hasattr(member, EXPORT_FLAG):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
         setattr(this_module, name, _wrap_delta_generator_method(method))
 
-def write(*args):
-    """Writes its arguments to the Report.
 
-    Prints its arguments to the current Report. Unlike other streamlit
-    functions, write() has two unique properties:
+def write(*args):
+    """Write arguments to the report.
+
+    Unlike other streamlit functions, write() has some unique properties:
 
         1. You can pass in multiple arguments, all of which will be written.
-        2. It's behavior depends on the input types as follows.
+        2. Its behavior depends on the input types as follows.
+        3. It returns None, so it's "slot" in the report cannot be reused.
 
-    Args
-    ----
+    Parameters
+    ----------
     *args : any
         One or many objects to print to the Report.
 
@@ -85,20 +89,13 @@ def write(*args):
         - write(module)     : Displays infomration about the module.
         - write(obj)        : The default is to print str(obj).
 
-    Returns
-    -------
-    If *one* argument is passed, write() returns a DeltaGenerator
-    which allows you to overwrite this element.
-
-    IF *multiple* arguments are passed, write() returns none.
-
     Examples
     --------
-    These are examples of writing things::
-
+    ::
         write('Hello, *World!*')
         write('1 + 1 = ', 2)
         write('This is a DataFrame', data_frame, 'No, really!!')
+
     """
     DATAFRAME_LIKE_TYPES = (
         pd.DataFrame,
@@ -112,23 +109,23 @@ def write(*args):
         types.ModuleType,
     )
 
-    # return markdown(*args)
     try:
         string_buffer = []
+
         def flush_buffer():
             if string_buffer:
-                markdown(' '.join(string_buffer))
+                markdown(' '.join(string_buffer))  # noqa: F821
                 string_buffer[:] = []
 
         for arg in args:
-            if isinstance(arg, string_types):
+            if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
             elif isinstance(arg, DATAFRAME_LIKE_TYPES):
                 flush_buffer()
-                dataframe(arg)
+                dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
                 flush_buffer()
-                exception(arg)
+                exception(arg)  # noqa: F821
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
@@ -136,38 +133,42 @@ def write(*args):
                 string_buffer.append('`%s`' % escape_markdown(str(arg)))
 
         flush_buffer()
-    except:
+
+    except Exception:
         _, exc, exc_tb = sys.exc_info()
-        exception(exc, exc_tb)
+        exception(exc, exc_tb)  # noqa: F821
+
 
 @contextlib.contextmanager
 def spinner(text):
     """Temporarily displays a message while executing a block of code.
 
-    Args
-    ----
+    Parameters
+    ----------
     text : string
         A message to display while executing that block
 
     Examples
     --------
     ::
-
         with st.spinner('Wait for it...'):
             time.sleep(5)
         st.success('Done!')
+
     """
     try:
         # Set the message 0.1 seconds in the future to avoid annoying flickering
         # if this spinner runs too quickly.
         DELAY_SECS = 0.1
-        message = empty()
+        message = empty()  # noqa: F821
         display_message = True
         display_message_lock = threading.Lock()
+
         def set_message():
             with display_message_lock:
                 if display_message:
                     message.warning(str(text))
+
         threading.Timer(DELAY_SECS, set_message).start()
 
         # Yield control back to the context.
@@ -176,6 +177,7 @@ def spinner(text):
         with display_message_lock:
             display_message = False
         message.empty()
+
 
 @contextlib.contextmanager
 def echo():
@@ -186,9 +188,10 @@ def echo():
     ::
         with st.echo():
             st.write('This code will be printed')
+
     """
     from streamlit.compatibility import running_py3
-    code = empty()
+    code = empty()  # noqa: F821
     try:
         spaces = re.compile('\s*')
         frame = traceback.extract_stack()[-3]
@@ -212,8 +215,10 @@ def echo():
                 lines_to_display.append(line)
         lines_to_display = textwrap.dedent(''.join(lines_to_display))
         code.markdown(f'```\n{lines_to_display}\n```')
-    except FileNotFoundError as err:
+
+    except FileNotFoundError as err:  # noqa: F821
         code.warning(f'Unable to display code. {str(err)}')
+
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
@@ -224,6 +229,7 @@ def echo():
 _this_may_be_proxy = False
 if sys.argv[0] in ('-m', '-c'):
     _this_may_be_proxy = True
+
 
 # Test whether this is the 'streamlit' command.
 _this_may_be_streamlit_command = os.path.split(sys.argv[0])[1] == 'streamlit'
@@ -238,56 +244,3 @@ _this_may_be_streamlit_command = os.path.split(sys.argv[0])[1] == 'streamlit'
 # that the connection may be established later.
 if not (_this_may_be_proxy or _this_may_be_streamlit_command):
     Connection.get_connection().get_delta_generator()
-
-### DEPRECATION WARNING ###
-# Everything below this point exists TEMPORARILY to emulate the old io
-# module and to emit a deprecation warning in case someone uses it.
-def _IO_show_warning(func):
-    @functools.wraps(func)
-    def wrapped(io_obj, *args, **kwargs):
-        if not io_obj._emitted_deprecation_warning:
-            error('The io package is deprecated. '
-                'Please import streamlit as follows:\nimport streamlit as st')
-            io_obj._emitted_deprecation_warning = True
-        func(*args, **kwargs)
-    return wrapped
-
-class _IO(object):
-    """THIS CLAASS WILL BE REMOVED SOON. It exists to mimic the old io
-    package and print a deprecation error."""
-    def __init__(self):
-        self._emitted_deprecation_warning = False
-
-    area_chart = _IO_show_warning(area_chart)
-    audio = _IO_show_warning(audio)
-    bar_chart = _IO_show_warning(bar_chart)
-    chart = _IO_show_warning(
-        lambda *args: error('Private method "chart" was removed'))
-    dataframe = _IO_show_warning(dataframe)
-    echo = _IO_show_warning(lambda *args: error('Please use st.echo()'))
-    empty = _IO_show_warning(empty)
-    error = _IO_show_warning(error)
-    exception = _IO_show_warning(exception)
-    header = _IO_show_warning(header)
-    help = _IO_show_warning(help)
-    image = _IO_show_warning(image)
-    img = _IO_show_warning(img)
-    info = _IO_show_warning(info)
-    json = _IO_show_warning(json)
-    line_chart = _IO_show_warning(line_chart)
-    link = _IO_show_warning(link)
-    map = _IO_show_warning(map)
-    markdown = _IO_show_warning(markdown)
-    progress = _IO_show_warning(progress)
-    spinner = _IO_show_warning(lambda *args: error('Please use st.spinner()'))
-    subheader = _IO_show_warning(subheader)
-    success = _IO_show_warning(success)
-    table = _IO_show_warning(table)
-    text = _IO_show_warning(text)
-    title = _IO_show_warning(title)
-    video = _IO_show_warning(video)
-    warning = _IO_show_warning(warning)
-    write = _IO_show_warning(write)
-
-# This class is a pseudo-package which exists to emit deprecation warnings.
-io = _IO()
