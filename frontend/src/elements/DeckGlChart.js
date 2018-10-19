@@ -281,7 +281,7 @@ function makeGetterName(key) {
     throw new Error('Encodings must be strings');
   }
 
-  return 'get' + key.charAt(0).toUpperCase() + key.slice(1);
+  return `get${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 
 

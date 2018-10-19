@@ -405,7 +405,7 @@ class WebClient extends PureComponent {
             <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               <AutoSizer className="main">
-                {({width}) => this.renderElements(width)}
+                { ({width}) => this.renderElements(width) }
               </AutoSizer>
             </Col>
           </Row>

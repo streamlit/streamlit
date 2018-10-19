@@ -5,6 +5,8 @@
 import { dispatchOneOf, updateOneOf } from './immutableProto';
 import { format } from './format';
 
+export const INDEX_COLUMN_DESIGNATOR = 'index';
+
 /**
  * Returns a dictionary of integers:
  *   { headerRows, headerCols, dataRows, dataCols, cols, rows }
@@ -37,8 +39,6 @@ export function tableGetRowsAndCols(table) {
   return [rows, cols];
 }
 
-export const INDEX_COLUMN_DESIGNATOR = 'index';
-
 /**
  * Converts dataframe to array-of-dicts format.
  *
@@ -57,7 +57,7 @@ export function dataFrameToArrayOfDicts(df) {
   const dfData = df.get('data');
 
   for (let r = 0; r < nRows; r++) {
-    let rowDict = {};
+    const rowDict = {};
 
     for (let c = 0; c < nCols; c++) {
       rowDict[indexGet(dfColumns, 0, c)] = tableGet(dfData, c, r);
@@ -67,15 +67,6 @@ export function dataFrameToArrayOfDicts(df) {
   }
 
   // TODO: Handle indices too.
-  //const dfIndex = df.get('index');
-  //const nIndices = indexLen(dfIndex);
-  //
-  //for (let i = 0; i < nIndices; i++) {
-  //  for (let r = 0; r < nRows; r++) {
-  //    dataArr[r][INDEX_COLUMN_DESIGNATOR + '[' + i + ']'] =
-  //        indexGet(dfIndex, i, r);
-  //  }
-  //}
 
   return dataArr;
 }
