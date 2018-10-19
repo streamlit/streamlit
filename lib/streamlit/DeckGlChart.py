@@ -1,5 +1,4 @@
-"""A Python wrapper around DeckGl.
-"""
+"""A Python wrapper around DeckGl."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -7,16 +6,14 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import pandas as pd
-import sys
 
-from streamlit import data_frame_proto, protobuf
-from streamlit.dicttools import unflatten
+from streamlit import data_frame_proto
 from streamlit.caseconverters import to_lower_camel_case, convert_dict_keys
 
 # setup logging
 from streamlit.logger import get_logger
 LOGGER = get_logger()
+
 
 def marshall(proto, data, layers, **kwargs):
     """Marshall a proto with DeckGL chart info.
@@ -36,7 +33,8 @@ def marshall(proto, data, layers, **kwargs):
 
     for layer in layers:
         # Don't add layers that have no data.
-        if 'data' not in layer: continue
+        if 'data' not in layer:
+            continue
 
         # Remove DataFrame because it's not JSON-serializable
         data = layer.pop('data')

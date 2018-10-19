@@ -1,4 +1,4 @@
-import React, {PureComponent} from 'react';
+import React, { PureComponent, PropTypes } from 'react';
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -9,15 +9,16 @@ import DeckGL, {
   ScreenGridLayer,
   TextLayer,
 } from 'deck.gl';
-import {StaticMap} from 'react-map-gl';
-import {dataFrameToArrayOfDicts} from '../dataFrameProto';
-
-import {Alert}  from 'reactstrap';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import Immutable from 'immutable';
+import { Alert } from 'reactstrap';
+import { StaticMap } from 'react-map-gl';
 
 import './DeckGlChart.css';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { dataFrameToArrayOfDicts } from '../dataFrameProto';
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
+
 
 class DeckGlChart extends PureComponent {
   constructor(props) {
@@ -28,55 +29,53 @@ class DeckGlChart extends PureComponent {
     const v = spec.viewport || {};
 
     this.initialViewState = {
-        width: v.width || props.width,
-        height: v.height || 500,
-        longitude: v.longitude || 0,
-        latitude: v.latitude || 0,
-        pitch: v.pitch || 0,
-        bearing: v.bearing || 0,
-        zoom: v.zoom || 1,
+      width: v.width || props.width,
+      height: v.height || 500,
+      longitude: v.longitude || 0,
+      latitude: v.latitude || 0,
+      pitch: v.pitch || 0,
+      bearing: v.bearing || 0,
+      zoom: v.zoom || 1,
     };
 
     this.mapStyle = getStyleUrl(v.mapStyle);
 
-    this._fixHexLayerBug_bound = this._fixHexLayerBug.bind(this);
-    this.state = {initialized: false};
+    this.fixHexLayerBug_bound = this.fixHexLayerBug.bind(this);
+    this.state = { initialized: false };
 
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    window.setTimeout(this._fixHexLayerBug_bound, 0);
+    setTimeout(this.fixHexLayerBug_bound, 0);
   }
 
-  _fixHexLayerBug() {
-    this.setState({initialized: true});
+  fixHexLayerBug() {
+    this.setState({ initialized: true });
   }
 
   render() {
     try {
       return (
         <div
-            className='deckglchart'
-            style={{
-              height: this.initialViewState.height,
-              width: this.initialViewState.width,
-            }}
-            >
+          className="deckglchart"
+          style={{
+            height: this.initialViewState.height,
+            width: this.initialViewState.width,
+          }}
+        >
           <DeckGL
-              initialViewState={this.initialViewState}
+            initialViewState={this.initialViewState}
+            height={this.initialViewState.height}
+            width={this.initialViewState.width}
+            controller
+            layers={this.state.initialized ? this.buildLayers() : []}
+          >
+            <StaticMap
               height={this.initialViewState.height}
               width={this.initialViewState.width}
-              controller={true}
-              layers={this.state.initialized ? this.buildLayers() : []}
-              //onWebGLInitialized={this._fixHexLayerBug_bound}
-              //onViewportChange={this._fixHexLayerBug_bound}
-              >
-            <StaticMap
-                height={this.initialViewState.height}
-                width={this.initialViewState.width}
-                mapStyle={this.mapStyle}
-                mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-                />
+              mapStyle={this.mapStyle}
+              mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+            />
           </DeckGL>
         </div>
       );
@@ -92,54 +91,87 @@ class DeckGlChart extends PureComponent {
 
   buildLayers() {
     const layers = this.props.element.get('layers');
-    return layers.map(layer => this.buildLayer(layer)).toArray();
+    return layers.map(layer => buildLayer(layer)).toArray();
+  }
+}
+
+
+DeckGlChart.propTypes = {
+  element: PropTypes.instanceOf(Immutable.Map).isRequired,
+  width: PropTypes.number.isRequired,
+};
+
+
+function buildLayer(layer) {
+  const data = dataFrameToArrayOfDicts(layer.get('data'));
+  const spec = JSON.parse(layer.get('spec'));
+  parseEncodings(spec);
+
+  const type = spec.type || '';
+  delete spec.type;
+
+  switch (type.toLowerCase()) {
+    case 'arclayer':
+      return new ArcLayer({
+        data, ...Defaults.ArcLayer, ...spec
+      });
+
+    case 'gridlayer':
+      return new GridLayer({
+        data, ...Defaults.GridLayer, ...spec
+      });
+
+    case 'hexagonlayer':
+      return new HexagonLayer({
+        data, ...Defaults.HexagonLayer, ...spec
+      });
+
+    case 'linelayer':
+      return new LineLayer({
+        data, ...Defaults.LineLayer, ...spec
+      });
+
+    case 'pointcloudlayer':
+      return new PointCloudLayer({
+        data, ...Defaults.PointCloudLayer, ...spec
+      });
+
+    case 'scatterplotlayer':
+      return new ScatterplotLayer({
+        data, ...Defaults.ScatterplotLayer, ...spec
+      });
+
+    case 'screengridlayer':
+      return new ScreenGridLayer({
+        data, ...Defaults.ScreenGridLayer, ...spec
+      });
+
+    case 'textlayer':
+      return new TextLayer({
+        data, ...Defaults.TextLayer, ...spec
+      });
+
+    default:
+      throw new Error(`Unsupported layer type "${type}"`);
+  }
+}
+
+
+/**
+ * Take a short "map style" string and convert to the full URL for the style.
+ * (And it only does this if the input string is not already a URL.)
+ *
+ * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
+ */
+function getStyleUrl(styleStr = 'light-v9') {
+  if (
+    styleStr.startsWith('http://') ||
+    styleStr.startsWith('https://') ||
+    styleStr.startsWith('mapbox://')) {
+    return styleStr;
   }
 
-  buildLayer(layer) {
-    const data = dataFrameToArrayOfDicts(layer.get('data'));
-    const spec = JSON.parse(layer.get('spec'));
-    parseEncodings(spec);
-
-    const type = spec.type || '';
-    delete spec.type;
-
-    switch (type.toLowerCase()) {
-      case 'arclayer':
-        return new ArcLayer(
-          {data, ...Defaults.ArcLayer, ...spec});
-
-      case 'gridlayer':
-        return new GridLayer(
-          {data, ...Defaults.GridLayer, ...spec});
-
-      case 'hexagonlayer':
-        return new HexagonLayer(
-          {data, ...Defaults.HexagonLayer, ...spec});
-
-      case 'linelayer':
-        return new LineLayer(
-          {data, ...Defaults.LineLayer, ...spec});
-
-      case 'pointcloudlayer':
-        return new PointCloudLayer(
-          {data, ...Defaults.PointCloudLayer, ...spec});
-
-      case 'scatterplotlayer':
-        return new ScatterplotLayer(
-          {data, ...Defaults.ScatterplotLayer, ...spec});
-
-      case 'screengridlayer':
-        return new ScreenGridLayer(
-          {data, ...Defaults.ScreenGridLayer, ...spec});
-
-      case 'textlayer':
-        return new TextLayer(
-          {data, ...Defaults.TextLayer, ...spec});
-
-      default:
-        throw new Error(`Unsupported layer type "${type}"`);
-    }
-  }
+  return `mapbox://styles/mapbox/${styleStr}`;
 }
 
 
@@ -152,9 +184,9 @@ class DeckGlChart extends PureComponent {
  * Accepts infinitely many arguments:
  *   fallback(value, fallback1, fallback2, fallback3)
  */
-function fallback() {
-  for (let i = 0; i < arguments.length; i++) {
-    if (arguments[i] != null) return arguments[i];
+function fallback(...args) {
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] != null) return args[i];
   }
   return null;
 }
@@ -186,22 +218,22 @@ const DEFAULT_COLOR = [200, 30, 0, 160];
 
 function getColorFromColorRGBAColumns(d) {
   return d.colorR && d.colorG && d.colorB ?
-      [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
-      DEFAULT_COLOR;
+    [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
+    DEFAULT_COLOR;
 }
 
 function getSourceColorFromSourceColorRGBAColumns(d) {
   return d.sourceColorR && d.sourceColorG && d.sourceColorB ?
-      [d.sourceColorR, d.sourceColorG, d.sourceColorB,
-          d.sourceColorA == null ? 255 : d.sourceColorA] :
-      DEFAULT_COLOR;
+    [d.sourceColorR, d.sourceColorG, d.sourceColorB,
+      d.sourceColorA == null ? 255 : d.sourceColorA] :
+    DEFAULT_COLOR;
 }
 
 function getTargetColorFromTargetColorRGBAColumns(d) {
   return d.targetColorR && d.targetColorG && d.targetColorB ?
-      [d.targetColorR, d.targetColorG, d.targetColorB,
-          d.targetColorA == null ? 255 : d.targetColorA] :
-      DEFAULT_COLOR;
+    [d.targetColorR, d.targetColorG, d.targetColorB,
+      d.targetColorA == null ? 255 : d.targetColorA] :
+    DEFAULT_COLOR;
 }
 
 /**
@@ -224,17 +256,18 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
  *     }
  */
 function parseEncodings(spec) {
-  const encoding = spec.encoding;
+  /* eslint-disable no-param-reassign */
+  const { encoding } = spec;
   if (!encoding) return;
 
   delete spec.encoding;
 
-  Object.keys(encoding).forEach(key => {
+  Object.keys(encoding).forEach((key) => {
     const v = encoding[key];
     spec[makeGetterName(key)] =
         typeof v === 'string' ?
-        d => d[v] :
-        d => v;
+          d => d[v] :
+          () => v;
   });
 }
 
@@ -306,27 +339,6 @@ const Defaults = {
     getPosition: getPositionFromLatLonColumns,
   },
 };
-
-
-/**
- * Take a short "map style" string and convert to the full URL for the style.
- * (And it only does this if the input string is not already a URL.)
- *
- * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
- */
-function getStyleUrl(styleStr) {
-  if (!styleStr) {
-    styleStr = 'light-v9';
-
-  } else if (
-      styleStr.startsWith('http://') ||
-      styleStr.startsWith('https://') ||
-      styleStr.startsWith('mapbox://')) {
-    return styleStr;
-  }
-
-  return `mapbox://styles/mapbox/${styleStr}`;
-}
 
 
 export default DeckGlChart;
