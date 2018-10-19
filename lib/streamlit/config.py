@@ -277,8 +277,9 @@ def get_default_creds():
         # Replace whatever is in the config with the default credentials
         c['storage']['s3'].update(creds)
 
-    except (httpclient.HTTPError, RuntimeError, socket.gaierror) as e:
-        LOGGER.debug('Not using default credentials.  Error getting default credentials from %s: %s', endpoint, e)
+    except (SyntaxError, httpclient.HTTPError, RuntimeError,
+            socket.gaierror) as e:
+        LOGGER.debug('Not using default credentials. Error getting default credentials from %s: %s', endpoint, e)
     finally:
         if http_client is not None:
             http_client.close()
