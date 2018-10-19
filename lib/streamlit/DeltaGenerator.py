@@ -580,7 +580,7 @@ class DeltaGenerator(object):
         """
         DeckGlChart.marshall(element.deck_gl_chart, data, layers, **kwargs)
 
-    @_export_to_io
+    @_export
     @_create_element
     def table(self, element, df):
         """Creates a map element.
