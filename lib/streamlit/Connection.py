@@ -80,7 +80,10 @@ class Connection(object):
         # Full path of the file that caused this connection to be created.
         self._source_file_path = ''  # Empty string means "no file" to us.
 
-        if filename != '<stdin>':  # Magic filename when in REPL.
+        # Check if we're in the REPL by looking at magic filename strings.
+        # <stdin> is what the basic Python REPL calls the root frame's
+        # filename, and <string> is what iPython calls it.
+        if filename not in ('<stdin>', '<string>'):
             self._source_file_path = os.path.realpath(filename)
 
         LOGGER.debug(f'source_file_path: {self._source_file_path}.')
