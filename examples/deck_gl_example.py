@@ -7,8 +7,8 @@ import streamlit as st
 st.title('DeckGL example')
 
 random_points = pd.DataFrame(
-    np.random.randn(1000, 2) / 50 + [37.76, -122.4],
-    columns=['lat', 'lon'])
+    np.random.randn(1000, 3) / [50, 50, .002] + [37.76, -122.4, 0],
+    columns=['lat', 'lon', 'size'])
 
 
 st.header('Random data')
@@ -35,13 +35,39 @@ st.deck_gl_chart(
         'longitude': -122.4,
         'zoom': 11,
         'pitch': 50,
-        'radiusScale': 1000,
     },
     layers=[{
+       'data': random_points,
+       'type': 'HexagonLayer',
+       'radius': 250,
+       'extruded': True,
+    }],
+)
+
+
+st.subheader('As both')
+
+st.write('...this time with different sizes!')
+
+st.deck_gl_chart(
+    viewport={
+        'latitude': 37.76,
+        'longitude': -122.4,
+        'zoom': 11,
+        'pitch': 50,
+    },
+    layers=[{
+       'data': random_points,
+       'type': 'HexagonLayer',
+       'radius': 250,
+       'extruded': True,
+   }, {
         'data': random_points,
-        'type': 'HexagonLayer',
-        'radius': 250,
+        'type': 'ScatterplotLayer',
         'extruded': True,
+        'encoding': {
+            'radius': 'size',
+        }
     }],
 )
 
@@ -55,13 +81,16 @@ st.write('...and the same plot using Vega Lite:')
 
 st.vega_lite_chart(
     random_points,
+    height=500,
     mark='circle',
-    x_field='lat',
+    x_field='lon',
     x_type='quantitative',
-    x_scale_domain=[random_points.min()[0], random_points.max()[0]],
-    y_field='lon',
+    x_scale_domain=[random_points.min()[1], random_points.max()[1]],
+    y_field='lat',
     y_type='quantitative',
-    y_scale_domain=[random_points.min()[1], random_points.max()[1]],
+    y_scale_domain=[random_points.min()[0], random_points.max()[0]],
+    size_field='size',
+    size_type='quantitative',
     selection_grid={
         'type': 'interval',
         'bind': 'scales',
@@ -69,7 +98,7 @@ st.vega_lite_chart(
 )
 
 
-st.header('Multilayer example')
+st.header('Bart stops and bike rentals')
 
 @st.cache
 def from_data_file(filename):
@@ -99,17 +128,15 @@ st.deck_gl_chart(
         'pickable': True,
         'extruded': True,
 
-    # # Now plot locations of Bart stops
-    # # ...and let's size the stops according to traffic
-    # }, {
-    #     'type': 'ScatterplotLayer',
-    #     'data': bart_stop_stats,
-    #     'pickable': True,
-    #     'autoHighlight': True,
-    #     'radiusScale': 0.002,  # XXX
-    #     'encoding': {
-    #         'radius': 'exits',
-    #     },
+    # Now plot locations of Bart stops
+    # ...and let's size the stops according to traffic
+    }, {
+        'type': 'ScatterplotLayer',
+        'data': bart_stop_stats,
+        'radiusScale': 10,
+        'encoding': {
+            'radius': 250,
+        },
 
     # Now Add names of Bart stops
     }, {
@@ -131,3 +158,5 @@ st.deck_gl_chart(
             'strokeWidth': 10,
         },
     }])
+
+st.write(bart_stop_stats)
