@@ -277,8 +277,13 @@ def get_default_creds():
         # Replace whatever is in the config with the default credentials
         c['storage']['s3'].update(creds)
 
-    except (httpclient.HTTPError, RuntimeError, socket.gaierror) as e:
-        LOGGER.debug('Not using default credentials.  Error getting default credentials from %s: %s', endpoint, e)
+    # Catch all types of exceptions here, since we want Streamlit to fail
+    # gracefully: an error in loading the credentials shouldn't stop the user
+    # from using Streamlit.
+    except Exception as e:
+        LOGGER.debug(
+            'Error getting credentials from %s. Sharing will be '
+            'disabled. %s', endpoint, e)
     finally:
         if http_client is not None:
             http_client.close()
