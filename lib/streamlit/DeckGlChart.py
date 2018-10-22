@@ -64,7 +64,6 @@ def marshall(proto, data=None, spec=None, **kwargs):
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.
     proto.spec = json.dumps(spec)
-    print('XXX', spec)
 
 
 # See accessors for layers at
