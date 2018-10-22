@@ -110,6 +110,12 @@ bart_stop_stats = from_data_file('bart_stop_stats.json')
 bart_path_stats = from_data_file('bart_path_stats.json')
 bike_rental_stats = from_data_file('bike_rental_stats.json')
 
+# Move bart stop name to the 1st column, so it looks nicer when printed as a
+# table.
+bart_stop_names = bart_stop_stats['name']
+bart_stop_stats.drop(labels=['name'], axis=1, inplace=True)
+bart_stop_stats.insert(0, 'name', bart_stop_names)
+
 st.deck_gl_chart(
     viewport={
         'latitude': 37.76,
