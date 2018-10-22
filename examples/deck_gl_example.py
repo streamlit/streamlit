@@ -30,12 +30,11 @@ st.deck_gl_chart(
 st.subheader('As a histogram plot')
 
 st.deck_gl_chart(
-    viewport={
-        'latitude': 37.76,
-        'longitude': -122.4,
-        'zoom': 11,
-        'pitch': 50,
-    },
+    # Using flattened dicts:
+    viewport_latitude = 37.76,
+    viewport_longitude = -122.4,
+    viewport_zoom = 11,
+    viewport_pitch = 50,
     layers=[{
        'data': random_points,
        'type': 'HexagonLayer',
@@ -61,7 +60,7 @@ st.deck_gl_chart(
        'type': 'HexagonLayer',
        'radius': 250,
        'extruded': True,
-   }, {
+    }, {
         'data': random_points,
         'type': 'ScatterplotLayer',
         'extruded': True,

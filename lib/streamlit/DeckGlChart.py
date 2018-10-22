@@ -6,32 +6,46 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import pandas as pd
 
 from streamlit import data_frame_proto
 from streamlit.caseconverters import to_lower_camel_case, convert_dict_keys
+from streamlit.dicttools import unflatten
 
-# setup logging
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-def marshall(proto, data, layers, **kwargs):
+def marshall(proto, data=None, spec=None, **kwargs):
     """Marshall a proto with DeckGL chart info.
 
     See DeltaGenerator.deck_gl_chart for docs.
     """
-    if layers is None:
-        layers = []
+    if data is None:
+        data = pd.DataFrame([])
 
-    # Syntax sugar: if no layers defined and data is passed at the top
-    # level, created a scatterplot layer with the top-level data by default.
-    if data is not None and not layers:
-        layers.append({
-            'data': data,
-            'type': 'ScatterplotLayer',
-        })
+    elif type(data) is not pd.DataFrame:
+        data = pd.DataFrame(data)
 
-    for layer in layers:
+    if spec is None:
+        spec = dict()
+
+    # Merge spec with unflattened kwargs, where kwargs take precedence.
+    # This only works for string keys, but kwarg keys are strings anyways.
+    spec = dict(spec, **unflatten(kwargs, _ENCODINGS, set(['viewport'])))
+
+    if 'layers' not in spec:
+        spec['layers'] = []
+
+        # Syntax sugar: if no layers defined and data is passed at the top
+        # level, create a scatterplot layer with the top-level data by default.
+        if data is not None:
+            spec['layers'].append({
+                'data': data,
+                'type': 'ScatterplotLayer',
+            })
+
+    for layer in spec['layers']:
         # Don't add layers that have no data.
         if 'data' not in layer:
             continue
@@ -43,8 +57,45 @@ def marshall(proto, data, layers, **kwargs):
         fixed_layer = convert_dict_keys(
             to_lower_camel_case, layer)
         layer_proto.spec = json.dumps(fixed_layer)
+        # TODO: If several layers use the same data frame, the data gets resent
+        # for each layer. Need to improve this.
         data_frame_proto.marshall_data_frame(data, layer_proto.data)
 
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.
-    proto.spec = json.dumps(kwargs)
+    proto.spec = json.dumps(spec)
+    print('XXX', spec)
+
+
+# See accessors for layers at
+# https://github.com/uber/deck.gl/tree/master/docs/layers
+_ENCODINGS = set([
+    'alignmentBaseline',
+    'angle',
+    'centroid',
+    'color',
+    'colorValue',
+    'dashArray',
+    'elevation',
+    'elevationValue',
+    'fillColor',
+    'icon',
+    'latitude',
+    'lineColor',
+    'lineDashArray',
+    'longitude',
+    'normal',
+    'path',
+    'polygon',
+    'position',
+    'radius',
+    'size',
+    'sourceColor',
+    'sourcePosition',
+    'strokeWidth',
+    'targetColor',
+    'targetPosition',
+    'text',
+    'textAnchor',
+    'weight',
+])

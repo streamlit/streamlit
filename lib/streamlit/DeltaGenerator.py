@@ -369,6 +369,20 @@ class DeltaGenerator(object):
     @_create_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
         """Displays a chart using the Vega Lite library.
+
+        Parameters
+        ----------
+        data : list or Numpy Array or DataFrame or None
+            Data to be plotted.
+
+        spec : dict
+            The Vega Lite spec for the chart.
+
+        **kwargs : any
+            Same as spec, but as keywords. Keys are "unflattened" at the
+            underscore characters. For example, foo_bar_baz=123 becomes
+            foo={'bar': {'bar': 123}}.
+
         """
         VegaLiteChart.marshall(element.vega_lite_chart, data, spec, **kwargs)
 
@@ -523,15 +537,17 @@ class DeltaGenerator(object):
 
     @_export
     @_create_element
-    def deck_gl_chart(self, element, data=None, layers=None, **kwargs):
+    def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
         """Draw a map chart using the DeckGL library.
 
         See https://deck.gl/#/documentation for more info.
 
         Parameters
         ----------
-        data : DataFrame or None
-        kwargs : dict
+        data : list or Numpy Array or DataFrame or None
+            Data to be plotted, if no layer specified.
+
+        spec : dict
             Keys/values in this dict can be:
             - Anything accepted by DeckGl's top level element.
             - "layers": a list of dicts containing information to build a new
@@ -541,8 +557,18 @@ class DeltaGenerator(object):
                 - "type" : string - a layer type accepted by DeckGl
                     The layer type, such as 'HexagonLayer', 'ScatterplotLayer',
                     etc.
-                - "encoding" : dict of components accepted by that layer type
+                - "encoding" : dict - Accessors accepted by that layer type.
+                  The keys should be the accessor name without the "get"
+                  prefix. For example instead of "getColor" you should
+                  useinstead of "getColor" you should use "color". If strings,
+                  these get automatically transformed into getters for that
+                  column.
                 - And anything accepted by that layer type
+
+        **kwargs : any
+            Same as spec, but as keywords. Keys are "unflattened" at the
+            underscore characters. For example, foo_bar_baz=123 becomes
+            foo={'bar': {'bar': 123}}.
 
         Examples
         --------
@@ -578,7 +604,7 @@ class DeltaGenerator(object):
                 }])
 
         """
-        DeckGlChart.marshall(element.deck_gl_chart, data, layers, **kwargs)
+        DeckGlChart.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_export
     @_create_element
