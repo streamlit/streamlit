@@ -11,6 +11,8 @@ setup_2_3_shims(globals())
 import sys
 import os
 
+_dict = dict
+
 def setup_2_3_shims(caller_globals):
     """
     Meant to be called as follows:
@@ -28,8 +30,11 @@ def setup_2_3_shims(caller_globals):
         export_symbols = []
 
         # Override basic types.
+        native_dict = _dict
         from builtins import range, map, str, dict, object, zip, int
-        export_symbols += ['range', 'map', 'str', 'dict', 'object', 'zip', 'int']
+        export_symbols += [
+            'range', 'map', 'str', 'dict', 'object', 'zip', 'int',
+            'native_dict']
 
         # Oerride the open function.
         from io import open

@@ -64,9 +64,8 @@ st.deck_gl_chart(
         'data': random_points,
         'type': 'ScatterplotLayer',
         'extruded': True,
-        'encoding': {
-            'radius': 'size',
-        }
+        # Testing that the "encoding" is set automatically:
+        'getRadius': 'size',
     }],
 )
 
@@ -139,19 +138,15 @@ st.deck_gl_chart(
         'type': 'ScatterplotLayer',
         'data': bart_stop_stats,
         'radiusScale': 10,
-        'encoding': {
-            'radius': 250,
-        },
+        'getRadius': 50,
 
     # Now Add names of Bart stops
     }, {
         'type': 'TextLayer',
         'data': bart_stop_stats,
-        'encoding': {
-            'text': 'name',
-            'color': [0, 0, 0, 200],
-            'size': 15,
-        },
+        'getText': 'name',
+        'getColor': [0, 0, 0, 200],
+        'getSize': 15,
 
     # And draw some arcs connecting the stops
     }, {
@@ -159,9 +154,7 @@ st.deck_gl_chart(
         'data': bart_path_stats,
         'pickable': True,
         'autoHighlight': True,
-        'encoding': {
-            'strokeWidth': 10,
-        },
+        'getStrokeWidth': 10,
     }])
 
 st.write(bart_stop_stats)

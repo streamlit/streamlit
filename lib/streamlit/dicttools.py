@@ -63,7 +63,7 @@ def _unflatten_single_dict(flat_dict):
     return out
 
 
-def unflatten(flat_dict, encodings=None, encoding_blacklist=None):
+def unflatten(flat_dict, encodings=None):
     """Converts a flat dict of key-value pairs to a spec tree.
 
     Example:
@@ -97,12 +97,6 @@ def unflatten(flat_dict, encodings=None, encoding_blacklist=None):
     encodings: set
         Key names that should be automatically moved into the 'encoding' key.
 
-    encoding_blacklist: set
-        Key names where encodings whould not apply. For example, in DeckGL
-        charts we don't want the 'viewport' dict to move 'latitude' into the
-        'encoding' sub-dict, but we do want that to happen everywhere else.  So
-        we put 'viewport' in the blacklist.
-
     Returns:
     --------
     A tree made of dicts inside of dicts.
@@ -110,20 +104,18 @@ def unflatten(flat_dict, encodings=None, encoding_blacklist=None):
     if encodings is None:
         encodings = set()
 
-    if encoding_blacklist is None:
-        encoding_blacklist = set()
-
     out_dict = _unflatten_single_dict(flat_dict)
 
     for k, v in list(out_dict.items()):
-        if type(v) is dict:
-            if k in encoding_blacklist:
-                next_blacklist = None
-            else:
-                next_blacklist = encoding_blacklist
+        # Unflatten child dicts:
+        if type(v) in (dict, native_dict):
+            v = unflatten(v, encodings)
+        elif hasattr(v, '__iter__'):
+            for i, child in enumerate(v):
+                if type(child) in (dict, native_dict):
+                    v[i] = unflatten(child, encodings)
 
-            v = unflatten(v, encodings, next_blacklist)
-
+        # Move items into 'encoding' if needed:
         if k in encodings:
             if 'encoding' not in out_dict:
                 out_dict['encoding'] = dict()

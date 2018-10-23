@@ -274,13 +274,10 @@ function parseEncodings(spec) {
 
 
 /**
- * Convert a string 'foo' to its getter name 'getFoo'.
+ * Convert a string 'foo' to its getter name 'getFoo', if needed.
  */
 function makeGetterName(key) {
-  if (typeof key !== 'string' || key.length === 0) {
-    throw new Error('Encodings must be strings');
-  }
-
+  if (key.startsWith('get')) return key;
   return `get${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 

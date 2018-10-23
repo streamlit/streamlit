@@ -32,7 +32,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     # Merge spec with unflattened kwargs, where kwargs take precedence.
     # This only works for string keys, but kwarg keys are strings anyways.
-    spec = dict(spec, **unflatten(kwargs, _ENCODINGS, set(['viewport'])))
+    spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
 
     if 'layers' not in spec:
         spec['layers'] = []
@@ -54,12 +54,13 @@ def marshall(proto, data=None, spec=None, **kwargs):
         data = layer.pop('data')
 
         layer_proto = proto.layers.add()
-        fixed_layer = convert_dict_keys(
-            to_lower_camel_case, layer)
+        fixed_layer = convert_dict_keys(to_lower_camel_case, layer)
         layer_proto.spec = json.dumps(fixed_layer)
         # TODO: If several layers use the same data frame, the data gets resent
         # for each layer. Need to improve this.
         data_frame_proto.marshall_data_frame(data, layer_proto.data)
+
+    del spec['layers']
 
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.
@@ -69,32 +70,32 @@ def marshall(proto, data=None, spec=None, **kwargs):
 # See accessors for layers at
 # https://github.com/uber/deck.gl/tree/master/docs/layers
 _ENCODINGS = set([
-    'alignmentBaseline',
-    'angle',
-    'centroid',
-    'color',
-    'colorValue',
-    'dashArray',
-    'elevation',
-    'elevationValue',
-    'fillColor',
-    'icon',
-    'latitude',
-    'lineColor',
-    'lineDashArray',
-    'longitude',
-    'normal',
-    'path',
-    'polygon',
-    'position',
-    'radius',
-    'size',
-    'sourceColor',
-    'sourcePosition',
-    'strokeWidth',
-    'targetColor',
-    'targetPosition',
-    'text',
-    'textAnchor',
-    'weight',
+    'getAlignmentBaseline',
+    'getAngle',
+    'getCentroid',
+    'getColor',
+    'getColorValue',
+    'getDashArray',
+    'getElevation',
+    'getElevationValue',
+    'getFillColor',
+    'getIcon',
+    'getLatitude',
+    'getLineColor',
+    'getLineDashArray',
+    'getLongitude',
+    'getNormal',
+    'getPath',
+    'getPolygon',
+    'getPosition',
+    'getRadius',
+    'getSize',
+    'getSourceColor',
+    'getSourcePosition',
+    'getStrokeWidth',
+    'getTargetColor',
+    'getTargetPosition',
+    'getText',
+    'getTextAnchor',
+    'getWeight',
 ])
