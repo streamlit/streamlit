@@ -6,7 +6,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import pandas as pd
 
 from streamlit import data_frame_proto
 from streamlit.caseconverters import to_lower_camel_case, convert_dict_keys
@@ -22,10 +21,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
     See DeltaGenerator.deck_gl_chart for docs.
     """
     if data is None:
-        data = pd.DataFrame([])
-
-    elif type(data) is not pd.DataFrame:
-        data = pd.DataFrame(data)
+        data = []
 
     if spec is None:
         spec = dict()

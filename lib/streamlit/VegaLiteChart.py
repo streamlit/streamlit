@@ -7,7 +7,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import pandas as pd
 
 from streamlit import data_frame_proto, protobuf
 from streamlit.dicttools import unflatten
@@ -22,10 +21,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
     See DeltaGenerator.vega_lite_chart for docs.
     """
     if data is None:
-        data = pd.DataFrame([])
-
-    elif type(data) is not pd.DataFrame:
-        data = pd.DataFrame(data)
+        data = []
 
     if spec is None:
         spec = dict()
