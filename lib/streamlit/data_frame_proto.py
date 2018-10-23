@@ -15,13 +15,20 @@ import tzlocal
 
 LOGGER = get_logger()
 
-def marshall_data_frame(pandas_df, proto_df):
+def marshall_data_frame(df, proto_df):
     """
     Converts a pandas.DataFrame into a protobuf.DataFrame.
 
-    pandas_df - Panda.DataFrame (input)
-    proto_df  - Protobuf.DataFrame (output)
+    df : Panda.DataFrame, Numpy.Array, list
+        Input. Something that can be converted to a dataframe.
+    proto_df : Protobuf.DataFrame
+        Output. The protobuf for a Streamlit DataFrame proto.
     """
+    if type(df) is pd.DataFrame:
+        pandas_df = df
+    else:
+        pandas_df = pd.DataFrame(df)
+
     pandas_df_data = (pandas_df.iloc[:,col]
         for col in range(len(pandas_df.columns)))
     marshall_table(pandas_df_data, proto_df.data)

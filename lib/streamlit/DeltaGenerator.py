@@ -352,8 +352,6 @@ class DeltaGenerator(object):
 
         pandas_df - The dataframe.
         """
-        if type(pandas_df) != pd.DataFrame:
-            pandas_df = pd.DataFrame(pandas_df)
         def set_data_frame(element):
             data_frame_proto.marshall_data_frame(pandas_df, element.data_frame)
         return self._new_element(set_data_frame)
@@ -616,16 +614,11 @@ class DeltaGenerator(object):
         df : DataFrame
             The table data.
         """
-        if type(df) != pd.DataFrame:
-            df = pd.DataFrame(df)
         data_frame_proto.marshall_data_frame(df, element.table)
 
     def add_rows(self, df):
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
-        if type(df) != pd.DataFrame:
-            df = pd.DataFrame(df)
-
         delta = protobuf.Delta()
         delta.id = self._id
         data_frame_proto.marshall_data_frame(df, delta.add_rows)
