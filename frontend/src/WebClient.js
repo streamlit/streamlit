@@ -22,6 +22,7 @@ import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
+import DeckGlChart from './elements/DeckGlChart';
 import Table from './elements/Table';
 import Text from './elements/Text';
 import VegaLiteChart from './elements/VegaLiteChart';
@@ -398,6 +399,7 @@ class WebClient extends PureComponent {
             })}
           />
         </header>
+
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
@@ -423,18 +425,19 @@ class WebClient extends PureComponent {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
           audio: (audio) => <Audio audio={audio} width={width}/>,
-          dataFrame: (df) => <DataFrame df={df} width={width}/>,
-          chart: (chart) => <Chart chart={chart} width={width}/>,
-          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
-          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
-          text: (text) => <Text element={text} width={width}/>,
-          docString: (doc) => <DocString element={doc} width={width}/>,
-          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
-          empty: (empty) => undefined,
-          map: (map) => <Map map={map} width={width}/>,
-          table: (df) => <Table df={df} width={width}/>,
           balloons: (balloons) => <Balloons balloons={balloons}/>,
+          chart: (chart) => <Chart chart={chart} width={width}/>,
+          dataFrame: (df) => <DataFrame df={df} width={width}/>,
+          deckGlChart: (el) => <DeckGlChart element={el} width={width}/>,
+          docString: (doc) => <DocString element={doc} width={width}/>,
+          empty: (empty) => undefined,
+          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
+          map: (map) => <Map map={map} width={width}/>,
+          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
+          table: (df) => <Table df={df} width={width}/>,
+          text: (text) => <Text element={text} width={width}/>,
+          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
           video: (video) => <Video video={video} width={width}/>,
         });
       } catch (err) {

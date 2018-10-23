@@ -8,13 +8,13 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 
-def unflatten(flat_dict, sep='_'):
+def _unflatten_single_dict(flat_dict):
     """Convert a flat dict of key-value pairs to dict tree.
 
     Example
     -------
 
-        unflatten({
+        _unflatten_single_dict({
           foo_bar_baz: 123,
           foo_bar_biz: 456,
           x_bonks: 'hi',
@@ -47,7 +47,7 @@ def unflatten(flat_dict, sep='_'):
     """
     out = dict()
     for pathstr, v in flat_dict.items():
-        path = pathstr.split(sep)
+        path = pathstr.split('_')
 
         prev_dict = None
         curr_dict = out
@@ -61,3 +61,65 @@ def unflatten(flat_dict, sep='_'):
         prev_dict[k] = v
 
     return out
+
+
+def unflatten(flat_dict, encodings=None):
+    """Converts a flat dict of key-value pairs to a spec tree.
+
+    Example:
+        unflatten({
+          foo_bar_baz: 123,
+          foo_bar_biz: 456,
+          x_bonks: 'hi',
+        }, ['x'])
+
+        # Returns:
+        # {
+        #   foo: {
+        #     bar: {
+        #       baz: 123,
+        #       biz: 456,
+        #     },
+        #   },
+        #   encoding: {  # This gets added automatically
+        #     x: {
+        #       bonks: 'hi'
+        #     }
+        #   }
+        # }
+
+    Args:
+    -----
+    flat_dict: dict
+        A flat dict where keys are fully-qualified paths separated by
+        underscores.
+
+    encodings: set
+        Key names that should be automatically moved into the 'encoding' key.
+
+    Returns:
+    --------
+    A tree made of dicts inside of dicts.
+    """
+    if encodings is None:
+        encodings = set()
+
+    out_dict = _unflatten_single_dict(flat_dict)
+
+    for k, v in list(out_dict.items()):
+        # Unflatten child dicts:
+        if type(v) in (dict, native_dict):
+            v = unflatten(v, encodings)
+        elif hasattr(v, '__iter__'):
+            for i, child in enumerate(v):
+                if type(child) in (dict, native_dict):
+                    v[i] = unflatten(child, encodings)
+
+        # Move items into 'encoding' if needed:
+        if k in encodings:
+            if 'encoding' not in out_dict:
+                out_dict['encoding'] = dict()
+            out_dict['encoding'][k] = v
+            out_dict.pop(k)
+
+    return out_dict

@@ -5,6 +5,8 @@
 import { dispatchOneOf, updateOneOf } from './immutableProto';
 import { format } from './format';
 
+export const INDEX_COLUMN_DESIGNATOR = 'index';
+
 /**
  * Returns a dictionary of integers:
  *   { headerRows, headerCols, dataRows, dataCols, cols, rows }
@@ -30,10 +32,43 @@ export function dataFrameGetDimensions(df) {
  */
 export function tableGetRowsAndCols(table) {
   const cols = table.get('cols').size;
-  if (cols === 0)
+  if (cols === 0) {
     return [0, 0];
+  }
   const rows = anyArrayLen(table.getIn(['cols', 0]));
   return [rows, cols];
+}
+
+/**
+ * Converts dataframe to array-of-dicts format.
+ *
+ * Example:
+ *
+ * [
+ *   {index1: row1_col1, index2: row1_col2, ...},
+ *   {index1: row2_col1, index2: row2_col2, ...},
+ * ]
+ */
+export function dataFrameToArrayOfDicts(df) {
+  const dataArr = [];
+  const [nRows, nCols] = tableGetRowsAndCols(df.get('data'));
+
+  const dfColumns = df.get('columns');
+  const dfData = df.get('data');
+
+  for (let r = 0; r < nRows; r++) {
+    const rowDict = {};
+
+    for (let c = 0; c < nCols; c++) {
+      rowDict[indexGet(dfColumns, 0, c)] = tableGet(dfData, c, r);
+    }
+
+    dataArr.push(rowDict);
+  }
+
+  // TODO: Handle indices too.
+
+  return dataArr;
 }
 
 /**
@@ -240,8 +275,9 @@ function concatAnyArray(anyArray1, anyArray2) {
  */
 function getDataFrame(element) {
   return dispatchOneOf(element, 'type', {
-    dataFrame: (df) => df,
     chart: (chart) => chart.get('data'),
+    dataFrame: (df) => df,
+    deckGlMap: (el) => el.get('data'),
     vegaLiteChart: (chart) => chart.get('data'),
   });
 }
@@ -251,8 +287,9 @@ function getDataFrame(element) {
  */
 function setDataFrame(element, df) {
   return updateOneOf(element, 'type', {
-    dataFrame: () => df,
     chart: (chart) => chart.set('data', df),
+    dataFrame: () => df,
+    deckGlMap: (el) => el.set('data', df),
     vegaLiteChart: (chart) => chart.set('data', df),
   });
 }
