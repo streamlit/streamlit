@@ -23,11 +23,13 @@ def to_lower_camel_case(snake_case_str):
         foo_bar -> fooBar
         fooBar -> foobar
     """
-    titleCaseWords = [w for w in snake_case_str.title().split('_')]
-    if titleCaseWords:
-        return titleCaseWords[0].lower() + ''.join(titleCaseWords[1:])
+    words = snake_case_str.split('_')
+    if len(words) > 1:
+        capitalized = [w.title() for w in words]
+        capitalized[0] = words[0]
+        return ''.join(capitalized)
     else:
-        return ''
+        return snake_case_str
 
 
 def to_snake_case(camel_case_str):
