@@ -25,6 +25,7 @@ def setup_2_3_shims(caller_globals):
     if running_py3():
         caller_globals['dict_types'] = (type({}),)
         caller_globals['string_types'] = (type(''),)
+        caller_globals['native_dict'] = _dict
     else:
         # These are the symbols we will export to the calling package.
         export_symbols = []
