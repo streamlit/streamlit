@@ -205,36 +205,6 @@ def display_reference():
 
             st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
-    st.header('Playing audio')
-
-    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
-                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
-    audio_bytes = read_file_from_url(audio_url)
-
-    st.write("""
-        Streamlit can play audio in all formats supported by modern
-        browsers. Below is an example of an _ogg_-formatted file:
-        """)
-
-    if audio_bytes is not None:
-        with st.echo():
-            st.audio(audio_bytes, format='audio/ogg')
-
-    st.header('Playing video')
-
-    st.write("""
-        Streamlit can play video in all formats supported by modern
-        browsers. Below is an example of an _mp4_-formatted file:
-        """)
-
-    video_url = ('https://www.sample-videos.com/video/mp4/480/'
-                 'big_buck_bunny_480p_2mb.mp4')
-    video_bytes = read_file_from_url(video_url)
-
-    if video_bytes is not None:
-        with st.echo():
-            st.video(video_bytes, format='video/webm')
-
     st.header('Inserting headers')
 
     st.write(
@@ -300,6 +270,36 @@ def display_reference():
             raise RuntimeError('An exception')
         except Exception as e:
             st.exception(e)
+
+    st.header('Playing audio')
+
+    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
+                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
+    audio_bytes = read_file_from_url(audio_url)
+
+    st.write("""
+        Streamlit can play audio in all formats supported by modern
+        browsers. Below is an example of an _ogg_-formatted file:
+        """)
+
+    if audio_bytes is not None:
+        with st.echo():
+            st.audio(audio_bytes, format='audio/ogg')
+
+    st.header('Playing video')
+
+    st.write("""
+        Streamlit can play video in all formats supported by modern
+        browsers. Below is an example of an _mp4_-formatted file:
+        """)
+
+    video_url = ('https://archive.org/download/WildlifeSampleVideo/'
+                 'Wildlife.mp4')
+    video_bytes = read_file_from_url(video_url)
+
+    if video_bytes is not None:
+        with st.echo():
+            st.video(video_bytes, format='video/mp4')
 
     st.header('Lengthy Computations')
     st.write("""
