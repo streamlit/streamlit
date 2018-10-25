@@ -81,7 +81,7 @@
 
 .streamlit-container .react-json-view {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 15px;
+  font-size: 0.8rem;
 }
 
 .streamlit-container .alert {

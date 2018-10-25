@@ -8,6 +8,7 @@
 
 .streamlit-container .dataframe-container {
   border: 1px solid #E6E9EE;
+  box-sizing: content-box;  /* Fix borders going under other elements. */
 }
 
 .streamlit-container .dataframe.row-header,
@@ -47,8 +48,18 @@
 
 .streamlit-container .table-top-right {
   overflow-x: hidden !important;
+  background-color: #F0F3F9;
 }
 
 .streamlit-container .table-bottom-left {
   overflow-y: hidden !important;
+  background-color: #F0F3F9;
+}
+
+.streamlit-container .empty-dataframe {
+  font-family: 'IBM Plex Mono', monospace;
+  color: #768096;
+  font-style: italic;
+  font-size: 0.8rem;
+  text-align: center;
 }

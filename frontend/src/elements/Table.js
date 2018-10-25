@@ -22,6 +22,8 @@ class Table extends PureComponent {
     // Get the properties.
     const {df, width} = this.props;
 
+    // TODO(tvst): Make tables have a max width with overflow: scroll (when
+    // media==screen). But need to fix the autosizer first.
     try {
       return (
         <div className='streamlit-table'>
