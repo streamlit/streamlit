@@ -17,3 +17,10 @@
   border-right: none;
   vertical-align: middle;
 }
+
+.streamlit-container .streamlit-table .empty-table td {
+  color: #768096;
+  font-style: italic;
+  font-size: 0.8rem;
+  text-align: center;
+}

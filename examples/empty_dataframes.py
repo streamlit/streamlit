@@ -21,7 +21,6 @@ st.write(pd.DataFrame({'lat': [], 'lon': []}))
 st.header('Using st.table')
 
 st.write('These should look like empty tables')
-st.write('_TODO: Make these look nicer!_')
 st.table([])
 st.table(np.array(0))
 st.table(pd.DataFrame([]))

@@ -47,8 +47,8 @@ class DataFrame extends PureComponent {
       let {elementWidth, columnWidth, headerWidth} = getWidths(
           cols, rows, headerCols, headerRows, width - border, cellContents);
 
-      // Add space for the "(empty)" text.
-      if (dataRows == 0 && elementWidth < 60) {
+      // Add space for the "empty" text.
+      if (dataRows === 0 && elementWidth < 60) {
         elementWidth = 60;
         headerWidth = 60;
         if (columnWidth * cols < 60) {
@@ -94,9 +94,9 @@ class DataFrame extends PureComponent {
               height: border,
             }}/>
             {
-              dataRows == 0 ?
+              dataRows === 0 ?
                 <div className="empty-dataframe">
-                  (empty)
+                  empty
                 </div>
                 : null
             }
