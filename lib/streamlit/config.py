@@ -75,12 +75,13 @@ class Config(object):
                     value = 0.01,
                 ),
                 waitForProxySecs = dict(
-                    _comment = 'How long to wait for the proxy server to start up.',
+                    _comment = (
+                        'How long to wait for the proxy server to start up.'),
                     value = 3.0,
                 ),
             ),
             proxy = dict(
-                _comment = 'Configuration of the proxy server',
+                _comment = 'Configuration of the proxy server.',
                 port = dict(
                     value = 8501,
                 ),
@@ -88,7 +89,9 @@ class Config(object):
                     value = 'localhost',
                 ),
                 waitForConnectionSecs = dict(
-                    _comment = 'How many seconds the proxy waits for the connection before timing out.',
+                    _comment = (
+                        'On startup, how long to wait for connections before '
+                        'closing'),
                     value = 10.1,
                 ),
                 keepAlive = dict(
@@ -108,11 +111,13 @@ class Config(object):
                 externalIP = dict(
                     _comment = ('IP address of the machine where Streamlit is '
                         'running.'),
-                    # Must be None, so the autodetection in Proxy.py takes place
+                    # Must be None, so the autodetection in Proxy.py takes
+                    # place
                     value = None,
                 ),
                 watchFileSystem = dict(
-                    _comment = 'Watch for filesystem changes and rerun reports',
+                    _comment = (
+                        'Watch for filesystem changes and rerun reports'),
                     value = True,
                 ),
             ),
@@ -143,7 +148,8 @@ class Config(object):
             client = dict(
                 remotelyTrackUsage = dict(
                     _comment = (
-                        'Whether Streamlit should remotely record usage stats'),
+                        'Whether Streamlit should remotely record usage '
+                        'stats.'),
                     value = True,
                 ),
             ),
