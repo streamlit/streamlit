@@ -91,6 +91,12 @@ class Config(object):
                     _comment = 'How many seconds the proxy waits for the connection before timing out.',
                     value = 10.1,
                 ),
+                keepAlive = dict(
+                    _comment = (
+                        'Keep proxy alive even when no connections are '
+                        'present.'),
+                    value = False,
+                ),
                 useNode = dict(
                     _comment = 'Whether to use the node server or not.',
                     value = False,

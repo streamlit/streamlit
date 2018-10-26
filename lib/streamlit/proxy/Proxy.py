@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 """A proxy server between the Streamlit libs and web client.
 
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
@@ -161,6 +160,9 @@ class Proxy(object):
         # FSObserver.get_key(proxy_connection).
         self._fs_observers = dict()
 
+        # If true, will not close the proxy when no connections point to it.
+        self._keepAlive = config.get_option('proxy.keepAlive')
+
         LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
         # We have to import these in here to break a circular import reference
@@ -288,7 +290,10 @@ class Proxy(object):
         return self._connections.get(connection.name, None) is connection
 
     def potentially_stop(self):
-        """Stop proxy if no open connections."""
+        """Stop proxy if no open connections and not in keepAlive mode."""
+        if self._keepAlive:
+            return
+
         LOGGER.debug(
             'Stopping if there are no more connections: ' +
             str(list(self._connections.keys())))
@@ -394,6 +399,11 @@ class Proxy(object):
 
         """
         if not config.get_option('proxy.watchFileSystem'):
+            return
+
+        if self._keepAlive:
+            LOGGER.info(
+                'Will not observe file system since keepAlive is set to True')
             return
 
         key = FSObserver.get_key(connection)
