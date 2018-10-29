@@ -69,9 +69,14 @@ def _print_remote_url(port, quoted_name):
     external_url = _get_report_url(external_ip, port, quoted_name)
     lan_url = _get_report_url(lan_ip, port, quoted_name)
 
+    if timeout_secs != float('inf'):
+        timeout_msg = f'within {int(timeout_secs)} seconds'
+    else:
+        timeout_msg = ''
+
     print(textwrap.dedent(f'''
         =============================================================
-        Open one of the URLs below in your browser within {int(timeout_secs)} seconds
+        Open one of the URLs below in your browser {timeout_msg}
         External URL: {external_url}
         Internal URL: {lan_url}
         =============================================================
@@ -248,26 +253,38 @@ class Proxy(object):
         if new_name:
             _launch_web_client(connection.name)
 
-        # Clean up the connection we don't get an incoming connection.
-        def connection_timeout():
-            LOGGER.debug(f'In connection timeout for "{connection.name}".')
-            connection.end_grace_period()
-            self.try_to_deregister_proxy_connection(connection)
-            self.potentially_stop()
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-        loop = IOLoop.current()
-        loop.call_later(timeout_secs, connection_timeout)
-        LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
+        if timeout_secs != float('inf'):
+            self._schedule_connection_stoppage(timeout_secs, connection)
+
         LOGGER.debug(
-            f'Finished resistering connection: '
+            f'Finished registering connection: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
+
+        def _schedule_connection_stoppage(self, timeout_secs, connection):
+            """Schedules a timer to close the connection if no clients.
+            """
+            # Clean up the connection we don't get an incoming connection.
+            def connection_timeout():
+                LOGGER.debug(f'In connection timeout for "{connection.name}".')
+                connection.end_grace_period()
+                self.try_to_deregister_proxy_connection(connection)
+                self.potentially_stop()
+
+            loop = IOLoop.current()
+            loop.call_later(timeout_secs, connection_timeout)
+            LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
 
     def try_to_deregister_proxy_connection(self, connection):
         """Try to deregister proxy connection.
 
-        Deregister this ProxyConnection so long as there aren't any open
-        connection (local or client), and the connection is no longer in its
-        grace period.
+        Deregister ProxyConnection so long as there aren't any open connection
+        (local or client), and the connection is no longer in its grace period.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+
         """
         if not self.proxy_connection_is_registered(connection):
             return
