@@ -153,7 +153,10 @@ class Config(object):
             self._enable_development()
 
         out = []
-        foo = yaml.dump(self._raw_config, default_flow_style=False)
+
+        foo = yaml.dump(self._raw_config, default_flow_style=False,
+                width=float('inf'))
+
         for line in foo.split('\n'):
             if '_comment:' in line:
                 prev_line = out.pop(-1)
