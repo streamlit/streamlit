@@ -272,7 +272,8 @@ def get_default_creds():
     try:
         http_client = httpclient.HTTPClient()
         endpoint = 'http://streamlit.io/tmp/st_pub_write.json'
-        response = http_client.fetch(endpoint, request_timeout=5)
+        response = http_client.fetch(endpoint, request_timeout=0.3)
+
         # Strip unicode
         creds = ast.literal_eval(response.body.decode('utf-8'))
         # LOGGER.debug(response.body)
@@ -288,9 +289,9 @@ def get_default_creds():
     # gracefully: an error in loading the credentials shouldn't stop the user
     # from using Streamlit.
     except Exception as e:
-        LOGGER.debug(
-            'Error getting credentials from %s. Sharing will be '
-            'disabled. %s', endpoint, e)
+        LOGGER.info(
+            'Error getting Streamlit credentials. Sharing will be '
+            'disabled. %s', e)
     finally:
         if http_client is not None:
             http_client.close()
