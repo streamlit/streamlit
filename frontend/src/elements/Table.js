@@ -28,17 +28,23 @@ class Table extends PureComponent {
     // media==screen). But need to fix the autosizer first.
     try {
       return (
-        <div className='streamlit-table'>
-          <ReactTable className={ hasNoData ? 'empty-table' : ''}>
+        <div className="streamlit-table">
+          <ReactTable className={hasNoData ? 'empty-table' : ''}>
             <thead>
-              <TableRows df={df} header={true}/>
+              <TableRows df={df} header />
             </thead>
             <tbody>
               { hasNoData ?
                 <tr>
                   <td colSpan={cols || 1}>empty</td>
                 </tr>
-                : <TableRows df={df} header={false}/>
+                :
+                <TableRows
+                  df={df}
+                  headerRows={headerRows}
+                  rows={rows}
+                  cols={cols}
+                />
               }
             </tbody>
           </ReactTable>
