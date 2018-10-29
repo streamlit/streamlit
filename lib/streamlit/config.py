@@ -75,7 +75,8 @@ class Config(object):
                     value = 0.01,
                 ),
                 waitForProxySecs = dict(
-                    _comment = 'How long to wait for the proxy server to start up.',
+                    _comment = (
+                        'How long to wait for the proxy server to start up.'),
                     value = 3.0,
                 ),
             ),
@@ -88,7 +89,9 @@ class Config(object):
                     value = 'localhost',
                 ),
                 waitForConnectionSecs = dict(
-                    _comment = 'How many seconds the proxy waits for the connection before timing out.',
+                    _comment = (
+                        'How many seconds the proxy waits for the connection '
+                        'before timing out.'),
                     value = 10.1,
                 ),
                 useNode = dict(
@@ -240,8 +243,9 @@ def get_s3_option(option):
     elif get_option(old_option) is None:
         return None
     else:
-        LOGGER.warning('DEPRECATION: Please update ~/.streamlit/config.yaml by renaming "%s" to "%s".' \
-            % (old_option, new_option))
+        LOGGER.warning(
+            'DEPRECATION: Please update ~/.streamlit/config.yaml by '
+            'renaming "%s" to "%s".' % (old_option, new_option))
         return get_option(old_option)
 
 def saving_is_configured():
