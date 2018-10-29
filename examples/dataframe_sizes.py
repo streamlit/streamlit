@@ -1,5 +1,3 @@
-"""The crypt of top secret undocumented Streamlit API calls."""
-
 import streamlit as st
 import numpy as np
 import pandas as pd
