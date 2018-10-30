@@ -1,7 +1,8 @@
 .streamlit-container .fixed-width {
   font-family: 'IBM Plex Mono', monospace;
-  white-space: pre-wrap;
-  font-size: 1rem;
+  white-space: pre;
+  font-size: 0.8rem;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container {
