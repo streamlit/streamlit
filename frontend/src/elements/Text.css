@@ -37,11 +37,11 @@
   line-height: inherit;
   margin: 0;
   max-width: auto;
-  overflow: visible;
   padding: 0;
   white-space: pre;
   word-break: normal;
   word-wrap: normal;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container blockquote {
