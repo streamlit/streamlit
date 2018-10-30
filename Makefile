@@ -63,14 +63,14 @@ wheel:
 clean:
 	@echo FIXME: This needs to be fixed!
 	cd lib; rm -rf build dist  .eggs *.egg-info
-	find . -name '*.pyc' -type f -delete
-	find . -name __pycache__ -type d -delete
-	find . -name .pytest_cache -exec rm -rf {} \;
+	find . -name '*.pyc' -type f -delete || true
+	find . -name __pycache__ -type d -delete || true
+	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/protobuf/*_pb2.py
 	rm -f frontend/src/protobuf.js
 	rm -rf lib/streamlit/static
-	find . -name .streamlit -type d -exec rm -rf {} \;
+	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
 .PHONY: site
