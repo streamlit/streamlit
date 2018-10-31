@@ -36,10 +36,10 @@ st.deck_gl_chart(
     viewport_zoom=11,
     viewport_pitch=50,
     layers=[{
-       'data': random_points,
-       'type': 'HexagonLayer',
-       'radius': 250,
-       'extruded': True,
+        'data': random_points,
+        'type': 'HexagonLayer',
+        'radius': 250,
+        'extruded': True,
     }],
 )
 
@@ -56,15 +56,15 @@ st.deck_gl_chart(
         'pitch': 50,
     },
     layers=[{
-       'data': random_points,
-       'type': 'HexagonLayer',
-       'radius': 250,
-       'extruded': True,
+        'data': random_points,
+        'type': 'HexagonLayer',
+        'radius': 250,
+        'extruded': True,
     }, {
-       'data': random_points,
-       'type': 'ScatterplotLayer',
-       # Testing that the "encoding" is set automatically:
-       'getRadius': 'size',
+        'data': random_points,
+        'type': 'ScatterplotLayer',
+        # Testing that the "encoding" is set automatically:
+        'getRadius': 'size',
     }],
 )
 
@@ -111,13 +111,13 @@ st.deck_gl_chart(
         'pitch': 50,
     },
     layers=[{
-       'data': random_points,
-       'type': 'ArcLayer',
-       'getStrokeWidth': 10,
-       'getLatitude': 'my_lat',
-       'getLongitude': 'my_lon',
-       'getTargetLatitude': 'my_lat2',
-       'getTargetLongitude': 'my_lon2',
+        'data': random_points,
+        'type': 'ArcLayer',
+        'getStrokeWidth': 10,
+        'getLatitude': 'my_lat',
+        'getLongitude': 'my_lon',
+        'getTargetLatitude': 'my_lat2',
+        'getTargetLongitude': 'my_lon2',
     }],
 )
 
