@@ -106,12 +106,13 @@ DeckGlChart.propTypes = {
 function buildLayer(layer) {
   const data = dataFrameToArrayOfDicts(layer.get('data'));
   const spec = JSON.parse(layer.get('spec'));
-  parseEncodings(spec);
 
-  const type = spec.type || '';
+  const type = spec.type ? spec.type.toLowerCase() : '';
   delete spec.type;
 
-  switch (type.toLowerCase()) {
+  parseEncodings(type, spec);
+
+  switch (type) {
     case 'arclayer':
       return new ArcLayer({
         data, ...Defaults.ArcLayer, ...spec
@@ -156,6 +157,20 @@ function buildLayer(layer) {
       throw new Error(`Unsupported layer type "${type}"`);
   }
 }
+
+
+
+// DeckGL Layers that take a getPosition argument. We'll allow users to specify
+// position columns via getLatitude and getLongitude instead.
+const POSITION_LAYER_TYPES = new Set([
+  'arclayer',
+  'gridlayer',
+  'hexagonlayer',
+  'linelayer',
+  'scatterplotlayer',
+  'screengridlayer',
+  'textlayer',
+]);
 
 
 /**
@@ -256,19 +271,31 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
  *       ...
  *     }
  */
-function parseEncodings(spec) {
+function parseEncodings(type, spec) {
   /* eslint-disable no-param-reassign */
   const { encoding } = spec;
   if (!encoding) return;
 
   delete spec.encoding;
 
+  // If this is a layer that accepts a getPosition argument, build that
+  // argument from getLatiude and getLongitude.
+  if (POSITION_LAYER_TYPES.has(type) &&
+      encoding.getLatitude &&
+      encoding.getLongitude) {
+    const latField = encoding.getLatitude;
+    const lonField = encoding.getLongitude;
+    encoding.getPosition = (d) => [d[lonField], d[latField]];
+  }
+
   Object.keys(encoding).forEach((key) => {
     const v = encoding[key];
     spec[makeGetterName(key)] =
-        typeof v === 'string' ?
-          d => d[v] :
-          () => v;
+        typeof v === 'function' ?
+            v :                       // Leave functions untouched.
+            typeof v === 'string' ?
+                d => d[v] :           // Make getters from strings.
+                () => v;              // Make constant function otherwise.
   });
 }
 

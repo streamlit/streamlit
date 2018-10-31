@@ -61,11 +61,10 @@ st.deck_gl_chart(
        'radius': 250,
        'extruded': True,
     }, {
-        'data': random_points,
-        'type': 'ScatterplotLayer',
-        'extruded': True,
-        # Testing that the "encoding" is set automatically:
-        'getRadius': 'size',
+       'data': random_points,
+       'type': 'ScatterplotLayer',
+       # Testing that the "encoding" is set automatically:
+       'getRadius': 'size',
     }],
 )
 
@@ -93,6 +92,37 @@ st.vega_lite_chart(
         'type': 'interval',
         'bind': 'scales',
     },
+)
+
+
+st.header('Testing custom column names')
+
+random_points = pd.DataFrame(
+    np.random.randn(1000, 3) / [50, 50, .002] + [37.76, -122.4, 0],
+    columns=['my_lat', 'my_lon', 'my_size'])
+
+st.deck_gl_chart(
+    viewport={
+        'latitude': 37.76,
+        'longitude': -122.4,
+        'zoom': 11,
+        'pitch': 50,
+    },
+    layers=[{
+       'data': random_points,
+       'type': 'HexagonLayer',
+       'radius': 250,
+       'extruded': True,
+       'getLatitude': 'my_lat',
+       'getLongitude': 'my_lon',
+    }, {
+       'data': random_points,
+       'type': 'ScatterplotLayer',
+       # Testing that the "encoding" is set automatically:
+       'getRadius': 'my_size',
+       'getLatitude': 'my_lat',
+       'getLongitude': 'my_lon',
+    }],
 )
 
 
