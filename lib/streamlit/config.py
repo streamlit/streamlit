@@ -269,7 +269,7 @@ def get_default_creds():
     http_client = None
     try:
         response = urllib.request.urlopen(
-            STREAMLIT_CREDENTIALS_URL, timeout=0.3).read()
+            STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
 
         # Strip unicode
         creds = ast.literal_eval(response.decode('utf-8'))
