@@ -160,16 +160,23 @@ function buildLayer(layer) {
 
 
 
-// DeckGL Layers that take a getPosition argument. We'll allow users to specify
-// position columns via getLatitude and getLongitude instead.
+// Set of DeckGL Layers that take a getPosition argument. We'll allow users to
+// specify position columns via getLatitude and getLongitude instead.
 const POSITION_LAYER_TYPES = new Set([
-  'arclayer',
   'gridlayer',
   'hexagonlayer',
-  'linelayer',
   'scatterplotlayer',
   'screengridlayer',
   'textlayer',
+]);
+
+
+// Set of DeckGL Layers that take a getSourcePosition/getTargetPosition
+// arguments.  We'll allow users to specify position columns via
+// getLatitude/getTargetLatitude and getLongitude/getTargetLongitude instead.
+const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set([
+  'arclayer',
+  'linelayer',
 ]);
 
 
@@ -214,7 +221,7 @@ function getPositionFromLatLonColumns(d) {
   return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)];
 }
 
-function getEndPositionFromLatLonColumn(d) {
+function getTargetPositionFromLatLonColumn(d) {
   return [fallback(d.longitude2, d.lon2), fallback(d.latitude2, d.lat2)];
 }
 
@@ -288,6 +295,20 @@ function parseEncodings(type, spec) {
     encoding.getPosition = (d) => [d[lonField], d[latField]];
   }
 
+  // Same as the above, but for getSourcePosition/getTargetPosition.
+  if (SOURCE_TARGET_POSITION_LAYER_TYPES.has(type) &&
+      encoding.getLatitude &&
+      encoding.getLongitude &&
+      encoding.getTargetLatitude &&
+      encoding.getTargetLongitude) {
+    const latField = encoding.getLatitude;
+    const lonField = encoding.getLongitude;
+    const latField2 = encoding.getTargetLatitude;
+    const lonField2 = encoding.getTargetLongitude;
+    encoding.getSourcePosition = (d) => [d[lonField], d[latField]];
+    encoding.getTargetPosition = (d) => [d[lonField2], d[latField2]];
+  }
+
   Object.keys(encoding).forEach((key) => {
     const v = encoding[key];
     spec[makeGetterName(key)] =
@@ -317,7 +338,7 @@ const Defaults = {
     getSourceColor: getSourceColorFromSourceColorRGBAColumns,
     getTargetColor: getTargetColorFromTargetColorRGBAColumns,
     getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getEndPositionFromLatLonColumn,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
   },
 
   // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
@@ -332,7 +353,7 @@ const Defaults = {
 
   LineLayer: {
     getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getEndPositionFromLatLonColumn,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
   },
 
   // IconLayer: TODO

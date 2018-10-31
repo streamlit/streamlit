@@ -76,10 +76,8 @@ _ENCODINGS = set([
     'getElevationValue',
     'getFillColor',
     'getIcon',
-    'getLatitude',
     'getLineColor',
     'getLineDashArray',
-    'getLongitude',
     'getNormal',
     'getPath',
     'getPolygon',
@@ -94,4 +92,10 @@ _ENCODINGS = set([
     'getText',
     'getTextAnchor',
     'getWeight',
+
+    # Streamlit-specific:
+    'getLatitude',
+    'getLongitude',
+    'getTargetLatitude',
+    'getTargetLongitude',
 ])
