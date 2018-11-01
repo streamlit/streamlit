@@ -43,6 +43,7 @@ import types
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
+from streamlit.caching import set_allow_caching as _set_allow_caching
 from streamlit.util import escape_markdown
 
 
@@ -218,6 +219,13 @@ def echo():
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning(f'Unable to display code. {str(err)}')
+
+
+# TODO: Move to config.py when we refactor the config system.
+def set_config(client_caching=None):
+    if client_caching is not None:
+        assert type(client_caching) is bool
+        _set_allow_caching(client_caching)
 
 
 # This is a necessary (but not sufficient) condition to establish that this

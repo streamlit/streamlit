@@ -23,6 +23,11 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger()
 
+_scope = dict(
+    # When this is false, cache(func) just returns func back.
+    allow_caching=True,
+)
+
 def cache(func):
     """Function decorator to memoize input function, saving to disk.
 
@@ -32,6 +37,8 @@ def cache(func):
         The function that cache.
 
     """
+    if not _scope['allow_caching']:
+        return func
 
     @wraps(func)
     def wrapped_func(*argc, **argv):
@@ -76,6 +83,7 @@ def cache(func):
     # Return the funciton which wraps our function.
     return wrapped_func
 
+
 def clear_cache(verbose=False):
     """Clear the memoization cache."""
     cache_path = os.path.join(local_root, 'cache')
@@ -85,3 +93,7 @@ def clear_cache(verbose=False):
             print(f'Cleared {cache_path} directory.')
     elif verbose:
         print(f'No such directory {cache_path} so nothing to clear. :)')
+
+
+def set_allow_caching(value):
+    _scope['allow_caching'] = value
