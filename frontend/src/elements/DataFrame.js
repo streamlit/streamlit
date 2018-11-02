@@ -1,5 +1,8 @@
 /**
- * Component display a Pandas Dataframe.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Component display a Pandas Dataframe.
  */
 
 import React, { PureComponent } from 'react';

@@ -1,4 +1,7 @@
 """Generate default public S3 policy."""
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 import sys
 
 from textwrap import dedent

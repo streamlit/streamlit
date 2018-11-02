@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ */
+
 import { IS_DEV_ENV } from './baseconsts';
 
 /**

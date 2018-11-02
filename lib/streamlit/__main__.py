@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """This is a script which is run when the streamlit package is executed."""
 import getpass
 import sys

@@ -1,6 +1,6 @@
 /**
- * Implements a websocket connection over which we can send and receive
- * Google protocol buffers. It guarnatees message arrival order.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
 import {ForwardMsg, BackMsg} from './protobuf';

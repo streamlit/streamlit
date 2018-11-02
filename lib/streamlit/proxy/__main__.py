@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Main handler for proxy."""
 
 # Python 2/3 compatibility
