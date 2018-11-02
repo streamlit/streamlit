@@ -37,19 +37,20 @@ def cache(func):
         The function that cache.
 
     """
-    if not _scope['allow_caching']:
-        return func
-
     @wraps(func)
     def wrapped_func(*argc, **argv):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
+        if not _scope['allow_caching']:
+            LOGGER.debug('Purposefully skipping cache')
+            return func(*argc, **argv)
+
         # Temporarily display this message while computing this function.
         if len(argc) == 0 and len(argv) == 0:
-            message = f'Caching {func.__name__}().'
+            message = f'Running {func.__name__}().'
         else:
-            message = f'Caching {func.__name__}(...).'
+            message = f'Running {func.__name__}(...).'
         with st.spinner(message):
             # Calculate the filename hash.
             hasher = hashlib.new('md5')
