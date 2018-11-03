@@ -29,6 +29,7 @@ p {
 
 #signup-email {
   vertical-align: baseline;
+  background-color: none;
   padding: 12px 0;
   font-size: 1rem;
   margin-bottom: 0.66em;
@@ -41,6 +42,11 @@ p {
   transition:
       opacity 300ms,
       visibility 300ms step-start;
+}
+
+#signup-email:-webkit-autofill {
+  /* Hack to make background white when text field is autofilled */
+  -webkit-box-shadow: 0 0 0 3rem white inset;
 }
 
 #signup-email:focus {
@@ -142,7 +148,6 @@ p {
       opacity 300ms,
       visibility 300ms step-end;
 }
-
 
 .main-text {
   margin-right: 1rem;
