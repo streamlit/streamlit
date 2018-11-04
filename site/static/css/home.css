@@ -29,10 +29,9 @@ p {
 
 #signup-email {
   vertical-align: baseline;
-  background-color: none;
+  background-color: transparent;
   padding: 12px 0;
   font-size: 1rem;
-  margin-bottom: 0.66em;
   width: 15em;
   border: solid #bfc4d0;
   border-width: 0 0 1px;
@@ -51,15 +50,15 @@ p {
 
 #signup-email:focus {
   outline: none;
-  border-color: #b5bccc;
 }
 
 #signup-email::placeholder {
   color: #b5bccc;
 }
 
-#button-field {
+.field {
   position: relative;
+  margin-bottom: 0.66em;
 }
 
 #signup-button,
@@ -113,7 +112,7 @@ p {
       visibility 300ms step-end;
 }
 
-#button-field {
+.field {
   transition:
       transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -149,6 +148,16 @@ p {
       visibility 300ms step-end;
 }
 
-.main-text {
-  margin-right: 1rem;
+#signup-email ~ .focus-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #f1516c;
+  transition: 300ms;
+}
+
+#signup-email:focus ~ .focus-border {
+  width: 15rem;
 }
