@@ -31,15 +31,15 @@ st.subheader('As a histogram plot')
 
 st.deck_gl_chart(
     # Using flattened dicts:
-    viewport_latitude = 37.76,
-    viewport_longitude = -122.4,
-    viewport_zoom = 11,
-    viewport_pitch = 50,
+    viewport_latitude=37.76,
+    viewport_longitude=-122.4,
+    viewport_zoom=11,
+    viewport_pitch=50,
     layers=[{
-       'data': random_points,
-       'type': 'HexagonLayer',
-       'radius': 250,
-       'extruded': True,
+        'data': random_points,
+        'type': 'HexagonLayer',
+        'radius': 250,
+        'extruded': True,
     }],
 )
 
@@ -56,14 +56,13 @@ st.deck_gl_chart(
         'pitch': 50,
     },
     layers=[{
-       'data': random_points,
-       'type': 'HexagonLayer',
-       'radius': 250,
-       'extruded': True,
+        'data': random_points,
+        'type': 'HexagonLayer',
+        'radius': 250,
+        'extruded': True,
     }, {
         'data': random_points,
         'type': 'ScatterplotLayer',
-        'extruded': True,
         # Testing that the "encoding" is set automatically:
         'getRadius': 'size',
     }],
@@ -96,12 +95,41 @@ st.vega_lite_chart(
 )
 
 
+st.header('Testing custom column names')
+
+random_points = pd.DataFrame(
+    (np.random.randn(100, 4)
+        / [50, 50, 50, 50]
+        + [37.76, -122.4, 37.76, -122.4]),
+    columns=['my_lat', 'my_lon', 'my_lat2', 'my_lon2'])
+
+st.deck_gl_chart(
+    viewport={
+        'latitude': 37.76,
+        'longitude': -122.4,
+        'zoom': 11,
+        'pitch': 50,
+    },
+    layers=[{
+        'data': random_points,
+        'type': 'ArcLayer',
+        'getStrokeWidth': 10,
+        'getLatitude': 'my_lat',
+        'getLongitude': 'my_lon',
+        'getTargetLatitude': 'my_lat2',
+        'getTargetLongitude': 'my_lon2',
+    }],
+)
+
+
 st.header('Bart stops and bike rentals')
+
 
 @st.cache
 def from_data_file(filename):
     dirname = os.path.dirname(__file__)
     return pd.read_json(os.path.join(dirname, 'data', filename))
+
 
 # Grab some data
 bart_stop_stats = from_data_file('bart_stop_stats.json')
@@ -122,8 +150,8 @@ st.deck_gl_chart(
         'pitch': 50,
     },
 
-    # Plot number of bike rentals throughtout the city
     layers=[{
+        # Plot number of bike rentals throughtout the city
         'type': 'HexagonLayer',
         'data': bike_rental_stats,
         'radius': 200,
@@ -132,24 +160,24 @@ st.deck_gl_chart(
         'pickable': True,
         'extruded': True,
 
-    # Now plot locations of Bart stops
-    # ...and let's size the stops according to traffic
     }, {
+        # Now plot locations of Bart stops
+        # ...and let's size the stops according to traffic
         'type': 'ScatterplotLayer',
         'data': bart_stop_stats,
         'radiusScale': 10,
         'getRadius': 50,
 
-    # Now Add names of Bart stops
     }, {
+        # Now Add names of Bart stops
         'type': 'TextLayer',
         'data': bart_stop_stats,
         'getText': 'name',
         'getColor': [0, 0, 0, 200],
         'getSize': 15,
 
-    # And draw some arcs connecting the stops
     }, {
+        # And draw some arcs connecting the stops
         'type': 'ArcLayer',
         'data': bart_path_stats,
         'pickable': True,
