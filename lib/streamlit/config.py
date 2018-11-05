@@ -7,16 +7,12 @@ import os
 import platform
 import socket
 import yaml
-
-from tornado import gen, httpclient
-from tornado.concurrent import run_on_executor, futures
+import urllib
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 class Config(object):
-
-    executor = futures.ThreadPoolExecutor(5)
 
     _config = None
 
@@ -265,17 +261,18 @@ def remotely_track_usage():
     return True  # default to True. See also /frontend/src/remotelogging.js
 
 
+STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+
 def get_default_creds():
     # TODO(armando): Should we always fetch this or should we write
     # credentials to disk and then if the user deletes it, refetch?
     http_client = None
     try:
-        http_client = httpclient.HTTPClient()
-        endpoint = 'http://streamlit.io/tmp/st_pub_write.json'
-        response = http_client.fetch(endpoint, request_timeout=0.3)
+        response = urllib.request.urlopen(
+            STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
 
         # Strip unicode
-        creds = ast.literal_eval(response.body.decode('utf-8'))
+        creds = ast.literal_eval(response.decode('utf-8'))
         # LOGGER.debug(response.body)
 
         c = Config._config._config

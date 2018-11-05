@@ -2,7 +2,8 @@
   background-color: #F0F3F9;
   padding: 0.5rem 1rem;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
 }
 
 .streamlit-container .doc-header {
@@ -20,11 +21,5 @@
 }
 
 .streamlit-container .doc-containter .doc-string {
-  white-space: pre-wrap;
-}
-
-@media (max-width: 768px) {
-  .streamlit-container .doc-containter {
-    font-size: 0.6rem;
-  }
+  white-space: pre;
 }

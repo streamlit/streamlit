@@ -1,7 +1,8 @@
 .streamlit-container .fixed-width {
   font-family: 'IBM Plex Mono', monospace;
-  white-space: pre-wrap;
-  font-size: 1rem;
+  white-space: pre;
+  font-size: 0.8rem;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container {
@@ -36,11 +37,11 @@
   line-height: inherit;
   margin: 0;
   max-width: auto;
-  overflow: visible;
   padding: 0;
   white-space: pre;
   word-break: normal;
   word-wrap: normal;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container blockquote {
