@@ -222,7 +222,17 @@ def echo():
 
 
 # TODO: Move to config.py when we refactor the config system.
-def set_config(client_caching=None):
+def set_config(config):
+    """Set config options for Streamlit.
+
+    Parameters
+    ----------
+    config : dict
+        A dictionary where keys are strings with the fully-qualified names of
+        config options (e.g. 'client.caching'), and keys are the config values.
+
+    """
+    client_caching = config.get('client.caching')
     if client_caching is not None:
         assert type(client_caching) is bool
         _set_allow_caching(client_caching)

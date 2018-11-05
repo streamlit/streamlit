@@ -55,6 +55,7 @@ else:
     st.subheader('Test that you can turn off caching')
     before = scope['num_executions']
     st.set_config(client_caching=False)
+    st.set_config({'client.caching': False})
     v = my_func(1, 2, dont_care=10)
     after = scope['num_executions']
     if after == before + 1:
@@ -65,6 +66,7 @@ else:
     st.subheader('Test that you can turn on caching')
     before = scope['num_executions']
     st.set_config(client_caching=True)
+    st.set_config({'client.caching': True})
     v1 = my_func(1, 2, dont_care=10)
     v2 = my_func(1, 2, dont_care=10)
     after = scope['num_executions']
