@@ -6,7 +6,6 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 
-import './Video.css';
 
 class Video extends PureComponent {
   render() {
