@@ -9,7 +9,7 @@ main .contents {
 }
 
 .main-text {
-  max-width: 45vw;
+  max-width: 35rem;
 }
 
 main {
@@ -74,7 +74,6 @@ p {
   color: #ffffff;
   box-sizing: border-box;
   padding: 0 2em;
-  margin: 20px 0;
   height: 2.75rem;
   display: flex;
   justify-content: center;
@@ -119,6 +118,11 @@ p {
 
 .success #button-field {
   transform: translateY(-3rem);
+}
+
+#button-field {
+  height: 2.75rem;
+  margin: 40px 0;
 }
 
 .success #signup-button {
