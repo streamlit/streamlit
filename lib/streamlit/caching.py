@@ -23,10 +23,9 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger()
 
-_scope = dict(
-    # When this is false, cache(func) just returns func back.
-    allow_caching=True,
-)
+# When this is false, cache(func) just returns func back.
+allow_caching = True
+
 
 def cache(func):
     """Function decorator to memoize input function, saving to disk.
@@ -42,7 +41,8 @@ def cache(func):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
-        if not _scope['allow_caching']:
+        global allow_caching
+        if not allow_caching:
             LOGGER.debug('Purposefully skipping cache')
             return func(*argc, **argv)
 
@@ -97,4 +97,5 @@ def clear_cache(verbose=False):
 
 
 def set_allow_caching(value):
-    _scope['allow_caching'] = value
+    global allow_caching
+    allow_caching = value
