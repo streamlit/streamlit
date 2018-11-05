@@ -6,7 +6,6 @@
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 
-import './Audio.css';
 
 class Audio extends PureComponent {
   render() {
