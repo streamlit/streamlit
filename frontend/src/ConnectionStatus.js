@@ -1,5 +1,8 @@
 /**
- * Implements a persistent websocket connection.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Implements a persistent websocket connection.
  * Displays itself as an icon indicating the connection type.
  */
 

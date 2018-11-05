@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Websocket handler class which the local python library connects to."""
 from tornado.websocket import WebSocketHandler
 import urllib

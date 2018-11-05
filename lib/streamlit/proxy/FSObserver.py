@@ -1,4 +1,7 @@
 # -*- coding: future_fstrings -*-
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """A class that watches the file system"""
 
 # Python 2/3 compatibility

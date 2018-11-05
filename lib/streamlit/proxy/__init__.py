@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """The package which includes all files related to the Streamlit proxy
 server."""
 

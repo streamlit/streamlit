@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Exports everything that should be visible to Streamlit users.
 
 The functions in this package wrap member functions of DeltaGenerator, as well
