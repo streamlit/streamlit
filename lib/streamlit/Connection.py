@@ -69,7 +69,7 @@ class Connection(object):
         self._report_id = base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
         # Create a name for this report.
-        self._name = self._create_name()
+        self._name = _create_name(self._report_id)
         LOGGER.debug(f'Created a connection with name "{self._name}"')
 
         # This is the event loop to talk with the proxy.
@@ -174,22 +174,6 @@ class Connection(object):
         Report, e.g. adding new elements.
         """
         return self._delta_generator
-
-    def _create_name(self):
-        """Create a name for this report."""
-        name = ''
-        if len(sys.argv) >= 2 and sys.argv[0] == '-m':
-            name = sys.argv[1]
-        elif len(sys.argv) >= 1:
-            name = os.path.split(sys.argv[0])[1]
-            if name.endswith('.py'):
-                name = name[:-3]
-            if name == '__main__' and len(sys.argv) >= 2:
-                name = sys.argv[1]
-
-        if name == '':
-            name = str(self._report_id)
-        return name
 
     @_assert_singleton
     def _enqueue_delta(self, delta):
@@ -352,6 +336,23 @@ class ProxyConnectionError(Exception):
         """
         msg = f'Unable to connect to proxy at {uri}.'
         super(ProxyConnectionError, self).__init__(msg)
+
+
+def _create_name(report_id):
+    """Create a name for this report."""
+    name = ''
+    if len(sys.argv) >= 2 and sys.argv[0] == '-m':
+        name = sys.argv[1]
+    elif len(sys.argv) >= 1:
+        name = os.path.split(sys.argv[0])[1]
+        if name.endswith('.py'):
+            name = name[:-3]
+        if name == '__main__' and len(sys.argv) >= 2:
+            name = sys.argv[1]
+
+    if name == '':
+        name = str(_report_id)
+    return name
 
 
 if __name__ == '__main__':
