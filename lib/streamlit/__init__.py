@@ -52,10 +52,17 @@ from streamlit.util import escape_markdown
 this_module = sys.modules[__name__]
 
 
+# If True, Streamlit will sent deltas to the Proxy. If False, all methods will
+# appear to work normally but not deltas will be sent to the Proxy.
+_connection_enabled = True
+
+
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        dg = Connection.get_connection().get_delta_generator()
+        global _connection_enabled
+        con = Connection.get_connection(enabled=_connection_enabled)
+        dg = con.get_delta_generator()
         return method(dg, *args, **kwargs)
     return wrapped_method
 
@@ -239,6 +246,13 @@ def set_config(config):
         assert type(client_caching) is bool
         _set_allow_caching(client_caching)
 
+    client_enabled = config.get('client.enabled')
+    if client_enabled is not None:
+        assert type(client_enabled) is bool
+        global _connection_enabled
+        _connection_enabled = client_enabled
+        Connection.get_connection(enabled=_connection_enabled)
+
 
 # This is a necessary (but not sufficient) condition to establish that this
 # is the proxy process.
@@ -263,4 +277,5 @@ _this_may_be_streamlit_command = os.path.split(sys.argv[0])[1] == 'streamlit'
 # Overcautiously skipping this step isn't fatal in general as it simply implies
 # that the connection may be established later.
 if not (_this_may_be_proxy or _this_may_be_streamlit_command):
-    Connection.get_connection().get_delta_generator()
+    con = Connection.get_connection(enabled=_connection_enabled)
+    con.get_delta_generator()

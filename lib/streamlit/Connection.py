@@ -63,7 +63,7 @@ class Connection(object):
     _PROXY_CONNECTION_FAILED = 'failed'
 
     # This is the class through which we can add elements to the Report
-    def __init__(self):
+    def __init__(self, enabled=True):
         """Create a new connection to the server."""
         # Create an ID for this Report
         self._report_id = base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
@@ -105,6 +105,9 @@ class Connection(object):
         # from other threads could cause rare, subtle race conditions!
         self._queue = ReportQueue()
 
+        # If True, will not allow adding more items to the queue.
+        self._allow_enqueueing_items = enabled
+
         # Will stay open until the main thread closes. Then gets set to false to
         # cleanly close down the connection. Like self._queue, this variable
         # is only ever accessed
@@ -122,17 +125,31 @@ class Connection(object):
         self._delta_generator = DeltaGenerator(self._enqueue_delta)
 
     @classmethod
-    def get_connection(cls):
+    def get_connection(cls, enabled=True):
         """Return the singleton Connection object.
 
         Instantiates one if necessary.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether to the connection should be enabled (True) or disabled
+            (False). The difference is that disabled connections silently drop
+            all deltas you try to enqueue.
+
+            NOTE: If the connection singleton already exists, this sets its
+            state enabled/disabled state.
+
         """
         # Instantiate the singleton connection if necessary.
         if cls._connection is None:
             LOGGER.debug('No connection. Registering one.')
 
             # Create the new connection.
-            Connection().register()
+            Connection(enabled=enabled).register()
+
+        else:
+            cls._connection.set_enabled(enabled)
 
         # Now that we're sure to have a connection, return it.
         return cls._connection
@@ -142,6 +159,7 @@ class Connection(object):
         # Establish this connection and connect to the proxy server.
         assert type(self)._connection is None, 'Cannot register two connections'
         Connection._connection = self
+
         self._connect_to_proxy()
 
         # Override the default exception handler.
@@ -166,6 +184,19 @@ class Connection(object):
         """Remove this connection from being the singleton connection."""
         Connection._connection = None
 
+    def set_enabled(self, state):
+        """Enable or disable connection.
+
+        If you call enqueue() on a disabled connection, it's a no-op.
+
+        Parameters
+        ----------
+        state : bool
+            Whether to enable (True) or disable (False) the connection.
+
+        """
+        self._allow_enqueueing_items = state
+
     @_assert_singleton
     def get_delta_generator(self):
         """Return the DeltaGenerator for this connection.
@@ -178,8 +209,16 @@ class Connection(object):
     @_assert_singleton
     def _enqueue_delta(self, delta):
         """Enqueue the given delta for transmission to the server."""
+
+        # Read the value of _allow_enqueueing_items at this point rather than
+        # inside the inner function below because that function gets enqueued
+        # and executed asynchronously -- at which point the value of
+        # _allow_enqueueing_items may be changed.
+        enabled = self._allow_enqueueing_items
+
         def queue_the_delta():
-            self._queue(delta)
+            if enabled:
+                self._queue(delta)
         self._loop.add_callback(queue_the_delta)
 
     @_assert_singleton
