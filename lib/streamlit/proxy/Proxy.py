@@ -255,27 +255,23 @@ class Proxy(object):
         if new_name:
             _launch_web_client(connection.name)
 
+        # Clean up the connection we don't get an incoming connection.
+        def connection_timeout():
+            LOGGER.debug(f'In connection timeout for "{connection.name}".')
+            connection.end_grace_period()
+            self.try_to_deregister_proxy_connection(connection)
+            self.potentially_stop()
+
         timeout_secs = config.get_option('proxy.waitForConnectionSecs')
+
         if timeout_secs != float('inf'):
-            self._schedule_connection_stoppage(timeout_secs, connection)
+            loop = IOLoop.current()
+            loop.call_later(timeout_secs, connection_timeout)
+            LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
 
         LOGGER.debug(
             f'Finished registering connection: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
-
-        def _schedule_connection_stoppage(self, timeout_secs, connection):
-            """Schedules a timer to close the connection if no clients.
-            """
-            # Clean up the connection we don't get an incoming connection.
-            def connection_timeout():
-                LOGGER.debug(f'In connection timeout for "{connection.name}".')
-                connection.end_grace_period()
-                self.try_to_deregister_proxy_connection(connection)
-                self.potentially_stop()
-
-            loop = IOLoop.current()
-            loop.call_later(timeout_secs, connection_timeout)
-            LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
 
     def try_to_deregister_proxy_connection(self, connection):
         """Try to deregister proxy connection.
