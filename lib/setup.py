@@ -13,7 +13,7 @@ def readme():
 
 setuptools.setup(
     name='streamlit',
-    version='0.17.2',  # PEP-440
+    version='0.18.0',  # PEP-440
     description='Streaming Data Science',
     long_description=readme(),
     url='https://github.com/treuille/streamlet-cloud',

@@ -1,4 +1,7 @@
 # -*- coding: future_fstrings -*-
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility

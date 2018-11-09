@@ -1,5 +1,8 @@
 /**
- * Displays a Python Exception in the Report.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Displays a Python Exception in the Report.
  */
 
 import React, { PureComponent} from 'react';

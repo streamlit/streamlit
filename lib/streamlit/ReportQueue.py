@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """
 A queue of deltas associated with a particular Report.
 Whenever possible, deltas are combined.

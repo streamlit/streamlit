@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """A Python wrapper around Vega Lite.
 """
 

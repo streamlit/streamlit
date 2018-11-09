@@ -1,4 +1,9 @@
 /**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+/**
  * Port used to connect to the prod proxy server.
  */
 export const PROXY_PORT_PROD = 8501;

@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Websocket handler class which the web client connects to."""
 
 from tornado import gen

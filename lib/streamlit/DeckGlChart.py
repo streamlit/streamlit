@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """A Python wrapper around DeckGl."""
 
 # Python 2/3 compatibility
@@ -76,10 +78,8 @@ _ENCODINGS = set([
     'getElevationValue',
     'getFillColor',
     'getIcon',
-    'getLatitude',
     'getLineColor',
     'getLineDashArray',
-    'getLongitude',
     'getNormal',
     'getPath',
     'getPolygon',
@@ -94,4 +94,10 @@ _ENCODINGS = set([
     'getText',
     'getTextAnchor',
     'getWeight',
+
+    # Streamlit-specific:
+    'getLatitude',
+    'getLongitude',
+    'getTargetLatitude',
+    'getTargetLongitude',
 ])

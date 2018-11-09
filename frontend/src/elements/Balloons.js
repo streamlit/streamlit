@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React, { PureComponent } from 'react';
 import { Balloons as BalloonsProto } from '../protobuf';
 import './Balloons.css';
