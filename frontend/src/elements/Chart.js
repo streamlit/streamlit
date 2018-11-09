@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet, INDEX_COLUMN_DESIGNATOR } from '../dataFrameProto';

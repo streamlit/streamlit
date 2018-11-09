@@ -1,4 +1,7 @@
 # -*- coding: future_fstrings -*-
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Declarative configuration for Streamlit's native ReCharts-based charts."""
 
 # Python 2/3 compatibility

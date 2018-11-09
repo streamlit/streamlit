@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 .streamlit-container .streamlit-table {
   font-size: 0.8rem;
   font-family: 'IBM Plex Mono', monospace;
@@ -18,51 +23,9 @@
   vertical-align: middle;
 }
 
-/*
-
-.streamlit-container .dataframe-container {
-  border: 1px solid #E6E9EE;
-}
-
-.streamlit-container .dataframe.row-header,
-.streamlit-container .dataframe.col-header,
-.dataframe.corner {
-  background-color: #F0F3F9;
+.streamlit-container .streamlit-table .empty-table td {
   color: #768096;
-  z-index: 1;
+  font-style: italic;
+  font-size: 0.8rem;
+  text-align: center;
 }
-
-.streamlit-container .dataframe.row-header,
-.streamlit-container .dataframe.col-header,
-.streamlit-container .dataframe.data {
-  overflow: hidden;
-}
-
-.streamlit-container .dataframe.row-header,
-.dataframe.corner {
-  align-items: center;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.streamlit-container .fixup {
-  position: absolute;
-}
-
-.streamlit-container .fixup-top-right {
-  top: 0px;
-  right: 0px;
-}
-
-.streamlit-container .fixup-bottom-left {
-  bottom: 0px;
-  left: 0px;
-}
-
-.streamlit-container .table-top-right {
-  overflow-x: hidden !important;
-}
-
-.streamlit-container .table-bottom-left {
-  overflow-y: hidden !important;
-} */

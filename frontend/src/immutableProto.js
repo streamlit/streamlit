@@ -1,5 +1,8 @@
 /**
- * Utility functions for dealing with immutable protobuf objects.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Utility functions for dealing with immutable protobuf objects.
  */
 
 import { fromJS } from 'immutable';

@@ -1,5 +1,8 @@
 /**
- * Represents formatted text.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Represents formatted text.
  */
 
 import React, { PureComponent} from 'react';

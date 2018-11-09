@@ -1,5 +1,8 @@
 /**
- * Component display a Pandas Dataframe.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Component display a Pandas Dataframe.
  */
 
 import React, { PureComponent } from 'react';
@@ -19,18 +22,33 @@ import './Table.css';
 
 class Table extends PureComponent {
   render() {
-    // Get the properties.
-    const {df, width} = this.props;
+    const { df, width } = this.props;
+    const { headerRows, rows, cols } = dataFrameGetDimensions(df);
 
+    const hasNoData = rows === headerRows;
+
+    // TODO(tvst): Make tables have a max width with overflow: scroll (when
+    // media==screen). But need to fix the autosizer first.
     try {
       return (
-        <div className='streamlit-table'>
-          <ReactTable>
+        <div className="streamlit-table">
+          <ReactTable className={hasNoData ? 'empty-table' : ''}>
             <thead>
-              <TableRows df={df} header={true}/>
+              <TableRows df={df} header />
             </thead>
             <tbody>
-              <TableRows df={df} header={false}/>
+              { hasNoData ?
+                <tr>
+                  <td colSpan={cols || 1}>empty</td>
+                </tr>
+                :
+                <TableRows
+                  df={df}
+                  headerRows={headerRows}
+                  rows={rows}
+                  cols={cols}
+                />
+              }
             </tbody>
           </ReactTable>
         </div>
@@ -50,20 +68,23 @@ class Table extends PureComponent {
 /**
  * Purely functional component returning a list of rows.
  *
- * df     - The dataFrame to display.
- * header - Whether to display the header.
+ * df         - The dataFrame to display.
+ * header     - Whether to display the header.
+ * headerRows - Number of rows in the header.
+ * rows       - number of rows in the table (header + data).
+ * cols       - numver of colums in the table.
  */
-function TableRows({df, header}) {
-  const { headerRows, rows } = dataFrameGetDimensions(df);
-  const rowArray = [];
+function TableRows({df, header, headerRows, rows, cols}) {
   const startRow = header ? 0 : headerRows;
   const endRow = header ? headerRows : rows;
-  for (var rowIdx = startRow ; rowIdx < endRow ; rowIdx++)
+  const rowArray = [];
+  for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
     rowArray.push(
       <tr key={rowIdx}>
-        <TableRow df={df} rowIdx={rowIdx}/>
+        <TableRow df={df} rowIdx={rowIdx} cols={cols}/>
       </tr>
     );
+  }
   return rowArray;
 }
 
@@ -72,21 +93,21 @@ function TableRows({df, header}) {
  *
  * df     - The dataFrame to display.
  * rowIdx - The row index.
+ * cols   - numver of colums in the table.
  */
-function TableRow({df, rowIdx}) {
-  const { cols } = dataFrameGetDimensions(df);
+function TableRow({df, rowIdx, cols}) {
   const entries = [];
-  for (var colIdx = 0 ; colIdx < cols ; colIdx++) {
+  for (let colIdx = 0; colIdx < cols; colIdx++) {
     const { contents, type } = dataFrameGet(df, colIdx, rowIdx);
     const formattedContents = toFormattedString(contents);
     if (type === "corner") {
-      entries.push(<th>&nbsp;</th>);
+      entries.push(<th key={colIdx}>&nbsp;</th>);
     } else if (type === "row-header") {
-      entries.push(<th scope="row"> { formattedContents } </th>);
+      entries.push(<th key={colIdx} scope="row">{ formattedContents }</th>);
     } else if (type === "col-header") {
-      entries.push(<th> { formattedContents } </th>);
+      entries.push(<th key={colIdx}>{ formattedContents }</th>);
     } else if (type === "data") {
-      entries.push(<td> { formattedContents } </td>);
+      entries.push(<td key={colIdx}>{ formattedContents }</td>);
     } else {
       throw new Error(`Cannot parse type "${type}".`)
     }

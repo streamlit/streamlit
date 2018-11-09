@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
 
 # Python 2/3 compatibility
@@ -26,6 +28,8 @@ def marshall_data_frame(df, proto_df):
     """
     if type(df) is pd.DataFrame:
         pandas_df = df
+    elif type(df) is np.ndarray and len(df.shape) == 0:
+        pandas_df = pd.DataFrame([])
     else:
         pandas_df = pd.DataFrame(df)
 
@@ -45,8 +49,14 @@ def marshall_index(pandas_index, proto_index):
     if type(pandas_index) == pd.Index:
         marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
-        proto_index.range_index.start = pandas_index.min()
-        proto_index.range_index.stop = pandas_index.max() + 1
+        min = pandas_index.min()
+        max = pandas_index.max()
+        if pd.isna(min) or pd.isna(max):
+            proto_index.range_index.start = 0
+            proto_index.range_index.stop = 0
+        else:
+            proto_index.range_index.start = min
+            proto_index.range_index.stop = max + 1
     elif type(pandas_index) == pd.MultiIndex:
         for level in pandas_index.levels:
             marshall_index(level, proto_index.multi_index.levels.add())

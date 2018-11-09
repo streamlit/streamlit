@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import DeckGL, {
@@ -106,12 +111,13 @@ DeckGlChart.propTypes = {
 function buildLayer(layer) {
   const data = dataFrameToArrayOfDicts(layer.get('data'));
   const spec = JSON.parse(layer.get('spec'));
-  parseEncodings(spec);
 
-  const type = spec.type || '';
+  const type = spec.type ? spec.type.toLowerCase() : '';
   delete spec.type;
 
-  switch (type.toLowerCase()) {
+  parseEncodings(type, spec);
+
+  switch (type) {
     case 'arclayer':
       return new ArcLayer({
         data, ...Defaults.ArcLayer, ...spec
@@ -158,6 +164,27 @@ function buildLayer(layer) {
 }
 
 
+
+// Set of DeckGL Layers that take a getPosition argument. We'll allow users to
+// specify position columns via getLatitude and getLongitude instead.
+const POSITION_LAYER_TYPES = new Set([
+  'gridlayer',
+  'hexagonlayer',
+  'scatterplotlayer',
+  'screengridlayer',
+  'textlayer',
+]);
+
+
+// Set of DeckGL Layers that take a getSourcePosition/getTargetPosition
+// arguments.  We'll allow users to specify position columns via
+// getLatitude/getTargetLatitude and getLongitude/getTargetLongitude instead.
+const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set([
+  'arclayer',
+  'linelayer',
+]);
+
+
 /**
  * Take a short "map style" string and convert to the full URL for the style.
  * (And it only does this if the input string is not already a URL.)
@@ -199,7 +226,7 @@ function getPositionFromLatLonColumns(d) {
   return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)];
 }
 
-function getEndPositionFromLatLonColumn(d) {
+function getTargetPositionFromLatLonColumn(d) {
   return [fallback(d.longitude2, d.lon2), fallback(d.latitude2, d.lat2)];
 }
 
@@ -256,19 +283,45 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
  *       ...
  *     }
  */
-function parseEncodings(spec) {
+function parseEncodings(type, spec) {
   /* eslint-disable no-param-reassign */
   const { encoding } = spec;
   if (!encoding) return;
 
   delete spec.encoding;
 
+  // If this is a layer that accepts a getPosition argument, build that
+  // argument from getLatiude and getLongitude.
+  if (POSITION_LAYER_TYPES.has(type) &&
+      encoding.getLatitude &&
+      encoding.getLongitude) {
+    const latField = encoding.getLatitude;
+    const lonField = encoding.getLongitude;
+    encoding.getPosition = (d) => [d[lonField], d[latField]];
+  }
+
+  // Same as the above, but for getSourcePosition/getTargetPosition.
+  if (SOURCE_TARGET_POSITION_LAYER_TYPES.has(type) &&
+      encoding.getLatitude &&
+      encoding.getLongitude &&
+      encoding.getTargetLatitude &&
+      encoding.getTargetLongitude) {
+    const latField = encoding.getLatitude;
+    const lonField = encoding.getLongitude;
+    const latField2 = encoding.getTargetLatitude;
+    const lonField2 = encoding.getTargetLongitude;
+    encoding.getSourcePosition = (d) => [d[lonField], d[latField]];
+    encoding.getTargetPosition = (d) => [d[lonField2], d[latField2]];
+  }
+
   Object.keys(encoding).forEach((key) => {
     const v = encoding[key];
     spec[makeGetterName(key)] =
-        typeof v === 'string' ?
-          d => d[v] :
-          () => v;
+        typeof v === 'function' ?
+            v :                       // Leave functions untouched.
+            typeof v === 'string' ?
+                d => d[v] :           // Make getters from strings.
+                () => v;              // Make constant function otherwise.
   });
 }
 
@@ -290,7 +343,7 @@ const Defaults = {
     getSourceColor: getSourceColorFromSourceColorRGBAColumns,
     getTargetColor: getTargetColorFromTargetColorRGBAColumns,
     getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getEndPositionFromLatLonColumn,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
   },
 
   // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
@@ -305,7 +358,7 @@ const Defaults = {
 
   LineLayer: {
     getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getEndPositionFromLatLonColumn,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
   },
 
   // IconLayer: TODO

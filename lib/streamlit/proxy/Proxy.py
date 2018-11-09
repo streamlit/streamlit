@@ -1,4 +1,6 @@
 # -*- coding: future_fstrings -*-
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """A proxy server between the Streamlit libs and web client.
 
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection

@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Smooths out some differences between python 2 and 3. It is meant to
 be called as follows:
 

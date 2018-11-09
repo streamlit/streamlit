@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Connection management methods."""
 
 # Python 2/3 compatibility
@@ -182,7 +184,7 @@ class Connection(object):
             name = os.path.split(sys.argv[0])[1]
             if name.endswith('.py'):
                 name = name[:-3]
-            if name == '__main__' and len(sys.argv) >= 2:
+            if name in ['__main__', 'streamlit'] and len(sys.argv) >= 2:
                 name = sys.argv[1]
 
         if name == '':

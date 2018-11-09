@@ -1,4 +1,9 @@
 /**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+/**
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
@@ -10,20 +15,33 @@ export const INDEX_COLUMN_DESIGNATOR = 'index';
 /**
  * Returns a dictionary of integers:
  *   { headerRows, headerCols, dataRows, dataCols, cols, rows }
- * for this DataFrame.
+ * for this DataFrame, where rows and cols are sums of the header and data
+ * components.
+ *
+ * If df is null, this returns zeroes. If any of index/data/columns are null,
+ * this treats them as empty (so their dimensions are [0, 0]).
  */
 export function dataFrameGetDimensions(df) {
- // Calculate the dimensions of this array.
- const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
- const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
- const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
- if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
-   throw new Error("Dataframe dimensions don't align: " +
-     `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-     `cols(${dataCols} != ${dataColsCheck})`)
- }
- const cols = headerCols + dataCols;
- const rows = headerRows + dataRows;
+  const index = df ? df.get('index') : null;
+  const data = df ? df.get('data') : null;
+  const columns = df ? df.get('columns') : null;
+
+  const [headerCols, dataRowsCheck] = index ?
+      indexGetLevelsAndLength(index) : [0, 0];
+  const [headerRows, dataColsCheck] = columns ?
+      indexGetLevelsAndLength(columns) : [0, 0];
+  const [dataRows, dataCols] = data ?
+      tableGetRowsAndCols(data) : [0, 0];
+
+  if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
+    throw new Error("Dataframe dimensions don't align: " +
+      `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+      `cols(${dataCols} != ${dataColsCheck})`)
+  }
+
+  const cols = headerCols + dataCols;
+  const rows = headerRows + dataRows;
+
  return { headerRows, headerCols, dataRows, dataCols, cols, rows };
 }
 

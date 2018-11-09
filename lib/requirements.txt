@@ -25,7 +25,7 @@ flake8==3.5.0
 funcsigs==1.0.2           # via pytest
 future-fstrings==0.4.3
 future==0.16.0
-futures==3.1.1
+futures>=2.2.0
 idna==2.6                 # via requests
 jmespath==0.9.3
 mccabe==0.6.1             # via flake8

@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React, { Component } from 'react';
 import { Alert }  from 'reactstrap';
 import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';

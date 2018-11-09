@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react';

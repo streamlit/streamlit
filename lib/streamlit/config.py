@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Loads the configuration data."""
 
 # Package Imports
@@ -7,16 +9,12 @@ import os
 import platform
 import socket
 import yaml
-
-from tornado import gen, httpclient
-from tornado.concurrent import run_on_executor, futures
+import urllib
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 class Config(object):
-
-    executor = futures.ThreadPoolExecutor(5)
 
     _config = None
 
@@ -90,8 +88,8 @@ class Config(object):
                 ),
                 waitForConnectionSecs = dict(
                     _comment = (
-                        'On startup, how long to wait for connections before '
-                        'closing'),
+                        'How many seconds the proxy waits for the connection '
+                        'before timing out.'),
                     value = 10.1,
                 ),
                 keepAlive = dict(
@@ -165,7 +163,10 @@ class Config(object):
             self._enable_development()
 
         out = []
-        foo = yaml.dump(self._raw_config, default_flow_style=False)
+
+        foo = yaml.dump(self._raw_config, default_flow_style=False,
+                width=float('inf'))
+
         for line in foo.split('\n'):
             if '_comment:' in line:
                 prev_line = out.pop(-1)
@@ -249,8 +250,9 @@ def get_s3_option(option):
     elif get_option(old_option) is None:
         return None
     else:
-        LOGGER.warning('DEPRECATION: Please update ~/.streamlit/config.yaml by renaming "%s" to "%s".' \
-            % (old_option, new_option))
+        LOGGER.warning(
+            'DEPRECATION: Please update ~/.streamlit/config.yaml by '
+            'renaming "%s" to "%s".' % (old_option, new_option))
         return get_option(old_option)
 
 def saving_is_configured():
@@ -270,16 +272,18 @@ def remotely_track_usage():
     return True  # default to True. See also /frontend/src/remotelogging.js
 
 
+STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+
 def get_default_creds():
     # TODO(armando): Should we always fetch this or should we write
     # credentials to disk and then if the user deletes it, refetch?
     http_client = None
     try:
-        http_client = httpclient.HTTPClient()
-        endpoint = 'http://streamlit.io/tmp/st_pub_write.json'
-        response = http_client.fetch(endpoint, request_timeout=5)
+        response = urllib.request.urlopen(
+            STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
+
         # Strip unicode
-        creds = ast.literal_eval(response.body.decode('utf-8'))
+        creds = ast.literal_eval(response.decode('utf-8'))
         # LOGGER.debug(response.body)
 
         c = Config._config._config
@@ -293,9 +297,9 @@ def get_default_creds():
     # gracefully: an error in loading the credentials shouldn't stop the user
     # from using Streamlit.
     except Exception as e:
-        LOGGER.debug(
-            'Error getting credentials from %s. Sharing will be '
-            'disabled. %s', endpoint, e)
+        LOGGER.info(
+            'Error getting Streamlit credentials. Sharing will be '
+            'disabled. %s', e)
     finally:
         if http_client is not None:
             http_client.close()
