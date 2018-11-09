@@ -1,7 +1,11 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
 
-import './Video.css';
 
 class Video extends PureComponent {
   render() {

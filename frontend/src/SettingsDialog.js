@@ -1,5 +1,8 @@
 /**
- * Implements a dialog that is used to configure user settings.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Implements a dialog that is used to configure user settings.
  */
 
 import React, {PureComponent} from 'react';

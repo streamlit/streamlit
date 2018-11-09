@@ -1,5 +1,9 @@
 # -*- coding: future_fstrings -*-
 #!./streamlit_run
+# -*- coding: future_fstrings -*-
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Example of everything that's possible in streamlit."""
 
 # Python 2/3 compatibility

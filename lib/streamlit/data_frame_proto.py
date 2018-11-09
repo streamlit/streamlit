@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
 
 # Python 2/3 compatibility

@@ -1,7 +1,10 @@
 /**
- * This class is the "brother" of WebsocketConnection. The class implements
- * loading deltas over an HTTP connection (as opposed to with websockets).
- * Like WebsocketConnection it also implements:
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview This class is the "brother" of WebsocketConnection. The class
+ * implements loading deltas over an HTTP connection (as opposed to with
+ * websockets).  Like WebsocketConnection it also implements:
  *
  *   get_status() - returns information to display status in the GUI
  *   connected_to_proxy() - always returns false
