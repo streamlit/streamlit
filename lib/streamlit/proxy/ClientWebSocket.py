@@ -10,7 +10,6 @@ import os
 
 from streamlit import config
 from streamlit import protobuf
-from streamlit.S3Connection import S3
 from streamlit.proxy import Proxy
 
 from streamlit.logger import get_logger
@@ -28,7 +27,6 @@ class ClientWebSocket(WebSocketHandler):
         self._connection = None
         self._queue = None
         self._is_open = False
-        self._cloud = S3()
 
     def check_origin(self, origin):
         """Ignore CORS."""
@@ -179,7 +177,8 @@ class ClientWebSocket(WebSocketHandler):
             yield progress(0)
 
             files = connection.serialize_report_to_files()
-            url = yield self._cloud.upload_report(connection.id, files, progress)
+            cloud = self._proxy.get_cloud()
+            url = yield cloud.upload_report(connection.id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
