@@ -93,4 +93,4 @@ class LocalWebSocket(WebSocketHandler):
         files = connection.serialize_report_to_files()
         cloud = self._proxy.get_cloud_storage()
         url = yield cloud.upload_report(connection.id, files, progress)
-        print('SAVED ON EXIT: %s' % url)
+        print('SAVED REPORT: %s' % url)
