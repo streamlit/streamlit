@@ -86,17 +86,11 @@ class Config(object):
                 server = dict(
                     value = 'localhost',
                 ),
-                waitForConnectionSecs = dict(
+                autoCloseDelaySecs = dict(
                     _comment = (
-                        'How many seconds the proxy waits for the connection '
-                        'before timing out.'),
+                        'How long the proxy should stay open when there are '
+                        'no connections. Can be set to .inf for "infinity".'),
                     value = 10.1,
-                ),
-                keepAlive = dict(
-                    _comment = (
-                        'Keep proxy alive even when no connections are '
-                        'present.'),
-                    value = False,
                 ),
                 useNode = dict(
                     _comment = 'Whether to use the node server or not.',
