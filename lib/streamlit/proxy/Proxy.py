@@ -165,9 +165,9 @@ class Proxy(object):
         self._fs_observers = dict()
 
         # This object represents a connection to an S3 bucket or other cloud
-        # storage solution. It is instantiated lazily by calling get_cloud()
-        # which is why it starts off as null.
-        self._cloud = None
+        # storage solution. It is instantiated lazily by calling
+        # get_cloud_storage() which is why it starts off as null.
+        self._cloud_storage = None
 
         LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
@@ -352,17 +352,16 @@ class Proxy(object):
             yield self._add_client(report_name, ws))
         raise gen.Return((new_connection, new_queue))
 
-    def get_cloud(self):
-        """
-        Returns a `cloud` object (see `S3Connection.py`) which
+    def get_cloud_storage(self):
+        """Return a `cloud` object (see `S3Connection.py`) which
         connects to an S3 bucket or other cloud storage solution.
 
         NOTE: Even inetrnal methods of Proxy should call this directly,
         since the cloud object is instantiated lazily in this method.
         """
-        if self._cloud == None:
-            self._cloud = S3Connection.S3()
-        return self._cloud
+        if self._cloud_storage is None:
+            self._cloud_storage = S3Connection.S3()
+        return self._cloud_storage
 
     @gen.coroutine
     def _add_client(self, report_name, ws):

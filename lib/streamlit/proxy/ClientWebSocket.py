@@ -177,7 +177,7 @@ class ClientWebSocket(WebSocketHandler):
             yield progress(0)
 
             files = connection.serialize_report_to_files()
-            cloud = self._proxy.get_cloud()
+            cloud = self._proxy.get_cloud_storage()
             url = yield cloud.upload_report(connection.id, files, progress)
 
             # Indicate that the save is done.

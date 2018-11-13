@@ -76,14 +76,21 @@ class LocalWebSocket(WebSocketHandler):
         if self._connection:
             # Save the report if proxy.saveOnExit is true.
             if config.get_option('proxy.saveOnExit'):
-                LOGGER.debug('saveOnExit=True so uploading...')
-                # Don't report upload progress.
-                progress = gen.coroutine(lambda percent: None)
-                files = self._connection.serialize_report_to_files()
-                cloud = self._proxy.get_cloud()
-                url = yield cloud.upload_report(self._connection.id, files, progress)
-                LOGGER.debug('Saved %s' % url)
+                yield self._save_report(self._connection)
 
             self._connection.close_local_connection()
             self._proxy.try_to_deregister_proxy_connection(self._connection)
         self._proxy.potentially_stop()
+
+    @gen.coroutine
+    def _save_report(self, connection):
+        """Save the report stored in this connection."""
+        # Don't report upload progress.
+        progress = gen.coroutine(lambda percent: None)
+
+        # Saving the report
+        LOGGER.debug('Uploading the report... (id=%s)' % connection.id)
+        files = connection.serialize_report_to_files()
+        cloud = self._proxy.get_cloud_storage()
+        url = yield cloud.upload_report(connection.id, files, progress)
+        print('SAVED ON EXIT: %s' % url)
