@@ -42,7 +42,7 @@ import threading
 import traceback
 import types
 
-from streamlit.Connection import Connection
+from streamlit.DeltaConnection import DeltaConnection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
 from streamlit.caching import set_allow_caching as _set_allow_caching
@@ -54,14 +54,14 @@ this_module = sys.modules[__name__]
 
 # If True, Streamlit will sent deltas to the Proxy. If False, all methods will
 # appear to work normally but not deltas will be sent to the Proxy.
-_connection_enabled = True
+_enable_display = True
 
 
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        global _connection_enabled
-        con = Connection.get_connection(enabled=_connection_enabled)
+        global _enable_display
+        con = DeltaConnection(enable_display=_enable_display)
         dg = con.get_delta_generator()
         return method(dg, *args, **kwargs)
     return wrapped_method
@@ -231,24 +231,26 @@ def echo():
 
 
 # TODO: Move to config.py when we refactor the config system.
-def set_config(config):
+def set_config(options):
     """Set config options for Streamlit.
 
     Parameters
     ----------
-    config : dict
+    options : dict
         A dictionary where keys are strings with the fully-qualified names of
         config options (e.g. 'client.caching'), and keys are the config values.
 
     """
-    client_caching = config.get('client.caching')
+    client_caching = options.get('client.caching')
     if client_caching is not None:
         assert type(client_caching) is bool
         _set_allow_caching(client_caching)
 
-    client_enabled = config.get('client.enabled')
+    client_enabled = options.get('client.enabled')
     if client_enabled is not None:
         assert type(client_enabled) is bool
-        global _connection_enabled
-        _connection_enabled = client_enabled
-        Connection.get_connection(enabled=_connection_enabled)
+        global _enable_display
+        if client_enabled and not _enable_display:
+            raise config.Error('Cannot re-enable display once it is disabled.')
+        _enable_display = client_enabled
+        DeltaConnection(enable_display=_enable_display)

@@ -300,3 +300,7 @@ def autodetect_remote_machine():
     is_linux = platform.system() == 'Linux'
     is_headless = not os.getenv('DISPLAY')
     return is_linux and is_headless
+
+
+class Error(Exception):
+    pass
