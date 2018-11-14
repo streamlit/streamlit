@@ -100,8 +100,6 @@ class Connection(object):
         # Establish this connection and connect to the proxy server.
         self._connect_to_proxy(uri, initial_msg)
 
-        on_connect()
-
         # When the current thread closes, then close down the connection.
         main_thread = threading.current_thread()
         cleanup_thread = threading.Thread(
@@ -110,6 +108,8 @@ class Connection(object):
         )
         cleanup_thread.daemon = False
         cleanup_thread.start()
+
+        on_connect()
 
     def enqueue_delta(self, delta):
         """Enqueue the given delta for transmission to the server."""
@@ -209,8 +209,6 @@ class Connection(object):
         LOGGER.debug('Cleanup thread waiting for main thread to end.')
         main_thread.join()
 
-        on_cleanup()
-
         # Then wait for a certain number of seconds to connect to the proxy
         # to make sure that we can flush the connection queue.
         start_time = time.time()
@@ -239,6 +237,8 @@ class Connection(object):
                     '_proxy_connection_status illegal value: ' +
                     str(self._proxy_connection_status))
                 break
+
+        on_cleanup()
 
         self._loop.add_callback(setattr, self, '_is_open', False)
         LOGGER.debug('Submitted callback to stop the connection thread.')

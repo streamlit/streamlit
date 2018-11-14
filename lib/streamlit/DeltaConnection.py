@@ -39,23 +39,41 @@ class DeltaConnection(object):
     # This is the singleton connection object.
     _singleton = None
 
+    @classmethod
+    def get_connection(cls, enable_display=True):
+        """Return the singleton DeltaConnection object.
+
+        Instantiates one if necessary.
+
+        Parameters
+        ----------
+        enable_display : bool
+            Whether Deltas should be sent to a Proxy (True) or not (False).
+
+        """
+        if cls._singleton is None:
+            LOGGER.debug('No singleton. Registering one.')
+            DeltaConnection(enable_display=enable_display)
+        else:
+            DeltaConnection._singleton._set_display_enabled(enable_display)
+
+        return DeltaConnection._singleton
+
+    # Don't allow constructor to be called more than once.
     def __new__(cls, *args, **kwargs):
-        """Create new connection or return singleton."""
-        if cls._singleton:
-            return cls._singleton
-        # Don't pass *args and **kwargs to super() because Python3 doesn't
-        # support that. But this doesn't seem impact what gets passed into
-        # __init__(), so it's all good.
+        if DeltaConnection._singleton is not None:
+            raise RuntimeError('Use .get_connection() instead')
         return super(DeltaConnection, cls).__new__(cls)
 
-    # This is the class through which we can add elements to the Report
     def __init__(self, enable_display=True):
-        """Initialize connection to the server."""
-        # If this is the singleton, don't reinitalize.
-        if self is DeltaConnection._singleton:
-            DeltaConnection._singleton._set_display_enabled(enable_display)
-            return
+        """Initialize connection to the server.
 
+        Parameters
+        ----------
+        enable_display : bool
+            Whether Deltas should be sent to a Proxy (True) or not (False).
+
+        """
         DeltaConnection._singleton = self
 
         self._is_display_enabled = None
@@ -65,17 +83,20 @@ class DeltaConnection(object):
         self._set_display_enabled(enable_display)
 
     def _set_display_enabled(self, do_enable):
+        LOGGER.debug(f'_set_display_enabled')
         if do_enable == self._is_display_enabled:
+            LOGGER.debug(f'_set_display_enabled: no change')
             return
 
+        self._is_display_enabled = do_enable
+
         if do_enable and self._connection is None:
+            LOGGER.debug(f'_set_display_enabled: will connect')
             self._connect()
 
         # If do_enable is false, do nothing. Either this DeltaConnection is
         # already disabled, or the user is trying to go from enabled to
         # disabled -- which is unsupported. Either way, there's nothing to do.
-
-        self._is_display_enabled = do_enable
 
     def _connect(self):
         # Create ID for the connection and its respective report.
@@ -124,7 +145,6 @@ class DeltaConnection(object):
         # NOTE: This is a callback that gets executed in a coroutine.
         LOGGER.debug('Main thread ended. Restoring excepthook.')
         sys.excepthook = _original_excepthook
-        DeltaConnection._singleton = None
 
     def get_delta_generator(self):
         """Return the DeltaGenerator for this connection.

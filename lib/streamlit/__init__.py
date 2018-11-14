@@ -60,8 +60,7 @@ _enable_display = True
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        global _enable_display
-        con = DeltaConnection(enable_display=_enable_display)
+        con = DeltaConnection.get_connection(enable_display=_enable_display)
         dg = con.get_delta_generator()
         return method(dg, *args, **kwargs)
     return wrapped_method
@@ -253,4 +252,4 @@ def set_config(options):
         if client_enabled and not _enable_display:
             raise config.Error('Cannot re-enable display once it is disabled.')
         _enable_display = client_enabled
-        DeltaConnection(enable_display=_enable_display)
+        DeltaConnection.get_connection(enable_display=_enable_display)
