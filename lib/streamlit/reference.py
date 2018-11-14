@@ -12,7 +12,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # import numpy as np
-from PIL import Image
+import PIL
 import urllib
 from io import BytesIO
 
@@ -181,7 +181,7 @@ def display_reference():
             },
         })
 
-    st.header('Visualizing data as images')
+    st.header('Visualizing data as images via Pillow.')
 
     @st.cache
     def read_file_from_url(url):
@@ -200,7 +200,8 @@ def display_reference():
 
     if image_bytes is not None:
         with st.echo():
-            image = Image.open(BytesIO(image_bytes))
+            # Make it obvious that its PIL ie PIL.Image vs just Image.
+            image = PIL.Image.open(BytesIO(image_bytes))
 
             st.image(image, caption='Sunset', use_column_width=True)
 
@@ -208,6 +209,26 @@ def display_reference():
             channels = array.reshape(array.shape + (1,))
 
             st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
+
+    st.header('Visualizing data as images via OpenCV')
+
+    st.write('Streamlit also supports OpenCV!')
+    try:
+        import cv2
+
+        if image_bytes is not None:
+            with st.echo():
+                image = cv2.cvtColor(
+                    cv2.imdecode(np.fromstring(image_bytes, dtype='uint8'), 1),
+                    cv2.COLOR_BGR2RGB)
+
+                st.image(image, caption='Sunset', use_column_width=True)
+                st.image(cv2.split(image), caption=['Red', 'Green', 'Blue'], width=200)
+    except ImportError as e:
+        st.write('If you install opencv with the command `pip install opencv-python-headless` '
+                 'this section will tell you how to use it.')
+
+        st.warning('Error running opencv: ' + str(e))
 
     st.header('Inserting headers')
 
