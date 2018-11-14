@@ -151,9 +151,9 @@ class Connection(object):
             yield self._transmit_through_websocket(ws, initial_msg)
             return
         except IOError:
-            LOGGER.info(f'First connection to {uri} failed.')
+            LOGGER.info(f'First connection to {uri} failed. No proxy running?')
 
-        LOGGER.info('Starting the proxy manually.')
+        LOGGER.info('Starting proxy.')
         yield self._launch_proxy()
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
@@ -182,7 +182,7 @@ class Connection(object):
         """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
         yield write_proto(ws, initial_msg)
-        LOGGER.debug('Just sent a initial_msg with: ' + str(sys.argv))
+        LOGGER.debug('Just sent an initial_msg with: ' + str(sys.argv))
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')

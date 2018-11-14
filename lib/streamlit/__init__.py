@@ -249,7 +249,5 @@ def set_config(options):
     if client_enabled is not None:
         assert type(client_enabled) is bool
         global _enable_display
-        if client_enabled and not _enable_display:
-            raise config.Error('Cannot re-enable display once it is disabled.')
         _enable_display = client_enabled
         DeltaConnection.get_connection(enable_display=_enable_display)

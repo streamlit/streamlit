@@ -254,17 +254,22 @@ class WebClient extends PureComponent {
    */
   clearOldElements() {
     this.setState(({elements, reportId}) => ({
-      elements: elements.map((elt) => {
-        if (elt.get('reportId') === reportId) {
-          return elt;
-        } else {
-          return fromJS({
-            empty: {unused: true},
-            reportId: reportId,
-            type: "empty"
-          });
-        }
-      })
+      elements: elements
+          // Need to filter because the element list can have can have "holes"
+          // in it (caused by enqueing elements with non-consecutive IDs). This
+          // causing .map() to iterate over undefined elements at times.
+          .filter((elt) => elt)
+          .map((elt) => {
+            if (elt.get('reportId') === reportId) {
+              return elt;
+            } else {
+              return fromJS({
+                empty: {unused: true},
+                reportId: reportId,
+                type: "empty"
+              });
+            }
+          }),
     }));
   }
 
@@ -456,7 +461,7 @@ class WebClient extends PureComponent {
       } else {
         return [];
       }
-    })
+    });
   }
 }
 
