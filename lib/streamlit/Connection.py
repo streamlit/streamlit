@@ -46,14 +46,14 @@ class Connection(object):
     _PROXY_CONNECTION_FAILED = 'failed'
 
     # This is the class through which we can add elements to the Report
-    def __init__(self, uri, new_report_msg, on_connect, on_cleanup):
+    def __init__(self, uri, initial_msg, on_connect, on_cleanup):
         """Create a new connection to the server.
 
         Parameters
         ----------
         uri : str
             The Proxy URI for this WebSocket connection.
-        new_report_msg : protobuf.ForwardMsg
+        initial_msg : protobuf.ForwardMsg
             First message to send via the connection, as soon as the connection
             is established.
         on_connect : callable
@@ -93,12 +93,12 @@ class Connection(object):
         self._proxy_connection_status = (
             Connection._PROXY_CONNECTION_DISCONNECTED)
 
-        self._connect(uri, new_report_msg, on_cleanup, on_cleanup)
+        self._connect(uri, initial_msg, on_cleanup, on_cleanup)
 
-    def _connect(self, uri, new_report_msg, on_connect, on_cleanup):
+    def _connect(self, uri, initial_msg, on_connect, on_cleanup):
         """Connect to the proxy and set up output thread."""
         # Establish this connection and connect to the proxy server.
-        self._connect_to_proxy(uri, new_report_msg)
+        self._connect_to_proxy(uri, initial_msg)
 
         on_connect()
 
@@ -115,13 +115,13 @@ class Connection(object):
         """Enqueue the given delta for transmission to the server."""
         self._loop.add_callback(lambda: self._queue(delta))
 
-    def _connect_to_proxy(self, uri, new_report_msg):
+    def _connect_to_proxy(self, uri, initial_msg):
         """Open a connection to the server in a separate thread."""
         def connection_thread():
             self._loop.make_current()
             LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
             self._loop.run_sync(
-                lambda: self._attempt_connection(uri, new_report_msg))
+                lambda: self._attempt_connection(uri, initial_msg))
             self._loop.close()
             LOGGER.debug(
                 'Exit. (deltas remaining = %s)' % len(self._queue._deltas))
@@ -131,7 +131,7 @@ class Connection(object):
         connection_thread.start()
 
     @gen.coroutine
-    def _attempt_connection(self, uri, new_report_msg):
+    def _attempt_connection(self, uri, initial_msg):
         """Try to establish a connection to the proxy.
 
         Launches the proxy (if necessary), then pumps deltas through the
@@ -148,7 +148,7 @@ class Connection(object):
             ws = yield websocket_connect(uri, **WS_ARGS)
             self._proxy_connection_status = (
                 Connection._PROXY_CONNECTION_CONNECTED)
-            yield self._transmit_through_websocket(ws, new_report_msg)
+            yield self._transmit_through_websocket(ws, initial_msg)
             return
         except IOError:
             LOGGER.info(f'First connection to {uri} failed.')
@@ -161,7 +161,7 @@ class Connection(object):
             ws = yield websocket_connect(uri, **WS_ARGS)
             self._proxy_connection_status = (
                 Connection._PROXY_CONNECTION_CONNECTED)
-            yield self._transmit_through_websocket(ws, new_report_msg)
+            yield self._transmit_through_websocket(ws, initial_msg)
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
             # cleanup thread can now run.
@@ -178,11 +178,11 @@ class Connection(object):
         yield gen.sleep(wait_for_proxy_secs)
 
     @gen.coroutine
-    def _transmit_through_websocket(self, ws, new_report_msg):
+    def _transmit_through_websocket(self, ws, initial_msg):
         """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
-        yield write_proto(ws, new_report_msg)
-        LOGGER.debug('Just sent a new_report_msg with: ' + str(sys.argv))
+        yield write_proto(ws, initial_msg)
+        LOGGER.debug('Just sent a initial_msg with: ' + str(sys.argv))
 
         # Send other information across.
         throttle_secs = config.get_option('local.throttleSecs')

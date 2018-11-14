@@ -103,7 +103,7 @@ class DeltaConnection(object):
 
         self._connection = Connection(
             uri=uri,
-            new_report_msg=new_report_msg(
+            initial_msg=new_report_msg(
                 report_id, os.getcwd(), ['python'] + sys.argv,
                 source_file_path),
             on_connect=self._on_connect,
