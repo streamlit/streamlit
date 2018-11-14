@@ -41,7 +41,6 @@ function StreamlitDialog({dialogProps}) {
 }
 
 function BasicDialog({children, onClose}) {
-  console.log(children);
   const isOpen = children !== undefined;
   return (
     <Modal
