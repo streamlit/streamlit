@@ -2,11 +2,13 @@
 
 """Websocket handler class which the local python library connects to."""
 from tornado.websocket import WebSocketHandler
+from tornado import gen
 import urllib
 
 from streamlit import protobuf
 from streamlit.proxy import Proxy, ProxyConnection
 from streamlit.logger import get_logger
+from streamlit import config
 
 LOGGER = get_logger()
 
@@ -64,13 +66,31 @@ class LocalWebSocket(WebSocketHandler):
         else:
             raise RuntimeError('Cannot parse message type: %s' % msg_type)
 
-    @Proxy.stop_proxy_on_exception()
+    @Proxy.stop_proxy_on_exception(is_coroutine=True)
+    @gen.coroutine
     def on_close(self):
         """Close callback."""
         LOGGER.info('Local websocket closed for "%s"' % self._report_name)
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
+            # Save the report if proxy.saveOnExit is true.
+            if config.get_option('proxy.saveOnExit'):
+                yield self._save_report(self._connection)
+
             self._connection.close_local_connection()
             self._proxy.try_to_deregister_proxy_connection(self._connection)
         self._proxy.potentially_stop()
+
+    @gen.coroutine
+    def _save_report(self, connection):
+        """Save the report stored in this connection."""
+        # Don't report upload progress.
+        progress = gen.coroutine(lambda percent: None)
+
+        # Saving the report
+        LOGGER.debug('Uploading the report... (id=%s)' % connection.id)
+        files = connection.serialize_report_to_files()
+        cloud = self._proxy.get_cloud_storage()
+        url = yield cloud.upload_report(connection.id, files, progress)
+        print('SAVED REPORT: %s' % url)

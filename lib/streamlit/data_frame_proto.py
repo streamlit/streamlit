@@ -17,14 +17,17 @@ import tzlocal
 
 LOGGER = get_logger()
 
-def marshall_data_frame(df, proto_df):
-    """
-    Converts a pandas.DataFrame into a protobuf.DataFrame.
 
-    df : Panda.DataFrame, Numpy.Array, list
+def marshall_data_frame(df, proto_df):
+    """Convert a pandas.DataFrame into a protobuf.DataFrame.
+
+    Parameters
+    ----------
+    df : Panda.DataFrame, Numpy.Array, or list
         Input. Something that can be converted to a dataframe.
     proto_df : Protobuf.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
+
     """
     if type(df) is pd.DataFrame:
         pandas_df = df
@@ -33,21 +36,23 @@ def marshall_data_frame(df, proto_df):
     else:
         pandas_df = pd.DataFrame(df)
 
-    pandas_df_data = (pandas_df.iloc[:,col]
-        for col in range(len(pandas_df.columns)))
-    marshall_table(pandas_df_data, proto_df.data)
-    marshall_index(pandas_df.columns, proto_df.columns)
-    marshall_index(pandas_df.index, proto_df.index)
+    pandas_df_data = (
+        pandas_df.iloc[:, col]
+        for col in range(len(pandas_df.columns))
+    )
+    _marshall_table(pandas_df_data, proto_df.data)
+    _marshall_index(pandas_df.columns, proto_df.columns)
+    _marshall_index(pandas_df.index, proto_df.index)
 
-def marshall_index(pandas_index, proto_index):
-    """
-    Converts an pandas.Index into a protobuf.Index.
+
+def _marshall_index(pandas_index, proto_index):
+    """Convert an pandas.Index into a protobuf.Index.
 
     pandas_index - Panda.Index or related (input)
     proto_index  - Protobuf.Index (output)
     """
     if type(pandas_index) == pd.Index:
-        marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
+        _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         min = pandas_index.min()
         max = pandas_index.max()
@@ -59,7 +64,7 @@ def marshall_index(pandas_index, proto_index):
             proto_index.range_index.stop = max + 1
     elif type(pandas_index) == pd.MultiIndex:
         for level in pandas_index.levels:
-            marshall_index(level, proto_index.multi_index.levels.add())
+            _marshall_index(level, proto_index.multi_index.levels.add())
         for label in pandas_index.labels:
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
@@ -76,21 +81,21 @@ def marshall_index(pandas_index, proto_index):
     else:
         raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
 
-def marshall_table(pandas_table, proto_table):
-    """
-    Converts a sequence of 1d arrays into protobuf.Table.
 
-    pandas_table - Sequence of 1d arrays which are AnyArray compatible (input).
+def _marshall_table(pandas_table, proto_table):
+    """Convert a sequence of 1D arrays into protobuf.Table.
+
+    pandas_table - Sequence of 1D arrays which are AnyArray compatible (input).
     proto_table  - Protobuf.Table (output)
     """
     for pandas_array in pandas_table:
-        marshall_any_array(pandas_array, proto_table.cols.add())
+        _marshall_any_array(pandas_array, proto_table.cols.add())
 
-def marshall_any_array(pandas_array, proto_array):
-    """
-    Converts a 1D numpy.Array into a protobuf.AnyArray.
 
-    pandas_array - 1d arrays which is AnyArray compatible (input).
+def _marshall_any_array(pandas_array, proto_array):
+    """Convert a 1D numpy.Array into a protobuf.AnyArray.
+
+    pandas_array - 1D arrays which is AnyArray compatible (input).
     proto_array  - Protobuf.AnyArray (output)
     """
     # Convert to np.array as necessary.
@@ -119,30 +124,28 @@ def marshall_any_array(pandas_array, proto_array):
     else:
         raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
 
+
 def add_rows(delta1, delta2):
-    """Adds the rows from the DataFrame in delta2 to the DataFrame in delta1."""
-    df1 = get_data_frame(delta1)
-    df2 = get_data_frame(delta2)
+    """Concat the DataFrame in delta2 to the DataFrame in delta1.
 
-    # print('ADDING ROWS')
-    # print(delta1.WhichOneof('type'))
-    # print(delta2.WhichOneof('type'))
-    # print('df1', id(df1), df1 == None)
-    # print('df2', id(df2), df2 == None)
-    # print('df1.index', id(df1.index), df1.index == None, df1.index.WhichOneof('type'))
-    # print('df2.index', id(df2.index), df2.index == None, df2.index.WhichOneof('type'))
-    # print(delta1);
-    # print('HERE IS DF1')
-    # print(df1)
+    Parameters
+    ----------
+    delta1 : Delta
+    delta2 : Delta
 
-    concat_index(df1.index, df2.index)
+    """
+    df1 = _get_data_frame(delta1)
+    df2 = _get_data_frame(delta2)
+
+    _concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
-        concat_any_array(col1, col2)
+        _concat_any_array(col1, col2)
 
-def concat_index(index1, index2):
-    """Merges elements from index2 into index1."""
+
+def _concat_index(index1, index2):
+    """Contact index2 into index1."""
     # Special case if index1 is empty.
-    if index_len(index1) == 0:
+    if _index_len(index1) == 0:
         index1.CopyFrom(index2)
         return
 
@@ -152,7 +155,7 @@ def concat_index(index1, index2):
     assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
 
     if type1 == 'plain_index':
-        concat_any_array(index1.plain_index.data, index2.plain_index.data)
+        _concat_any_array(index1.plain_index.data, index2.plain_index.data)
     elif type1 == 'range_index':
         index1.range_index.stop += \
             (index2.range_index.stop - index2.range_index.start)
@@ -167,10 +170,11 @@ def concat_index(index1, index2):
     else:
         raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
 
-def concat_any_array(any_array_1, any_array_2):
-    """Merges elements from any_array_2 into any_array_1."""
+
+def _concat_any_array(any_array_1, any_array_2):
+    """Concat elements from any_array_2 into any_array_1."""
     # Special case if any_array_1 is empty
-    if any_array_len(any_array_1) == 0:
+    if _any_array_len(any_array_1) == 0:
         any_array_1.CopyFrom(any_array_2)
         return
 
@@ -179,8 +183,9 @@ def concat_any_array(any_array_1, any_array_2):
     assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
-def get_data_frame(delta):
-    """Extracts the dataframe from a delta."""
+
+def _get_data_frame(delta):
+    """Extract the dataframe from a delta."""
     delta_type = delta.WhichOneof('type')
     if delta_type == 'new_element':
         element_type = delta.new_element.WhichOneof('type')
@@ -195,11 +200,12 @@ def get_data_frame(delta):
     else:
         raise RuntimeError(f'Cannot extract DataFrame from {delta_type}.')
 
-def index_len(index):
-    """Returns the number of elements in an index."""
+
+def _index_len(index):
+    """Return the number of elements in an index."""
     index_type = index.WhichOneof('type')
     if index_type == 'plain_index':
-        return any_array_len(index.plain_index.data)
+        return _any_array_len(index.plain_index.data)
     elif index_type == 'range_index':
         return index.range_index.stop - index.range_index.start
     elif index_type == 'multi_index':
@@ -214,8 +220,9 @@ def index_len(index):
     elif index_type == 'timedelta_index':
         return len(index.timedelta_index.data.data)
 
-def any_array_len(any_array):
-    """Returns the length of an any_array."""
+
+def _any_array_len(any_array):
+    """Return the length of an any_array."""
     array_type = any_array.WhichOneof('type')
     the_array = getattr(any_array, array_type).data
     return len(the_array)

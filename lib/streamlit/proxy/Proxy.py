@@ -23,6 +23,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
+from streamlit import S3Connection
 from streamlit.util import get_static_dir
 from streamlit.wsutil import write_proto
 
@@ -164,6 +165,11 @@ class Proxy(object):
         # FSObserver.get_key(proxy_connection).
         self._fs_observers = dict()
 
+        # This object represents a connection to an S3 bucket or other cloud
+        # storage solution. It is instantiated lazily by calling
+        # get_cloud_storage() which is why it starts off as null.
+        self._cloud_storage = None
+
         LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
 
         # We have to import these in here to break a circular import reference
@@ -205,9 +211,6 @@ class Proxy(object):
 
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
-
-        # Initialized things that the proxy will need to do cloud things.
-        self._cloud = None  # S3Connection()
 
     def run_app(self):
         """Run web app."""
@@ -349,6 +352,17 @@ class Proxy(object):
         new_connection, new_queue = (
             yield self._add_client(report_name, ws))
         raise gen.Return((new_connection, new_queue))
+
+    def get_cloud_storage(self):
+        """Return a `cloud` object (see `S3Connection.py`) which
+        connects to an S3 bucket or other cloud storage solution.
+
+        NOTE: Even inetrnal methods of Proxy should call this directly,
+        since the cloud object is instantiated lazily in this method.
+        """
+        if self._cloud_storage is None:
+            self._cloud_storage = S3Connection.S3()
+        return self._cloud_storage
 
     @gen.coroutine
     def _add_client(self, report_name, ws):
