@@ -8,8 +8,6 @@ st.text('This should not appear')
 # ENABLED
 st.set_config({'client.enabled': True})
 
-st.warning('IMPORTANT: Make sure you get a streamlit.config.Error in the terminal!')
-
 a = st.text('This will be overwritten')
 b = st.text('This will be overwritten too')
 a.text('This should show up first')
