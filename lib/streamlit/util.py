@@ -142,5 +142,11 @@ def write_proto(ws, msg):
     ----------
     ws : WebSocket
     msg : Proto
+
+    Returns
+    -------
+    Future
+        See tornado.websocket.websocket_connect. This returns a Future whose
+        result is a WebSocketClientConnection.
     """
     return ws.write_message(msg.SerializeToString(), binary=True)
