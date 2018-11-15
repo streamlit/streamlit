@@ -434,7 +434,7 @@ def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
     external_url = _get_report_url(external_ip, port, quoted_name)
     lan_url = _get_report_url(lan_ip, port, quoted_name)
 
-    if autoCloseDelaySecs != float('int'):
+    if autoCloseDelaySecs != float('inf'):
         timeout_msg = f'within {int(autoCloseDelaySecs)} seconds'
     else:
         timeout_msg = ''
