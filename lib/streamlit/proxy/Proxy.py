@@ -11,8 +11,8 @@ objects. A ProxyConnection always has:
 
 Essentially, the ProxyConnection stays open so long as any of those connections
 do. When the final ProxyConnection closes, then the whole proxy does too.
-(...unless autoCloseDelaySecs is infinity, in which case the proxy stays open no
-matter what.)
+(...unless any of autoCloseDelaySecs or reportExpirationSecs are infinity, in
+which case the proxy stays open no matter what.)
 
 To ensure the proxy closes, a short timeout is launched for each connection
 which closes the proxy if no connections were established.
