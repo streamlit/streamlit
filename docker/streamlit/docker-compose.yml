@@ -1,0 +1,21 @@
+version: '3.6'
+
+services:
+  frontend:
+    image: st/frontend
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - 3000:5000
+
+  proxy:
+    image: st/proxy
+    build:
+      context: ../..
+      dockerfile: lib/Dockerfile
+    environment:
+      - PORT=8501
+      - IP=192.168.99.100
+    ports:
+      - 8501:8501

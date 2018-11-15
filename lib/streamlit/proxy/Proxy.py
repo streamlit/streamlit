@@ -71,13 +71,16 @@ def _print_remote_url(port, quoted_name):
     external_url = _get_report_url(external_ip, port, quoted_name)
     lan_url = _get_report_url(lan_ip, port, quoted_name)
 
-    print(textwrap.dedent(f'''
+    if config.get_option('proxy.isRemote'):
+        LOGGER.debug(f'External URL: {external_url}, Internal URL: {lan_url}')
+    else:
+        print(textwrap.dedent(f'''
         =============================================================
         Open one of the URLs below in your browser within {int(timeout_secs)} seconds
         External URL: {external_url}
         Internal URL: {lan_url}
         =============================================================
-    '''))
+        '''))
 
 
 def _launch_web_client(name):
