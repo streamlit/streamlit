@@ -150,6 +150,11 @@ def stop_proxy_on_exception(is_coroutine=False):
     return stop_proxy_decorator
 
 
+class HealthHandler(web.RequestHandler):
+    def get(self):
+        self.write('ok')
+
+
 class Proxy(object):
     """The main base class for the streamlit server."""
 
@@ -182,6 +187,8 @@ class Proxy(object):
 
             # Outgoing endpoint to get the latest report.
             ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
+
+            ('/healthz', HealthHandler),
         ]
         if not config.get_option('proxy.useNode'):
             # If we're not using the node development server, then the proxy
