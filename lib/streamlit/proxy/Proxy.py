@@ -353,11 +353,17 @@ class Proxy(object):
         raise gen.Return((new_connection, new_queue))
 
     def get_cloud_storage(self):
-        """Return a `cloud` object (see `S3Connection.py`) which
-        connects to an S3 bucket or other cloud storage solution.
+        """Get object that connects to online storage.
 
-        NOTE: Even inetrnal methods of Proxy should call this directly,
-        since the cloud object is instantiated lazily in this method.
+        See `S3Connection.py` for an example.
+
+        NOTE: Even internal methods of Proxy should call this directly, since
+        the cloud object is instantiated lazily in this method.
+
+        Returns
+        -------
+        S3Connection.Cloud
+            The cloud object.
         """
         if self._cloud_storage is None:
             self._cloud_storage = S3Connection.S3()
@@ -379,9 +385,11 @@ class Proxy(object):
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
 
-        yield write_proto(ws, new_report_msg(
-            connection.id, connection.cwd, connection.command_line,
-            connection.source_file_path))
+        yield write_proto(
+            ws,
+            new_report_msg(
+                connection.id, connection.cwd, connection.command_line,
+                connection.source_file_path))
 
         LOGGER.debug(
             'Added new client. '
