@@ -89,7 +89,19 @@ class Config(object):
                 autoCloseDelaySecs = dict(
                     _comment = (
                         'How long the proxy should stay open when there are '
-                        'no connections. Can be set to .inf for "infinity".'),
+                        'no connections. Can be set to .inf for "infinity". '
+                        'This delay only starts counting after the '
+                        'reportExpirationSecs delay transpires.'),
+                    value = 0,
+                ),
+                reportExpirationSecs = dict(
+                    # TODO: In new config system, allow us to specify ranges
+                    # for numeric values, so anything outside that range is
+                    # considered invalid.
+                    _comment = (
+                        'How long reports should be stored in memory for when '
+                        'script is done and there are no viewers. '
+                        'For best results make sure this is >= 3.'),
                     value = 10.1,
                 ),
                 useNode = dict(

@@ -68,7 +68,12 @@ class Proxy(object):
         self._autoCloseDelaySecs = config.get_option(
             'proxy.autoCloseDelaySecs')
 
-        self._keepAlive = self._autoCloseDelaySecs == float('inf')
+        self._reportExpirationSecs = config.get_option(
+            'proxy.reportExpirationSecs')
+
+        self._keepAlive = (
+            self._autoCloseDelaySecs == float('inf') or
+            self._reportExpirationSecs == float('inf'))
 
         LOGGER.debug(
             f'Creating proxy with self._connections: {id(self._connections)}')
@@ -159,21 +164,16 @@ class Proxy(object):
         def connection_timeout():
             LOGGER.debug(f'In connection timeout for "{connection.name}".')
             connection.end_grace_period()
-            self.try_to_deregister_proxy_connection(connection)
-            self.potentially_stop()
+            self.schedule_potential_deregister_and_stop(connection)
 
         if not self._keepAlive:
-            loop = IOLoop.current()
-            loop.call_later(self._autoCloseDelaySecs, connection_timeout)
-            LOGGER.debug(
-                f'Added connection timeout for {self._autoCloseDelaySecs} '
-                'secs.')
+            connection_timeout()
 
         LOGGER.debug(
             f'Finished registering connection: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
 
-    def try_to_deregister_proxy_connection(self, connection):
+    def schedule_potential_deregister_and_stop(self, connection):
         """Try to deregister proxy connection.
 
         Deregister ProxyConnection so long as there aren't any open connection
@@ -184,12 +184,25 @@ class Proxy(object):
         connection : ProxyConnection
 
         """
-        if not self.proxy_connection_is_registered(connection):
-            return
-        if connection.can_be_deregistered():
-            self.deregister_proxy_connection(connection)
+        LOGGER.debug(
+            f'Will wait {self._reportExpirationSecs}s before deregistering '
+            'connection')
 
-    def deregister_proxy_connection(self, connection):
+        def potentially_unregister():
+            if not self.proxy_connection_is_registered(connection):
+                return
+
+            if not connection.can_be_deregistered():
+                return
+
+            LOGGER.debug('Deregistering connection')
+            self._deregister_proxy_connection(connection)
+            self.schedule_potential_stop()
+
+        loop = IOLoop.current()
+        loop.call_later(self._reportExpirationSecs, potentially_unregister)
+
+    def _deregister_proxy_connection(self, connection):
         """Deregister proxy connection irrespective of whether it's in use.
 
         Parameters
@@ -200,21 +213,23 @@ class Proxy(object):
 
         """
         del self._connections[connection.name]
-        LOGGER.debug('Got rid of connection "%s".' % connection.name)
+        LOGGER.debug(f'Got rid of connection {connection.name}')
+        LOGGER.debug(f'Total connections left: {len(self._connections)}')
 
     def proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
-    def potentially_stop(self):
+    def schedule_potential_stop(self):
         """Stop proxy if no open connections and not in keepAlive mode."""
         if self._keepAlive:
             return
 
-        def stop_timeout():
+        def potentially_stop():
             LOGGER.debug(
                 'Stopping if there are no more connections: ' +
                 str(list(self._connections.keys())))
+
             if not self._connections:
                 self.stop()
 
@@ -222,7 +237,7 @@ class Proxy(object):
             f'Will check in {self._autoCloseDelaySecs}s if there are no more '
             'connections: ')
         loop = IOLoop.current()
-        loop.call_later(self._autoCloseDelaySecs, stop_timeout)
+        loop.call_later(self._autoCloseDelaySecs, potentially_stop)
 
     @gen.coroutine
     def on_client_opened(self, report_name, ws):  # noqa: D401
@@ -307,8 +322,7 @@ class Proxy(object):
         """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
         LOGGER.debug('Removed the client for "%s"', connection.name)
-        self.try_to_deregister_proxy_connection(connection)
-        self.potentially_stop()
+        self.schedule_potential_deregister_and_stop(connection)
 
     def _maybe_add_fs_observer(self, connection):
         """Start observing filesystem and store observer in local map.
