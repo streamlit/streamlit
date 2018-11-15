@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A proxy server between the Streamlit libs and web client.
@@ -12,6 +11,8 @@ objects. A ProxyConnection always has:
 
 Essentially, the ProxyConnection stays open so long as any of those connections
 do. When the final ProxyConnection closes, then the whole proxy does too.
+(...unless any of autoCloseDelaySecs or reportExpirationSecs are infinity, in
+which case the proxy stays open no matter what.)
 
 To ensure the proxy closes, a short timeout is launched for each connection
 which closes the proxy if no connections were established.
@@ -50,114 +51,6 @@ AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
 
-def _print_remote_url(port, quoted_name):
-    external_ip = config.get_option('proxy.externalIP')
-    lan_ip = None
-
-    if external_ip:
-        LOGGER.debug(f'proxy.externalIP set to {external_ip}')
-    else:
-        print('proxy.externalIP not set, attempting to autodetect IP')
-        external_ip = _get_external_ip()
-        lan_ip = _get_lan_ip()
-
-    timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-
-    if external_ip is None and lan_ip is None:
-        print('Did not auto detect external ip. Please go to '
-              f'{HELP_DOC} for debugging hints.')
-        return
-
-    external_url = _get_report_url(external_ip, port, quoted_name)
-    lan_url = _get_report_url(lan_ip, port, quoted_name)
-
-    if config.get_option('proxy.isRemote'):
-        LOGGER.debug(f'External URL: {external_url}, Internal URL: {lan_url}')
-    else:
-        print(textwrap.dedent(f'''
-        =============================================================
-        Open one of the URLs below in your browser within {int(timeout_secs)} seconds
-        External URL: {external_url}
-        Internal URL: {lan_url}
-        =============================================================
-        '''))
-
-
-def _launch_web_client(name):
-    """Launch a web browser to connect to the proxy to get the named report.
-
-    Parameters
-    ----------
-    name : string
-        The name of the report to which the web browser should connect.
-
-    """
-    if config.get_option('proxy.useNode'):
-        # If changing this, also change frontend/src/baseconsts.js
-        host, port = 'localhost', '3000'
-    else:
-        host = config.get_option('proxy.server')
-        port = config.get_option('proxy.port')
-    quoted_name = urllib.parse.quote_plus(name)
-    url = 'http://{}:{}/?name={}'.format(
-        host, port, quoted_name)
-
-    headless = config.get_option('proxy.isRemote')
-    LOGGER.debug(f'headless = {headless}')
-    if headless:
-        _print_remote_url(port, quoted_name)
-    else:
-        webbrowser.open(url)
-
-
-def stop_proxy_on_exception(is_coroutine=False):
-    """Decorate WebSocketHandler callbacks to stop the proxy on exception."""
-    def stop_proxy_decorator(callback):
-        if is_coroutine:
-            @functools.wraps(callback)
-            @gen.coroutine
-            def wrapped_coroutine(web_socket_handler, *args, **kwargs):
-                try:
-                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
-                    LOGGER.debug(f'About to yield {callback}')
-                    rv = yield callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'About to return {rv}')
-                    raise gen.Return(rv)
-                except gen.Return:
-                    LOGGER.debug(f'Passing through COROUTINE return value:')
-                    raise
-                except Exception as e:
-                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
-                    traceback.print_exc()
-                    web_socket_handler._proxy.stop()
-                    LOGGER.debug('Stopped the proxy.')
-                    raise
-            return wrapped_coroutine
-
-        else:
-            @functools.wraps(callback)
-            def wrapped_callback(web_socket_handler, *args, **kwargs):
-                try:
-                    return callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'Running wrapped version of {callback}')
-                except Exception as e:
-                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
-                    traceback.print_exc()
-                    web_socket_handler._proxy.stop()
-                    LOGGER.debug('Stopped the proxy.')
-                    raise
-            return wrapped_callback
-
-        return functools.wraps(callback)(wrapped_callback)
-
-    return stop_proxy_decorator
-
-
-class HealthHandler(web.RequestHandler):
-    def get(self):
-        self.write('ok')
-
-
 class Proxy(object):
     """The main base class for the streamlit server."""
 
@@ -177,7 +70,19 @@ class Proxy(object):
         # get_cloud_storage() which is why it starts off as null.
         self._cloud_storage = None
 
-        LOGGER.debug(f'Creating proxy with self._connections: {id(self._connections)}')
+        # How long to keep the proxy alive for, when there are no connections.
+        self._autoCloseDelaySecs = config.get_option(
+            'proxy.autoCloseDelaySecs')
+
+        self._reportExpirationSecs = config.get_option(
+            'proxy.reportExpirationSecs')
+
+        self._keepAlive = (
+            self._autoCloseDelaySecs == float('inf') or
+            self._reportExpirationSecs == float('inf'))
+
+        LOGGER.debug(
+            f'Creating proxy with self._connections: {id(self._connections)}')
 
         # We have to import these in here to break a circular import reference
         # issue in Python 2.7.
@@ -185,7 +90,7 @@ class Proxy(object):
 
         # Set up HTTP routes
         routes = [
-            # # Local connection to stream a new report.
+            # Local connection to stream a new report.
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
 
             # Outgoing endpoint to get the latest report.
@@ -239,6 +144,7 @@ class Proxy(object):
 
         Allowing all current handler to exit normally.
         """
+        LOGGER.debug('Stopping proxy')
         if not self._stopped:
             IOLoop.current().stop()
         self._stopped = True
@@ -257,35 +163,52 @@ class Proxy(object):
         new_name = connection.name not in self._connections
         self._connections[connection.name] = connection
         if new_name:
-            _launch_web_client(connection.name)
+            _launch_web_client(connection.name, self._autoCloseDelaySecs)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
             LOGGER.debug(f'In connection timeout for "{connection.name}".')
             connection.end_grace_period()
-            self.try_to_deregister_proxy_connection(connection)
-            self.potentially_stop()
-        timeout_secs = config.get_option('proxy.waitForConnectionSecs')
-        loop = IOLoop.current()
-        loop.call_later(timeout_secs, connection_timeout)
-        LOGGER.debug(f'Added connection timeout for {timeout_secs} secs.')
+            self.schedule_potential_deregister_and_stop(connection)
+
+        if not self._keepAlive:
+            connection_timeout()
+
         LOGGER.debug(
-            f'Finished resistering connection: '
+            f'Finished registering connection: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
 
-    def try_to_deregister_proxy_connection(self, connection):
+    def schedule_potential_deregister_and_stop(self, connection):
         """Try to deregister proxy connection.
 
-        Deregister this ProxyConnection so long as there aren't any open
-        connection (local or client), and the connection is no longer in its
-        grace period.
-        """
-        if not self.proxy_connection_is_registered(connection):
-            return
-        if connection.can_be_deregistered():
-            self.deregister_proxy_connection(connection)
+        Deregister ProxyConnection so long as there aren't any open connection
+        (local or client), and the connection is no longer in its grace period.
 
-    def deregister_proxy_connection(self, connection):
+        Parameters
+        ----------
+        connection : ProxyConnection
+
+        """
+
+        def potentially_unregister():
+            if not self.proxy_connection_is_registered(connection):
+                return
+
+            if not connection.can_be_deregistered():
+                return
+
+            LOGGER.debug('Deregistering connection')
+            self._deregister_proxy_connection(connection)
+            self.schedule_potential_stop()
+
+        LOGGER.debug(
+            f'Will wait {self._reportExpirationSecs}s before deregistering '
+            'connection')
+
+        loop = IOLoop.current()
+        loop.call_later(self._reportExpirationSecs, potentially_unregister)
+
+    def _deregister_proxy_connection(self, connection):
         """Deregister proxy connection irrespective of whether it's in use.
 
         Parameters
@@ -296,19 +219,31 @@ class Proxy(object):
 
         """
         del self._connections[connection.name]
-        LOGGER.debug('Got rid of connection "%s".' % connection.name)
+        LOGGER.debug(f'Got rid of connection {connection.name}')
+        LOGGER.debug(f'Total connections left: {len(self._connections)}')
 
     def proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
-    def potentially_stop(self):
-        """Stop proxy if no open connections."""
+    def schedule_potential_stop(self):
+        """Stop proxy if no open connections and not in keepAlive mode."""
+        if self._keepAlive:
+            return
+
+        def potentially_stop():
+            LOGGER.debug(
+                'Stopping if there are no more connections: ' +
+                str(list(self._connections.keys())))
+
+            if not self._connections:
+                self.stop()
+
         LOGGER.debug(
-            'Stopping if there are no more connections: ' +
-            str(list(self._connections.keys())))
-        if not self._connections:
-            self.stop()
+            f'Will check in {self._autoCloseDelaySecs}s if there are no more '
+            'connections: ')
+        loop = IOLoop.current()
+        loop.call_later(self._autoCloseDelaySecs, potentially_stop)
 
     @gen.coroutine
     def on_client_opened(self, report_name, ws):  # noqa: D401
@@ -363,11 +298,17 @@ class Proxy(object):
         raise gen.Return((new_connection, new_queue))
 
     def get_cloud_storage(self):
-        """Return a `cloud` object (see `S3Connection.py`) which
-        connects to an S3 bucket or other cloud storage solution.
+        """Get object that connects to online storage.
 
-        NOTE: Even inetrnal methods of Proxy should call this directly,
-        since the cloud object is instantiated lazily in this method.
+        See `S3Connection.py` for an example.
+
+        NOTE: Even internal methods of Proxy should call this directly, since
+        the cloud object is instantiated lazily in this method.
+
+        Returns
+        -------
+        S3Connection.Cloud
+            The cloud object.
         """
         if self._cloud_storage is None:
             self._cloud_storage = S3Connection.S3()
@@ -404,8 +345,7 @@ class Proxy(object):
         """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
         LOGGER.debug('Removed the client for "%s"', connection.name)
-        self.try_to_deregister_proxy_connection(connection)
-        self.potentially_stop()
+        self.schedule_potential_deregister_and_stop(connection)
 
     def _maybe_add_fs_observer(self, connection):
         """Start observing filesystem and store observer in local map.
@@ -420,6 +360,11 @@ class Proxy(object):
 
         """
         if not config.get_option('proxy.watchFileSystem'):
+            return
+
+        if self._keepAlive:
+            LOGGER.info(
+                'Will not observe file system since keepAlive is True')
             return
 
         key = FSObserver.get_key(connection)
@@ -448,6 +393,120 @@ class Proxy(object):
             observer.deregister_consumer(connection)
             if observer.is_closed():
                 del self._fs_observers[key]
+
+
+def stop_proxy_on_exception(is_coroutine=False):
+    """Decorate WebSocketHandler callbacks to stop the proxy on exception."""
+    def stop_proxy_decorator(callback):
+        if is_coroutine:
+            @functools.wraps(callback)
+            @gen.coroutine
+            def wrapped_coroutine(web_socket_handler, *args, **kwargs):
+                try:
+                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
+                    LOGGER.debug(f'About to yield {callback}')
+                    rv = yield callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'About to return {rv}')
+                    raise gen.Return(rv)
+                except gen.Return:
+                    LOGGER.debug(f'Passing through COROUTINE return value:')
+                    raise
+                except Exception as e:
+                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    traceback.print_exc()
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_coroutine
+
+        else:
+            @functools.wraps(callback)
+            def wrapped_callback(web_socket_handler, *args, **kwargs):
+                try:
+                    return callback(web_socket_handler, *args, **kwargs)
+                    LOGGER.debug(f'Running wrapped version of {callback}')
+                except Exception as e:
+                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
+                    traceback.print_exc()
+                    web_socket_handler._proxy.stop()
+                    LOGGER.debug('Stopped the proxy.')
+                    raise
+            return wrapped_callback
+
+        return functools.wraps(callback)(wrapped_callback)
+
+    return stop_proxy_decorator
+
+
+class HealthHandler(web.RequestHandler):
+    def get(self):
+        self.write('ok')
+
+
+def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
+    external_ip = config.get_option('proxy.externalIP')
+    lan_ip = None
+
+    if external_ip:
+        LOGGER.debug(f'proxy.externalIP set to {external_ip}')
+    else:
+        print('proxy.externalIP not set, attempting to autodetect IP')
+        external_ip = _get_external_ip()
+        lan_ip = _get_lan_ip()
+
+    if external_ip is None and lan_ip is None:
+        print('Did not auto detect external ip. Please go to '
+              f'{HELP_DOC} for debugging hints.')
+        return
+
+    external_url = _get_report_url(external_ip, port, quoted_name)
+    lan_url = _get_report_url(lan_ip, port, quoted_name)
+
+    if autoCloseDelaySecs != float('inf'):
+        timeout_msg = f'within {int(autoCloseDelaySecs)} seconds'
+    else:
+        timeout_msg = ''
+
+    if config.get_option('proxy.isRemote'):
+        LOGGER.debug(f'External URL: {external_url}, Internal URL: {lan_url}')
+    else:
+        print(textwrap.dedent(f'''
+            =============================================================
+            Open one of the URLs below in your browser {timeout_msg}
+            External URL: {external_url}
+            Internal URL: {lan_url}
+            =============================================================
+        '''))
+
+
+def _launch_web_client(name, autoCloseDelaySecs):
+    """Launch a web browser to connect to the proxy to get the named report.
+
+    Parameters
+    ----------
+    name : string
+        The name of the report to which the web browser should connect.
+    autoCloseDelaySecs : float
+        Time the proxy will wait before closing, when there are no more
+        connections.
+
+    """
+    if config.get_option('proxy.useNode'):
+        # If changing this, also change frontend/src/baseconsts.js
+        host, port = 'localhost', '3000'
+    else:
+        host = config.get_option('proxy.server')
+        port = config.get_option('proxy.port')
+    quoted_name = urllib.parse.quote_plus(name)
+    url = 'http://{}:{}/?name={}'.format(
+        host, port, quoted_name)
+
+    headless = config.get_option('proxy.isRemote')
+    LOGGER.debug(f'headless = {headless}')
+    if headless:
+        _print_remote_url(port, quoted_name, autoCloseDelaySecs)
+    else:
+        webbrowser.open(url)
 
 
 def _on_fs_event(observer, event):  # noqa: D401

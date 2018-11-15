@@ -79,17 +79,29 @@ class Config(object):
                 ),
             ),
             proxy = dict(
-                _comment = 'Configuration of the proxy server',
+                _comment = 'Configuration of the proxy server.',
                 port = dict(
                     value = 8501,
                 ),
                 server = dict(
                     value = 'localhost',
                 ),
-                waitForConnectionSecs = dict(
+                autoCloseDelaySecs = dict(
                     _comment = (
-                        'How many seconds the proxy waits for the connection '
-                        'before timing out.'),
+                        'How long the proxy should stay open when there are '
+                        'no connections. Can be set to .inf for "infinity". '
+                        'This delay only starts counting after the '
+                        'reportExpirationSecs delay transpires.'),
+                    value = 0,
+                ),
+                reportExpirationSecs = dict(
+                    # TODO: In new config system, allow us to specify ranges
+                    # for numeric values, so anything outside that range is
+                    # considered invalid.
+                    _comment = (
+                        'How long reports should be stored in memory for when '
+                        'script is done and there are no viewers. '
+                        'For best results make sure this is >= 3.'),
                     value = 10.1,
                 ),
                 useNode = dict(
@@ -103,11 +115,13 @@ class Config(object):
                 externalIP = dict(
                     _comment = ('IP address of the machine where Streamlit is '
                         'running.'),
-                    # Must be None, so the autodetection in Proxy.py takes place
+                    # Must be None, so the autodetection in Proxy.py takes
+                    # place
                     value = None,
                 ),
                 watchFileSystem = dict(
-                    _comment = 'Watch for filesystem changes and rerun reports',
+                    _comment = (
+                        'Watch for filesystem changes and rerun reports'),
                     value = True,
                 ),
             ),
@@ -138,7 +152,8 @@ class Config(object):
             client = dict(
                 remotelyTrackUsage = dict(
                     _comment = (
-                        'Whether Streamlit should remotely record usage stats'),
+                        'Whether Streamlit should remotely record usage '
+                        'stats.'),
                     value = True,
                 ),
             ),
