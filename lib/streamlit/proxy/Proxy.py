@@ -184,9 +184,6 @@ class Proxy(object):
         connection : ProxyConnection
 
         """
-        LOGGER.debug(
-            f'Will wait {self._reportExpirationSecs}s before deregistering '
-            'connection')
 
         def potentially_unregister():
             if not self.proxy_connection_is_registered(connection):
@@ -198,6 +195,10 @@ class Proxy(object):
             LOGGER.debug('Deregistering connection')
             self._deregister_proxy_connection(connection)
             self.schedule_potential_stop()
+
+        LOGGER.debug(
+            f'Will wait {self._reportExpirationSecs}s before deregistering '
+            'connection')
 
         loop = IOLoop.current()
         loop.call_later(self._reportExpirationSecs, potentially_unregister)
