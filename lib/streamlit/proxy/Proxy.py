@@ -24,8 +24,7 @@ setup_2_3_shims(globals())
 
 from streamlit import config
 from streamlit import S3Connection
-from streamlit.util import get_static_dir
-from streamlit.wsutil import write_proto
+from streamlit.util import get_static_dir, write_proto
 
 from streamlit.streamlit_msg_proto import new_report_msg
 
