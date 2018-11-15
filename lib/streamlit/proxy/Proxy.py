@@ -24,6 +24,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
+from streamlit import S3Connection
 from streamlit.util import get_static_dir
 
 from streamlit.streamlit_msg_proto import new_report_msg
@@ -64,6 +65,11 @@ class Proxy(object):
         # FSObserver.get_key(proxy_connection).
         self._fs_observers = dict()
 
+        # This object represents a connection to an S3 bucket or other cloud
+        # storage solution. It is instantiated lazily by calling
+        # get_cloud_storage() which is why it starts off as null.
+        self._cloud_storage = None
+
         # How long to keep the proxy alive for, when there are no connections.
         self._autoCloseDelaySecs = config.get_option(
             'proxy.autoCloseDelaySecs')
@@ -84,11 +90,13 @@ class Proxy(object):
 
         # Set up HTTP routes
         routes = [
-            # # Local connection to stream a new report.
+            # Local connection to stream a new report.
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
 
             # Outgoing endpoint to get the latest report.
             ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
+
+            ('/healthz', HealthHandler),
         ]
         if not config.get_option('proxy.useNode'):
             # If we're not using the node development server, then the proxy
@@ -117,9 +125,6 @@ class Proxy(object):
 
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
-
-        # Initialized things that the proxy will need to do cloud things.
-        self._cloud = None  # S3Connection()
 
     def run_app(self):
         """Run web app."""
@@ -292,6 +297,23 @@ class Proxy(object):
             yield self._add_client(report_name, ws))
         raise gen.Return((new_connection, new_queue))
 
+    def get_cloud_storage(self):
+        """Get object that connects to online storage.
+
+        See `S3Connection.py` for an example.
+
+        NOTE: Even internal methods of Proxy should call this directly, since
+        the cloud object is instantiated lazily in this method.
+
+        Returns
+        -------
+        S3Connection.Cloud
+            The cloud object.
+        """
+        if self._cloud_storage is None:
+            self._cloud_storage = S3Connection.S3()
+        return self._cloud_storage
+
     @gen.coroutine
     def _add_client(self, report_name, ws):
         """Add a queue to the connection for the given report_name.
@@ -416,6 +438,11 @@ def stop_proxy_on_exception(is_coroutine=False):
     return stop_proxy_decorator
 
 
+class HealthHandler(web.RequestHandler):
+    def get(self):
+        self.write('ok')
+
+
 def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
     external_ip = config.get_option('proxy.externalIP')
     lan_ip = None
@@ -440,13 +467,16 @@ def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
     else:
         timeout_msg = ''
 
-    print(textwrap.dedent(f'''
-        =============================================================
-        Open one of the URLs below in your browser {timeout_msg}
-        External URL: {external_url}
-        Internal URL: {lan_url}
-        =============================================================
-    '''))
+    if config.get_option('proxy.isRemote'):
+        LOGGER.debug(f'External URL: {external_url}, Internal URL: {lan_url}')
+    else:
+        print(textwrap.dedent(f'''
+            =============================================================
+            Open one of the URLs below in your browser {timeout_msg}
+            External URL: {external_url}
+            Internal URL: {lan_url}
+            =============================================================
+        '''))
 
 
 def _launch_web_client(name, autoCloseDelaySecs):

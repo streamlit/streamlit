@@ -10,7 +10,6 @@ import os
 
 from streamlit import config
 from streamlit import protobuf
-from streamlit.S3Connection import S3
 from streamlit.proxy import Proxy
 
 from streamlit.logger import get_logger
@@ -28,7 +27,6 @@ class ClientWebSocket(WebSocketHandler):
         self._connection = None
         self._queue = None
         self._is_open = False
-        self._cloud = S3()
 
     def check_origin(self, origin):
         """Ignore CORS."""
@@ -73,6 +71,7 @@ class ClientWebSocket(WebSocketHandler):
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
     def do_loop(self):
+        """Start the proxy's main loop."""
         # How long we wait between sending more data.
         throttle_secs = config.get_option('local.throttleSecs')
 
@@ -122,16 +121,17 @@ class ClientWebSocket(WebSocketHandler):
 
     @gen.coroutine
     def _send_new_connection_msg(self):
-        """Sends a message to the browser indicating local configuration
-        settings."""
+        """Send message to browser with local configuration settings."""
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.saving_configured = config.saving_is_configured()
-        LOGGER.debug('New Client Connection: saving_is_configured=%s' % \
+        LOGGER.debug(
+            'New Client Connection: saving_is_configured=%s' %
             msg.new_connection.saving_configured)
 
         msg.new_connection.remotely_track_usage = config.remotely_track_usage()
-        LOGGER.debug('New Client Connection: remotely_track_usage=%s' % \
+        LOGGER.debug(
+            'New Client Connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
@@ -168,8 +168,6 @@ class ClientWebSocket(WebSocketHandler):
         """Save serialized version of report deltas to the cloud."""
         @gen.coroutine
         def progress(percent):
-            """Takes a 0 <= percent <= 100 and updates the frontend with this
-            progress."""
             progress_msg = protobuf.ForwardMsg()
             progress_msg.upload_report_progress = percent
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
@@ -179,7 +177,8 @@ class ClientWebSocket(WebSocketHandler):
             yield progress(0)
 
             files = connection.serialize_report_to_files()
-            url = yield self._cloud.upload_report(connection.id, files, progress)
+            cloud = self._proxy.get_cloud_storage()
+            url = yield cloud.upload_report(connection.id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
