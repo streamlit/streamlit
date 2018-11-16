@@ -1,0 +1,8 @@
+streamlit/protobuf/*_pb2.py
+streamlit/static
+Dockerfile
+entrypoint.sh
+tests
+.dockerignore
+**/*.pyc
+**/.DS_Store
