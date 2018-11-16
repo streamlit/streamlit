@@ -24,7 +24,7 @@ with st.echo():
     st.write('Nothing here will appear')
 
 # ENABLED
-st.set_config({'client.enabled': True})  # This causes an exception.
+st.set_config({'client.enabled': True})
 
 st.write('This should appear last')
 b.text('This should appear second')
