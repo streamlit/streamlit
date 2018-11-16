@@ -138,7 +138,6 @@ class DeltaConnection(object):
     # NOTE: This is a callback that is executed by DeltaGenerator.
     def _maybe_enqueue_delta(self, delta):
         if self._is_display_enabled:
-            LOGGER.debug(f'Enqueing delta')
             self._connection.enqueue_delta(delta)
 
 
