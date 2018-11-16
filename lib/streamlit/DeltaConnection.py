@@ -103,8 +103,9 @@ class DeltaConnection(object):
         # else:
         #     Do nothing. Either this DeltaConnection is already disabled, or
         #     the user is trying to go from enabled to disabled -- in which
-        #     case we leave self._connection untouched in case the user
-        #     re-enables display later on. Either way, there's nothing to do.
+        #     case we want to leave self._connection untouched since the user
+        #     may re-enable display later on. Either way, there's nothing to
+        #     do.
 
     def _on_connect(self):
         # NOTE: This is a callback that gets executed in a coroutine.
