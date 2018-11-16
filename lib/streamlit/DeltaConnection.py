@@ -107,8 +107,8 @@ class DeltaConnection(object):
         #     may re-enable display later on. Either way, there's nothing to
         #     do.
 
+    # NOTE: This is a callback that gets executed in a coroutine.
     def _on_connect(self):
-        # NOTE: This is a callback that gets executed in a coroutine.
 
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
             dg = self.get_delta_generator()
@@ -117,8 +117,8 @@ class DeltaConnection(object):
 
         sys.excepthook = streamlit_excepthook
 
+    # NOTE: This is a callback that gets executed in a coroutine.
     def _on_cleanup(self):
-        # NOTE: This is a callback that gets executed in a coroutine.
         LOGGER.debug('Main thread ended. Restoring excepthook.')
         sys.excepthook = _original_excepthook
 
@@ -135,6 +135,7 @@ class DeltaConnection(object):
 
         return self._delta_generator
 
+    # NOTE: This is a callback that is executed by DeltaGenerator.
     def _maybe_enqueue_delta(self, delta):
         if self._is_display_enabled:
             LOGGER.debug(f'Enqueing delta')
