@@ -228,7 +228,8 @@ def register_component(component_name, implemented):
     instance for builder-style chaining:
 
     register_component('baz', False)
-    c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz() 
+    c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
+    
     """
     def append_component_method(self, **props):
         if implemented:
