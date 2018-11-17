@@ -39,6 +39,10 @@ pylint:
 	cd lib; flake8 --ignore=E402 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
 
 pytest:
+	# Just testing. No code coverage.
+	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules tests/ $(modules)
+
+pycoverage:
 	# testing + code coverage
 	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
