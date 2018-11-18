@@ -105,8 +105,10 @@ class ConfigTest(unittest.TestCase):
         This also implicitly tests simple and complex ConfigOptions as well as
         get_option() and set_option().
         """
-        # Set up both options.
+        # Some useful variables.
         DUMMY_VAL_1, DUMMY_VAL_2, DUMMY_VAL_3 = 'Steven', 'Vincent', 'Buscemi'
+
+        # Set up both options.
         config._create_option('_test.independentOption',
             description = 'This option can change at will',
             default_val = DUMMY_VAL_1)
@@ -146,3 +148,27 @@ class ConfigTest(unittest.TestCase):
             config._USER_DEFINED)
         self.assertEqual(config.get_where_defined('_test.dependentOption'),
             config._USER_DEFINED)
+
+    def test_parsing_toml(self):
+        """Test config._update_config_with_toml()."""
+        # Some useful variables.
+        DUMMY_VAL_1, DUMMY_VAL_2 = 'Christopher', 'Walken'
+        DUMMY_DEFINTIION = '<test definition>'
+
+        # Create a dummy default option.
+        config._create_option('_test.tomlTest',
+            description = 'This option tests the TOML parser.',
+            default_val = DUMMY_VAL_1)
+        self.assertEqual(config.get_option('_test.tomlTest'), DUMMY_VAL_1)
+        self.assertEqual(config.get_where_defined('_test.tomlTest'),
+            ConfigOption.DEFAULT_DEFINITION)
+
+        # Override it with some TOML
+        NEW_TOML = f"""
+            [_test]
+            tomlTest="{DUMMY_VAL_2}"
+        """
+        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINTIION)
+        self.assertEqual(config.get_option('_test.tomlTest'), DUMMY_VAL_2)
+        self.assertEqual(config.get_where_defined('_test.tomlTest'),
+            DUMMY_DEFINTIION)
