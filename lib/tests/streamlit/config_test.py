@@ -23,7 +23,7 @@ class ConfigTest(unittest.TestCase):
         #     raise RuntimeError, 'This is a test'
 
     def test_simple_config_option(self):
-        """Test setting an invalid config section."""
+        """Test creating a simple (constant) config option."""
         # Create the config option.
         config_option = ConfigOption('_test.simpleParam',
             description = 'Simple config option.',
@@ -38,7 +38,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.value, 12345)
 
     def test_complex_config_option(self):
-        """Test setting an invalid config section."""
+        """Test setting a complex (functional) config option."""
         # Create the config option.
         @ConfigOption('_test.complexParam')
         def config_option():
@@ -52,6 +52,14 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.description,
             'Complex config option.')
         self.assertEqual(config_option.value, 12345)
+
+    def test_complex_config_option_must_have_doc_strings(self):
+        """Test that complex config options have doc string to form
+        their descriptions."""
+        with self.assertRaises(AssertionError):
+            @ConfigOption('_test.noDocString')
+            def no_doc_string():
+                pass
 
     def test_invalid_config_section(self):
         """Test setting an invalid config section."""

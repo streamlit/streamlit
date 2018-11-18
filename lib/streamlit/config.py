@@ -45,12 +45,26 @@ def _create_option(key, description=None, default_val=None):
     assert key not in _config_options, (
         'Cannot define option "%s" twice.' % key)
     _config_options[key] = option
+    return option
 
 
 
 ### Config Section: All ###
 
-_create_section('all', 'Global options that apply across all of Streamlit.')
+_create_section('global', 'Global options that apply across all of Streamlit.')
+
+@_create_option('global.developmentMode')
+def _global_log_level():
+    """Are we in development mode? (Only for Streamlit developers.)"""
+    return ('site-packages' not in __file__)
+
+@_create_option('global.logLevel')
+def _global_log_level():
+    """What level of logging, 'error', 'warning', 'info', or 'debug'?"""
+    if get_option('global.developmentMode'):
+        return 'debug'
+    else:
+        return 'info'
 
 
 
@@ -61,12 +75,15 @@ _create_section('proxy', 'Configuration of the proxy server.')
 
 
 
-### Config Section: All ###
-
 
 ### Public Interface ###
 
-def get_option(opt):
+def get_option(key):
+    if key not in _config_options:
+        raise RuntimeError, 'Config key "%s" not defined.' % key
+    return _config_options[key].value
+
+def old_get_option(opt):
     c = Config().Get()
     config = dict()
     _flatten(c, config)
