@@ -13,6 +13,7 @@ import urllib
 
 # Streamlit imports
 from streamlit.ConfigOption import ConfigOption
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -121,6 +122,7 @@ def _proxy_use_node():
     return get_option('global.developmentMode')
 
 @_create_option('proxy.isRemote')
+@util.memoize
 def _proxy_is_remote():
     """Is the proxy running remotely.
 
@@ -136,7 +138,7 @@ def _proxy_is_remote():
 
 def get_option(key):
     if key not in _config_options:
-        return old_get_option(key) # REMOVE THIS
+        # return old_get_option(key) # REMOVE THIS
         raise RuntimeError, 'Config key "%s" not defined.' % key
     return _config_options[key].value
 
