@@ -167,12 +167,34 @@ _create_option('client.remotelyTrackUsage',
 ### Public Interface ###
 
 def get_option(key):
+    """Return the config option with the given key.
+
+    Parameters
+    ----------
+    key : string
+        The config option key of the form "section.optionName"
+
+    """
     if key not in _config_options:
         # return old_get_option(key) # REMOVE THIS
         raise RuntimeError, 'Config key "%s" not defined.' % key
     return _config_options[key].value
 
+def set_option(key, value):
+    """Ses the config option.
 
+    Note that some config parameters depend on others, so changing one parameter
+    may affect others in unexpected ways.
+
+    Parameters
+    ----------
+    key : string
+        The config option key of the form "section.optionName"
+    value
+        The new value of the parameter.
+
+    """
+    _set_option(key, value, '<user defined>')
 
 ### Load Config Files ###
 
@@ -209,14 +231,10 @@ def _update_config_with_toml(raw_toml, where_defined):
 def _parse_config_file():
     """Parse the config file and update config parameters."""
     # Find the path to the config file.
-    homedir = os.getenv('HOME', None)
-    if not homedir:
+    home = os.getenv('HOME', None)
+    if home is None:
         raise RuntimeError('No home directory.')
-    try:
-        os.mkdir(os.path.join(homedir, '.streamlit'))
-    except OSError:
-        pass
-    config_fileanme = os.path.join(homedir, '.streamlit', 'config.toml')
+    config_fileanme = os.path.join(home, '.streamlit', 'config.toml')
 
     # Parse the config file.
     if not os.path.exists(config_fileanme):
@@ -226,8 +244,6 @@ def _parse_config_file():
 
 # Acually parse the config file.
 _parse_config_file()
-
-
 
 ### Old Config Stuff ###
 
