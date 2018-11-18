@@ -15,10 +15,7 @@ class ConfigOption(object):
     '''Stores a Streamlit configuration option.
 
     A configuration option, like 'proxy.port', which indicates which port to use
-    when connecting to the proxy. ConfigurationOptions are stored globally
-    in the sreamlit.config module.
-
-    There are two ways to create a ConfigOption.
+    when connecting to the proxy. There are two ways to create a ConfigOption:
 
     Simple ConfigOptions are created as follows:
 
@@ -36,14 +33,30 @@ class ConfigOption(object):
             """
             return 8501
 
-    This "magic" uses the __call__ function to make the class behave like a
-    decorator. An important constraint on thise more complex config options
-    is that they have no side effects, i.e.
+    NOTE: For compplex config options, the function is called each time the
+    option.value is evaluated!
 
-        get_config('x.y') == get_config('x.y')
+    Properties
+    ----------
+
+        key: string
+            The fully qualified section.name
+        value:
+            The value for this option. If this is a a complex config option then
+            the callback is called EACH TIME value is evaluated.
+        section: string
+            The section of this option.
+        name : string
+            The name of this option.
+        description: string
+            A "commment" for this option.
+        where_defined: string
+            Indicates which file set this config option.
+            ConfigOption.DEFAULT_DEFINITION means this file.
+
     '''
 
-    # This is a special value for ConfigOption._where_defined which indicates
+    # This is a special value for ConfigOption.where_defined which indicates
     # that the option default was not overridden.
     DEFAULT_DEFINITION = '<default>'
 
@@ -54,12 +67,12 @@ class ConfigOption(object):
         _test = 'Special test section just used for unit tests.',
     )
 
-    def __init__(self, section_dot_name, description=None, default_val=None):
+    def __init__(self, key, description=None, default_val=None):
         """Create a ConfigOption with the given name.
 
         Parameters
         ----------
-        section_dot_name : string
+        key : string
             Should be of the form "section.optionName"
         description : string
             Like a comment for the config option.
@@ -67,25 +80,27 @@ class ConfigOption(object):
             The value for this config option.
 
         """
-        # Verify that the name is copacetic.
-        name_format = \
+        # Parse out the section and name.
+        self.key = key
+        key_format = \
             r'(?P<section>\_?[a-z][a-z0-9]+)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
-        match = re.match(name_format, section_dot_name)
-        assert match, (
-            'Name "%s" must match section.optionName.' % section_dot_name)
-        section, name = match.group('section'), match.group('name')
-        assert section in ConfigOption.SECTION_DESCRIPTIONS, (
+        match = re.match(key_format, self.key)
+        assert match, 'Key "%s" must match section.optionName.' % self.key
+        self.section, self.name = match.group('section'), match.group('name')
+
+        # NOTE: This will move into config.py.
+        assert self.section in ConfigOption.SECTION_DESCRIPTIONS, (
             'Section "%s" must be one of %s.' %
             (section, ', '.join(ConfigOption.SECTION_DESCRIPTIONS.keys())))
 
         # This string is like a comment. If None, it should be set in __call__.
-        self._description = description
+        self.description = description
 
         # Function which returns the value of this option.
         self._get_val_func = lambda: default_val
 
         # This indicates that (for now) we're using the default definition.
-        self._where_defined = ConfigOption.DEFAULT_DEFINITION
+        self.where_defined = ConfigOption.DEFAULT_DEFINITION
 
     def __call__(self, get_val_func):
         """This method is called when ConfigOption is used as a decorator.
@@ -101,17 +116,10 @@ class ConfigOption(object):
         Returns self, which makes testing easier. See config_test.py.
 
         """
-        self._description = get_val_func.__doc__
+        self.description = get_val_func.__doc__
         self._get_val_func = get_val_func
         return self
 
-    def get_value(self):
-        """Gets the value of this config option."""
-        # Memoize the result in a property called _val
-        if not hasattr(self, '_val'):
-            self._val = self._get_val_func()
-        return self._val
-
-    def get_description(self):
-        """Gets the value of this config option."""
-        return self._description
+    @property
+    def value(self):
+        return self._get_val_func()

@@ -27,9 +27,9 @@ class ConfigTest(unittest.TestCase):
             default_val = 12345)
 
         # Test that it works.
-        self.assertEqual(config_option.get_description(),
+        self.assertEqual(config_option.description,
             'Simple config option.')
-        self.assertEqual(config_option.get_value(), 12345)
+        self.assertEqual(config_option.value, 12345)
 
     def test_complex_config_option(self):
         """Test setting an invalid config section."""
@@ -40,6 +40,6 @@ class ConfigTest(unittest.TestCase):
             return 12345
 
         # Test that it works.
-        self.assertEqual(config_option.get_description(),
+        self.assertEqual(config_option.description,
             'Complex config option.')
-        self.assertEqual(config_option.get_value(), 12345)
+        self.assertEqual(config_option.value, 12345)
