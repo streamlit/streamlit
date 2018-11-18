@@ -11,8 +11,34 @@ import socket
 import yaml
 import urllib
 
+# Streamlit imports
+from streamlit.ConfigOption import ConfigOption
+
 from streamlit.logger import get_logger
 LOGGER = get_logger()
+
+# Descriptions of each of the possible config sections.
+_SECTION_DESCRIPTIONS = dict(
+    all = 'Global options apply across all of Streamlit.',
+    proxy = 'Configuration of the proxy server.',
+    _test = 'Special test section just used for unit tests.',
+)
+
+# Stores the config options as key value pairs in a flat dict.
+_config_options = dict()
+
+def _create_option(key, description=None, default_val=None):
+    """Create a ConfigOption and stores it globally in this module.
+
+    Exactly follows ConfigOption arguments. See that class for details.
+    """
+    option = ConfigOption(key, description=description, default_val=default_val)
+    assert option.section in _SECTION_DESCRIPTIONS, (
+        'Section "%s" must be one of %s.' %
+        (option.section, ', '.join(_SECTION_DESCRIPTIONS.keys())))
+    assert key not in _config_options, (
+        'Cannot assign key "%s" twice.' % option.key)
+    _config_options[key] = option
 
 class Config(object):
 

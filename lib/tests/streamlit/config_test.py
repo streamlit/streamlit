@@ -9,15 +9,18 @@ from streamlit.ConfigOption import ConfigOption
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
-    def test_badly_formed_full_qualified_name(self):
-        """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
-            ConfigOption('_test.myParam.')
+    # def test_badly_formed_full_qualified_name(self):
+    #     """Test setting an invalid config section."""
+    #     with self.assertRaises(AssertionError):
+    #         ConfigOption('_test.myParam.')
 
-    def test_invalid_config_section(self):
+    # ALSO: add a test that you can't add the same key twice!
+
+    def test_section_and_name_parsing(self):
         """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
-            ConfigOption('mySection.myParam')
+        config_option = ConfigOption('_test.param')
+        # with self.assertRaises(AssertionError):
+        #     raise RuntimeError, 'This is a test'
 
     def test_simple_config_option(self):
         """Test setting an invalid config section."""
@@ -27,6 +30,9 @@ class ConfigTest(unittest.TestCase):
             default_val = 12345)
 
         # Test that it works.
+        self.assertEqual(config_option.key, '_test.simpleParam')
+        self.assertEqual(config_option.section, '_test')
+        self.assertEqual(config_option.name, 'simpleParam')
         self.assertEqual(config_option.description,
             'Simple config option.')
         self.assertEqual(config_option.value, 12345)
@@ -40,6 +46,29 @@ class ConfigTest(unittest.TestCase):
             return 12345
 
         # Test that it works.
+        self.assertEqual(config_option.key, '_test.complexParam')
+        self.assertEqual(config_option.section, '_test')
+        self.assertEqual(config_option.name, 'complexParam')
         self.assertEqual(config_option.description,
             'Complex config option.')
         self.assertEqual(config_option.value, 12345)
+
+    def test_invalid_config_section(self):
+        """Test setting an invalid config section."""
+        with self.assertRaises(AssertionError):
+            config._create_option('mySection.myParam')
+
+    def test_cannot_overwrite_config_key(self):
+        """Test overwriting a config option using _create_option."""
+        with self.assertRaises(AssertionError):
+            config._create_option('_test.overwriteKey')
+            config._create_option('_test.overwriteKey')
+
+    def test_param_names_are_camel_case(self):
+        """Test that param names must be camelCase.
+
+        Note the exception is the "_test" section which is used
+        for unit testing.
+        """
+        with self.assertRaises(AssertionError):
+            config._create_option('_test.snake_case')
