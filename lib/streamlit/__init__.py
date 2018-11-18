@@ -26,7 +26,7 @@ __version__ = pkg_resources.require("streamlit")[0].version
 # Must be at the top, to avoid circular dependency.
 from . import logger
 from streamlit import config
-logger.set_log_level(config.get_option('log_level').upper())
+logger.set_log_level(config.get_option('global.logLevel').upper())
 logger.init_tornado_logs()
 LOGGER = logger.get_logger('root')
 
