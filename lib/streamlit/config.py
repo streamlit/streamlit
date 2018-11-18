@@ -50,7 +50,7 @@ def _create_option(key, description=None, default_val=None):
 
 
 
-### Config Section: All ###
+### Config Section: Global ###
 
 _create_section('global', 'Global options that apply across all of Streamlit.')
 
@@ -83,6 +83,10 @@ _create_section('local', 'Settings for users to connect to Streamlit.')
 _create_option('local.waitForProxySecs',
     description = 'How long to wait for the proxy server to start up.',
     default_val = 3.0)
+
+_create_option('local.throttleSecs',
+    description = 'How long to wait between draining the local queue.',
+    default_val= 0.01)
 
 
 
@@ -132,7 +136,19 @@ def _proxy_is_remote():
     is_headless = not os.getenv('DISPLAY')
     return is_linux and is_headless
 
-# def autodetect_remote_machine():
+_create_option('proxy.saveOnExit',
+    description = """
+        Should we save this report to S3 after the script copletes.
+
+        DEPRECATION WARNING: I think we should get rid of this, and fold a
+        single option that makes sense for the Flotilla use case.
+        """,
+    default_val = False)
+
+_create_option('proxy.watchFileSystem',
+    description = 'Watch for filesystem changes and rerun reports.',
+    default_val = True)
+
 
 ### Public Interface ###
 
@@ -201,12 +217,6 @@ class Config(object):
                 _comment = 'error, warning, info, debug',
                 value = 'warning',
             ),
-            local = dict(
-                _comment = 'Configuration for the local server',
-                throttleSecs = dict(
-                    value = 0.01,
-                ),
-            ),
             proxy = dict(
 
                 useNode = dict(
@@ -219,11 +229,6 @@ class Config(object):
                     # Must be None, so the autodetection in Proxy.py takes
                     # place
                     value = None,
-                ),
-                watchFileSystem = dict(
-                    _comment = (
-                        'Watch for filesystem changes and rerun reports'),
-                    value = True,
                 ),
             ),
             s3 = dict(
