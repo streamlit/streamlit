@@ -16,7 +16,6 @@ import os
 import pwd
 import threading
 import uuid
-import yaml
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility

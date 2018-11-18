@@ -25,7 +25,7 @@ flake8==3.5.0
 funcsigs==1.0.2           # via pytest
 future-fstrings==0.4.3
 future==0.16.0
-futures>=2.2.0
+futures==3.2.0
 idna==2.6                 # via requests
 jmespath==0.9.3
 mccabe==0.6.1             # via flake8
@@ -55,6 +55,7 @@ six==1.11.0
 snowballstemmer==1.2.1    # via pydocstyle
 testfixtures==6.1.0
 tokenize-rt==2.0.1
+toml==0.10.0
 tornado==5.0.2
 tqdm==4.23.4              # via twine
 twine==1.11.0
