@@ -5,6 +5,7 @@
 # Package Imports
 import os
 import platform
+import toml
 
 # Streamlit imports
 from streamlit.ConfigOption import ConfigOption
@@ -143,6 +144,7 @@ _create_option('proxy.saveOnExit',
 _create_option('proxy.watchFileSystem',
     description = 'Watch for filesystem changes and rerun reports.',
     default_val = True)
+
 
 
 ### Public Interface ###
