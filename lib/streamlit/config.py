@@ -79,7 +79,7 @@ class _ConfigOption(object):
         assert match, (
             'Name "%s" must match section.optionName.' % section_dot_name)
         section, name = match.group('section'), match.group('name')
-        assert section in _Config.SECTION_DESCRIPTIONS, (
+        assert section in SECTION_DESCRIPTIONS, (
             'Section "%s" must be one of %s.' %
             (section, ', '.join(_SECTION_DESCRIPTIONS.keys())))
 
