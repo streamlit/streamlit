@@ -16,59 +16,95 @@ import re
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
-# # Descriptions of each of the possible config sections.
-# _SECTION_DESCRIPTIONS = dict(
-#     proxy='Configuration of the proxy server.'
-# )
-#
-# def _config_option(name):
-#     '''Function decorator to define a config option.
-#
-#     Parameters
-#     ----------
-#     name : string
-#         The name of the parameter as 'section.parameterName'.
-#
-#     Example
-#     -------
-#     @_config_option('section.parameterName')
-#     def _config_section_parameter_name():
-#         """One sentance description of parameter.
-#
-#         Longer description of parameter.
-#
-#         Default
-#         -------
-#         Description of how the default value is computed.
-#         """
-#         return code_to_compute_parameter()
-#
-#     '''
-#     # Implicitly verifies that there's a single period.
-#     section, parameter_name = name.split('.')
-#
-#     # Verify that the section name is valid.
-#     assert section in _SECTION_DESCRIPTIONS, \
-#         'Section must be one of: ' + ' '.join(_SECTION_DESCRIPTIONS.keys())
-#
-#     # Verify that the parameter name is valid. This is a restrited definition
-#     # of camel case that includes only letters.
-#     camel_case = re.compile(r'[a-z][a-zA-Z]*')
-#     assert camel_case.match(parameter_name), \
-#         '"%s" is an invalid config parameter name.' % parameter_name
-#
-#
-#     def register_config_option()
-#
-# @_config_option('proxy.port')
-# def _config_proxy_port():
-#     """Connect to the proxy at this port.
-#
-#     Default
-#     -------
-#     8501
-#     """
-#     return 8501
+# Descriptions of each of the possible config sections.
+_SECTION_DESCRIPTIONS = dict(
+    proxy='Configuration of the proxy server.'
+)
+
+def _config_option(name):
+    '''Function decorator to define a config option.
+
+    Parameters
+    ----------
+    name : string
+        The name of the parameter as 'section.parameterName'.
+
+    Example
+    -------
+    @_config_option('section.parameterName')
+    def _config_section_parameter_name():
+        """One sentance description of parameter.
+
+        Longer description of parameter.
+
+        Default
+        -------
+        Description of how the default value is computed.
+        """
+        return code_to_compute_parameter()
+
+    '''
+    # Implicitly verifies that there's a single period.
+    section, parameter_name = name.split('.')
+
+    # Verify that the section name is valid.
+    assert section in _SECTION_DESCRIPTIONS, \
+        'Section must be one of: ' + ' '.join(_SECTION_DESCRIPTIONS.keys())
+
+    # Verify that the parameter name is valid. This is a restrited definition
+    # of camel case that includes only letters.
+    camel_case = re.compile(r'[a-z][a-zA-Z]*')
+    assert camel_case.match(parameter_name), \
+        '"%s" is an invalid config parameter name.' % parameter_name
+
+
+    def register_config_option()
+
+# For simple config options.
+_ConfigOption('proxy.port',
+    description = 'Connect to the proxy at this port.',
+    default_val = 8501)
+
+# Simple options can be set directly.
+_ConfigOption('proxy.port',
+    description = 'Connect to the proxy at this port.',
+    default_val = 8501)
+
+class _ConfigOption(object):
+    '''Stores a streamlit configuration option.
+
+    A configuration option, like 'proxy.port', which indicates which port to use
+    when connecting to the proxy. ConfigurationOptions are stored globally
+    in the sreamlit.config module.
+
+    There are two ways to create a _ConfigOption.
+
+    Simple _ConfigOptions are created as follows:
+
+        _ConfigOption('proxy.port',
+            description = 'Connect to the proxy at this port.',
+            default_val = 8501)
+
+    More complex config options resolve thier values at runtime as follows:
+
+        @_ConfigOption('proxy.port')
+        def _proxy_port():
+            """Connect to the proxy at this port.
+
+            Defaults to 8501.
+            """
+            return 8501
+
+    This "magic" uses the __call__ function to make the class behave like a
+    decorator.
+
+    Of course in this case, since _proxy_port returns a constant, it would make
+    more sense to use the simple form.
+    '''
+
+    def __init__(self, description='', default_val=None):
+        """Create a _ConfigOption
+
 
 class Config(object):
 
