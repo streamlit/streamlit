@@ -17,15 +17,21 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
+### Config System Global State ###
+
 # Descriptions of each of the possible config sections.
-_SECTION_DESCRIPTIONS = dict(
-    all = 'Global options apply across all of Streamlit.',
-    proxy = 'Configuration of the proxy server.',
+_config_sections = dict(
     _test = 'Special test section just used for unit tests.',
 )
 
 # Stores the config options as key value pairs in a flat dict.
 _config_options = dict()
+
+def _create_section(section, description):
+    """Create a config section and store it globally in this module."""
+    assert section not in _config_sections, (
+        'Cannot define section "%s" twice.' % section)
+    _config_sections[section] = description
 
 def _create_option(key, description=None, default_val=None):
     """Create a ConfigOption and stores it globally in this module.
@@ -33,12 +39,38 @@ def _create_option(key, description=None, default_val=None):
     Exactly follows ConfigOption arguments.
     """
     option = ConfigOption(key, description=description, default_val=default_val)
-    assert option.section in _SECTION_DESCRIPTIONS, (
+    assert option.section in _config_sections, (
         'Section "%s" must be one of %s.' %
-        (option.section, ', '.join(_SECTION_DESCRIPTIONS.keys())))
+        (option.section, ', '.join(_config_sections.keys())))
     assert key not in _config_options, (
-        'Cannot assign key "%s" twice.' % option.key)
+        'Cannot define option "%s" twice.' % key)
     _config_options[key] = option
+
+
+
+### Config Section: All ###
+
+_create_section('all', 'Global options that apply across all of Streamlit.')
+
+
+
+### Config Section: Proxy ###
+
+_create_section('proxy', 'Configuration of the proxy server.')
+
+
+
+
+### Config Section: All ###
+
+
+### Public Interface ###
+
+def get_option(opt):
+    c = Config().Get()
+    config = dict()
+    _flatten(c, config)
+    return config.get('%s' % opt, None)
 
 class Config(object):
 
@@ -241,12 +273,6 @@ def _flatten(nested_dict, flat_dict, prefix=[]):
             _flatten(v, flat_dict, subprefix)
         else:
             flat_dict['.'.join(subprefix)] = v
-
-def get_option(opt):
-    c = Config().Get()
-    config = dict()
-    _flatten(c, config)
-    return config.get('%s' % opt, None)
 
 def get_s3_option(option):
     """This function gets an s3 option and returns it. It supports both new
