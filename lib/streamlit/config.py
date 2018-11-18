@@ -1,6 +1,13 @@
+# -*- coding: future_fstrings -*-
+
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Loads the configuration data."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 # Package Imports
 import os
@@ -147,6 +154,16 @@ _create_option('proxy.watchFileSystem',
 
 
 
+### Config Section: Client ###
+
+_create_section('client', 'Configuration of browser front-end.')
+
+_create_option('client.remotelyTrackUsage',
+    description = 'Whether to send usage statistics to Streamlit.',
+    default_val = True)
+
+
+
 ### Public Interface ###
 
 def get_option(key):
@@ -154,6 +171,7 @@ def get_option(key):
         # return old_get_option(key) # REMOVE THIS
         raise RuntimeError, 'Config key "%s" not defined.' % key
     return _config_options[key].value
+
 
 
 ### Load Config Files ###
@@ -183,14 +201,33 @@ def _update_config_with_toml(raw_toml, where_defined):
     where_defined : string
         Tells the config system where this was set.
     """
+    all_sections = toml.loads(raw_toml)
+    for section, options in all_sections.items():
+        for name, value in options.items():
+            _set_option(f'{section}.{name}', value, where_defined)
+
+def _parse_config_file():
+    """Parse the config file and update config parameters."""
+    # Find the path to the config file.
+    homedir = os.getenv('HOME', None)
+    if not homedir:
+        raise RuntimeError('No home directory.')
+    try:
+        os.mkdir(os.path.join(homedir, '.streamlit'))
+    except OSError:
+        pass
+    config_fileanme = os.path.join(homedir, '.streamlit', 'config.toml')
+
+    # Parse the config file.
+    if not os.path.exists(config_fileanme):
+        return
+    with file(config_fileanme) as input:
+        _update_config_with_toml(input.read(), config_fileanme)
+
+# Acually parse the config file.
+_parse_config_file()
 
 
-# def _update_config_with_file(filename):
-#     """Updates the config system by parsing this file."""
-#     with file(filename) as input:
-#
-# def _parse_config_files():
-#     pass
 
 ### Old Config Stuff ###
 
@@ -232,15 +269,6 @@ def _update_config_with_toml(raw_toml, where_defined):
 #             return yaml.load(f.read())
 #
 #     def _make_streamlit_dir(self):
-#         homedir = os.getenv('HOME', None)
-#         if not homedir:
-#             raise Exception('no home dir')
-#
-#         try:
-#             os.mkdir(os.path.join(homedir, '.streamlit'))
-#         except OSError:
-#             pass
-#         self._configfile = os.path.join(homedir, '.streamlit', 'config.yaml')
 #
 #     def __init__(self):
 #         self._development = ('site-packages' not in __file__)
