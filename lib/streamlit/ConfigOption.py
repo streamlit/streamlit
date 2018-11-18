@@ -96,7 +96,7 @@ class ConfigOption(object):
         Parameters
         ----------
         get_val_func : function
-            A functieon which will be called to get the value of this parameter.
+            A function which will be called to get the value of this parameter.
             We will use its docString as the description.
 
         Return
