@@ -17,10 +17,7 @@ from streamlit.ConfigOption import ConfigOption
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
-    # def test_badly_formed_full_qualified_name(self):
-    #     """Test setting an invalid config section."""
-    #     with self.assertRaises(AssertionError):
-    #         ConfigOption('_test.myParam.')
+
 
     # ALSO: add a test that you can't add the same key twice!
 
@@ -43,7 +40,10 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.name, 'simpleParam')
         self.assertEqual(config_option.description,
             'Simple config option.')
+        self.assertEqual(config_option.where_defined,
+            ConfigOption.DEFAULT_DEFINITION)
         self.assertEqual(config_option.value, 12345)
+
 
     def test_complex_config_option(self):
         """Test setting a complex (functional) config option."""
@@ -59,6 +59,8 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.name, 'complexParam')
         self.assertEqual(config_option.description,
             'Complex config option.')
+        self.assertEqual(config_option.where_defined,
+            ConfigOption.DEFAULT_DEFINITION)
         self.assertEqual(config_option.value, 12345)
 
     def test_complex_config_option_must_have_doc_strings(self):
@@ -68,6 +70,11 @@ class ConfigTest(unittest.TestCase):
             @ConfigOption('_test.noDocString')
             def no_doc_string():
                 pass
+
+    def test_invalid_config_name(self):
+        """Test setting an invalid config section."""
+        with self.assertRaises(AssertionError):
+            ConfigOption('_test.myParam.')
 
     def test_invalid_config_section(self):
         """Test setting an invalid config section."""

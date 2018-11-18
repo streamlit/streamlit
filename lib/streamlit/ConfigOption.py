@@ -84,11 +84,8 @@ class ConfigOption(object):
         # This string is like a comment. If None, it should be set in __call__.
         self.description = description
 
-        # Function which returns the value of this option.
-        self._get_val_func = lambda: default_val
-
-        # This indicates that (for now) we're using the default definition.
-        self.where_defined = ConfigOption.DEFAULT_DEFINITION
+        # Set the value.
+        self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION)
 
     def __call__(self, get_val_func):
         """This method is called when ConfigOption is used as a decorator.
@@ -112,4 +109,18 @@ class ConfigOption(object):
 
     @property
     def value(self):
+        """Get the value of this config option."""
         return self._get_val_func()
+
+    def set_value(self, value, where_defined):
+        """Set the value of this option.
+
+        Parameters
+        ----------
+        value
+            The new value for this parameter.
+        where_defined : string
+            New value to remember where this parameter was set.
+        """
+        self._get_val_func = lambda: value
+        self.where_defined = where_defined

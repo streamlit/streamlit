@@ -158,10 +158,39 @@ def get_option(key):
 
 ### Load Config Files ###
 
-# def _update_config_by_file(filename):
+def _set_option(key, value, where_defined):
+    """Sets a config option by key / value pair.
+
+    Parameters
+    ----------
+    key : string
+        The key of the option, like "global.logLevel".
+    value
+        The value of the option.
+    where_defined : string
+        Tells the config system where this was set.
+    """
+    assert key in _config_options, 'Key "%s" is not defined.' % key
+    _config_options[key].set_value(value, where_defined)
+
+def _update_config_with_toml(raw_toml, where_defined):
+    """Updates the config system by parsing this string.
+
+    Parameters
+    ----------
+    raw_toml : string
+        The TOML file to parse to update the config values.
+    where_defined : string
+        Tells the config system where this was set.
+    """
+
+
+# def _update_config_with_file(filename):
 #     """Updates the config system by parsing this file."""
 #     with file(filename) as input:
-
+#
+# def _parse_config_files():
+#     pass
 
 ### Old Config Stuff ###
 
