@@ -130,13 +130,13 @@ def _proxy_is_remote():
     is_headless = not os.getenv('DISPLAY')
     return is_linux and is_headless
 
-def autodetect_remote_machine():
-
+# def autodetect_remote_machine():
 
 ### Public Interface ###
 
 def get_option(key):
     if key not in _config_options:
+        return old_get_option(key) # REMOVE THIS
         raise RuntimeError, 'Config key "%s" not defined.' % key
     return _config_options[key].value
 
