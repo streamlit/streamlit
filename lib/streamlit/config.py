@@ -54,13 +54,20 @@ def _create_option(key, description=None, default_val=None):
 _create_section('global', 'Global options that apply across all of Streamlit.')
 
 @_create_option('global.developmentMode')
-def _global_log_level():
-    """Are we in development mode? (Only for Streamlit developers.)"""
+def _global_development_mode():
+    """Are we in development mode? (Only for developers of Streamlit.)
+
+    This option defaults to True if and only if Streamlit wasn't installed
+    normally.
+    """
     return ('site-packages' not in __file__)
 
 @_create_option('global.logLevel')
 def _global_log_level():
-    """What level of logging, 'error', 'warning', 'info', or 'debug'?"""
+    """What level of logging, 'error', 'warning', 'info', or 'debug'?
+
+    By default, this is 'debug' in development mode, and 'info' otherwise.
+    """
     if get_option('global.developmentMode'):
         return 'debug'
     else:
@@ -68,12 +75,62 @@ def _global_log_level():
 
 
 
+### Config Section: Local ###
+
+_create_section('local', 'Settings for users to connect to Streamlit.')
+
+_create_option('local.waitForProxySecs',
+    description = 'How long to wait for the proxy server to start up.',
+    default_val = 3.0)
+
+
+
 ### Config Section: Proxy ###
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
+_create_option('proxy.server',
+    description = 'Internet address of the proxy server.',
+    default_val = 'localhost')
 
+_create_option('proxy.port',
+    description = 'Port for the proxy server.',
+    default_val = 8501)
 
+_create_option('proxy.autoCloseDelaySecs',
+    description = (
+        'How long the proxy should stay open when there are '
+        'no connections. Can be set to .inf for "infinity". '
+        'This delay only starts counting after the '
+        'reportExpirationSecs delay transpires.'),
+    default_val = 0)
+
+# TODO: In new config system, allow us to specify ranges
+# for numeric values, so anything outside that range is
+# considered invalid.
+_create_option('proxy.reportExpirationSecs',
+    description = (
+        'How long reports should be stored in memory for when '
+        'script is done and there are no viewers. '
+        'For best results make sure this is >= 3.'),
+    default_val = 10.1)
+
+@_create_option('proxy.useNode')
+def _proxy_use_node():
+    """Whether to use the node server. (Only for developers of Streamlit.)"""
+    return get_option('global.developmentMode')
+
+@_create_option('proxy.isRemote')
+def _proxy_is_remote():
+    """Is the proxy running remotely.
+
+    By default, this option is False unless we are on a headless Linux box.
+    """
+    is_linux = platform.system() == 'Linux'
+    is_headless = not os.getenv('DISPLAY')
+    return is_linux and is_headless
+
+def autodetect_remote_machine():
 
 
 ### Public Interface ###
@@ -147,45 +204,12 @@ class Config(object):
                 throttleSecs = dict(
                     value = 0.01,
                 ),
-                waitForProxySecs = dict(
-                    _comment = (
-                        'How long to wait for the proxy server to start up.'),
-                    value = 3.0,
-                ),
             ),
             proxy = dict(
-                _comment = 'Configuration of the proxy server.',
-                port = dict(
-                    value = 8501,
-                ),
-                server = dict(
-                    value = 'localhost',
-                ),
-                autoCloseDelaySecs = dict(
-                    _comment = (
-                        'How long the proxy should stay open when there are '
-                        'no connections. Can be set to .inf for "infinity". '
-                        'This delay only starts counting after the '
-                        'reportExpirationSecs delay transpires.'),
-                    value = 0,
-                ),
-                reportExpirationSecs = dict(
-                    # TODO: In new config system, allow us to specify ranges
-                    # for numeric values, so anything outside that range is
-                    # considered invalid.
-                    _comment = (
-                        'How long reports should be stored in memory for when '
-                        'script is done and there are no viewers. '
-                        'For best results make sure this is >= 3.'),
-                    value = 10.1,
-                ),
+
                 useNode = dict(
                     _comment = 'Whether to use the node server or not.',
                     value = False,
-                ),
-                isRemote = dict(
-                    _comment = 'Is the proxy running remotely.',
-                    value = autodetect_remote_machine(),
                 ),
                 externalIP = dict(
                     _comment = ('IP address of the machine where Streamlit is '
@@ -378,9 +402,3 @@ def get_default_creds():
     finally:
         if http_client is not None:
             http_client.close()
-
-
-def autodetect_remote_machine():
-    is_linux = platform.system() == 'Linux'
-    is_headless = not os.getenv('DISPLAY')
-    return is_linux and is_headless
