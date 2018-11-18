@@ -30,7 +30,7 @@ _config_options = dict()
 def _create_option(key, description=None, default_val=None):
     """Create a ConfigOption and stores it globally in this module.
 
-    Exactly follows ConfigOption arguments. See that class for details.
+    Exactly follows ConfigOption arguments.
     """
     option = ConfigOption(key, description=description, default_val=default_val)
     assert option.section in _SECTION_DESCRIPTIONS, (
