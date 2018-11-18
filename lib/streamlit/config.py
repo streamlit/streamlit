@@ -166,20 +166,6 @@ _create_option('client.remotelyTrackUsage',
 
 ### Public Interface ###
 
-def get_option(key):
-    """Return the config option with the given key.
-
-    Parameters
-    ----------
-    key : string
-        The config option key of the form "section.optionName"
-
-    """
-    if key not in _config_options:
-        # return old_get_option(key) # REMOVE THIS
-        raise RuntimeError, 'Config key "%s" not defined.' % key
-    return _config_options[key].value
-
 def set_option(key, value):
     """Ses the config option.
 
@@ -194,9 +180,40 @@ def set_option(key, value):
         The new value of the parameter.
 
     """
-    _set_option(key, value, '<user defined>')
+    _set_option(key, value, _USER_DEFINED)
+
+def get_option(key):
+    """Return the config option with the given key.
+
+    Parameters
+    ----------
+    key : string
+        The config option key of the form "section.optionName"
+
+    """
+    if key not in _config_options:
+        raise RuntimeError, 'Config key "%s" not defined.' % key
+    return _config_options[key].value
+
+def get_where_defined(key):
+    """Indicate where (e.g. in which file) this option was defined.
+
+    Parameters
+    ----------
+    key : string
+        The config option key of the form "section.optionName"
+
+    """
+    if key not in _config_options:
+        raise RuntimeError, 'Config key "%s" not defined.' % key
+    return _config_options[key].where_defined
+
+
 
 ### Load Config Files ###
+
+# Indicates that this was defined by the user.
+_USER_DEFINED = '<user defined>'
 
 def _set_option(key, value, where_defined):
     """Sets a config option by key / value pair.
