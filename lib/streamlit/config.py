@@ -17,61 +17,14 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 # Descriptions of each of the possible config sections.
-_SECTION_DESCRIPTIONS = dict(
-    proxy='Configuration of the proxy server.'
+SECTION_DESCRIPTIONS = dict(
+    all = 'Global options apply across all of Streamlit.',
+    proxy = 'Configuration of the proxy server.',
+    _test = 'Special test section just used for unit tests.',
 )
 
-def _config_option(name):
-    '''Function decorator to define a config option.
-
-    Parameters
-    ----------
-    name : string
-        The name of the parameter as 'section.parameterName'.
-
-    Example
-    -------
-    @_config_option('section.parameterName')
-    def _config_section_parameter_name():
-        """One sentance description of parameter.
-
-        Longer description of parameter.
-
-        Default
-        -------
-        Description of how the default value is computed.
-        """
-        return code_to_compute_parameter()
-
-    '''
-    # Implicitly verifies that there's a single period.
-    section, parameter_name = name.split('.')
-
-    # Verify that the section name is valid.
-    assert section in _SECTION_DESCRIPTIONS, \
-        'Section must be one of: ' + ' '.join(_SECTION_DESCRIPTIONS.keys())
-
-    # Verify that the parameter name is valid. This is a restrited definition
-    # of camel case that includes only letters.
-    camel_case = re.compile(r'[a-z][a-zA-Z]*')
-    assert camel_case.match(parameter_name), \
-        '"%s" is an invalid config parameter name.' % parameter_name
-
-
-    def register_config_option()
-
-# For simple config options.
-_ConfigOption('proxy.port',
-    description = 'Connect to the proxy at this port.',
-    default_val = 8501)
-
-# Simple options can be set directly.
-_ConfigOption('proxy.port',
-    description = 'Connect to the proxy at this port.',
-    default_val = 8501)
-
 class _ConfigOption(object):
-    '''Stores a streamlit configuration option.
+    '''Stores a Streamlit configuration option.
 
     A configuration option, like 'proxy.port', which indicates which port to use
     when connecting to the proxy. ConfigurationOptions are stored globally
@@ -96,15 +49,77 @@ class _ConfigOption(object):
             return 8501
 
     This "magic" uses the __call__ function to make the class behave like a
-    decorator.
+    decorator. An important constraint on thise more complex config options
+    is that they have no side effects, i.e.
 
-    Of course in this case, since _proxy_port returns a constant, it would make
-    more sense to use the simple form.
+        get_config('x.y') == get_config('x.y')
     '''
 
-    def __init__(self, description='', default_val=None):
-        """Create a _ConfigOption
+    # This is a special value for _ConfigOption._where_defined which indicates
+    # that the option default was not overridden.
+    DEFAULT_DEFINITION = '<default>'
 
+    def __init__(self, section_dot_name, description=None, default_val=None):
+        """Create a _ConfigOption with the given name.
+
+        Parameters
+        ----------
+        section_dot_name : string
+            Should be of the form "section.optionName"
+        description : string
+            Like a comment for the config option.
+        default_val : anything
+            The value for this config option.
+
+        """
+        # Verify that the name is copacetic.
+        name_format = \
+            r'(?P<section>\_?[a-z][a-z0-9]+)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
+        match = re.match(name_format, section_dot_name)
+        assert match, (
+            'Name "%s" must match section.optionName.' % section_dot_name)
+        section, name = match.group('section'), match.group('name')
+        assert section in _Config.SECTION_DESCRIPTIONS, (
+            'Section "%s" must be one of %s.' %
+            (section, ', '.join(_SECTION_DESCRIPTIONS.keys())))
+
+        # This string is like a comment. If None, it should be set in __call__.
+        self._description = description
+
+        # Function which returns the value of this option.
+        self._get_val_func = lambda: default_val
+
+        # This indicates that (for now) we're using the default definition.
+        self._where_defined = _ConfigOption.DEFAULT_DEFINITION
+
+    def __call__(self, get_val_func):
+        """This method is called when _ConfigOption is used as a decorator.
+
+        Parameters
+        ----------
+        get_val_func : function
+            A functieon which will be called to get the value of this parameter.
+            We will use its docString as the description.
+
+        Return
+        ------
+        Returns self, which makes testing easier. See config_test.py.
+
+        """
+        self._description = get_val_func.__doc__
+        self._get_val_func = get_val_func
+        return self
+
+    def get_value(self):
+        """Gets the value of this config option."""
+        # Memoize the result in a property called _val
+        if not hasattr(self, '_val'):
+            self._val = self._get_val_func()
+        return self._val
+
+    def get_description(self):
+        """Gets the value of this config option."""
+        return self._description
 
 class Config(object):
 
