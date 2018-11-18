@@ -60,13 +60,6 @@ class ConfigOption(object):
     # that the option default was not overridden.
     DEFAULT_DEFINITION = '<default>'
 
-    # Descriptions of each of the possible config sections.
-    SECTION_DESCRIPTIONS = dict(
-        all = 'Global options apply across all of Streamlit.',
-        proxy = 'Configuration of the proxy server.',
-        _test = 'Special test section just used for unit tests.',
-    )
-
     def __init__(self, key, description=None, default_val=None):
         """Create a ConfigOption with the given name.
 
@@ -83,15 +76,10 @@ class ConfigOption(object):
         # Parse out the section and name.
         self.key = key
         key_format = \
-            r'(?P<section>\_?[a-z][a-z0-9]+)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
+            r'(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
         match = re.match(key_format, self.key)
-        assert match, 'Key "%s" must match section.optionName.' % self.key
+        assert match, ('Key "%s" must match section.optionName.' % self.key) + str(match)
         self.section, self.name = match.group('section'), match.group('name')
-
-        # NOTE: This will move into config.py.
-        assert self.section in ConfigOption.SECTION_DESCRIPTIONS, (
-            'Section "%s" must be one of %s.' %
-            (section, ', '.join(ConfigOption.SECTION_DESCRIPTIONS.keys())))
 
         # This string is like a comment. If None, it should be set in __call__.
         self.description = description
