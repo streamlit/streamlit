@@ -17,10 +17,6 @@ from streamlit.ConfigOption import ConfigOption
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
-
-
-    # ALSO: add a test that you can't add the same key twice!
-
     def test_section_and_name_parsing(self):
         """Test setting an invalid config section."""
         config_option = ConfigOption('_test.param')
