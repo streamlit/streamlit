@@ -48,9 +48,9 @@ class ConfigOption(object):
             The section of this option.
         name : string
             The name of this option.
-        description: string
+        description : string
             A "commment" for this option.
-        where_defined: string
+        where_defined : string
             Indicates which file set this config option.
             ConfigOption.DEFAULT_DEFINITION means this file.
 
