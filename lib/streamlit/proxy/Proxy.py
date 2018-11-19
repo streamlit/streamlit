@@ -25,7 +25,7 @@ setup_2_3_shims(globals())
 
 from streamlit import config
 from streamlit import S3Connection
-from streamlit.util import get_static_dir
+from streamlit.util import get_static_dir, write_proto
 
 from streamlit.streamlit_msg_proto import new_report_msg
 
@@ -330,9 +330,11 @@ class Proxy(object):
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
 
-        yield new_report_msg(
-            connection.id, connection.cwd, connection.command_line,
-            connection.source_file_path, ws)
+        yield write_proto(
+            ws,
+            new_report_msg(
+                connection.id, connection.cwd, connection.command_line,
+                connection.source_file_path))
 
         LOGGER.debug(
             'Added new client. '
