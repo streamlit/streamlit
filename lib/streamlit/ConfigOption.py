@@ -11,6 +11,7 @@ setup_2_3_shims(globals())
 
 import re
 
+
 class ConfigOption(object):
     '''Stores a Streamlit configuration option.
 
@@ -88,7 +89,9 @@ class ConfigOption(object):
         self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION)
 
     def __call__(self, get_val_func):
-        """This method is called when ConfigOption is used as a decorator.
+        """Assign a function to compute the value for this option.
+
+        This method is called when ConfigOption is used as a decorator.
 
         Parameters
         ----------
@@ -121,6 +124,7 @@ class ConfigOption(object):
             The new value for this parameter.
         where_defined : string
             New value to remember where this parameter was set.
+
         """
         self._get_val_func = lambda: value
         self.where_defined = where_defined
