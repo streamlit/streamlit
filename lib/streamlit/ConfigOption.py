@@ -39,21 +39,20 @@ class ConfigOption(object):
 
     Attributes
     ----------
-
-        key : str
-            The fully qualified section.name
-        value
-            The value for this option. If this is a a complex config option then
-            the callback is called EACH TIME value is evaluated.
-        section : str
-            The section of this option.
-        name : str
-            The name of this option.
-        description : str
-            A "commment" for this option.
-        where_defined : str
-            Indicates which file set this config option.
-            ConfigOption.DEFAULT_DEFINITION means this file.
+    key : str
+        The fully qualified section.name
+    value
+        The value for this option. If this is a a complex config option then
+        the callback is called EACH TIME value is evaluated.
+    section : str
+        The section of this option.
+    name : str
+        The name of this option.
+    description : str
+        A "commment" for this option.
+    where_defined : str
+        Indicates which file set this config option.
+        ConfigOption.DEFAULT_DEFINITION means this file.
 
     '''
 
