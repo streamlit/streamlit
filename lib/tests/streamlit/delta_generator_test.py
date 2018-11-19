@@ -1,16 +1,31 @@
+# -*- coding: future_fstrings -*-
+
 """DeltaGenerator Unittest."""
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import json
 import unittest
 
 from streamlit.DeltaGenerator import DeltaGenerator, _export
+from streamlit.ReportQueue import ReportQueue
+from streamlit import compatibility
 from streamlit import protobuf
-
 
 def unwrap(dg, name):
     """Return unwrapped method 'name' from class 'dg'."""
     method = getattr(dg, name)
-    return method.func_closure[0].cell_contents
-
+    try:
+        # Python 2 way.
+        return method.func_closure[0].cell_contents
+    except AttributeError:
+        # Python 3 way. running_py3()
+        return method.__wrapped__
 
 class DeltaGeneratorDecoratorTest(unittest.TestCase):
     """Test Decorators."""
@@ -63,7 +78,7 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
     def setUp(self):
         """Setup."""
-        self._dg = DeltaGenerator(None)
+        self._dg = DeltaGenerator(ReportQueue())
 
     def test_generic_text(self):
         """Test protobuf.Text generic str(body) stuff."""
@@ -140,6 +155,7 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
         delta = protobuf.Delta()
         element = delta.new_element
+        # raise RuntimeError(f'method: {method} dg: {self._dg}')
         method(self._dg, element)
 
         self.assertEquals(True, element.empty.unused)

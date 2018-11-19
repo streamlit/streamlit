@@ -298,7 +298,7 @@ def get_option(key):
 
     """
     if key not in _config_options:
-        raise RuntimeError, 'Config key "%s" not defined.' % key
+        raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].value
 
 def get_where_defined(key):
@@ -311,7 +311,7 @@ def get_where_defined(key):
 
     """
     if key not in _config_options:
-        raise RuntimeError, 'Config key "%s" not defined.' % key
+        raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].where_defined
 
 
@@ -362,7 +362,7 @@ def _parse_config_file():
     # Parse the config file.
     if not os.path.exists(config_fileanme):
         return
-    with file(config_fileanme) as input:
+    with open(config_fileanme) as input:
         _update_config_with_toml(input.read(), config_fileanme)
 
 # Acually parse the config file.

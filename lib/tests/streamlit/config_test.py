@@ -17,12 +17,6 @@ from streamlit.ConfigOption import ConfigOption
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
-    def test_section_and_name_parsing(self):
-        """Test setting an invalid config section."""
-        config_option = ConfigOption('_test.param')
-        # with self.assertRaises(AssertionError):
-        #     raise RuntimeError, 'This is a test'
-
     def test_simple_config_option(self):
         """Test creating a simple (constant) config option."""
         # Create the config option.
