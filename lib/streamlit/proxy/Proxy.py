@@ -71,15 +71,15 @@ class Proxy(object):
         self._cloud_storage = None
 
         # How long to keep the proxy alive for, when there are no connections.
-        self._autoCloseDelaySecs = config.get_option(
+        self._auto_close_delay_secs = config.get_option(
             'proxy.autoCloseDelaySecs')
 
-        self._reportExpirationSecs = config.get_option(
+        self._report_expiration_secs = config.get_option(
             'proxy.reportExpirationSecs')
 
-        self._keepAlive = (
-            self._autoCloseDelaySecs == float('inf') or
-            self._reportExpirationSecs == float('inf'))
+        self._keep_alive = (
+            self._auto_close_delay_secs == float('inf') or
+            self._report_expiration_secs == float('inf'))
 
         LOGGER.debug(
             f'Creating proxy with self._connections: {id(self._connections)}')
@@ -163,7 +163,7 @@ class Proxy(object):
         new_name = connection.name not in self._connections
         self._connections[connection.name] = connection
         if new_name:
-            _launch_web_client(connection.name, self._autoCloseDelaySecs)
+            _launch_web_client(connection.name, self._auto_close_delay_secs)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -171,7 +171,7 @@ class Proxy(object):
             connection.end_grace_period()
             self.schedule_potential_deregister_and_stop(connection)
 
-        if not self._keepAlive:
+        if not self._keep_alive:
             connection_timeout()
 
         LOGGER.debug(
@@ -202,11 +202,11 @@ class Proxy(object):
             self.schedule_potential_stop()
 
         LOGGER.debug(
-            f'Will wait {self._reportExpirationSecs}s before deregistering '
+            f'Will wait {self._report_expiration_secs}s before deregistering '
             'connection')
 
         loop = IOLoop.current()
-        loop.call_later(self._reportExpirationSecs, potentially_unregister)
+        loop.call_later(self._report_expiration_secs, potentially_unregister)
 
     def _deregister_proxy_connection(self, connection):
         """Deregister proxy connection irrespective of whether it's in use.
@@ -228,7 +228,7 @@ class Proxy(object):
 
     def schedule_potential_stop(self):
         """Stop proxy if no open connections and not in keepAlive mode."""
-        if self._keepAlive:
+        if self._keep_alive:
             return
 
         def potentially_stop():
@@ -240,10 +240,10 @@ class Proxy(object):
                 self.stop()
 
         LOGGER.debug(
-            f'Will check in {self._autoCloseDelaySecs}s if there are no more '
+            f'Will check in {self._auto_close_delay_secs}s if there are no more '
             'connections: ')
         loop = IOLoop.current()
-        loop.call_later(self._autoCloseDelaySecs, potentially_stop)
+        loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
     @gen.coroutine
     def on_client_opened(self, report_name, ws):  # noqa: D401
@@ -364,7 +364,7 @@ class Proxy(object):
         if not config.get_option('proxy.watchFileSystem'):
             return
 
-        if self._keepAlive:
+        if self._keep_alive:
             LOGGER.info(
                 'Will not observe file system since keepAlive is True')
             return
