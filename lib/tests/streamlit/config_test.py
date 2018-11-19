@@ -14,6 +14,7 @@ import unittest
 from streamlit import config
 from streamlit.ConfigOption import ConfigOption
 
+
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
@@ -21,8 +22,8 @@ class ConfigTest(unittest.TestCase):
         """Test creating a simple (constant) config option."""
         # Create the config option.
         config_option = ConfigOption('_test.simpleParam',
-            description = 'Simple config option.',
-            default_val = 12345)
+            description='Simple config option.',
+            default_val=12345)
 
         # Test that it works.
         self.assertEqual(config_option.key, '_test.simpleParam')
@@ -33,7 +34,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.where_defined,
             ConfigOption.DEFAULT_DEFINITION)
         self.assertEqual(config_option.value, 12345)
-
 
     def test_complex_config_option(self):
         """Test setting a complex (functional) config option."""
@@ -54,8 +54,10 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.value, 12345)
 
     def test_complex_config_option_must_have_doc_strings(self):
-        """Test that complex config options have doc string to form
-        their descriptions."""
+        """Test that complex config options use funcs with doc stringsself.
+
+        This is becuase the doc string forms the option's description.
+        """
         with self.assertRaises(AssertionError):
             @ConfigOption('_test.noDocString')
             def no_doc_string():
@@ -93,8 +95,7 @@ class ConfigTest(unittest.TestCase):
             config._create_option('_test.snake_case')
 
     def test_get_set_and_complex_config_options(self):
-        """Creates a pair of config options, one of which depends on another
-        and verifies that changing one changes the other.
+        """Verify that changing one option changes another, dependent one.
 
         This also implicitly tests simple and complex ConfigOptions as well as
         get_option() and set_option().
@@ -104,11 +105,12 @@ class ConfigTest(unittest.TestCase):
 
         # Set up both options.
         config._create_option('_test.independentOption',
-            description = 'This option can change at will',
-            default_val = DUMMY_VAL_1)
+            description='This option can change at will',
+            default_val=DUMMY_VAL_1)
+
         @config._create_option('_test.dependentOption')
         def _test_dependent_option():
-            """This depends on the value of _test.independentOption."""
+            """Depend on the value of _test.independentOption."""
             return config.get_option('_test.independentOption')
 
         # Check that the default values are good.
@@ -151,8 +153,8 @@ class ConfigTest(unittest.TestCase):
 
         # Create a dummy default option.
         config._create_option('_test.tomlTest',
-            description = 'This option tests the TOML parser.',
-            default_val = DUMMY_VAL_1)
+            description='This option tests the TOML parser.',
+            default_val=DUMMY_VAL_1)
         self.assertEqual(config.get_option('_test.tomlTest'), DUMMY_VAL_1)
         self.assertEqual(config.get_where_defined('_test.tomlTest'),
             ConfigOption.DEFAULT_DEFINITION)

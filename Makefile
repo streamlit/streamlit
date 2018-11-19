@@ -36,7 +36,7 @@ requirements: lib/requirements.txt lib/install_requirements.txt
 pylint:
 	# Linting
 	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; flake8 --ignore=E402 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
+	cd lib; flake8 --ignore=E402,E128 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
 
 pytest:
 	# Just testing. No code coverage.
