@@ -153,13 +153,29 @@ _create_option('proxy.watchFileSystem',
     default_val = True)
 
 _create_option('proxy.externalIP',
-    decription = """
+    description = """
         An address for the proxy which can be accessed on the public Internet.
 
         NOTE: We should make this a computed option by bringing
         Proxy._get_external_ip into this function.
         """,
     default_val = None)
+
+
+### Config Section: S3 ###
+
+_create_section('s3', 'Configuration for report saving.')
+
+@_create_option('s3.bucket')
+def _s3_bucket():
+    """Name of the AWS S3 bucket to save reports.
+
+    Defaults to sharing to share.streamlit.io unless
+    """
+    default_val = True)
+
+
+
 
 
 ### Config Section: Client ###
@@ -466,7 +482,7 @@ _parse_config_file()
 #             'renaming "%s" to "%s".' % (old_option, new_option))
 #         return get_option(old_option)
 #
-# def saving_is_configured():
+# def sharing_enabled():
 #     """Returns true if S3 (and eventually GCS?) saving is configured properly
 #     for this session."""
 #     return (get_s3_option('bucket') is not None)
