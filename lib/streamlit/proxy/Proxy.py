@@ -320,7 +320,7 @@ class Proxy(object):
 
         Parameters
         ----------
-        report_name : string
+        report_name : str
             The name of the report
         ws
             The websocket object.
@@ -486,7 +486,7 @@ def _launch_web_client(name, autoCloseDelaySecs):
 
     Parameters
     ----------
-    name : string
+    name : str
         The name of the report to which the web browser should connect.
     autoCloseDelaySecs : float
         Time the proxy will wait before closing, when there are no more
@@ -576,11 +576,11 @@ def _get_report_url(host, port, name):
 
     Parameters
     ----------
-    host : string
+    host : str
         The hostname or IP address of the current machine.
     port : int
         The port where Streamlit is running.
-    name : string
+    name : str
         The name of the report.
 
     Returns

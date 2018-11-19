@@ -1,373 +1,424 @@
+# -*- coding: future_fstrings -*-
+
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Loads the configuration data."""
 
-# Package Imports
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import ast
-import json
 import os
 import platform
-import socket
-import yaml
+import toml
 import urllib
 
-import re
+from streamlit.ConfigOption import ConfigOption
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
-# # Descriptions of each of the possible config sections.
-# _SECTION_DESCRIPTIONS = dict(
-#     proxy='Configuration of the proxy server.'
-# )
-#
-# def _config_option(name):
-#     '''Function decorator to define a config option.
-#
-#     Parameters
-#     ----------
-#     name : string
-#         The name of the parameter as 'section.parameterName'.
-#
-#     Example
-#     -------
-#     @_config_option('section.parameterName')
-#     def _config_section_parameter_name():
-#         """One sentance description of parameter.
-#
-#         Longer description of parameter.
-#
-#         Default
-#         -------
-#         Description of how the default value is computed.
-#         """
-#         return code_to_compute_parameter()
-#
-#     '''
-#     # Implicitly verifies that there's a single period.
-#     section, parameter_name = name.split('.')
-#
-#     # Verify that the section name is valid.
-#     assert section in _SECTION_DESCRIPTIONS, \
-#         'Section must be one of: ' + ' '.join(_SECTION_DESCRIPTIONS.keys())
-#
-#     # Verify that the parameter name is valid. This is a restrited definition
-#     # of camel case that includes only letters.
-#     camel_case = re.compile(r'[a-z][a-zA-Z]*')
-#     assert camel_case.match(parameter_name), \
-#         '"%s" is an invalid config parameter name.' % parameter_name
-#
-#
-#     def register_config_option()
-#
-# @_config_option('proxy.port')
-# def _config_proxy_port():
-#     """Connect to the proxy at this port.
-#
-#     Default
-#     -------
-#     8501
-#     """
-#     return 8501
 
-class Config(object):
+# Config System Global State #
 
-    _config = None
+# Descriptions of each of the possible config sections.
+_section_descriptions = dict(
+    _test='Special test section just used for unit tests.',
+)
 
-    @classmethod
-    def Get(cls):
-        if not cls._config:
-            c = Config()
+# Stores the config options as key value pairs in a flat dict.
+_config_options = dict()
 
-            c._make_streamlit_dir()
 
-            if os.path.isfile(c._configfile):
-                config = c._load_yaml()
-                if config is not None:
-                    _update(c._config, config)
-            else:
-                c.dumps()
+def _create_section(section, description):
+    """Create a config section and store it globally in this module."""
+    assert section not in _section_descriptions, (
+        'Cannot define section "%s" twice.' % section)
+    _section_descriptions[section] = description
 
-            cls._config = c
 
-            # if bucket is not set then use default credentials.
-            if (c._config['storage']['s3']['bucket'] is None and
-                c._config['storage'].get('useDefault') is not False):
-                get_default_creds()
+def _create_option(key, description=None, default_val=None):
+    '''Create a ConfigOption and store it globally in this module.
 
-        return cls._config._config
+    There are two ways to create a ConfigOption:
 
-    def _load_yaml(self):
-        with open(self._configfile) as f:
-            return yaml.load(f.read())
+        (1) Simple, constant config options are created as follows:
 
-    def _make_streamlit_dir(self):
-        homedir = os.getenv('HOME', None)
-        if not homedir:
-            raise Exception('no home dir')
+            _create_option('section.optionName',
+                description = 'Put the description here.',
+                default_val = 12345)
 
-        try:
-            os.mkdir(os.path.join(homedir, '.streamlit'))
-        except OSError:
-            pass
-        self._configfile = os.path.join(homedir, '.streamlit', 'config.yaml')
+        (2) More complex, programmable config options use decorator syntax to
+        resolve thier values at runtime:
 
-    def __init__(self):
-        self._development = ('site-packages' not in __file__)
-        self._raw_config = dict(
-            development = dict(
-                _comment = 'Enable development configuration',
-                value = self._development,
-            ),
-            log_level = dict(
-                _comment = 'error, warning, info, debug',
-                value = 'warning',
-            ),
-            local = dict(
-                _comment = 'Configuration for the local server',
-                throttleSecs = dict(
-                    value = 0.01,
-                ),
-                waitForProxySecs = dict(
-                    _comment = (
-                        'How long to wait for the proxy server to start up.'),
-                    value = 3.0,
-                ),
-            ),
-            proxy = dict(
-                _comment = 'Configuration of the proxy server.',
-                port = dict(
-                    value = 8501,
-                ),
-                server = dict(
-                    value = 'localhost',
-                ),
-                autoCloseDelaySecs = dict(
-                    _comment = (
-                        'How long the proxy should stay open when there are '
-                        'no connections. Can be set to .inf for "infinity". '
-                        'This delay only starts counting after the '
-                        'reportExpirationSecs delay transpires.'),
-                    value = 0,
-                ),
-                reportExpirationSecs = dict(
-                    # TODO: In new config system, allow us to specify ranges
-                    # for numeric values, so anything outside that range is
-                    # considered invalid.
-                    _comment = (
-                        'How long reports should be stored in memory for when '
-                        'script is done and there are no viewers. '
-                        'For best results make sure this is >= 3.'),
-                    value = 10.1,
-                ),
-                useNode = dict(
-                    _comment = 'Whether to use the node server or not.',
-                    value = False,
-                ),
-                isRemote = dict(
-                    _comment = 'Is the proxy running remotely.',
-                    value = autodetect_remote_machine(),
-                ),
-                externalIP = dict(
-                    _comment = ('IP address of the machine where Streamlit is '
-                        'running.'),
-                    # Must be None, so the autodetection in Proxy.py takes
-                    # place
-                    value = None,
-                ),
-                watchFileSystem = dict(
-                    _comment = (
-                        'Watch for filesystem changes and rerun reports'),
-                    value = True,
-                ),
-            ),
-            s3 = dict(
-                _comment = 'S3 Configuration',
-                bucketname = dict(
-                    value = None,
-                ),
-                region = dict(
-                    _comment = 'ie. us-west-2',
-                    value = None,
-                ),
-                url = dict(
-                    value = None,
-                ),
-                key_prefix = dict(
-                    value = None,
-                ),
-            ),
-            storage = dict(
-                _comment = 'Remote Storage options',
-                s3 = dict(
-                    bucket = dict(
-                        value = None,
-                    ),
-                ),
-            ),
-            client = dict(
-                remotelyTrackUsage = dict(
-                    _comment = (
-                        'Whether Streamlit should remotely record usage '
-                        'stats.'),
-                    value = True,
-                ),
-            ),
-        )
-        self._config = yaml.load(self._dump())
+            @_create_option('section.optionName')
+            def _section_option_name():
+                """Put the description here."""
+                return 12345
 
-    def _enable_development(self):
-        self._raw_config['proxy']['useNode'] = True
-        self._raw_config['log_level']['value'] = 'debug'
+    To achieve this sugar, _create_option() returns a *callable object* of type
+    ConfigObject, which then decorates the function.
 
-    def _dump(self):
-        if self._development:
-            self._enable_development()
+    NOTE: ConfigObjects call their evaluation functions *every time* the option
+    is requested. To prevent this, use the `streamlit.util.memoize` decorator as
+    follows:
 
-        out = []
+            @_create_option('section.memoizedOptionName')
+            @util.memoize
+            def _section_memoized_option_name():
+                """Put the description here."""
 
-        foo = yaml.dump(self._raw_config, default_flow_style=False,
-                width=float('inf'))
+                (This function is only called once.)
+                """
+                return 12345
 
-        for line in foo.split('\n'):
-            if '_comment:' in line:
-                prev_line = out.pop(-1)
-                line = line.replace('  _comment:', '#')
-                out.append('\n' + line)
-                out.append(prev_line)
-            elif 'value:' in line:
-                prev_line = out.pop(-1)
-                line = line.replace('value:', '').strip()
-                line = ' '.join([prev_line, line])
-                out.append(line)
-            else:
-                out.append(line)
+    '''
+    option = ConfigOption(key, description=description, default_val=default_val)
+    assert option.section in _section_descriptions, (
+        'Section "%s" must be one of %s.' %
+        (option.section, ', '.join(_section_descriptions.keys())))
+    assert key not in _config_options, (
+        'Cannot define option "%s" twice.' % key)
+    _config_options[key] = option
+    return option
 
-        return '\n'.join(out).lstrip()
 
-    def dumps(self):
-        # Skipping writing self._configfile
-        return
-        # with open(self._configfile, 'w') as f:
-        #     f.write(self._dump())
-        #     LOGGER.info('Wrote out configuration file to "%s"', self._configfile)
+# Config Section: Global #
 
-def _update(first_dict, second_dict):
-    """Updates the first dict to contain information from the second dict. This
-    function is recursive on nested dicts."""
-    for key in second_dict.keys():
-        if key not in first_dict:
-            first_dict[key] = second_dict[key]
-        else:
-            try:
-                _update(first_dict[key], second_dict[key])
-            except AttributeError:
-                first_dict[key] = second_dict[key]
+_create_section('global', 'Global options that apply across all of Streamlit.')
 
-def _flatten(nested_dict, flat_dict, prefix=[]):
-    for k, v in nested_dict.items():
-        subprefix = prefix + [k]
-        if isinstance(v, dict):
-            _flatten(v, flat_dict, subprefix)
-        else:
-            flat_dict['.'.join(subprefix)] = v
 
-def get_option(opt):
-    c = Config().Get()
-    config = dict()
-    _flatten(c, config)
-    return config.get('%s' % opt, None)
+@_create_option('global.developmentMode')
+def _global_development_mode():
+    """Are we in development mode.
 
-def get_s3_option(option):
-    """This function gets an s3 option and returns it. It supports both new
-    and old ways of getting these options. Options can be one of:
-      - profile
-      - bucket
-      - keyPrefix
-      - url
+    This option defaults to True if and only if Streamlit wasn't installed
+    normally. (Only for developers of Streamlit.)
     """
-    # Maps s3 options to the new and old option name displaying
-    # a deprecation warning if the old option name is used.
-    s3_option_table = dict(
-        # name      # new location         # old location
-        profile   = ('storage.s3.profile'  , None           ),
-        bucket    = ('storage.s3.bucket'   , 's3.bucketname'),
-        keyPrefix = ('storage.s3.keyPrefix', 's3.key_prefix'),
-        url       = ('storage.s3.url'      , 's3.url'       ),
-        region    = ('storage.s3.region'   , 's3.region'    ),
+    return ('site-packages' not in __file__)
 
-        accessKeyId = ('storage.s3.accessKeyId', None),
-        secretAccessKey = ('storage.s3.secretAccessKey', None),
-    )
-    try:
-        new_option, old_option = s3_option_table[option]
-        LOGGER.debug('Getting option "%s" which maps to "%s" or "%s".' \
-            % (option, new_option, old_option))
-    except KeyError:
-        raise RuntimeError('S3 Option "%s" not recognized.' % option)
-    if get_option(new_option) is not None:
-        return get_option(new_option)
-    elif old_option is None:
-        return None
-    elif get_option(old_option) is None:
-        return None
+
+@_create_option('global.logLevel')
+def _global_log_level():
+    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+
+    By default, this is 'debug' in development mode, and 'info' otherwise.
+    """
+    if get_option('global.developmentMode'):
+        return 'debug'
     else:
-        LOGGER.warning(
-            'DEPRECATION: Please update ~/.streamlit/config.yaml by '
-            'renaming "%s" to "%s".' % (old_option, new_option))
-        return get_option(old_option)
-
-def saving_is_configured():
-    """Returns true if S3 (and eventually GCS?) saving is configured properly
-    for this session."""
-    return (get_s3_option('bucket') is not None)
+        return 'warning'
 
 
-def remotely_track_usage():
-    """Returns true if we should log user events remotely for our own stats"""
-    val = get_option('client.remotelyTrackUsage')
-    LOGGER.debug('remotelyTrackUsage: %s' % val)
+# Config Section: Local #
 
-    if type(val) is bool:
-        return val
+_create_section('local', 'Settings for users to connect to Streamlit.')
 
-    return True  # default to True. See also /frontend/src/remotelogging.js
+_create_option('local.waitForProxySecs',
+    description='How long to wait for the proxy server to start up.',
+    default_val=3.0)
+
+_create_option('local.throttleSecs',
+    description='How long to wait between draining the local queue.',
+    default_val=0.01)
 
 
-STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+# Config Section: Proxy #
 
-def get_default_creds():
-    # TODO(armando): Should we always fetch this or should we write
-    # credentials to disk and then if the user deletes it, refetch?
-    http_client = None
+_create_section('proxy', 'Configuration of the proxy server.')
+
+_create_option('proxy.server',
+    description='Internet address of the proxy server.',
+    default_val='localhost')
+
+_create_option('proxy.port',
+    description='Port for the proxy server.',
+    default_val=8501)
+
+_create_option('proxy.autoCloseDelaySecs',
+    description=(
+        'How long the proxy should stay open when there are '
+        'no connections. Can be set to .inf for "infinity". '
+        'This delay only starts counting after the '
+        'reportExpirationSecs delay transpires.'),
+    default_val=0)
+
+# TODO: In new config system, allow us to specify ranges
+# for numeric values, so anything outside that range is
+# considered invalid.
+_create_option('proxy.reportExpirationSecs',
+    description=(
+        'How long reports should be stored in memory for when '
+        'script is done and there are no viewers. '
+        'For best results make sure this is >= 3.'),
+    default_val=10.1)
+
+
+@_create_option('proxy.useNode')
+def _proxy_use_node():
+    """Whether to use the node server.
+
+    (Only for developers of Streamlit.)
+    """
+    return get_option('global.developmentMode')
+
+
+@_create_option('proxy.isRemote')
+@util.memoize
+def _proxy_is_remote():
+    """Is the proxy running remotely.
+
+    By default, this option is False unless we are on a headless Linux box.
+    """
+    is_linux = (platform.system() == 'Linux')
+    is_headless = (not os.getenv('DISPLAY'))
+    return is_linux and is_headless
+
+
+_create_option('proxy.saveOnExit',
+    description="""
+        Should we save this report to S3 after the script copletes.
+
+        DEPRECATION WARNING: We should get rid of this, and fold a
+        single option that makes sense for the Flotilla use case.
+        """,
+    default_val=False)
+
+_create_option('proxy.watchFileSystem',
+    description='Watch for filesystem changes and rerun reports.',
+    default_val=True)
+
+_create_option('proxy.externalIP',
+    description="""
+        An address for the proxy which can be accessed on the public Internet.
+
+        NOTE: We should make this a computed option by bringing
+        Proxy._get_external_ip into this function.
+        """,
+    default_val=None)
+
+
+# Config Section: S3 #
+
+_create_section('s3', 'Configuration for report saving.')
+
+
+@_create_option('s3.sharingEnabled')
+def _s3_sharing_enabled():
+    """Whether Streamlit is allowed tosave reports to s3.
+
+    Defaults to True so long as 's3.bucket' is defined, either by the user or
+    using the default Stremalit credentials.
+    """
+    # Sharing is enabled if the user overrode 's3.bucket'.
+    using_default_bucket = (_config_options['s3.bucket'].where_defined ==
+            ConfigOption.DEFAULT_DEFINITION)
+    if not using_default_bucket:
+        return True
+
+    # Sharing is also enabled if successfully parse default credentials.
+    return _get_default_credentials() is not None
+
+
+@_create_option('s3.bucket')
+def _s3_bucket():
+    """Name of the AWS S3 bucket to save reports.
+
+    Disabled if s3.sharingEnabled is False. Otherwise, defaults to
+    share.streamlit.io.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['bucket']
+
+
+@_create_option('s3.url')
+def _s3_url():
+    """URL root for external view of Streamlit reports.
+
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['url']
+
+
+@_create_option('s3.accessKeyId')
+def _s3_access_key_id():
+    """Access key to write to the S3 bucket.
+
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['accessKeyId']
+
+
+@_create_option('s3.secretAccessKey')
+def _s3_secret_access_key():
+    """Secret access key to write to the S3 bucket.
+
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['secretAccessKey']
+
+
+_create_option('s3.keyPrefix',
+    description=""""Subdirectory" within the S3 bucket to save reports.
+
+        Defaults to '', which means the root directory. S3 calls paths
+        "keys" which is why the keyPrefix is like a subdirectory.
+        """,
+    default_val='')
+
+
+_create_option('s3.region',
+    description="""AWS region where the bucket is located.
+
+        The AWS region, for example 'us-west-2'. Defaults to None.
+        """,
+    default_val=None)
+
+
+_create_option('s3.profile',
+    description="""AWS credentials profile to use for saving data.
+
+        Defaults to None.
+        """,
+    default_val=None)
+
+
+@util.memoize
+def _get_default_credentials():
+    STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+    LOGGER.info('Getting credentials from ' + STREAMLIT_CREDENTIALS_URL)
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
-
-        # Strip unicode
-        creds = ast.literal_eval(response.decode('utf-8'))
-        # LOGGER.debug(response.body)
-
-        c = Config._config._config
-        if c['storage'].get('s3') is None:
-            c['storage']['s3'] = {}
-
-        # Replace whatever is in the config with the default credentials
-        c['storage']['s3'].update(creds)
-
-    # Catch all types of exceptions here, since we want Streamlit to fail
-    # gracefully: an error in loading the credentials shouldn't stop the user
-    # from using Streamlit.
+        return ast.literal_eval(response.decode('utf-8'))
     except Exception as e:
         LOGGER.info(
             'Error getting Streamlit credentials. Sharing will be '
             'disabled. %s', e)
-    finally:
-        if http_client is not None:
-            http_client.close()
+        return None
 
 
-def autodetect_remote_machine():
-    is_linux = platform.system() == 'Linux'
-    is_headless = not os.getenv('DISPLAY')
-    return is_linux and is_headless
+# Config Section: Client #
+
+_create_section('client', 'Configuration of browser front-end.')
+
+
+_create_option('client.remotelyTrackUsage',
+    description='Whether to send usage statistics to Streamlit.',
+    default_val=True)
+
+
+# Public Interface #
+
+def set_option(key, value):
+    """Ses the config option.
+
+    Note that some config parameters depend on others, so changing one parameter
+    may affect others in unexpected ways.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName"
+    value
+        The new value of the parameter.
+
+    """
+    _set_option(key, value, _USER_DEFINED)
+
+
+def get_option(key):
+    """Return the config option with the given key.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName"
+
+    """
+    if key not in _config_options:
+        raise RuntimeError('Config key "%s" not defined.' % key)
+    return _config_options[key].value
+
+
+def get_where_defined(key):
+    """Indicate where (e.g. in which file) this option was defined.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName"
+
+    """
+    if key not in _config_options:
+        raise RuntimeError('Config key "%s" not defined.' % key)
+    return _config_options[key].where_defined
+
+
+# Load Config Files #
+
+# Indicates that this was defined by the user.
+_USER_DEFINED = '<user defined>'
+
+
+def _set_option(key, value, where_defined):
+    """Set a config option by key / value pair.
+
+    Parameters
+    ----------
+    key : str
+        The key of the option, like "global.logLevel".
+    value
+        The value of the option.
+    where_defined : str
+        Tells the config system where this was set.
+
+    """
+    assert key in _config_options, 'Key "%s" is not defined.' % key
+    _config_options[key].set_value(value, where_defined)
+
+
+def _update_config_with_toml(raw_toml, where_defined):
+    """Update the config system by parsing this string.
+
+    Parameters
+    ----------
+    raw_toml : str
+        The TOML file to parse to update the config values.
+    where_defined : str
+        Tells the config system where this was set.
+
+    """
+    all_sections = toml.loads(raw_toml)
+    for section, options in all_sections.items():
+        for name, value in options.items():
+            _set_option(f'{section}.{name}', value, where_defined)
+
+
+def _parse_config_file():
+    """Parse the config file and update config parameters."""
+    # Find the path to the config file.
+    home = os.getenv('HOME', None)
+    if home is None:
+        raise RuntimeError('No home directory.')
+    config_fileanme = os.path.join(home, '.streamlit', 'config.toml')
+
+    # Parse the config file.
+    if not os.path.exists(config_fileanme):
+        return
+    with open(config_fileanme) as input:
+        _update_config_with_toml(input.read(), config_fileanme)
+
+
+# Acually parse the config file.
+_parse_config_file()

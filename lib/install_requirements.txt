@@ -24,3 +24,4 @@ tokenize-rt>=2.0.0        # via future-fstrings
 tornado>=4.5.1            # used to be >=5.0.0
 tzlocal>=1.5.0
 watchdog>=0.9.0
+toml>=0.10.0

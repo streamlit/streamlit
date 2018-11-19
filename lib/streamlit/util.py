@@ -9,12 +9,12 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
-import uuid
 import contextlib
+import functools
 import os
-import yaml
-import threading
 import pwd
+import threading
+import uuid
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
@@ -112,7 +112,7 @@ def escape_markdown(raw_string):
 
     Args
     ----
-    raw_string : string
+    raw_string : str
         A string, possibly with markdown metacharacters, e.g. "1 * 2"
 
     Returns
@@ -134,6 +134,15 @@ def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
 
+def memoize(func):
+    """Decorator to memoize the result of a no-args func."""
+    result = []
+    @functools.wraps(func)
+    def wrapped_func():
+        if not result:
+            result.append(func())
+        return result[0]
+    return wrapped_func
 
 def write_proto(ws, msg):
     """Writes a proto to a websocket.

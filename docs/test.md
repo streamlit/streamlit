@@ -37,6 +37,6 @@ raise Exception('test')
 ```
 - throwing an exception in a websocket handler decorated with `stop_proxy_on_exception()` causes the websocket to close
 - test that report names are successfully transferred from the client to the proxy even when they have the following characters `+`, `?`, and `/` (also, what about crazy unicode character??)
-- when you set `s3.bucketname` config then `config.saving_is_configured()` returns
+- when you set `s3.bucketname` config then `config.get_option('s3.sharingEnabled')` returns
 true. Otherwise, it returns false.
 - The s3 key should not include the character `'`  or `"` anywhere. (Explanation: in 2.7 those characters can sneak in)

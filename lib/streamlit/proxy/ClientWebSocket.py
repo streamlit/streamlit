@@ -124,12 +124,14 @@ class ClientWebSocket(WebSocketHandler):
         """Send message to browser with local configuration settings."""
         msg = protobuf.ForwardMsg()
 
-        msg.new_connection.saving_configured = config.saving_is_configured()
+        msg.new_connection.sharing_enabled = (
+            config.get_option('s3.sharingEnabled'))
         LOGGER.debug(
-            'New Client Connection: saving_is_configured=%s' %
-            msg.new_connection.saving_configured)
+            'New Client Connection: sharing_enabled=%s' %
+            msg.new_connection.sharing_enabled)
 
-        msg.new_connection.remotely_track_usage = config.remotely_track_usage()
+        msg.new_connection.remotely_track_usage = (
+            config.get_option('client.remotelyTrackUsage'))
         LOGGER.debug(
             'New Client Connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)

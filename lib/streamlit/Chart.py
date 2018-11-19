@@ -77,7 +77,7 @@ class Chart(object):
 
         Parameters
         ----------
-        type : string
+        type : str
             A string with the snake-case chart type. Example: 'area_chart',
             'bar_chart', etc...
 
@@ -110,7 +110,7 @@ class Chart(object):
 
         Parameters
         ----------
-        component_name : string
+        component_name : str
             A snake-case string with the ReCharts component name.
         props : anything
             The ReCharts component value.
@@ -210,7 +210,7 @@ def register_component(component_name, implemented):
 
     Parameters
     ----------
-    component_name : string
+    component_name : str
         A snake-case string containing the name of a chart component accepted by
         ReCharts.
 
@@ -254,7 +254,7 @@ def register_type_builder(chart_type):
 
     Parameters
     ----------
-    chart_type : string
+    chart_type : str
         A string with the upper-camel-case name of the chart type to add.
 
     """
