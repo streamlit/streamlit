@@ -78,7 +78,7 @@ class ConfigOption(object):
         key_format = \
             r'(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
         match = re.match(key_format, self.key)
-        assert match, ('Key "%s" must match section.optionName.' % self.key) + str(match)
+        assert match, (f'Key "{self.key}" has invalid format.')
         self.section, self.name = match.group('section'), match.group('name')
 
         # This string is like a comment. If None, it should be set in __call__.

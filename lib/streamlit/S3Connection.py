@@ -92,9 +92,6 @@ class S3(Cloud):
         if self._key_prefix and '{USER}' in self._key_prefix:
             self._key_prefix = self._key_prefix.replace('{USER}', user)
 
-        if self._key_prefix is None:
-            self._key_prefix = ''
-
         if not self._url:
             self._s3_url = os.path.join('https://%s.%s' % (self._bucketname, 's3.amazonaws.com'), self._s3_key('index.html'))
         else:
@@ -150,6 +147,8 @@ class S3(Cloud):
     @gen.coroutine
     def s3_init(self):
         """Initialize s3 bucket."""
+        assert config.get_option('s3.sharingEnabled'), (
+            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
