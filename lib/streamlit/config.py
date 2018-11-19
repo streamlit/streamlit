@@ -296,7 +296,7 @@ _create_option('s3.profile',
 @util.memoize
 def _get_default_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
-    LOGGER.info('Getting credentials from ' + STREAMLIT_CREDENTIALS_URL)
+    LOGGER.info('Getting remote Streamlit credentials.')
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
