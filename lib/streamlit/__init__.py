@@ -245,7 +245,7 @@ def set_config(options):
         assert type(client_caching) is bool
         _set_allow_caching(client_caching)
 
-    client_enabled = options.get('client.enabled')
+    client_enabled = options.get('client.displayEnabled')
     if client_enabled is not None:
         assert type(client_enabled) is bool
         global _enable_display
