@@ -40,53 +40,49 @@ class DeltaConnection(object):
     _singleton = None
 
     @classmethod
-    def get_connection(cls, enable_display=True):
+    def get_connection(cls):
         """Return the singleton DeltaConnection object.
 
         Instantiates one if necessary.
-
-        Parameters
-        ----------
-        enable_display : bool
-            Whether Deltas should be sent to a Proxy (True) or not (False).
-
         """
         if cls._singleton is None:
             LOGGER.debug('No singleton. Registering one.')
-            DeltaConnection(enable_display=enable_display)
-        else:
-            DeltaConnection._singleton._set_display_enabled(enable_display)
+            DeltaConnection()
 
         return DeltaConnection._singleton
 
     # Don't allow constructor to be called more than once.
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if DeltaConnection._singleton is not None:
             raise RuntimeError('Use .get_connection() instead')
         return super(DeltaConnection, cls).__new__(cls)
 
-    def __init__(self, enable_display=True):
+    def __init__(self):
         """Initialize connection to the server.
 
-        Parameters
-        ----------
-        enable_display : bool
-            Whether Deltas should be sent to a Proxy (True) or not (False).
-
+        NOTE: The connection will be "disabled" by default. To actually
+        connect, call set_enabled(True).
         """
         DeltaConnection._singleton = self
-
         self._is_display_enabled = None
         self._delta_generator = None
         self._connection = None
 
-        self._set_display_enabled(enable_display)
+    def set_enabled(self, do_enable):
+        """Enable or disable this connection.
 
-    def _set_display_enabled(self, do_enable):
+        Parameters
+        ----------
+        do_enable : bool
+            If True, connects the WebSocket and turns on the ability to send
+            data through it. If False, turns off the ability to send data
+            through the WebSocket, but does not touch the existing WebSocket's
+            actual connection, if any.
+        """
         if do_enable == self._is_display_enabled:
             return
         else:
-            LOGGER.debug(f'_set_display_enabled: {do_enable}')
+            LOGGER.debug(f'set_enabled: {do_enable}')
 
         self._is_display_enabled = do_enable
 

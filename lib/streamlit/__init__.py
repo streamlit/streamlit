@@ -60,7 +60,8 @@ _enable_display = True
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        con = DeltaConnection.get_connection(enable_display=_enable_display)
+        con = DeltaConnection.get_connection()
+        con.set_enabled(_enable_display)
         dg = con.get_delta_generator()
         return method(dg, *args, **kwargs)
     return wrapped_method
@@ -250,4 +251,5 @@ def set_config(options):
         assert type(client_enabled) is bool
         global _enable_display
         _enable_display = client_enabled
-        DeltaConnection.get_connection(enable_display=_enable_display)
+        con = DeltaConnection.get_connection()
+        con.set_enabled(_enable_display)
