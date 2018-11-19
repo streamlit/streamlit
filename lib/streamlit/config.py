@@ -135,8 +135,8 @@ def _proxy_is_remote():
 
     By default, this option is False unless we are on a headless Linux box.
     """
-    is_linux = platform.system() == 'Linux'
-    is_headless = not os.getenv('DISPLAY')
+    is_linux = (platform.system() == 'Linux')
+    is_headless = (not os.getenv('DISPLAY'))
     return is_linux and is_headless
 
 _create_option('proxy.saveOnExit',
@@ -152,6 +152,14 @@ _create_option('proxy.watchFileSystem',
     description = 'Watch for filesystem changes and rerun reports.',
     default_val = True)
 
+_create_option('proxy.externalIP',
+    decription = """
+        An address for the proxy which can be accessed on the public Internet.
+
+        NOTE: We should make this a computed option by bringing
+        Proxy._get_external_ip into this function.
+        """,
+    default_val = None)
 
 
 ### Config Section: Client ###
