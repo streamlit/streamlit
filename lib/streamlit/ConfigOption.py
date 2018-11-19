@@ -2,7 +2,7 @@
 
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""This classs stores a key-value pair for the config system."""
+"""This class stores a key-value pair for the config system."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -37,7 +37,7 @@ class ConfigOption(object):
     NOTE: For complex config options, the function is called each time the
     option.value is evaluated!
 
-    Properties
+    Attributes
     ----------
 
         key : str
@@ -86,6 +86,8 @@ class ConfigOption(object):
         self.description = description
 
         # Set the value.
+        self._get_val_func = None
+        self.where_defined = None
         self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION)
 
     def __call__(self, get_val_func):
@@ -99,9 +101,10 @@ class ConfigOption(object):
             A function which will be called to get the value of this parameter.
             We will use its docString as the description.
 
-        Return
-        ------
-        Returns self, which makes testing easier. See config_test.py.
+        Returns
+        -------
+        ConfigOption
+            Returns self, which makes testing easier. See config_test.py.
 
         """
         assert get_val_func.__doc__, (

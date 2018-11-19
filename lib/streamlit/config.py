@@ -25,7 +25,7 @@ LOGGER = get_logger()
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
-_config_sections = dict(
+_section_descriptions = dict(
     _test='Special test section just used for unit tests.',
 )
 
@@ -35,20 +35,51 @@ _config_options = dict()
 
 def _create_section(section, description):
     """Create a config section and store it globally in this module."""
-    assert section not in _config_sections, (
+    assert section not in _section_descriptions, (
         'Cannot define section "%s" twice.' % section)
-    _config_sections[section] = description
+    _section_descriptions[section] = description
 
 
 def _create_option(key, description=None, default_val=None):
-    """Create a ConfigOption and stores it globally in this module.
+    '''Create a ConfigOption and store it globally in this module.
 
-    Exactly follows ConfigOption arguments.
-    """
+    There are two ways to create a ConfigOption:
+
+        (1) Simple, constant config options are created as follows:
+
+            _create_option('section.optionName',
+                description = 'Put the description here.',
+                default_val = 12345)
+
+        (2) More complex, programmable config options use decorator syntax to
+        resolve thier values at runtime:
+
+            @_create_option('section.optionName')
+            def _section_option_name():
+                """Put the description here."""
+                return 12345
+
+    To achieve this sugar, _create_option() returns a *callable object* of type
+    ConfigObject, which then decorates the function.
+
+    NOTE: ConfigObjects call their evaluation functions *every time* the option
+    is requested. To prevent this, use the `streamlit.util.memoize` decorator as
+    follows:
+
+            @_create_option('section.memoizedOptionName')
+            @util.memoize
+            def _section_memoized_option_name():
+                """Put the description here."""
+
+                (This function is only called once.)
+                """
+                return 12345
+
+    '''
     option = ConfigOption(key, description=description, default_val=default_val)
-    assert option.section in _config_sections, (
+    assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
-        (option.section, ', '.join(_config_sections.keys())))
+        (option.section, ', '.join(_section_descriptions.keys())))
     assert key not in _config_options, (
         'Cannot define option "%s" twice.' % key)
     _config_options[key] = option
@@ -151,7 +182,7 @@ _create_option('proxy.saveOnExit',
     description="""
         Should we save this report to S3 after the script copletes.
 
-        DEPRECATION WARNING: I think we should get rid of this, and fold a
+        DEPRECATION WARNING: We should get rid of this, and fold a
         single option that makes sense for the Flotilla use case.
         """,
     default_val=False)
