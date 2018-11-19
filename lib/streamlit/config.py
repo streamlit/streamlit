@@ -79,7 +79,7 @@ def _global_log_level():
     if get_option('global.developmentMode'):
         return 'debug'
     else:
-        return 'info'
+        return 'warning'
 
 
 # Config Section: Local #
