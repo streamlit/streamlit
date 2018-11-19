@@ -76,7 +76,7 @@ class MyCallback(keras.callbacks.Callback):
         getattr(epoch_chart, type)(type='monotone', data_key='acc',
             stroke='#82ca9d', fill='#82ca9d',
             dot="false", y_axis_id='acc_axis')
-        return st.Connection.get_connection().get_delta_generator()._native_chart(epoch_chart)
+        return st.DeltaConnection.get_connection().get_delta_generator()._native_chart(epoch_chart)
 
 st.title('MNIST CNN')
 
