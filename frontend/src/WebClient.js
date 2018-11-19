@@ -179,7 +179,7 @@ class WebClient extends PureComponent {
         });
         trackEventRemotely('newConnection', 'newMessage');
         this.setState({
-          savingConfigured: connectionProperties.get('savingConfigured'),
+          sharingEnabled: connectionProperties.get('sharingEnabled'),
         });
       },
       newReport: (newReportMsg) => {
@@ -278,7 +278,7 @@ class WebClient extends PureComponent {
    * Callback to call when we want to save the report.
    */
   saveReport() {
-    if (this.state.savingConfigured) {
+    if (this.state.sharingEnabled) {
       trackEventRemotely('saveReport', 'newInteraction');
       this.sendBackMsg({
         type: 'cloudUpload',

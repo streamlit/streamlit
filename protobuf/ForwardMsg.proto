@@ -29,7 +29,7 @@ message ForwardMsg {
 // This is the first message that is sent when the connection is opened.
 message NewConnection {
   // True if saving is properly configured.
-  bool saving_configured = 1;
+  bool sharing_enabled = 1;
 
   // If true, tells Streamlit to log datpoints for our own stats when the user
   // performs certain actions.
