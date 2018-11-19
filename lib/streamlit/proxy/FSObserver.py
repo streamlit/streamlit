@@ -185,7 +185,7 @@ class FSEventHandler(PatternMatchingEventHandler):
             The function to call whenever a watched file changes. Takes the
             FileSystemEvent as a parameter.
 
-        file_to_observe : string
+        file_to_observe : str
             The full path fo the file to observe.
 
         """

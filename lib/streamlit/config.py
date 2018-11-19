@@ -297,7 +297,7 @@ def set_option(key, value):
 
     Parameters
     ----------
-    key : string
+    key : str
         The config option key of the form "section.optionName"
     value
         The new value of the parameter.
@@ -311,7 +311,7 @@ def get_option(key):
 
     Parameters
     ----------
-    key : string
+    key : str
         The config option key of the form "section.optionName"
 
     """
@@ -325,7 +325,7 @@ def get_where_defined(key):
 
     Parameters
     ----------
-    key : string
+    key : str
         The config option key of the form "section.optionName"
 
     """
@@ -345,11 +345,11 @@ def _set_option(key, value, where_defined):
 
     Parameters
     ----------
-    key : string
+    key : str
         The key of the option, like "global.logLevel".
     value
         The value of the option.
-    where_defined : string
+    where_defined : str
         Tells the config system where this was set.
 
     """
@@ -362,9 +362,9 @@ def _update_config_with_toml(raw_toml, where_defined):
 
     Parameters
     ----------
-    raw_toml : string
+    raw_toml : str
         The TOML file to parse to update the config values.
-    where_defined : string
+    where_defined : str
         Tells the config system where this was set.
 
     """

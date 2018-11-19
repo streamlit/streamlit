@@ -34,24 +34,24 @@ class ConfigOption(object):
             """
             return 8501
 
-    NOTE: For compplex config options, the function is called each time the
+    NOTE: For complex config options, the function is called each time the
     option.value is evaluated!
 
     Properties
     ----------
 
-        key: string
+        key : str
             The fully qualified section.name
-        value:
+        value
             The value for this option. If this is a a complex config option then
             the callback is called EACH TIME value is evaluated.
-        section: string
+        section : str
             The section of this option.
-        name : string
+        name : str
             The name of this option.
-        description : string
+        description : str
             A "commment" for this option.
-        where_defined : string
+        where_defined : str
             Indicates which file set this config option.
             ConfigOption.DEFAULT_DEFINITION means this file.
 
@@ -66,9 +66,9 @@ class ConfigOption(object):
 
         Parameters
         ----------
-        key : string
+        key : str
             Should be of the form "section.optionName"
-        description : string
+        description : str
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
@@ -122,7 +122,7 @@ class ConfigOption(object):
         ----------
         value
             The new value for this parameter.
-        where_defined : string
+        where_defined : str
             New value to remember where this parameter was set.
 
         """
