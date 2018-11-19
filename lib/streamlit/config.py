@@ -564,20 +564,3 @@ _parse_config_file()
 #             'renaming "%s" to "%s".' % (old_option, new_option))
 #         return get_option(old_option)
 #
-# def sharing_enabled():
-#     """Returns true if S3 (and eventually GCS?) saving is configured properly
-#     for this session."""
-#     return (get_s3_option('bucket') is not None)
-#
-#
-# def remotely_track_usage():
-#     """Returns true if we should log user events remotely for our own stats"""
-#     val = get_option('client.remotelyTrackUsage')
-#     LOGGER.debug('remotelyTrackUsage: %s' % val)
-#
-#     if type(val) is bool:
-#         return val
-#
-#     return True  # default to True. See also /frontend/src/remotelogging.js
-#
-#

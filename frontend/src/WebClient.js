@@ -285,7 +285,7 @@ class WebClient extends PureComponent {
           <div>
             You do not have Amazon S3 or Google GCS sharing configured.
             Please contact&nbsp;
-              <a href="mailto:adrien@streamlit.io">Adrien</a>
+              <a href="mailto:hello@streamlit.io">Streamlit Support</a>
             &nbsp;to setup sharing.
           </div>
         ),
