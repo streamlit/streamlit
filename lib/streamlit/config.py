@@ -10,9 +10,11 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # Package Imports
+import ast
 import os
 import platform
 import toml
+import urllib
 
 # Streamlit imports
 from streamlit.ConfigOption import ConfigOption
@@ -50,7 +52,6 @@ def _create_option(key, description=None, default_val=None):
         'Cannot define option "%s" twice.' % key)
     _config_options[key] = option
     return option
-
 
 
 ### Config Section: Global ###
@@ -166,17 +167,98 @@ _create_option('proxy.externalIP',
 
 _create_section('s3', 'Configuration for report saving.')
 
+@_create_option('s3.sharingEnabled')
+def _s3_sharing_enabled():
+    """Whether Streamlit is allowed tosave reports to s3.
+
+    Defaults to True so long as 's3.bucket' is defined, either by the user or
+    using the default Stremalit credentials.
+    """
+    # Sharing is enabled if the user overrode 's3.bucket'.
+    using_default_bucket = (_config_options['s3.bucket'].where_defined ==
+            ConfigOption.DEFAULT_DEFINITION)
+    if not using_default_bucket:
+        return True
+
+    # Sharing is also enabled if successfully parse default credentials.
+    return _get_default_credentials() is not None
+
 @_create_option('s3.bucket')
 def _s3_bucket():
     """Name of the AWS S3 bucket to save reports.
 
-    Defaults to sharing to share.streamlit.io unless
+    Disabled if s3.sharingEnabled is False. Otherwise, defaults to
+    share.streamlit.io.
     """
-    default_val = True)
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['bucket']
 
+@_create_option('s3.url')
+def _s3_url():
+    """URL root for external view of Streamlit reports.
 
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['url']
 
+@_create_option('s3.accessKeyId')
+def _s3_access_key_id():
+    """Access key to write to the S3 bucket.
 
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['accessKeyId']
+
+@_create_option('s3.secretAccessKey')
+def _s3_secret_access_key():
+    """Secret access key to write to the S3 bucket.
+
+    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    """
+    if not get_option('s3.sharingEnabled'):
+        return None
+    return _get_default_credentials()['secretAccessKey']
+
+_create_option('s3.keyPrefix',
+    description = """"Subdirectory" within the S3 bucket to save reports.
+
+        Defaults to '', which means the root directory. S3 calls paths
+        "keys" which is why the keyPrefix is like a subdirectory.
+        """,
+    default_val = '')
+
+_create_option('s3.region',
+    description = """AWS region where the bucket is located.
+
+        Defaults to None.
+        """,
+    default_val = None)
+
+_create_option('s3.profile',
+    description = """AWS credentials profile to use for saving data.
+
+        Defaults to None.
+        """,
+    default_val = None)
+
+@util.memoize
+def _get_default_credentials():
+    STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+    LOGGER.info('Getting credentials from ' + STREAMLIT_CREDENTIALS_URL)
+    try:
+        response = urllib.request.urlopen(
+            STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
+        return ast.literal_eval(response.decode('utf-8'))
+    except Exception as e:
+        LOGGER.info(
+            'Error getting Streamlit credentials. Sharing will be '
+            'disabled. %s', e)
+        return None
 
 ### Config Section: Client ###
 
@@ -499,34 +581,3 @@ _parse_config_file()
 #     return True  # default to True. See also /frontend/src/remotelogging.js
 #
 #
-# STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
-#
-# def get_default_creds():
-#     # TODO(armando): Should we always fetch this or should we write
-#     # credentials to disk and then if the user deletes it, refetch?
-#     http_client = None
-#     try:
-#         response = urllib.request.urlopen(
-#             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
-#
-#         # Strip unicode
-#         creds = ast.literal_eval(response.decode('utf-8'))
-#         # LOGGER.debug(response.body)
-#
-#         c = Config._config._config
-#         if c['storage'].get('s3') is None:
-#             c['storage']['s3'] = {}
-#
-#         # Replace whatever is in the config with the default credentials
-#         c['storage']['s3'].update(creds)
-#
-#     # Catch all types of exceptions here, since we want Streamlit to fail
-#     # gracefully: an error in loading the credentials shouldn't stop the user
-#     # from using Streamlit.
-#     except Exception as e:
-#         LOGGER.info(
-#             'Error getting Streamlit credentials. Sharing will be '
-#             'disabled. %s', e)
-#     finally:
-#         if http_client is not None:
-#             http_client.close()
