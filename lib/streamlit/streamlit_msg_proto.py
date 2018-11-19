@@ -20,7 +20,7 @@ def new_report_msg(report_id, cwd, command_line, source_file_path, ws):
     ----
     report_id : uuid
         ID of the new report
-    cwd : string
+    cwd : str
         The current working directory from which this report was launched.
     command_line : list of strings
         The command line arguments used to launch the report.

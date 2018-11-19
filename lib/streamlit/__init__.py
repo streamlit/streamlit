@@ -148,7 +148,7 @@ def spinner(text):
 
     Parameters
     ----------
-    text : string
+    text : str
         A message to display while executing that block
 
     Examples

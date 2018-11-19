@@ -196,7 +196,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        string : string
+        string : str
             The string to display.
 
         """
@@ -579,7 +579,7 @@ class DeltaGenerator(object):
               DeckGl layer in the map. Each layer accepts the following keys:
                 - "data" : DataFrame
                     The data for that layer.
-                - "type" : string - a layer type accepted by DeckGl
+                - "type" : str - a layer type accepted by DeckGl
                     The layer type, such as 'HexagonLayer', 'ScatterplotLayer',
                     etc.
                 - "encoding" : dict - Accessors accepted by that layer type.

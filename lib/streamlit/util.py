@@ -113,7 +113,7 @@ def escape_markdown(raw_string):
 
     Args
     ----
-    raw_string : string
+    raw_string : str
         A string, possibly with markdown metacharacters, e.g. "1 * 2"
 
     Returns

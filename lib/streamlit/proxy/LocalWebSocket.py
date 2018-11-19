@@ -32,9 +32,9 @@ class LocalWebSocket(WebSocketHandler):
 
         Parameters
         ----------
-        local_id : string
+        local_id : str
             Vestigial stuff. Deprecated.
-        report_name : string
+        report_name : str
             The name of the report.
 
         """

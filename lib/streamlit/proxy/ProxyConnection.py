@@ -32,7 +32,7 @@ class ProxyConnection(object):
         ----------
         new_report_msg : NewReport proto
             Protobuf with all sorts of useful information about this report.
-        name : string
+        name : str
             The report's name.
 
         """
