@@ -220,16 +220,16 @@ def register_component(component_name, implemented):
 
     Examples
     --------
-    >>> register_component('foo_bar')
-    >>> c = Chart(myData, 'line_chart')
-    >>> c.foo_bar(stuff='other stuff', etc='you get the gist')
+    register_component('foo_bar', False)
+    c = Chart(myData, 'line_chart')
+    c.foo_bar(stuff='other stuff', etc='you get the gist')
 
     In addition, the methods created by this function return the Chart
     instance for builder-style chaining:
 
-    >>> register_component('baz')
-    >>> c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
-
+    register_component('baz', False)
+    c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
+    
     """
     def append_component_method(self, **props):
         if implemented:

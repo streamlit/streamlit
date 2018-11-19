@@ -76,7 +76,6 @@ class DeltaGeneratorTextTest(unittest.TestCase):
             'warning': protobuf.Text.WARNING,
             'info': protobuf.Text.INFO,
             'success': protobuf.Text.SUCCESS,
-            'link': protobuf.Text.LINK,
         }
 
         string_data = 'Some string'
