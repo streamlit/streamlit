@@ -1,8 +1,0 @@
--r install_requirements.txt
-flake8
-flake8-docstrings
-pytest
-pytest-cov
-testfixtures
-twine
-six
