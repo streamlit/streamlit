@@ -241,10 +241,10 @@ def set_config(options):
         config options (e.g. 'local.caching'), and keys are the config values.
 
     """
-    client_enabled = options.get('local.displayEnabled')
-    if client_enabled is not None:
-        assert type(client_enabled) is bool
+    local_display_enabled = options.get('local.displayEnabled')
+    if local_display_enabled is not None:
+        assert type(local_display_enabled) is bool
         global _enable_display
-        _enable_display = client_enabled
+        _enable_display = local_display_enabled
         con = DeltaConnection.get_connection()
         con.set_enabled(_enable_display)
