@@ -536,8 +536,8 @@ def _on_fs_event(observer, event):  # noqa: D401
         f'File system event: [{event.event_type}] {event.src_path}.')
 
     process_runner.run_outside_proxy_process(
-        observer.connection.command_line,
-        observer.connection.cwd,
+        observer.command_line,
+        observer.cwd,
         )
 
 

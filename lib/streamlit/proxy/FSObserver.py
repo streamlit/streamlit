@@ -58,7 +58,8 @@ class FSObserver(object):
         self._is_closed = False
 
         # Things we want to expose to the callback:
-        self.connection = connection
+        self.command_line = connection.command_line
+        self.cwd = connection.cwd
 
         self._initialize_observer(connection.source_file_path)
 
