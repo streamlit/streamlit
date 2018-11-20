@@ -34,14 +34,14 @@ def help(args):
 
 def run(args):
     """Run a script and pipe stderr to Streamlit if error."""
-    import streamlit.proxy.ProcessRunner as ProcessRunner
+    import streamlit.proxy.process_runner as process_runner
     import sys
 
     assert len(args) > 0, 'You must specify a file to run'
 
     source_file_path = args[0]
     cmd = [sys.executable] + list(args)
-    ProcessRunner.run_assuming_outside_proxy_process(
+    process_runner.run_assuming_outside_proxy_process(
         cmd=cmd,
         source_file_path=source_file_path)
 

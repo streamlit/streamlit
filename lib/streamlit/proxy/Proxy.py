@@ -42,7 +42,7 @@ import urllib
 import webbrowser
 
 from streamlit.proxy.FSObserver import FSObserver
-from streamlit.proxy import ProcessRunner
+from streamlit.proxy import process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -535,7 +535,7 @@ def _on_fs_event(observer, event):  # noqa: D401
     LOGGER.info(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
-    ProcessRunner.run_outside_proxy_process(
+    process_runner.run_outside_proxy_process(
         observer.connection.command_line,
         observer.connection.cwd,
         observer.connection.source_file_path)

@@ -15,7 +15,7 @@ from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from streamlit import config
 from streamlit import protobuf
-from streamlit.proxy import Proxy, ProcessRunner
+from streamlit.proxy import Proxy, process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -153,7 +153,7 @@ class ClientWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                ProcessRunner.run_streamlit_command('help')
+                process_runner.run_streamlit_command('help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
@@ -165,7 +165,7 @@ class ClientWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        ProcessRunner.run_outside_proxy_process(
+        process_runner.run_outside_proxy_process(
             cmd, self._connection.cwd, self._connection.source_file_path)
 
     @gen.coroutine
