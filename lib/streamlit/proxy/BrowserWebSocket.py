@@ -9,12 +9,16 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from tornado import gen
+from tornado.concurrent import futures
+from tornado.concurrent import run_on_executor
 from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor, futures
-from tornado.websocket import WebSocketHandler, WebSocketClosedError
+from tornado.websocket import WebSocketClosedError
+from tornado.websocket import WebSocketHandler
 
-from streamlit import config, protobuf
-from streamlit.proxy import Proxy, process_runner
+from streamlit import config
+from streamlit import protobuf
+from streamlit.proxy import Proxy
+from streamlit.proxy import process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
