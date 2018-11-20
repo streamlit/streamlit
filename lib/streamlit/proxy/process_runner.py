@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import shlex
+import re
 
 import streamlit as st
 from streamlit import protobuf
@@ -45,6 +46,7 @@ def run_outside_proxy_process(cmd_in, cwd=None):
         unicode_str = unicode
 
     if type(cmd_in) in string_types or type(cmd_in) == unicode_str: # noqa: F821
+        # Split string around whitespaces, but respect quotes.
         cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
@@ -104,12 +106,14 @@ def _run_with_error_handler(cmd, cwd=None):
     # rather than just a small buffer worth)
     stdout, stderr = process.communicate()
 
-    if process.returncode != 0:
-        print(stderr, file=sys.stderr)
+    stderr_str = _to_str(stderr)
+
+    if process.returncode != 0 and _is_syntax_error(stderr_str):
+        print(stderr_str, file=sys.stderr)
 
         # This line needs to be done in a process separate from the Proxy
         # process, since it creates WebSocket connection.
-        st.error(_to_str(stderr))
+        st.error(stderr_str)
 
 def _to_list_of_str(the_list):
     return [_to_str(x) for x in the_list]
@@ -120,3 +124,10 @@ def _to_str(x):
         return x.decode('utf-8')
     else:
         return x
+
+
+_SYNTAX_ERROR_RE = re.compile('^SyntaxError: ', re.MULTILINE)
+
+
+def _is_syntax_error(err_str):
+    return _SYNTAX_ERROR_RE.search(err_str) is not None
