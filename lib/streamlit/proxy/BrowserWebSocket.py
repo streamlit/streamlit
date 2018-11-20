@@ -13,8 +13,7 @@ from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor, futures
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
-from streamlit import config
-from streamlit import protobuf
+from streamlit import config, protobuf
 from streamlit.proxy import Proxy, process_runner
 
 from streamlit.logger import get_logger
