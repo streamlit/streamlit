@@ -9,6 +9,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from .ProxyConnection import ProxyConnection
-from .ClientWebSocket import ClientWebSocket
+from .BrowserWebSocket import BrowserWebSocket
 from .LocalWebSocket import LocalWebSocket
 from .Proxy import Proxy

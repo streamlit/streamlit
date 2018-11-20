@@ -47,9 +47,9 @@ import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
-import './WebClient.css';
+import './StreamlitApp.css';
 
-class WebClient extends PureComponent {
+class StreamlitApp extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -466,4 +466,4 @@ class WebClient extends PureComponent {
   }
 }
 
-export default hotkeys(WebClient);
+export default hotkeys(StreamlitApp);
