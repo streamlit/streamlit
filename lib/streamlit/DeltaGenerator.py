@@ -126,7 +126,7 @@ class DeltaGenerator(object):
             The string to display.
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.PLAIN
 
     @_export
@@ -214,7 +214,7 @@ class DeltaGenerator(object):
             The error text to display.
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.ERROR
 
     @_export
@@ -228,7 +228,7 @@ class DeltaGenerator(object):
             The warning text to display.
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.WARNING
 
     @_export
@@ -242,7 +242,7 @@ class DeltaGenerator(object):
             The info text to display.
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.INFO
 
     @_export
@@ -256,7 +256,7 @@ class DeltaGenerator(object):
             The success text to display.
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.SUCCESS
 
     @_export
