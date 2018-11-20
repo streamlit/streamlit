@@ -36,12 +36,21 @@ def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
         can extract the name of the report.
 
     """
-    if type(cmd_in) in string_types:  # noqa: F821
+
+    if type(cmd_in) in string_types or type(cmd_in) == unicode: # noqa: F821
         cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
 
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
+
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS:")
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd_in=%s", cmd_in)
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cwd=%s", cwd)
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: source_file_path=%s", source_file_path)
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd_list=%s", cmd_list)
+    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd=%s", cmd)
+
     _run_with_error_handler(cmd, cwd, source_file_path)
 
 
