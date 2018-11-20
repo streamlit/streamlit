@@ -119,7 +119,7 @@ def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
             # This line needs to be done in a process separate from the Proxy
             # process, since it creates WebSocket connection.
             st.write('**Testing simplified error code.**')
-            st.error(err_msg)
+            st.error(err_str)
 
 
 # def _print_error_to_report(source_file_path, err_msg):
