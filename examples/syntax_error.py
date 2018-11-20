@@ -9,8 +9,6 @@ st.write('''
     when Streamlit autoruns this file.
 ''')
 
-#st.error('yeah!')
-
 st.text('1')
 
 # Try this line:
