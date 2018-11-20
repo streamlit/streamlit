@@ -252,7 +252,7 @@ class ProxyConnectionError(Exception):
 
         Parameters
         ----------
-        uri : string
+        uri : str
             The URI of the Streamlit Proxy that errored out.
 
         """

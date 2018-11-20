@@ -75,10 +75,10 @@ class S3(Cloud):
         log.propagate = False
 
         # Config related stuff.
-        self._bucketname = config.get_s3_option('bucket')
-        self._url = config.get_s3_option('url')
-        self._key_prefix = config.get_s3_option('keyPrefix')
-        self._region = config.get_s3_option('region')
+        self._bucketname = config.get_option('s3.bucket')
+        self._url = config.get_option('s3.url')
+        self._key_prefix = config.get_option('s3.keyPrefix')
+        self._region = config.get_option('s3.region')
 
         # self._bucketname = config.get_option('s3.bucketname')
         # self._url = config.get_option('s3.url')
@@ -92,21 +92,18 @@ class S3(Cloud):
         if self._key_prefix and '{USER}' in self._key_prefix:
             self._key_prefix = self._key_prefix.replace('{USER}', user)
 
-        if self._key_prefix is None:
-            self._key_prefix = ''
-
         if not self._url:
             self._s3_url = os.path.join('https://%s.%s' % (self._bucketname, 's3.amazonaws.com'), self._s3_key('index.html'))
         else:
             self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
 
-        aws_profile = config.get_s3_option('profile')
-        access_key_id = config.get_s3_option('accessKeyId')
+        aws_profile = config.get_option('s3.profile')
+        access_key_id = config.get_option('s3.accessKeyId')
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._client = boto3.Session(profile_name=aws_profile).client('s3')
         elif access_key_id is not None:
-            secret_access_key = config.get_s3_option('secretAccessKey')
+            secret_access_key = config.get_option('s3.secretAccessKey')
             self._client = boto3.client(
                 's3',
                  aws_access_key_id=access_key_id,
@@ -150,6 +147,8 @@ class S3(Cloud):
     @gen.coroutine
     def s3_init(self):
         """Initialize s3 bucket."""
+        assert config.get_option('s3.sharingEnabled'), (
+            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
