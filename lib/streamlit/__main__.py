@@ -3,7 +3,6 @@
 """This is a script which is run when the Streamlit package is executed."""
 
 import click
-import streamlit
 
 
 def print_usage(args):
@@ -38,7 +37,7 @@ def run(args):
     import streamlit.proxy.ProcessRunner as ProcessRunner
     import sys
 
-    assert len(args) > 0, 'Please specify which script to run'
+    assert len(args) > 0, 'You must specify a file to run'
 
     source_file_path = args[0]
     cmd = [sys.executable] + list(args)
@@ -67,6 +66,7 @@ def kill_proxy(*args):
 
 def version(*args):
     """Print Stremalit's version."""
+    import streamlit
     print('Streamlit v' + streamlit.__version__)
 
 

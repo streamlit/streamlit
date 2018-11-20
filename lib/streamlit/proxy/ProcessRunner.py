@@ -21,13 +21,27 @@ LOGGER = get_logger()
 
 
 def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
+    """Open a subprocess that will call `streamlit run` on a script.
+
+    Parameters
+    ----------
+    cmd : str | sequence of str
+        See the args parameter of Python's subprocess.Popen for more info.
+
+    cwd : str | None
+        The current working directory for this process.
+
+    source_file_path : str | None
+        The full path to the script that is being executed. This is used so we
+        can extract the name of the report.
+    """
     if type(cmd_in) in string_types:
         cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
 
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
-    _run(cmd, cwd, source_file_path)
+    _run_with_error_handler(cmd, cwd, source_file_path)
 
 
 def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
@@ -43,26 +57,30 @@ def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
 
     cwd : str | None
         The current working directory for this process.
+
+    source_file_path : str | None
+        The full path to the script that is being executed. This is used so we
+        can extract the name of the report.
     """
-    _run(cmd, cwd, source_file_path)
+    _run_with_error_handler(cmd, cwd, source_file_path)
 
 
-def _run(cmd, cwd=None, source_file_path=None):
-    """Execute a command in a subprocess.
+def run_streamlit_command(cmd):
+    """Run a Streamlit command, like "help".
 
     Parameters
     ----------
-    cmd : sequence of str
-        Sequence with the command and arguments to run.
-        Example: ['sum.py', 38, 4].
-
-    cwd : str | None
-        The current working directory for this process.
+    cmd : str
+        The command to run. Example: "help", "kill_proxy", etc.
 
     """
-    # Add sys.executable to cmd, to make sure we pick the right Python.
+    # For some reason, Strealit commands must be run on a Shell. But they're
+    # trustworthy, so we let them.
+    subprocess.Popen(f'streamlit {cmd}', shell=True)
 
-    # Convet cmd to a list.
+
+def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
+    # Convert cmd to a list.
     # (Sometimes it's a RepeatedScalarContainer proto)
     cmd = [x for x in cmd]
 
@@ -72,7 +90,7 @@ def _run(cmd, cwd=None, source_file_path=None):
             stderr=subprocess.PIPE)
 
     # Wait for the process to end and grab all data from stderr.
-    # (We use this instead of .wait() because communicate() grabs *all data*
+    # (We use this instead of .wait() because .communicate() grabs *all data*
     # rather than just a small buffer worth)
     stdout, stderr = process.communicate()
 
@@ -92,7 +110,7 @@ def _print_error_to_report(source_file_path, err_msg):
 
     con = DeltaConnection.get_connection(filename)
 
-    # XXX TODO: Only do this when client.displayEnabled. Need new config first.
+    # TODO: Only do this when client.displayEnabled. Need new config first.
     con.set_enabled(True)
 
     dg = con.get_delta_generator()

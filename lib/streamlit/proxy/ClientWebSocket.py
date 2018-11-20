@@ -153,8 +153,7 @@ class ClientWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                # XXX Need to fix this.
-                ProcessRunner.run_outside_proxy_process('-m streamlit help')
+                ProcessRunner.run_streamlit_command('help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
