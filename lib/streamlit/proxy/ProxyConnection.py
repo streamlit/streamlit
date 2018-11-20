@@ -44,7 +44,7 @@ class ProxyConnection(object):
 
         # The command and command-line arguments used to launch this
         # connection.
-        self.command_line = list(new_report_msg.command_line)
+        self.command_line = new_report_msg.command_line
 
         # Full path of the file that caused this connection to be initiated,
         # or empty string if in REPL.

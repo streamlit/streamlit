@@ -9,12 +9,13 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
-import uuid
+import base58
 import contextlib
 import os
-import yaml
-import threading
 import pwd
+import threading
+import uuid
+import yaml
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
@@ -150,3 +151,8 @@ def write_proto(ws, msg):
         result is a WebSocketClientConnection.
     """
     return ws.write_message(msg.SerializeToString(), binary=True)
+
+
+def build_report_id():
+    """Randomly generate a report ID."""
+    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")

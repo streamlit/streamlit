@@ -8,7 +8,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import base58
 import inspect
 import os
 import sys
@@ -19,7 +18,7 @@ from streamlit import config
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_local_id
+from streamlit.util import get_local_id, build_report_id
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -40,7 +39,7 @@ class DeltaConnection(object):
     _singleton = None
 
     @classmethod
-    def get_connection(cls):
+    def get_connection(cls, name_override=None):
         """Return the singleton DeltaConnection object.
 
         Instantiates one if necessary.
@@ -48,6 +47,10 @@ class DeltaConnection(object):
         if cls._singleton is None:
             LOGGER.debug('No singleton. Registering one.')
             DeltaConnection()
+            DeltaConnection._singleton._name_override = name_override
+
+        assert name_override == DeltaConnection._singleton._name_override, \
+            'Cannot change report name once DeltaConnection is initialized!'
 
         return DeltaConnection._singleton
 
@@ -67,6 +70,7 @@ class DeltaConnection(object):
         self._is_display_enabled = None
         self._delta_generator = None
         self._connection = None
+        self._name_override = None
 
     def set_enabled(self, do_enable):
         """Enable or disable this connection.
@@ -87,11 +91,11 @@ class DeltaConnection(object):
         self._is_display_enabled = do_enable
 
         if do_enable and self._connection is None:
-            report_id = _build_report_id()
+            report_id = build_report_id()
             LOGGER.debug(f'Report ID: "{report_id}"')
 
             self._connection = Connection(
-                uri=_build_uri(report_id),
+                uri=_build_uri(report_id, self._name_override),
                 initial_msg=_build_new_report_msg(report_id),
                 on_connect=self._on_connect,
                 on_cleanup=self._on_cleanup)
@@ -137,14 +141,11 @@ class DeltaConnection(object):
             self._connection.enqueue_delta(delta)
 
 
-def _build_report_id():
-    """Randomly generate a report ID."""
-    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
-
-
-def _build_uri(report_id):
+def _build_uri(report_id, name):
     """Create the Proxy's WebSocket URI for this report."""
-    name = _build_name(report_id)
+    if name is None:
+        name = _build_name(report_id)
+
     LOGGER.debug(f'Report name: "{name}"')
 
     server = config.get_option('proxy.server')
@@ -191,7 +192,8 @@ def _build_new_report_msg(report_id):
     if filename not in ('<stdin>', '<string>'):
         source_file_path = os.path.realpath(filename)
 
-    LOGGER.debug(f'source_file_path: {source_file_path}.')
-
     return new_report_msg(
-        report_id, os.getcwd(), ['python'] + sys.argv, source_file_path)
+        report_id=report_id,
+        cwd=os.getcwd(),
+        command_line=sys.argv,
+        source_file_path=source_file_path)

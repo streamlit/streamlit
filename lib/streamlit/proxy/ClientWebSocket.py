@@ -1,16 +1,21 @@
+# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Websocket handler class which the web client connects to."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor, futures
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
-import os
 
 from streamlit import config
 from streamlit import protobuf
-from streamlit.proxy import Proxy
+from streamlit.proxy import Proxy, ProcessRunner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -146,13 +151,12 @@ class ClientWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                os.system('streamlit help &')
+                # XXX Need to fix this.
+                ProcessRunner.run_outside_proxy_process('-m streamlit help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
-                full_command = 'cd "%s" ; %s' % \
-                    (self._connection.cwd, backend_msg.rerun_script)
-                yield self._run(full_command)
+                yield self._run(backend_msg.rerun_script)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
@@ -160,8 +164,8 @@ class ClientWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        LOGGER.info('Running command: %s' % cmd)
-        os.system(cmd)
+        ProcessRunner.run_outside_proxy_process(
+            cmd, self._connection.cwd, self._connection.source_file_path)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):
