@@ -4,17 +4,20 @@ import streamlit as st
 
 st.title('Syntax error test')
 
-st.write('''
+st.info('''
     Uncomment the lines below and save this file. You should see a syntax error
-    when Streamlit autoruns this file.
+    when Streamlit reruns the script.
 ''')
 
-st.text('1')
+st.write('(Some top text)')
 
-# Try this line:
+# Uncomment this as a block:
+# st.write('You should see an inline exception below:')
 #a = not_a_real_variable
 
-# Then try this other line:
+# Uncomment this as a block:
+# st.write('You should see a fullscreen exception:')
 #if True  # missing semicolon
 
-st.text('2')
+st.write('(Some bottom text)')
+
