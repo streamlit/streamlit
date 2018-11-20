@@ -19,5 +19,9 @@ st.write('(Some top text)')
 #st.write('You should see a fullscreen exception:')
 #if True  # missing semicolon
 
+# Uncomment this as a block:
+#st.write('You should see a fullscreen exception:')
+#       this_indentation_is_wrong = True
+
 st.write('(Some bottom text)')
 

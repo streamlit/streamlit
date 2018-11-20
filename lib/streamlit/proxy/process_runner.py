@@ -126,7 +126,10 @@ def _to_str(x):
         return x
 
 
-_SYNTAX_ERROR_RE = re.compile('^SyntaxError: ', re.MULTILINE)
+# These are all compilation errors in Python.
+# See: https://docs.python.org/3/library/exceptions.html
+_SYNTAX_ERROR_RE = (
+    re.compile('^(SyntaxError|IndentationError|TabError): ', re.MULTILINE))
 
 
 def _is_syntax_error(err_str):
