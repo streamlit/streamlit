@@ -1,6 +1,7 @@
 # -*- coding: future_fstrings -*-
 
 import streamlit as st
+import sys
 
 st.title('Syntax error test')
 
@@ -11,17 +12,19 @@ st.info('''
 
 st.write('(Some top text)')
 
-# Uncomment this as a block:
-#st.write('You should see an inline exception below:')
-#a = not_a_real_variable
+# # Uncomment this as a block:
+# st.write('You should see an inline exception below:')
+# a = not_a_real_variable
+
+# # Uncomment this as a block:
+# st.write('You should see a fullscreen exception:')
+# if True  # missing semicolon
 
 # Uncomment this as a block:
-#st.write('You should see a fullscreen exception:')
-#if True  # missing semicolon
-
-# Uncomment this as a block:
-#st.write('You should see a fullscreen exception:')
-#       this_indentation_is_wrong = True
+print('Hello!', file=sys.stderr)  # Cool, this doesn't get affected by stderr,
+                                  # since it never executes!
+st.write('You should see a fullscreen exception:')
+       this_indentation_is_wrong = True
 
 st.write('(Some bottom text)')
 
