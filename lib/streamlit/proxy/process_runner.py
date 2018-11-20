@@ -23,7 +23,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
+def run_outside_proxy_process(cmd_in, cwd=None):
     """Open a subprocess that will call `streamlit run` on a script.
 
     Parameters
@@ -51,14 +51,7 @@ def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
 
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
 
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS:")
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd_in=%s", cmd_in)
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cwd=%s", cwd)
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: source_file_path=%s", source_file_path)
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd_list=%s", cmd_list)
-    LOGGER.debug("RUN OUTSIDE PROXY PROCESS: cmd=%s", cmd)
-
-    _run_with_error_handler(cmd, cwd, source_file_path)
+    _run_with_error_handler(cmd, cwd)
 
 
 def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
@@ -79,7 +72,7 @@ def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
         The full path to the script that is being executed. This is used so we
         can extract the name of the report.
     """
-    _run_with_error_handler(cmd, cwd, source_file_path)
+    _run_with_error_handler(cmd, cwd)
 
 
 def run_streamlit_command(cmd):
@@ -96,7 +89,7 @@ def run_streamlit_command(cmd):
     subprocess.Popen(f'streamlit {cmd}', shell=True)
 
 
-def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
+def _run_with_error_handler(cmd, cwd=None):
     # Convert cmd to a list.
     # (Sometimes it's a RepeatedScalarContainer proto)
     cmd = [x for x in cmd]
@@ -114,27 +107,9 @@ def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
     if process.returncode != 0:
         print(stderr, file=sys.stderr)
 
-        if source_file_path:
-            err_str = _to_str(stderr)
-            # This line needs to be done in a process separate from the Proxy
-            # process, since it creates WebSocket connection.
-            st.write('**Testing simplified error code.**')
-            st.error(err_str)
-
-
-# def _print_error_to_report(source_file_path, err_msg):
-#     import sys
-#
-#     # filename_w_ext = os.path.basename(source_file_path)
-#     # filename = os.path.splitext(filename_w_ext)[0]
-#     #
-#     # con = DeltaConnection.get_connection(filename)
-#     #
-#     # # TODO: Only do this when client.displayEnabled. Need new config first.
-#     # con.set_enabled(True)
-#     #
-#     # dg = con.get_delta_generator()
-#     # dg.error(err_msg)
+        # This line needs to be done in a process separate from the Proxy
+        # process, since it creates WebSocket connection.
+        st.error(_to_str(stderr))
 
 def _to_list_of_str(the_list):
     return [_to_str(x) for x in the_list]

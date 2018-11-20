@@ -39,7 +39,7 @@ class DeltaConnection(object):
     _singleton = None
 
     @classmethod
-    def get_connection(cls, name_override=None):
+    def get_connection(cls):
         """Return the singleton DeltaConnection object.
 
         Instantiates one if necessary.
@@ -47,10 +47,6 @@ class DeltaConnection(object):
         if cls._singleton is None:
             LOGGER.debug('No singleton. Registering one.')
             DeltaConnection()
-            DeltaConnection._singleton._name_override = name_override
-
-        assert name_override == DeltaConnection._singleton._name_override, \
-            'Cannot change report name once DeltaConnection is initialized!'
 
         return DeltaConnection._singleton
 
@@ -70,7 +66,6 @@ class DeltaConnection(object):
         self._is_display_enabled = None
         self._delta_generator = None
         self._connection = None
-        self._name_override = None
 
     def set_enabled(self, do_enable):
         """Enable or disable this connection.
@@ -95,7 +90,7 @@ class DeltaConnection(object):
             LOGGER.debug(f'Report ID: "{report_id}"')
 
             self._connection = Connection(
-                uri=_build_uri(report_id, self._name_override),
+                uri=_build_uri(report_id),
                 initial_msg=_build_new_report_msg(report_id),
                 on_connect=self._on_connect,
                 on_cleanup=self._on_cleanup)
@@ -141,10 +136,9 @@ class DeltaConnection(object):
             self._connection.enqueue_delta(delta)
 
 
-def _build_uri(report_id, name):
+def _build_uri(report_id):
     """Create the Proxy's WebSocket URI for this report."""
-    if name is None:
-        name = _build_name(report_id)
+    name = _build_name(report_id)
 
     LOGGER.debug(f'Report name: "{name}"')
 

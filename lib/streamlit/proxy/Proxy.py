@@ -538,7 +538,7 @@ def _on_fs_event(observer, event):  # noqa: D401
     process_runner.run_outside_proxy_process(
         observer.connection.command_line,
         observer.connection.cwd,
-        observer.connection.source_file_path)
+        )
 
 
 def _get_external_ip():

@@ -165,8 +165,7 @@ class ClientWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        process_runner.run_outside_proxy_process(
-            cmd, self._connection.cwd, self._connection.source_file_path)
+        process_runner.run_outside_proxy_process(cmd, self._connection.cwd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):
