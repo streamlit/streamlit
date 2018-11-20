@@ -328,7 +328,7 @@ def _get_default_credentials():
 _create_section('client', 'Configuration of browser front-end.')
 
 
-_create_option('client.remotelyTrackUsage',
+_create_option('browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
 
