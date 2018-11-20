@@ -23,12 +23,14 @@ build: react-build
 setup:
 	pip install pip-tools
 
-# Got rid of this step because pip-compile is too strict about versions.
+# NOTE: Got rid of these next two steps because pip-compile is too strict about
+# versions.
+
 # lib/install_requirements.txt: lib/install_requirements.in
 # 	pip-compile lib/install_requirements.in
 
-lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
-	pip-compile lib/requirements.in
+# lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
+# 	pip-compile lib/requirements.in
 
 requirements: lib/requirements.txt lib/install_requirements.txt
 	pip install -r lib/requirements.txt
