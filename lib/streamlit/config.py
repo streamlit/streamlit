@@ -325,7 +325,7 @@ def _get_default_credentials():
 
 # Config Section: Browser #
 
-_create_section('client', 'Configuration of browser front-end.')
+_create_section('browser', 'Configuration of browser front-end.')
 
 
 _create_option('browser.remotelyTrackUsage',
