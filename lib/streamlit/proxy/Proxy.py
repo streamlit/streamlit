@@ -86,7 +86,7 @@ class Proxy(object):
 
         # We have to import these in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import LocalWebSocket, ClientWebSocket
+        from streamlit.proxy import LocalWebSocket, BrowserWebSocket
 
         # Set up HTTP routes
         routes = [
@@ -94,7 +94,7 @@ class Proxy(object):
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
 
             # Outgoing endpoint to get the latest report.
-            ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
+            ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
             ('/healthz', HealthHandler),
         ]
@@ -253,8 +253,8 @@ class Proxy(object):
         ----------
         report_name : str
             The name of the report the client connection is for.
-        ws : ClientWebSocket
-            The ClientWebSocket instance that just got opened.
+        ws : BrowserWebSocket
+            The BrowserWebSocket instance that just got opened.
 
         """
         connection, queue = yield self._add_client(report_name, ws)
@@ -284,8 +284,8 @@ class Proxy(object):
         ----------
         report_name : str
             The name of the report the client connection is for.
-        ws : ClientWebSocket
-            The ClientWebSocket instance that just got opened.
+        ws : BrowserWebSocket
+            The BrowserWebSocket instance that just got opened.
         connection : ProxyConnection
             The connection object that just got closed.
         queue : ReportQueue
@@ -520,7 +520,7 @@ def _on_fs_event(observer, event):  # noqa: D401
         f'File system event: [{event.event_type}] {event.src_path}. '
         f'Calling: {observer.key}')
 
-    # TODO(thiago): Move this and similar code from ClientWebSocket.py to a
+    # TODO(thiago): Move this and similar code from BrowserWebSocket.py to a
     # single file.
     process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
 

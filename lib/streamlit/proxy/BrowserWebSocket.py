@@ -16,7 +16,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class ClientWebSocket(WebSocketHandler):
+class BrowserWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
     executor = futures.ThreadPoolExecutor(5)
