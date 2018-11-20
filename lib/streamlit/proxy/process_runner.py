@@ -107,9 +107,18 @@ def _run_with_error_handler(cmd, cwd=None):
     if process.returncode != 0 and _is_syntax_error(stderr_str):
         print(stderr_str, file=sys.stderr)
 
-        # This line needs to be done in a process separate from the Proxy
-        # process, since it creates WebSocket connection.
-        st.error(stderr_str)
+        parsed_err = _parse_exception_text(stderr_str)
+
+        # This part of the code line needs to be done in a process separate
+        # from the Proxy process, since st.foo creates WebSocket connection.
+
+        if parsed_err:
+            stack_trace, exception_type, message = parsed_err
+            st._text_exception(
+                exception_type, message, stack_trace.split('\n'))
+        else:
+            st.error(stderr_str)
+
 
 def _to_list_of_str(the_list):
     return [_to_str(x) for x in the_list]
@@ -130,3 +139,15 @@ _SYNTAX_ERROR_RE = (
 
 def _is_syntax_error(err_str):
     return _SYNTAX_ERROR_RE.search(err_str) is not None
+
+
+# RegEx used for parsing an Exception's printout into its proper fields.
+# See: https://docs.python.org/3/library/exceptions.html
+_EXCEPTION_PARSER_ER = re.compile(
+    '(.*)^(SyntaxError|IndentationError|TabError): (.*)',
+    re.MULTILINE|re.DOTALL)
+
+
+def _parse_exception_text(err_str):
+    matches = _EXCEPTION_PARSER_ER.match(err_str)
+    return matches.groups()

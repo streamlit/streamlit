@@ -91,9 +91,5 @@
 }
 
 .streamlit-container .alert {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
   margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
 }

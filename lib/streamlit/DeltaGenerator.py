@@ -126,7 +126,7 @@ class DeltaGenerator(object):
             The string to display.
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = str(body)
         element.text.format = protobuf.Text.PLAIN
 
     @_export
@@ -214,7 +214,7 @@ class DeltaGenerator(object):
             The error text to display.
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = str(body)
         element.text.format = protobuf.Text.ERROR
 
     @_export
@@ -228,7 +228,7 @@ class DeltaGenerator(object):
             The warning text to display.
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = str(body)
         element.text.format = protobuf.Text.WARNING
 
     @_export
@@ -242,7 +242,7 @@ class DeltaGenerator(object):
             The info text to display.
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = str(body)
         element.text.format = protobuf.Text.INFO
 
     @_export
@@ -256,7 +256,7 @@ class DeltaGenerator(object):
             The success text to display.
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = str(body)
         element.text.format = protobuf.Text.SUCCESS
 
     @_export
@@ -345,6 +345,22 @@ class DeltaGenerator(object):
                 'Try calling exception() within the `catch` block.']
         else:
             stack_trace = traceback.format_list(extracted_traceback)
+        element.exception.stack_trace.extend(stack_trace)
+
+    @_export
+    @_create_element
+    def _text_exception(self, element, exception_type, message, stack_trace):
+        """Display an exception.
+
+        Parameters
+        ----------
+        exception_type : str
+        message : str
+        stack_trace : list of str
+
+        """
+        element.exception.type = exception_type
+        element.exception.message = message
         element.exception.stack_trace.extend(stack_trace)
 
     @_export
