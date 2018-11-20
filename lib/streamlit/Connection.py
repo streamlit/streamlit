@@ -93,7 +93,7 @@ class Connection(object):
         self._proxy_connection_status = (
             Connection._PROXY_CONNECTION_DISCONNECTED)
 
-        self._connect(uri, initial_msg, on_cleanup, on_cleanup)
+        self._connect(uri, initial_msg, on_connect, on_cleanup)
 
     def _connect(self, uri, initial_msg, on_connect, on_cleanup):
         """Connect to the proxy and set up output thread."""
