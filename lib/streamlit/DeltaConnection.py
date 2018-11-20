@@ -158,6 +158,12 @@ def _build_uri(report_id, name):
 
     return uri
 
+def _convert_filename_to_name(filename):
+    """Converts a python filename to a name."""
+    name = os.path.split(filename)[1]
+    if name.endswith('.py'):
+        name = name[:-3]
+    return name
 
 def _build_name(report_id):
     """Create a name for this report."""
@@ -167,11 +173,14 @@ def _build_name(report_id):
         name = sys.argv[1]
 
     elif len(sys.argv) >= 1:
-        name = os.path.split(sys.argv[0])[1]
+        name = _convert_filename_to_name(sys.argv[0])
         if name.endswith('.py'):
             name = name[:-3]
-        if name in ['__main__', 'streamlit'] and len(sys.argv) >= 2:
-            name = sys.argv[1]
+        if name in ['__main__', 'streamlit']:
+            if len(sys.argv) >= 3 and sys.argv[1] == 'run':
+                name = _convert_filename_to_name(sys.argv[2])
+            elif len(sys.argv) >= 2:
+                name = sys.argv[1]
 
     if name == '':
         name = str(report_id)

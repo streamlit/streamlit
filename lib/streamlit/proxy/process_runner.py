@@ -12,6 +12,7 @@ import subprocess
 import sys
 import shlex
 
+import streamlit as st
 from streamlit import protobuf
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.streamlit_msg_proto import new_report_msg
@@ -116,17 +117,20 @@ def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
 
 
 def _print_error_to_report(source_file_path, err_msg):
-    filename_w_ext = os.path.basename(source_file_path)
-    filename = os.path.splitext(filename_w_ext)[0]
+    import sys
+    st.write(sys.argv)
+    st.error(err_msg)
 
-    con = DeltaConnection.get_connection(filename)
-
-    # TODO: Only do this when client.displayEnabled. Need new config first.
-    con.set_enabled(True)
-
-    dg = con.get_delta_generator()
-    dg.error(err_msg)
-
+    # filename_w_ext = os.path.basename(source_file_path)
+    # filename = os.path.splitext(filename_w_ext)[0]
+    #
+    # con = DeltaConnection.get_connection(filename)
+    #
+    # # TODO: Only do this when client.displayEnabled. Need new config first.
+    # con.set_enabled(True)
+    #
+    # dg = con.get_delta_generator()
+    # dg.error(err_msg)
 
 def _to_list_of_str(the_list):
     return [_to_str(x) for x in the_list]
