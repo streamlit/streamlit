@@ -238,15 +238,10 @@ def set_config(options):
     ----------
     options : dict
         A dictionary where keys are strings with the fully-qualified names of
-        config options (e.g. 'client.caching'), and keys are the config values.
+        config options (e.g. 'local.caching'), and keys are the config values.
 
     """
-    client_caching = options.get('client.caching')
-    if client_caching is not None:
-        assert type(client_caching) is bool
-        _set_allow_caching(client_caching)
-
-    client_enabled = options.get('client.displayEnabled')
+    client_enabled = options.get('local.displayEnabled')
     if client_enabled is not None:
         assert type(client_enabled) is bool
         global _enable_display

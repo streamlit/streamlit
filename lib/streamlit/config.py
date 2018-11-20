@@ -117,6 +117,19 @@ def _global_log_level():
 
 _create_section('local', 'Settings for users to connect to Streamlit.')
 
+_create_option('local.caching',
+    description='Whether to enable caching to ./.streamlit/cache.',
+    default_val=True)
+
+_create_option('local.displayEnabled',
+    description="""
+        If True, connects the WebSocket and turns on the ability to send
+        data through it. If False, turns off the ability to send data
+        through the WebSocket. If set to False after a *already* transmitting
+        data, this does not touch the existing WebSocket's actual connection.
+        """,
+    default_val=True)
+
 _create_option('local.waitForProxySecs',
     description='How long to wait for the proxy server to start up.',
     default_val=3.0)
@@ -316,7 +329,6 @@ _create_section('client', 'Configuration of browser front-end.')
 _create_option('client.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
-
 
 # Public Interface #
 
