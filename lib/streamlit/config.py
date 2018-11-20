@@ -115,13 +115,13 @@ def _global_log_level():
 
 # Config Section: Client #
 
-_create_section('local', 'Settings for users to connect to Streamlit.')
+_create_section('client', 'Settings for users to connect to Streamlit.')
 
-_create_option('local.caching',
+_create_option('client.caching',
     description='Whether to enable caching to ./.streamlit/cache.',
     default_val=True)
 
-_create_option('local.displayEnabled',
+_create_option('client.displayEnabled',
     description="""
         If True, connects the WebSocket and turns on the ability to send
         data through it.
@@ -132,11 +132,11 @@ _create_option('local.displayEnabled',
         """,
     default_val=True)
 
-_create_option('local.waitForProxySecs',
+_create_option('client.waitForProxySecs',
     description='How long to wait for the proxy server to start up.',
     default_val=3.0)
 
-_create_option('local.throttleSecs',
+_create_option('client.throttleSecs',
     description='How long to wait between draining the local queue.',
     default_val=0.01)
 

@@ -73,7 +73,7 @@ class BrowserWebSocket(WebSocketHandler):
     def do_loop(self):
         """Start the proxy's main loop."""
         # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
+        throttle_secs = config.get_option('client.throttleSecs')
 
         indicated_closed = False
 

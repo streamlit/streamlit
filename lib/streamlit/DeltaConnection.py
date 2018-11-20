@@ -50,7 +50,7 @@ class DeltaConnection(object):
             DeltaConnection()
 
         DeltaConnection._singleton.set_enabled(
-            config.get_option('local.displayEnabled'))
+            config.get_option('client.displayEnabled'))
 
         return DeltaConnection._singleton
 
