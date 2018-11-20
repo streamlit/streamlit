@@ -113,7 +113,7 @@ def _global_log_level():
         return 'warning'
 
 
-# Config Section: Local #
+# Config Section: Client #
 
 _create_section('local', 'Settings for users to connect to Streamlit.')
 
@@ -323,7 +323,7 @@ def _get_default_credentials():
         return None
 
 
-# Config Section: Client #
+# Config Section: Browser #
 
 _create_section('client', 'Configuration of browser front-end.')
 
