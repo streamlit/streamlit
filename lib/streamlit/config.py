@@ -124,9 +124,11 @@ _create_option('local.caching',
 _create_option('local.displayEnabled',
     description="""
         If True, connects the WebSocket and turns on the ability to send
-        data through it. If False, turns off the ability to send data
-        through the WebSocket. If set to False after a *already* transmitting
-        data, this does not touch the existing WebSocket's actual connection.
+        data through it.
+
+        If False, turns off the ability to send data
+        through the WebSocket. If set to False after it was True at some point,
+        this does not touch the existing WebSocket's actual connection.
         """,
     default_val=True)
 
