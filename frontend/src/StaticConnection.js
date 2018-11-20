@@ -37,7 +37,29 @@ class StaticConnection {
     // Load the report and display it
     fetch(manifestUri, fetchParams).then((response) => {
       return response.json();
-    }).then(({name, nDeltas}) => {
+    }).then((response) => {
+      // This assumes the proxy has already written a manifest file.
+      let {proxyStatus, proxyUri} = response;
+
+      // If the proxy is running redirect immediately to proxy.
+      if (proxyStatus == 'running') {
+        let url = document.createElement('a');
+        url.href = proxyUri;
+        let healthzUri = `${url.protocol}//${url.host}/healthz`;
+
+        fetch(healthzUri, fetchParams).then((response) => {
+            return response.text();
+        }).then((response) => {
+            console.log(`redirecting to ${proxyUri}`);
+            window.location.replace(proxyUri);
+        }).catch((error) => {
+            // This needs to be presented to the user somehow
+            console.log(`Error connecting to proxy at ${healthzUri}, not redirecting to ${proxyUri}: ${error}`);
+        });
+      }
+
+      // Else serve out the static version.
+      let {name, nDeltas} = response;
       setConnectionState({connectionState: ConnectionState.STATIC});
       setReportName(name);
       for (let id = 0 ; id < nDeltas ; id++) {

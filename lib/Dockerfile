@@ -1,3 +1,5 @@
+ARG PYTHON_VERSION=2.7
+
 #######################################################################
 # Frontend image
 #######################################################################
@@ -8,7 +10,8 @@ FROM st/frontend as frontend
 #######################################################################
 # Proxy build
 #######################################################################
-FROM python:2-slim-stretch as build
+FROM python:${PYTHON_VERSION}-slim-stretch as build
+ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils apt-transport-https curl ca-certificates \
@@ -33,7 +36,8 @@ RUN python setup.py bdist_wheel --universal
 #######################################################################
 # Proxy container
 #######################################################################
-FROM python:2-slim-stretch
+FROM python:${PYTHON_VERSION}-slim-stretch
+ENV PYTHONUNBUFFERED 1
 
 # build-essential shouldnt be needed but for some reason one of the pip
 # dependencies compiles something so thats why its there.  This image
@@ -47,5 +51,3 @@ COPY lib/entrypoint.sh /
 
 WORKDIR /st
 RUN pip install *.whl
-
-ENTRYPOINT /entrypoint.sh

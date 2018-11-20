@@ -48,6 +48,9 @@ class DeltaConnection(object):
             LOGGER.debug('No singleton. Registering one.')
             DeltaConnection()
 
+        DeltaConnection._singleton.set_enabled(
+            config.get_option('client.displayEnabled'))
+
         return DeltaConnection._singleton
 
     # Don't allow constructor to be called more than once.

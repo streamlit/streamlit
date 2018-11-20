@@ -21,7 +21,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class ClientWebSocket(WebSocketHandler):
+class BrowserWebSocket(WebSocketHandler):
     """Websocket handler class which the web client connects to."""
 
     executor = futures.ThreadPoolExecutor(5)
@@ -78,7 +78,7 @@ class ClientWebSocket(WebSocketHandler):
     def do_loop(self):
         """Start the proxy's main loop."""
         # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
+        throttle_secs = config.get_option('client.throttleSecs')
 
         indicated_closed = False
 
@@ -136,7 +136,7 @@ class ClientWebSocket(WebSocketHandler):
             msg.new_connection.sharing_enabled)
 
         msg.new_connection.remotely_track_usage = (
-            config.get_option('client.remotelyTrackUsage'))
+            config.get_option('browser.remotelyTrackUsage'))
         LOGGER.debug(
             'New Client Connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)

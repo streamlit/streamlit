@@ -86,7 +86,7 @@ class Proxy(object):
 
         # We have to import these in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import LocalWebSocket, ClientWebSocket
+        from streamlit.proxy import LocalWebSocket, BrowserWebSocket
 
         # Set up HTTP routes
         routes = [
@@ -94,7 +94,7 @@ class Proxy(object):
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
 
             # Outgoing endpoint to get the latest report.
-            ('/stream/(.*)', ClientWebSocket, dict(proxy=self)),
+            ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
             ('/healthz', HealthHandler),
         ]
@@ -253,8 +253,8 @@ class Proxy(object):
         ----------
         report_name : str
             The name of the report the client connection is for.
-        ws : ClientWebSocket
-            The ClientWebSocket instance that just got opened.
+        ws : BrowserWebSocket
+            The BrowserWebSocket instance that just got opened.
 
         Returns
         -------
@@ -289,8 +289,8 @@ class Proxy(object):
         ----------
         report_name : str
             The name of the report the client connection is for.
-        ws : ClientWebSocket
-            The ClientWebSocket instance that just got opened.
+        ws : BrowserWebSocket
+            The BrowserWebSocket instance that just got opened.
         connection : ProxyConnection
             The connection object that just got closed.
         queue : ReportQueue
@@ -352,7 +352,7 @@ class Proxy(object):
                 connection.source_file_path))
 
         LOGGER.debug(
-            'Added new client. '
+            'Added new browser connection. '
             f'Id: {connection.id}, '
             f'Command line: {connection.command_line}')
 
@@ -361,7 +361,7 @@ class Proxy(object):
     def _remove_client(self, connection, queue):
         """Remove queue from connection and close connection if necessary."""
         connection.remove_client_queue(queue)
-        LOGGER.debug('Removed the client for "%s"', connection.name)
+        LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
 
     def _maybe_add_fs_observer(self, connection):

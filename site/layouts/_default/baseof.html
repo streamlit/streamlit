@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html class="kind-{{ .Kind }}">
+<html class="page-{{ .Kind }}">
   <head>
     <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} &middot; {{ .Site.Title }}{{ end }}</title>
     <meta charset="utf-8" />
@@ -9,7 +9,14 @@
     {{ partial "google_analytics" . }}
     {{ partial "fonts" . }}
     <link rel="stylesheet" href="{{ .Site.BaseURL }}fonts/fonts.css" />
-    <link rel="stylesheet" href="{{ .Site.BaseURL }}css/main.css" />
+
+    <link rel="stylesheet" href="{{ .Site.BaseURL }}css/base.css" />
+    {{if .IsHome }}
+      <link rel="stylesheet" href="{{ .Site.BaseURL }}css/home.css" />
+    {{ else }}
+      <link rel="stylesheet" href="{{ .Site.BaseURL }}css/pages.css" />
+    {{ end }}
+
     <link rel="stylesheet" href="{{ .Site.BaseURL }}css/syntax.css" />
   </head>
 
@@ -18,7 +25,9 @@
       {{ partial "header" . }}
     {{ end }}
 
-    {{ block "main" . }}{{ end }}
+    <main>
+      {{ block "main" . }}{{ end }}
+    </main>
 
     {{ block "footer" . }}
       {{ partial "footer" . }}

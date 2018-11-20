@@ -21,8 +21,8 @@ LOGGER = get_logger()
 class ProxyConnection(object):
     """Represents a connection.
 
-    The lifetime of a ProxyConnection is tied to the lifetime of client
-    connections.
+    The lifetime of a ProxyConnection is tied to the lifetime of client and
+    browser connections.
     """
 
     def __init__(self, new_report_msg, name):
@@ -77,7 +77,7 @@ class ProxyConnection(object):
         """End the grace period, during which we don't close the connection.
 
         This indicates that the connection can be closed when it no longer has
-        any local or client connections.
+        any client or browser connections.
         """
         self._in_grace_period = False
 
@@ -87,17 +87,17 @@ class ProxyConnection(object):
         Returns
         -------
         boolean
-            True iff the connectionn has no clients.
+            True if and only if we have no browser connections.
 
         """
-        has_clients = len(self._client_queues) > 0
-        return not (self._in_grace_period or self._has_local or has_clients)
+        has_browser_connections = len(self._client_queues) > 0
+        return not (self._in_grace_period or self._has_local or has_browser_connections)
 
     def enqueue(self, delta):
         """Enqueue a delta.
 
-        Stores the delta in the master queue and transmits to all clients
-        via client_queues.
+        Stores the delta in the master queue and transmits to all browsers
+        via browser_queues.
 
         Parameters
         ----------
@@ -110,7 +110,7 @@ class ProxyConnection(object):
             queue(delta)
 
     def add_client_queue(self):
-        """Add a queue for a new client by cloning the master queue.
+        """Add a queue for a new browser by cloning the master queue.
 
         Returns
         -------
@@ -124,12 +124,12 @@ class ProxyConnection(object):
         return new_queue
 
     def remove_client_queue(self, queue):
-        """Remove the client queue.
+        """Remove the browser queue.
 
         Returns
         -------
         boolean
-            True iff the client queue list is empty.
+            True iff the browser queue list is empty.
 
         """
         self._client_queues.remove(queue)

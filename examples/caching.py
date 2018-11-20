@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit import config
 import random
 
 
@@ -54,7 +55,7 @@ else:
 
     st.subheader('Test that you can turn off caching')
     before = num_executions
-    st.set_config({'client.caching': False})
+    config.set_option('client.caching', False)
     v = my_func(1, 2, dont_care=10)
     after = num_executions
     if after == before + 1:
@@ -64,7 +65,7 @@ else:
 
     st.subheader('Test that you can turn on caching')
     before = num_executions
-    st.set_config({'client.caching': True})
+    config.set_option('client.caching', True)
     v1 = my_func(1, 2, dont_care=10)
     v2 = my_func(1, 2, dont_care=10)
     after = num_executions
@@ -72,4 +73,3 @@ else:
         st.write('OK')
     else:
         st.write('Fail')
-
