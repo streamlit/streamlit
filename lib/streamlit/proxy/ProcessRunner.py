@@ -13,7 +13,7 @@ import shlex
 
 from streamlit import protobuf
 from streamlit.DeltaConnection import DeltaConnection
-from streamlit.streamlit_msg_proto import new_report_msg, new_exception_delta_msg
+from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.util import get_local_id, build_report_id
 
 from streamlit.logger import get_logger
@@ -34,8 +34,9 @@ def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
     source_file_path : str | None
         The full path to the script that is being executed. This is used so we
         can extract the name of the report.
+
     """
-    if type(cmd_in) in string_types:
+    if type(cmd_in) in string_types:  # noqa: F821
         cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
@@ -98,7 +99,7 @@ def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
         print(stderr, file=sys.stderr)
 
         if source_file_path:
-            err_str =_to_str(stderr)
+            err_str = _to_str(stderr)
             # This line needs to be done in a process separate from the Proxy
             # process, since it creates WebSocket connection.
             _print_error_to_report(source_file_path, err_str)
