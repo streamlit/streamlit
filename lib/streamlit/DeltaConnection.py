@@ -168,8 +168,6 @@ def _build_name(report_id):
 
     elif len(sys.argv) >= 1:
         name = _convert_filename_to_name(sys.argv[0])
-        if name.endswith('.py'):
-            name = name[:-3]
         if name in ['__main__', 'streamlit']:
             if len(sys.argv) >= 3 and sys.argv[1] == 'run':
                 name = _convert_filename_to_name(sys.argv[2])
