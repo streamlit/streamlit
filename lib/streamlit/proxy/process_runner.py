@@ -92,10 +92,6 @@ def run_streamlit_command(cmd):
 
 
 def _run_with_error_handler(cmd, cwd=None):
-    # Convert cmd to a list.
-    # (Sometimes it's a RepeatedScalarContainer proto)
-    cmd = [x for x in cmd]
-
     process = subprocess.Popen(
             cmd,
             cwd=cwd,
