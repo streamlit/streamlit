@@ -40,9 +40,11 @@ def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
 
     """
     if compatibility.running_py3():
-        unicode = str
+        unicode_str = str
+    else:
+        unicode_str = unicode
 
-    if type(cmd_in) in string_types or type(cmd_in) == unicode: # noqa: F821
+    if type(cmd_in) in string_types or type(cmd_in) == unicode_str: # noqa: F821
         cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
@@ -116,24 +118,23 @@ def _run_with_error_handler(cmd, cwd=None, source_file_path=None):
             err_str = _to_str(stderr)
             # This line needs to be done in a process separate from the Proxy
             # process, since it creates WebSocket connection.
-            _print_error_to_report(source_file_path, err_str)
+            st.write('**Testing simplified error code.**')
+            st.error(err_msg)
 
 
-def _print_error_to_report(source_file_path, err_msg):
-    import sys
-    st.write(sys.argv)
-    st.error(err_msg)
-
-    # filename_w_ext = os.path.basename(source_file_path)
-    # filename = os.path.splitext(filename_w_ext)[0]
-    #
-    # con = DeltaConnection.get_connection(filename)
-    #
-    # # TODO: Only do this when client.displayEnabled. Need new config first.
-    # con.set_enabled(True)
-    #
-    # dg = con.get_delta_generator()
-    # dg.error(err_msg)
+# def _print_error_to_report(source_file_path, err_msg):
+#     import sys
+#
+#     # filename_w_ext = os.path.basename(source_file_path)
+#     # filename = os.path.splitext(filename_w_ext)[0]
+#     #
+#     # con = DeltaConnection.get_connection(filename)
+#     #
+#     # # TODO: Only do this when client.displayEnabled. Need new config first.
+#     # con.set_enabled(True)
+#     #
+#     # dg = con.get_delta_generator()
+#     # dg.error(err_msg)
 
 def _to_list_of_str(the_list):
     return [_to_str(x) for x in the_list]
