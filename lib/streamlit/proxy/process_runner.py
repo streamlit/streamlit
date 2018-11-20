@@ -14,6 +14,7 @@ import shlex
 
 import streamlit as st
 from streamlit import protobuf
+from streamlit import compatibility
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.util import get_local_id, build_report_id
@@ -38,6 +39,8 @@ def run_outside_proxy_process(cmd_in, cwd=None, source_file_path=None):
         can extract the name of the report.
 
     """
+    if compatibility.running_py3():
+        unicode = str
 
     if type(cmd_in) in string_types or type(cmd_in) == unicode: # noqa: F821
         cmd_list = shlex.split(cmd_in)
