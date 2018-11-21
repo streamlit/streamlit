@@ -1,5 +1,8 @@
 /**
- * Component display a Pandas Dataframe.
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Component display a Pandas Dataframe.
  */
 
 import React, { PureComponent } from 'react';
@@ -32,7 +35,8 @@ class DataFrame extends PureComponent {
 
     try {
       // Calculate the dimensions of this array.
-      const { headerRows, headerCols, cols, rows } = dataFrameGetDimensions(df);
+      const { headerRows, headerCols, dataRows, cols, rows } =
+          dataFrameGetDimensions(df);
 
       // Rendering constants.
       const rowHeight = 25;
@@ -43,9 +47,17 @@ class DataFrame extends PureComponent {
       // Get the cell renderer.
       const cellContents = getCellContents(df, headerRows, headerCols);
       const cellRenderer = getCellRenderer(cellContents);
-      const {elementWidth, columnWidth, headerWidth} =
-        getWidths(cols, rows, headerCols, headerRows, width - border,
-          cellContents);
+      let {elementWidth, columnWidth, headerWidth} = getWidths(
+          cols, rows, headerCols, headerRows, width - border, cellContents);
+
+      // Add space for the "empty" text.
+      if (dataRows === 0 && elementWidth < 60) {
+        elementWidth = 60;
+        headerWidth = 60;
+        if (columnWidth * cols < 60) {
+          columnWidth = 60/cols;
+        }
+      }
 
       // Since this is a PureComponent, finding ourselves in this method
       // means that the props have chaged, so we should force a rerender of the
@@ -58,35 +70,39 @@ class DataFrame extends PureComponent {
 
       // Put it all together.
       return (
-        <div style={{width: elementWidth, height}}>
-          <div style={{width: elementWidth, height, position: 'absolute'}}
-            className="dataframe-container">
-              <MultiGrid
-                className="dataFrame"
-                cellRenderer={cellRenderer}
-                fixedColumnCount={headerCols}
-                fixedRowCount={headerRows}
-                columnWidth={columnWidth}
-                columnCount={cols}
-                enableFixedColumnScroll
-                enableFixedRowScroll
-                height={height - border}
-                rowHeight={rowHeight}
-                rowCount={rows}
-                width={elementWidth}
-                classNameBottomLeftGrid='table-bottom-left'
-                classNameTopRightGrid='table-top-right'
-                ref={this.multGridRef}
-              />
-              <div className="fixup fixup-top-right" style={{
-                width: border,
-                height: headerHeight,
-              }}/>
-              <div className="fixup fixup-bottom-left" style={{
-                width: headerWidth,
-                height: border,
-              }}/>
-          </div>
+        <div style={{width: elementWidth}} className="dataframe-container">
+            <MultiGrid
+              className="dataFrame"
+              cellRenderer={cellRenderer}
+              fixedColumnCount={headerCols}
+              fixedRowCount={headerRows}
+              columnWidth={columnWidth}
+              columnCount={cols}
+              enableFixedColumnScroll
+              enableFixedRowScroll
+              height={height - border}
+              rowHeight={rowHeight}
+              rowCount={rows}
+              width={elementWidth}
+              classNameBottomLeftGrid='table-bottom-left'
+              classNameTopRightGrid='table-top-right'
+              ref={this.multGridRef}
+            />
+            <div className="fixup fixup-top-right" style={{
+              width: border,
+              height: headerHeight,
+            }}/>
+            <div className="fixup fixup-bottom-left" style={{
+              width: headerWidth,
+              height: border,
+            }}/>
+            {
+              dataRows === 0 ?
+                <div className="empty-dataframe">
+                  empty
+                </div>
+                : null
+            }
         </div>
       );
     } catch (e) {
@@ -99,9 +115,6 @@ class DataFrame extends PureComponent {
     }
   }
 }
-// const DataFrame = ({df, width}) => {
-//
-// }
 
 /**
  * Returns a function which can render each cell.

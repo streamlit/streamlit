@@ -1,5 +1,27 @@
 # Release Notes
 
+
+#### v0.18.1
+November 12, 2018
+```
+Hey. It's Monday and a new version of the Streamlit, 0.18.1 is out!
+To upgrade, please run:
+
+   pip install --upgrade streamlit
+
+This is a minor upgrade with two new features.
+
+1. You can now have Streamlit automatically save a report on close. To do
+   so, please set the following setting in ~/.streamlit/config.yaml:
+
+   proxy:
+     saveOnExit: True
+
+   IMPORTANT: Please make sure that sharing is set up properly, or this will throw an exception after you code completes.
+
+2. Running streamlit help now creates a report named "help".
+```
+
 #### v0.16.1
 October 2, 2018
 ```
@@ -40,7 +62,7 @@ Other than that, here's what else is new in this release:
 5. Published some tutorials at http://streamlit.io/docs
 
 6. Fixed a few important bugs, such as Vega Lite support in Python 2.7, support
-   for argument-free @st.cache, and support for tiny scripts that end before the Streamlit proxy has a chance to start. 
+   for argument-free @st.cache, and support for tiny scripts that end before the Streamlit proxy has a chance to start.
 ```
 
 #### v0.14.2

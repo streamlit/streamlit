@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """
 Constructs the protobuf module.
 
@@ -18,15 +20,16 @@ import sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-from Chart_pb2 import Chart
-from Element_pb2 import Element
-from Delta_pb2 import Delta
-from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
-import DataTransform_pb2 as DataTransform
-from Text_pb2 import Text
-from Balloons_pb2 import Balloons
-from ForwardMsg_pb2 import ForwardMsg
 from BackMsg_pb2 import BackMsg
+from Balloons_pb2 import Balloons
+from Chart_pb2 import Chart
+from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
+from Delta_pb2 import Delta
+from Element_pb2 import Element
+from ForwardMsg_pb2 import ForwardMsg
+from Text_pb2 import Text
+
+import DataTransform_pb2 as DataTransform
 
 # Clear out all temporary variables.
 sys.path.pop()

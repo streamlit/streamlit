@@ -1,27 +1,47 @@
 /**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+/**
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
 import { dispatchOneOf, updateOneOf } from './immutableProto';
 import { format } from './format';
 
+export const INDEX_COLUMN_DESIGNATOR = 'index';
+
 /**
  * Returns a dictionary of integers:
  *   { headerRows, headerCols, dataRows, dataCols, cols, rows }
- * for this DataFrame.
+ * for this DataFrame, where rows and cols are sums of the header and data
+ * components.
+ *
+ * If df is null, this returns zeroes. If any of index/data/columns are null,
+ * this treats them as empty (so their dimensions are [0, 0]).
  */
 export function dataFrameGetDimensions(df) {
- // Calculate the dimensions of this array.
- const [headerCols, dataRowsCheck] = indexGetLevelsAndLength(df.get('index'));
- const [headerRows, dataColsCheck] = indexGetLevelsAndLength(df.get('columns'));
- const [dataRows, dataCols] = tableGetRowsAndCols(df.get('data'));
- if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
-   throw new Error("Dataframe dimensions don't align: " +
-     `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-     `cols(${dataCols} != ${dataColsCheck})`)
- }
- const cols = headerCols + dataCols;
- const rows = headerRows + dataRows;
+  const index = df ? df.get('index') : null;
+  const data = df ? df.get('data') : null;
+  const columns = df ? df.get('columns') : null;
+
+  const [headerCols, dataRowsCheck] = index ?
+      indexGetLevelsAndLength(index) : [0, 0];
+  const [headerRows, dataColsCheck] = columns ?
+      indexGetLevelsAndLength(columns) : [0, 0];
+  const [dataRows, dataCols] = data ?
+      tableGetRowsAndCols(data) : [0, 0];
+
+  if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
+    throw new Error("Dataframe dimensions don't align: " +
+      `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+      `cols(${dataCols} != ${dataColsCheck})`)
+  }
+
+  const cols = headerCols + dataCols;
+  const rows = headerRows + dataRows;
+
  return { headerRows, headerCols, dataRows, dataCols, cols, rows };
 }
 
@@ -30,10 +50,43 @@ export function dataFrameGetDimensions(df) {
  */
 export function tableGetRowsAndCols(table) {
   const cols = table.get('cols').size;
-  if (cols === 0)
+  if (cols === 0) {
     return [0, 0];
+  }
   const rows = anyArrayLen(table.getIn(['cols', 0]));
   return [rows, cols];
+}
+
+/**
+ * Converts dataframe to array-of-dicts format.
+ *
+ * Example:
+ *
+ * [
+ *   {index1: row1_col1, index2: row1_col2, ...},
+ *   {index1: row2_col1, index2: row2_col2, ...},
+ * ]
+ */
+export function dataFrameToArrayOfDicts(df) {
+  const dataArr = [];
+  const [nRows, nCols] = tableGetRowsAndCols(df.get('data'));
+
+  const dfColumns = df.get('columns');
+  const dfData = df.get('data');
+
+  for (let r = 0; r < nRows; r++) {
+    const rowDict = {};
+
+    for (let c = 0; c < nCols; c++) {
+      rowDict[indexGet(dfColumns, 0, c)] = tableGet(dfData, c, r);
+    }
+
+    dataArr.push(rowDict);
+  }
+
+  // TODO: Handle indices too.
+
+  return dataArr;
 }
 
 /**
@@ -240,8 +293,9 @@ function concatAnyArray(anyArray1, anyArray2) {
  */
 function getDataFrame(element) {
   return dispatchOneOf(element, 'type', {
-    dataFrame: (df) => df,
     chart: (chart) => chart.get('data'),
+    dataFrame: (df) => df,
+    deckGlMap: (el) => el.get('data'),
     vegaLiteChart: (chart) => chart.get('data'),
   });
 }
@@ -251,8 +305,9 @@ function getDataFrame(element) {
  */
 function setDataFrame(element, df) {
   return updateOneOf(element, 'type', {
-    dataFrame: () => df,
     chart: (chart) => chart.set('data', df),
+    dataFrame: () => df,
+    deckGlMap: (el) => el.set('data', df),
     vegaLiteChart: (chart) => chart.set('data', df),
   });
 }

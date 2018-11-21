@@ -1,4 +1,9 @@
 /**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+/**
  * Text formatting utilities
  */
 

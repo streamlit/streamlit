@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """
 A queue of deltas associated with a particular Report.
 Whenever possible, deltas are combined.
@@ -102,7 +104,7 @@ class ReportQueue(object):
                 if not sent_more_deltas:
                     LOGGER.debug('No more deltas to send.')
                     break
-            LOGGER.debug('This client queue is closing.')
+            LOGGER.debug('This queue is closing.')
             self._state = QueueState.CLOSED
             msg = protobuf.ForwardMsg()
             msg.report_finished = True

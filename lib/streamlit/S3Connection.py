@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Handles a connecton to an S3 bucket to send Report data."""
 
 # Python 2/3 compatibility
@@ -73,10 +75,10 @@ class S3(Cloud):
         log.propagate = False
 
         # Config related stuff.
-        self._bucketname = config.get_s3_option('bucket')
-        self._url = config.get_s3_option('url')
-        self._key_prefix = config.get_s3_option('keyPrefix')
-        self._region = config.get_s3_option('region')
+        self._bucketname = config.get_option('s3.bucket')
+        self._url = config.get_option('s3.url')
+        self._key_prefix = config.get_option('s3.keyPrefix')
+        self._region = config.get_option('s3.region')
 
         # self._bucketname = config.get_option('s3.bucketname')
         # self._url = config.get_option('s3.url')
@@ -90,35 +92,32 @@ class S3(Cloud):
         if self._key_prefix and '{USER}' in self._key_prefix:
             self._key_prefix = self._key_prefix.replace('{USER}', user)
 
-        if self._key_prefix is None:
-            self._key_prefix = ''
-
         if not self._url:
             self._s3_url = os.path.join('https://%s.%s' % (self._bucketname, 's3.amazonaws.com'), self._s3_key('index.html'))
         else:
             self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
 
-        aws_profile = config.get_s3_option('profile')
-        access_key_id = config.get_s3_option('accessKeyId')
+        aws_profile = config.get_option('s3.profile')
+        access_key_id = config.get_option('s3.accessKeyId')
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
-            self._client = boto3.Session(profile_name=aws_profile).client('s3')
+            self._s3_client = boto3.Session(profile_name=aws_profile).client('s3')
         elif access_key_id is not None:
-            secret_access_key = config.get_s3_option('secretAccessKey')
-            self._client = boto3.client(
+            secret_access_key = config.get_option('s3.secretAccessKey')
+            self._s3_client = boto3.client(
                 's3',
                  aws_access_key_id=access_key_id,
                  aws_secret_access_key=secret_access_key)
         else:
             LOGGER.debug(f'Using default AWS profile.')
-            self._client = boto3.client('s3')
+            self._s3_client = boto3.client('s3')
 
     @run_on_executor
     def _get_static_upload_files(self):
         """Returns a list of static files to upload, or an empty list if they're
         already uploaded."""
         try:
-            self._client.head_object(
+            self._s3_client.head_object(
                 Bucket=self._bucketname,
                 Key=self._s3_key('index.html'))
             return []
@@ -130,7 +129,7 @@ class S3(Cloud):
         # THIS DOES NOT WORK because the aws exception isn't being
         # caught and disappearing.
         try:
-            self._client.head_bucket(Bucket=self._bucketname)
+            self._s3_client.head_bucket(Bucket=self._bucketname)
         except botocore.exceptions.ClientError:
             LOGGER.info('"%s" bucket not found', self._bucketname)
             return False
@@ -139,7 +138,7 @@ class S3(Cloud):
     @run_on_executor
     def _create_bucket(self):
         LOGGER.info('Attempting to create "%s" bucket', self._bucketname)
-        self._client.create_bucket(
+        self._s3_client.create_bucket(
             ACL='public-read',
             Bucket=self._bucketname,
             CreateBucketConfiguration={'LocationConstraint': self._region})
@@ -148,6 +147,8 @@ class S3(Cloud):
     @gen.coroutine
     def s3_init(self):
         """Initialize s3 bucket."""
+        assert config.get_option('s3.sharingEnabled'), (
+            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
@@ -180,7 +181,7 @@ class S3(Cloud):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
                 mime_type = 'application/octet-stream'
-            self._client.put_object(
+            self._s3_client.put_object(
                 Bucket=self._bucketname,
                 Body=data,
                 Key=self._s3_key(path),

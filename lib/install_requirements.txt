@@ -1,13 +1,13 @@
 backports-abc>=0.5        # via tornado
 base58>=1.0.0
-boto3
-botocore                  # via boto3, s3transfer
+boto3>=1.4.4
+botocore>=1.5.0                  # via boto3, s3transfer
 click>=6.0
 docutils>=0.14
 enum-compat>=0.0.2
 future-fstrings>=0.4.0
 future>=0.16.0
-futures>=3.0.0            # via s3transfer, tornado
+futures>=2.2.0            # via s3transfer, tornado
 jmespath>=0.9.0           # via boto3, botocore
 numpy>=1.14.0             # via pandas
 pandas>=0.23.0
@@ -23,4 +23,5 @@ six>=1.0.0                # via protobuf, python-dateutil, singledispatch
 tokenize-rt>=2.0.0        # via future-fstrings
 tornado>=4.5.1            # used to be >=5.0.0
 tzlocal>=1.5.0
-watchdog
+watchdog>=0.9.0
+toml>=0.10.0

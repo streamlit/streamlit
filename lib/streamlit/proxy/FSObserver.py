@@ -1,4 +1,5 @@
 # -*- coding: future_fstrings -*-
+# Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A class that watches the file system"""
 
@@ -14,7 +15,6 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
 from streamlit.logger import get_logger
-from streamlit.util import get_local_id
 LOGGER = get_logger()
 
 
@@ -23,10 +23,17 @@ class FSObserver(object):
 
     @staticmethod
     def get_key(connection):
+        """Get unique ID for this connection, for FS observation purposes.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            The connection the ID is for.
+
+        """
         return (
             connection.cwd,
-            connection.command_line[0],
-            connection.command_line[1])
+            connection.command_line[0])
 
     def __init__(self, connection, callback):
         """Constructor.
@@ -35,10 +42,13 @@ class FSObserver(object):
         ----------
         connection : ProxyConnection
             The connection that is asking for an observer to be created.
-        callback: function(FSObserver, FileSystemEvent)
+        callback: callback
             The function that should get called when something changes in
             path_to_observe. This function will be called on the observer
-            thread, which is created by the watchdog module.
+            thread, which is created by the watchdog module. Parameters:
+            - FSObserver: the object that is calling the callback.
+            - FileSystemEvent: the event.
+
         """
         self.key = FSObserver.get_key(connection)
         LOGGER.info(f'Will observe file system for: {self.key}')
@@ -47,6 +57,7 @@ class FSObserver(object):
         self._callback = callback
         self._is_closed = False
 
+        # Things we want to expose to the callback:
         self.command_line = connection.command_line
         self.cwd = connection.cwd
 
@@ -74,7 +85,7 @@ class FSObserver(object):
 
         fsev_handler = FSEventHandler(
             fn_to_run=self._on_event,
-            source_file_path=source_file_path,
+            file_to_observe=source_file_path,
         )
 
         observer = Observer()
@@ -88,13 +99,14 @@ class FSObserver(object):
             LOGGER.error(f'Could not start file system observer: {e}')
 
     def _on_event(self, event):
-        """Function that gets called when filesystem changes are detected.
+        """Event handler for filesystem changes.
 
         This simply calls the callback function passed during construction.
 
         Parameters
         ----------
         event : FileSystemEvent
+
         """
         if self._is_closed:
             LOGGER.info(f'Will not rerun source script.')
@@ -113,6 +125,7 @@ class FSObserver(object):
         key : any
             A unique identifier of the consumer that is interested in this
             observer.
+
         """
         self._consumers.add(key)
 
@@ -127,6 +140,7 @@ class FSObserver(object):
         key : any
             A unique identifier of the consumer that is interested in this
             observer.
+
         """
         if key in self._consumers:
             self._consumers.remove(key)
@@ -143,11 +157,12 @@ class FSObserver(object):
         -------
         boolean
             True if closed.
+
         """
         return self._is_closed
 
     def _close(self):
-        """Stops observing the file system."""
+        """Stop observing the file system."""
         LOGGER.info(f'Closing file system observer for {self.key}')
         self._is_closed = True
 
@@ -159,28 +174,28 @@ class FSObserver(object):
 
 
 class FSEventHandler(PatternMatchingEventHandler):
-    """Calls a function whenever a watched file changes."""
+    """Object that calls a function whenever a watched file changes."""
 
-    def __init__(self, fn_to_run, source_file_path):
+    def __init__(self, fn_to_run, file_to_observe):
         """Constructor.
 
         Parameters
         ----------
-        fn_to_run : function
+        fn_to_run : callable
             The function to call whenever a watched file changes. Takes the
             FileSystemEvent as a parameter.
 
-        More information at https://pythonhosted.org/watchdog/api.html#watchdog.events.PatternMatchingEventHandler
+        file_to_observe : str
+            The full path fo the file to observe.
+
         """
-        super(FSEventHandler, self).__init__(patterns=[source_file_path])
+        super(FSEventHandler, self).__init__(patterns=[file_to_observe])
         self._fn_to_run = fn_to_run
-        self._source_file_path = source_file_path
-        self._prev_md5 = _calc_md5(source_file_path)
+        self._file_to_observe = file_to_observe
+        self._prev_md5 = _calc_md5(file_to_observe)
 
     def on_any_event(self, event):
         """Catch-all event handler.
-
-        See https://pythonhosted.org/watchdog/api.html#watchdog.events.FileSystemEventHandler.on_any_event
 
         Parameters
         ----------
@@ -188,7 +203,7 @@ class FSEventHandler(PatternMatchingEventHandler):
             The event object representing the file system event.
 
         """
-        new_md5 = _calc_md5(self._source_file_path)
+        new_md5 = _calc_md5(self._file_to_observe)
         if new_md5 != self._prev_md5:
             LOGGER.info(f'File MD5 changed.')
             self._prev_md5 = new_md5
@@ -209,6 +224,7 @@ def _calc_md5(file_path):
     -------
     str
         The MD5 checksum.
+
     """
     md5 = hashlib.md5()
     md5.update(open(file_path).read().encode('utf-8'))

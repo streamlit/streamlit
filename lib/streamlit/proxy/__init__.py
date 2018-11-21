@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """The package which includes all files related to the Streamlit proxy
 server."""
 
@@ -7,6 +9,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from .ProxyConnection import ProxyConnection
-from .ClientWebSocket import ClientWebSocket
+from .BrowserWebSocket import BrowserWebSocket
 from .LocalWebSocket import LocalWebSocket
 from .Proxy import Proxy
+import streamlit.proxy.process_runner

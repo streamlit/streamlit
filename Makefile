@@ -23,12 +23,14 @@ build: react-build
 setup:
 	pip install pip-tools
 
-# Got rid of this step because pip-compile is too strict about versions.
+# NOTE: Got rid of these next two steps because pip-compile is too strict about
+# versions.
+
 # lib/install_requirements.txt: lib/install_requirements.in
 # 	pip-compile lib/install_requirements.in
 
-lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
-	pip-compile lib/requirements.in
+# lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
+# 	pip-compile lib/requirements.in
 
 requirements: lib/requirements.txt lib/install_requirements.txt
 	pip install -r lib/requirements.txt
@@ -36,9 +38,13 @@ requirements: lib/requirements.txt lib/install_requirements.txt
 pylint:
 	# Linting
 	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; flake8 --ignore=E402 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
+	cd lib; flake8 --ignore=E402,E128 --exclude=streamlit/protobuf/*_pb2.py $(modules) tests/
 
 pytest:
+	# Just testing. No code coverage.
+	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules tests/ $(modules)
+
+pycoverage:
 	# testing + code coverage
 	cd lib; PYTHONPATH=. pytest -v -l --doctest-modules $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
@@ -63,14 +69,14 @@ wheel:
 clean:
 	@echo FIXME: This needs to be fixed!
 	cd lib; rm -rf build dist  .eggs *.egg-info
-	find . -name '*.pyc' -type f -delete
-	find . -name __pycache__ -type d -delete
-	find . -name .pytest_cache -exec rm -rf {} \;
+	find . -name '*.pyc' -type f -delete || true
+	find . -name __pycache__ -type d -delete || true
+	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/protobuf/*_pb2.py
 	rm -f frontend/src/protobuf.js
 	rm -rf lib/streamlit/static
-	find . -name .streamlit -type d -exec rm -rf {} \;
+	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
 .PHONY: site

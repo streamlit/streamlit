@@ -1,35 +1,50 @@
+# -*- coding: future_fstrings -*-
+
 """DeltaGenerator Unittest."""
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import json
 import unittest
 
-from streamlit.DeltaGenerator import DeltaGenerator, _export_to_io
+from streamlit.DeltaGenerator import DeltaGenerator, _export
+from streamlit.ReportQueue import ReportQueue
+from streamlit import compatibility
 from streamlit import protobuf
-
 
 def unwrap(dg, name):
     """Return unwrapped method 'name' from class 'dg'."""
     method = getattr(dg, name)
-    return method.func_closure[0].cell_contents
-
+    try:
+        # Python 2 way.
+        return method.func_closure[0].cell_contents
+    except AttributeError:
+        # Python 3 way. running_py3()
+        return method.__wrapped__
 
 class DeltaGeneratorDecoratorTest(unittest.TestCase):
     """Test Decorators."""
 
-    def test_export_to_io(self):
+    def test_export(self):
         """Test DeltaGenerator decorator export_to_st."""
         def method():
             pass
 
         # undecorated function shouldn't have export_to_io
-        self.assertFalse(hasattr(method, '__export_to_io__'))
+        self.assertFalse(hasattr(method, '__export__'))
 
         # Run decorator
-        _export_to_io(method)
+        _export(method)
 
         # undecorated function should have export_to_io
-        self.assertTrue(hasattr(method, '__export_to_io__'))
+        self.assertTrue(hasattr(method, '__export__'))
         # and it should be True
-        self.assertTrue(getattr(method, '__export_to_io__'))
+        self.assertTrue(getattr(method, '__export__'))
 
 
 class DeltaGeneratorClassTest(unittest.TestCase):
@@ -63,7 +78,7 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
     def setUp(self):
         """Setup."""
-        self._dg = DeltaGenerator(None)
+        self._dg = DeltaGenerator(ReportQueue())
 
     def test_generic_text(self):
         """Test protobuf.Text generic str(body) stuff."""
@@ -76,7 +91,6 @@ class DeltaGeneratorTextTest(unittest.TestCase):
             'warning': protobuf.Text.WARNING,
             'info': protobuf.Text.INFO,
             'success': protobuf.Text.SUCCESS,
-            'link': protobuf.Text.LINK,
         }
 
         string_data = 'Some string'
@@ -141,6 +155,7 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
         delta = protobuf.Delta()
         element = delta.new_element
+        # raise RuntimeError(f'method: {method} dg: {self._dg}')
         method(self._dg, element)
 
         self.assertEquals(True, element.empty.unused)

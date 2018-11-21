@@ -1,16 +1,21 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 
 import 'bootstrap/dist/css/bootstrap.css';
 import './index.css';
 
-import WebClient from './WebClient';
+import StreamlitApp from './StreamlitApp';
 
 // Disabling this magic for now because we want
 // to test without caching on the production build:
 /* import registerServiceWorker from './registerServiceWorker'; */
 
-ReactDOM.render(<WebClient />, document.getElementById('root'));
+ReactDOM.render(<StreamlitApp />, document.getElementById('root'));
 
 // Disabling this magic for now because we want
 // to test without caching on the production build:

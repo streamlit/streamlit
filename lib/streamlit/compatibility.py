@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Smooths out some differences between python 2 and 3. It is meant to
 be called as follows:
 
@@ -10,6 +12,8 @@ setup_2_3_shims(globals())
 
 import sys
 import os
+
+_dict = dict
 
 def setup_2_3_shims(caller_globals):
     """
@@ -23,13 +27,17 @@ def setup_2_3_shims(caller_globals):
     if running_py3():
         caller_globals['dict_types'] = (type({}),)
         caller_globals['string_types'] = (type(''),)
+        caller_globals['native_dict'] = _dict
     else:
         # These are the symbols we will export to the calling package.
         export_symbols = []
 
         # Override basic types.
+        native_dict = _dict
         from builtins import range, map, str, dict, object, zip, int
-        export_symbols += ['range', 'map', 'str', 'dict', 'object', 'zip', 'int']
+        export_symbols += [
+            'range', 'map', 'str', 'dict', 'object', 'zip', 'int',
+            'native_dict']
 
         # Oerride the open function.
         from io import open

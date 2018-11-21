@@ -1,6 +1,8 @@
 # -*- coding: future_fstrings -*-
-
 #!./streamlit_run
+# -*- coding: future_fstrings -*-
+
+# Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Example of everything that's possible in streamlit."""
 
@@ -10,7 +12,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # import numpy as np
-from PIL import Image
+import PIL
 import urllib
 from io import BytesIO
 
@@ -179,7 +181,7 @@ def display_reference():
             },
         })
 
-    st.header('Visualizing data as images')
+    st.header('Visualizing data as images via Pillow.')
 
     @st.cache
     def read_file_from_url(url):
@@ -198,44 +200,35 @@ def display_reference():
 
     if image_bytes is not None:
         with st.echo():
-            image = Image.open(BytesIO(image_bytes))
+            # Make it obvious that its PIL ie PIL.Image vs just Image.
+            image = PIL.Image.open(BytesIO(image_bytes))
 
-            st.image(image, caption="Sunset", use_column_width=True)
+            st.image(image, caption='Sunset', use_column_width=True)
 
             array = np.array(image).transpose((2, 0, 1))
             channels = array.reshape(array.shape + (1,))
 
             st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
-    st.header('Playing audio')
+    st.header('Visualizing data as images via OpenCV')
 
-    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
-                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
-    audio_bytes = read_file_from_url(audio_url)
+    st.write('Streamlit also supports OpenCV!')
+    try:
+        import cv2
 
-    st.write('''
-        Streamlit can play audio in all formats supported by modern
-        browsers. Below is an example of an _ogg_-formatted file:
-        ''')
+        if image_bytes is not None:
+            with st.echo():
+                image = cv2.cvtColor(
+                    cv2.imdecode(np.fromstring(image_bytes, dtype='uint8'), 1),
+                    cv2.COLOR_BGR2RGB)
 
-    if audio_bytes is not None:
-        with st.echo():
-            st.audio(audio_bytes, format='audio/ogg')
+                st.image(image, caption='Sunset', use_column_width=True)
+                st.image(cv2.split(image), caption=['Red', 'Green', 'Blue'], width=200)
+    except ImportError as e:
+        st.write('If you install opencv with the command `pip install opencv-python-headless` '
+                 'this section will tell you how to use it.')
 
-    st.header('Playing video')
-
-    st.write('''
-        Streamlit can play video in all formats supported by modern
-        browsers. Below is an example of an _mp4_-formatted file:
-        ''')
-
-    video_url = ('https://www.sample-videos.com/video/mp4/480/'
-                 'big_buck_bunny_480p_2mb.mp4')
-    video_bytes = read_file_from_url(video_url)
-
-    if video_bytes is not None:
-        with st.echo():
-            st.video(video_bytes, format='video/webm')
+        st.warning('Error running opencv: ' + str(e))
 
     st.header('Inserting headers')
 
@@ -247,8 +240,8 @@ def display_reference():
 
     with st.echo():
         st.text("Here's preformatted text instead of _Markdown_!\n"
-                "       ^^^^^^^^^^^^\n"
-                "Rock on! \m/(^_^)\m/ ")
+                '       ^^^^^^^^^^^^\n'
+                'Rock on! \m/(^_^)\m/ ')
 
     st.header('JSON')
 
@@ -267,10 +260,10 @@ def display_reference():
     st.header('Alert boxes')
 
     with st.echo():
-        st.error("This is an error message")
-        st.warning("This is a warning message")
-        st.info("This is an info message")
-        st.success("This is a success message")
+        st.error('This is an error message')
+        st.warning('This is a warning message')
+        st.info('This is an info message')
+        st.success('This is a success message')
 
     st.header('Progress Bars')
 
@@ -303,6 +296,36 @@ def display_reference():
         except Exception as e:
             st.exception(e)
 
+    st.header('Playing audio')
+
+    audio_url = ('https://upload.wikimedia.org/wikipedia/commons/c/c4/'
+                 'Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
+    audio_bytes = read_file_from_url(audio_url)
+
+    st.write("""
+        Streamlit can play audio in all formats supported by modern
+        browsers. Below is an example of an _ogg_-formatted file:
+        """)
+
+    if audio_bytes is not None:
+        with st.echo():
+            st.audio(audio_bytes, format='audio/ogg')
+
+    st.header('Playing video')
+
+    st.write("""
+        Streamlit can play video in all formats supported by modern
+        browsers. Below is an example of an _mp4_-formatted file:
+        """)
+
+    video_url = ('https://archive.org/download/WildlifeSampleVideo/'
+                 'Wildlife.mp4')
+    video_bytes = read_file_from_url(video_url)
+
+    if video_bytes is not None:
+        with st.echo():
+            st.video(video_bytes, format='video/mp4')
+
     st.header('Lengthy Computations')
     st.write("""
         If you're repeatedly running length computations, try caching the
@@ -332,7 +355,7 @@ def display_reference():
 
     st.header('Animation')
     st.write(
-        'Every `streamlit.io` method (except `st.write`) returns a handle '
+        'Every Streamlit method (except `st.write`) returns a handle '
         'which can be used for animation.')
 
     with st.echo():

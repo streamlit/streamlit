@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react';
@@ -22,6 +27,7 @@ import DocString from './elements/DocString';
 import ExceptionElement from './elements/ExceptionElement';
 import ImageList from './elements/ImageList';
 import Map from './elements/Map';
+import DeckGlChart from './elements/DeckGlChart';
 import Table from './elements/Table';
 import Text from './elements/Text';
 import VegaLiteChart from './elements/VegaLiteChart';
@@ -41,9 +47,9 @@ import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
-import './WebClient.css';
+import './StreamlitApp.css';
 
-class WebClient extends PureComponent {
+class StreamlitApp extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -173,7 +179,7 @@ class WebClient extends PureComponent {
         });
         trackEventRemotely('newConnection', 'newMessage');
         this.setState({
-          savingConfigured: connectionProperties.get('savingConfigured'),
+          sharingEnabled: connectionProperties.get('sharingEnabled'),
         });
       },
       newReport: (newReportMsg) => {
@@ -248,17 +254,23 @@ class WebClient extends PureComponent {
    */
   clearOldElements() {
     this.setState(({elements, reportId}) => ({
-      elements: elements.map((elt) => {
-        if (elt.get('reportId') === reportId) {
-          return elt;
-        } else {
-          return fromJS({
-            empty: {unused: true},
-            reportId: reportId,
-            type: "empty"
-          });
-        }
-      })
+      elements: elements
+          // Need to filter the element list first because the list can have
+          // can have "holes" in it (caused by enqueing elements with
+          // non-consecutive IDs). Without this, elt.get() (below) will fail
+          // sometimes because elt can be undefined.
+          .filter((elt) => elt)
+          .map((elt) => {
+            if (elt.get('reportId') === reportId) {
+              return elt;
+            } else {
+              return fromJS({
+                empty: {unused: true},
+                reportId: reportId,
+                type: "empty"
+              });
+            }
+          }),
     }));
   }
 
@@ -266,7 +278,7 @@ class WebClient extends PureComponent {
    * Callback to call when we want to save the report.
    */
   saveReport() {
-    if (this.state.savingConfigured) {
+    if (this.state.sharingEnabled) {
       trackEventRemotely('saveReport', 'newInteraction');
       this.sendBackMsg({
         type: 'cloudUpload',
@@ -279,7 +291,7 @@ class WebClient extends PureComponent {
           <div>
             You do not have Amazon S3 or Google GCS sharing configured.
             Please contact&nbsp;
-              <a href="mailto:adrien@streamlit.io">Adrien</a>
+              <a href="mailto:hello@streamlit.io">Streamlit Support</a>
             &nbsp;to setup sharing.
           </div>
         ),
@@ -398,6 +410,7 @@ class WebClient extends PureComponent {
             })}
           />
         </header>
+
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
@@ -423,18 +436,19 @@ class WebClient extends PureComponent {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
           audio: (audio) => <Audio audio={audio} width={width}/>,
-          dataFrame: (df) => <DataFrame df={df} width={width}/>,
-          chart: (chart) => <Chart chart={chart} width={width}/>,
-          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
-          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
-          text: (text) => <Text element={text} width={width}/>,
-          docString: (doc) => <DocString element={doc} width={width}/>,
-          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
-          empty: (empty) => undefined,
-          map: (map) => <Map map={map} width={width}/>,
-          table: (df) => <Table df={df} width={width}/>,
           balloons: (balloons) => <Balloons balloons={balloons}/>,
+          chart: (chart) => <Chart chart={chart} width={width}/>,
+          dataFrame: (df) => <DataFrame df={df} width={width}/>,
+          deckGlChart: (el) => <DeckGlChart element={el} width={width}/>,
+          docString: (doc) => <DocString element={doc} width={width}/>,
+          empty: (empty) => undefined,
+          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
+          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
+          map: (map) => <Map map={map} width={width}/>,
+          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
+          table: (df) => <Table df={df} width={width}/>,
+          text: (text) => <Text element={text} width={width}/>,
+          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
           video: (video) => <Video video={video} width={width}/>,
         });
       } catch (err) {
@@ -448,8 +462,8 @@ class WebClient extends PureComponent {
       } else {
         return [];
       }
-    })
+    });
   }
 }
 
-export default hotkeys(WebClient);
+export default hotkeys(StreamlitApp);

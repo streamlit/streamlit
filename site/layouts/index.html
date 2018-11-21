@@ -1,23 +1,77 @@
 {{ define "main" }}
-<main id="home">
-  <section id="fullbleed" class="parallax dark">
-    <h1 class="logo"><strong>stream</strong><span>lit</span></h1>
-  </section>
+  <div class="contents">
 
-  {{/* partial "quickstart" . */}}
-  {{ partial "contact" . }}
-</main>
+    <section class="row">
+      <div class="main-text">
 
-<script>
-  if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
-    var els = document.getElementsByClassName('parallax');
-    for (var i = 0; i < els.length; i++) {
-      els[i].classList.add('chrome');
+        <h1>What if data science could be delightful all the way to production?</h1>
+
+        <p>
+          At Streamlit, we're working hard on a new architecture for data
+          science and machine learning that we think you&rsquo;ll love. Sound
+          interesting? Request early access below.
+        </p>
+
+        <form
+            action="https://script.google.com/macros/s/AKfycbybsXsHyw_NjgLr5LupCGh8AAZTp6U00eiWd5TA3L4roSvI4ES8/exec"
+            method="POST"
+            target="hiddenFrame"
+            id="main-form"
+            onsubmit="return onSubmit()"
+            >
+
+          <div class="field">
+            <input
+                id="signup-email"
+                name="email"
+                placeholder="you@probablygmail.com"
+                required="true"
+                type="email"
+                />
+            <div class="focus-border"></div>
+          </div>
+
+          <div class="field" id="button-field">
+            <input
+                id="signup-success"
+                type="button"
+                value="✔️ We got you"
+                disabled="true"
+                class="hidden"
+                />
+            <input
+                id="signup-button"
+                type="submit"
+                value="I want to try it out!"
+                />
+          </div>
+
+        </form>
+      </div>
+    </section>
+
+  </div>
+
+  <iframe name="hiddenFrame" width="0" height="0" border="0" style="display: none;"></iframe>
+
+  <script>
+
+    var signupEmail = document.getElementById('signup-email');
+    var formEl = document.getElementById('main-form');
+
+    function onSubmit() {
+      if (signupEmail.value.trim().length == 0) {
+        return false;
+      }
+
+      formEl.classList.add('success');
+
+      window.setTimeout(function() {
+        signupEmail.value = '';
+        formEl.classList.remove('success');
+      }, 4000);
+
+      return true;
     }
-  }
-</script>
+  </script>
 {{ end }}
-
-
-{{ define "header" }}<!-- -->{{ end }}
-{{ define "footer" }}<!-- -->{{ end }}

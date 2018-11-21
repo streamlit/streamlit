@@ -1,4 +1,5 @@
 # -*- coding: future_fstrings -*-
+# Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A bunch of useful utilites."""
 
@@ -8,12 +9,13 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
-import uuid
+import base58
 import contextlib
+import functools
 import os
-import yaml
-import threading
 import pwd
+import threading
+import uuid
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
@@ -111,7 +113,7 @@ def escape_markdown(raw_string):
 
     Args
     ----
-    raw_string : string
+    raw_string : str
         A string, possibly with markdown metacharacters, e.g. "1 * 2"
 
     Returns
@@ -129,57 +131,38 @@ def escape_markdown(raw_string):
         result = result.replace(character, '\\' + character)
     return result
 
-# def __get_config():
-#     """Gets the local config file."""
-#     if not __LOCAL_CONFIG:
-#         __reload_config()
-#     return __LOCAL_CONFIG
-#
-# def __append_to_config(key, value, comment=None):
-#     if key in __LOCAL_CONFIG:
-#         raise RuntimeError("Cannot append a key that's already in config.")
-#     try:
-#         with open(__LOCAL_CONFIG_PATH) as config_stream:
-#             config_data = config_stream.read()
-#     except FileNotFoundError:
-#         config_data = ''
-#
-#     # Make sure that all nonempty documents end with two newlines.
-#     config_data = config_data.strip()
-#     if config_data == '':
-#         pass
-#     else:
-#         config_data = config_data + '\n\n'
-#
-#     # Format the comment.
-#     if comment:
-#         comment = f'# {comment}\n'
-#     else:
-#         comment = ''
-#
-#     # Update the config yaml string and write it out.
-#     config_data = f'{config_data}{comment}{key}: {value}\n'
-#     with open_ensuring_path(__LOCAL_CONFIG_PATH) as config_stream:
-#         config_stream.write(config_data)
-#
-#     # Reload the configuration.
-#     __reload_config()
-#
-# def __reload_config():
-#     """Reloads the config file."""
-#     config = __LOCAL_CONFIG
-#     config.clear()
-#     try:
-#         with open(__LOCAL_CONFIG_PATH) as config_stream:
-#             config.update(yaml.load(config_stream))
-#
-#             # Add types where necessary.
-#             if 'localId' in config:
-#                 config['localId'] = bson.ObjectId(config['localId'])
-#     except FileNotFoundError:
-#         pass
-#     return __LOCAL_CONFIG
-
 def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
+
+
+def memoize(func):
+    """Decorator to memoize the result of a no-args func."""
+    result = []
+    @functools.wraps(func)
+    def wrapped_func():
+        if not result:
+            result.append(func())
+        return result[0]
+    return wrapped_func
+
+def write_proto(ws, msg):
+    """Writes a proto to a websocket.
+
+    Parameters
+    ----------
+    ws : WebSocket
+    msg : Proto
+
+    Returns
+    -------
+    Future
+        See tornado.websocket.websocket_connect. This returns a Future whose
+        result is a WebSocketClientConnection.
+    """
+    return ws.write_message(msg.SerializeToString(), binary=True)
+
+
+def build_report_id():
+    """Randomly generate a report ID."""
+    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")

@@ -1,7 +1,13 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 .streamlit-container .fixed-width {
   font-family: 'IBM Plex Mono', monospace;
-  white-space: pre-wrap;
-  font-size: 1rem;
+  white-space: pre;
+  font-size: 0.8rem;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container {
@@ -36,11 +42,11 @@
   line-height: inherit;
   margin: 0;
   max-width: auto;
-  overflow: visible;
   padding: 0;
   white-space: pre;
   word-break: normal;
   word-wrap: normal;
+  overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container blockquote {
@@ -64,11 +70,13 @@
   background: #f6f9fa;
 }
 
+/* This is used to point to the specific part of the pre.error that
+   caused an error. */
 .streamlit-container .json-text-container span.error {
   padding: 0.2em 0.4em;
   margin: 0;
-  background-color: #E6E9EE;
-  border-radius: 3px;
+  background-color: #df616d60;
+  border-bottom: 1px dashed #df616d;
 }
 
 .streamlit-container .json-text-container pre.error {
@@ -79,7 +87,7 @@
 
 .streamlit-container .react-json-view {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 15px;
+  font-size: 0.8rem;
 }
 
 .streamlit-container .alert {

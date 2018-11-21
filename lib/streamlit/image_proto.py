@@ -1,5 +1,7 @@
 # -*- coding: future_fstrings -*-
 
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """
 Converts a numpy image array and list of caption to protobuf.ImageList.
 """

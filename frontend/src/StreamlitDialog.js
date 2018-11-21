@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
 import React from 'react';
 
 import {
@@ -36,7 +41,6 @@ function StreamlitDialog({dialogProps}) {
 }
 
 function BasicDialog({children, onClose}) {
-  console.log(children);
   const isOpen = children !== undefined;
   return (
     <Modal

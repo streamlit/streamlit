@@ -1,3 +1,5 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Main handler for proxy."""
 
 # Python 2/3 compatibility
@@ -11,6 +13,7 @@ LOGGER = get_logger()
 
 from streamlit.proxy import Proxy
 
+
 def main():
     """Run Proxy main handler.
 
@@ -22,6 +25,7 @@ def main():
     LOGGER.debug('Instantiated the proxy server. About to call run_app()')
     proxy_server.run_app()
     LOGGER.debug('Finished calling run app.')
+
 
 if __name__ == '__main__':
     main()

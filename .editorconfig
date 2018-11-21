@@ -1,0 +1,30 @@
+# https://editorconfig.org/
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = lf
+charset = utf-8
+max_line_length = 79
+
+[*.py]
+indent_size = 4
+
+# The JSON files contain newlines inconsistently
+[*.json]
+insert_final_newline = ignore
+
+[**/node_modules/**]
+indent_style = ignore
+indent_size = ignore
+
+[**.min.js]
+indent_style = ignore
+insert_final_newline = ignore
+
+[Makefile]
+indent_style = tab
