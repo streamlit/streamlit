@@ -14,9 +14,7 @@ import sys
 
 st.title('Syntax error test')
 
-st.info('''
-    Uncomment the comment blocks in source code one at a time.
-''')
+st.info('Uncomment the comment blocks in the source code one at a time.')
 
 st.write('(Some top text)')
 
@@ -31,8 +29,16 @@ st.write('(Some top text)')
 # # The line below is a compile-time error. Bad indentation.
 #        this_indentation_is_wrong = True  # EXPECTED: full-screen exception.
 
+# Uncomment this as a block.
+sys.stderr.write(
+    'EXPECTED: this looks like an exception. '
+    'It will be displayed full-screen, sadly.\n')
+sys.exit(-1)
+
 # # Uncomment this as a block.
-# sys.stderr.write('EXPECTED: full screen exception.\n')
+# sys.stderr.write(
+#     'Now, EXPECTED: this does not look like an exception. '
+#     'Nothing should be displayed.\n')
 # sys.exit(-1)
 
 st.write('(Some bottom text)')

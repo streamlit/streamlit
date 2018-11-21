@@ -126,7 +126,11 @@ def _run_with_error_handler(cmd, cwd=None):
             exc_type, exc_message, exc_tb = parsed_err
             st._text_exception(exc_type, exc_message, exc_tb)
         else:
-            st.error(stderr_str)
+            # If we couldn't find the exception type, then maybe the script
+            # just returns an error code and prints something to stderr. So
+            # let's not replace the report with the contents of stderr because
+            # that would be annoying.
+            pass
 
 
 def _to_list_of_str(the_list):
@@ -185,14 +189,9 @@ def _parse_exception_text(err_str, ret_code):
             break
 
     if last_line_match is None:
-        # If we cannot find the last line, this is what we use as the exception
-        # info.
-        type_str = 'Error'
-        message_str = f'process returned with error code {ret_code}'
-        traceback_lines = err_lines
+        return None
 
-    else:
-        type_str, message_str = last_line_match.groups()
-        traceback_lines = err_lines[:-1]
+    type_str, message_str = last_line_match.groups()
+    traceback_lines = err_lines[:-1]
 
     return type_str, message_str, traceback_lines
