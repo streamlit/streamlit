@@ -159,10 +159,18 @@ class Proxy(object):
             f'About to start registration: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
 
-        # Register the connection and launch a web client if this is a new name.
-        new_name = connection.name not in self._connections
+        # Open the browser and connect it to this report_name
+        # (i.e. connction.name) if we don't have one open already.
+        if connection.name in self._connections:
+            old_connection = self._connections[connection.name]
+            if old_connection.has_browser_connections():
+                open_new_browser_connection = False
+            else:
+                open_new_browser_connection = True
+        else:
+            open_new_browser_connection = True
         self._connections[connection.name] = connection
-        if new_name:
+        if open_new_browser_connection:
             _launch_web_client(connection.name, self._auto_close_delay_secs)
 
         # Clean up the connection we don't get an incoming connection.
