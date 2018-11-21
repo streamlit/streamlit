@@ -160,7 +160,7 @@ class Proxy(object):
             f'{list(self._connections.keys())} ({id(self._connections)})')
 
         # Open the browser and connect it to this report_name
-        # (i.e. connction.name) if we don't have one open already.
+        # (i.e. connection.name) if we don't have one open already.
         open_new_browser_connection = (
             not self._has_browser_connections(connection.name))
         self._connections[connection.name] = connection
