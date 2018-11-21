@@ -18,10 +18,13 @@ from streamlit import config
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_local_id, build_report_id
+from streamlit.util import build_report_id
+from streamlit.util import get_local_id
+from streamlit.util import EXCEPTHOOK_IDENTIFIER_STR
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
+
 
 # Save the default exception handler.
 _original_excepthook = sys.excepthook
@@ -111,6 +114,7 @@ class DeltaConnection(object):
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
             dg = self.get_delta_generator()
             dg.exception(exc_value, exc_tb)
+            print(EXCEPTHOOK_IDENTIFIER_STR, file=sys.stderr)
             _original_excepthook(exc_type, exc_value, exc_tb)
 
         sys.excepthook = streamlit_excepthook

@@ -13,12 +13,14 @@ import sys
 import shlex
 import re
 
-import streamlit as st
-from streamlit import protobuf
 from streamlit import compatibility
+from streamlit import protobuf
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_local_id, build_report_id
+from streamlit.util import EXCEPTHOOK_IDENTIFIER_STR
+from streamlit.util import build_report_id
+from streamlit.util import get_local_id
+import streamlit as st
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -29,13 +31,13 @@ def run_outside_proxy_process(cmd_in, cwd=None):
 
     Parameters
     ----------
-    cmd : str | sequence of str
+    cmd : str or sequence of str
         See the args parameter of Python's subprocess.Popen for more info.
 
-    cwd : str | None
+    cwd : str or None
         The current working directory for this process.
 
-    source_file_path : str | None
+    source_file_path : str or None
         The full path to the script that is being executed. This is used so we
         can extract the name of the report.
 
@@ -64,13 +66,13 @@ def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
 
     Parameters
     ----------
-    cmd : str | sequence of str
+    cmd : str or sequence of str
         See the args parameter of Python's subprocess.Popen for more info.
 
-    cwd : str | None
+    cwd : str or None
         The current working directory for this process.
 
-    source_file_path : str | None
+    source_file_path : str or None
         The full path to the script that is being executed. This is used so we
         can extract the name of the report.
     """
@@ -101,21 +103,28 @@ def _run_with_error_handler(cmd, cwd=None):
     # (We use this instead of .wait() because .communicate() grabs *all data*
     # rather than just a small buffer worth)
     stdout, stderr = process.communicate()
-
     stderr_str = _to_str(stderr)
 
-    if process.returncode != 0 and _is_syntax_error(stderr_str):
+    # Always forward stderr and stdout to the user-visible stderr and stdout.
+
+    if stdout:
+        print(_to_str(stdout), file=sys.stdout)
+
+    if stderr:
         print(stderr_str, file=sys.stderr)
 
-        parsed_err = _parse_exception_text(stderr_str)
+    if (process.returncode != 0
+            and len(stderr_str) > 0
+            and not EXCEPTHOOK_IDENTIFIER_STR in stderr_str):
 
-        # This part of the code line needs to be done in a process separate
-        # from the Proxy process, since st.foo creates WebSocket connection.
+        parsed_err = _parse_exception_text(stderr_str, process.returncode)
+
+        # This part of the code needs to be done in a process separate from the
+        # Proxy process, since st.foo creates WebSocket connection.
 
         if parsed_err:
-            stack_trace, exception_type, message = parsed_err
-            st._text_exception(
-                exception_type, message, stack_trace.split('\n'))
+            exc_type, exc_message, exc_tb = parsed_err
+            st._text_exception(exc_type, exc_message, exc_tb)
         else:
             st.error(stderr_str)
 
@@ -131,23 +140,59 @@ def _to_str(x):
         return x
 
 
-# These are all compilation errors in Python.
-# See: https://docs.python.org/3/library/exceptions.html
-_SYNTAX_ERROR_RE = (
-    re.compile('^(SyntaxError|IndentationError|TabError): ', re.MULTILINE))
+# RegEx that matches strings that look like "Foo: bar boz"
+_EXCEPTION_RE = re.compile('([A-Z][A-Za-z0-9]*): (.*)')
 
 
-def _is_syntax_error(err_str):
-    return _SYNTAX_ERROR_RE.search(err_str) is not None
+def _parse_exception_text(err_str, ret_code):
+    """Get the exception info from a string captured from stderr.
 
+    Parameters
+    ----------
+    err_str : str
+        A string captured from stderr.
 
-# RegEx used for parsing an Exception's printout into its proper fields.
-# See: https://docs.python.org/3/library/exceptions.html
-_EXCEPTION_PARSER_ER = re.compile(
-    '(.*)^(SyntaxError|IndentationError|TabError): (.*)',
-    re.MULTILINE|re.DOTALL)
+    ret_code : int
+        The return code from of the process.
 
+    Returns
+    -------
+    tuple
+        A 3-tuple with the following components:
+        str
+            the type of the exception. Example: 'SyntaxError'.
+        str
+            the exception description.
+        list of str
+            the traceback, split into lines of text.
 
-def _parse_exception_text(err_str):
-    matches = _EXCEPTION_PARSER_ER.match(err_str)
-    return matches.groups()
+    """
+    err_lines = err_str.splitlines()
+
+    # Find the first line of the exception text.
+    try:
+        i = err_lines.index('Traceback (most recent call last):')
+        err_lines = err_lines[i + 1:]
+    except ValueError:
+        # This error gets thrown when .index() does not find the element.
+        pass
+
+    last_line_match = None
+
+    for line in reversed(err_lines):
+        last_line_match = _EXCEPTION_RE.match(line)
+        if last_line_match:
+            break
+
+    if last_line_match is None:
+        # If we cannot find the last line, this is what we use as the exception
+        # info.
+        type_str = 'Error'
+        message_str = f'process returned with error code {ret_code}'
+        traceback_lines = err_lines
+
+    else:
+        type_str, message_str = last_line_match.groups()
+        traceback_lines = err_lines[:-1]
+
+    return type_str, message_str, traceback_lines
