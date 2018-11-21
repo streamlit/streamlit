@@ -21,10 +21,9 @@ st.write('(Some top text)')
 # if True  # missing semicolon
 
 # Uncomment this as a block:
-sys.stderr.write('Hello!\n')        # Cool, this doesn't get affected by stderr,
-                                  # since it never executes!
-st.write('You should see a fullscreen exception:')
-       this_indentation_is_wrong = True
+# sys.stderr.write('Hello!\n')        # Cool, this doesn't get affected by stderr,
+#                                   # since it never executes!
+# st.write('You should see a fullscreen exception:')
+#        this_indentation_is_wrong = True
 
 st.write('(Some bottom text)')
-
