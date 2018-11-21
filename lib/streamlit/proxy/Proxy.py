@@ -36,13 +36,13 @@ import functools
 import os
 import platform
 import socket
-import subprocess
 import textwrap
 import traceback
 import urllib
 import webbrowser
 
 from streamlit.proxy.FSObserver import FSObserver
+from streamlit.proxy import process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -256,6 +256,11 @@ class Proxy(object):
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
 
+        Returns
+        -------
+        ProxyConnection
+        ReportQueue
+
         """
         connection, queue = yield self._add_client(report_name, ws)
         self._maybe_add_fs_observer(connection)
@@ -291,6 +296,11 @@ class Proxy(object):
         queue : ReportQueue
             The client queue corresponding to the closed connection.
 
+        Returns
+        -------
+        ProxyConnection
+        ReportQueue
+
         """
         self._remove_client(old_connection, old_queue)
         new_connection, new_queue = (
@@ -324,6 +334,11 @@ class Proxy(object):
             The name of the report
         ws
             The websocket object.
+
+        Returns
+        -------
+        ProxyConnection
+        ReportQueue
 
         """
         self._received_client_connection = True
@@ -514,19 +529,16 @@ def _launch_web_client(name, autoCloseDelaySecs):
 def _on_fs_event(observer, event):  # noqa: D401
     """Callback for FS events.
 
-    Note: this will run in the Observer thread (created by the watchdog module).
+    Note: this will run in the Observer thread (created by the watchdog
+    module).
     """
     LOGGER.info(
-        f'File system event: [{event.event_type}] {event.src_path}. '
-        f'Calling: {observer.key}')
+        f'File system event: [{event.event_type}] {event.src_path}.')
 
-    # TODO(thiago): Move this and similar code from BrowserWebSocket.py to a
-    # single file.
-    process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
-
-    # Required! Otherwise we end up with defunct processes.
-    # (See ps -Al | grep python)
-    process.wait()
+    process_runner.run_outside_proxy_process(
+        observer.command_line,
+        observer.cwd,
+        )
 
 
 def _get_external_ip():

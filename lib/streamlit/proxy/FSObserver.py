@@ -33,8 +33,7 @@ class FSObserver(object):
         """
         return (
             connection.cwd,
-            connection.command_line[0],
-            connection.command_line[1])
+            connection.command_line[0])
 
     def __init__(self, connection, callback):
         """Constructor.
@@ -58,6 +57,7 @@ class FSObserver(object):
         self._callback = callback
         self._is_closed = False
 
+        # Things we want to expose to the callback:
         self.command_line = connection.command_line
         self.cwd = connection.cwd
 
