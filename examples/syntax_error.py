@@ -29,11 +29,11 @@ st.write('(Some top text)')
 # # The line below is a compile-time error. Bad indentation.
 #        this_indentation_is_wrong = True  # EXPECTED: full-screen exception.
 
-# Uncomment this as a block.
-sys.stderr.write(
-    'EXPECTED: this looks like an exception. '
-    'It will be displayed full-screen, sadly.\n')
-sys.exit(-1)
+# # Uncomment this as a block.
+# sys.stderr.write(
+#     'EXPECTED: this looks like an exception. '
+#     'It will be displayed full-screen, sadly.\n')
+# sys.exit(-1)
 
 # # Uncomment this as a block.
 # sys.stderr.write(
