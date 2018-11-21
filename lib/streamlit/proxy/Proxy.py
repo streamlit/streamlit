@@ -161,14 +161,8 @@ class Proxy(object):
 
         # Open the browser and connect it to this report_name
         # (i.e. connction.name) if we don't have one open already.
-        if connection.name in self._connections:
-            old_connection = self._connections[connection.name]
-            if old_connection.has_browser_connections():
-                open_new_browser_connection = False
-            else:
-                open_new_browser_connection = True
-        else:
-            open_new_browser_connection = True
+        open_new_browser_connection = (
+            not self._has_browser_connections(connection.name))
         self._connections[connection.name] = connection
         if open_new_browser_connection:
             _launch_web_client(connection.name, self._auto_close_delay_secs)
@@ -332,14 +326,30 @@ class Proxy(object):
             self._cloud_storage = S3Connection.S3()
         return self._cloud_storage
 
-    @gen.coroutine
-    def _add_client(self, report_name, ws):
-        """Add a queue to the connection for the given report_name.
+    def _has_browser_connections(self, report_name):
+        """Check whether any browsers are connected to this report name.
 
         Parameters
         ----------
         report_name : str
             The name of the report
+
+        Returns
+        -------
+        boolean
+            True if any browsers maintain connections to this report_name.
+
+        """
+        if report_name in self._connections:
+            return self._connections[report_name].has_browser_connections()
+        else:
+            return False
+
+    @gen.coroutine
+    def _add_client(self, report_name, ws):
+        """Add a queue to the connection for the given report_name.
+
+
         ws
             The websocket object.
 

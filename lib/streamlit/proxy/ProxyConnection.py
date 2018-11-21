@@ -87,7 +87,7 @@ class ProxyConnection(object):
         Returns
         -------
         boolean
-            True if and only if we have no browser connections.
+            True if any browsers maintain connections to this queue.
 
         """
         return len(self._client_queues) > 0
