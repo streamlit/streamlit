@@ -11,5 +11,3 @@ python examples/close_and_rerun.py
 ```
 Then, please **verify that a new broser tab opened.**
 """)
-
-st.balloons()
