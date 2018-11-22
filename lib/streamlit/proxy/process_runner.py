@@ -15,12 +15,8 @@ import re
 
 from streamlit import compatibility
 from streamlit import protobuf
+from streamlit import util
 from streamlit.DeltaConnection import DeltaConnection
-from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import EXCEPTHOOK_IDENTIFIER_STR
-from streamlit.util import build_report_id
-from streamlit.util import get_local_id
-import streamlit as st
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -47,7 +43,8 @@ def run_outside_proxy_process(cmd_in, cwd=None):
     else:
         unicode_str = unicode
 
-    if type(cmd_in) in string_types or type(cmd_in) == unicode_str: # noqa: F821
+    if (type(cmd_in) in string_types  # noqa: F821
+            or type(cmd_in) == unicode_str):
         # Split string around whitespaces, but respect quotes.
         cmd_list = shlex.split(cmd_in)
     else:
@@ -75,6 +72,7 @@ def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
     source_file_path : str or None
         The full path to the script that is being executed. This is used so we
         can extract the name of the report.
+
     """
     _run_with_error_handler(cmd, cwd)
 
@@ -115,7 +113,7 @@ def _run_with_error_handler(cmd, cwd=None):
 
     if (process.returncode != 0
             and len(stderr_str) > 0
-            and not EXCEPTHOOK_IDENTIFIER_STR in stderr_str):
+            and util.EXCEPTHOOK_IDENTIFIER_STR not in stderr_str):
 
         parsed_err = _parse_exception_text(stderr_str, process.returncode)
 
@@ -123,6 +121,7 @@ def _run_with_error_handler(cmd, cwd=None):
         # Proxy process, since st.foo creates WebSocket connection.
 
         if parsed_err:
+            import streamlit as st
             exc_type, exc_message, exc_tb = parsed_err
             st._text_exception(exc_type, exc_message, exc_tb)
         else:
