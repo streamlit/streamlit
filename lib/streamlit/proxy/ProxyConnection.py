@@ -81,17 +81,31 @@ class ProxyConnection(object):
         """
         self._in_grace_period = False
 
+    def has_browser_connections(self):
+        """Check whether any browsers are connected to this ProxyConnection.
+
+        Returns
+        -------
+        boolean
+            True if any browsers maintain connections to this queue.
+
+        """
+        return len(self._client_queues) > 0
+
     def can_be_deregistered(self):
         """Check whether we can deregister this connection.
 
         Returns
         -------
         boolean
-            True if and only if we have no browser connections.
+            All conditions are met to remove this ProxyConnection from the
+            Proxy's _connections table.
 
         """
-        has_browser_connections = len(self._client_queues) > 0
-        return not (self._in_grace_period or self._has_local or has_browser_connections)
+        return not (
+            self._in_grace_period or
+            self._has_local or
+            self.has_browser_connections())
 
     def enqueue(self, delta):
         """Enqueue a delta.

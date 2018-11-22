@@ -9,12 +9,14 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
+import base58
 import contextlib
 import functools
 import os
 import pwd
 import threading
 import uuid
+
 
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
@@ -134,6 +136,7 @@ def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
 
+
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
     result = []
@@ -159,3 +162,14 @@ def write_proto(ws, msg):
         result is a WebSocketClientConnection.
     """
     return ws.write_message(msg.SerializeToString(), binary=True)
+
+
+def build_report_id():
+    """Randomly generate a report ID."""
+    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+# Magic strings used to mark exceptions that have been handled by Streamlit's
+# excepthook. These string should be printed to stderr.
+EXCEPTHOOK_IDENTIFIER_STR = (
+    'Streamlit has caught the following unhandled exception...')

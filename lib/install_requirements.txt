@@ -1,7 +1,5 @@
 backports-abc>=0.5        # via tornado
 base58>=1.0.0
-boto3>=1.4.4
-botocore>=1.5.0                  # via boto3, s3transfer
 click>=6.0
 docutils>=0.14
 enum-compat>=0.0.2
@@ -23,5 +21,10 @@ six>=1.0.0                # via protobuf, python-dateutil, singledispatch
 tokenize-rt>=2.0.0        # via future-fstrings
 tornado>=4.5.1            # used to be >=5.0.0
 tzlocal>=1.5.0
-watchdog>=0.9.0
+watchdog>=0.8.0
 toml>=0.10.0
+
+# These two are set this way to be compatible with anaconda3-5.1.0.
+# This is super brittle and we should really fix this!
+boto3<1.10.0,>=1.9.0
+botocore<1.13.0,>=1.12.49 # via boto3, s3transfer

@@ -8,12 +8,12 @@ setup_2_3_shims(globals())
 
 from streamlit import protobuf
 
-def new_report_msg(report_id, cwd, command_line, source_file_path):
-    """
-    Sends a message indicating a new report across the websocket wire.
 
-    Args
-    ----
+def new_report_msg(report_id, cwd, command_line, source_file_path):
+    """Build message indicating a new report is starting.
+
+    Parameters
+    ----------
     report_id : uuid
         ID of the new report
     cwd : str
@@ -22,6 +22,7 @@ def new_report_msg(report_id, cwd, command_line, source_file_path):
         The command line arguments used to launch the report.
     source_file_path: string
         Full path of the file that initiated the new report.
+
     """
     msg = protobuf.ForwardMsg()
     msg.new_report.id = str(report_id)

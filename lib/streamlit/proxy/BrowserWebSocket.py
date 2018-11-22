@@ -1,16 +1,24 @@
+# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Websocket handler class which the web client connects to."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 from tornado import gen
+from tornado.concurrent import futures
+from tornado.concurrent import run_on_executor
 from tornado.ioloop import IOLoop
-from tornado.concurrent import run_on_executor, futures
-from tornado.websocket import WebSocketHandler, WebSocketClosedError
-import os
+from tornado.websocket import WebSocketClosedError
+from tornado.websocket import WebSocketHandler
 
 from streamlit import config
 from streamlit import protobuf
 from streamlit.proxy import Proxy
+from streamlit.proxy import process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -73,7 +81,7 @@ class BrowserWebSocket(WebSocketHandler):
     def do_loop(self):
         """Start the proxy's main loop."""
         # How long we wait between sending more data.
-        throttle_secs = config.get_option('local.throttleSecs')
+        throttle_secs = config.get_option('client.throttleSecs')
 
         indicated_closed = False
 
@@ -131,7 +139,7 @@ class BrowserWebSocket(WebSocketHandler):
             msg.new_connection.sharing_enabled)
 
         msg.new_connection.remotely_track_usage = (
-            config.get_option('client.remotelyTrackUsage'))
+            config.get_option('browser.remotelyTrackUsage'))
         LOGGER.debug(
             'New Client Connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)
@@ -148,13 +156,11 @@ class BrowserWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                os.system('streamlit help &')
+                process_runner.run_streamlit_command('help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
-                full_command = 'cd "%s" ; %s' % \
-                    (self._connection.cwd, backend_msg.rerun_script)
-                yield self._run(full_command)
+                yield self._run(backend_msg.rerun_script)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
@@ -162,8 +168,7 @@ class BrowserWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        LOGGER.info('Running command: %s' % cmd)
-        os.system(cmd)
+        process_runner.run_outside_proxy_process(cmd, self._connection.cwd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):

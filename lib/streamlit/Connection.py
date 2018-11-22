@@ -93,7 +93,7 @@ class Connection(object):
         self._proxy_connection_status = (
             Connection._PROXY_CONNECTION_DISCONNECTED)
 
-        self._connect(uri, initial_msg, on_cleanup, on_cleanup)
+        self._connect(uri, initial_msg, on_connect, on_cleanup)
 
     def _connect(self, uri, initial_msg, on_connect, on_cleanup):
         """Connect to the proxy and set up output thread."""
@@ -172,7 +172,7 @@ class Connection(object):
     @gen.coroutine
     def _launch_proxy(self):
         """Launch the proxy server."""
-        wait_for_proxy_secs = config.get_option('local.waitForProxySecs')
+        wait_for_proxy_secs = config.get_option('client.waitForProxySecs')
         os.system('python -m streamlit.proxy &')
         LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
         yield gen.sleep(wait_for_proxy_secs)
@@ -185,7 +185,7 @@ class Connection(object):
         LOGGER.debug('Just sent an initial_msg with: ' + str(sys.argv))
 
         # Send other information across.
-        throttle_secs = config.get_option('local.throttleSecs')
+        throttle_secs = config.get_option('client.throttleSecs')
         LOGGER.debug(f'Websocket Transmit ws = {ws}')
         LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
 

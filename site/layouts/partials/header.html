@@ -1,5 +1,11 @@
-<header class="dark">
-  <div class="contents">
-    <a class="logo" href="/"><strong>stream</strong><span>lit</span></a>
-  </div>
+<header>
+  <ul class="contents">
+    {{ if .IsHome }}
+      <li>Streamlit</li>
+    {{ else }}
+      <li class="logo"><a href="/">Streamlit</a></li
+      ><li><a href="/docs">Docs</a></li
+      ><li><a href="mailto:hello@streamlit.io">Contact</a></li>
+    {{ end }}
+  </ul>
 </header>

@@ -29,7 +29,6 @@ from streamlit import protobuf
 from streamlit.Chart import Chart
 from streamlit.caseconverters import to_snake_case
 from streamlit.chartconfig import CHART_TYPES
-from streamlit.logger import get_logger
 
 EXPORT_FLAG = '__export__'
 
@@ -94,10 +93,11 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        queue : ? XXX
-            Callback when delta is generated
+        queue : callable
+            Function that enqueues Deltas.
         id : int
-            ID for deltas, or None to create a new generator (with new ID) each time
+            ID for deltas, or None to create a new generator (with new ID) each
+            time.
 
         """
         self._queue = queue
@@ -313,7 +313,7 @@ class DeltaGenerator(object):
         ----------
         exception : Exception
             The exception to display.
-        exception_traceback : Exception Traceback or None   XXX ??
+        exception_traceback : Exception Traceback or None
             If None or False, does not show display the trace. If True,
             tries to capture a trace automatically. If a Traceback object,
             displays the given traceback.
@@ -345,6 +345,22 @@ class DeltaGenerator(object):
                 'Try calling exception() within the `catch` block.']
         else:
             stack_trace = traceback.format_list(extracted_traceback)
+        element.exception.stack_trace.extend(stack_trace)
+
+    @_export
+    @_create_element
+    def _text_exception(self, element, exception_type, message, stack_trace):
+        """Display an exception.
+
+        Parameters
+        ----------
+        exception_type : str
+        message : str
+        stack_trace : list of str
+
+        """
+        element.exception.type = exception_type
+        element.exception.message = message
         element.exception.stack_trace.extend(stack_trace)
 
     @_export

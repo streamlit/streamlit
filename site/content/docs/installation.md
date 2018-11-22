@@ -1,5 +1,5 @@
 ---
-title: "Installation"
+title: "Getting started"
 weight: 1
 ---
 
@@ -32,3 +32,18 @@ finish up, we recommend you **take a minute to read that doc** since
 it is a great crash course on the most important Streamlit commands.
 
 Next, let's create our [first Streamlit report](/docs/tutorial/).
+
+## Note
+
+By default, Streamlit collects statistics about how often certain features are
+used, and sends them to our servers so we can better understand how to improve
+the product. If you would like to opt out, just type these commands in a
+terminal:
+
+```
+$ mkdir -p ~/.streamlit
+$ cat << EOF >> ~/.streamlit/config.yaml
+client:
+  remotelyTrackUsage: false
+EOF
+```

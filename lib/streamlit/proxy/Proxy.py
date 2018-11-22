@@ -36,13 +36,13 @@ import functools
 import os
 import platform
 import socket
-import subprocess
 import textwrap
 import traceback
 import urllib
 import webbrowser
 
 from streamlit.proxy.FSObserver import FSObserver
+from streamlit.proxy import process_runner
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -159,10 +159,12 @@ class Proxy(object):
             f'About to start registration: '
             f'{list(self._connections.keys())} ({id(self._connections)})')
 
-        # Register the connection and launch a web client if this is a new name.
-        new_name = connection.name not in self._connections
+        # Open the browser and connect it to this report_name
+        # (i.e. connection.name) if we don't have one open already.
+        open_new_browser_connection = (
+            not self._has_browser_connections(connection.name))
         self._connections[connection.name] = connection
-        if new_name:
+        if open_new_browser_connection:
             _launch_web_client(connection.name, self._auto_close_delay_secs)
 
         # Clean up the connection we don't get an incoming connection.
@@ -256,6 +258,12 @@ class Proxy(object):
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
 
+        Returns
+        -------
+        (ProxyConnection, ReportQueue)
+            The new connection object which manages this connection to the
+            proxy, as well as the queue this connection should write into.
+
         """
         connection, queue = yield self._add_client(report_name, ws)
         self._maybe_add_fs_observer(connection)
@@ -291,6 +299,11 @@ class Proxy(object):
         queue : ReportQueue
             The client queue corresponding to the closed connection.
 
+        Returns
+        -------
+        ProxyConnection
+        ReportQueue
+
         """
         self._remove_client(old_connection, old_queue)
         new_connection, new_queue = (
@@ -314,16 +327,37 @@ class Proxy(object):
             self._cloud_storage = S3Connection.S3()
         return self._cloud_storage
 
-    @gen.coroutine
-    def _add_client(self, report_name, ws):
-        """Add a queue to the connection for the given report_name.
+    def _has_browser_connections(self, report_name):
+        """Check whether any browsers are connected to this report name.
 
         Parameters
         ----------
         report_name : str
             The name of the report
+
+        Returns
+        -------
+        boolean
+            True if any browsers maintain connections to this report_name.
+
+        """
+        if report_name in self._connections:
+            return self._connections[report_name].has_browser_connections()
+        else:
+            return False
+
+    @gen.coroutine
+    def _add_client(self, report_name, ws):
+        """Add a queue to the connection for the given report_name.
+
+
         ws
             The websocket object.
+
+        Returns
+        -------
+        ProxyConnection
+        ReportQueue
 
         """
         self._received_client_connection = True
@@ -514,19 +548,16 @@ def _launch_web_client(name, autoCloseDelaySecs):
 def _on_fs_event(observer, event):  # noqa: D401
     """Callback for FS events.
 
-    Note: this will run in the Observer thread (created by the watchdog module).
+    Note: this will run in the Observer thread (created by the watchdog
+    module).
     """
     LOGGER.info(
-        f'File system event: [{event.event_type}] {event.src_path}. '
-        f'Calling: {observer.key}')
+        f'File system event: [{event.event_type}] {event.src_path}.')
 
-    # TODO(thiago): Move this and similar code from BrowserWebSocket.py to a
-    # single file.
-    process = subprocess.Popen(observer.command_line, cwd=observer.cwd)
-
-    # Required! Otherwise we end up with defunct processes.
-    # (See ps -Al | grep python)
-    process.wait()
+    process_runner.run_outside_proxy_process(
+        observer.command_line,
+        observer.cwd,
+        )
 
 
 def _get_external_ip():

@@ -11,6 +11,7 @@ setup_2_3_shims(globals())
 
 import ast
 import os
+import sys
 import platform
 import toml
 import urllib
@@ -113,15 +114,15 @@ def _global_log_level():
         return 'warning'
 
 
-# Config Section: Local #
+# Config Section: Client #
 
-_create_section('local', 'Settings for users to connect to Streamlit.')
+_create_section('client', 'Settings for users to connect to Streamlit.')
 
-_create_option('local.caching',
+_create_option('client.caching',
     description='Whether to enable caching to ./.streamlit/cache.',
     default_val=True)
 
-_create_option('local.displayEnabled',
+_create_option('client.displayEnabled',
     description="""
         If True, connects the WebSocket and turns on the ability to send
         data through it.
@@ -132,11 +133,11 @@ _create_option('local.displayEnabled',
         """,
     default_val=True)
 
-_create_option('local.waitForProxySecs',
+_create_option('client.waitForProxySecs',
     description='How long to wait for the proxy server to start up.',
     default_val=3.0)
 
-_create_option('local.throttleSecs',
+_create_option('client.throttleSecs',
     description='How long to wait between draining the local queue.',
     default_val=0.01)
 
@@ -323,12 +324,12 @@ def _get_default_credentials():
         return None
 
 
-# Config Section: Client #
+# Config Section: Browser #
 
-_create_section('client', 'Configuration of browser front-end.')
+_create_section('browser', 'Configuration of browser front-end.')
 
 
-_create_option('client.remotelyTrackUsage',
+_create_option('browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
 
@@ -426,6 +427,20 @@ def _parse_config_file():
     if home is None:
         raise RuntimeError('No home directory.')
     config_fileanme = os.path.join(home, '.streamlit', 'config.toml')
+
+    # DEPRECATION WARNINGL: Eventually we should get rid of this code.
+    old_config_file_exists = os.path.exists(
+        os.path.join(home, '.streamlit', 'config.yaml'))
+    this_may_be_proxy = False
+    if sys.argv[0] in ('-m', '-c'):
+        this_may_be_proxy = True
+    elif os.path.split(sys.argv[0])[1] == 'streamlit':
+        this_may_be_proxy = True
+    if old_config_file_exists and not this_may_be_proxy:
+        sys.stderr.write(
+            'Config ~/.streamlit/config.yaml is DEPRECATED. '
+            'Please remove it and use ~/.streamlit/config.toml instead. For '
+            'any quetions, please contact Streamlit support over Slack. <3\n')
 
     # Parse the config file.
     if not os.path.exists(config_fileanme):

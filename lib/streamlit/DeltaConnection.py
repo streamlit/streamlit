@@ -8,7 +8,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import base58
 import inspect
 import os
 import sys
@@ -16,16 +15,13 @@ import urllib
 import uuid
 
 from streamlit import config
+from streamlit import streamlit_msg_proto
+from streamlit import util
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.streamlit_msg_proto import new_report_msg
-from streamlit.util import get_local_id
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
-
-# Save the default exception handler.
-_original_excepthook = sys.excepthook
 
 
 class DeltaConnection(object):
@@ -50,12 +46,13 @@ class DeltaConnection(object):
             DeltaConnection()
 
         DeltaConnection._singleton.set_enabled(
-            config.get_option('local.displayEnabled'))
+            config.get_option('client.displayEnabled'))
 
         return DeltaConnection._singleton
 
     # Don't allow constructor to be called more than once.
     def __new__(cls):
+        """Constructor."""
         if DeltaConnection._singleton is not None:
             raise RuntimeError('Use .get_connection() instead')
         return super(DeltaConnection, cls).__new__(cls)
@@ -70,6 +67,7 @@ class DeltaConnection(object):
         self._is_display_enabled = None
         self._delta_generator = None
         self._connection = None
+        self._original_excepthook = None
 
     def set_enabled(self, do_enable):
         """Enable or disable this connection.
@@ -81,6 +79,7 @@ class DeltaConnection(object):
             data through it. If False, turns off the ability to send data
             through the WebSocket, but does not touch the existing WebSocket's
             actual connection, if any.
+
         """
         if do_enable == self._is_display_enabled:
             return
@@ -90,7 +89,7 @@ class DeltaConnection(object):
         self._is_display_enabled = do_enable
 
         if do_enable and self._connection is None:
-            report_id = _build_report_id()
+            report_id = util.build_report_id()
             LOGGER.debug(f'Report ID: "{report_id}"')
 
             self._connection = Connection(
@@ -112,14 +111,16 @@ class DeltaConnection(object):
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
             dg = self.get_delta_generator()
             dg.exception(exc_value, exc_tb)
-            _original_excepthook(exc_type, exc_value, exc_tb)
+            print(util.EXCEPTHOOK_IDENTIFIER_STR, file=sys.stderr)
+            self._original_excepthook(exc_type, exc_value, exc_tb)
 
+        self._original_excepthook = sys.excepthook
         sys.excepthook = streamlit_excepthook
 
     # NOTE: This is a callback that gets executed in a coroutine.
     def _on_cleanup(self):
         LOGGER.debug('Main thread ended. Restoring excepthook.')
-        sys.excepthook = _original_excepthook
+        sys.excepthook = self._original_excepthook
 
     def get_delta_generator(self):
         """Return the DeltaGenerator for this connection.
@@ -140,25 +141,29 @@ class DeltaConnection(object):
             self._connection.enqueue_delta(delta)
 
 
-def _build_report_id():
-    """Randomly generate a report ID."""
-    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
-
-
 def _build_uri(report_id):
     """Create the Proxy's WebSocket URI for this report."""
     name = _build_name(report_id)
+
     LOGGER.debug(f'Report name: "{name}"')
 
     server = config.get_option('proxy.server')
     port = config.get_option('proxy.port')
-    local_id = get_local_id()
+    local_id = util.get_local_id()
     report_name = urllib.parse.quote_plus(name)
     uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
 
     LOGGER.debug(f'Report WebSocket URI: "{uri}"')
 
     return uri
+
+
+def _convert_filename_to_name(filename):
+    """Convert Python filename to name."""
+    name = os.path.split(filename)[1]
+    if name.endswith('.py'):
+        name = name[:-3]
+    return name
 
 
 def _build_name(report_id):
@@ -169,11 +174,12 @@ def _build_name(report_id):
         name = sys.argv[1]
 
     elif len(sys.argv) >= 1:
-        name = os.path.split(sys.argv[0])[1]
-        if name.endswith('.py'):
-            name = name[:-3]
-        if name in ['__main__', 'streamlit'] and len(sys.argv) >= 2:
-            name = sys.argv[1]
+        name = _convert_filename_to_name(sys.argv[0])
+        if name in ['__main__', 'streamlit']:
+            if len(sys.argv) >= 3 and sys.argv[1] == 'run':
+                name = _convert_filename_to_name(sys.argv[2])
+            elif len(sys.argv) >= 2:
+                name = sys.argv[1]
 
     if name == '':
         name = str(report_id)
@@ -194,7 +200,8 @@ def _build_new_report_msg(report_id):
     if filename not in ('<stdin>', '<string>'):
         source_file_path = os.path.realpath(filename)
 
-    LOGGER.debug(f'source_file_path: {source_file_path}.')
-
-    return new_report_msg(
-        report_id, os.getcwd(), ['python'] + sys.argv, source_file_path)
+    return streamlit_msg_proto.new_report_msg(
+        report_id=report_id,
+        cwd=os.getcwd(),
+        command_line=sys.argv,
+        source_file_path=source_file_path)
