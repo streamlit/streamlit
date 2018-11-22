@@ -24,7 +24,7 @@ import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version
 
 # Must be at the top, to avoid circular dependency.
-from . import logger
+from streamlit import logger
 from streamlit import config
 logger.set_log_level(config.get_option('global.logLevel').upper())
 logger.init_tornado_logs()
@@ -32,9 +32,7 @@ LOGGER = logger.get_logger('root')
 
 import contextlib
 import functools
-import numpy as np
 import os
-import pandas as pd
 import re
 import sys
 import textwrap
@@ -108,10 +106,10 @@ def write(*args):
 
     """
     DATAFRAME_LIKE_TYPES = (
-        pd.DataFrame,
-        pd.Series,
-        pd.Index,
-        np.ndarray,
+        'DataFrame',
+        'Series',
+        'Index',
+        'ndarray',
     )
 
     HELP_TYPES = (
@@ -130,7 +128,7 @@ def write(*args):
         for arg in args:
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif isinstance(arg, DATAFRAME_LIKE_TYPES):
+            elif type(arg).__name__ in DATAFRAME_LIKE_TYPES:
                 flush_buffer()
                 dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
