@@ -177,11 +177,11 @@ def _parse_exception_text(err_str):
     tuple
         A 3-tuple with the following components:
         str
-            the type of the exception. Example: 'SyntaxError'.
+            The type of the exception. Example: 'SyntaxError'.
         str
-            the exception description.
+            The exception description.
         list of str
-            the traceback, split into lines of text.
+            The traceback, split into lines of text.
 
     """
     err_lines = err_str.splitlines()
