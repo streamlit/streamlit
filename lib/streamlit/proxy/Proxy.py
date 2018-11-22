@@ -294,9 +294,9 @@ class Proxy(object):
             The name of the report the client connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
-        connection : ProxyConnection
+        old_connection : ProxyConnection
             The connection object that just got closed.
-        queue : ReportQueue
+        old_queue : ReportQueue
             The client queue corresponding to the closed connection.
 
         Returns
