@@ -24,10 +24,6 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-# This is where we'll save the default exception handler.
-_original_excepthook = None
-
-
 class DeltaConnection(object):
     """Represents a single connection to the server for a single report.
 
@@ -71,6 +67,7 @@ class DeltaConnection(object):
         self._is_display_enabled = None
         self._delta_generator = None
         self._connection = None
+        self._original_excepthook = None
 
     def set_enabled(self, do_enable):
         """Enable or disable this connection.
@@ -115,16 +112,15 @@ class DeltaConnection(object):
             dg = self.get_delta_generator()
             dg.exception(exc_value, exc_tb)
             print(util.EXCEPTHOOK_IDENTIFIER_STR, file=sys.stderr)
-            _original_excepthook(exc_type, exc_value, exc_tb)
+            self._original_excepthook(exc_type, exc_value, exc_tb)
 
-        global _original_excepthook
-        _original_excepthook = sys.excepthook
+        self._original_excepthook = sys.excepthook
         sys.excepthook = streamlit_excepthook
 
     # NOTE: This is a callback that gets executed in a coroutine.
     def _on_cleanup(self):
         LOGGER.debug('Main thread ended. Restoring excepthook.')
-        sys.excepthook = _original_excepthook
+        sys.excepthook = self._original_excepthook
 
     def get_delta_generator(self):
         """Return the DeltaGenerator for this connection.
