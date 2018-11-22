@@ -22,6 +22,25 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
+# String that Python prints at the beginning of a trace dump. This is not
+# guaranteed to be present in all exceptions.
+_TRACE_START_STR = 'Traceback (most recent call last):'
+
+
+# When an exception prints to stderr, the printed traceback contains lines
+# like:
+#   File "foo/bar.py", line 30
+#   File "foo/bar.py", line 30, in module foo
+# This RegEx matches those, in multiline strings.
+# NOTE: these kinds of lines seem to print out for all exceptions.
+_TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
+
+
+# RegEx that matches strings that look like "Foo: bar boz"
+# This RegEx is meant to be used in single-line strings.
+_EXCEPTION_LINE_RE = re.compile('([A-Z][A-Za-z0-9]+): (.*)')
+
+
 def run_outside_proxy_process(cmd_in, cwd=None):
     """Open a subprocess that will call `streamlit run` on a script.
 
@@ -111,11 +130,13 @@ def _run_with_error_handler(cmd, cwd=None):
     if stderr:
         print(stderr_str, file=sys.stderr)
 
-    if (process.returncode != 0
-            and len(stderr_str) > 0
+    if (process.returncode != 0 and len(stderr_str) > 0
+            # Look for magic string to check whether stderr has exception.
+            and _TRACE_FILE_LINE_RE.search(stderr_str)
+            # Only parse exceptions that were not handled by Streamlit already.
             and util.EXCEPTHOOK_IDENTIFIER_STR not in stderr_str):
 
-        parsed_err = _parse_exception_text(stderr_str, process.returncode)
+        parsed_err = _parse_exception_text(stderr_str)
 
         # This part of the code needs to be done in a process separate from the
         # Proxy process, since st.foo creates WebSocket connection.
@@ -143,20 +164,13 @@ def _to_str(x):
         return x
 
 
-# RegEx that matches strings that look like "Foo: bar boz"
-_EXCEPTION_RE = re.compile('([A-Z][A-Za-z0-9]*): (.*)')
-
-
-def _parse_exception_text(err_str, ret_code):
+def _parse_exception_text(err_str):
     """Get the exception info from a string captured from stderr.
 
     Parameters
     ----------
     err_str : str
         A string captured from stderr.
-
-    ret_code : int
-        The return code from of the process.
 
     Returns
     -------
@@ -174,7 +188,7 @@ def _parse_exception_text(err_str, ret_code):
 
     # Find the first line of the exception text.
     try:
-        i = err_lines.index('Traceback (most recent call last):')
+        i = err_lines.index(_TRACE_START_STR)
         err_lines = err_lines[i + 1:]
     except ValueError:
         # This error gets thrown when .index() does not find the element.
@@ -182,15 +196,17 @@ def _parse_exception_text(err_str, ret_code):
 
     last_line_match = None
 
-    for line in reversed(err_lines):
-        last_line_match = _EXCEPTION_RE.match(line)
+    # Find the last line of the exception text.
+    for i, line in enumerate(err_lines):
+        last_line_match = _EXCEPTION_LINE_RE.match(line)
         if last_line_match:
             break
 
     if last_line_match is None:
         return None
 
+    # Finally, parse exception text.
     type_str, message_str = last_line_match.groups()
-    traceback_lines = err_lines[:-1]
+    traceback_lines = err_lines[:i]
 
     return type_str, message_str, traceback_lines
