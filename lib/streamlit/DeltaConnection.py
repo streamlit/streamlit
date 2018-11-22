@@ -26,8 +26,8 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-# Save the default exception handler.
-_original_excepthook = sys.excepthook
+# This is where we'll save the default exception handler.
+_original_excepthook = None
 
 
 class DeltaConnection(object):
@@ -117,6 +117,8 @@ class DeltaConnection(object):
             print(EXCEPTHOOK_IDENTIFIER_STR, file=sys.stderr)
             _original_excepthook(exc_type, exc_value, exc_tb)
 
+        global _original_excepthook
+        _original_excepthook = sys.excepthook
         sys.excepthook = streamlit_excepthook
 
     # NOTE: This is a callback that gets executed in a coroutine.
