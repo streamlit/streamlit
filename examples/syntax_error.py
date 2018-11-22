@@ -34,11 +34,11 @@ st.write('(Some top text)')
 # st.write('EXPECTED: You should see no error')
 # sys.exit(-1)
 
-# # Uncomment this as a block.
-sys.stderr.write('Traceback (most recent call last):\n')  # Not required
-sys.stderr.write('  File "foo/bar.py", line 30, in module foo\n')  # Required
-sys.stderr.write('--> EXPECTED: full-screen exception\n')  # Not required
-sys.stderr.write('FakeError: This looks like an exception.\n')  # Required
-sys.exit(-1)
+# # # Uncomment this as a block.
+# sys.stderr.write('Traceback (most recent call last):\n')  # Not required
+# sys.stderr.write('  File "foo/bar.py", line 30, in module foo\n')  # Required
+# sys.stderr.write('--> EXPECTED: full-screen exception\n')  # Not required
+# sys.stderr.write('FakeError: This looks like an exception.\n')  # Required
+# sys.exit(-1)
 
 st.write('(Some bottom text)')
