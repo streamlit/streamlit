@@ -8,7 +8,6 @@ from future.types import newbytes
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import numpy as np
 import io
 import base64
 
@@ -35,7 +34,7 @@ def marshall(proto, data):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         b64encodable = data.read()
-    elif isinstance(data, np.ndarray):
+    elif type(data).__name__ == 'ndarray':
         b64encodable = data
     else:
         raise RuntimeError('Invalid binary data format: %s' % type(data))

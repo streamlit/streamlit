@@ -12,19 +12,11 @@ setup_2_3_shims(globals())
 from functools import wraps
 import io
 import json
-import math
-import numpy as np
-import pandas as pd
 import random
 import sys
 import textwrap
 import traceback
 
-from streamlit import DeckGlChart
-from streamlit import VegaLiteChart
-from streamlit import data_frame_proto
-from streamlit import generic_binary_proto
-from streamlit import image_proto
 from streamlit import protobuf
 from streamlit.Chart import Chart
 from streamlit.caseconverters import to_snake_case
@@ -373,6 +365,7 @@ class DeltaGenerator(object):
             The dataframe to display.
 
         """
+        from streamlit import data_frame_proto
         def set_data_frame(element):
             data_frame_proto.marshall_data_frame(df, element.data_frame)
         return self._new_element(set_data_frame)
@@ -402,6 +395,7 @@ class DeltaGenerator(object):
             foo={'bar': {'bar': 123}}.
 
         """
+        from streamlit import VegaLiteChart
         VegaLiteChart.marshall(element.vega_lite_chart, data, spec, **kwargs)
 
     @_export
@@ -416,6 +410,7 @@ class DeltaGenerator(object):
             the usual case, this function will render the global plot.
 
         """
+        from streamlit import image_proto
         try:
             import matplotlib  # noqa: F401
             import matplotlib.pyplot as plt
@@ -459,6 +454,7 @@ class DeltaGenerator(object):
             Clamp the image to the given range.
 
         """
+        from streamlit import image_proto
         if use_column_width:
             width = -2
         elif width is None:
@@ -491,6 +487,7 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
+        from streamlit import generic_binary_proto
         generic_binary_proto.marshall(element.audio, data)
         element.audio.format = format
 
@@ -512,6 +509,7 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
+        from streamlit import generic_binary_proto
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
@@ -570,6 +568,7 @@ class DeltaGenerator(object):
             The points to display. Must have 'lat' and 'lon' columns.
 
         """
+        from streamlit import data_frame_proto
         LAT_LON = ['lat', 'lon']
         assert set(points.columns) >= set(LAT_LON), \
             'Map points must contain "lat" and "lon" columns.'
@@ -645,6 +644,7 @@ class DeltaGenerator(object):
                 }])
 
         """
+        from streamlit import DeckGlChart
         DeckGlChart.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_export
@@ -658,6 +658,7 @@ class DeltaGenerator(object):
             The table data.
 
         """
+        from streamlit import data_frame_proto
         data_frame_proto.marshall_data_frame(df, element.table)
 
     def add_rows(self, df):
@@ -669,6 +670,7 @@ class DeltaGenerator(object):
             The table to concat.
 
         """
+        from streamlit import data_frame_proto
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
         delta = protobuf.Delta()

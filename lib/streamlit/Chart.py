@@ -55,8 +55,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import pandas as pd
-
 from streamlit import data_frame_proto
 from streamlit.ChartComponent import ChartComponent
 from streamlit.DictBuilder import ForEachColumn, ValueCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME, INDEX_COLUMN_DESIGNATOR
@@ -97,6 +95,7 @@ class Chart(object):
             top-level element.
 
         """
+        import pandas as pd
         assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
         self._type = type
@@ -229,7 +228,7 @@ def register_component(component_name, implemented):
 
     register_component('baz', False)
     c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
-    
+
     """
     def append_component_method(self, **props):
         if implemented:

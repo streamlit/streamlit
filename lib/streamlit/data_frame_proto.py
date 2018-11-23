@@ -11,11 +11,12 @@ setup_2_3_shims(globals())
 
 from streamlit.logger import get_logger
 
-import numpy as np
-import pandas as pd
 import tzlocal
 
 LOGGER = get_logger()
+
+np = None
+pd = None
 
 
 def marshall_data_frame(df, proto_df):
@@ -29,6 +30,12 @@ def marshall_data_frame(df, proto_df):
         Output. The protobuf for a Streamlit DataFrame proto.
 
     """
+    import numpy
+    import pandas
+    global pd, np
+    np = numpy
+    pd = pandas
+
     if type(df) is pd.DataFrame:
         pandas_df = df
     elif type(df) is np.ndarray and len(df.shape) == 0:
