@@ -118,10 +118,10 @@ class Proxy(object):
         http_server.listen(port)
         LOGGER.info('Proxy http server started on port {}'.format(port))
 
-        # Remember whether we've seen any client connections so that we can
+        # Remember whether we've seen any browser connections so that we can
         # display a helpful warming message if the proxy closed without having
         # received any connections.
-        self._received_client_connection = False
+        self._received_browser_connection = False
 
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
@@ -134,7 +134,7 @@ class Proxy(object):
 
         # Give the user a helpful hint if no connection was received.
         headless = config.get_option('proxy.isRemote')
-        if headless and not self._received_client_connection:
+        if headless and not self._received_browser_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
                   f'Please go to {HELP_DOC} for debugging hints.')
@@ -152,7 +152,7 @@ class Proxy(object):
     def register_proxy_connection(self, connection):
         """Register this connection's name.
 
-        So that client connections can connect to it.
+        So that browser connections can connect to it.
         """
         LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
         LOGGER.debug(
@@ -165,7 +165,7 @@ class Proxy(object):
             not self._has_browser_connections(connection.name))
         self._connections[connection.name] = connection
         if open_new_browser_connection:
-            _launch_web_client(connection.name, self._auto_close_delay_secs)
+            _launch_web_browser(connection.name, self._auto_close_delay_secs)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -249,12 +249,12 @@ class Proxy(object):
 
     @gen.coroutine
     def on_browser_connection_opened(self, report_name, ws):  # noqa: D401
-        """Called when a client connection is opened.
+        """Called when a browser connection is opened.
 
         Parameters
         ----------
         report_name : str
-            The name of the report the client connection is for.
+            The name of the report the browser connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
 
@@ -265,19 +265,19 @@ class Proxy(object):
             proxy, as well as the queue this connection should write into.
 
         """
-        connection, queue = yield self._add_client(report_name, ws)
+        connection, queue = yield self._register_browser(report_name, ws)
         self._maybe_add_fs_observer(connection)
         raise gen.Return((connection, queue))
 
     def on_browser_connection_closed(self, connection, queue):  # noqa: D401
-        """Called when a client connection is closed.
+        """Called when a browser connection is closed.
 
         Parameters
         ----------
         connection : ProxyConnection
-            The connection object for the client that just got closed.
+            The ProxyConnection for the browser connection that just closed.
         queue : ReportQueue
-            The queue for the closed client.
+            The queue for the closed browser connection.
 
         """
         self._remove_fs_observer(connection)
@@ -291,7 +291,7 @@ class Proxy(object):
         Parameters
         ----------
         report_name : str
-            The name of the report the client connection is for.
+            The name of the report the browser connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
         old_connection : ProxyConnection
@@ -307,7 +307,7 @@ class Proxy(object):
         """
         self._remove_client(old_connection, old_queue)
         new_connection, new_queue = (
-            yield self._add_client(report_name, ws))
+            yield self._register_browser(report_name, ws))
         raise gen.Return((new_connection, new_queue))
 
     def get_cloud_storage(self):
@@ -347,7 +347,7 @@ class Proxy(object):
             return False
 
     @gen.coroutine
-    def _add_client(self, report_name, ws):
+    def _register_browser(self, report_name, ws):
         """Add a queue to the connection for the given report_name.
 
 
@@ -360,7 +360,7 @@ class Proxy(object):
         ReportQueue
 
         """
-        self._received_client_connection = True
+        self._received_browser_connection = True
         connection = self._connections[report_name]
         queue = connection.add_client_queue()
 
@@ -515,7 +515,7 @@ def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
         '''))
 
 
-def _launch_web_client(name, autoCloseDelaySecs):
+def _launch_web_browser(name, autoCloseDelaySecs):
     """Launch a web browser to connect to the proxy to get the named report.
 
     Parameters
