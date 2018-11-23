@@ -41,7 +41,9 @@ def run_commands(section_header, commands):
     st.subheader(section_header)
     for command in commands:
         st.text(command)
+        print(f'Running `{command}`...')
         st.write('- Running...')
+
         os.system(command)
         st.write('- **Done.**')
 

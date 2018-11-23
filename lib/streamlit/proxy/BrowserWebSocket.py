@@ -60,7 +60,7 @@ class BrowserWebSocket(WebSocketHandler):
 
             # Get a ProxyConnection object to coordinate sending deltas over this report name.
             self._connection, self._queue = (
-                yield self._proxy.on_client_opened(self._report_name, self))
+                yield self._proxy.on_browser_connection_opened(self._report_name, self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
@@ -112,7 +112,7 @@ class BrowserWebSocket(WebSocketHandler):
             pass
 
         if self._connection is not None:
-            self._proxy.on_client_closed(self._connection, self._queue)
+            self._proxy.on_browser_connection_closed(self._connection, self._queue)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
@@ -135,13 +135,13 @@ class BrowserWebSocket(WebSocketHandler):
         msg.new_connection.sharing_enabled = (
             config.get_option('s3.sharingEnabled'))
         LOGGER.debug(
-            'New Client Connection: sharing_enabled=%s' %
+            'New browser connection: sharing_enabled=%s' %
             msg.new_connection.sharing_enabled)
 
         msg.new_connection.remotely_track_usage = (
             config.get_option('browser.remotelyTrackUsage'))
         LOGGER.debug(
-            'New Client Connection: remotely_track_usage=%s' %
+            'New browser connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
