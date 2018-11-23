@@ -59,6 +59,7 @@ frontend/src/protobuf.js
 ########################################################################
 .streamlit/
 lib/streamlit/static
+storage/
 
 # Data Files
 **/uber-raw-data-sep14.csv
