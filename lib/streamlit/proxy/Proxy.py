@@ -281,7 +281,7 @@ class Proxy(object):
 
         """
         self._remove_fs_observer(connection)
-        self._remove_client(connection, queue)
+        self._deregister_browser(connection, queue)
 
     @gen.coroutine
     def on_browser_waiting_for_proxy_conn(  # noqa: D401
@@ -305,7 +305,7 @@ class Proxy(object):
         ReportQueue
 
         """
-        self._remove_client(old_connection, old_queue)
+        self._deregister_browser(old_connection, old_queue)
         new_connection, new_queue = (
             yield self._register_browser(report_name, ws))
         raise gen.Return((new_connection, new_queue))
@@ -362,7 +362,7 @@ class Proxy(object):
         """
         self._received_browser_connection = True
         connection = self._connections[report_name]
-        queue = connection.add_client_queue()
+        queue = connection.add_browser_queue()
 
         yield write_proto(
             ws,
@@ -377,9 +377,9 @@ class Proxy(object):
 
         raise gen.Return((connection, queue))
 
-    def _remove_client(self, connection, queue):
+    def _deregister_browser(self, connection, queue):
         """Remove queue from connection and close connection if necessary."""
-        connection.remove_client_queue(queue)
+        connection.remove_browser_queue(queue)
         LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
 

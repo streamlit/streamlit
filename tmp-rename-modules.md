@@ -1,13 +1,5 @@
 **Note** This file will be deleted! Reviewers, please ignore! These are just notes fro me as I work on this renaming project.
 
-### Step 4
-
-- `_remove_client(` -> `_deregister_browser(`
-- `The name of the report the browser connection is for.` -> `The name of the report the browser connection is for.`
-- `add_client_queue(` -> `add_browser_queue(`
-- `remove_client_queue(` -> `remove_browser_queue(`
-- `self._client_queues` -> `self._browser_queues`
-
 # NEXT REPLACEMENT
 
 - `One "local" connection to the python libs.` -> `One ClientWebSocket connection to the client python libs.`
