@@ -11,12 +11,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-# import numpy as np
-import PIL
 import urllib
 from io import BytesIO
-
-# import sys
 
 import streamlit as st
 
@@ -200,8 +196,9 @@ def display_reference():
 
     if image_bytes is not None:
         with st.echo():
-            # Make it obvious that its PIL ie PIL.Image vs just Image.
-            image = PIL.Image.open(BytesIO(image_bytes))
+            # For some reason, `PIL` requires you to import `Image` this way.
+            from PIL import Image
+            image = Image.open(BytesIO(image_bytes))
 
             st.image(image, caption='Sunset', use_column_width=True)
 

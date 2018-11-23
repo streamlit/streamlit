@@ -157,10 +157,16 @@ def send_message(ws, msg):
         send_exception(ws, msg, 'RuntimeError', 'Data too large')
         return
 
+    ws.write_message(msg_str, binary=True)
+
     try:
         ws.write_message(msg_str, binary=True)
     except Exception as e:
-        send_exception(ws, msg, type(e), e.message)
+        try:
+            exception_message = e.message
+        except AttributeError:
+            exception_message = str(e)
+        send_exception(ws, msg, type(e), exception_message)
 
 
 def send_exception(ws, msg, exception_type, exception_message):
@@ -172,7 +178,7 @@ def send_exception(ws, msg, exception_type, exception_message):
 
     emsg = protobuf.ForwardMsg()
     emsg.delta.id = delta_id
-    emsg.delta.new_element.exception.type = exception_type
+    emsg.delta.new_element.exception.type = str(exception_type)
     emsg.delta.new_element.exception.message = exception_message
 
     ws.write_message(emsg.SerializeToString(), binary=True)
