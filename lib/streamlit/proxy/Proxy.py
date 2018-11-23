@@ -6,7 +6,7 @@
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
 objects. A ProxyConnection always has:
 
-    - One "local" connection to the python libs.
+    - One ClientWebSocket connection to the client python libs.
     - Zero or more BrowserWebSocket connections to a web browser.
 
 Essentially, the ProxyConnection stays open so long as any of those connections
@@ -90,12 +90,13 @@ class Proxy(object):
 
         # Set up HTTP routes
         routes = [
-            # Local connection to stream a new report.
+            # Incoming client connection to stream a new report.
             ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
 
-            # Outgoing endpoint to get the latest report.
+            # Outgoing browser endpoint to get the latest report.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
+            # Test the health of the proxy.
             ('/healthz', HealthHandler),
         ]
         if not config.get_option('proxy.useNode'):
@@ -382,7 +383,7 @@ class Proxy(object):
         self.schedule_potential_deregister_and_stop(connection)
 
     def _maybe_add_fs_observer(self, connection):
-        """Start observing filesystem and store observer in local map.
+        """Start observing filesystem and store observer in self._fs_observers.
 
         Obeys config option proxy.watchFileSystem. If False, does not observe.
 

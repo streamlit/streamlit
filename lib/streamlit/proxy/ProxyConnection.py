@@ -2,7 +2,7 @@
 
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""Stores information about local and client connections for a report."""
+"""Stores information about client and browser connections for a report."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -14,7 +14,7 @@ import json
 from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
-from streamlit.util import get_local_id
+from streamlit import util
 LOGGER = get_logger()
 
 
@@ -53,7 +53,7 @@ class ProxyConnection(object):
         # The name for this report.
         self.name = name
 
-        # When the local connection ends, this flag becomes false.
+        # When the client connection ends, this flag becomes false.
         self._has_local = True
 
         # Before recieving connection and the the timeout hits, the connection
@@ -67,7 +67,7 @@ class ProxyConnection(object):
         self._browser_queues = []
 
     def close_local_connection(self):
-        """Close local connection."""
+        """Close the client connection."""
         self._has_local = False
         self._master_queue.close()
         for queue in self._browser_queues:
@@ -164,10 +164,10 @@ class ProxyConnection(object):
         """
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
-        local_id = str(get_local_id())
+        client_id = str(util.get_local_id())
         manifest = dict(
             name=self.name,
-            local_id=local_id,
+            client_id=client_id,
             nDeltas=len(deltas)
         )
         return (

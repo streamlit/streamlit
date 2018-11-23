@@ -129,7 +129,7 @@ class BrowserWebSocket(WebSocketHandler):
 
     @gen.coroutine
     def _send_new_connection_msg(self):
-        """Send message to browser with local configuration settings."""
+        """Send message to browser with client configuration settings."""
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.sharing_enabled = (
