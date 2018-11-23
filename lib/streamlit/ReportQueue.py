@@ -157,8 +157,6 @@ def send_message(ws, msg):
         send_exception(ws, msg, 'RuntimeError', 'Data too large')
         return
 
-    ws.write_message(msg_str, binary=True)
-
     try:
         ws.write_message(msg_str, binary=True)
     except Exception as e:
