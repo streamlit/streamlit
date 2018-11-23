@@ -153,26 +153,28 @@ def send_message(ws, msg):
     """Sends msg via the websocket"""
     msg_str = msg.SerializeToString()
 
-    if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        send_exception(ws, msg, 'RuntimeError', 'Data too large')
-        return
+    # if len(msg_str) > MESSAGE_SIZE_LIMIT:
+    #     send_exception(ws, msg, 'RuntimeError', 'Data too large')
+    #     return
 
-    try:
-        ws.write_message(msg_str, binary=True)
-    except Exception as e:
-        send_exception(ws, msg, type(e), e.message)
+    ws.write_message(msg_str, binary=True)
 
-
-def send_exception(ws, msg, exception_type, exception_message):
-    """Sends an exception via websocket in place of msg"""
-    if msg.delta is not None:
-        delta_id = msg.delta.id
-    else:
-        delta_id = 0
-
-    emsg = protobuf.ForwardMsg()
-    emsg.delta.id = delta_id
-    emsg.delta.new_element.exception.type = exception_type
-    emsg.delta.new_element.exception.message = exception_message
-
-    ws.write_message(emsg.SerializeToString(), binary=True)
+#     try:
+#         ws.write_message(msg_str, binary=True)
+#     except Exception as e:
+#         send_exception(ws, msg, type(e), e.message)
+#
+#
+# def send_exception(ws, msg, exception_type, exception_message):
+#     """Sends an exception via websocket in place of msg"""
+#     if msg.delta is not None:
+#         delta_id = msg.delta.id
+#     else:
+#         delta_id = 0
+#
+#     emsg = protobuf.ForwardMsg()
+#     emsg.delta.id = delta_id
+#     emsg.delta.new_element.exception.type = exception_type
+#     emsg.delta.new_element.exception.message = exception_message
+#
+#     ws.write_message(emsg.SerializeToString(), binary=True)
