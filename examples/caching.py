@@ -24,6 +24,13 @@ check_if_cached()
 
 if cache_was_hit:
     st.warning('You must clear your cache before you run this script!')
+    st.write('''
+        Use the command below to clear the cache:
+        ```
+        streamlit clear_cache
+        ```
+        ...and then press `R` on this page to rerun.
+    ''')
 else:
     st.subheader('Test that basic caching works')
     before = num_executions
