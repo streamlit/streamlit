@@ -6,7 +6,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from copy import deepcopy
-import numpy as np
 
 CURRENT_COLUMN_NAME = '__current_column_name__'
 CURRENT_COLUMN_NUMBER = '__current_column_number__'
@@ -237,7 +236,7 @@ def get_first_match(available_names, wanted_names):
 def guess_column_type(df, i):
     dtype = df.dtypes[i]
 
-    if dtype == np.int64:
+    if type(dtype).__name__ == 'int64':
         return 'ordinal'
 
     return 'quantitative'
