@@ -142,7 +142,10 @@ Test that it works:
 make install
 python examples/run_all_examples.py
 ```
-Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
+Check that all elements and figure work properly
+and everything should run over port `8501`.
+
+**Note:** It's fine to `ctrl-C` kill `mnist-cnn.py` becuase it runs for so long.
 
 #### Build the Wheel and Test That
 
