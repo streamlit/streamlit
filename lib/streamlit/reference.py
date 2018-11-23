@@ -196,6 +196,7 @@ def display_reference():
 
     if image_bytes is not None:
         with st.echo():
+            # For some reason, `PIL` requires you to import `Image` this way.
             from PIL import Image
             image = Image.open(BytesIO(image_bytes))
 
