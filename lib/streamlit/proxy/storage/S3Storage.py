@@ -17,6 +17,7 @@ import os
 
 from tornado import gen
 from tornado.concurrent import run_on_executor, futures
+
 from streamlit import errors
 from streamlit import config
 from streamlit.proxy.storage.AbstractStorage import AbstractStorage
@@ -58,9 +59,13 @@ class S3Storage(AbstractStorage):
             self._key_prefix = self._key_prefix.replace('{USER}', user)
 
         if not self._url:
-            self._s3_url = os.path.join('https://%s.%s' % (self._bucketname, 's3.amazonaws.com'), self._s3_key('index.html'))
+            self._s3_url = os.path.join(
+                'https://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
+                self._s3_key('index.html'))
         else:
-            self._s3_url = os.path.join(self._url, self._s3_key('index.html', add_prefix=False))
+            self._s3_url = os.path.join(
+                self._url,
+                self._s3_key('index.html', add_prefix=False))
 
         aws_profile = config.get_option('s3.profile')
         access_key_id = config.get_option('s3.accessKeyId')
@@ -71,16 +76,18 @@ class S3Storage(AbstractStorage):
             secret_access_key = config.get_option('s3.secretAccessKey')
             self._s3_client = boto3.client(
                 's3',
-                 aws_access_key_id=access_key_id,
-                 aws_secret_access_key=secret_access_key)
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key)
         else:
             LOGGER.debug(f'Using default AWS profile.')
             self._s3_client = boto3.client('s3')
 
     @run_on_executor
     def _get_static_upload_files(self):
-        """Returns a list of static files to upload, or an empty list if they're
-        already uploaded."""
+        """Return a list of static files to upload.
+
+        Returns an empty list if the files are already uploaded.
+        """
         try:
             self._s3_client.head_object(
                 Bucket=self._bucketname,
@@ -120,7 +127,9 @@ class S3Storage(AbstractStorage):
                 yield self._create_bucket()
 
         except botocore.exceptions.NoCredentialsError:
-            LOGGER.error('please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" environment variables')
+            LOGGER.error(
+                'please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
+                'environment variables')
             raise errors.S3NoCredentials
 
     def _s3_key(self, relative_path, add_prefix=True):

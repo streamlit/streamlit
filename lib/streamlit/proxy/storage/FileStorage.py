@@ -8,12 +8,13 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import os
 import math
+import os
 
 from tornado import gen, concurrent
-from streamlit import errors
+
 from streamlit import config
+from streamlit import errors
 from streamlit.proxy.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger

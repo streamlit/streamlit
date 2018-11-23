@@ -12,9 +12,9 @@ import base58
 import hashlib
 import os
 
-import streamlit
-
 from tornado import gen
+
+import streamlit
 from streamlit import errors
 
 from streamlit.logger import get_logger
@@ -31,7 +31,8 @@ class AbstractStorage(object):
 
         self._static_dir = static_dir
         self._static_files = static_files
-        self._release_hash = '%s-%s' % (streamlit.__version__,
+        self._release_hash = '%s-%s' % (
+            streamlit.__version__,
             base58.b58encode(md5.digest()[:3]).decode("utf-8"))
 
     def _get_static_dir(self):
