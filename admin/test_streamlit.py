@@ -18,9 +18,6 @@ EXAMPLE_DIR = 'examples'
 
 # These are all the files we excliude
 EXCLUDED_FILENAMES = (
-    # Exclude this file so we don't run ourselves recursively,
-    os.path.split(sys.argv[0])[1],
-
     # Exclude mnist becuase it takes so long to run.
     'mnist-cnn.py',
 
