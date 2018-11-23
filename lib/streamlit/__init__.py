@@ -43,7 +43,6 @@ import types
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
-from streamlit.caching import set_allow_caching as _set_allow_caching
 from streamlit.util import escape_markdown
 
 
