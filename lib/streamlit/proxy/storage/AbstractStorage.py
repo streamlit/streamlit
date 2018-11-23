@@ -21,7 +21,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class AbstractCloudStorage(object):
+class AbstractStorage(object):
     """Abstract cloud storage class."""
 
     def __init__(self):

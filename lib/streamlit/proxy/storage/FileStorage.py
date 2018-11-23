@@ -14,13 +14,13 @@ import math
 from tornado import gen, concurrent
 from streamlit import errors
 from streamlit import config
-from streamlit.proxy.storage.AbstractCloudStorage import AbstractCloudStorage
+from streamlit.proxy.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class FileStorage(AbstractCloudStorage):
+class FileStorage(AbstractStorage):
     """Class to store reports in local storage, for testing."""
 
     def __init__(self):
@@ -42,7 +42,7 @@ class FileStorage(AbstractCloudStorage):
     def save_report_files(self, report_id, files, progress_coroutine=None):
         """Save files related to a given report.
 
-        See CloudStorage for docs.
+        See AbstractStorage for docs.
         """
         report_path = None
 

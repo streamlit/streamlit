@@ -19,13 +19,13 @@ from tornado import gen
 from tornado.concurrent import run_on_executor, futures
 from streamlit import errors
 from streamlit import config
-from streamlit.proxy.storage.AbstractCloudStorage import AbstractCloudStorage
+from streamlit.proxy.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class S3Storage(AbstractCloudStorage):
+class S3Storage(AbstractStorage):
     """Class to handle S3 uploads."""
 
     executor = futures.ThreadPoolExecutor(5)
@@ -134,7 +134,7 @@ class S3Storage(AbstractCloudStorage):
     def save_report_files(self, report_id, files, progress_coroutine=None):
         """Save files related to a given report.
 
-        See CloudStorage for docs.
+        See AbstractStorage for docs.
         """
         yield self._s3_init()
         files_to_upload = yield self._get_static_upload_files()
