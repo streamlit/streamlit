@@ -16,22 +16,55 @@ import streamlit as st
 # Where we expect to find the example files.
 EXAMPLE_DIR = 'examples'
 
-# Exclude this file from being run.
-THIS_FILENAME = os.path.split(sys.argv[0])[1]
+# These are all the files we excliude
+EXCLUDED_FILENAMES = (
+    # Exclude this file so we don't run ourselves recursively,
+    os.path.split(sys.argv[0])[1],
 
-# Run all the files in the EXAMPLE_DIR directory
+    # Exclude mnist becuase it takes so long to run.
+    'mnist-cnn.py',
+
+    # Exclude caching because we special case it.
+    'caching.py',
+)
+
 st.title('Running All Examples')
 
-for filename in os.listdir(EXAMPLE_DIR):
-    if filename == THIS_FILENAME or not filename.endswith('.py'):
-        continue
-    filename = os.path.join(EXAMPLE_DIR, filename)
-    st.write('Running `%s`...' % filename)
-    if filename in ['examples/mnist-cnn.py']:
-        st.write('**Excluding %s.**' % filename)
-        continue
-    else:
-        os.system('python %s' % filename)
-        st.write('Done.')
-st.success('Ran all examples files....')
-st.balloons()
+st.header('Important Note')
+
+st.warning("""
+    We are not testing `streamlit kill_proxy` because it would mess with this
+    test.
+""")
+
+st.header('Running Commands')
+
+def run_commands(section_header, commands):
+    """Run a list of commands, displaying them within the given section."""
+    st.subheader(section_header)
+    for command in commands:
+        st.text(command)
+        st.write('- Running...')
+        os.system(command)
+        st.write('- **Done.**')
+
+# First run the 'streamlit commands'
+run_commands('Basic Commands', [
+    'streamlit version',
+    'streamlit help'
+])
+
+run_commands('Examples', [
+    f'streamlit run examples/{filename}'
+        for filename in os.listdir(EXAMPLE_DIR)
+        if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+])
+
+run_commands('Caching', [
+    'streamlit clear_cache',
+    'streamlit run examples/caching.py'
+])
+
+run_commands('MNIST', [
+    'streamlit run examples/mnist-cnn.py'
+])
