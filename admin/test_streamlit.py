@@ -25,6 +25,9 @@ EXCLUDED_FILENAMES = (
     'caching.py',
 )
 
+# When we're in linux, we add a little display so as not to slam Thiago's laptop.
+_on_linux = (platform.system() == 'Linux')
+
 st.title('Running All Examples')
 
 st.header('Important Note')
