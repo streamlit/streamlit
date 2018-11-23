@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Handles a connecton to an S3 bucket to send Report data."""
@@ -9,65 +8,31 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-# Standard Library Imports
-import base58
-import binascii
 import boto3
 import botocore
-import hashlib
 import logging
 import math
 import mimetypes
 import os
 
-import streamlit
-
 from tornado import gen
 from tornado.concurrent import run_on_executor, futures
 from streamlit import errors
 from streamlit import config
+from streamlit.proxy.storage.AbstractCloudStorage import AbstractCloudStorage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
 
 
-class Cloud(object):
-    """Generic Cloud class for either S3 or GCS."""
-
-    def __init__(self):
-        """Constructor."""
-        dirname = os.path.dirname(os.path.normpath(__file__))
-        self._static_dir = os.path.normpath(os.path.join(dirname, 'static'))
-
-        # load the static files and compute the release hash
-        self._static_files, md5 = [], hashlib.md5()
-        for root, dirnames, filenames in os.walk(self._static_dir):
-            for filename in filenames:
-                absolute_name = os.path.join(root, filename)
-                relative_name = os.path.relpath(absolute_name, self._static_dir)
-                with open(absolute_name, 'rb') as input:
-                    file_data = input.read()
-                    self._static_files.append((relative_name, file_data))
-                    md5.update(file_data)
-        if not self._static_files:
-            raise errors.NoStaticFiles(
-                'Cannot find static files. Run "make build".')
-        self._release_hash = '%s-%s' % (streamlit.__version__,
-            base58.b58encode(md5.digest()[:3]).decode("utf-8"))
-
-    def _get_static_dir(self):
-        """Return static directory location."""
-        return self._static_dir
-
-
-class S3(Cloud):
+class S3Storage(AbstractCloudStorage):
     """Class to handle S3 uploads."""
 
     executor = futures.ThreadPoolExecutor(5)
 
     def __init__(self):
         """Constructor."""
-        super(S3, self).__init__()
+        super(S3Storage, self).__init__()
 
         # For now don't enable verbose boto logs
         # TODO(armando): Make this configurable.
@@ -145,7 +110,7 @@ class S3(Cloud):
         LOGGER.info('"%s" bucket created', self._bucketname)
 
     @gen.coroutine
-    def s3_init(self):
+    def _s3_init(self):
         """Initialize s3 bucket."""
         assert config.get_option('s3.sharingEnabled'), (
             'Sharing is disabled. See "s3.sharingEnabled".')
@@ -166,13 +131,16 @@ class S3(Cloud):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def upload_report(self, report_id, files, progress_coroutine):
-        """Save report to s3."""
-        yield self.s3_init()
-        files_to_upload = yield self._get_static_upload_files()
-        yield self._s3_upload_files(files_to_upload + files, progress_coroutine)
+    def save_report_files(self, report_id, files, progress_coroutine=None):
+        """Save files related to a given report.
 
-        # Return the url for the saved report.
+        See CloudStorage for docs.
+        """
+        yield self._s3_init()
+        files_to_upload = yield self._get_static_upload_files()
+        yield self._s3_upload_files(
+            files_to_upload + files, progress_coroutine)
+
         raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
 
     @gen.coroutine
@@ -188,4 +156,8 @@ class S3(Cloud):
                 ContentType=mime_type,
                 ACL='public-read')
             LOGGER.debug('Uploaded: "%s"' % path)
-            yield progress_coroutine(math.ceil(100 * (i+1) / len(files)))
+
+            if progress_coroutine:
+                yield progress_coroutine(math.ceil(100 * (i + 1) / len(files)))
+            else:
+                yield
