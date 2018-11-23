@@ -140,7 +140,7 @@ make build
 Test that it works:
 ```
 make install
-python examples/run_all_examples.py
+python admin/test_streamlit.py
 ```
 Check that all elements and figure work properly
 and everything should run over port `8501`.
