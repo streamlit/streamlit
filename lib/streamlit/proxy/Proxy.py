@@ -1,13 +1,13 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""A proxy server between the Streamlit libs and web client.
+"""A proxy server between the Streamlit client and web browser.
 
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
 objects. A ProxyConnection always has:
 
     - One "local" connection to the python libs.
-    - Zero or more "client" connections to the web client.
+    - Zero or more BrowserWebSocket connections to a web browser.
 
 Essentially, the ProxyConnection stays open so long as any of those connections
 do. When the final ProxyConnection closes, then the whole proxy does too.
@@ -248,7 +248,7 @@ class Proxy(object):
         loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
     @gen.coroutine
-    def on_client_opened(self, report_name, ws):  # noqa: D401
+    def on_browser_connection_opened(self, report_name, ws):  # noqa: D401
         """Called when a client connection is opened.
 
         Parameters
@@ -269,7 +269,7 @@ class Proxy(object):
         self._maybe_add_fs_observer(connection)
         raise gen.Return((connection, queue))
 
-    def on_client_closed(self, connection, queue):  # noqa: D401
+    def on_browser_connection_closed(self, connection, queue):  # noqa: D401
         """Called when a client connection is closed.
 
         Parameters
