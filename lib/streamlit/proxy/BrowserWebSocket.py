@@ -91,7 +91,7 @@ class BrowserWebSocket(WebSocketHandler):
                     LOGGER.debug('The proxy connection for "%s" is not registered.',
                                  self._report_name)
                     self._connection, self._queue = (
-                        yield self._proxy.on_client_waiting_for_proxy_conn(
+                        yield self._proxy.on_browser_waiting_for_proxy_conn(
                                 self._report_name, self,
                                 self._connection, self._queue))
                     LOGGER.debug('Got a new connection ("%s") : %s',

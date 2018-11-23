@@ -284,7 +284,7 @@ class Proxy(object):
         self._remove_client(connection, queue)
 
     @gen.coroutine
-    def on_client_waiting_for_proxy_conn(  # noqa: D401
+    def on_browser_waiting_for_proxy_conn(  # noqa: D401
             self, report_name, ws, old_connection, old_queue):
         """Called when a client detects it has no corresponding ProxyConnection.
 
