@@ -138,7 +138,7 @@ _create_option('client.waitForProxySecs',
     default_val=3.0)
 
 _create_option('client.throttleSecs',
-    description='How long to wait between draining the local queue.',
+    description='How long to wait between draining the client queue.',
     default_val=0.01)
 
 

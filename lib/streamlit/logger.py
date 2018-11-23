@@ -52,7 +52,7 @@ def set_log_level(level):
 
 
 def set_this_is_proxy():
-    """Set the local boolean THIS_IS_PROXY."""
+    """Set the module-level global boolean THIS_IS_PROXY."""
     global THIS_IS_PROXY
     THIS_IS_PROXY = True
     for log in LOGGERS.values():
@@ -68,9 +68,9 @@ def setup_formatter(logger):
     # Creates the console handler for this logger.
     global THIS_IS_PROXY
     if THIS_IS_PROXY:
-        formatter = logging.Formatter('- PROXY %(levelname)-5s %(name)-20s: %(message)s')
+        formatter = logging.Formatter('- PROXY  %(levelname)-5s %(name)-20s: %(message)s')
     else:
-        formatter = logging.Formatter('- LOCAL %(levelname)-5s %(name)-20s: %(message)s')
+        formatter = logging.Formatter('- CLIENT %(levelname)-5s %(name)-20s: %(message)s')
     logger.streamlit_console_handler = logging.StreamHandler()
     logger.streamlit_console_handler.setFormatter(formatter)
 

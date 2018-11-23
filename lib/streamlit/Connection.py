@@ -68,7 +68,7 @@ class Connection(object):
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
         #
-        # VERY IMPORTANT: The key to understanding local threading in Streamlit
+        # VERY IMPORTANT: The key to understanding client threading in Streamlit
         # is that self._queue acts like a thread-safe channel for data (in this
         # case deltas) from the main thread (e.g. st.write()) to the proxy
         # connection thread (e.g. flush_queue()). To ensure the thread-safety
@@ -230,7 +230,7 @@ class Connection(object):
                 time.sleep(FLUSH_QUEUE_SECONDS)
                 break
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
-                LOGGER.debug('Proxy connection failed. Ending the local script.')
+                LOGGER.debug('Proxy connection failed. Ending the client script.')
                 break
             else:
                 LOGGER.error(
