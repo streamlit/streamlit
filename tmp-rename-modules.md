@@ -1,9 +1,5 @@
 **Note** This file will be deleted! Reviewers, please ignore! These are just notes fro me as I work on this renaming project.
 
-## Step 2
-
-- `LocalWebSocket` -> `CientWebSocket` _(and rename the file)_
-
 ## Step 3
 
 - `self._has_local` -> `self._has_client_connection`

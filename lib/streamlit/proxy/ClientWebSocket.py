@@ -13,7 +13,7 @@ from streamlit import config
 LOGGER = get_logger()
 
 
-class LocalWebSocket(WebSocketHandler):
+class CientWebSocket(WebSocketHandler):
     """Websocket handler class which the local python library connects to."""
 
     def initialize(self, proxy):
