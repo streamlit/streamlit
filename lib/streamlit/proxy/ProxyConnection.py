@@ -12,6 +12,11 @@ import json
 import socket
 import urllib
 
+try:
+    import urllib.request  # for Python3
+except ImportError:
+    pass
+
 from streamlit import config
 from streamlit import util
 from streamlit.ReportQueue import ReportQueue
@@ -223,7 +228,9 @@ class ProxyConnection(object):
             external_proxy_url=external_url,
             internal_proxy_url=internal_url,
         )
-        return [(f'reports/{self.id}/manifest.json', json.dumps(manifest))]
+
+        manifest_json = json.dumps(manifest).encode('utf-8')
+        return [(f'reports/{self.id}/manifest.json', manifest_json)]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -243,12 +250,13 @@ class ProxyConnection(object):
             status=_Status.DONE,
             n_deltas=len(deltas)
         )
+        manifest_json = json.dumps(manifest).encode('utf-8')
         return (
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
                 for idx, delta in enumerate(deltas)] +
             # Must be at the end, so clients don't connect and read the
             # manifest while the deltas haven't been saved yet.
-            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))]
+            [(f'reports/{self.id}/manifest.json', manifest_json)]
         )
 
     def _build_manifest(
