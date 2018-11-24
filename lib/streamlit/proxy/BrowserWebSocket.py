@@ -183,9 +183,10 @@ class BrowserWebSocket(WebSocketHandler):
         try:
             yield progress(0)
 
-            files = connection.serialize_report_to_files()
-            cloud = self._proxy.get_cloud_storage()
-            url = yield cloud.save_report_files(connection.id, files, progress)
+            files = connection.serialize_final_report_to_files()
+            storage = self._proxy.get_storage()
+            url = yield storage.save_report_files(
+                connection.id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()

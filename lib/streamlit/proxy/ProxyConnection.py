@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Stores information about local and client connections for a report."""
@@ -10,12 +9,18 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import socket
+import urllib
 
+from streamlit import config
+from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
-from streamlit.util import get_local_id
 LOGGER = get_logger()
+
+
+AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 
 
 class ProxyConnection(object):
@@ -148,30 +153,223 @@ class ProxyConnection(object):
         """
         self._browser_queues.remove(queue)
 
-    def serialize_report_to_files(self):
+    def get_local_url(self):
+        """Get the URL for this report, for access from this exact machine.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        return _get_report_url(None, None, self.name)
+
+    def get_external_url(self):
+        """Get the URL for this report, for access from outside this LAN.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        external_ip = config.get_option('proxy.externalIP')
+
+        if external_ip:
+            LOGGER.debug(f'proxy.externalIP set to {external_ip}')
+        else:
+            LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
+            external_ip = _get_external_ip()
+
+        if external_ip is None:
+            print('Did not auto detect external IP. Please go to '
+                  f'{util.HELP_DOC} for debugging hints.')
+            return None
+
+        return _get_report_url(external_ip, None, self.name)
+
+    def get_internal_url(self):
+        """Get the URL for this report, for access from inside this LAN.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        internal_ip = _get_internal_ip()
+        return _get_report_url(internal_ip, None, self.name)
+
+    def serialize_running_report_to_files(self, external_url, internal_url):
+        """Return a running report as an easily-serializable list of tuples.
+
+        Parameters
+        ----------
+        external_url : str
+        internal_url : str
+
+        Returns
+        -------
+        list of tuples
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's just a manifest pointing to the Proxy
+            so browsers who go to the shareable report URL can connect to it
+            live.
+
+        """
+        LOGGER.debug(f'Serializing running report')
+        manifest = self._build_manifest(
+            status=_Status.RUNNING,
+            external_proxy_url=external_url,
+            internal_proxy_url=internal_url,
+        )
+        return [(f'reports/{self.id}/manifest.json', json.dumps(manifest))]
+
+    def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
 
         Returns
         -------
         list of tuples
-            A list of pairs of the form:
-
-            [
-                (filename_1, data_1),
-                (filename_2, data_2), etc..
-            ]
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's (1) a simple manifest and (2) a bunch
+            of serialized Deltas.
 
         """
+        LOGGER.debug(f'Serializing final report')
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
-        local_id = str(get_local_id())
-        manifest = dict(
-            name=self.name,
-            local_id=local_id,
-            nDeltas=len(deltas)
+        manifest = self._build_manifest(
+            status=_Status.DONE,
+            n_deltas=len(deltas)
         )
         return (
-            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] +
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
-                for idx, delta in enumerate(deltas)]
+                for idx, delta in enumerate(deltas)] +
+            # Must be at the end, so clients don't connect and read the
+            # manifest while the deltas haven't been saved yet.
+            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))]
         )
+
+    def _build_manifest(
+            self, status, n_deltas=None, external_proxy_url=None,
+            internal_proxy_url=None):
+        """Build a manifest dict for this report.
+
+        Parameters
+        ----------
+        status : _Status.DONE | _Status.RUNNING
+            The report status. If the script is still executing, then the
+            status should be RUNNING. Otherwise, DONE.
+        n_deltas : int | None
+            Only when status is DONE. The number of deltas that this report
+            is made of.
+        external_proxy_url : str | None
+            Only when status is RUNNING. The URL of the Proxy's websocket.
+        internal_proxy_url : str | None
+            Only when status is RUNNING. The URL of the Proxy's websocket.
+
+        Returns
+        -------
+        dict
+            The actual manifest. Schema:
+            - name: str,
+            - local_id: str,
+            - status: 'running' | 'done',
+            - nDeltas: int | None,
+            - externalProxyUrl: str | None,
+            - internalProxyUrl: str | None,
+
+        """
+        return dict(
+            name=self.name,
+            status=status,
+            local_id=str(util.get_local_id()),
+            nDeltas=n_deltas,
+            externalProxyUrl=external_proxy_url,
+            internalProxyUrl=internal_proxy_url,
+        )
+
+
+class _Status(object):
+    DONE = 'done'
+    RUNNING = 'running'
+
+
+@util.memoize
+def _get_external_ip():
+    """Get the *external* IP address of the current machine.
+
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
+    """
+    try:
+        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
+        external_ip = response.decode('utf-8').strip()
+    except RuntimeError as e:
+        LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
+        external_ip = None
+
+    return external_ip
+
+
+@util.memoize
+def _get_internal_ip():
+    """Get the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        internal_ip = s.getsockname()[0]
+    except Exception:
+        internal_ip = '127.0.0.1'
+    finally:
+        s.close()
+    return internal_ip
+
+
+def _get_report_url(host, port, name):
+    """Return the URL of report defined by (host, port, name).
+
+    Parameters
+    ----------
+    host : str or None
+        The hostname or IP address of the current machine. If None, will use
+        the `proxy.server` value from the config system.
+
+    port : int or None
+        The port where Streamlit is running. If None, will use the `proxy.port`
+        value from the config system.
+
+    name : str
+        The name of the report.
+
+    Returns
+    -------
+    string
+        The report's URL.
+
+    """
+    if host is None:
+        host = config.get_option('proxy.server')
+
+    if port is None:
+        if config.get_option('proxy.useNode'):
+            port = 3000
+        else:
+            port = config.get_option('proxy.port')
+
+    quoted_name = urllib.parse.quote_plus(name)
+    return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
