@@ -185,7 +185,7 @@ class Proxy(object):
         """Try to deregister proxy connection.
 
         Deregister ProxyConnection so long as there aren't any open connection
-        (local or client), and the connection is no longer in its grace period.
+        (client or browser), and the connection is no longer in its grace period.
 
         Parameters
         ----------

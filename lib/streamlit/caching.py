@@ -21,7 +21,7 @@ from functools import wraps
 import streamlit as st
 from streamlit import config
 from streamlit.util import streamlit_read, streamlit_write
-from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
+from streamlit.util import STREAMLIT_ROOT_DIRECTORY as local_root
 from streamlit.logger import get_logger
 
 LOGGER = get_logger()

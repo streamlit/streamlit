@@ -1,12 +1,5 @@
 **Note** This file will be deleted! Reviewers, please ignore! These are just notes fro me as I work on this renaming project.
 
-## Step 3
-
-- `self._has_local` -> `self._has_client_connection`
-- `One "local" connection to the python libs.` -> `One ClientWebSocket connection to the client python libs.`
-- `(local or client)` -> `(client or browser)`
-- `local_display_enabled` -> `client_display_enabled`
-- `__STREAMLIT_LOCAL_ROOT` -> `STREAMLIT_ROOT_DIRECTORY`
 
 ## Step 4
 
