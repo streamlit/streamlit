@@ -64,13 +64,13 @@ class ProxyConnection(object):
         self._master_queue = ReportQueue()
 
         # Each connection additionally gets its own queue.
-        self._client_queues = []
+        self._browser_queues = []
 
     def close_local_connection(self):
         """Close local connection."""
         self._has_local = False
         self._master_queue.close()
-        for queue in self._client_queues:
+        for queue in self._browser_queues:
             queue.close()
 
     def end_grace_period(self):
@@ -90,7 +90,7 @@ class ProxyConnection(object):
             True if any browsers maintain connections to this queue.
 
         """
-        return len(self._client_queues) > 0
+        return len(self._browser_queues) > 0
 
     def can_be_deregistered(self):
         """Check whether we can deregister this connection.
@@ -120,10 +120,10 @@ class ProxyConnection(object):
 
         """
         self._master_queue(delta)
-        for queue in self._client_queues:
+        for queue in self._browser_queues:
             queue(delta)
 
-    def add_client_queue(self):
+    def add_browser_queue(self):
         """Add a queue for a new browser by cloning the master queue.
 
         Returns
@@ -134,10 +134,10 @@ class ProxyConnection(object):
         """
         self.end_grace_period()
         new_queue = self._master_queue.clone()
-        self._client_queues.append(new_queue)
+        self._browser_queues.append(new_queue)
         return new_queue
 
-    def remove_client_queue(self, queue):
+    def remove_browser_queue(self, queue):
         """Remove the browser queue.
 
         Returns
@@ -146,7 +146,7 @@ class ProxyConnection(object):
             True iff the browser queue list is empty.
 
         """
-        self._client_queues.remove(queue)
+        self._browser_queues.remove(queue)
 
     def serialize_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
