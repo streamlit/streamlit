@@ -46,7 +46,7 @@ from streamlit.caching import cache  # Just for export.
 from streamlit.util import escape_markdown
 
 
-_this_module = sys.modules[__name__]
+this_module = sys.modules[__name__]
 
 # This delta generator has no queue so it can't send anything out on a
 # connection.
@@ -71,7 +71,7 @@ for name in dir(DeltaGenerator):
     if hasattr(member, EXPORT_FLAG):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
-        setattr(_this_module, name, _wrap_delta_generator_method(method))
+        setattr(this_module, name, _wrap_delta_generator_method(method))
 
 
 def write(*args):
