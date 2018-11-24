@@ -55,7 +55,7 @@ class ProxyConnection(object):
         self.name = name
 
         # When the client connection ends, this flag becomes false.
-        self._has_local = True
+        self._has_client_connection = True
 
         # Before recieving connection and the the timeout hits, the connection
         # is in a "grace period" in which it can't be deregistered.
@@ -69,7 +69,7 @@ class ProxyConnection(object):
 
     def close_local_connection(self):
         """Close the client connection."""
-        self._has_local = False
+        self._has_client_connection = False
         self._master_queue.close()
         for queue in self._browser_queues:
             queue.close()
@@ -105,7 +105,7 @@ class ProxyConnection(object):
         """
         return not (
             self._in_grace_period or
-            self._has_local or
+            self._has_client_connection or
             self.has_browser_connections())
 
     def enqueue(self, delta):

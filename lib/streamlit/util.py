@@ -25,7 +25,7 @@ except ImportError:
     pass
 
 
-__STREAMLIT_LOCAL_ROOT = '.streamlit'
+STREAMLIT_ROOT_DIRECTORY = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
 
 
@@ -95,7 +95,7 @@ def streamlit_read(path, binary=False):
     with read('foo.txt') as foo:
         ...
 
-    opens the file `{__STREAMLIT_LOCAL_ROOT}/foo.txt`
+    opens the file `{STREAMLIT_ROOT_DIRECTORY}/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
@@ -103,7 +103,7 @@ def streamlit_read(path, binary=False):
     mode = 'r'
     if binary:
         mode += 'b'
-    with open(os.path.join(__STREAMLIT_LOCAL_ROOT, path), mode) as handle:
+    with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
 
 @contextlib.contextmanager
@@ -115,7 +115,7 @@ def streamlit_write(path, binary=False):
         with open_ensuring_path('foo/bar.txt') as bar:
             ...
 
-    opens the file {__STREAMLIT_LOCAL_ROOT}/foo/bar.txt for writing,
+    opens the file {STREAMLIT_ROOT_DIRECTORY}/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
@@ -124,7 +124,7 @@ def streamlit_write(path, binary=False):
     mode = 'w'
     if binary:
         mode += 'b'
-    path = os.path.join(__STREAMLIT_LOCAL_ROOT, path)
+    path = os.path.join(STREAMLIT_ROOT_DIRECTORY, path)
     directory = os.path.split(path)[0]
     if not os.path.exists(directory):
         os.makedirs(directory)
