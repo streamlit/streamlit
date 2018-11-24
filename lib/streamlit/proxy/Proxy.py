@@ -85,7 +85,7 @@ class Proxy(object):
         # Set up HTTP routes
         routes = [
             # Incoming client connection to stream a new report.
-            ('/new/(.*)/(.*)', ClientWebSocket, dict(proxy=self)),
+            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
 
             # Outgoing browser endpoint to get the latest report.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),

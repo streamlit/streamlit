@@ -100,9 +100,8 @@ def _build_uri(report_id):
 
     server = config.get_option('proxy.server')
     port = config.get_option('proxy.port')
-    local_id = util.get_local_id()
     report_name = urllib.parse.quote_plus(name)
-    uri = f'ws://{server}:{port}/new/{local_id}/{report_name}'
+    uri = f'ws://{server}:{port}/new/{report_name}'
 
     LOGGER.debug(f'Report WebSocket URI: "{uri}"')
 

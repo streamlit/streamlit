@@ -1,11 +1,7 @@
 **Note** This file will be deleted! Reviewers, please ignore! These are just notes fro me as I work on this renaming project.
 
+# Step 5
 
-## Step 4
-
-- `self._local_id` -> `self._client_id`
-- `get_local_id(` -> `get_client_id(`
-- `local_id` -> `client_id`
 - `LOGGER.info('Local websocket` -> `LOGGER.info('Client websocket`
 - `close_local_connection(` -> `close_client_connection(`
 - `local_uuid.txt` -> `client_uuid.txt`

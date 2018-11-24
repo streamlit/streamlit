@@ -30,19 +30,16 @@ class ClientWebSocket(WebSocketHandler):
         return True
 
     @Proxy.stop_proxy_on_exception()
-    def open(self, local_id, report_name):
+    def open(self, report_name):
         """Handle connection to *local* instance of Streamlit.
 
         Parameters
         ----------
-        local_id : str
-            Vestigial stuff. Deprecated.
         report_name : str
             The name of the report.
 
         """
         # Parse out the control information.
-        self._local_id = local_id
         self._report_name = report_name
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
