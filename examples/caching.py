@@ -17,7 +17,7 @@ def check_if_cached():
 def my_func(arg1, arg2=None, *args, **kwargs):
     global num_executions
     num_executions += 1
-    return random.randint(0, 2^32)
+    return random.randint(0, 2 ** 32)
 
 
 check_if_cached()
