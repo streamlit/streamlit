@@ -10,6 +10,6 @@ setup_2_3_shims(globals())
 
 from .ProxyConnection import ProxyConnection
 from .BrowserWebSocket import BrowserWebSocket
-from .CientWebSocket import CientWebSocket
+from .ClientWebSocket import ClientWebSocket
 from .Proxy import Proxy
 import streamlit.proxy.process_runner

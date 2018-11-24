@@ -86,12 +86,12 @@ class Proxy(object):
 
         # We have to import these in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import CientWebSocket, BrowserWebSocket
+        from streamlit.proxy import ClientWebSocket, BrowserWebSocket
 
         # Set up HTTP routes
         routes = [
             # Incoming client connection to stream a new report.
-            ('/new/(.*)/(.*)', CientWebSocket, dict(proxy=self)),
+            ('/new/(.*)/(.*)', ClientWebSocket, dict(proxy=self)),
 
             # Outgoing browser endpoint to get the latest report.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
