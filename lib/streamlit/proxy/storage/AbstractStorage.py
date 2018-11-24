@@ -26,7 +26,7 @@ class AbstractStorage(object):
 
     def __init__(self):
         """Constructor."""
-        static_dir = _build_static_dir()
+        static_dir = _get_static_dir()
         static_files, md5 = _get_static_files(static_dir)
 
         self._static_dir = static_dir
@@ -62,8 +62,8 @@ class AbstractStorage(object):
             The ordering is important! Files will be written in order according
             to this list.
 
-        progress_coroutine : callable | None
-            Generator that will be called successively with a number between 0
+        progress_coroutine : coroutine | None
+            Coroutine that will be called successively with a number between 0
             and 100 as input, to indicate progress.
 
         Returns
@@ -72,10 +72,10 @@ class AbstractStorage(object):
             the url for the saved report.
 
         """
-        raise gen.Return('https://foo.com/%s' % report_id)
+        raise NotImplementedError()
 
 
-def _build_static_dir():
+def _get_static_dir():
     """Return the path to lib/streamlit/static.
 
     Returns

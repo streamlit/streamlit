@@ -16,6 +16,13 @@ st.title('Syntax error test')
 
 st.info('Uncomment the comment blocks in the source code one at a time.')
 
+st.write('''
+    Here's the source file for you to edit:
+    ```
+    examples/syntax_error.py
+    ```
+    ''')
+
 st.write('(Some top text)')
 
 # # Uncomment this as a block.

@@ -60,8 +60,11 @@ class FileStorage(AbstractStorage):
             with open(full_filename, 'wb') as f:
                 f.write(data)
 
-                yield progress_coroutine(
-                    math.ceil(100 * (i + 1) / len(files)))
+                if progress_coroutine:
+                    yield progress_coroutine(
+                        math.ceil(100 * (i + 1) / len(files)))
+                else:
+                    yield
 
         LOGGER.info(f'Done writing files!')
         raise gen.Return(report_path)
