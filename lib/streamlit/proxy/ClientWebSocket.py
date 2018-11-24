@@ -43,7 +43,7 @@ class ClientWebSocket(WebSocketHandler):
         self._report_name = report_name
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
-        LOGGER.info('Local websocket opened for %s', self._report_name)
+        LOGGER.info('Client websocket opened for %s', self._report_name)
 
     @Proxy.stop_proxy_on_exception()
     def on_message(self, message):
@@ -68,14 +68,14 @@ class ClientWebSocket(WebSocketHandler):
     @gen.coroutine
     def on_close(self):
         """Close callback."""
-        LOGGER.info('Local websocket closed for "%s"' % self._report_name)
+        LOGGER.info('Client websocket closed for "%s"' % self._report_name)
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
             if config.get_option('proxy.saveOnExit'):
                 yield self._save_final_report()
 
-            self._connection.close_local_connection()
+            self._connection.close_client_connection()
             self._proxy.schedule_potential_deregister_and_stop(
                 self._connection)
         else:
