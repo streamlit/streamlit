@@ -274,7 +274,7 @@ class ProxyConnection(object):
         dict
             The actual manifest. Schema:
             - name: str,
-            - local_id: str,
+            - localId: str,
             - status: 'running' | 'done',
             - nDeltas: int | None,
             - externalProxyUrl: str | None,
@@ -284,7 +284,7 @@ class ProxyConnection(object):
         return dict(
             name=self.name,
             status=status,
-            local_id=str(util.get_local_id()),
+            localId=str(util.get_local_id()),
             nDeltas=n_deltas,
             externalProxyUrl=external_proxy_url,
             internalProxyUrl=internal_proxy_url,
