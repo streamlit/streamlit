@@ -21,6 +21,17 @@ import uuid
 __STREAMLIT_LOCAL_ROOT = '.streamlit'
 __CACHE = dict() # use insead of {} for 2/3 compatibility
 
+
+# Magic strings used to mark exceptions that have been handled by Streamlit's
+# excepthook. These string should be printed to stderr.
+EXCEPTHOOK_IDENTIFIER_STR = (
+    'Streamlit has caught the following unhandled exception...')
+
+
+# URL of Streamlit's help page.
+HELP_DOC = 'http://streamlit.io/docs/help/'
+
+
 def __cache(path, serialize, deserialize):
     """Performs two levels of caching:
 
@@ -147,6 +158,7 @@ def memoize(func):
         return result[0]
     return wrapped_func
 
+
 def write_proto(ws, msg):
     """Writes a proto to a websocket.
 
@@ -167,9 +179,3 @@ def write_proto(ws, msg):
 def build_report_id():
     """Randomly generate a report ID."""
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
-
-
-# Magic strings used to mark exceptions that have been handled by Streamlit's
-# excepthook. These string should be printed to stderr.
-EXCEPTHOOK_IDENTIFIER_STR = (
-    'Streamlit has caught the following unhandled exception...')
