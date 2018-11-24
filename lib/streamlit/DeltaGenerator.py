@@ -17,6 +17,7 @@ import sys
 import textwrap
 import traceback
 
+from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
 from streamlit.caseconverters import to_snake_case
@@ -700,6 +701,10 @@ class DeltaGenerator(object):
             element.
 
         """
+        # Make sure that we can output here.
+        if not config.get_option('client.displayEnabled'):
+            return self
+
         # Create a delta message.
         delta = protobuf.Delta()
         set_element(delta.new_element)
