@@ -38,23 +38,27 @@ class StaticConnection {
     fetch(manifestUri, fetchParams).then((response) => {
       return response.json();
     }).then((response) => {
-      // This assumes the proxy has already written a manifest file.
-      let {proxyStatus, proxyUri} = response;
+      // Get internalProxyUrl because we assume the user is in the same LAN as
+      // the proxy. In the future we may want to try the internal URL first,
+      // and then the external one.
+      let {proxyStatus, internalProxyUrl} = response;
 
       // If the proxy is running redirect immediately to proxy.
       if (proxyStatus == 'running') {
         let url = document.createElement('a');
-        url.href = proxyUri;
+        url.href = internalProxyUrl;
         let healthzUri = `${url.protocol}//${url.host}/healthz`;
 
         fetch(healthzUri, fetchParams).then((response) => {
             return response.text();
         }).then((response) => {
-            console.log(`redirecting to ${proxyUri}`);
-            window.location.replace(proxyUri);
+            console.log(`redirecting to ${internalProxyUrl}`);
+            window.location.replace(internalProxyUrl);
         }).catch((error) => {
             // This needs to be presented to the user somehow
-            console.log(`Error connecting to proxy at ${healthzUri}, not redirecting to ${proxyUri}: ${error}`);
+            console.log(
+                `Error connecting to proxy at ${healthzUri}, not redirecting `
+                `to ${internalProxyUrl}: ${error}`);
         });
       }
 

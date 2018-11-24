@@ -275,17 +275,17 @@ class ProxyConnection(object):
             The actual manifest. Schema:
             - name: str,
             - localId: str,
-            - status: 'running' | 'done',
             - nDeltas: int | None,
+            - proxyStatus: 'running' | 'done',
             - externalProxyUrl: str | None,
             - internalProxyUrl: str | None,
 
         """
         return dict(
             name=self.name,
-            status=status,
             localId=str(util.get_local_id()),
             nDeltas=n_deltas,
+            proxyStatus=status,
             externalProxyUrl=external_proxy_url,
             internalProxyUrl=internal_proxy_url,
         )
