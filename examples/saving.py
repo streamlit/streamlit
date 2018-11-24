@@ -12,6 +12,4 @@ import random
 
 st.subheader('Test Saving')
 
-st.write(f'**Please save this report and check for this number: `{random.randint(0, 2**32)}`.**')
-
-# return
+st.write(f'**Please save this report and check for this number: `{random.randint(0, 2 ** 32)}`.**')
