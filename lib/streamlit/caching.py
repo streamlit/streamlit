@@ -19,15 +19,12 @@ import shutil
 from functools import wraps
 
 import streamlit as st
+from streamlit import config
 from streamlit.util import streamlit_read, streamlit_write
 from streamlit.util import __STREAMLIT_LOCAL_ROOT as local_root
 from streamlit.logger import get_logger
 
 LOGGER = get_logger()
-
-# When this is false, cache(func) just returns func back.
-allow_caching = True
-
 
 def cache(func):
     """Function decorator to memoize input function, saving to disk.
@@ -43,8 +40,7 @@ def cache(func):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
-        global allow_caching
-        if not allow_caching:
+        if not config.get_option('client.caching'):
             LOGGER.debug('Purposefully skipping cache')
             return func(*argc, **argv)
 
@@ -96,8 +92,3 @@ def clear_cache(verbose=False):
             print(f'Cleared {cache_path} directory.')
     elif verbose:
         print(f'No such directory {cache_path} so nothing to clear. :)')
-
-
-def set_allow_caching(value):
-    global allow_caching
-    allow_caching = value

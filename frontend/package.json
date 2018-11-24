@@ -1,5 +1,5 @@
 {
-  "name": "streamlit-client",
+  "name": "streamlit-browser",
   "version": "0.19.1",
   "private": true,
   "dependencies": {
