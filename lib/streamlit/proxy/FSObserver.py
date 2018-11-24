@@ -63,7 +63,7 @@ class FSObserver(object):
 
         self._initialize_observer(connection.source_file_path)
 
-        # Set of clients which are interested in this observer being up.  When
+        # Set of consumers which are interested in this observer being up.  When
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()

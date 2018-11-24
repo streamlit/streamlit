@@ -1,7 +1,7 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""Websocket handler class which the web client connects to."""
+"""Websocket handler class for connections to the browser."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import

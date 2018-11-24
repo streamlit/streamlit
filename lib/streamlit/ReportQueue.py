@@ -150,7 +150,16 @@ class ReportQueue(object):
 
 
 def send_message(ws, msg):
-    """Sends msg via the websocket"""
+    """Sends msg via the websocket.
+
+    Parameters
+    ----------
+    ws : WebSocket
+        The message through which we're sending this message.
+    msg : ForwardMsg
+        A Streamlit ForwardMsg to send over the websocket.
+
+    """
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:
@@ -160,6 +169,8 @@ def send_message(ws, msg):
     try:
         ws.write_message(msg_str, binary=True)
     except Exception as e:
+        # Not all exceptions have a `message` attribute.
+        # https://www.python.org/dev/peps/pep-0352/
         try:
             exception_message = e.message
         except AttributeError:
