@@ -701,8 +701,8 @@ class DeltaGenerator(object):
             element.
 
         """
-        # Make sure that we can output here.
-        if not config.get_option('client.displayEnabled'):
+        # "Null" delta generators (those wihtout queues), don't send anything.
+        if self._queue is None:
             return self
 
         # Create a delta message.
