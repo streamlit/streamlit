@@ -191,7 +191,7 @@ class Proxy(object):
 
         """
         def potentially_unregister():
-            if not self.proxy_connection_is_registered(connection):
+            if not self._proxy_connection_is_registered(connection):
                 return
 
             if not connection.can_be_deregistered():
@@ -222,7 +222,7 @@ class Proxy(object):
         LOGGER.debug(f'Got rid of connection {connection.name}')
         LOGGER.debug(f'Total connections left: {len(self._connections)}')
 
-    def proxy_connection_is_registered(self, connection):
+    def _proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
@@ -282,9 +282,13 @@ class Proxy(object):
         self._deregister_browser(connection, queue)
 
     @gen.coroutine
-    def on_browser_waiting_for_proxy_conn(  # noqa: D401
-            self, report_name, ws, old_connection, old_queue):
-        """Called when a client detects it has no corresponding ProxyConnection.
+    def replace_connection_and_queue(  # noqa: D401
+            self, report_name, ws, connection, queue):
+        """Gets the most recent proxy connection and queue for this report_name.
+
+        BrowserWebSocket continuously calls this method in case a new client
+        connection was established, in which case the BrowserWebSocket should
+        switch to the new proxy connection and queue.
 
         Parameters
         ----------
@@ -292,18 +296,28 @@ class Proxy(object):
             The name of the report the browser connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
-        old_connection : ProxyConnection
+        connection : ProxyConnection
             The connection object that just got closed.
-        old_queue : ReportQueue
+        queue : ReportQueue
             The client queue corresponding to the closed connection.
 
         Returns
         -------
         ProxyConnection
+            The newly registered proxy connection.
         ReportQueue
+            The corresponding newly registered queue.
 
         """
-        self._deregister_browser(old_connection, old_queue)
+        # No need to change the connection or queue if the current one is still
+        # registered.
+        if self._proxy_connection_is_registered(connection):
+            raise gen.Return((connection, queue))
+
+        LOGGER.debug('The proxy connection for "%s" is not registered.',
+                        report_name)
+
+        self._deregister_browser(connection, queue)
         new_connection, new_queue = (
             yield self._register_browser(report_name, ws))
         raise gen.Return((new_connection, new_queue))
