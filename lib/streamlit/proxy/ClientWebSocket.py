@@ -16,7 +16,7 @@ from streamlit.proxy import Proxy, ProxyConnection
 LOGGER = get_logger()
 
 
-class LocalWebSocket(WebSocketHandler):
+class CientWebSocket(WebSocketHandler):
     """Websocket handler class which the local python library connects to."""
 
     def initialize(self, proxy):
