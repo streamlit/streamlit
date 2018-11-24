@@ -12,6 +12,14 @@ import os
 import sys
 import time
 import streamlit as st
+from streamlit import compatibility
+
+# This is how we get user input
+if not compatibility.running_py3():
+    input = raw_input
+
+# True means we run through all tests automatically.
+auto_run = False
 
 # Where we expect to find the example files.
 EXAMPLE_DIR = 'examples'
@@ -25,47 +33,69 @@ EXCLUDED_FILENAMES = (
     'caching.py',
 )
 
-# When we're in linux, we add a little display so as not to slam Thiago's laptop.
-_on_linux = (platform.system() == 'Linux')
-
-st.title('Running All Examples')
-
-st.header('Important Note')
-
-st.warning("""
-    We are not testing `streamlit kill_proxy` because it would mess with this
-    test.
-""")
-
-st.header('Running Commands')
-
-def run_commands(section_header, commands):
+def run_commands(section_header, commands, skip_last_input=False):
     """Run a list of commands, displaying them within the given section."""
-    st.subheader(section_header)
-    for command in commands:
-        st.text(command)
+    global auto_run, status
+
+    st.header(section_header)
+    for i, command in enumerate(commands):
+        # Display the status.
+        status.warning(f'Running {section_header} {i+1}/{len(commands)} : ' +
+            command)
+        st.subheader(f'{i+1}/{len(commands)} : {command}')
         print(f'Running `{command}`...')
-        st.write('- Running...')
-        os.system(command)
-        st.write('- **Done.**')
 
-# First run the 'streamlit commands'
-run_commands('Basic Commands', [
-    'streamlit version',
-    'streamlit help'
-])
+        # Run the command.
+        exit_code = os.system(command)
+        if exit_code == 0:
+            st.success('Exit Code: 0')
+        else:
+            st.error(f'Exit Code: {exit_code}')
 
-run_commands('Examples', [
-    f'streamlit run examples/{filename}'
-        for filename in os.listdir(EXAMPLE_DIR)
-        if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
-])
+        #
+        last_command = (i + 1 == len(commands))
+        if not (auto_run or (last_command and skip_last_input)):
+            sys.stdout.write(
+                'Press [enter] to continue or [a] to continue on auto:\n> ')
+            status.info('Waiting for input.')
+            response = input()
+            if response == 'a':
+                print('Turning on auto run.')
+                auto_run = True
 
-run_commands('Caching', [
-    'streamlit clear_cache',
-    'streamlit run examples/caching.py'
-])
+def main():
+    global status
 
-run_commands('MNIST', [
-    'streamlit run examples/mnist-cnn.py'
-])
+    st.title('Running All Examples')
+
+    st.header('Status')
+
+    status = st.warning('Initializing...')
+
+
+    # First run the 'streamlit commands'
+    run_commands('Basic Commands', [
+        'streamlit version',
+        'streamlit help'
+    ])
+
+    # run_commands('Examples', [
+    #     f'streamlit run examples/{filename}'
+    #         for filename in os.listdir(EXAMPLE_DIR)
+    #         if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+    # ])
+
+    run_commands('Caching', [
+        'streamlit clear_cache',
+        'streamlit run examples/caching.py'
+    ])
+
+    run_commands('MNIST', [
+        'streamlit run examples/mnist-cnn.py'
+    ], skip_last_input=True)
+
+    status.success('Completed all tests!')
+    st.balloons()
+
+if __name__ == '__main__':
+    main()
