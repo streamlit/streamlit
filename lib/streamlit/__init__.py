@@ -48,17 +48,10 @@ from streamlit.util import escape_markdown
 
 this_module = sys.modules[__name__]
 
-
-# If True, Streamlit will sent deltas to the Proxy. If False, all methods will
-# appear to work normally but not deltas will be sent to the Proxy.
-_enable_display = True
-
-
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
         con = DeltaConnection.get_connection()
-        con.set_enabled(_enable_display)
         dg = con.get_delta_generator()
         return method(dg, *args, **kwargs)
     return wrapped_method
@@ -225,23 +218,3 @@ def echo():
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning(f'Unable to display code. {str(err)}')
-
-
-# TODO: Move to config.py when we refactor the config system.
-def set_config(options):
-    """Set config options for Streamlit.
-
-    Parameters
-    ----------
-    options : dict
-        A dictionary where keys are strings with the fully-qualified names of
-        config options (e.g. 'client.caching'), and keys are the config values.
-
-    """
-    local_display_enabled = options.get('client.displayEnabled')
-    if local_display_enabled is not None:
-        assert type(local_display_enabled) is bool
-        global _enable_display
-        _enable_display = local_display_enabled
-        con = DeltaConnection.get_connection()
-        con.set_enabled(_enable_display)
