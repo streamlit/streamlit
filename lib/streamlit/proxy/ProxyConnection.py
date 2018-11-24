@@ -66,7 +66,7 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._browser_queues = []
 
-    def close_local_connection(self):
+    def close_client_connection(self):
         """Close the client connection."""
         self._has_client_connection = False
         self._master_queue.close()
