@@ -24,7 +24,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
-from streamlit import S3Connection
+from streamlit.proxy.storage.S3Storage import S3Storage as Storage
 from streamlit.util import get_static_dir, write_proto
 
 from streamlit.streamlit_msg_proto import new_report_msg
@@ -313,18 +313,16 @@ class Proxy(object):
     def get_cloud_storage(self):
         """Get object that connects to online storage.
 
-        See `S3Connection.py` for an example.
-
         NOTE: Even internal methods of Proxy should call this directly, since
         the cloud object is instantiated lazily in this method.
 
         Returns
         -------
-        S3Connection.Cloud
+        proxy.storage.AbstractCloudStorage
             The cloud object.
         """
         if self._cloud_storage is None:
-            self._cloud_storage = S3Connection.S3()
+            self._cloud_storage = Storage()
         return self._cloud_storage
 
     def _has_browser_connections(self, report_name):

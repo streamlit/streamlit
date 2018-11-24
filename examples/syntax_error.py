@@ -16,6 +16,13 @@ st.title('Syntax error test')
 
 st.info('Uncomment the comment blocks in the source code one at a time.')
 
+st.write('''
+    Here's the source file for you to edit:
+    ```
+    examples/syntax_error.py
+    ```
+    ''')
+
 st.write('(Some top text)')
 
 # # Uncomment this as a block.
@@ -34,7 +41,7 @@ st.write('(Some top text)')
 # st.write('EXPECTED: You should see no error')
 # sys.exit(-1)
 
-# # # Uncomment this as a block.
+# # Uncomment this as a block.
 # sys.stderr.write('Traceback (most recent call last):\n')  # Not required
 # sys.stderr.write('  File "foo/bar.py", line 30, in module foo\n')  # Required
 # sys.stderr.write('--> EXPECTED: full-screen exception\n')  # Not required
