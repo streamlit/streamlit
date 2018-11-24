@@ -140,14 +140,12 @@ make build
 Test that it works:
 ```
 make install
-streamlit version
-streamlit help
-python examples/mnist-cnn.py
-python examples/apocrypha.py
-python examples/uber.py
-python examples/tables.py
+python admin/test_streamlit.py
 ```
-Check that all elements and figure work properly. You should also see the port number set to the current version number, indicating that we're not using Node.
+Check that all elements and figures work properly
+and everything should run over port `8501`.
+
+**Note:** It's fine to `ctrl-C` kill `mnist-cnn.py` becuase it runs for so long.
 
 #### Build the Wheel and Test That
 

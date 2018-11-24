@@ -270,7 +270,7 @@ class DeltaGenerator(object):
 
         Displays the doc string for this object. If the doc string is
         represented as ReStructuredText, then it will be converted to
-        Markdown on the client before display.
+        Markdown in the browser before display.
 
         Parameters
         ----------
