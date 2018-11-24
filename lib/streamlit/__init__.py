@@ -46,16 +46,24 @@ from streamlit.caching import cache  # Just for export.
 from streamlit.util import escape_markdown
 
 
-this_module = sys.modules[__name__]
+_this_module = sys.modules[__name__]
+
+# This delta generator has no queue so it can't send anything out on a
+# connection.
+_NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        con = DeltaConnection.get_connection()
-        dg = con.get_delta_generator()
-        return method(dg, *args, **kwargs)
-    return wrapped_method
+        # Only output if the config allows us to.
+        if config.get_option('client.displayEnabled'):
+            connection = DeltaConnection.get_connection()
+            delta_generator = connection.get_delta_generator()
+        else:
+            delta_generator = _NULL_DELTA_GENERATOR
 
+        return method(delta_generator, *args, **kwargs)
+    return wrapped_method
 
 for name in dir(DeltaGenerator):
     member = getattr(DeltaGenerator, name)
@@ -63,7 +71,7 @@ for name in dir(DeltaGenerator):
     if hasattr(member, EXPORT_FLAG):
         method = member
         # We introduce this level of indirection to wrap 'method' in a closure.
-        setattr(this_module, name, _wrap_delta_generator_method(method))
+        setattr(_this_module, name, _wrap_delta_generator_method(method))
 
 
 def write(*args):
