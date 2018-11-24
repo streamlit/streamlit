@@ -80,18 +80,18 @@ def main():
     ])
 
     run_commands('Examples', [
-        f'streamlit run examples/{filename}'
+        f'streamlit run {EXAMPLE_DIR}/{filename}'
             for filename in os.listdir(EXAMPLE_DIR)
             if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
     ])
 
     run_commands('Caching', [
-        'streamlit clear_cache',
-        'streamlit run examples/caching.py'
+        f'streamlit clear_cache',
+        f'streamlit run {EXAMPLE_DIR}/caching.py'
     ])
 
     run_commands('MNIST', [
-        'streamlit run examples/mnist-cnn.py'
+        f'streamlit run {EXAMPLE_DIR}/mnist-cnn.py'
     ], skip_last_input=True)
 
     status.success('Completed all tests!')
