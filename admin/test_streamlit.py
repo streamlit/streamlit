@@ -79,11 +79,11 @@ def main():
         'streamlit help'
     ])
 
-    # run_commands('Examples', [
-    #     f'streamlit run examples/{filename}'
-    #         for filename in os.listdir(EXAMPLE_DIR)
-    #         if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
-    # ])
+    run_commands('Examples', [
+        f'streamlit run examples/{filename}'
+            for filename in os.listdir(EXAMPLE_DIR)
+            if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+    ])
 
     run_commands('Caching', [
         'streamlit clear_cache',
