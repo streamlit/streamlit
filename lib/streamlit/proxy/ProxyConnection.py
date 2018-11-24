@@ -164,10 +164,8 @@ class ProxyConnection(object):
         """
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
-        client_id = str(util.get_local_id())
         manifest = dict(
             name=self.name,
-            client_id=client_id,
             nDeltas=len(deltas)
         )
         return (

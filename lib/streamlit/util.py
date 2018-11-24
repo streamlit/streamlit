@@ -19,50 +19,10 @@ import uuid
 
 
 STREAMLIT_ROOT_DIRECTORY = '.streamlit'
-__CACHE = dict() # use insead of {} for 2/3 compatibility
-
-def __cache(path, serialize, deserialize):
-    """Performs two levels of caching:
-
-    1. The data is cached to disk.
-    2. The data is memoized future reference.
-
-    Arguments are as follows:
-
-    path - path to save the data
-    serialize - serialize to string function
-    deserialize - deserialize from string function
-
-    NOTE: The wrapped function must take no arguments!
-    """
-    def decorator(func):
-        cached_value = []
-        lock = threading.Lock()
-        def wrapped_func():
-            with lock:
-                if not cached_value:
-                    try:
-                        with streamlit_read(path) as input:
-                            cached_value.append(deserialize(input.read()))
-                    except FileNotFoundError:
-                        cached_value.append(func())
-                        with streamlit_write(path) as output:
-                            output.write(serialize(cached_value[0]))
-                return cached_value[0]
-        return wrapped_func
-    return decorator
 
 def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
-
-@__cache('local_uuid.txt', str, uuid.UUID)
-def get_local_id():
-    """Returns a local id which identifies this user to the database."""
-    # mac = str(uuid.getnode())
-    # user = pwd.getpwuid(os.geteuid()).pw_name
-    # return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
-    return uuid.uuid4()
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):

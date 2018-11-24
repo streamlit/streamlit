@@ -20,8 +20,7 @@ from functools import wraps
 
 import streamlit as st
 from streamlit import config
-from streamlit.util import streamlit_read, streamlit_write
-from streamlit.util import STREAMLIT_ROOT_DIRECTORY as local_root
+from streamlit import util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger()
@@ -62,12 +61,12 @@ def cache(func):
 
             # Load the file (hit) or compute the function (miss).
             try:
-                with streamlit_read(path, binary=True) as input:
+                with util.streamlit_read(path, binary=True) as input:
                     rv = pickle.load(input)
                     LOGGER.debug('Cache HIT: ' + str(type(rv)))
             except FileNotFoundError:
                 rv = func(*argc, **argv)
-                with streamlit_write(path, binary=True) as output:
+                with util.streamlit_write(path, binary=True) as output:
                     pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
                 LOGGER.debug('Cache MISS: ' + str(type(rv)))
         return rv
@@ -85,7 +84,7 @@ def cache(func):
 
 def clear_cache(verbose=False):
     """Clear the memoization cache."""
-    cache_path = os.path.join(local_root, 'cache')
+    cache_path = os.path.join(util.STREAMLIT_ROOT_DIRECTORY, 'cache')
     if os.path.isdir(cache_path):
         shutil.rmtree(cache_path)
         if verbose:
