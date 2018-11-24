@@ -45,18 +45,23 @@ def _export(method):
 
 def _create_element(method):
     """Wrap function to easily create a Delta-generating method.
+
     This is a function decorator.
+
     Converts a method of the with arguments (self, element, ...) into a method
     with arguments (self, ...). Thus, the intantiation of the element proto
     object and creation of the element are handled automaticallyself.
+
     Parameters
     ----------
     method : callable
         A DeltaGenerator method with arguments (self, element, ...)
+
     Returns
     -------
     DeltaGenerator
         A new DeltaGenerator method with arguments (self, ...)
+
     """
     @wraps(method)
     def wrapped_method(self, *args, **kwargs):
