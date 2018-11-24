@@ -57,16 +57,16 @@ class DeltaConnection(object):
     def __init__(self):
         """Initialize connection to the server."""
         DeltaConnection._singleton = self
-        self._delta_generator = None
-        self._original_excepthook = None
 
-        # Create the connection object
         report_id = util.build_report_id()
+
+        self._original_excepthook = None
         self._connection = Connection(
             uri=_build_uri(report_id),
             initial_msg=_build_new_report_msg(report_id),
             on_connect=self._on_connect,
             on_cleanup=self._on_cleanup)
+        self._delta_generator = DeltaGenerator(self._connection.enqueue_delta)
 
     # NOTE: This is a callback that gets executed in a coroutine.
     def _on_connect(self):
@@ -90,16 +90,7 @@ class DeltaConnection(object):
         This is the object that allows you to dispatch toplevel deltas to the
         Report, e.g. adding new elements.
         """
-        if self._delta_generator is None:
-            # Start a new DeltaGenerator and tell it how to enqueue deltas.
-            self._delta_generator = DeltaGenerator(
-                self._maybe_enqueue_delta)
-
         return self._delta_generator
-
-    # NOTE: This is a callback that is executed by DeltaGenerator.
-    def _maybe_enqueue_delta(self, delta):
-        self._connection.enqueue_delta(delta)
 
 def _build_uri(report_id):
     """Create the Proxy's WebSocket URI for this report."""
