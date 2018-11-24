@@ -55,7 +55,7 @@ class FileStorage(AbstractStorage):
                 report_path = os.path.dirname(full_filename)
                 _recursively_create_folder(report_path)
 
-            LOGGER.info(f'Writing file {full_filename}')
+            LOGGER.debug(f'Writing file {full_filename}')
 
             with open(full_filename, 'wb') as f:
                 f.write(data)
@@ -66,7 +66,7 @@ class FileStorage(AbstractStorage):
                 else:
                     yield
 
-        LOGGER.info(f'Done writing files!')
+        LOGGER.debug(f'Done writing files!')
         raise gen.Return(report_path)
 
 
