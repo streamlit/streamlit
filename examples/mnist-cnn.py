@@ -105,7 +105,7 @@ sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
 model = Sequential()
 layer_1_size = 10
-epochs = 5
+epochs = 3
 
 model.add(Conv2D(10, (5, 5), input_shape=(img_width, img_height,1), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -120,7 +120,7 @@ model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
 
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
-    epochs=epochs, callbacks=[MyCallback(x_test)])
+    epochs=epochs, verbose=0, callbacks=[MyCallback(x_test)])
 
 st.success('Finished training!')
 

@@ -72,7 +72,7 @@ class ClientWebSocket(WebSocketHandler):
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
-            if config.get_option('proxy.saveOnExit'):
+            if config.get_option('proxy.liveSave'):
                 yield self._save_final_report()
 
             self._connection.close_client_connection()
@@ -86,7 +86,7 @@ class ClientWebSocket(WebSocketHandler):
             new_report_proto, self._report_name)
         self._proxy.register_proxy_connection(self._connection)
 
-        if config.get_option('proxy.saveOnExit'):
+        if config.get_option('proxy.liveSave'):
             IOLoop.current().spawn_callback(self._save_running_report)
 
     @gen.coroutine
