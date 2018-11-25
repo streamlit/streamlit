@@ -1,9 +1,12 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Websocket handler class which the local python library connects to."""
-from tornado.websocket import WebSocketHandler
-from tornado import gen
+
 import urllib
+
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.websocket import WebSocketHandler
 
 from streamlit import protobuf
 from streamlit.proxy import Proxy, ProxyConnection
@@ -46,7 +49,6 @@ class LocalWebSocket(WebSocketHandler):
         LOGGER.info('Local websocket opened for %s', self._report_name)
 
     @Proxy.stop_proxy_on_exception()
-    @gen.coroutine
     def on_message(self, message):
         """Run callback for websocket messages."""
         # LOGGER.debug(repr(message))
@@ -59,7 +61,7 @@ class LocalWebSocket(WebSocketHandler):
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
-            yield self._init_connection(msg.new_report)
+            self._init_connection(msg.new_report)
 
         elif msg_type == 'delta':
             assert self._connection, 'No `delta` before `new_report`.'
@@ -85,14 +87,13 @@ class LocalWebSocket(WebSocketHandler):
         else:
             self._proxy.schedule_potential_stop()
 
-    @gen.coroutine
     def _init_connection(self, new_report_proto):
         self._connection = ProxyConnection(
             new_report_proto, self._report_name)
         self._proxy.register_proxy_connection(self._connection)
 
         if config.get_option('proxy.saveOnExit'):
-            yield self._save_running_report()
+            IOLoop.current().spawn_callback(self._save_running_report)
 
     @gen.coroutine
     def _save_running_report(self):
