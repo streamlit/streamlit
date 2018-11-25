@@ -488,7 +488,7 @@ class StreamlitApp extends PureComponent {
 
     return new StaticConnection({
       manifest,
-      reportId: reportId,
+      reportId,
       onMessage: this.handleMessage,
       setConnectionState: this.setConnectionState,
       setReportName: this.setReportName,
