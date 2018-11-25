@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import streamlit as st
+from streamlit import config
 from streamlit.Chart import Chart
 
 from keras.datasets import mnist
@@ -119,8 +120,9 @@ model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
 
+show_terminal_output = not config.get_option('proxy.liveSave')
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
-    epochs=epochs, verbose=0, callbacks=[MyCallback(x_test)])
+    epochs=epochs, verbose=show_terminal_output, callbacks=[MyCallback(x_test)])
 
 st.success('Finished training!')
 
