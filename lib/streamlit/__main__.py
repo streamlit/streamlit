@@ -80,15 +80,15 @@ def show_config(*args):
     """Nothing."""
     pass
 
-COMMAND_HANDLERS = {
-    'clear_cache': clear_cache,
-    'help': help,
-    'kill_proxy': kill_proxy,
-    'run': run,
-    'show_config': show_config,
-    'usage': print_usage,
-    'version': version,
-}
+COMMAND_HANDLERS = dict(
+    clear_cache = clear_cache,
+    help = help,
+    kill_proxy = kill_proxy,
+    run = run,
+    show_config = show_config,
+    usage = print_usage,
+    version = version,
+)
 
 
 COMMANDS = list(COMMAND_HANDLERS.keys())
