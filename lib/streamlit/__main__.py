@@ -12,18 +12,9 @@ import click
 
 def print_usage(args):
     """Print this help message."""
-    # USAGE = """
-    #
-    #       clear_cache - Clear the memoization cache.
-    #       help        - Show help in browser.
-    #       kill_proxy  - Kill proxy.
-    #       usage       - Print this help message.
-    #       version     - Print the version number.
-    # """
-    # import textwrap
     print("\nWhere [MODE] is one of:")
-    # for command, handler in COMMAND_HANDLERS.items():
-    #     print('%.13s xcommand, handler)
+    for command, handler in COMMAND_HANDLERS.items():
+        print(f'  {command:<13} - {handler.__doc__}')
 
 
 def clear_cache(args):
@@ -40,7 +31,7 @@ def help(args):
 
 
 def run(args):
-    """Run a script and pipe stderr to Streamlit if error."""
+    """Run a Python script, piping stderr to Streamlit."""
     import streamlit.proxy.process_runner as process_runner
     import sys
 
@@ -72,7 +63,7 @@ def kill_proxy(*args):
 
 
 def version(*args):
-    """Print Streamlit's version number."""
+    """Print the version number."""
     import streamlit
     print('Streamlit v' + streamlit.__version__)
 
