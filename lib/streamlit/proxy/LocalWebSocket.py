@@ -8,10 +8,10 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 
-from streamlit import protobuf
-from streamlit.proxy import Proxy, ProxyConnection
-from streamlit.logger import get_logger
 from streamlit import config
+from streamlit import protobuf
+from streamlit.logger import get_logger
+from streamlit.proxy import Proxy, ProxyConnection
 
 LOGGER = get_logger()
 
@@ -56,8 +56,6 @@ class LocalWebSocket(WebSocketHandler):
         msg = protobuf.ForwardMsg()
         msg.ParseFromString(message)
 
-        # raise RuntimeError('Exceptionin on_message')
-
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
@@ -77,7 +75,6 @@ class LocalWebSocket(WebSocketHandler):
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
-            # Save the report if proxy.saveOnExit is true.
             if config.get_option('proxy.saveOnExit'):
                 yield self._save_final_report()
 
@@ -101,12 +98,7 @@ class LocalWebSocket(WebSocketHandler):
         LOGGER.debug(
             'Uploading running report... (id=%s)' % self._connection.id)
 
-        external_url = self._connection.get_external_url()
-        internal_url = self._connection.get_internal_url()
-
-        files = self._connection.serialize_running_report_to_files(
-            external_url=external_url,
-            internal_url=internal_url)
+        files = self._connection.serialize_running_report_to_files()
 
         storage = self._proxy.get_storage()
         url = yield storage.save_report_files(self._connection.id, files)

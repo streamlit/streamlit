@@ -29,6 +29,12 @@ class BrowserWebSocket(WebSocketHandler):
 
     executor = futures.ThreadPoolExecutor(5)
 
+    def set_default_headers(self):
+        self.set_header(
+            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
     def initialize(self, proxy):
         """Initialize self._connections."""
         self._proxy = proxy

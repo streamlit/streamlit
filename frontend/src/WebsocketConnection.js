@@ -3,8 +3,8 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import {ForwardMsg, BackMsg} from './protobuf';
-import {ConnectionState} from './ConnectionState';
+import { ForwardMsg, BackMsg } from './protobuf';
+import { ConnectionState } from './ConnectionState';
 
 
 /**
@@ -19,7 +19,7 @@ class WebsocketConnection {
   /**
    * Constructor.
    */
-  constructor({uri, onMessage, setConnectionState}) {
+  constructor({ uri, onMessage, setConnectionState }) {
     // To guarantee packet transmission order, this is the index of the last
     // dispatched incoming message.
     this.lastDispatchedMessageIndex = -1;
@@ -29,19 +29,19 @@ class WebsocketConnection {
 
     // This dictionary stores recieved messages that we haven't sent out yet
     // (because we're still decoding previous messages)
-    this.messageQueue = {}
+    this.messageQueue = {};
 
     // Create a new websocket.
     this.state = ConnectionState.DISCONNECTED;
     this.websocket = new WebSocket(uri);
 
-    this.websocket.onmessage = ({data}) => {
+    this.websocket.onmessage = ({ data }) => {
       this.handleMessage(data, onMessage);
-    }
+    };
 
     this.websocket.onclose = () => {
-      setConnectionState({connectionState: ConnectionState.DISCONNECTED});
-    }
+      setConnectionState({ connectionState: ConnectionState.DISCONNECTED });
+    };
 
     this.websocket.onerror = () => {
       setConnectionState({
@@ -50,7 +50,7 @@ class WebsocketConnection {
       });
     };
 
-    setConnectionState({connectionState: ConnectionState.CONNECTED});
+    setConnectionState({ connectionState: ConnectionState.CONNECTED });
   }
 
   /**
@@ -59,21 +59,21 @@ class WebsocketConnection {
   sendToProxy(obj) {
     const msg = BackMsg.create(obj);
     const buffer = BackMsg.encode(msg).finish();
-    this.websocket.send(buffer)
+    this.websocket.send(buffer);
   }
 
   handleMessage(data, onMessage) {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex;
-    this.nextMessageIndex += 1
+    this.nextMessageIndex += 1;
 
     // Read in the message data.
     const reader = new FileReader();
-    reader.readAsArrayBuffer(data)
+    reader.readAsArrayBuffer(data);
     reader.onloadend = () => {
       if (this.messageQueue === undefined) {
         console.log("We don't have a message queue. This is bad.")
-        return
+        return;
       }
 
       const resultArray = new Uint8Array(reader.result);
@@ -84,8 +84,8 @@ class WebsocketConnection {
         delete this.messageQueue[dispatchMessageIndex];
         this.lastDispatchedMessageIndex = dispatchMessageIndex;
       }
-    }
+    };
   }
-};
+}
 
 export default WebsocketConnection;

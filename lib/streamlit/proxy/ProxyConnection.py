@@ -9,13 +9,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import socket
 import urllib
-
-try:
-    import urllib.request  # for Python3
-except ImportError:
-    pass
 
 from streamlit import config
 from streamlit import util
@@ -23,9 +17,6 @@ from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
-
-
-AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 
 
 class ProxyConnection(object):
@@ -184,12 +175,7 @@ class ProxyConnection(object):
             LOGGER.debug(f'proxy.externalIP set to {external_ip}')
         else:
             LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
-            external_ip = _get_external_ip()
-
-        if external_ip is None:
-            print('Did not auto detect external IP. Please go to '
-                  f'{util.HELP_DOC} for debugging hints.')
-            return None
+            external_ip = util.get_external_ip()
 
         return _get_report_url(external_ip, None, self.name)
 
@@ -202,16 +188,11 @@ class ProxyConnection(object):
             The URL.
 
         """
-        internal_ip = _get_internal_ip()
+        internal_ip = util.get_internal_ip()
         return _get_report_url(internal_ip, None, self.name)
 
-    def serialize_running_report_to_files(self, external_url, internal_url):
+    def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
-
-        Parameters
-        ----------
-        external_url : str
-        internal_url : str
 
         Returns
         -------
@@ -225,8 +206,8 @@ class ProxyConnection(object):
         LOGGER.debug(f'Serializing running report')
         manifest = self._build_manifest(
             status=_Status.RUNNING,
-            external_proxy_url=external_url,
-            internal_proxy_url=internal_url,
+            external_proxy_ip=util.get_external_ip(),
+            internal_proxy_ip=util.get_internal_ip(),
         )
 
         manifest_json = json.dumps(manifest).encode('utf-8')
@@ -260,8 +241,8 @@ class ProxyConnection(object):
         )
 
     def _build_manifest(
-            self, status, n_deltas=None, external_proxy_url=None,
-            internal_proxy_url=None):
+            self, status, n_deltas=None, external_proxy_ip=None,
+            internal_proxy_ip=None):
         """Build a manifest dict for this report.
 
         Parameters
@@ -272,10 +253,10 @@ class ProxyConnection(object):
         n_deltas : int | None
             Only when status is DONE. The number of deltas that this report
             is made of.
-        external_proxy_url : str | None
-            Only when status is RUNNING. The URL of the Proxy's websocket.
-        internal_proxy_url : str | None
-            Only when status is RUNNING. The URL of the Proxy's websocket.
+        external_proxy_ip : str | None
+            Only when status is RUNNING. The IP of the Proxy's websocket.
+        internal_proxy_ip : str | None
+            Only when status is RUNNING. The IP of the Proxy's websocket.
 
         Returns
         -------
@@ -285,8 +266,9 @@ class ProxyConnection(object):
             - localId: str,
             - nDeltas: int | None,
             - proxyStatus: 'running' | 'done',
-            - externalProxyUrl: str | None,
-            - internalProxyUrl: str | None,
+            - externalProxyIP: str | None,
+            - internalProxyIP: str | None,
+            - proxyPort: int
 
         """
         return dict(
@@ -294,58 +276,15 @@ class ProxyConnection(object):
             localId=str(util.get_local_id()),
             nDeltas=n_deltas,
             proxyStatus=status,
-            externalProxyUrl=external_proxy_url,
-            internalProxyUrl=internal_proxy_url,
+            externalProxyIP=external_proxy_ip,
+            internalProxyIP=internal_proxy_ip,
+            proxyPort=config.get_option('proxy.port'),
         )
 
 
 class _Status(object):
     DONE = 'done'
     RUNNING = 'running'
-
-
-@util.memoize
-def _get_external_ip():
-    """Get the *external* IP address of the current machine.
-
-    Returns
-    -------
-    string
-        The external IPv4 address of the current machine.
-
-    """
-    try:
-        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
-        external_ip = response.decode('utf-8').strip()
-    except RuntimeError as e:
-        LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
-        external_ip = None
-
-    return external_ip
-
-
-@util.memoize
-def _get_internal_ip():
-    """Get the *local* IP address of the current machine.
-
-    From: https://stackoverflow.com/a/28950776
-
-    Returns
-    -------
-    string
-        The local IPv4 address of the current machine.
-
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Doesn't even have to be reachable
-        s.connect(('8.8.8.8', 1))
-        internal_ip = s.getsockname()[0]
-    except Exception:
-        internal_ip = '127.0.0.1'
-    finally:
-        s.close()
-    return internal_ip
 
 
 def _get_report_url(host, port, name):
@@ -374,10 +313,13 @@ def _get_report_url(host, port, name):
         host = config.get_option('proxy.server')
 
     if port is None:
-        if config.get_option('proxy.useNode'):
-            port = 3000
-        else:
-            port = config.get_option('proxy.port')
+        port = _get_http_port()
 
     quoted_name = urllib.parse.quote_plus(name)
     return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
+
+
+def _get_http_port():
+    if config.get_option('proxy.useNode'):
+        return 3000
+    return config.get_option('proxy.port')

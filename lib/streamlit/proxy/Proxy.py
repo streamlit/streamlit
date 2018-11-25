@@ -476,6 +476,12 @@ def stop_proxy_on_exception(is_coroutine=False):
 
 
 class _HealthHandler(web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header(
+            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
     def get(self):
         self.write('ok')
 
