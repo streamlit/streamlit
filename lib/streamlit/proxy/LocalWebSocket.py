@@ -46,6 +46,7 @@ class LocalWebSocket(WebSocketHandler):
         LOGGER.info('Local websocket opened for %s', self._report_name)
 
     @Proxy.stop_proxy_on_exception()
+    @gen.coroutine
     def on_message(self, message):
         """Run callback for websocket messages."""
         # LOGGER.debug(repr(message))
@@ -58,7 +59,7 @@ class LocalWebSocket(WebSocketHandler):
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
-            self._init_connection(msg.new_report)
+            yield self._init_connection(msg.new_report)
 
         elif msg_type == 'delta':
             assert self._connection, 'No `delta` before `new_report`.'
@@ -84,14 +85,16 @@ class LocalWebSocket(WebSocketHandler):
         else:
             self._proxy.schedule_potential_stop()
 
+    @gen.coroutine
     def _init_connection(self, new_report_proto):
         self._connection = ProxyConnection(
             new_report_proto, self._report_name)
         self._proxy.register_proxy_connection(self._connection)
 
         if config.get_option('proxy.saveOnExit'):
-            self._save_running_report()
+            yield self._save_running_report()
 
+    @gen.coroutine
     def _save_running_report(self):
         """Save the report stored in this connection."""
         LOGGER.debug(
@@ -105,8 +108,12 @@ class LocalWebSocket(WebSocketHandler):
             internal_url=internal_url)
 
         storage = self._proxy.get_storage()
-        storage.save_report_files(self._connection.id, files)
+        url = yield storage.save_report_files(self._connection.id, files)
 
+        # Print the URL to stdout so external scripts can grab this info.
+        print('SAVED REPORT: %s' % url)
+
+    @gen.coroutine
     def _save_final_report(self):
         """Save the report stored in this connection."""
         LOGGER.debug(
@@ -114,7 +121,7 @@ class LocalWebSocket(WebSocketHandler):
 
         files = self._connection.serialize_final_report_to_files()
         storage = self._proxy.get_storage()
-        url = storage.save_report_files(self._connection.id, files)
+        url = yield storage.save_report_files(self._connection.id, files)
 
         # Print the URL to stdout so external scripts can grab this info.
         print('SAVED REPORT: %s' % url)
