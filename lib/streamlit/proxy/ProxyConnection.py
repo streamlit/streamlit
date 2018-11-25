@@ -273,7 +273,6 @@ class ProxyConnection(object):
         """
         return dict(
             name=self.name,
-            localId=str(util.get_local_id()),
             nDeltas=n_deltas,
             proxyStatus=status,
             externalProxyIP=external_proxy_ip,
