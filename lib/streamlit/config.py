@@ -189,7 +189,7 @@ def _proxy_is_remote():
 
     By default, this option is False unless we are on a headless Linux box.
     """
-    live_save = False # get_option('proxy.liveSave')
+    live_save = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
     is_headless = (not os.getenv('DISPLAY'))
     return live_save or (is_linux and is_headless)
