@@ -88,7 +88,7 @@ class BrowserWebSocket(WebSocketHandler):
         try:
             while self._is_open:
                 self._connection, self._queue = (
-                    yield self._proxy.replace_connection_and_queue(
+                    yield self._proxy.get_latest_connection_and_queue(
                             self._report_name, self,
                             self._connection, self._queue))
                 if not self._queue.is_closed():

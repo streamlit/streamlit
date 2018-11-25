@@ -285,9 +285,9 @@ class Proxy(object):
         self._deregister_browser(connection, queue)
 
     @gen.coroutine
-    def replace_connection_and_queue(  # noqa: D401
+    def get_latest_connection_and_queue(  # noqa: D401
             self, report_name, ws, connection, queue):
-        """Gets the most recent proxy connection and queue for this report_name.
+        """Get the most recent proxy connection and queue for this report_name.
 
         BrowserWebSocket continuously calls this method in case a new client
         connection was established, in which case the BrowserWebSocket should
@@ -318,7 +318,7 @@ class Proxy(object):
             raise gen.Return((connection, queue))
 
         LOGGER.debug('The proxy connection for "%s" is not registered.',
-                        report_name)
+                     report_name)
 
         self._deregister_browser(connection, queue)
         new_connection, new_queue = (
