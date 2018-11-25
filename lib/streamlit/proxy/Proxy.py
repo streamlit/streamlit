@@ -6,7 +6,7 @@
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
 objects. A ProxyConnection always has:
 
-    - One ClientWebSocket connection to the client python libs.
+    - One ClientWebSocket connection to the client Python libs.
     - Zero or more BrowserWebSocket connections to a web browser.
 
 Essentially, the ProxyConnection stays open so long as any of those connections
@@ -90,10 +90,10 @@ class Proxy(object):
 
         # Set up HTTP routes
         routes = [
-            # Incoming client connection to stream a new report.
+            # Endpoint for WebSocket used by clients to send data to the Proxy.
             ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
 
-            # Outgoing browser endpoint to get the latest report.
+            # Endpoint for WebSocket used by the Proxy to send data to browsers.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
             # Test the health of the proxy.
