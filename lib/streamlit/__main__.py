@@ -68,6 +68,7 @@ def version(*args):
     import streamlit
     print('Streamlit v' + streamlit.__version__)
 
+
 COMMAND_HANDLERS = dict(
     clear_cache = clear_cache,
     help = help,
