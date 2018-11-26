@@ -19,7 +19,7 @@ from streamlit import util
 from streamlit.DeltaConnection import DeltaConnection
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 # String that Python prints at the beginning of a trace dump. This is not

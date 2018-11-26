@@ -25,7 +25,7 @@ THIS_IS_PROXY = False
 
 def set_log_level(level):
     """Set log level."""
-    logger = get_logger()
+    logger = get_logger(__name__)
 
     if isinstance(level, str):
         level = level.upper()
@@ -88,7 +88,7 @@ def init_aiohttp_logs():
         name = 'aiohttp.{}'.format(log)
         get_logger(name)
 
-    logger = get_logger()
+    logger = get_logger(__name__)
     logger.debug('Initialized aiohttp logs')
 
 
@@ -102,35 +102,13 @@ def init_tornado_logs():
         name = 'tornado.{}'.format(log)
         get_logger(name)
 
-    logger = get_logger()
+    logger = get_logger(__name__)
     logger.debug('Initialized tornado logs')
 
 
 def get_logger(name=None):
     """Return a logger."""
     global LOG_LEVEL
-
-    if not name:
-        caller = sys._getframe(1)
-
-        filename = inspect.getfile(caller)
-        module = inspect.getmodule(caller)
-
-        package = module.__package__
-        if package is None:
-            package = ''
-        modulename = inspect.getmodulename(filename)
-
-        # Join the name with periods, and get rid of any leading periods.
-        name = '.'.join([package, modulename])
-        while True:
-            if name == '':
-                name = 'null'
-                break
-            elif name[0] == '.':
-                name = name[1:]
-            else:
-                break
 
     if name in LOGGERS.keys():
         return LOGGERS[name]
@@ -147,7 +125,3 @@ def get_logger(name=None):
     LOGGERS[name] = log
 
     return log
-
-
-# Avoid dependency loop in 2.7 by importing this at the bottom.
-import streamlit.proxy  # noqa: F401

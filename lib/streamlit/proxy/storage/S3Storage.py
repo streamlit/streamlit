@@ -23,7 +23,7 @@ from streamlit import config
 from streamlit.proxy.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class S3Storage(AbstractStorage):

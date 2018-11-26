@@ -18,7 +18,7 @@ import streamlit
 from streamlit import errors
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class AbstractStorage(object):

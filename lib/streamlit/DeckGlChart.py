@@ -14,7 +14,7 @@ from streamlit.caseconverters import to_lower_camel_case, convert_dict_keys
 from streamlit.dicttools import unflatten
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 def marshall(proto, data=None, spec=None, **kwargs):

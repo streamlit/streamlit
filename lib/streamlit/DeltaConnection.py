@@ -21,7 +21,7 @@ from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class DeltaConnection(object):
@@ -140,6 +140,7 @@ def _build_name(report_id):
 def _build_new_report_msg(report_id):
     """Create a NewReportMessage proto."""
     # Get path of the file that caused this connection to be created.
+    # TODO: Find a cheaper way to do this. This costs around 40ms.
     root_frame = inspect.stack()[-1]
     filename = root_frame[1]  # 1 is the filename field in this tuple.
     source_file_path = ''  # Empty string means "no file" to us.
