@@ -27,7 +27,7 @@ EXPORT_FLAG = '__export__'
 
 # setup logging
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB

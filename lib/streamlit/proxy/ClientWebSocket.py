@@ -13,7 +13,7 @@ from streamlit import protobuf
 from streamlit.logger import get_logger
 from streamlit.proxy import Proxy, ProxyConnection
 
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class ClientWebSocket(WebSocketHandler):

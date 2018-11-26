@@ -14,7 +14,7 @@ from streamlit import data_frame_proto, protobuf
 from streamlit.dicttools import unflatten
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 def marshall(proto, data=None, spec=None, **kwargs):

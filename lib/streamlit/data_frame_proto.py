@@ -13,7 +13,7 @@ from streamlit.logger import get_logger
 
 import tzlocal
 
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 np = None
 pd = None

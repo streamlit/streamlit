@@ -23,7 +23,7 @@ from streamlit import config
 from streamlit import util
 from streamlit.logger import get_logger
 
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 def cache(func):
     """Function decorator to memoize input function, saving to disk.

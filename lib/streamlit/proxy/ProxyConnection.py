@@ -16,7 +16,7 @@ from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class ProxyConnection(object):
