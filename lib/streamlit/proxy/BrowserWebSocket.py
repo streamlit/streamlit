@@ -29,6 +29,12 @@ class BrowserWebSocket(WebSocketHandler):
 
     executor = futures.ThreadPoolExecutor(5)
 
+    def set_default_headers(self):
+        self.set_header(
+            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
     def initialize(self, proxy):
         """Initialize self._connections."""
         self._proxy = proxy
@@ -176,9 +182,10 @@ class BrowserWebSocket(WebSocketHandler):
         try:
             yield progress(0)
 
-            files = connection.serialize_report_to_files()
-            cloud = self._proxy.get_cloud_storage()
-            url = yield cloud.save_report_files(connection.id, files, progress)
+            files = connection.serialize_final_report_to_files()
+            storage = self._proxy.get_storage()
+            url = yield storage.save_report_files(
+                connection.id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()

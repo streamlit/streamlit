@@ -14,11 +14,31 @@ import contextlib
 import functools
 import os
 import pwd
+import socket
 import threading
+import urllib
 import uuid
+
+try:
+    import urllib.request  # for Python3
+except ImportError:
+    pass
 
 
 STREAMLIT_ROOT_DIRECTORY = '.streamlit'
+
+# Magic strings used to mark exceptions that have been handled by Streamlit's
+# excepthook. These string should be printed to stderr.
+EXCEPTHOOK_IDENTIFIER_STR = (
+    'Streamlit has caught the following unhandled exception...')
+
+
+# URL for checking the current machine's external IP address.
+_AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+
+
+# URL of Streamlit's help page.
+HELP_DOC = 'http://streamlit.io/docs/help/'
 
 def _decode_ascii(str):
     """Decodes a string as ascii."""
@@ -107,6 +127,7 @@ def memoize(func):
         return result[0]
     return wrapped_func
 
+
 def write_proto(ws, msg):
     """Writes a proto to a websocket.
 
@@ -129,7 +150,61 @@ def build_report_id():
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
 
-# Magic strings used to mark exceptions that have been handled by Streamlit's
-# excepthook. These string should be printed to stderr.
-EXCEPTHOOK_IDENTIFIER_STR = (
-    'Streamlit has caught the following unhandled exception...')
+_external_ip = None
+
+
+def get_external_ip():
+    """Get the *external* IP address of the current machine.
+
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
+    """
+    global _external_ip
+
+    if _external_ip is not None:
+        return _external_ip
+
+    try:
+        response = urllib.request.urlopen(_AWS_CHECK_IP, timeout=5).read()
+        _external_ip = response.decode('utf-8').strip()
+    except RuntimeError as e:
+        LOGGER.error(f'Error connecting to {_AWS_CHECK_IP}: {e}')
+        print('Did not auto detect external IP. Please go to '
+              f'{HELP_DOC} for debugging hints.')
+
+    return _external_ip
+
+
+_internal_ip = None
+
+
+def get_internal_ip():
+    """Get the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
+    """
+    global _internal_ip
+
+    if _internal_ip is not None:
+        return _internal_ip
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        _internal_ip = s.getsockname()[0]
+    except Exception:
+        _internal_ip = '127.0.0.1'
+    finally:
+        s.close()
+
+    return _internal_ip
