@@ -6,7 +6,7 @@
 Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
 objects. A ProxyConnection always has:
 
-    - One "local" connection to the python libs.
+    - One ClientWebSocket connection to the client Python libs.
     - Zero or more BrowserWebSocket connections to a web browser.
 
 Essentially, the ProxyConnection stays open so long as any of those connections
@@ -78,14 +78,14 @@ class Proxy(object):
 
         # We have to import these in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import LocalWebSocket, BrowserWebSocket
+        from streamlit.proxy import ClientWebSocket, BrowserWebSocket
 
         # Set up HTTP routes
         routes = [
-            # Local connection to stream a new report.
-            ('/new/(.*)/(.*)', LocalWebSocket, dict(proxy=self)),
+            # Endpoint for WebSocket used by clients to send data to the Proxy.
+            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
 
-            # Outgoing endpoint to get the latest report.
+            # Endpoint for WebSocket used by the Proxy to send data to browsers.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
             ('/healthz', _HealthHandler),
@@ -181,7 +181,7 @@ class Proxy(object):
         """Try to deregister proxy connection.
 
         Deregister ProxyConnection so long as there aren't any open connection
-        (local or client), and the connection is no longer in its grace period.
+        (client or browser), and the connection is no longer in its grace period.
 
         Parameters
         ----------
@@ -189,7 +189,7 @@ class Proxy(object):
 
         """
         def potentially_unregister():
-            if not self.proxy_connection_is_registered(connection):
+            if not self._proxy_connection_is_registered(connection):
                 return
 
             if not connection.can_be_deregistered():
@@ -220,7 +220,7 @@ class Proxy(object):
         LOGGER.debug(f'Got rid of connection {connection.name}')
         LOGGER.debug(f'Total connections left: {len(self._connections)}')
 
-    def proxy_connection_is_registered(self, connection):
+    def _proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
         return self._connections.get(connection.name, None) is connection
 
@@ -280,9 +280,13 @@ class Proxy(object):
         self._deregister_browser(connection, queue)
 
     @gen.coroutine
-    def on_browser_waiting_for_proxy_conn(  # noqa: D401
-            self, report_name, ws, old_connection, old_queue):
-        """Called when a client detects it has no corresponding ProxyConnection.
+    def get_latest_connection_and_queue(  # noqa: D401
+            self, report_name, ws, connection, queue):
+        """Get the most recent proxy connection and queue for this report_name.
+
+        BrowserWebSocket continuously calls this method in case a new client
+        connection was established, in which case the BrowserWebSocket should
+        switch to the new proxy connection and queue.
 
         Parameters
         ----------
@@ -290,18 +294,28 @@ class Proxy(object):
             The name of the report the browser connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
-        old_connection : ProxyConnection
+        connection : ProxyConnection
             The connection object that just got closed.
-        old_queue : ReportQueue
+        queue : ReportQueue
             The client queue corresponding to the closed connection.
 
         Returns
         -------
         ProxyConnection
+            The newly registered proxy connection.
         ReportQueue
+            The corresponding newly registered queue.
 
         """
-        self._deregister_browser(old_connection, old_queue)
+        # No need to change the connection or queue if the current one is still
+        # registered.
+        if self._proxy_connection_is_registered(connection):
+            raise gen.Return((connection, queue))
+
+        LOGGER.debug('The proxy connection for "%s" is not registered.',
+                     report_name)
+
+        self._deregister_browser(connection, queue)
         new_connection, new_queue = (
             yield self._register_browser(report_name, ws))
         raise gen.Return((new_connection, new_queue))
@@ -383,7 +397,7 @@ class Proxy(object):
         self.schedule_potential_deregister_and_stop(connection)
 
     def _maybe_add_fs_observer(self, connection):
-        """Start observing filesystem and store observer in local map.
+        """Start observing filesystem and store observer in self._fs_observers.
 
         Obeys config option proxy.watchFileSystem. If False, does not observe.
 

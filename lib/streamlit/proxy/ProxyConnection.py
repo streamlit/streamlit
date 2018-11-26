@@ -1,7 +1,7 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""Stores information about local and client connections for a report."""
+"""Stores information about client and browser connections for a report."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -55,8 +55,8 @@ class ProxyConnection(object):
         # The name for this report.
         self.name = name
 
-        # When the local connection ends, this flag becomes false.
-        self._has_local = True
+        # When the client connection ends, this flag becomes false.
+        self._has_client_connection = True
 
         # Before recieving connection and the the timeout hits, the connection
         # is in a "grace period" in which it can't be deregistered.
@@ -68,9 +68,9 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._browser_queues = []
 
-    def close_local_connection(self):
-        """Close local connection."""
-        self._has_local = False
+    def close_client_connection(self):
+        """Close the client connection."""
+        self._has_client_connection = False
         self._master_queue.close()
         for queue in self._browser_queues:
             queue.close()
@@ -106,7 +106,7 @@ class ProxyConnection(object):
         """
         return not (
             self._in_grace_period or
-            self._has_local or
+            self._has_client_connection or
             self.has_browser_connections())
 
     def enqueue(self, delta):
@@ -274,7 +274,6 @@ class ProxyConnection(object):
         """
         return dict(
             name=self.name,
-            localId=str(util.get_local_id()),
             nDeltas=n_deltas,
             proxyStatus=status,
             externalProxyIP=external_proxy_ip,

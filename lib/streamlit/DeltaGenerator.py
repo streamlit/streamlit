@@ -17,6 +17,7 @@ import sys
 import textwrap
 import traceback
 
+from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
 from streamlit.caseconverters import to_snake_case
@@ -694,6 +695,10 @@ class DeltaGenerator(object):
             element.
 
         """
+        # "Null" delta generators (those wihtout queues), don't send anything.
+        if self._queue is None:
+            return self
+
         # Create a delta message.
         delta = protobuf.Delta()
         set_element(delta.new_element)

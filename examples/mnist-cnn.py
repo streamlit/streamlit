@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import streamlit as st
+from streamlit import config
 from streamlit.Chart import Chart
 
 from keras.datasets import mnist
@@ -105,7 +106,7 @@ sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
 model = Sequential()
 layer_1_size = 10
-epochs = 5
+epochs = 3
 
 model.add(Conv2D(10, (5, 5), input_shape=(img_width, img_height,1), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -119,8 +120,9 @@ model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
 
+show_terminal_output = not config.get_option('proxy.liveSave')
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
-    epochs=epochs, callbacks=[MyCallback(x_test)])
+    epochs=epochs, verbose=show_terminal_output, callbacks=[MyCallback(x_test)])
 
 st.success('Finished training!')
 

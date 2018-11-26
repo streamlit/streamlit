@@ -42,8 +42,8 @@ terminal:
 
 ```
 $ mkdir -p ~/.streamlit
-$ cat << EOF >> ~/.streamlit/config.yaml
-client:
-  remotelyTrackUsage: false
+$ cat << EOF >> ~/.streamlit/config.toml
+[browser]
+remotelyTrackUsage = false
 EOF
 ```

@@ -251,14 +251,8 @@ class StreamlitApp extends PureComponent {
    * Empties out all elements whose reportIds are no longer current.
    */
   clearOldElements() {
-    this.setState(({ elements, reportId }) => ({
-      elements: elements
-          // Need to filter the element list first because the list can have
-          // can have "holes" in it (caused by enqueing elements with
-          // non-consecutive IDs). Without this, elt.get() (below) will fail
-          // sometimes because elt can be undefined.
-          .filter(elt => elt)
-          .map((elt) => {
+    this.setState(({elements, reportId}) => ({
+      elements: elements.map((elt) => {
             if (elt.get('reportId') === reportId) {
               return elt;
             }

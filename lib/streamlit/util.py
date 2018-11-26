@@ -17,9 +17,7 @@ import threading
 import uuid
 
 
-__STREAMLIT_LOCAL_ROOT = '.streamlit'
-__CACHE = dict() # use insead of {} for 2/3 compatibility
-
+STREAMLIT_ROOT_DIRECTORY = '.streamlit'
 
 # Magic strings used to mark exceptions that have been handled by Streamlit's
 # excepthook. These string should be printed to stderr.
@@ -30,49 +28,9 @@ EXCEPTHOOK_IDENTIFIER_STR = (
 # URL of Streamlit's help page.
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
-
-def __cache(path, serialize, deserialize):
-    """Performs two levels of caching:
-
-    1. The data is cached to disk.
-    2. The data is memoized future reference.
-
-    Arguments are as follows:
-
-    path - path to save the data
-    serialize - serialize to string function
-    deserialize - deserialize from string function
-
-    NOTE: The wrapped function must take no arguments!
-    """
-    def decorator(func):
-        cached_value = []
-        lock = threading.Lock()
-        def wrapped_func():
-            with lock:
-                if not cached_value:
-                    try:
-                        with streamlit_read(path) as input:
-                            cached_value.append(deserialize(input.read()))
-                    except FileNotFoundError:
-                        cached_value.append(func())
-                        with streamlit_write(path) as output:
-                            output.write(serialize(cached_value[0]))
-                return cached_value[0]
-        return wrapped_func
-    return decorator
-
 def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
-
-@__cache('local_uuid.txt', str, uuid.UUID)
-def get_local_id():
-    """Returns a local id which identifies this user to the database."""
-    # mac = str(uuid.getnode())
-    # user = pwd.getpwuid(os.geteuid()).pw_name
-    # return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
-    return uuid.uuid4()
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
@@ -83,7 +41,7 @@ def streamlit_read(path, binary=False):
     with read('foo.txt') as foo:
         ...
 
-    opens the file `{__STREAMLIT_LOCAL_ROOT}/foo.txt`
+    opens the file `{STREAMLIT_ROOT_DIRECTORY}/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
@@ -91,7 +49,7 @@ def streamlit_read(path, binary=False):
     mode = 'r'
     if binary:
         mode += 'b'
-    with open(os.path.join(__STREAMLIT_LOCAL_ROOT, path), mode) as handle:
+    with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
 
 @contextlib.contextmanager
@@ -103,7 +61,7 @@ def streamlit_write(path, binary=False):
         with open_ensuring_path('foo/bar.txt') as bar:
             ...
 
-    opens the file {__STREAMLIT_LOCAL_ROOT}/foo/bar.txt for writing,
+    opens the file {STREAMLIT_ROOT_DIRECTORY}/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
@@ -112,7 +70,7 @@ def streamlit_write(path, binary=False):
     mode = 'w'
     if binary:
         mode += 'b'
-    path = os.path.join(__STREAMLIT_LOCAL_ROOT, path)
+    path = os.path.join(STREAMLIT_ROOT_DIRECTORY, path)
     directory = os.path.split(path)[0]
     if not os.path.exists(directory):
         os.makedirs(directory)

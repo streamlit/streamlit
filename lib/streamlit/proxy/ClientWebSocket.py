@@ -17,7 +17,7 @@ from streamlit.proxy import proxy_util
 LOGGER = get_logger()
 
 
-class LocalWebSocket(WebSocketHandler):
+class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the local python library connects to."""
 
     def initialize(self, proxy):
@@ -29,23 +29,20 @@ class LocalWebSocket(WebSocketHandler):
         return proxy_util.url_is_from_allowed_origins(origin)
 
     @Proxy.stop_proxy_on_exception()
-    def open(self, local_id, report_name):
+    def open(self, report_name):
         """Handle connection to *local* instance of Streamlit.
 
         Parameters
         ----------
-        local_id : str
-            Vestigial stuff. Deprecated.
         report_name : str
             The name of the report.
 
         """
         # Parse out the control information.
-        self._local_id = local_id
         self._report_name = report_name
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
-        LOGGER.info('Local websocket opened for %s', self._report_name)
+        LOGGER.info('Client websocket opened for %s', self._report_name)
 
     @Proxy.stop_proxy_on_exception()
     def on_message(self, message):
@@ -70,14 +67,14 @@ class LocalWebSocket(WebSocketHandler):
     @gen.coroutine
     def on_close(self):
         """Close callback."""
-        LOGGER.info('Local websocket closed for "%s"' % self._report_name)
+        LOGGER.info('Client websocket closed for "%s"' % self._report_name)
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
-            if config.get_option('proxy.saveOnExit'):
+            if config.get_option('proxy.liveSave'):
                 yield self._save_final_report()
 
-            self._connection.close_local_connection()
+            self._connection.close_client_connection()
             self._proxy.schedule_potential_deregister_and_stop(
                 self._connection)
         else:
@@ -88,7 +85,7 @@ class LocalWebSocket(WebSocketHandler):
             new_report_proto, self._report_name)
         self._proxy.register_proxy_connection(self._connection)
 
-        if config.get_option('proxy.saveOnExit'):
+        if config.get_option('proxy.liveSave'):
             IOLoop.current().spawn_callback(self._save_running_report)
 
     @gen.coroutine

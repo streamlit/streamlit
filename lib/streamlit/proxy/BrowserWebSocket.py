@@ -88,17 +88,10 @@ class BrowserWebSocket(WebSocketHandler):
 
         try:
             while self._is_open:
-                if not self._proxy.proxy_connection_is_registered(self._connection):
-                    LOGGER.debug('The proxy connection for "%s" is not registered.',
-                                 self._report_name)
-                    self._connection, self._queue = (
-                        yield self._proxy.on_browser_waiting_for_proxy_conn(
-                                self._report_name, self,
-                                self._connection, self._queue))
-                    LOGGER.debug('Got a new connection ("%s") : %s',
-                                 self._connection.name, self._connection)
-                    LOGGER.debug('Got a new queue : "%s"', self._queue)
-
+                self._connection, self._queue = (
+                    yield self._proxy.get_latest_connection_and_queue(
+                            self._report_name, self,
+                            self._connection, self._queue))
                 if not self._queue.is_closed():
                     yield self._queue.flush_queue(self)
                 elif not indicated_closed:
@@ -130,7 +123,7 @@ class BrowserWebSocket(WebSocketHandler):
 
     @gen.coroutine
     def _send_new_connection_msg(self):
-        """Send message to browser with local configuration settings."""
+        """Send message to browser with client configuration settings."""
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.sharing_enabled = (

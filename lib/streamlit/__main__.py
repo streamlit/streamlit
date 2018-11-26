@@ -1,22 +1,21 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: future_fstrings -*-
 
 """This is a script which is run when the Streamlit package is executed."""
+
+# Python 2/3 compatibility
+from __future__ import print_function, division, absolute_import
+# Not importing unicode_literals from __future__ because click doesn't like it.
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 import click
 
 
 def print_usage(args):
-    """Print a help message."""
-    USAGE = """
-        Where [MODE] is one of:
-          clear_cache - Clear the memoization cache.
-          help        - Show help in browser.
-          kill_proxy  - Kill proxy.
-          usage       - Print this help message.
-          version     - Print the version number.
-    """
-    import textwrap
-    print("\n" + textwrap.dedent(USAGE).strip())
+    """Print this help message."""
+    print("\nWhere [MODE] is one of:")
+    for command, handler in COMMAND_HANDLERS.items():
+        print(f'  {command:<13} - {handler.__doc__}')
 
 
 def clear_cache(args):
@@ -26,14 +25,14 @@ def clear_cache(args):
 
 
 def help(args):
-    """Show help."""
+    """Show help in browser."""
     print('Showing help page in browser...')
     import streamlit.reference
     streamlit.reference.display_reference()
 
 
 def run(args):
-    """Run a script and pipe stderr to Streamlit if error."""
+    """Run a Python script, piping stderr to Streamlit."""
     import streamlit.proxy.process_runner as process_runner
     import sys
 
@@ -47,7 +46,7 @@ def run(args):
 
 
 def kill_proxy(*args):
-    """Kill Streamlit Proxy."""
+    """Kill the Streamlit proxy."""
     import psutil
     import getpass
 
@@ -65,19 +64,19 @@ def kill_proxy(*args):
 
 
 def version(*args):
-    """Print Stremalit's version."""
+    """Print the version number."""
     import streamlit
     print('Streamlit v' + streamlit.__version__)
 
 
-COMMAND_HANDLERS = {
-    'usage': print_usage,
-    'clear_cache': clear_cache,
-    'help': help,
-    'run': run,
-    'kill_proxy': kill_proxy,
-    'version': version
-}
+COMMAND_HANDLERS = dict(
+    clear_cache = clear_cache,
+    help = help,
+    kill_proxy = kill_proxy,
+    run = run,
+    usage = print_usage,
+    version = version,
+)
 
 
 COMMANDS = list(COMMAND_HANDLERS.keys())

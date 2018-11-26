@@ -140,6 +140,7 @@ make build
 Test that it works:
 ```
 make install
+make pytest
 python admin/test_streamlit.py
 ```
 Check that all elements and figures work properly
