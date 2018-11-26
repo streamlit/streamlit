@@ -379,6 +379,22 @@ def get_where_defined(key):
         raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].where_defined
 
+def show_config():
+    """Show all the config options."""
+    import textwrap
+
+    SKIP_SECTIONS = ('_test',)
+    print(_section_descriptions)
+    config_md = '# Config Options\n\n'
+    for section, section_description in _section_descriptions.items():
+        if section in SKIP_SECTIONS:
+            continue
+        config_md += f'## {section}\n\n'
+        config_md += f'_{textwrap.dedent(section_description).strip()}_\n'
+        config_md += '\n\n\n'
+    print(config_md)
+    import streamlit as st
+    st.write(config_md)
 
 # Load Config Files #
 
