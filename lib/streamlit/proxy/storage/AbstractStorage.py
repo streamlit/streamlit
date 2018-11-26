@@ -113,14 +113,29 @@ def _get_static_files(static_dir):
     static_files = []
     md5 = hashlib.md5()
 
+    # Put index.html in this temporary variable rather than in static_files, so
+    # we can add it to the END of static_files later on. This is because the
+    # presence of index.html is used to verify whether ALL the files have been
+    # successfully uploaded.
+    index_tuple = None
+
     for root, dirnames, filenames in os.walk(static_dir):
         for filename in filenames:
             absolute_name = os.path.join(root, filename)
             relative_name = os.path.relpath(absolute_name, static_dir)
             with open(absolute_name, 'rb') as input:
                 file_data = input.read()
-                static_files.append((relative_name, file_data))
+                file_tuple = (relative_name, file_data)
+
+                if relative_name == 'index.html':
+                    index_tuple = file_tuple
+                else:
+                    static_files.append(file_tuple)
+
                 md5.update(file_data)
+
+    if index_tuple is not None:
+        static_files.append(index_tuple)
 
     if not static_files:
         raise errors.NoStaticFiles(
