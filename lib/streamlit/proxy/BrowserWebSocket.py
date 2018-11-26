@@ -8,6 +8,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import urllib
+
 from tornado import gen
 from tornado.concurrent import futures
 from tornado.concurrent import run_on_executor
@@ -19,6 +21,7 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit.proxy import Proxy
 from streamlit.proxy import process_runner
+from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -29,12 +32,6 @@ class BrowserWebSocket(WebSocketHandler):
 
     executor = futures.ThreadPoolExecutor(5)
 
-    def set_default_headers(self):
-        self.set_header(
-            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
-        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-
     def initialize(self, proxy):
         """Initialize self._connections."""
         self._proxy = proxy
@@ -43,10 +40,8 @@ class BrowserWebSocket(WebSocketHandler):
         self._is_open = False
 
     def check_origin(self, origin):
-        """Ignore CORS."""
-        # WARNING.  EXTREMELY UNSECURE.
-        # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
-        return True
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
 
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine

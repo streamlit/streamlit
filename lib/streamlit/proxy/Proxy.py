@@ -23,12 +23,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import config
-from streamlit.proxy.storage.S3Storage import S3Storage as Storage
-from streamlit.util import get_static_dir, write_proto
-
-from streamlit.streamlit_msg_proto import new_report_msg
-
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -37,9 +31,13 @@ import textwrap
 import traceback
 import webbrowser
 
-from streamlit.proxy.FSObserver import FSObserver
-from streamlit.proxy import process_runner
+from streamlit import config
 from streamlit import util
+from streamlit.proxy import process_runner
+from streamlit.proxy import proxy_util
+from streamlit.proxy.FSObserver import FSObserver
+from streamlit.proxy.storage.S3Storage import S3Storage as Storage
+from streamlit.streamlit_msg_proto import new_report_msg
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -95,7 +93,7 @@ class Proxy(object):
         if not config.get_option('proxy.useNode'):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
-            static_path = get_static_dir()
+            static_path = util.get_static_dir()
             LOGGER.info(f'Serving static content from {static_path}')
 
             routes.extend([
@@ -365,7 +363,7 @@ class Proxy(object):
         connection = self._connections[report_name]
         queue = connection.add_browser_queue()
 
-        yield write_proto(
+        yield util.write_proto(
             ws,
             new_report_msg(
                 connection.id, connection.cwd, connection.command_line,
@@ -476,14 +474,12 @@ def stop_proxy_on_exception(is_coroutine=False):
 
 
 class _HealthHandler(web.RequestHandler):
-    def set_default_headers(self):
-        self.set_header(
-            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
-        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-
     def get(self):
         self.write('ok')
+
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
 
 
 def _print_urls(connection, autoCloseDelaySecs):

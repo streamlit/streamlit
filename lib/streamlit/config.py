@@ -216,6 +216,12 @@ _create_option('proxy.externalIP',
         """,
     default_val=None)
 
+_create_option('proxy.enableCORS',
+    description="""
+        Enables support for Cross-Origin Request Sharing, for added security.
+        """,
+    default_val=True)
+
 
 # Config Section: S3 #
 

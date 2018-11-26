@@ -13,3 +13,4 @@ from .BrowserWebSocket import BrowserWebSocket
 from .LocalWebSocket import LocalWebSocket
 from .Proxy import Proxy
 import streamlit.proxy.process_runner
+import streamlit.proxy.proxy_util

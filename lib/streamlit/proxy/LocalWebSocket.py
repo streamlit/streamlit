@@ -12,6 +12,7 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit.logger import get_logger
 from streamlit.proxy import Proxy, ProxyConnection
+from streamlit.proxy import proxy_util
 
 LOGGER = get_logger()
 
@@ -24,10 +25,8 @@ class LocalWebSocket(WebSocketHandler):
         self._proxy = proxy
 
     def check_origin(self, origin):
-        """Ignore CORS."""
-        # WARNING.  EXTREMELY UNSECURE.
-        # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
-        return True
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
 
     @Proxy.stop_proxy_on_exception()
     def open(self, local_id, report_name):
