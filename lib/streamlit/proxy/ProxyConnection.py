@@ -14,7 +14,6 @@ import urllib
 from streamlit import config
 from streamlit import util
 from streamlit.ReportQueue import ReportQueue
-from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
@@ -176,7 +175,7 @@ class ProxyConnection(object):
             LOGGER.debug(f'proxy.externalIP set to {external_ip}')
         else:
             LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
-            external_ip = proxy_util.get_external_ip()
+            external_ip = util.get_external_ip()
 
         return _get_report_url(external_ip, None, self.name)
 
@@ -189,7 +188,7 @@ class ProxyConnection(object):
             The URL.
 
         """
-        internal_ip = proxy_util.get_internal_ip()
+        internal_ip = util.get_internal_ip()
         return _get_report_url(internal_ip, None, self.name)
 
     def serialize_running_report_to_files(self):
@@ -207,8 +206,8 @@ class ProxyConnection(object):
         LOGGER.debug(f'Serializing running report')
         manifest = self._build_manifest(
             status=_Status.RUNNING,
-            external_proxy_ip=proxy_util.get_external_ip(),
-            internal_proxy_ip=proxy_util.get_internal_ip(),
+            external_proxy_ip=util.get_external_ip(),
+            internal_proxy_ip=util.get_internal_ip(),
         )
 
         manifest_json = json.dumps(manifest).encode('utf-8')

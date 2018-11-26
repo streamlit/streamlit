@@ -210,7 +210,7 @@ _create_option('proxy.externalIP',
         An address for the proxy which can be accessed on the public Internet.
 
         NOTE: We should make this a computed option by bringing
-        Proxy._get_external_ip into this function.
+        util.get_external_ip into this function.
         """,
     default_val=None)
 

@@ -13,8 +13,15 @@ import base58
 import contextlib
 import functools
 import os
+import socket
 import threading
+import urllib
 import uuid
+
+try:
+    import urllib.request  # for Python3
+except ImportError:
+    pass
 
 
 STREAMLIT_ROOT_DIRECTORY = '.streamlit'
@@ -28,9 +35,15 @@ EXCEPTHOOK_IDENTIFIER_STR = (
 # URL of Streamlit's help page.
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
+
+# URL for checking the current machine's external IP address.
+_AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+
+
 def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
+
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
@@ -51,6 +64,7 @@ def streamlit_read(path, binary=False):
         mode += 'b'
     with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
+
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
@@ -77,6 +91,7 @@ def streamlit_write(path, binary=False):
     with open(path, mode) as handle:
         yield handle
 
+
 def escape_markdown(raw_string):
     """Returns a new string which escapes all markdown metacharacters.
 
@@ -99,6 +114,7 @@ def escape_markdown(raw_string):
     for character in metacharacters:
         result = result.replace(character, '\\' + character)
     return result
+
 
 def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))
@@ -136,3 +152,63 @@ def write_proto(ws, msg):
 def build_report_id():
     """Randomly generate a report ID."""
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+_external_ip = None
+
+
+def get_external_ip():
+    """Get the *external* IP address of the current machine.
+
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
+    """
+    global _external_ip
+
+    if _external_ip is not None:
+        return _external_ip
+
+    try:
+        response = urllib.request.urlopen(_AWS_CHECK_IP, timeout=5).read()
+        _external_ip = response.decode('utf-8').strip()
+    except RuntimeError as e:
+        LOGGER.error(f'Error connecting to {_AWS_CHECK_IP}: {e}')
+        print('Did not auto detect external IP. Please go to '
+              f'{HELP_DOC} for debugging hints.')
+
+    return _external_ip
+
+
+_internal_ip = None
+
+
+def get_internal_ip():
+    """Get the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
+    """
+    global _internal_ip
+
+    if _internal_ip is not None:
+        return _internal_ip
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        _internal_ip = s.getsockname()[0]
+    except Exception:
+        _internal_ip = '127.0.0.1'
+    finally:
+        s.close()
+
+    return _internal_ip
