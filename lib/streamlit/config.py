@@ -383,13 +383,23 @@ def show_config():
 
     SKIP_SECTIONS = ('_test',)
     print(_section_descriptions)
-    config_md = '# Config Options\n\n'
+    config_md = '# Config Options\n\n---\n'
     for section, section_description in _section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
         config_md += f'## {section}\n\n'
-        config_md += f'_{textwrap.dedent(section_description).strip()}_\n'
-        config_md += '\n\n\n'
+        config_md += f'{textwrap.dedent(section_description).strip()}\n\n\n'
+        for key, option in _config_options.items():
+            if option.section != section:
+                continue
+
+            description = ' '.join(textwrap.dedent(line).strip()
+                for line in option.description.split('\n'))
+
+            config_md += f'### {option.key} : {option.value}\n\n'
+            config_md += f'{description} (_Set In:_ `{option.where_defined}`)\n\n'
+            config_md += '\n\n'
+        config_md += '\n---\n\n'
     print(config_md)
     import streamlit as st
     st.write(config_md)
