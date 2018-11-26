@@ -106,8 +106,19 @@ def init_tornado_logs():
     logger.debug('Initialized tornado logs')
 
 
-def get_logger(name=None):
-    """Return a logger."""
+def get_logger(name):
+    """Return a logger.
+
+    Parameters
+    ----------
+    name : str
+        The name of the logger to use. You should just pass in __name__.
+
+    Returns
+    -------
+    Logger
+
+    """
     global LOG_LEVEL
 
     if name in LOGGERS.keys():
