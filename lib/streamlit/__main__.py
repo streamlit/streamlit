@@ -8,7 +8,9 @@ from __future__ import print_function, division, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+
 import click
+
 
 def print_usage(args):
     """Print this help message."""
@@ -67,10 +69,12 @@ def version(*args):
     import streamlit
     print('Streamlit v' + streamlit.__version__)
 
+
 def show_config(*args):
     """Show all of Streamlit's config settings."""
     from streamlit import config
     config.show_config()
+
 
 COMMAND_HANDLERS = dict(
     clear_cache = clear_cache,

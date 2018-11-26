@@ -1,14 +1,17 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Websocket handler class which the local python library connects to."""
-from tornado.websocket import WebSocketHandler
-from tornado import gen
+
 import urllib
 
-from streamlit import protobuf
-from streamlit.proxy import Proxy, ProxyConnection
-from streamlit.logger import get_logger
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.websocket import WebSocketHandler
+
 from streamlit import config
+from streamlit import protobuf
+from streamlit.logger import get_logger
+from streamlit.proxy import Proxy, ProxyConnection
 
 LOGGER = get_logger()
 
@@ -50,13 +53,11 @@ class ClientWebSocket(WebSocketHandler):
         msg = protobuf.ForwardMsg()
         msg.ParseFromString(message)
 
-        # raise RuntimeError('Exceptionin on_message')
-
         msg_type = msg.WhichOneof('type')
         if msg_type == 'new_report':
             assert not self._connection, 'Cannot send `new_report` twice.'
-            self._connection = ProxyConnection(msg.new_report, self._report_name)
-            self._proxy.register_proxy_connection(self._connection)
+            self._init_connection(msg.new_report)
+
         elif msg_type == 'delta':
             assert self._connection, 'No `delta` before `new_report`.'
             self._connection.enqueue(msg.delta)
@@ -71,9 +72,8 @@ class ClientWebSocket(WebSocketHandler):
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
-            # Save the report if proxy.saveOnExit is true.
-            if config.get_option('proxy.saveOnExit'):
-                yield self._save_report(self._connection)
+            if config.get_option('proxy.liveSave'):
+                yield self._save_final_report()
 
             self._connection.close_client_connection()
             self._proxy.schedule_potential_deregister_and_stop(
@@ -81,15 +81,37 @@ class ClientWebSocket(WebSocketHandler):
         else:
             self._proxy.schedule_potential_stop()
 
-    @gen.coroutine
-    def _save_report(self, connection):
-        """Save the report stored in this connection."""
-        # Don't report upload progress.
-        progress = gen.coroutine(lambda percent: None)
+    def _init_connection(self, new_report_proto):
+        self._connection = ProxyConnection(
+            new_report_proto, self._report_name)
+        self._proxy.register_proxy_connection(self._connection)
 
-        # Saving the report
-        LOGGER.debug('Uploading the report... (id=%s)' % connection.id)
-        files = connection.serialize_report_to_files()
-        cloud = self._proxy.get_cloud_storage()
-        url = yield cloud.upload_report(connection.id, files, progress)
+        if config.get_option('proxy.liveSave'):
+            IOLoop.current().spawn_callback(self._save_running_report)
+
+    @gen.coroutine
+    def _save_running_report(self):
+        """Save the report stored in this connection."""
+        LOGGER.debug(
+            'Uploading running report... (id=%s)' % self._connection.id)
+
+        files = self._connection.serialize_running_report_to_files()
+
+        storage = self._proxy.get_storage()
+        url = yield storage.save_report_files(self._connection.id, files)
+
+        # Print the URL to stdout so external scripts can grab this info.
+        print('SAVED REPORT: %s' % url)
+
+    @gen.coroutine
+    def _save_final_report(self):
+        """Save the report stored in this connection."""
+        LOGGER.debug(
+            'Uploading final report... (id=%s)' % self._connection.id)
+
+        files = self._connection.serialize_final_report_to_files()
+        storage = self._proxy.get_storage()
+        url = yield storage.save_report_files(self._connection.id, files)
+
+        # Print the URL to stdout so external scripts can grab this info.
         print('SAVED REPORT: %s' % url)

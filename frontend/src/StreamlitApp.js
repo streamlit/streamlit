@@ -42,7 +42,7 @@ import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
-import { PROXY_PORT_PROD } from './baseconsts';
+import { PROXY_PORT_PROD, FETCH_PARAMS } from './baseconsts';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -62,7 +62,7 @@ class StreamlitApp extends PureComponent {
         text: {
           format: TextProto.Format.INFO,
           body: 'Ready to receive data',
-        }
+        },
       }]),
       userSettings: {
         wideMode: false,
@@ -109,28 +109,26 @@ class StreamlitApp extends PureComponent {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const { query } = url.parse(window.location.href, true);
     if (query.name !== undefined) {
-        const reportName = query.name;
-        this.setReportName(reportName);
-        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
-        this.connection = new WebsocketConnection({
-          uri: uri,
-          onMessage: this.handleMessage,
-          setConnectionState: this.setConnectionState,
-        });
+      const reportName = query.name;
+      this.setReportName(reportName);
+
+      const uri =
+          getWsUrl(window.location.hostname, PROXY_PORT_PROD, reportName);
+
+      this.connection = new WebsocketConnection({
+        uri,
+        onMessage: this.handleMessage,
+        setConnectionState: this.setConnectionState,
+      });
     } else if (query.id !== undefined) {
-        this.connection = new StaticConnection({
-          reportId: query.id,
-          onMessage: this.handleMessage,
-          setConnectionState: this.setConnectionState,
-          setReportName: this.setReportName,
-        });
+      this.connection = await this.getAppropriateConnection(query.id);
     } else {
       this.showSingleTextElement(
         'URL must contain either a report name or an ID.',
-        TextProto.Format.ERROR
+        TextProto.Format.ERROR,
       );
     }
   }
@@ -159,9 +157,9 @@ class StreamlitApp extends PureComponent {
       elements: fromJS([{
         type: 'text',
         text: {
-          format: format,
+          format,
           body: msg,
-        }
+        },
       }]),
     });
   }
@@ -201,10 +199,10 @@ class StreamlitApp extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.openDialog({type: 'uploadProgress', progress: progress});
+        this.openDialog({ progress, type: 'uploadProgress' });
       },
       reportUploaded: (url) => {
-        this.openDialog({type: 'uploaded', url: url})
+        this.openDialog({ url, type: 'uploaded' })
       },
     });
   }
@@ -213,14 +211,14 @@ class StreamlitApp extends PureComponent {
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
-    this.setState({dialog: dialogProps});
+    this.setState({ dialog: dialogProps });
   }
 
   /**
    * Closes the upload dialog if it's open.
    */
   closeDialog() {
-    this.setState({dialog: undefined});
+    this.setState({ dialog: undefined });
   }
 
   /**
@@ -239,13 +237,13 @@ class StreamlitApp extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
-    const reportId = this.state.reportId;
-    this.setState(({elements}) => ({
-      elements: elements.update(delta.get('id'), (element) =>
-          dispatchOneOf(delta, 'type', {
-            newElement: (newElement) => newElement.set('reportId', reportId),
-            addRows: (newRows) => addRows(element, newRows),
-        }))
+    const { reportId } = this.state;
+    this.setState(({ elements }) => ({
+      elements: elements.update(delta.get('id'), element =>
+        dispatchOneOf(delta, 'type', {
+          newElement: newElement => newElement.set('reportId', reportId),
+          addRows: newRows => addRows(element, newRows),
+      })),
     }));
   }
 
@@ -257,13 +255,12 @@ class StreamlitApp extends PureComponent {
       elements: elements.map((elt) => {
             if (elt.get('reportId') === reportId) {
               return elt;
-            } else {
-              return fromJS({
-                empty: {unused: true},
-                reportId: reportId,
-                type: "empty"
-              });
             }
+            return fromJS({
+              reportId,
+              empty: { unused: true },
+              type: 'empty',
+            });
           }),
     }));
   }
@@ -458,6 +455,51 @@ class StreamlitApp extends PureComponent {
       }
     });
   }
+
+  async getAppropriateConnection(reportId) {
+    const manifestUri = `reports/${reportId}/manifest.json`;
+
+    let manifestResponse;
+    let manifest;
+
+    try {
+      manifestResponse = await fetch(manifestUri, FETCH_PARAMS);
+      manifest = await manifestResponse.json();
+    } catch (error) {
+      this.setConnectionState({
+        connectionState: ConnectionState.ERROR,
+        errMsg: `Unable to find or parse report with ID "${reportId}": ${error}`
+      });
+    }
+
+    // Get internalProxyUrl because we assume the user is in the same LAN as
+    // the proxy. In the future we may want to try the internal URL first,
+    // and then the external one.
+    const {name, proxyStatus, internalProxyIP, proxyPort} = manifest;
+
+    // If the proxy is running redirect immediately to proxy.
+    if (proxyStatus === 'running') {
+      return new WebsocketConnection({
+        uri: getWsUrl(internalProxyIP, proxyPort, name),
+        onMessage: this.handleMessage,
+        setConnectionState: this.setConnectionState,
+      });
+    }
+
+    return new StaticConnection({
+      manifest,
+      reportId,
+      onMessage: this.handleMessage,
+      setConnectionState: this.setConnectionState,
+      setReportName: this.setReportName,
+    });
+  }
 }
+
+
+function getWsUrl(host, port, reportName) {
+  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
+}
+
 
 export default hotkeys(StreamlitApp);

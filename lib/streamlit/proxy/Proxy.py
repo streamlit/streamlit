@@ -33,22 +33,16 @@ from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import functools
-import os
-import platform
-import socket
 import textwrap
 import traceback
-import urllib
 import webbrowser
 
 from streamlit.proxy.FSObserver import FSObserver
 from streamlit.proxy import process_runner
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger()
-
-AWS_CHECK_IP = 'http://checkip.amazonaws.com'
-HELP_DOC = 'http://streamlit.io/docs/help/'
 
 
 class Proxy(object):
@@ -67,8 +61,8 @@ class Proxy(object):
 
         # This object represents a connection to an S3 bucket or other cloud
         # storage solution. It is instantiated lazily by calling
-        # get_cloud_storage() which is why it starts off as null.
-        self._cloud_storage = None
+        # get_storage() which is why it starts off as null.
+        self._storage = None
 
         # How long to keep the proxy alive for, when there are no connections.
         self._auto_close_delay_secs = config.get_option(
@@ -96,8 +90,7 @@ class Proxy(object):
             # Endpoint for WebSocket used by the Proxy to send data to browsers.
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
 
-            # Test the health of the proxy.
-            ('/healthz', HealthHandler),
+            ('/healthz', _HealthHandler),
         ]
         if not config.get_option('proxy.useNode'):
             # If we're not using the node development server, then the proxy
@@ -138,7 +131,7 @@ class Proxy(object):
         if headless and not self._received_browser_connection:
             print('Connection timeout to proxy.')
             print('Did you try to connect and nothing happened? '
-                  f'Please go to {HELP_DOC} for debugging hints.')
+                  f'Please go to {util.HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -164,9 +157,14 @@ class Proxy(object):
         # (i.e. connection.name) if we don't have one open already.
         open_new_browser_connection = (
             not self._has_browser_connections(connection.name))
+
         self._connections[connection.name] = connection
+
         if open_new_browser_connection:
-            _launch_web_browser(connection.name, self._auto_close_delay_secs)
+            if config.get_option('proxy.isRemote'):
+                _print_urls(connection, self._auto_close_delay_secs)
+            else:
+                webbrowser.open(connection.get_local_url())
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -192,7 +190,6 @@ class Proxy(object):
         connection : ProxyConnection
 
         """
-
         def potentially_unregister():
             if not self._proxy_connection_is_registered(connection):
                 return
@@ -325,7 +322,7 @@ class Proxy(object):
             yield self._register_browser(report_name, ws))
         raise gen.Return((new_connection, new_queue))
 
-    def get_cloud_storage(self):
+    def get_storage(self):
         """Get object that connects to online storage.
 
         NOTE: Even internal methods of Proxy should call this directly, since
@@ -335,10 +332,11 @@ class Proxy(object):
         -------
         proxy.storage.AbstractCloudStorage
             The cloud object.
+
         """
-        if self._cloud_storage is None:
-            self._cloud_storage = Storage()
-        return self._cloud_storage
+        if self._storage is None:
+            self._storage = Storage()
+        return self._storage
 
     def _has_browser_connections(self, report_name):
         """Check whether any browsers are connected to this report name.
@@ -363,8 +361,12 @@ class Proxy(object):
     def _register_browser(self, report_name, ws):
         """Add a queue to the connection for the given report_name.
 
+        Parameters
+        ----------
+        report_name : str
+            The name of the report this is about.
 
-        ws
+        ws : WebSocket
             The websocket object.
 
         Returns
@@ -487,29 +489,20 @@ def stop_proxy_on_exception(is_coroutine=False):
     return stop_proxy_decorator
 
 
-class HealthHandler(web.RequestHandler):
+class _HealthHandler(web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header(
+            'Access-Control-Allow-Origin', config.get_option('s3.bucket'))
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
     def get(self):
         self.write('ok')
 
 
-def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
-    external_ip = config.get_option('proxy.externalIP')
-    lan_ip = None
-
-    if external_ip:
-        LOGGER.debug(f'proxy.externalIP set to {external_ip}')
-    else:
-        print('proxy.externalIP not set, attempting to autodetect IP')
-        external_ip = _get_external_ip()
-        lan_ip = _get_lan_ip()
-
-    if external_ip is None and lan_ip is None:
-        print('Did not auto detect external ip. Please go to '
-              f'{HELP_DOC} for debugging hints.')
-        return
-
-    external_url = _get_report_url(external_ip, port, quoted_name)
-    lan_url = _get_report_url(lan_ip, port, quoted_name)
+def _print_urls(connection, autoCloseDelaySecs):
+    external_url = connection.get_external_url()
+    internal_url = connection.get_internal_url()
 
     if autoCloseDelaySecs != float('inf'):
         timeout_msg = f'within {int(autoCloseDelaySecs)} seconds'
@@ -517,45 +510,16 @@ def _print_remote_url(port, quoted_name, autoCloseDelaySecs):
         timeout_msg = ''
 
     if config.get_option('proxy.isRemote'):
-        LOGGER.debug(f'External URL: {external_url}, Internal URL: {lan_url}')
+        LOGGER.debug(
+            f'External URL: {external_url}, Internal URL: {internal_url}')
     else:
         print(textwrap.dedent(f'''
             =============================================================
             Open one of the URLs below in your browser {timeout_msg}
             External URL: {external_url}
-            Internal URL: {lan_url}
+            Internal URL: {internal_url}
             =============================================================
         '''))
-
-
-def _launch_web_browser(name, autoCloseDelaySecs):
-    """Launch a web browser to connect to the proxy to get the named report.
-
-    Parameters
-    ----------
-    name : str
-        The name of the report to which the web browser should connect.
-    autoCloseDelaySecs : float
-        Time the proxy will wait before closing, when there are no more
-        connections.
-
-    """
-    if config.get_option('proxy.useNode'):
-        # If changing this, also change frontend/src/baseconsts.js
-        host, port = 'localhost', '3000'
-    else:
-        host = config.get_option('proxy.server')
-        port = config.get_option('proxy.port')
-    quoted_name = urllib.parse.quote_plus(name)
-    url = 'http://{}:{}/?name={}'.format(
-        host, port, quoted_name)
-
-    headless = config.get_option('proxy.isRemote')
-    LOGGER.debug(f'headless = {headless}')
-    if headless:
-        _print_remote_url(port, quoted_name, autoCloseDelaySecs)
-    else:
-        webbrowser.open(url)
 
 
 def _on_fs_event(observer, event):  # noqa: D401
@@ -571,68 +535,3 @@ def _on_fs_event(observer, event):  # noqa: D401
         observer.command_line,
         observer.cwd,
         )
-
-
-def _get_external_ip():
-    """Get the *external* IP address of the current machine.
-
-    Returns
-    -------
-    string
-        The external IPv4 address of the current machine.
-
-    """
-    try:
-        response = urllib.request.urlopen(AWS_CHECK_IP, timeout=5).read()
-        external_ip = response.decode('utf-8').strip()
-    except (urllib.URLError, RuntimeError) as e:
-        LOGGER.error(f'Error connecting to {AWS_CHECK_IP}: {e}')
-        external_ip = None
-
-    return external_ip
-
-
-def _get_lan_ip():
-    """Get the *local* IP address of the current machine.
-
-    From: https://stackoverflow.com/a/28950776
-
-    Returns
-    -------
-    string
-        The local IPv4 address of the current machine.
-
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Doesn't even have to be reachable
-        s.connect(('8.8.8.8', 1))
-        lan_ip = s.getsockname()[0]
-    except Exception:
-        lan_ip = '127.0.0.1'
-    finally:
-        s.close()
-    return lan_ip
-
-
-def _get_report_url(host, port, name):
-    """Return the URL of report defined by (host, port, name).
-
-    Parameters
-    ----------
-    host : str
-        The hostname or IP address of the current machine.
-    port : int
-        The port where Streamlit is running.
-    name : str
-        The name of the report.
-
-    Returns
-    -------
-    string
-        The remote IPv4 address.
-
-    """
-    if host is None:
-        return 'Unable to detect'
-    return 'http://{}:{}/?name={}'.format(host, port, name)

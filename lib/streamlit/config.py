@@ -189,17 +189,15 @@ def _proxy_is_remote():
 
     By default, this option is False unless we are on a headless Linux box.
     """
+    live_save = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
     is_headless = (not os.getenv('DISPLAY'))
-    return is_linux and is_headless
+    return live_save or (is_linux and is_headless)
 
-
-_create_option('proxy.saveOnExit',
+_create_option('proxy.liveSave',
     description="""
-        Should we save this report to S3 after the script copletes.
-
-        DEPRECATION WARNING: We should get rid of this, and fold a
-        single option that makes sense for the Flotilla use case.
+        Immediately save the report to S3 in such a way that enables live
+        monitoring.
         """,
     default_val=False)
 

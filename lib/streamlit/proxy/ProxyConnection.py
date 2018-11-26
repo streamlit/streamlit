@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Stores information about client and browser connections for a report."""
@@ -10,11 +9,13 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import urllib
 
+from streamlit import config
+from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
-from streamlit import util
 LOGGER = get_logger()
 
 
@@ -148,28 +149,176 @@ class ProxyConnection(object):
         """
         self._browser_queues.remove(queue)
 
-    def serialize_report_to_files(self):
+    def get_local_url(self):
+        """Get the URL for this report, for access from this exact machine.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        return _get_report_url(None, None, self.name)
+
+    def get_external_url(self):
+        """Get the URL for this report, for access from outside this LAN.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        external_ip = config.get_option('proxy.externalIP')
+
+        if external_ip:
+            LOGGER.debug(f'proxy.externalIP set to {external_ip}')
+        else:
+            LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
+            external_ip = util.get_external_ip()
+
+        return _get_report_url(external_ip, None, self.name)
+
+    def get_internal_url(self):
+        """Get the URL for this report, for access from inside this LAN.
+
+        Returns
+        -------
+        str
+            The URL.
+
+        """
+        internal_ip = util.get_internal_ip()
+        return _get_report_url(internal_ip, None, self.name)
+
+    def serialize_running_report_to_files(self):
+        """Return a running report as an easily-serializable list of tuples.
+
+        Returns
+        -------
+        list of tuples
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's just a manifest pointing to the Proxy
+            so browsers who go to the shareable report URL can connect to it
+            live.
+
+        """
+        LOGGER.debug(f'Serializing running report')
+        manifest = self._build_manifest(
+            status=_Status.RUNNING,
+            external_proxy_ip=util.get_external_ip(),
+            internal_proxy_ip=util.get_internal_ip(),
+        )
+
+        manifest_json = json.dumps(manifest).encode('utf-8')
+        return [(f'reports/{self.id}/manifest.json', manifest_json)]
+
+    def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
 
         Returns
         -------
         list of tuples
-            A list of pairs of the form:
-
-            [
-                (filename_1, data_1),
-                (filename_2, data_2), etc..
-            ]
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's (1) a simple manifest and (2) a bunch
+            of serialized Deltas.
 
         """
+        LOGGER.debug(f'Serializing final report')
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
-        manifest = dict(
-            name=self.name,
-            nDeltas=len(deltas)
+        manifest = self._build_manifest(
+            status=_Status.DONE,
+            n_deltas=len(deltas)
         )
+        manifest_json = json.dumps(manifest).encode('utf-8')
         return (
-            [(f'reports/{self.id}/manifest.json', json.dumps(manifest))] +
             [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
-                for idx, delta in enumerate(deltas)]
+                for idx, delta in enumerate(deltas)] +
+            # Must be at the end, so clients don't connect and read the
+            # manifest while the deltas haven't been saved yet.
+            [(f'reports/{self.id}/manifest.json', manifest_json)]
         )
+
+    def _build_manifest(
+            self, status, n_deltas=None, external_proxy_ip=None,
+            internal_proxy_ip=None):
+        """Build a manifest dict for this report.
+
+        Parameters
+        ----------
+        status : _Status.DONE | _Status.RUNNING
+            The report status. If the script is still executing, then the
+            status should be RUNNING. Otherwise, DONE.
+        n_deltas : int | None
+            Only when status is DONE. The number of deltas that this report
+            is made of.
+        external_proxy_ip : str | None
+            Only when status is RUNNING. The IP of the Proxy's websocket.
+        internal_proxy_ip : str | None
+            Only when status is RUNNING. The IP of the Proxy's websocket.
+
+        Returns
+        -------
+        dict
+            The actual manifest. Schema:
+            - name: str,
+            - localId: str,
+            - nDeltas: int | None,
+            - proxyStatus: 'running' | 'done',
+            - externalProxyIP: str | None,
+            - internalProxyIP: str | None,
+            - proxyPort: int
+
+        """
+        return dict(
+            name=self.name,
+            nDeltas=n_deltas,
+            proxyStatus=status,
+            externalProxyIP=external_proxy_ip,
+            internalProxyIP=internal_proxy_ip,
+            proxyPort=config.get_option('proxy.port'),
+        )
+
+
+class _Status(object):
+    DONE = 'done'
+    RUNNING = 'running'
+
+
+def _get_report_url(host, port, name):
+    """Return the URL of report defined by (host, port, name).
+
+    Parameters
+    ----------
+    host : str or None
+        The hostname or IP address of the current machine. If None, will use
+        the `proxy.server` value from the config system.
+
+    port : int or None
+        The port where Streamlit is running. If None, will use the `proxy.port`
+        value from the config system.
+
+    name : str
+        The name of the report.
+
+    Returns
+    -------
+    string
+        The report's URL.
+
+    """
+    if host is None:
+        host = config.get_option('proxy.server')
+
+    if port is None:
+        port = _get_http_port()
+
+    quoted_name = urllib.parse.quote_plus(name)
+    return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
+
+
+def _get_http_port():
+    if config.get_option('proxy.useNode'):
+        return 3000
+    return config.get_option('proxy.port')
