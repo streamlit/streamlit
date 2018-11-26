@@ -32,12 +32,12 @@ EXCEPTHOOK_IDENTIFIER_STR = (
     'Streamlit has caught the following unhandled exception...')
 
 
-# URL of Streamlit's help page.
-HELP_DOC = 'http://streamlit.io/docs/help/'
-
-
 # URL for checking the current machine's external IP address.
 _AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+
+
+# URL of Streamlit's help page.
+HELP_DOC = 'http://streamlit.io/docs/help/'
 
 
 def _decode_ascii(str):
