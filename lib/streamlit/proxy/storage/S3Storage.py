@@ -46,12 +46,6 @@ class S3Storage(AbstractStorage):
         self._key_prefix = config.get_option('s3.keyPrefix')
         self._region = config.get_option('s3.region')
 
-        # Whether we're currently uploading the static files for Streamlit's
-        # web app to S3. This is required because if 2 coroutines call
-        # save_report_files at the same time, we could end up uploading the
-        # static files twice.
-        self._currently_uploading_static_files = False
-
         user = os.getenv('USER', None)
 
         if self._url and '{USER}' in self._url:
@@ -150,16 +144,8 @@ class S3Storage(AbstractStorage):
         See AbstractStorage for docs.
         """
         yield self._s3_init()
-
-        if self._currently_uploading_static_files:
-            # No need to grab the static files and upload them, if we're
-            # already currently uploading them (likely in a separate
-            # coroutine).
-            files_to_upload = files
-        else:
-            self._currently_uploading_static_files = True
-            static_files = yield self._get_static_upload_files()
-            files_to_upload = static_files + files
+        static_files = yield self._get_static_upload_files()
+        files_to_upload = static_files + files
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 
@@ -183,6 +169,3 @@ class S3Storage(AbstractStorage):
                 yield progress_coroutine(math.ceil(100 * (i + 1) / len(files)))
             else:
                 yield
-
-        if self._currently_uploading_static_files:
-            self._currently_uploading_static_files = False
