@@ -34,7 +34,7 @@ class FileStorage(AbstractStorage):
 
     def _mkdir(self):
         cwd = os.getcwd()
-        reports_dir = os.path.join(cwd, 'storage')
+        reports_dir = os.path.join(cwd, 'streamlit-storage')
         if not os.path.exists(reports_dir):
             os.mkdir(reports_dir)
         return reports_dir
