@@ -161,9 +161,9 @@ class S3Storage(AbstractStorage):
                 files_to_upload.pop(manifest_index)
 
                 if manifest_save_order == 'first':
-                    files_to_upload = manifest_tuple + files_to_upload
+                    files_to_upload.insert(0, manifest_tuple)
                 else:
-                    files_to_upload = files_to_upload + manifest_tuple
+                    files_to_upload.append(manifest_tuple)
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 
