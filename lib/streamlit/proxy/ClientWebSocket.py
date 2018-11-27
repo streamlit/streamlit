@@ -106,12 +106,8 @@ class ClientWebSocket(WebSocketHandler):
         storage = self._proxy.get_storage()
         url = yield storage.save_report_files(self._connection.id, files)
 
-        if config.get_option('proxy.isRemote'):
-            # Print URL to stderr so it appears in remote logs.
-            print('SAVED RUNNING REPORT: %s' % url, file=sys.stderr)
-        else:
-            # Print the URL to stdout so external scripts can grab this info.
-            print('SAVED RUNNING REPORT: %s' % url)
+        # Print URL to stderr so it appears in remote logs.
+        print('SAVED RUNNING REPORT: %s' % url, file=sys.stderr)
 
     @gen.coroutine
     def _save_final_report(self):
@@ -123,9 +119,5 @@ class ClientWebSocket(WebSocketHandler):
         storage = self._proxy.get_storage()
         url = yield storage.save_report_files(self._connection.id, files)
 
-        if config.get_option('proxy.isRemote'):
-            # Print URL to stderr so it appears in remote logs.
-            print('SAVED FINAL REPORT: %s' % url, file=sys.stderr)
-        else:
-            # Print the URL to stdout so external scripts can grab this info.
-            print('SAVED FINAL REPORT: %s' % url)
+        # Print URL to stderr so it appears in remote logs.
+        print('SAVED FINAL REPORT: %s' % url, file=sys.stderr)
