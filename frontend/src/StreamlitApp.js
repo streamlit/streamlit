@@ -472,15 +472,12 @@ class StreamlitApp extends PureComponent {
       });
     }
 
-    // Get internalProxyUrl because we assume the user is in the same LAN as
-    // the proxy. In the future we may want to try the internal URL first,
-    // and then the external one.
-    const {name, proxyStatus, internalProxyIP, proxyPort} = manifest;
+    const {name, proxyStatus, externalProxyIP, proxyPort} = manifest;
 
     // If the proxy is running redirect immediately to proxy.
     if (proxyStatus === 'running') {
       return new WebsocketConnection({
-        uri: getWsUrl(internalProxyIP, proxyPort, name),
+        uri: getWsUrl(externalProxyIP, proxyPort, name),
         onMessage: this.handleMessage,
         setConnectionState: this.setConnectionState,
       });
