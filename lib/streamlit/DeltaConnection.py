@@ -98,7 +98,7 @@ def _build_uri(report_id):
 
     LOGGER.debug(f'Report name: "{name}"')
 
-    server = config.get_option('proxy.server')
+    server = config.get_option('client.proxyAddress')
     port = config.get_option('proxy.port')
     report_name = urllib.parse.quote_plus(name)
     uri = f'ws://{server}:{port}/new/{report_name}'

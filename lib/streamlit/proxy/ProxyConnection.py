@@ -149,8 +149,8 @@ class ProxyConnection(object):
         """
         self._browser_queues.remove(queue)
 
-    def get_local_url(self):
-        """Get the URL for this report, for access from this exact machine.
+    def get_url_for_client_webbrowser(self):
+        """Get URL for this report, for access from client machine's browser.
 
         Returns
         -------
@@ -158,7 +158,8 @@ class ProxyConnection(object):
             The URL.
 
         """
-        return _get_report_url(None, None, self.name)
+        return _get_report_url(
+            config.get_option('client.proxyAddress'), self.name)
 
     def get_external_url(self):
         """Get the URL for this report, for access from outside this LAN.
@@ -177,7 +178,7 @@ class ProxyConnection(object):
             LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
             external_ip = util.get_external_ip()
 
-        return _get_report_url(external_ip, None, self.name)
+        return _get_report_url(external_ip, self.name)
 
     def get_internal_url(self):
         """Get the URL for this report, for access from inside this LAN.
@@ -189,7 +190,7 @@ class ProxyConnection(object):
 
         """
         internal_ip = util.get_internal_ip()
-        return _get_report_url(internal_ip, None, self.name)
+        return _get_report_url(internal_ip, self.name)
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -271,10 +272,16 @@ class ProxyConnection(object):
             - proxyPort: int
 
         """
+        if status == _Status.RUNNING:
+            configured_proxy_address = config.get_option('browser.proxyAddress')
+        else:
+            configured_proxy_address = None
+
         return dict(
             name=self.name,
             nDeltas=n_deltas,
             proxyStatus=status,
+            configuredProxyAddress=configured_proxy_address,
             externalProxyIP=external_proxy_ip,
             internalProxyIP=internal_proxy_ip,
             proxyPort=config.get_option('proxy.port'),
@@ -286,18 +293,13 @@ class _Status(object):
     RUNNING = 'running'
 
 
-def _get_report_url(host, port, name):
-    """Return the URL of report defined by (host, port, name).
+def _get_report_url(host, name):
+    """Return the URL of report defined by (host, name).
 
     Parameters
     ----------
-    host : str or None
-        The hostname or IP address of the current machine. If None, will use
-        the `proxy.server` value from the config system.
-
-    port : int or None
-        The port where Streamlit is running. If None, will use the `proxy.port`
-        value from the config system.
+    host : str
+        The hostname or IP address of the current machine.
 
     name : str
         The name of the report.
@@ -308,11 +310,7 @@ def _get_report_url(host, port, name):
         The report's URL.
 
     """
-    if host is None:
-        host = config.get_option('proxy.server')
-
-    if port is None:
-        port = _get_http_port()
+    port = _get_http_port()
 
     quoted_name = urllib.parse.quote_plus(name)
     return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
