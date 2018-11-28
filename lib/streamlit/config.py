@@ -110,7 +110,7 @@ def _global_development_mode():
 def _global_log_level():
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
-    By default, this is 'debug' in development mode, and 'info' otherwise.
+    Default: 'warning'
     """
     if get_option('global.developmentMode'):
         return 'debug'
@@ -127,13 +127,8 @@ _create_option('client.caching',
     default_val=True)
 
 _create_option('client.displayEnabled',
-    description="""If True, connects the WebSocket and turns on the ability to
-        send data through it.
-
-        If False, turns off the ability to send data
-        through the WebSocket. If set to False after it was True at some point,
-        this does not touch the existing WebSocket's actual connection.
-        """,
+    description="""If false, makes your Streamlit script not sent data to a
+        Streamlit report.""",
     default_val=True)
 
 _create_option('client.waitForProxySecs',
@@ -187,7 +182,7 @@ def _proxy_use_node():
 def _proxy_is_remote():
     """Is the proxy running remotely.
 
-    By default, this option is False unless we are on a headless Linux box.
+    Default: false unless we are on a Linux box where DISPLAY is unset.
     """
     live_save = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
@@ -233,8 +228,8 @@ _create_section('s3', 'Configuration for report saving.')
 def _s3_sharing_enabled():
     """Whether Streamlit is allowed tosave reports to s3.
 
-    Defaults to True so long as 's3.bucket' is defined, either by the user or
-    using the default Stremalit credentials.
+    Default: false. But is automatically set ot true if s3.bucket is defined,
+    either by the user or using the default Streamlit credentials.
     """
     # Sharing is enabled if the user overrode 's3.bucket'.
     using_default_bucket = (_config_options['s3.bucket'].where_defined ==
@@ -250,8 +245,8 @@ def _s3_sharing_enabled():
 def _s3_bucket():
     """Name of the AWS S3 bucket to save reports.
 
-    Disabled if s3.sharingEnabled is False. Otherwise, defaults to
-    share.streamlit.io.
+    Default: if s3.sharingEnabled is set, defaults to "share.streamlit.io".
+    Disabled otherwise.
     """
     if not get_option('s3.sharingEnabled'):
         return None
@@ -262,7 +257,8 @@ def _s3_bucket():
 def _s3_url():
     """URL root for external view of Streamlit reports.
 
-    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    Default: if s3.sharingEnabled is set, uses credentials for
+    share.streamlit.io. Disabled otherwise.
     """
     if not get_option('s3.sharingEnabled'):
         return None
@@ -273,7 +269,8 @@ def _s3_url():
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
-    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    Default: if s3.sharingEnabled is set, uses credentials for
+    share.streamlit.io. Disabled otherwise.
     """
     if not get_option('s3.sharingEnabled'):
         return None
@@ -284,7 +281,8 @@ def _s3_access_key_id():
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
-    Disabled if s3.bucket is None. Otherwise uses default credentials.
+    Default: if s3.sharingEnabled is set, uses credentials for
+    share.streamlit.io. Disabled otherwise.
     """
     if not get_option('s3.sharingEnabled'):
         return None
@@ -293,17 +291,18 @@ def _s3_secret_access_key():
 
 _create_option('s3.keyPrefix',
     description=""""Subdirectory" within the S3 bucket to save reports.
+        S3 calls paths "keys" which is why the keyPrefix is like a
+        subdirectory.
 
-        Defaults to '', which means the root directory. S3 calls paths
-        "keys" which is why the keyPrefix is like a subdirectory.
+        Default: "", which means the root directory.
         """,
     default_val='')
 
 
 _create_option('s3.region',
-    description="""AWS region where the bucket is located.
+    description="""AWS region where the bucket is located, e.g. "us-west-2".
 
-        The AWS region, for example 'us-west-2'. Defaults to None.
+        Default: (unset)
         """,
     default_val=None)
 
@@ -311,7 +310,7 @@ _create_option('s3.region',
 _create_option('s3.profile',
     description="""AWS credentials profile to use for saving data.
 
-        Defaults to None.
+        Default: (unset)
         """,
     default_val=None)
 
@@ -379,8 +378,6 @@ def get_where_defined(key):
 
 def show_config():
     """Show all the config options."""
-    import textwrap
-
     SKIP_SECTIONS = ('_test',)
 
     out = []
@@ -406,17 +403,20 @@ def show_config():
                 continue
 
             key = option.key.split('.')[1]
-            description = _clean(option.description)
+            description_paragraphs = _clean_paragraphs(option.description)
 
-            out.append(f'# {description}')
+            for txt in description_paragraphs:
+                out.append(f'# {txt}')
 
             toml_default = toml.dumps({'default': option.default_val})
             toml_default = toml_default[10:].strip()
 
-            if len(toml_default) == 0:
-                toml_default = '(none set)'
+            if len(toml_default) > 0:
+                out.append(f'# Default: {toml_default}')
 
-            out.append(f'# Default: {toml_default}')
+            if option.where_defined != ConfigOption.DEFAULT_DEFINITION:
+                out.append(
+                    f'# The value below was set in {option.where_defined}')
 
             toml_setting = toml.dumps({key: option.value})
 
@@ -425,9 +425,6 @@ def show_config():
 
             else:
                 out.append(toml_setting)
-
-            # XXX
-            #config_md += f'{description} (_Set In:_ `{option.where_defined}`)\n\n'
 
     print('\n'.join(out))
 
@@ -502,8 +499,13 @@ def _parse_config_file():
         _update_config_with_toml(input.read(), config_fileanme)
 
 
+def _clean_paragraphs(txt):
+    paragraphs = txt.split('\n\n')
+    cleaned_paragraphs = [_clean(x) for x in paragraphs]
+    return cleaned_paragraphs
+
 def _clean(txt):
-    # Replace all whitespace with a single space.
+    """Replace all whitespace with a single space."""
     return ' '.join(txt.split()).strip()
 
 
