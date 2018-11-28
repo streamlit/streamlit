@@ -15,6 +15,7 @@ import sys
 import platform
 import toml
 import urllib
+import collections
 
 from streamlit.ConfigOption import ConfigOption
 from streamlit import util
@@ -26,7 +27,9 @@ LOGGER = get_logger()
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
-_section_descriptions = dict(
+# (We use OrderedDict to make the order in which sections are declared in this
+# file be the same order as the sections appear with `streamlit show_config`)
+_section_descriptions = collections.OrderedDict(
     _test='Special test section just used for unit tests.',
 )
 
@@ -41,7 +44,7 @@ def _create_section(section, description):
     _section_descriptions[section] = description
 
 
-def _create_option(key, description=None, default_val=None):
+def _create_option(key, description=None, default_val=None, visible=True):
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -77,7 +80,8 @@ def _create_option(key, description=None, default_val=None):
                 return 12345
 
     '''
-    option = ConfigOption(key, description=description, default_val=default_val)
+    option = ConfigOption(
+        key, description=description, default_val=default_val, visible=visible)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -92,12 +96,12 @@ def _create_option(key, description=None, default_val=None):
 _create_section('global', 'Global options that apply across all of Streamlit.')
 
 
-@_create_option('global.developmentMode')
+@_create_option('global.developmentMode', visible=False)
 def _global_development_mode():
     """Are we in development mode.
 
     This option defaults to True if and only if Streamlit wasn't installed
-    normally. (Only for developers of Streamlit.)
+    normally.
     """
     return ('site-packages' not in __file__)
 
@@ -123,9 +127,8 @@ _create_option('client.caching',
     default_val=True)
 
 _create_option('client.displayEnabled',
-    description="""
-        If True, connects the WebSocket and turns on the ability to send
-        data through it.
+    description="""If True, connects the WebSocket and turns on the ability to
+        send data through it.
 
         If False, turns off the ability to send data
         through the WebSocket. If set to False after it was True at some point,
@@ -173,12 +176,9 @@ _create_option('proxy.reportExpirationSecs',
     default_val=10.1)
 
 
-@_create_option('proxy.useNode')
+@_create_option('proxy.useNode', visible=False)
 def _proxy_use_node():
-    """Whether to use the node server.
-
-    (Only for developers of Streamlit.)
-    """
+    """Whether to use the node server."""
     return get_option('global.developmentMode')
 
 
@@ -214,6 +214,15 @@ _create_option('proxy.externalIP',
         """,
     default_val=None)
 
+
+# Config Section: Browser #
+
+_create_section('browser', 'Configuration of browser front-end.')
+
+
+_create_option('browser.remotelyTrackUsage',
+    description='Whether to send usage statistics to Streamlit.',
+    default_val=True)
 
 # Config Section: S3 #
 
@@ -322,15 +331,6 @@ def _get_default_credentials():
         return None
 
 
-# Config Section: Browser #
-
-_create_section('browser', 'Configuration of browser front-end.')
-
-
-_create_option('browser.remotelyTrackUsage',
-    description='Whether to send usage statistics to Streamlit.',
-    default_val=True)
-
 # Public Interface #
 
 def set_option(key, value):
@@ -382,27 +382,54 @@ def show_config():
     import textwrap
 
     SKIP_SECTIONS = ('_test',)
-    print(_section_descriptions)
-    config_md = '# Config Options\n\n---\n'
+
+    out = []
+    out.append(_clean('''
+        Below are all the sections and options you can have in
+        ~/.streamlit/config.toml. The values shown below are the current values
+        that are set for your system.
+    '''))
+
     for section, section_description in _section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
-        config_md += f'## {section}\n\n'
-        config_md += f'{textwrap.dedent(section_description).strip()}\n\n\n'
+
+        out.append('')
+        out.append(f'[{section}]')
+        out.append('')
+
         for key, option in _config_options.items():
             if option.section != section:
                 continue
 
-            description = ' '.join(textwrap.dedent(line).strip()
-                for line in option.description.split('\n'))
+            if not option.visible:
+                continue
 
-            config_md += f'### {option.key} : {option.value}\n\n'
-            config_md += f'{description} (_Set In:_ `{option.where_defined}`)\n\n'
-            config_md += '\n\n'
-        config_md += '\n---\n\n'
-    print(config_md)
-    import streamlit as st
-    st.write(config_md)
+            key = option.key.split('.')[1]
+            description = _clean(option.description)
+
+            out.append(f'# {description}')
+
+            toml_default = toml.dumps({'default': option.default_val})
+            toml_default = toml_default[10:].strip()
+
+            if len(toml_default) == 0:
+                toml_default = '(none set)'
+
+            out.append(f'# Default: {toml_default}')
+
+            toml_setting = toml.dumps({key: option.value})
+
+            if len(toml_setting) == 0:
+                out.append(f'#{key} =\n')
+
+            else:
+                out.append(toml_setting)
+
+            # XXX
+            #config_md += f'{description} (_Set In:_ `{option.where_defined}`)\n\n'
+
+    print('\n'.join(out))
 
 # Load Config Files #
 
@@ -410,7 +437,7 @@ def show_config():
 _USER_DEFINED = '<user defined>'
 
 
-def _set_option(key, value, where_defined):
+def _set_option(key, value, where_defined, visible=True):
     """Set a config option by key / value pair.
 
     Parameters
@@ -421,10 +448,12 @@ def _set_option(key, value, where_defined):
         The value of the option.
     where_defined : str
         Tells the config system where this was set.
+    visible : bool
+        Whether this option should be shown to users.
 
     """
     assert key in _config_options, 'Key "%s" is not defined.' % key
-    _config_options[key].set_value(value, where_defined)
+    _config_options[key].set_value(value, where_defined, visible)
 
 
 def _update_config_with_toml(raw_toml, where_defined):
@@ -471,6 +500,11 @@ def _parse_config_file():
         return
     with open(config_fileanme) as input:
         _update_config_with_toml(input.read(), config_fileanme)
+
+
+def _clean(txt):
+    # Replace all whitespace with a single space.
+    return ' '.join(txt.split()).strip()
 
 
 # Acually parse the config file.
