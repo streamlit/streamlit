@@ -122,24 +122,29 @@ def _global_log_level():
 
 _create_section('client', 'Settings for users to connect to Streamlit.')
 
-_create_option('client.caching',
+_create_option(
+    'client.caching',
     description='Whether to enable caching to ./.streamlit/cache.',
     default_val=True)
 
-_create_option('client.displayEnabled',
+_create_option(
+    'client.displayEnabled',
     description='''If false, makes your Streamlit script not sent data to a
         Streamlit report.''',
     default_val=True)
 
-_create_option('client.waitForProxySecs',
+_create_option(
+    'client.waitForProxySecs',
     description='How long to wait for the proxy server to start up.',
     default_val=3.0)
 
-_create_option('client.throttleSecs',
+_create_option(
+    'client.throttleSecs',
     description='How long to wait between draining the client queue.',
     default_val=0.01)
 
-_create_option('client.proxyAddress',
+_create_option(
+    'client.proxyAddress',
     description='''
         Internet address of the proxy server that the client should connect
         to. Can be IP address or DNS name. Only set if different from
@@ -151,11 +156,13 @@ _create_option('client.proxyAddress',
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-_create_option('proxy.port',
+_create_option(
+    'proxy.port',
     description='Port that the proxy server should listed on.',
     default_val=8501)
 
-_create_option('proxy.autoCloseDelaySecs',
+_create_option(
+    'proxy.autoCloseDelaySecs',
     description=(
         'How long the proxy should stay open when there are '
         'no connections. Can be set to .inf for "infinity". '
@@ -166,7 +173,8 @@ _create_option('proxy.autoCloseDelaySecs',
 # TODO: In new config system, allow us to specify ranges
 # for numeric values, so anything outside that range is
 # considered invalid.
-_create_option('proxy.reportExpirationSecs',
+_create_option(
+    'proxy.reportExpirationSecs',
     description=(
         'How long reports should be stored in memory for when '
         'script is done and there are no viewers. '
@@ -192,23 +200,26 @@ def _proxy_is_remote():
     is_headless = (not os.getenv('DISPLAY'))
     return live_save or (is_linux and is_headless)
 
-_create_option('proxy.liveSave',
+
+_create_option(
+    'proxy.liveSave',
     description='''
         Immediately save the report to S3 in such a way that enables live
         monitoring.
         ''',
     default_val=False)
 
-_create_option('proxy.watchFileSystem',
+_create_option(
+    'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
     default_val=True)
 
-_create_option('proxy.externalIP',
+# NOTE: We should make this a computed option by bringing
+# Proxy._get_external_ip into this function.
+_create_option(
+    'proxy.externalIP',
     description='''
         An address for the proxy which can be accessed on the public Internet.
-
-        NOTE: We should make this a computed option by bringing
-        Proxy._get_external_ip into this function.
         ''',
     default_val=None)
 
@@ -217,13 +228,13 @@ _create_option('proxy.externalIP',
 
 _create_section('browser', 'Configuration of browser front-end.')
 
-
-_create_option('browser.remotelyTrackUsage',
+_create_option(
+    'browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
 
-
-_create_option('browser.proxyAddress',
+_create_option(
+    'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
         to. Can be IP address or DNS name. Only set if different from
@@ -244,8 +255,9 @@ def _s3_sharing_enabled():
     either by the user or using the default Streamlit credentials.
     """
     # Sharing is enabled if the user overrode 's3.bucket'.
-    using_default_bucket = (_config_options['s3.bucket'].where_defined ==
-            ConfigOption.DEFAULT_DEFINITION)
+    using_default_bucket = (
+        _config_options['s3.bucket'].where_defined ==
+        ConfigOption.DEFAULT_DEFINITION)
     if not using_default_bucket:
         return True
 
@@ -301,7 +313,8 @@ def _s3_secret_access_key():
     return _get_default_credentials()['secretAccessKey']
 
 
-_create_option('s3.keyPrefix',
+_create_option(
+    's3.keyPrefix',
     description='''"Subdirectory" within the S3 bucket to save reports.
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory.
@@ -310,16 +323,16 @@ _create_option('s3.keyPrefix',
         ''',
     default_val='')
 
-
-_create_option('s3.region',
+_create_option(
+    's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
 
         Default: (unset)
         ''',
     default_val=None)
 
-
-_create_option('s3.profile',
+_create_option(
+    's3.profile',
     description='''AWS credentials profile to use for saving data.
 
         Default: (unset)
@@ -345,7 +358,7 @@ def _get_default_credentials():
 # Public Interface #
 
 def set_option(key, value):
-    """Sets the config option.
+    """Set the config option.
 
     Note that some config parameters depend on others, so changing one parameter
     may affect others in unexpected ways.
@@ -442,6 +455,7 @@ def show_config():
     print('\n'.join(out))
 
 # Load Config Files #
+
 
 # Indicates that this was defined by the user.
 _USER_DEFINED = '<user defined>'
