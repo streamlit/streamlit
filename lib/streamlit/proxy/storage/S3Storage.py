@@ -23,7 +23,7 @@ from streamlit import config
 from streamlit.proxy.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class S3Storage(AbstractStorage):
@@ -46,11 +46,6 @@ class S3Storage(AbstractStorage):
         self._key_prefix = config.get_option('s3.keyPrefix')
         self._region = config.get_option('s3.region')
 
-        # self._bucketname = config.get_option('s3.bucketname')
-        # self._url = config.get_option('s3.url')
-        # self._key_prefix = config.get_option('s3.key_prefix')
-        # self._region = config.get_option('s3.region')
-
         user = os.getenv('USER', None)
 
         if self._url and '{USER}' in self._url:
@@ -58,12 +53,15 @@ class S3Storage(AbstractStorage):
         if self._key_prefix and '{USER}' in self._key_prefix:
             self._key_prefix = self._key_prefix.replace('{USER}', user)
 
+        # URL where browsers go to load the Streamlit web app.
+        self._web_app_url = None
+
         if not self._url:
-            self._s3_url = os.path.join(
+            self._web_app_url = os.path.join(
                 'https://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
                 self._s3_key('index.html'))
         else:
-            self._s3_url = os.path.join(
+            self._web_app_url = os.path.join(
                 self._url,
                 self._s3_key('index.html', add_prefix=False))
 
@@ -146,11 +144,12 @@ class S3Storage(AbstractStorage):
         See AbstractStorage for docs.
         """
         yield self._s3_init()
-        files_to_upload = yield self._get_static_upload_files()
-        yield self._s3_upload_files(
-            files_to_upload + files, progress_coroutine)
+        static_files = yield self._get_static_upload_files()
+        files_to_upload = static_files + files
 
-        raise gen.Return('%s?id=%s' % (self._s3_url, report_id))
+        yield self._s3_upload_files(files_to_upload, progress_coroutine)
+
+        raise gen.Return('%s?id=%s' % (self._web_app_url, report_id))
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):

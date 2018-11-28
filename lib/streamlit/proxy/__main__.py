@@ -9,7 +9,7 @@ setup_2_3_shims(globals())
 
 from streamlit.logger import get_logger, set_this_is_proxy
 set_this_is_proxy()
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 from streamlit.proxy import Proxy
 

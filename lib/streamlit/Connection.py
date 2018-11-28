@@ -23,7 +23,7 @@ from streamlit.util import write_proto
 from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 # Websocket arguments.
 WS_ARGS = {

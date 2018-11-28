@@ -21,7 +21,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit import util
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 # Config System Global State #
@@ -127,8 +127,8 @@ _create_option('client.caching',
     default_val=True)
 
 _create_option('client.displayEnabled',
-    description="""If false, makes your Streamlit script not sent data to a
-        Streamlit report.""",
+    description='''If false, makes your Streamlit script not sent data to a
+        Streamlit report.''',
     default_val=True)
 
 _create_option('client.waitForProxySecs',
@@ -139,17 +139,20 @@ _create_option('client.throttleSecs',
     description='How long to wait between draining the client queue.',
     default_val=0.01)
 
+_create_option('client.proxyAddress',
+    description='''
+        Internet address of the proxy server that the client should connect
+        to. Can be IP address or DNS name. Only set if different from
+        proxy.port.''',
+    default_val='localhost')
+
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-_create_option('proxy.server',
-    description='Internet address of the proxy server.',
-    default_val='localhost')
-
 _create_option('proxy.port',
-    description='Port for the proxy server.',
+    description='Port that the proxy server should listed on.',
     default_val=8501)
 
 _create_option('proxy.autoCloseDelaySecs',
@@ -190,10 +193,10 @@ def _proxy_is_remote():
     return live_save or (is_linux and is_headless)
 
 _create_option('proxy.liveSave',
-    description="""
+    description='''
         Immediately save the report to S3 in such a way that enables live
         monitoring.
-        """,
+        ''',
     default_val=False)
 
 _create_option('proxy.watchFileSystem',
@@ -201,12 +204,12 @@ _create_option('proxy.watchFileSystem',
     default_val=True)
 
 _create_option('proxy.externalIP',
-    description="""
+    description='''
         An address for the proxy which can be accessed on the public Internet.
 
         NOTE: We should make this a computed option by bringing
         Proxy._get_external_ip into this function.
-        """,
+        ''',
     default_val=None)
 
 
@@ -218,6 +221,15 @@ _create_section('browser', 'Configuration of browser front-end.')
 _create_option('browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
+
+
+_create_option('browser.proxyAddress',
+    description='''
+        Internet address of the proxy server that the browser should connect
+        to. Can be IP address or DNS name. Only set if different from
+        proxy.port.''',
+    default_val=None)
+
 
 # Config Section: S3 #
 
@@ -290,28 +302,28 @@ def _s3_secret_access_key():
 
 
 _create_option('s3.keyPrefix',
-    description=""""Subdirectory" within the S3 bucket to save reports.
+    description='''"Subdirectory" within the S3 bucket to save reports.
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory.
 
         Default: "", which means the root directory.
-        """,
+        ''',
     default_val='')
 
 
 _create_option('s3.region',
-    description="""AWS region where the bucket is located, e.g. "us-west-2".
+    description='''AWS region where the bucket is located, e.g. "us-west-2".
 
         Default: (unset)
-        """,
+        ''',
     default_val=None)
 
 
 _create_option('s3.profile',
-    description="""AWS credentials profile to use for saving data.
+    description='''AWS credentials profile to use for saving data.
 
         Default: (unset)
-        """,
+        ''',
     default_val=None)
 
 
@@ -333,7 +345,7 @@ def _get_default_credentials():
 # Public Interface #
 
 def set_option(key, value):
-    """Ses the config option.
+    """Sets the config option.
 
     Note that some config parameters depend on others, so changing one parameter
     may affect others in unexpected ways.
@@ -375,6 +387,7 @@ def get_where_defined(key):
     if key not in _config_options:
         raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].where_defined
+
 
 def show_config():
     """Show all the config options."""
@@ -503,6 +516,7 @@ def _clean_paragraphs(txt):
     paragraphs = txt.split('\n\n')
     cleaned_paragraphs = [_clean(x) for x in paragraphs]
     return cleaned_paragraphs
+
 
 def _clean(txt):
     """Replace all whitespace with a single space."""
