@@ -193,7 +193,8 @@ class BrowserWebSocket(WebSocketHandler):
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
+            err_msg = f'{type(e).__name__}: {str(e) or "No further details."}'
             progress_msg = protobuf.ForwardMsg()
-            progress_msg.report_uploaded = 'ERROR: ' + str(e)
+            progress_msg.report_uploaded = err_msg
             yield ws.write_message(progress_msg.SerializeToString(), binary=True)
             raise e
