@@ -78,7 +78,7 @@ class AbstractStorage(object):
             the url for the saved report.
 
         """
-        self._save_report_files(
+        yield self._save_report_files(
             report_id,
             files,
             progress_coroutine=progress_coroutine,
