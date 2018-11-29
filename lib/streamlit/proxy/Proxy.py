@@ -24,8 +24,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import config
-# from streamlit.proxy.storage.S3Storage import S3Storage as Storage
-from streamlit.proxy.storage.FileStorage import FileStorage as Storage
+from streamlit.proxy.storage.S3Storage import S3Storage as Storage
 from streamlit.util import get_static_dir, write_proto
 
 from streamlit.streamlit_msg_proto import new_report_msg
