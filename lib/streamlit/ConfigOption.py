@@ -53,8 +53,10 @@ class ConfigOption(object):
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
-    visible : bool
-        If False, will not include this when listing all options to users.
+    visibility : 'visible' or 'hidden' or 'obfuscated'
+        If 'hidden', will not include this when listing all options to users.
+        If 'obfuscated', will list it, but will only print out its actual value
+        if the value was manually set (i.e. not default).
 
     '''
 
@@ -62,7 +64,9 @@ class ConfigOption(object):
     # that the option default was not overridden.
     DEFAULT_DEFINITION = '<default>'
 
-    def __init__(self, key, description=None, default_val=None, visible=True):
+    def __init__(
+            self, key, description=None, default_val=None,
+            visibility='visible'):
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -73,7 +77,7 @@ class ConfigOption(object):
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
-        visible : bool
+        visibility : 'visible' or 'hidden' or 'obfuscated'
             Whether this option should be shown to users.
 
         """
@@ -88,13 +92,13 @@ class ConfigOption(object):
         # This string is like a comment. If None, it should be set in __call__.
         self.description = description
 
-        self.visible = None
+        self.visibility = visibility
         self.default_val = default_val
 
         # Set the value.
         self._get_val_func = None
         self.where_defined = None
-        self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION, visible)
+        self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION)
 
     def __call__(self, get_val_func):
         """Assign a function to compute the value for this option.
@@ -124,7 +128,7 @@ class ConfigOption(object):
         """Get the value of this config option."""
         return self._get_val_func()
 
-    def set_value(self, value, where_defined, visible=True):
+    def set_value(self, value, where_defined):
         """Set the value of this option.
 
         Parameters
@@ -133,10 +137,7 @@ class ConfigOption(object):
             The new value for this parameter.
         where_defined : str
             New value to remember where this parameter was set.
-        visible : bool
-            Whether this option should be shown to users.
 
         """
         self._get_val_func = lambda: value
         self.where_defined = where_defined
-        self.visible = visible

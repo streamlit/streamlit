@@ -44,7 +44,8 @@ def _create_section(section, description):
     _section_descriptions[section] = description
 
 
-def _create_option(key, description=None, default_val=None, visible=True):
+def _create_option(
+        key, description=None, default_val=None, visibility='visible'):
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -81,7 +82,8 @@ def _create_option(key, description=None, default_val=None, visible=True):
 
     '''
     option = ConfigOption(
-        key, description=description, default_val=default_val, visible=visible)
+        key, description=description, default_val=default_val,
+        visibility=visibility)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -96,7 +98,7 @@ def _create_option(key, description=None, default_val=None, visible=True):
 _create_section('global', 'Global options that apply across all of Streamlit.')
 
 
-@_create_option('global.developmentMode', visible=False)
+@_create_option('global.developmentMode', visibility='hidden')
 def _global_development_mode():
     """Are we in development mode.
 
@@ -182,7 +184,7 @@ _create_option(
     default_val=10.1)
 
 
-@_create_option('proxy.useNode', visible=False)
+@_create_option('proxy.useNode', visibility='hidden')
 def _proxy_use_node():
     """Whether to use the node server."""
     return get_option('global.developmentMode')
@@ -289,7 +291,7 @@ def _s3_url():
     return _get_default_credentials()['url']
 
 
-@_create_option('s3.accessKeyId')
+@_create_option('s3.accessKeyId', visibility='obfuscated')
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
@@ -301,7 +303,7 @@ def _s3_access_key_id():
     return _get_default_credentials()['accessKeyId']
 
 
-@_create_option('s3.secretAccessKey')
+@_create_option('s3.secretAccessKey', visibility='obfuscated')
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
@@ -425,7 +427,7 @@ def show_config():
             if option.section != section:
                 continue
 
-            if not option.visible:
+            if option.visibility == 'hidden':
                 continue
 
             key = option.key.split('.')[1]
@@ -440,17 +442,23 @@ def show_config():
             if len(toml_default) > 0:
                 out.append(f'# Default: {toml_default}')
 
-            if option.where_defined != ConfigOption.DEFAULT_DEFINITION:
+            is_manually_set = option.where_defined != ConfigOption.DEFAULT_DEFINITION
+
+            if is_manually_set:
                 out.append(
                     f'# The value below was set in {option.where_defined}')
 
-            toml_setting = toml.dumps({key: option.value})
-
-            if len(toml_setting) == 0:
-                out.append(f'#{key} =\n')
+            if option.visibility == 'obfuscated' and not is_manually_set:
+                out.append(f'{key} = (value hidden)')
 
             else:
-                out.append(toml_setting)
+                toml_setting = toml.dumps({key: option.value})
+
+                if len(toml_setting) == 0:
+                    out.append(f'#{key} =\n')
+
+                else:
+                    out.append(toml_setting)
 
     print('\n'.join(out))
 
@@ -461,7 +469,7 @@ def show_config():
 _USER_DEFINED = '<user defined>'
 
 
-def _set_option(key, value, where_defined, visible=True):
+def _set_option(key, value, where_defined):
     """Set a config option by key / value pair.
 
     Parameters
@@ -472,12 +480,10 @@ def _set_option(key, value, where_defined, visible=True):
         The value of the option.
     where_defined : str
         Tells the config system where this was set.
-    visible : bool
-        Whether this option should be shown to users.
 
     """
     assert key in _config_options, 'Key "%s" is not defined.' % key
-    _config_options[key].set_value(value, where_defined, visible)
+    _config_options[key].set_value(value, where_defined)
 
 
 def _update_config_with_toml(raw_toml, where_defined):
