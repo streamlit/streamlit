@@ -176,7 +176,7 @@ _create_option(
     'proxy.autoCloseDelaySecs',
     description=(
         'How long the proxy should stay open when there are '
-        'no connections. Can be set to .inf for "infinity". '
+        'no connections. Can be set to inf for "infinity". '
         'This delay only starts counting after the '
         'reportExpirationSecs delay transpires.'),
     default_val=0)
@@ -328,9 +328,7 @@ _create_option(
     's3.keyPrefix',
     description='''"Subdirectory" within the S3 bucket to save reports.
         S3 calls paths "keys" which is why the keyPrefix is like a
-        subdirectory.
-
-        Default: "", which means the root directory.
+        subdirectory. Use "" to mean the root directory.
         ''',
     default_val='')
 
