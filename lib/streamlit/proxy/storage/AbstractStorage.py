@@ -22,7 +22,11 @@ LOGGER = get_logger(__name__)
 
 
 class AbstractStorage(object):
-    """Abstract cloud storage class."""
+    """Abstract cloud storage class.
+
+    Concrete subclasses must implement _save_report_files() which provides the
+    concrete implementation of file saving.
+    """
 
     def __init__(self):
         """Constructor."""
@@ -72,6 +76,23 @@ class AbstractStorage(object):
         -------
         str
             the url for the saved report.
+
+        """
+        self._save_report_files(
+            report_id,
+            files,
+            progress_coroutine=progress_coroutine,
+            manifest_save_order=manifest_save_order
+        )
+
+    @gen.coroutine
+    def _save_report_files(self, report_id, files, progress_coroutine=None,
+            manifest_save_order=None):
+        """Concrete implemetation of saving filesself.
+
+        Subclasses of AbstractStorage must implement this method. See
+        `AbstractStorage.csave_report_files` (with no leading underscore) for a
+        description of the arguments to this function.
 
         """
         raise NotImplementedError()
