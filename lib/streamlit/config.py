@@ -146,6 +146,15 @@ _create_option(
     default_val=0.01)
 
 _create_option(
+    'client.outliveProxy',
+    description='''
+        If true, waits for the proxy to close before exiting the client script.
+        This is useful when running a Streamlit script in a container, to allow
+        the proxy to shut itself down cleanly.
+        ''',
+    default_val=False)
+
+_create_option(
     'client.proxyAddress',
     description='''
         Internet address of the proxy server that the client should connect
@@ -498,6 +507,7 @@ def _update_config_with_toml(raw_toml, where_defined):
 
     """
     all_sections = toml.loads(raw_toml)
+
     for section, options in all_sections.items():
         for name, value in options.items():
             _set_option(f'{section}.{name}', value, where_defined)
@@ -528,8 +538,20 @@ def _parse_config_file():
     # Parse the config file.
     if not os.path.exists(config_fileanme):
         return
+
     with open(config_fileanme) as input:
         _update_config_with_toml(input.read(), config_fileanme)
+
+    _check_conflicts()
+
+
+def _check_conflicts():
+    if get_option('client.outliveProxy') and not get_option('proxy.isRemote'):
+        LOGGER.warning(
+            'The following combination of settings...\n'
+            '  client.outliveProxy = true\n'
+            '  proxy.isRemote = false\n'
+            '...will cause scripts to block until the proxy is closed.')
 
 
 def _clean_paragraphs(txt):

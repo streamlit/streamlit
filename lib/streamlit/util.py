@@ -150,6 +150,13 @@ def build_report_id():
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
 
 
+def make_blocking_http_get(url, timeout=5):
+    try:
+        return urllib.request.urlopen(url, timeout=timeout).read()
+    except Exception:
+        return None
+
+
 _external_ip = None
 
 
@@ -167,13 +174,13 @@ def get_external_ip():
     if _external_ip is not None:
         return _external_ip
 
-    try:
-        response = urllib.request.urlopen(_AWS_CHECK_IP, timeout=5).read()
-        _external_ip = response.decode('utf-8').strip()
-    except RuntimeError as e:
-        LOGGER.error(f'Error connecting to {_AWS_CHECK_IP}: {e}')
+    response = make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
+
+    if response is None:
         print('Did not auto detect external IP. Please go to '
               f'{HELP_DOC} for debugging hints.')
+    else:
+        _external_ip = response.decode('utf-8').strip()
 
     return _external_ip
 

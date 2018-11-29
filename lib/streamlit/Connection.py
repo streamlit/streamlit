@@ -19,7 +19,7 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import websocket_connect
 
 from streamlit import config
-from streamlit.util import write_proto
+from streamlit import util
 from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 
 from streamlit.logger import get_logger
@@ -181,7 +181,7 @@ class Connection(object):
     def _transmit_through_websocket(self, ws, initial_msg):
         """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
-        yield write_proto(ws, initial_msg)
+        yield util.write_proto(ws, initial_msg)
         LOGGER.debug('Just sent an initial_msg with: ' + str(sys.argv))
 
         # Send other information across.
@@ -242,6 +242,24 @@ class Connection(object):
 
         self._loop.add_callback(setattr, self, '_is_open', False)
         LOGGER.debug('Submitted callback to stop the connection thread.')
+
+        if config.get_option('client.outliveProxy'):
+            self._wait_for_proxy_to_close()
+
+        LOGGER.debug('Allowing script to exit')
+
+    def _wait_for_proxy_to_close(self):
+        host = config.get_option('client.proxyAddress')
+        port = config.get_option('proxy.port')
+        url = f'http://{host}:{port}/healthz'
+
+        LOGGER.debug('Waiting for proxy to close...')
+
+        while True:
+            result = util.make_blocking_http_get(url, timeout=1)
+            if result is None:
+                break
+            time.sleep(0.25)
 
 
 class ProxyConnectionError(Exception):
