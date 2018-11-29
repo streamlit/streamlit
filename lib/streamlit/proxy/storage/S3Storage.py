@@ -138,7 +138,8 @@ class S3Storage(AbstractStorage):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def save_report_files(self, report_id, files, progress_coroutine=None):
+    def save_report_files(self, report_id, files, progress_coroutine=None,
+            manifest_save_order=None):
         """Save files related to a given report.
 
         See AbstractStorage for docs.
@@ -146,6 +147,23 @@ class S3Storage(AbstractStorage):
         yield self._s3_init()
         static_files = yield self._get_static_upload_files()
         files_to_upload = static_files + files
+
+        if manifest_save_order is not None:
+            manifest_index = None
+            manifest_tuple = None
+            for i, file_tuple in enumerate(files_to_upload):
+                if file_tuple[0] == 'manifest.json':
+                    manifest_index = i
+                    manifest_tuple = file_tuple
+                    break
+
+            if manifest_tuple:
+                files_to_upload.pop(manifest_index)
+
+                if manifest_save_order == 'first':
+                    files_to_upload.insert(0, manifest_tuple)
+                else:
+                    files_to_upload.append(manifest_tuple)
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 

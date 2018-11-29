@@ -40,7 +40,8 @@ class FileStorage(AbstractStorage):
         return reports_dir
 
     @gen.coroutine
-    def save_report_files(self, report_id, files, progress_coroutine=None):
+    def save_report_files(self, report_id, files, progress_coroutine=None,
+            manifest_save_order=None):
         """Save files related to a given report.
 
         See AbstractStorage for docs.
