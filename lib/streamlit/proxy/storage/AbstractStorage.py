@@ -35,10 +35,6 @@ class AbstractStorage(object):
             streamlit.__version__,
             base58.b58encode(md5.digest()[:3]).decode("utf-8"))
 
-    def _get_static_dir(self):
-        """Return static directory location."""
-        return self._static_dir
-
     @gen.coroutine
     def save_report_files(self, report_id, files, progress_coroutine=None,
             manifest_save_order=None):
