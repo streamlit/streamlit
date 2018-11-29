@@ -138,7 +138,7 @@ class S3Storage(AbstractStorage):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def __save_report_files(self, report_id, files, progress_coroutine=None,
+    def _save_report_files(self, report_id, files, progress_coroutine=None,
             manifest_save_order=None):
         """Save files related to a given report.
 

@@ -13,6 +13,7 @@ import hashlib
 import os
 
 from tornado import gen
+from tornado import locks
 
 import streamlit
 from streamlit import errors
@@ -38,6 +39,7 @@ class AbstractStorage(object):
         self._release_hash = '%s-%s' % (
             streamlit.__version__,
             base58.b58encode(md5.digest()[:3]).decode("utf-8"))
+        self._write_lock = locks.Lock()
 
     @gen.coroutine
     def save_report_files(self, report_id, files, progress_coroutine=None,
@@ -78,12 +80,15 @@ class AbstractStorage(object):
             the url for the saved report.
 
         """
-        yield self._save_report_files(
-            report_id,
-            files,
-            progress_coroutine=progress_coroutine,
-            manifest_save_order=manifest_save_order
-        )
+        return_value = None
+        with (yield self._write_lock.acquire()):
+            return_value = yield self._save_report_files(
+                report_id,
+                files,
+                progress_coroutine=progress_coroutine,
+                manifest_save_order=manifest_save_order
+            )
+        raise gen.Return(return_value)
 
     @gen.coroutine
     def _save_report_files(self, report_id, files, progress_coroutine=None,
@@ -94,6 +99,10 @@ class AbstractStorage(object):
         `AbstractStorage.csave_report_files` (with no leading underscore) for a
         description of the arguments to this function.
 
+        The difference between save_report_files (no underscore) and
+        _save_report_files (leading underscore) is that the former calls the
+        latter and handles coroutine locking to ensure that subsequent calls to
+        save_report_files happen in order.
         """
         raise NotImplementedError()
 
