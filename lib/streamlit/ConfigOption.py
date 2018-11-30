@@ -15,18 +15,19 @@ import re
 class ConfigOption(object):
     '''Stores a Streamlit configuration option.
 
-    A configuration option, like 'proxy.port', which indicates which port to use
-    when connecting to the proxy. There are two ways to create a ConfigOption:
+    A configuration option, like 'client.proxyPort', which indicates which port
+    to use when connecting to the proxy. There are two ways to create a
+    ConfigOption:
 
     Simple ConfigOptions are created as follows:
 
-        ConfigOption('proxy.port',
+        ConfigOption('client.proxyPort',
             description = 'Connect to the proxy at this port.',
             default_val = 8501)
 
     More complex config options resolve thier values at runtime as follows:
 
-        @ConfigOption('proxy.port')
+        @ConfigOption('client.proxyPort')
         def _proxy_port():
             """Connect to the proxy at this port.
 

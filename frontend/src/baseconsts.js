@@ -4,13 +4,6 @@
  */
 
 /**
- * Port used to connect to the proxy server.
- * TODO: Allow user to change this via config options. Today, the config option
- * exists, but it looks like it's never sent to the web client.
- */
-export const PROXY_PORT_PROD = 8501;
-
-/**
  * This is the port used to connect to the web server.
  */
 export const PROXY_PORT_DEV = 3000;

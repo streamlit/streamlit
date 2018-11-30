@@ -284,7 +284,7 @@ class ProxyConnection(object):
             configuredProxyAddress=configured_proxy_address,
             externalProxyIP=external_proxy_ip,
             internalProxyIP=internal_proxy_ip,
-            proxyPort=config.get_option('proxy.port'),
+            proxyPort=config.get_option('browser.proxyPort'),
         )
 
 
@@ -310,13 +310,13 @@ def _get_report_url(host, name):
         The report's URL.
 
     """
-    port = _get_http_port()
+    port = _get_proxy_browser_port()
 
     quoted_name = urllib.parse.quote_plus(name)
     return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
 
 
-def _get_http_port():
+def _get_proxy_browser_port():
     if config.get_option('proxy.useNode'):
         return 3000
-    return config.get_option('proxy.port')
+    return config.get_option('browser.proxyPort')

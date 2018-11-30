@@ -159,19 +159,20 @@ _create_option(
     'client.proxyAddress',
     description='''
         Internet address of the proxy server that the client should connect
-        to. Can be IP address or DNS name. Only set if different from
-        proxy.port.''',
+        to. Can be IP address or DNS name.''',
     default_val='localhost')
+
+_create_option(
+    'client.proxyPort',
+    description='''
+        The port that the client should use to connect to the proxy.
+        ''',
+    default_val=8500)
 
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
-
-_create_option(
-    'proxy.port',
-    description='Port that the proxy server should listed on.',
-    default_val=8501)
 
 _create_option(
     'proxy.autoCloseDelaySecs',
@@ -255,8 +256,36 @@ _create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
-        to. Can be IP address or DNS name. Only set if different from
-        proxy.port.''',
+        to. Can be IP address or DNS name.''',
+    default_val=None)
+
+
+@_create_option('browser.proxyPort')
+@util.memoize
+def _browser_proxy_port():
+    """Port that the browser should use to connect to the proxy.
+
+    Default: 8501
+    """
+    port_range = get_option('browser.proxyPortRange')
+
+    if port_range is None:
+        return 8501
+
+    assert len(port_range) == 2, (
+        'browser.proxyPortRange must be a 2-element list')
+
+    import random
+    return random.randint(port_range[0], port_range[1])
+
+
+_create_option(
+    'browser.proxyPortRange',
+    description='''
+        Use this if you want the proxy to pick a random port for communication
+        with the browser. Accepts ranges in the form (min, max), such as
+        (49152, 65535).
+        ''',
     default_val=None)
 
 

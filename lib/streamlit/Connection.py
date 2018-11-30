@@ -250,7 +250,7 @@ class Connection(object):
 
     def _wait_for_proxy_to_close(self):
         host = config.get_option('client.proxyAddress')
-        port = config.get_option('proxy.port')
+        port = config.get_option('client.proxyPort')
         url = f'http://{host}:{port}/healthz'
 
         LOGGER.debug('Waiting for proxy to close...')
