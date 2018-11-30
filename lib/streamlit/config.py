@@ -260,17 +260,24 @@ _create_option(
     default_val=None)
 
 
+DEFAULT_BROWSER_PROXY_PORT = 8501
+
+
 @_create_option('browser.proxyPort')
 @util.memoize
 def _browser_proxy_port():
     """Port that the browser should use to connect to the proxy.
 
-    Default: 8501
+    Default: 8501, but gets overriden by browser.proxyPortRange, if set.
     """
+    if get_option('global.developmentMode'):
+        # IMPORTANT: If changed, also change baseconsts.js
+        return DEFAULT_BROWSER_PROXY_PORT
+
     port_range = get_option('browser.proxyPortRange')
 
     if port_range is None:
-        return 8501
+        return DEFAULT_BROWSER_PROXY_PORT
 
     assert len(port_range) == 2, (
         'browser.proxyPortRange must be a 2-element list')

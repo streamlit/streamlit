@@ -42,7 +42,7 @@ import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
-import { FETCH_PARAMS } from './baseconsts';
+import { FETCH_PARAMS, IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -115,8 +115,10 @@ class StreamlitApp extends PureComponent {
       const reportName = query.name;
       this.setReportName(reportName);
 
+      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : window.location.port;
+
       const uri = getWsUrl(
-          window.location.hostname, window.location.port, reportName);
+          window.location.hostname, port, reportName);
 
       this.connection = new WebsocketConnection({
         uriList: [uri],
