@@ -146,6 +146,16 @@ _create_option(
     default_val=0.01)
 
 _create_option(
+    'client.tryToOutliveProxy',
+    description='''
+        If true, waits for the proxy to close before exiting the client script.
+        And if the proxy takes too long (10s), just exits the script. This is
+        useful when running a Streamlit script in a container, to allow the
+        proxy to shut itself down cleanly.
+        ''',
+    default_val=False)
+
+_create_option(
     'client.proxyAddress',
     description='''
         Internet address of the proxy server that the client should connect
@@ -167,7 +177,7 @@ _create_option(
     'proxy.autoCloseDelaySecs',
     description=(
         'How long the proxy should stay open when there are '
-        'no connections. Can be set to .inf for "infinity". '
+        'no connections. Can be set to inf for "infinity". '
         'This delay only starts counting after the '
         'reportExpirationSecs delay transpires.'),
     default_val=0)
@@ -319,9 +329,7 @@ _create_option(
     's3.keyPrefix',
     description='''"Subdirectory" within the S3 bucket to save reports.
         S3 calls paths "keys" which is why the keyPrefix is like a
-        subdirectory.
-
-        Default: "", which means the root directory.
+        subdirectory. Use "" to mean the root directory.
         ''',
     default_val='')
 
@@ -498,6 +506,7 @@ def _update_config_with_toml(raw_toml, where_defined):
 
     """
     all_sections = toml.loads(raw_toml)
+
     for section, options in all_sections.items():
         for name, value in options.items():
             _set_option(f'{section}.{name}', value, where_defined)
@@ -528,8 +537,21 @@ def _parse_config_file():
     # Parse the config file.
     if not os.path.exists(config_fileanme):
         return
+
     with open(config_fileanme) as input:
         _update_config_with_toml(input.read(), config_fileanme)
+
+    _check_conflicts()
+
+
+def _check_conflicts():
+    if (get_option('client.tryToOutliveProxy')
+        and not get_option('proxy.isRemote')):
+        LOGGER.warning(
+            'The following combination of settings...\n'
+            '  client.tryToOutliveProxy = true\n'
+            '  proxy.isRemote = false\n'
+            '...will cause scripts to block until the proxy is closed.')
 
 
 def _clean_paragraphs(txt):
