@@ -64,7 +64,7 @@ from streamlit.logger import get_logger
 
 current_module = __import__(__name__)
 
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class Chart(object):

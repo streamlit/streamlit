@@ -2,7 +2,13 @@
 
 """Websocket handler class which the local python library connects to."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
+
 import urllib
+import sys
 
 from tornado import gen
 from tornado.ioloop import IOLoop
@@ -14,7 +20,7 @@ from streamlit.logger import get_logger
 from streamlit.proxy import Proxy, ProxyConnection
 from streamlit.proxy import proxy_util
 
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class ClientWebSocket(WebSocketHandler):
@@ -99,8 +105,8 @@ class ClientWebSocket(WebSocketHandler):
         storage = self._proxy.get_storage()
         url = yield storage.save_report_files(self._connection.id, files)
 
-        # Print the URL to stdout so external scripts can grab this info.
-        print('SAVED REPORT: %s' % url)
+        # Print URL to stderr so it appears in remote logs.
+        print('SAVED RUNNING REPORT: %s' % url, file=sys.stderr)
 
     @gen.coroutine
     def _save_final_report(self):
@@ -112,5 +118,5 @@ class ClientWebSocket(WebSocketHandler):
         storage = self._proxy.get_storage()
         url = yield storage.save_report_files(self._connection.id, files)
 
-        # Print the URL to stdout so external scripts can grab this info.
-        print('SAVED REPORT: %s' % url)
+        # Print URL to stderr so it appears in remote logs.
+        print('SAVED FINAL REPORT: %s' % url, file=sys.stderr)

@@ -40,7 +40,7 @@ from streamlit.proxy.storage.S3Storage import S3Storage as Storage
 from streamlit.streamlit_msg_proto import new_report_msg
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class Proxy(object):
@@ -162,7 +162,7 @@ class Proxy(object):
             if config.get_option('proxy.isRemote'):
                 _print_urls(connection, self._auto_close_delay_secs)
             else:
-                webbrowser.open(connection.get_local_url())
+                webbrowser.open(connection.get_url_for_client_webbrowser())
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():

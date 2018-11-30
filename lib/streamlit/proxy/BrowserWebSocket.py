@@ -24,7 +24,7 @@ from streamlit.proxy import process_runner
 from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class BrowserWebSocket(WebSocketHandler):

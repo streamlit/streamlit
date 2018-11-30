@@ -20,7 +20,7 @@ from streamlit import protobuf
 from tornado import gen
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 # Largest message that can be sent via the WebSocket connection.

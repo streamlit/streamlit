@@ -19,7 +19,9 @@ class WebsocketConnection {
   /**
    * Constructor.
    */
-  constructor({ uri, onMessage, setConnectionState }) {
+  constructor(props) {
+    this.props = props;
+
     // To guarantee packet transmission order, this is the index of the last
     // dispatched incoming message.
     this.lastDispatchedMessageIndex = -1;
@@ -31,32 +33,52 @@ class WebsocketConnection {
     // (because we're still decoding previous messages)
     this.messageQueue = {};
 
-    // Create a new websocket.
     this.state = ConnectionState.DISCONNECTED;
-    this.websocket = new WebSocket(uri);
+    this.websocket = null;
 
-    this.websocket.onmessage = ({ data }) => {
-      this.handleMessage(data, onMessage);
-    };
+    this.connect(0);
+  }
 
-    this.websocket.onclose = () => {
-      setConnectionState({ connectionState: ConnectionState.DISCONNECTED });
-    };
+  connect(uriIndex) {
+    const props = this.props;
 
-    this.websocket.onerror = () => {
-      setConnectionState({
+    if (uriIndex >= props.uriList.length) {
+      props.setConnectionState({
         connectionState: ConnectionState.ERROR,
         errMsg: 'The connection is down. Please rerun your Python script.',
       });
+      return;
+    }
+
+    const uri = props.uriList[uriIndex];
+    this.websocket = new WebSocket(uri);
+
+    this.websocket.onmessage = ({ data }) => {
+      this.handleMessage(data, props.onMessage);
     };
 
-    setConnectionState({ connectionState: ConnectionState.CONNECTED });
+    this.websocket.onopen = () => {
+      props.setConnectionState({
+        connectionState: ConnectionState.CONNECTED,
+      });
+    };
+
+    this.websocket.onclose = () => {
+      props.setConnectionState({
+        connectionState: ConnectionState.DISCONNECTED,
+      });
+    };
+
+    this.websocket.onerror = () => {
+      this.connect(uriIndex + 1);
+    };
   }
 
   /**
    * Encdes the message with the outgoingMessageType and sends it over the wire.
    */
   sendToProxy(obj) {
+    if (!this.websocket) return;
     const msg = BackMsg.create(obj);
     const buffer = BackMsg.encode(msg).finish();
     this.websocket.send(buffer);

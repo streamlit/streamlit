@@ -20,7 +20,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit import util
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 # Config System Global State #
@@ -141,17 +141,19 @@ _create_option('client.throttleSecs',
     description='How long to wait between draining the client queue.',
     default_val=0.01)
 
+_create_option('client.proxyAddress',
+    description=(
+        'Internet address of the proxy server that the client should connect '
+        'to. Can be IP or DNS name.'),
+    default_val='localhost')
+
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-_create_option('proxy.server',
-    description='Internet address of the proxy server.',
-    default_val='localhost')
-
 _create_option('proxy.port',
-    description='Port for the proxy server.',
+    description='Port that the proxy server should listed on.',
     default_val=8501)
 
 _create_option('proxy.autoCloseDelaySecs',
@@ -336,6 +338,13 @@ _create_section('browser', 'Configuration of browser front-end.')
 _create_option('browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
     default_val=True)
+
+_create_option('browser.proxyAddress',
+    description=(
+        'Internet address of the proxy server that the browser should connect '
+        'to. Can be IP or DNS name.'),
+    default_val=None)
+
 
 # Public Interface #
 
