@@ -34,13 +34,14 @@ class FileStorage(AbstractStorage):
 
     def _mkdir(self):
         cwd = os.getcwd()
-        reports_dir = os.path.join(cwd, 'storage')
+        reports_dir = os.path.join(cwd, 'streamlit-storage')
         if not os.path.exists(reports_dir):
             os.mkdir(reports_dir)
         return reports_dir
 
     @gen.coroutine
-    def save_report_files(self, report_id, files, progress_coroutine=None):
+    def save_report_files(self, report_id, files, progress_coroutine=None,
+            manifest_save_order=None):
         """Save files related to a given report.
 
         See AbstractStorage for docs.

@@ -40,7 +40,8 @@ class AbstractStorage(object):
         return self._static_dir
 
     @gen.coroutine
-    def save_report_files(self, report_id, files, progress_coroutine=None):
+    def save_report_files(self, report_id, files, progress_coroutine=None,
+            manifest_save_order=None):
         """Save files related to a given report.
 
         Parameters
@@ -65,6 +66,11 @@ class AbstractStorage(object):
         progress_coroutine : coroutine | None
             Coroutine that will be called successively with a number between 0
             and 100 as input, to indicate progress.
+
+        manifest_save_order : None | 'last' | 'first'
+            If 'last'/'first', makes sure 'manifest.json' is saved last/first.
+            This is a hack to make it less likely that a running report's
+            manifest.json overwrites a final report's manifest.json.
 
         Returns
         -------

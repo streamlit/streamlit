@@ -53,6 +53,10 @@ class ConfigOption(object):
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
+    visibility : 'visible' or 'hidden' or 'obfuscated'
+        If 'hidden', will not include this when listing all options to users.
+        If 'obfuscated', will list it, but will only print out its actual value
+        if the value was manually set (i.e. not default).
 
     '''
 
@@ -60,7 +64,9 @@ class ConfigOption(object):
     # that the option default was not overridden.
     DEFAULT_DEFINITION = '<default>'
 
-    def __init__(self, key, description=None, default_val=None):
+    def __init__(
+            self, key, description=None, default_val=None,
+            visibility='visible'):
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -71,6 +77,8 @@ class ConfigOption(object):
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
+        visibility : 'visible' or 'hidden' or 'obfuscated'
+            Whether this option should be shown to users.
 
         """
         # Parse out the section and name.
@@ -83,6 +91,9 @@ class ConfigOption(object):
 
         # This string is like a comment. If None, it should be set in __call__.
         self.description = description
+
+        self.visibility = visibility
+        self.default_val = default_val
 
         # Set the value.
         self._get_val_func = None
