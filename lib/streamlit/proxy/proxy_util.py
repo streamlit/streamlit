@@ -54,6 +54,7 @@ def url_is_from_allowed_origins(url):
     # Allow connections from proxy's machine or localhost.
     allowed_domains = [
         'localhost',
+        '127.0.0.1',
         util.get_internal_ip(),
         util.get_external_ip(),
     ]
