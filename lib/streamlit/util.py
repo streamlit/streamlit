@@ -1,7 +1,7 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""A bunch of useful utilites."""
+"""A bunch of useful utilities."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -13,7 +13,6 @@ import base58
 import contextlib
 import functools
 import os
-import pwd
 import socket
 import threading
 import urllib
@@ -40,9 +39,11 @@ _AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 # URL of Streamlit's help page.
 HELP_DOC = 'http://streamlit.io/docs/help/'
 
+
 def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
+
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
@@ -63,6 +64,7 @@ def streamlit_read(path, binary=False):
         mode += 'b'
     with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
+
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
@@ -89,6 +91,7 @@ def streamlit_write(path, binary=False):
     with open(path, mode) as handle:
         yield handle
 
+
 def escape_markdown(raw_string):
     """Returns a new string which escapes all markdown metacharacters.
 
@@ -111,6 +114,7 @@ def escape_markdown(raw_string):
     for character in metacharacters:
         result = result.replace(character, '\\' + character)
     return result
+
 
 def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))

@@ -227,13 +227,19 @@ _create_option(
     default_val=True)
 
 # NOTE: We should make this a computed option by bringing
-# Proxy._get_external_ip into this function.
+# util.get_external_ip into this function.
 _create_option(
     'proxy.externalIP',
     description='''
         An address for the proxy which can be accessed on the public Internet.
         ''',
     default_val=None)
+
+_create_option('proxy.enableCORS',
+    description='''
+        Enables support for Cross-Origin Request Sharing, for added security.
+        ''',
+    default_val=True)
 
 
 # Config Section: Browser #
