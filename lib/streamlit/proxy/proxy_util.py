@@ -47,8 +47,7 @@ def url_is_from_allowed_origins(url):
     hostname = urllib.parse.urlparse(url).hostname
 
     # Allow connections from bucket.
-    bucket = config.get_option('s3.bucket')
-    if bucket is not None and hostname.endswith(bucket):
+    if hostname == config.get_option('s3.bucket'):
         return True
 
     # Allow connections from proxy's machine or localhost.
