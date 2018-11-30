@@ -255,11 +255,21 @@ class Connection(object):
 
         LOGGER.debug('Waiting for proxy to close...')
 
+        MAX_WAIT = 10  # Wait at most 10 seconds.
+        SLEEP_TIME = 0.25
+        total_wait_so_far = 0
+
         while True:
             result = util.make_blocking_http_get(url, timeout=1)
+
             if result is None:
                 break
-            time.sleep(0.25)
+
+            time.sleep(SLEEP_TIME)
+            total_wait_so_far += SLEEP_TIME
+
+            if total_wait_so_far > MAX_WAIT:
+                break
 
 
 class ProxyConnectionError(Exception):
