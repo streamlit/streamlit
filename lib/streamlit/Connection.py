@@ -243,7 +243,7 @@ class Connection(object):
         self._loop.add_callback(setattr, self, '_is_open', False)
         LOGGER.debug('Submitted callback to stop the connection thread.')
 
-        if config.get_option('client.outliveProxy'):
+        if config.get_option('client.tryToOutliveProxy'):
             self._wait_for_proxy_to_close()
 
         LOGGER.debug('Allowing script to exit')

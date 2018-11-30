@@ -146,11 +146,12 @@ _create_option(
     default_val=0.01)
 
 _create_option(
-    'client.outliveProxy',
+    'client.tryToOutliveProxy',
     description='''
         If true, waits for the proxy to close before exiting the client script.
-        This is useful when running a Streamlit script in a container, to allow
-        the proxy to shut itself down cleanly.
+        And if the proxy takes too long (10s), just exits the script. This is
+        useful when running a Streamlit script in a container, to allow the
+        proxy to shut itself down cleanly.
         ''',
     default_val=False)
 
@@ -544,10 +545,11 @@ def _parse_config_file():
 
 
 def _check_conflicts():
-    if get_option('client.outliveProxy') and not get_option('proxy.isRemote'):
+    if (get_option('client.tryToOutliveProxy')
+        and not get_option('proxy.isRemote')):
         LOGGER.warning(
             'The following combination of settings...\n'
-            '  client.outliveProxy = true\n'
+            '  client.tryToOutliveProxy = true\n'
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
 
