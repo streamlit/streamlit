@@ -106,7 +106,7 @@ class ClientWebSocket(WebSocketHandler):
         url = yield storage.save_report_files(self._connection.id, files)
 
         # Print URL to stderr so it appears in remote logs.
-        print('SAVED RUNNING REPORT: %s' % url, file=sys.stderr)
+        LOGGER.info('SAVED RUNNING REPORT: %s' % url)
 
     @gen.coroutine
     def _save_final_report(self):
@@ -119,4 +119,4 @@ class ClientWebSocket(WebSocketHandler):
         url = yield storage.save_report_files(self._connection.id, files)
 
         # Print URL to stderr so it appears in remote logs.
-        print('SAVED FINAL REPORT: %s' % url, file=sys.stderr)
+        LOGGER.info('SAVED FINAL REPORT: %s' % url)

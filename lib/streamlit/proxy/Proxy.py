@@ -127,9 +127,10 @@ class Proxy(object):
         # Give the user a helpful hint if no connection was received.
         headless = config.get_option('proxy.isRemote')
         if headless and not self._received_browser_connection:
-            print('Connection timeout to proxy.')
-            print('Did you try to connect and nothing happened? '
-                  f'Please go to {util.HELP_DOC} for debugging hints.')
+            LOGGER.warning(
+                'Connection timeout to proxy.\n'
+                'Did you try to connect and nothing happened? '
+                f'Go to {util.HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.

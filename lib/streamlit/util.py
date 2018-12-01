@@ -181,8 +181,9 @@ def get_external_ip():
     response = make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
 
     if response is None:
-        print('Did not auto detect external IP. Please go to '
-              f'{HELP_DOC} for debugging hints.')
+        LOGGER.warning(
+            'Did not auto detect external IP.\n'
+            f'Please go to {HELP_DOC} for debugging hints.')
     else:
         _external_ip = response.decode('utf-8').strip()
 

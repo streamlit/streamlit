@@ -73,7 +73,7 @@ class DeltaConnection(object):
         def streamlit_excepthook(exc_type, exc_value, exc_tb):
             dg = self.get_delta_generator()
             dg.exception(exc_value, exc_tb)
-            print(util.EXCEPTHOOK_IDENTIFIER_STR, file=sys.stderr)
+            LOGGER.error(util.EXCEPTHOOK_IDENTIFIER_STR)
             self._original_excepthook(exc_type, exc_value, exc_tb)
 
         self._original_excepthook = sys.excepthook
