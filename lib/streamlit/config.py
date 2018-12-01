@@ -547,9 +547,9 @@ def _update_config_with_toml(raw_toml, where_defined):
         Tells the config system where this was set.
 
     """
-    all_sections = toml.loads(raw_toml)
+    parsed_config_file = toml.loads(raw_toml)
 
-    for section, options in all_sections.items():
+    for section, options in parsed_config_file.items():
         for name, value in options.items():
             _set_option(f'{section}.{name}', value, where_defined)
 
@@ -560,7 +560,7 @@ def _parse_config_file():
     home = os.getenv('HOME', None)
     if home is None:
         raise RuntimeError('No home directory.')
-    config_fileanme = os.path.join(home, '.streamlit', 'config.toml')
+    config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
     # DEPRECATION WARNINGL: Eventually we should get rid of this code.
     old_config_file_exists = os.path.exists(
@@ -577,11 +577,11 @@ def _parse_config_file():
             'any quetions, please contact Streamlit support over Slack. <3\n')
 
     # Parse the config file.
-    if not os.path.exists(config_fileanme):
+    if not os.path.exists(config_filename):
         return
 
-    with open(config_fileanme) as input:
-        _update_config_with_toml(input.read(), config_fileanme)
+    with open(config_filename) as input:
+        _update_config_with_toml(input.read(), config_filename)
 
     _check_conflicts()
 
@@ -594,6 +594,18 @@ def _check_conflicts():
             '  client.tryToOutliveProxy = true\n'
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
+
+
+    proxyPortManuallySet = (
+            get_where_defined('browser.proxyPort')
+            != ConfigOption.DEFAULT_DEFINITION)
+
+    portRangeManuallySet = (
+            get_where_defined('browser.proxyPortRange')
+            != ConfigOption.DEFAULT_DEFINITION)
+
+    assert not (proxyPortManuallySet and portRangeManuallySet), (
+        'You cannot set both browser.proxyPort and browser.proxyPortRange')
 
 
 def _clean_paragraphs(txt):
