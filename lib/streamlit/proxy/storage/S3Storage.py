@@ -69,7 +69,8 @@ class S3Storage(AbstractStorage):
         access_key_id = config.get_option('s3.accessKeyId')
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
-            self._s3_client = boto3.Session(profile_name=aws_profile).client('s3')
+            self._s3_client = boto3.Session(
+                profile_name=aws_profile).client('s3')
         elif access_key_id is not None:
             secret_access_key = config.get_option('s3.secretAccessKey')
             self._s3_client = boto3.client(
@@ -101,18 +102,18 @@ class S3Storage(AbstractStorage):
         try:
             self._s3_client.head_bucket(Bucket=self._bucketname)
         except botocore.exceptions.ClientError:
-            LOGGER.info('"%s" bucket not found', self._bucketname)
+            LOGGER.debug('"%s" bucket not found', self._bucketname)
             return False
         return True
 
     @run_on_executor
     def _create_bucket(self):
-        LOGGER.info('Attempting to create "%s" bucket', self._bucketname)
+        LOGGER.debug('Attempting to create "%s" bucket', self._bucketname)
         self._s3_client.create_bucket(
             ACL='public-read',
             Bucket=self._bucketname,
             CreateBucketConfiguration={'LocationConstraint': self._region})
-        LOGGER.info('"%s" bucket created', self._bucketname)
+        LOGGER.debug('"%s" bucket created', self._bucketname)
 
     @gen.coroutine
     def _s3_init(self):

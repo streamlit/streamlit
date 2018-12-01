@@ -359,13 +359,13 @@ _create_option(
 @util.memoize
 def _get_default_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
-    LOGGER.info('Getting remote Streamlit credentials.')
+    LOGGER.debug('Getting remote Streamlit credentials.')
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
         return ast.literal_eval(response.decode('utf-8'))
     except Exception as e:
-        LOGGER.info(
+        LOGGER.warning(
             'Error getting Streamlit credentials. Sharing will be '
             'disabled. %s', e)
         return None

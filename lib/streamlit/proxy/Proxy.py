@@ -94,21 +94,21 @@ class Proxy(object):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
-            LOGGER.info(f'Serving static content from {static_path}')
+            LOGGER.debug(f'Serving static content from {static_path}')
 
             routes.extend([
                 (r"/()$", web.StaticFileHandler, {'path': f'{static_path}/index.html'}),
                 (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
             ])
         else:
-            LOGGER.info('useNode == True, not serving static content from python.')
+            LOGGER.debug('useNode == True, not serving static content from python.')
         self._app = web.Application(routes)
 
         # Attach an http server
         port = config.get_option('proxy.port')
         http_server = HTTPServer(self._app)
         http_server.listen(port)
-        LOGGER.info('Proxy http server started on port {}'.format(port))
+        LOGGER.debug('Proxy http server started on port {}'.format(port))
 
         # Remember whether we've seen any browser connections so that we can
         # display a helpful warming message if the proxy closed without having
@@ -181,7 +181,8 @@ class Proxy(object):
         """Try to deregister proxy connection.
 
         Deregister ProxyConnection so long as there aren't any open connection
-        (client or browser), and the connection is no longer in its grace period.
+        (client or browser), and the connection is no longer in its grace
+        period.
 
         Parameters
         ----------
@@ -238,8 +239,8 @@ class Proxy(object):
                 self.stop()
 
         LOGGER.debug(
-            f'Will check in {self._auto_close_delay_secs}s if there are no more '
-            'connections: ')
+            f'Will check in {self._auto_close_delay_secs}s if there are no '
+            'more connections: ')
         loop = IOLoop.current()
         loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
@@ -412,7 +413,7 @@ class Proxy(object):
             return
 
         if self._keep_alive:
-            LOGGER.info(
+            LOGGER.debug(
                 'Will not observe file system since keepAlive is True')
             return
 
@@ -452,7 +453,8 @@ def stop_proxy_on_exception(is_coroutine=False):
             @gen.coroutine
             def wrapped_coroutine(web_socket_handler, *args, **kwargs):
                 try:
-                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
+                    LOGGER.debug(
+                        f'Running wrapped version of COROUTINE {callback}')
                     LOGGER.debug(f'About to yield {callback}')
                     rv = yield callback(web_socket_handler, *args, **kwargs)
                     LOGGER.debug(f'About to return {rv}')
@@ -461,7 +463,8 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug(f'Passing through COROUTINE return value:')
                     raise
                 except Exception as e:
-                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    LOGGER.debug(
+                        f'Caught a COROUTINE exception: "{e}" ({type(e)})')
                     traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
@@ -524,7 +527,7 @@ def _on_fs_event(observer, event):  # noqa: D401
     Note: this will run in the Observer thread (created by the watchdog
     module).
     """
-    LOGGER.info(
+    LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
     process_runner.run_outside_proxy_process(

@@ -151,9 +151,10 @@ class Connection(object):
             yield self._transmit_through_websocket(ws, initial_msg)
             return
         except IOError:
-            LOGGER.info(f'First connection to {uri} failed. No proxy running?')
+            LOGGER.debug(
+                f'First connection to {uri} failed. No proxy running?')
 
-        LOGGER.info('Starting proxy.')
+        LOGGER.debug('Starting proxy.')
         yield self._launch_proxy()
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
@@ -165,7 +166,7 @@ class Connection(object):
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
             # cleanup thread can now run.
-            LOGGER.info(f'Failed to connect to proxy at {uri}.')
+            LOGGER.error(f'Failed to connect to proxy at {uri}.')
             self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
