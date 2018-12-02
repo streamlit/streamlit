@@ -13,7 +13,9 @@ import base58
 import contextlib
 import functools
 import os
+import platform
 import socket
+import subprocess
 import threading
 import urllib
 import uuid
@@ -220,3 +222,35 @@ def get_internal_ip():
         s.close()
 
     return _internal_ip
+
+
+def open_browser(url):
+    """Open a web browser pointing to a given URL.
+
+    We use this function instead of Python's `webbrowser` module because this
+    way we can capture stdout/stderr to avoid polluting the terminal with the
+    browser's messages. For example, Chrome always prints things like "Created
+    new window in existing browser session", and those get on the user's way.
+
+    url : str
+        The URL. Must include the protocol.
+
+    """
+
+    system = platform.system()
+
+    if system == 'Linux':
+        cmd = ['xdg-open', url]
+    elif system == 'Darwin':
+        cmd = ['open', url]
+    elif system == 'Windows':
+        cmd = ['start', '""', url]
+    else:
+        raise Error('Cannot open browser in platform "%s"' % system)
+
+    with open(os.devnull, 'w') as devnull:
+        subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+
+
+class Error(Exception):
+    pass

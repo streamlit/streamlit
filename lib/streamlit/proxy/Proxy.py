@@ -29,7 +29,6 @@ from tornado.ioloop import IOLoop
 import functools
 import textwrap
 import traceback
-import webbrowser
 
 from streamlit import config
 from streamlit import util
@@ -163,7 +162,7 @@ class Proxy(object):
             if config.get_option('proxy.isRemote'):
                 _print_urls(connection, self._auto_close_delay_secs)
             else:
-                webbrowser.open(connection.get_url_for_client_webbrowser())
+                util.open_browser(connection.get_url_for_client_webbrowser())
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
