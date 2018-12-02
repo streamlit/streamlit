@@ -112,12 +112,12 @@ def _global_development_mode():
 def _global_log_level():
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
-    Default: 'warning'
+    Default: 'info'
     """
     if get_option('global.developmentMode'):
         return 'debug'
     else:
-        return 'warning'
+        return 'info'
 
 
 # Config Section: Client #

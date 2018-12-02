@@ -17,7 +17,7 @@ import sys
 LOGGERS = dict()
 
 # The global log level is set here across all names.
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 # This boolean is True iff this is the proxy.
 THIS_IS_PROXY = False
@@ -119,8 +119,6 @@ def get_logger(name):
     Logger
 
     """
-    global LOG_LEVEL
-
     if name in LOGGERS.keys():
         return LOGGERS[name]
 
