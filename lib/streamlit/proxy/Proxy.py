@@ -23,12 +23,14 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import functools
+import logging
+import textwrap
+import traceback
+
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-import functools
-import textwrap
-import traceback
 
 from streamlit import config
 from streamlit import util
@@ -40,6 +42,9 @@ from streamlit.streamlit_msg_proto import new_report_msg
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+# Don't show per-request logs.
+logging.getLogger('tornado.access').setLevel(logging.WARNING)
 
 
 class Proxy(object):
