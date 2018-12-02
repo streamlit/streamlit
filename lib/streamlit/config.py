@@ -19,6 +19,7 @@ import collections
 
 from streamlit.ConfigOption import ConfigOption
 from streamlit import util
+from streamlit import development
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -573,3 +574,4 @@ def _clean(txt):
 
 # Acually parse the config file.
 _parse_config_file()
+development.is_development_mode = get_option('global.developmentMode')

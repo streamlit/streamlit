@@ -13,6 +13,8 @@ import inspect
 import logging
 import sys
 
+from streamlit import development
+
 # Loggers for each name are saved here.
 LOGGERS = dict()
 
@@ -65,14 +67,16 @@ def setup_formatter(logger):
     if hasattr(logger, 'streamlit_console_handler'):
         logger.removeHandler(logger.streamlit_console_handler)
 
-    # Creates the console handler for this logger.
-    global THIS_IS_PROXY
-    if THIS_IS_PROXY:
-        formatter = logging.Formatter('- PROXY  %(levelname)-5s %(name)-20s: %(message)s')
-    else:
-        formatter = logging.Formatter('- CLIENT %(levelname)-5s %(name)-20s: %(message)s')
     logger.streamlit_console_handler = logging.StreamHandler()
-    logger.streamlit_console_handler.setFormatter(formatter)
+
+    if development.is_development_mode:
+        # Creates the console handler for this logger.
+        global THIS_IS_PROXY
+        if THIS_IS_PROXY:
+            formatter = logging.Formatter('- PROXY  %(levelname)-5s %(name)-20s: %(message)s')
+        else:
+            formatter = logging.Formatter('- CLIENT %(levelname)-5s %(name)-20s: %(message)s')
+        logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
