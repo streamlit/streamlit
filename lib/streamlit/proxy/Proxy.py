@@ -43,8 +43,9 @@ from streamlit.streamlit_msg_proto import new_report_msg
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
-# Don't show per-request logs.
-logging.getLogger('tornado.access').setLevel(logging.WARNING)
+if not config.get_option('global.developmentMode'):
+    # Don't show per-request logs.
+    logging.getLogger('tornado.access').setLevel(logging.WARNING)
 
 
 class Proxy(object):
