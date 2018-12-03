@@ -76,7 +76,8 @@ class BrowserWebSocket(WebSocketHandler):
             loop.spawn_callback(self.do_loop)
 
         except KeyError as e:
-            LOGGER.debug('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
@@ -106,7 +107,8 @@ class BrowserWebSocket(WebSocketHandler):
                 yield gen.sleep(throttle_secs)
             LOGGER.debug('Closing loop for "%s"', self._connection.name)
         except KeyError as e:
-            LOGGER.warning('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
