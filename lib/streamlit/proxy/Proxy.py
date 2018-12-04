@@ -23,13 +23,14 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import functools
+import logging
+import textwrap
+import traceback
+
 from tornado import gen, web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-import functools
-import textwrap
-import traceback
-import webbrowser
 
 from streamlit import config
 from streamlit import util
@@ -41,6 +42,10 @@ from streamlit.streamlit_msg_proto import new_report_msg
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+if not config.get_option('global.developmentMode'):
+    # Don't show per-request logs.
+    logging.getLogger('tornado.access').setLevel(logging.WARNING)
 
 
 class Proxy(object):
@@ -103,7 +108,7 @@ class Proxy(object):
         http_server = HTTPServer(app)
         http_server.listen(port)
 
-        LOGGER.info('Proxy HTTP server for client connections started on '
+        LOGGER.debug('Proxy HTTP server for client connections started on '
                     'port {}'.format(port))
 
     def _set_up_browser_server(self):
@@ -120,14 +125,14 @@ class Proxy(object):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
-            LOGGER.info(f'Serving static content from {static_path}')
+            LOGGER.debug(f'Serving static content from {static_path}')
 
             routes.extend([
                 (r"/()$", web.StaticFileHandler, {'path': f'{static_path}/index.html'}),
                 (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
             ])
         else:
-            LOGGER.info('useNode == True, not serving static content from python.')
+            LOGGER.debug('useNode == True, not serving static content from python.')
 
         app = web.Application(routes)
         port = config.get_option('browser.proxyPort')
@@ -135,7 +140,7 @@ class Proxy(object):
         http_server = HTTPServer(app)
         http_server.listen(port)
 
-        LOGGER.info('Proxy HTTP server for browser connection started on '
+        LOGGER.debug('Proxy HTTP server for browser connection started on '
                     'port {}'.format(port))
 
     def run_app(self):
@@ -147,9 +152,10 @@ class Proxy(object):
         # Give the user a helpful hint if no connection was received.
         headless = config.get_option('proxy.isRemote')
         if headless and not self._received_browser_connection:
-            print('Connection timeout to proxy.')
-            print('Did you try to connect and nothing happened? '
-                  f'Please go to {util.HELP_DOC} for debugging hints.')
+            LOGGER.warning(
+                'Connection timeout to proxy.\n'
+                'Did you try to connect and nothing happened? '
+                f'Go to {util.HELP_DOC} for debugging hints.')
 
     def stop(self):
         """Stop proxy.
@@ -182,7 +188,7 @@ class Proxy(object):
             if config.get_option('proxy.isRemote'):
                 _print_urls(connection, self._auto_close_delay_secs)
             else:
-                webbrowser.open(connection.get_url_for_client_webbrowser())
+                util.open_browser(connection.get_url_for_client_webbrowser())
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -201,7 +207,8 @@ class Proxy(object):
         """Try to deregister proxy connection.
 
         Deregister ProxyConnection so long as there aren't any open connection
-        (client or browser), and the connection is no longer in its grace period.
+        (client or browser), and the connection is no longer in its grace
+        period.
 
         Parameters
         ----------
@@ -258,8 +265,8 @@ class Proxy(object):
                 self.stop()
 
         LOGGER.debug(
-            f'Will check in {self._auto_close_delay_secs}s if there are no more '
-            'connections: ')
+            f'Will check in {self._auto_close_delay_secs}s if there are no '
+            'more connections: ')
         loop = IOLoop.current()
         loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
@@ -432,7 +439,7 @@ class Proxy(object):
             return
 
         if self._keep_alive:
-            LOGGER.info(
+            LOGGER.debug(
                 'Will not observe file system since keepAlive is True')
             return
 
@@ -472,7 +479,8 @@ def stop_proxy_on_exception(is_coroutine=False):
             @gen.coroutine
             def wrapped_coroutine(web_socket_handler, *args, **kwargs):
                 try:
-                    LOGGER.debug(f'Running wrapped version of COROUTINE {callback}')
+                    LOGGER.debug(
+                        f'Running wrapped version of COROUTINE {callback}')
                     LOGGER.debug(f'About to yield {callback}')
                     rv = yield callback(web_socket_handler, *args, **kwargs)
                     LOGGER.debug(f'About to return {rv}')
@@ -481,7 +489,8 @@ def stop_proxy_on_exception(is_coroutine=False):
                     LOGGER.debug(f'Passing through COROUTINE return value:')
                     raise
                 except Exception as e:
-                    LOGGER.debug(f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                    LOGGER.debug(
+                        f'Caught a COROUTINE exception: "{e}" ({type(e)})')
                     traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
@@ -544,7 +553,7 @@ def _on_fs_event(observer, event):  # noqa: D401
     Note: this will run in the Observer thread (created by the watchdog
     module).
     """
-    LOGGER.info(
+    LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
     process_runner.run_outside_proxy_process(

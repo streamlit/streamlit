@@ -56,12 +56,15 @@ class BrowserWebSocket(WebSocketHandler):
 
         try:
             # Send the opening message
-            LOGGER.info('Browser websocket opened for "%s"', self._report_name)
+            LOGGER.debug(
+                'Browser websocket opened for "%s"', self._report_name)
             self._send_new_connection_msg()
 
-            # Get a ProxyConnection object to coordinate sending deltas over this report name.
+            # Get a ProxyConnection object to coordinate sending deltas over
+            # this report name.
             self._connection, self._queue = (
-                yield self._proxy.on_browser_connection_opened(self._report_name, self))
+                yield self._proxy.on_browser_connection_opened(
+                    self._report_name, self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
@@ -73,7 +76,8 @@ class BrowserWebSocket(WebSocketHandler):
             loop.spawn_callback(self.do_loop)
 
         except KeyError as e:
-            LOGGER.info('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
@@ -95,18 +99,22 @@ class BrowserWebSocket(WebSocketHandler):
                 if not self._queue.is_closed():
                     yield self._queue.flush_queue(self)
                 elif not indicated_closed:
-                    LOGGER.debug('The queue for "%s" is closed.' % self._connection.name)
+                    LOGGER.debug(
+                        'The queue for "%s" is closed.'
+                        % self._connection.name)
                     indicated_closed = True
 
                 yield gen.sleep(throttle_secs)
             LOGGER.debug('Closing loop for "%s"', self._connection.name)
         except KeyError as e:
-            LOGGER.info('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
         if self._connection is not None:
-            self._proxy.on_browser_connection_closed(self._connection, self._queue)
+            self._proxy.on_browser_connection_closed(
+                self._connection, self._queue)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
@@ -171,7 +179,8 @@ class BrowserWebSocket(WebSocketHandler):
         def progress(percent):
             progress_msg = protobuf.ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
 
         # Indicate that the save is starting.
         try:
@@ -185,10 +194,13 @@ class BrowserWebSocket(WebSocketHandler):
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
+            err_msg = f'{type(e).__name__}: {str(e) or "No further details."}'
             progress_msg = protobuf.ForwardMsg()
-            progress_msg.report_uploaded = 'ERROR: ' + str(e)
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            progress_msg.report_uploaded = err_msg
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
             raise e

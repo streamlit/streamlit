@@ -48,7 +48,7 @@ class ClientWebSocket(WebSocketHandler):
         self._report_name = report_name
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
-        LOGGER.info('Client websocket opened for %s', self._report_name)
+        LOGGER.debug('Client websocket opened for %s', self._report_name)
 
     @Proxy.stop_proxy_on_exception()
     def on_message(self, message):
@@ -73,7 +73,7 @@ class ClientWebSocket(WebSocketHandler):
     @gen.coroutine
     def on_close(self):
         """Close callback."""
-        LOGGER.info('Client websocket closed for "%s"' % self._report_name)
+        LOGGER.debug('Client websocket closed for "%s"' % self._report_name)
 
         # Deregistering this connection and see if we can close the proxy.
         if self._connection:
@@ -106,7 +106,7 @@ class ClientWebSocket(WebSocketHandler):
         url = yield storage.save_report_files(self._connection.id, files)
 
         # Print URL to stderr so it appears in remote logs.
-        print('SAVED RUNNING REPORT: %s' % url, file=sys.stderr)
+        LOGGER.info('SAVED RUNNING REPORT: %s' % url)
 
     @gen.coroutine
     def _save_final_report(self):
@@ -119,4 +119,4 @@ class ClientWebSocket(WebSocketHandler):
         url = yield storage.save_report_files(self._connection.id, files)
 
         # Print URL to stderr so it appears in remote logs.
-        print('SAVED FINAL REPORT: %s' % url, file=sys.stderr)
+        LOGGER.info('SAVED FINAL REPORT: %s' % url)

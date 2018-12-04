@@ -23,6 +23,9 @@ RUN ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./
 # Build static content which puts it into frontend/build
 RUN npm run build
 
+# Get rid of map files.
+RUN find /frontend -type 'f' -iname '*.map' -exec rm -f {} \;
+
 #######################################################################
 # Frontend Container
 #######################################################################

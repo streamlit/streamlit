@@ -12,15 +12,15 @@ setup_2_3_shims(globals())
 import inspect
 import logging
 import sys
+import time
+
+from streamlit import development
 
 # Loggers for each name are saved here.
 LOGGERS = dict()
 
 # The global log level is set here across all names.
-LOG_LEVEL = logging.DEBUG
-
-# This boolean is True iff this is the proxy.
-THIS_IS_PROXY = False
+LOG_LEVEL = logging.INFO
 
 
 def set_log_level(level):
@@ -51,28 +51,22 @@ def set_log_level(level):
     LOG_LEVEL = log_level
 
 
-def set_this_is_proxy():
-    """Set the module-level global boolean THIS_IS_PROXY."""
-    global THIS_IS_PROXY
-    THIS_IS_PROXY = True
-    for log in LOGGERS.values():
-        setup_formatter(log)
-
-
 def setup_formatter(logger):
     """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
     if hasattr(logger, 'streamlit_console_handler'):
         logger.removeHandler(logger.streamlit_console_handler)
 
-    # Creates the console handler for this logger.
-    global THIS_IS_PROXY
-    if THIS_IS_PROXY:
-        formatter = logging.Formatter('- PROXY  %(levelname)-5s %(name)-20s: %(message)s')
-    else:
-        formatter = logging.Formatter('- CLIENT %(levelname)-5s %(name)-20s: %(message)s')
     logger.streamlit_console_handler = logging.StreamHandler()
-    logger.streamlit_console_handler.setFormatter(formatter)
+
+    if development.is_development_mode:
+        logging.Formatter.converter = time.gmtime
+        formatter = logging.Formatter(
+            fmt=(
+                '%(asctime)s.%(msecs)03d %(levelname) -7s '
+                '%(name)s: %(message)s'),
+            datefmt='%Y-%m-%dT%H:%M:%SZ')
+        logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
@@ -119,20 +113,18 @@ def get_logger(name):
     Logger
 
     """
-    global LOG_LEVEL
-
     if name in LOGGERS.keys():
         return LOGGERS[name]
 
     if name == 'root':
-        log = logging.getLogger()
+        logger = logging.getLogger()
     else:
-        log = logging.getLogger(name)
+        logger = logging.getLogger(name)
 
-    log.setLevel(LOG_LEVEL)
-    log.propagate = False
-    setup_formatter(log)
+    logger.setLevel(LOG_LEVEL)
+    logger.propagate = False
+    setup_formatter(logger)
 
-    LOGGERS[name] = log
+    LOGGERS[name] = logger
 
-    return log
+    return logger

@@ -123,6 +123,8 @@ def _run_with_error_handler(cmd, cwd=None):
     stderr_str = _to_str(stderr)
 
     # Always forward stderr and stdout to the user-visible stderr and stdout.
+    # TODO: Forward this info live, as the process runs. Right now we only
+    # forward it when the process ends.
 
     if stdout:
         print(_to_str(stdout), file=sys.stdout)

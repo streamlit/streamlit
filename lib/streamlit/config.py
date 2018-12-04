@@ -19,6 +19,7 @@ import collections
 
 from streamlit.ConfigOption import ConfigOption
 from streamlit import util
+from streamlit import development
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -112,12 +113,12 @@ def _global_development_mode():
 def _global_log_level():
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
-    Default: 'warning'
+    Default: 'info'
     """
     if get_option('global.developmentMode'):
         return 'debug'
     else:
-        return 'warning'
+        return 'info'
 
 
 # Config Section: Client #
@@ -395,13 +396,13 @@ _create_option(
 @util.memoize
 def _get_default_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
-    LOGGER.info('Getting remote Streamlit credentials.')
+    LOGGER.debug('Getting remote Streamlit credentials.')
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
         return ast.literal_eval(response.decode('utf-8'))
     except Exception as e:
-        LOGGER.info(
+        LOGGER.warning(
             'Error getting Streamlit credentials. Sharing will be '
             'disabled. %s', e)
         return None
@@ -621,3 +622,4 @@ def _clean(txt):
 
 # Acually parse the config file.
 _parse_config_file()
+development.is_development_mode = get_option('global.developmentMode')
