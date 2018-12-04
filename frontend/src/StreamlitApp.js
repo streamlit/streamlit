@@ -115,7 +115,10 @@ class StreamlitApp extends PureComponent {
       const reportName = query.name;
       this.setReportName(reportName);
 
-      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : window.location.port;
+      // If dev, always connect to 8501, since window.location.port is the Node
+      // server's port 3000.
+      // If changed, also change config.py
+      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
 
       const uri = getWsUrl(
           window.location.hostname, port, reportName);

@@ -264,6 +264,12 @@ def _proxy_browser_port():
 
     Default: 8501, but gets overriden by proxy.browserPortRange, if set.
     """
+    # When using the Node server, always connect to 8501. This is hard-coded in
+    # JS as well. Otherwise, the browser would decide what port to connect to
+    # based on either:
+    #   1. window.location.port, which in dev is going to be (3000)
+    #   2. the proxyPort value in manifest.json, which only exists when
+    #   proxy.liveSave is true and the page is being served from storage.
     if get_option('proxy.useNode'):
         # IMPORTANT: If changed, also change baseconsts.js and StreamlitApp.js
         return DEFAULT_BROWSER_PROXY_PORT
@@ -628,6 +634,14 @@ def _check_conflicts():
 
     assert not (proxyPortManuallySet and portRangeManuallySet), (
         'You cannot set both proxy.browserPort and proxy.browserPortRange')
+
+    assert not (proxyPortManuallySet and get_option('proxy.useNode')), (
+        'proxy.browserPort does not work in dev mode. '
+        'See comment in config._proxy_browser_port()')
+
+    assert not (portRangeManuallySet and get_option('proxy.useNode')), (
+        'proxy.browserPortRange does not work in dev mode. '
+        'See comment in config._proxy_browser_port()')
 
 
 def _clean_paragraphs(txt):
