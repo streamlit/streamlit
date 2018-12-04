@@ -103,7 +103,7 @@ class Proxy(object):
         ]
 
         app = web.Application(routes)
-        port = config.get_option('client.proxyPort')
+        port = config.get_option('proxy.clientPort')
 
         http_server = HTTPServer(app)
         http_server.listen(port)
@@ -135,7 +135,7 @@ class Proxy(object):
             LOGGER.debug('useNode == True, not serving static content from python.')
 
         app = web.Application(routes)
-        port = config.get_option('browser.proxyPort')
+        port = config.get_option('proxy.browserPort')
 
         http_server = HTTPServer(app)
         http_server.listen(port)

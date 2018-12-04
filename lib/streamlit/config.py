@@ -163,12 +163,14 @@ _create_option(
         to. Can be IP address or DNS name.''',
     default_val='localhost')
 
-_create_option(
-    'client.proxyPort',
-    description='''
-        The port that the client should use to connect to the proxy.
-        ''',
-    default_val=8500)
+
+@_create_option('client.proxyPort')
+def _client_proxy_port():
+    """Port that the client should use to connect to the proxy.
+
+    Default: whatever value is set in proxy.clientPort.
+    """
+    return get_option('proxy.clientPort')
 
 
 # Config Section: Proxy #
@@ -244,6 +246,51 @@ _create_option(
         ''',
     default_val=True)
 
+_create_option(
+    'proxy.clientPort',
+    description='''
+        The port where the proxy will listen for client connections.
+        ''',
+    default_val=8500)
+
+
+DEFAULT_BROWSER_PROXY_PORT = 8501
+
+
+@_create_option('proxy.browserPort')
+@util.memoize
+def _proxy_browser_port():
+    """The port where the proxy will listen for browser connections.
+
+    Default: 8501, but gets overriden by proxy.browserPortRange, if set.
+    """
+    if get_option('proxy.useNode'):
+        # IMPORTANT: If changed, also change baseconsts.js and StreamlitApp.js
+        return DEFAULT_BROWSER_PROXY_PORT
+
+    port_range = get_option('proxy.browserPortRange')
+
+    if port_range is None:
+        return DEFAULT_BROWSER_PROXY_PORT
+
+    assert len(port_range) == 2, (
+        'proxy.browserPortRange must be a 2-element list')
+
+    import random
+    return random.randint(port_range[0], port_range[1])
+
+
+# IMPORTANT: When reading config options in normal Streamlit code, read
+# proxy.browserPort instead.
+_create_option(
+    'proxy.browserPortRange',
+    description='''
+        Use this if you want the proxy to pick a random port for communication
+        with the browser. Accepts ranges in the form (min, max), such as
+        (49152, 65535).
+        ''',
+    default_val=None)
+
 
 # Config Section: Browser #
 
@@ -262,40 +309,14 @@ _create_option(
     default_val=None)
 
 
-DEFAULT_BROWSER_PROXY_PORT = 8501
-
-
 @_create_option('browser.proxyPort')
 @util.memoize
 def _browser_proxy_port():
     """Port that the browser should use to connect to the proxy.
 
-    Default: 8501, but gets overriden by browser.proxyPortRange, if set.
+    Default: whatever value is set in proxy.browserPort.
     """
-    if get_option('global.developmentMode'):
-        # IMPORTANT: If changed, also change baseconsts.js
-        return DEFAULT_BROWSER_PROXY_PORT
-
-    port_range = get_option('browser.proxyPortRange')
-
-    if port_range is None:
-        return DEFAULT_BROWSER_PROXY_PORT
-
-    assert len(port_range) == 2, (
-        'browser.proxyPortRange must be a 2-element list')
-
-    import random
-    return random.randint(port_range[0], port_range[1])
-
-
-_create_option(
-    'browser.proxyPortRange',
-    description='''
-        Use this if you want the proxy to pick a random port for communication
-        with the browser. Accepts ranges in the form (min, max), such as
-        (49152, 65535).
-        ''',
-    default_val=None)
+    return get_option('proxy.browserPort')
 
 
 # Config Section: S3 #
@@ -597,17 +618,16 @@ def _check_conflicts():
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
 
-
     proxyPortManuallySet = (
-            get_where_defined('browser.proxyPort')
+            get_where_defined('proxy.browserPort')
             != ConfigOption.DEFAULT_DEFINITION)
 
     portRangeManuallySet = (
-            get_where_defined('browser.proxyPortRange')
+            get_where_defined('proxy.browserPortRange')
             != ConfigOption.DEFAULT_DEFINITION)
 
     assert not (proxyPortManuallySet and portRangeManuallySet), (
-        'You cannot set both browser.proxyPort and browser.proxyPortRange')
+        'You cannot set both proxy.browserPort and proxy.browserPortRange')
 
 
 def _clean_paragraphs(txt):
