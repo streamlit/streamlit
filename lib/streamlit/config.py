@@ -237,7 +237,8 @@ _create_option(
         ''',
     default_val=None)
 
-_create_option('proxy.enableCORS',
+_create_option(
+    'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
         ''',
