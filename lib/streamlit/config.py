@@ -632,15 +632,23 @@ def _check_conflicts():
             get_where_defined('proxy.browserPortRange')
             != ConfigOption.DEFAULT_DEFINITION)
 
+    browserPortManuallySet = (
+            get_where_defined('browser.proxyPort')
+            != ConfigOption.DEFAULT_DEFINITION)
+
     assert not (proxyPortManuallySet and portRangeManuallySet), (
         'You cannot set both proxy.browserPort and proxy.browserPortRange')
 
     assert not (proxyPortManuallySet and get_option('proxy.useNode')), (
-        'proxy.browserPort does not work in dev mode. '
+        'proxy.browserPort does not work when proxy.useNode is true. '
         'See comment in config._proxy_browser_port()')
 
     assert not (portRangeManuallySet and get_option('proxy.useNode')), (
-        'proxy.browserPortRange does not work in dev mode. '
+        'proxy.browserPortRange does not work when proxy.useNode is true. '
+        'See comment in config._proxy_browser_port()')
+
+    assert not (browserPortManuallySet and get_option('proxy.useNode')), (
+        'browser.proxyPort does not work when proxy.useNode is true. '
         'See comment in config._proxy_browser_port()')
 
 
