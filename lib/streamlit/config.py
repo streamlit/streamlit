@@ -160,19 +160,22 @@ _create_option(
     'client.proxyAddress',
     description='''
         Internet address of the proxy server that the client should connect
-        to. Can be IP address or DNS name. Only set if different from
-        proxy.port.''',
+        to. Can be IP address or DNS name.''',
     default_val='localhost')
+
+
+@_create_option('client.proxyPort')
+def _client_proxy_port():
+    """Port that the client should use to connect to the proxy.
+
+    Default: whatever value is set in proxy.clientPort.
+    """
+    return get_option('proxy.clientPort')
 
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
-
-_create_option(
-    'proxy.port',
-    description='Port that the proxy server should listed on.',
-    default_val=8501)
 
 _create_option(
     'proxy.autoCloseDelaySecs',
@@ -236,11 +239,63 @@ _create_option(
         ''',
     default_val=None)
 
-_create_option('proxy.enableCORS',
+_create_option(
+    'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
         ''',
     default_val=True)
+
+_create_option(
+    'proxy.clientPort',
+    description='''
+        The port where the proxy will listen for client connections.
+        ''',
+    default_val=8500)
+
+
+DEFAULT_BROWSER_PROXY_PORT = 8501
+
+
+@_create_option('proxy.browserPort')
+@util.memoize
+def _proxy_browser_port():
+    """The port where the proxy will listen for browser connections.
+
+    Default: 8501, but gets overriden by proxy.browserPortRange, if set.
+    """
+    # When using the Node server, always connect to 8501. This is hard-coded in
+    # JS as well. Otherwise, the browser would decide what port to connect to
+    # based on either:
+    #   1. window.location.port, which in dev is going to be (3000)
+    #   2. the proxyPort value in manifest.json, which only exists when
+    #   proxy.liveSave is true and the page is being served from storage.
+    if get_option('proxy.useNode'):
+        # IMPORTANT: If changed, also change baseconsts.js and StreamlitApp.js
+        return DEFAULT_BROWSER_PROXY_PORT
+
+    port_range = get_option('proxy.browserPortRange')
+
+    if port_range is None:
+        return DEFAULT_BROWSER_PROXY_PORT
+
+    assert len(port_range) == 2, (
+        'proxy.browserPortRange must be a 2-element list')
+
+    import random
+    return random.randint(port_range[0], port_range[1])
+
+
+# IMPORTANT: When reading config options in normal Streamlit code, read
+# proxy.browserPort instead.
+_create_option(
+    'proxy.browserPortRange',
+    description='''
+        Use this if you want the proxy to pick a random port for communication
+        with the browser. Accepts ranges in the form (min, max), such as
+        (49152, 65535).
+        ''',
+    default_val=None)
 
 
 # Config Section: Browser #
@@ -256,9 +311,18 @@ _create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
-        to. Can be IP address or DNS name. Only set if different from
-        proxy.port.''',
+        to. Can be IP address or DNS name.''',
     default_val=None)
+
+
+@_create_option('browser.proxyPort')
+@util.memoize
+def _browser_proxy_port():
+    """Port that the browser should use to connect to the proxy.
+
+    Default: whatever value is set in proxy.browserPort.
+    """
+    return get_option('proxy.browserPort')
 
 
 # Config Section: S3 #
@@ -512,9 +576,9 @@ def _update_config_with_toml(raw_toml, where_defined):
         Tells the config system where this was set.
 
     """
-    all_sections = toml.loads(raw_toml)
+    parsed_config_file = toml.loads(raw_toml)
 
-    for section, options in all_sections.items():
+    for section, options in parsed_config_file.items():
         for name, value in options.items():
             _set_option(f'{section}.{name}', value, where_defined)
 
@@ -525,7 +589,7 @@ def _parse_config_file():
     home = os.getenv('HOME', None)
     if home is None:
         raise RuntimeError('No home directory.')
-    config_fileanme = os.path.join(home, '.streamlit', 'config.toml')
+    config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
     # DEPRECATION WARNINGL: Eventually we should get rid of this code.
     old_config_file_exists = os.path.exists(
@@ -542,11 +606,11 @@ def _parse_config_file():
             'any quetions, please contact Streamlit support over Slack. <3\n')
 
     # Parse the config file.
-    if not os.path.exists(config_fileanme):
+    if not os.path.exists(config_filename):
         return
 
-    with open(config_fileanme) as input:
-        _update_config_with_toml(input.read(), config_fileanme)
+    with open(config_filename) as input:
+        _update_config_with_toml(input.read(), config_filename)
 
     _check_conflicts()
 
@@ -559,6 +623,33 @@ def _check_conflicts():
             '  client.tryToOutliveProxy = true\n'
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
+
+    proxyPortManuallySet = (
+            get_where_defined('proxy.browserPort')
+            != ConfigOption.DEFAULT_DEFINITION)
+
+    portRangeManuallySet = (
+            get_where_defined('proxy.browserPortRange')
+            != ConfigOption.DEFAULT_DEFINITION)
+
+    browserPortManuallySet = (
+            get_where_defined('browser.proxyPort')
+            != ConfigOption.DEFAULT_DEFINITION)
+
+    assert not (proxyPortManuallySet and portRangeManuallySet), (
+        'You cannot set both proxy.browserPort and proxy.browserPortRange')
+
+    assert not (proxyPortManuallySet and get_option('proxy.useNode')), (
+        'proxy.browserPort does not work when proxy.useNode is true. '
+        'See comment in config._proxy_browser_port()')
+
+    assert not (portRangeManuallySet and get_option('proxy.useNode')), (
+        'proxy.browserPortRange does not work when proxy.useNode is true. '
+        'See comment in config._proxy_browser_port()')
+
+    assert not (browserPortManuallySet and get_option('proxy.useNode')), (
+        'browser.proxyPort does not work when proxy.useNode is true. '
+        'See comment in config._proxy_browser_port()')
 
 
 def _clean_paragraphs(txt):

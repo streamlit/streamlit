@@ -143,8 +143,8 @@ make install
 make pytest
 python admin/test_streamlit.py
 ```
-Check that all elements and figures work properly
-and everything should run over port `8501`.
+Check that all elements and figures work properly and the browser connection
+should run over port `8501`.
 
 **Note:** It's fine to `ctrl-C` kill `mnist-cnn.py` becuase it runs for so long.
 

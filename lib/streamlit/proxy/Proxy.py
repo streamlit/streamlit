@@ -81,20 +81,46 @@ class Proxy(object):
         LOGGER.debug(
             f'Creating proxy with self._connections: {id(self._connections)}')
 
-        # We have to import these in here to break a circular import reference
+        self._set_up_client_server()
+        self._set_up_browser_server()
+
+        # Remember whether we've seen any browser connections so that we can
+        # display a helpful warming message if the proxy closed without having
+        # received any connections.
+        self._received_browser_connection = False
+
+        # Avoids an exception by guarding against twice stopping the event loop.
+        self._stopped = False
+
+    def _set_up_client_server(self):
+        # We have to import this in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import ClientWebSocket, BrowserWebSocket
+        from streamlit.proxy import ClientWebSocket
 
-        # Set up HTTP routes
         routes = [
-            # Endpoint for WebSocket used by clients to send data to the Proxy.
             ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
-
-            # Endpoint for WebSocket used by the Proxy to send data to browsers.
-            ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
-
             ('/healthz', _HealthHandler),
         ]
+
+        app = web.Application(routes)
+        port = config.get_option('proxy.clientPort')
+
+        http_server = HTTPServer(app)
+        http_server.listen(port)
+
+        LOGGER.debug('Proxy HTTP server for client connections started on '
+                    'port {}'.format(port))
+
+    def _set_up_browser_server(self):
+        # We have to import this in here to break a circular import reference
+        # issue in Python 2.7.
+        from streamlit.proxy import BrowserWebSocket
+
+        routes = [
+            ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
+            ('/healthz', _HealthHandler),
+        ]
+
         if not config.get_option('proxy.useNode'):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
@@ -107,21 +133,15 @@ class Proxy(object):
             ])
         else:
             LOGGER.debug('useNode == True, not serving static content from python.')
-        self._app = web.Application(routes)
 
-        # Attach an http server
-        port = config.get_option('proxy.port')
-        http_server = HTTPServer(self._app)
+        app = web.Application(routes)
+        port = config.get_option('proxy.browserPort')
+
+        http_server = HTTPServer(app)
         http_server.listen(port)
-        LOGGER.debug('Proxy http server started on port {}'.format(port))
 
-        # Remember whether we've seen any browser connections so that we can
-        # display a helpful warming message if the proxy closed without having
-        # received any connections.
-        self._received_browser_connection = False
-
-        # Avoids an exception by guarding against twice stopping the event loop.
-        self._stopped = False
+        LOGGER.debug('Proxy HTTP server for browser connection started on '
+                    'port {}'.format(port))
 
     def run_app(self):
         """Run web app."""
