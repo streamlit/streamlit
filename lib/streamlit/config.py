@@ -106,7 +106,8 @@ def _global_development_mode():
     This option defaults to True if and only if Streamlit wasn't installed
     normally.
     """
-    return ('site-packages' not in __file__)
+    return ('site-packages' not in __file__ and
+            'dist-packages' not in __file__)
 
 
 @_create_option('global.logLevel')
