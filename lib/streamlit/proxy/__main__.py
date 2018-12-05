@@ -7,9 +7,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.logger import get_logger, set_this_is_proxy
-set_this_is_proxy()
-LOGGER = get_logger()
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 from streamlit.proxy import Proxy
 

@@ -3,8 +3,8 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import {ForwardMsg, BackMsg} from './protobuf';
-import {ConnectionState} from './ConnectionState';
+import { ForwardMsg, BackMsg } from './protobuf';
+import { ConnectionState } from './ConnectionState';
 
 
 /**
@@ -19,7 +19,9 @@ class WebsocketConnection {
   /**
    * Constructor.
    */
-  constructor({uri, onMessage, setConnectionState}) {
+  constructor(props) {
+    this.props = props;
+
     // To guarantee packet transmission order, this is the index of the last
     // dispatched incoming message.
     this.lastDispatchedMessageIndex = -1;
@@ -29,51 +31,71 @@ class WebsocketConnection {
 
     // This dictionary stores recieved messages that we haven't sent out yet
     // (because we're still decoding previous messages)
-    this.messageQueue = {}
+    this.messageQueue = {};
 
-    // Create a new websocket.
     this.state = ConnectionState.DISCONNECTED;
-    this.websocket = new WebSocket(uri);
+    this.websocket = null;
 
-    this.websocket.onmessage = ({data}) => {
-      this.handleMessage(data, onMessage);
-    }
+    this.connect(0);
+  }
 
-    this.websocket.onclose = () => {
-      setConnectionState({connectionState: ConnectionState.DISCONNECTED});
-    }
+  connect(uriIndex) {
+    const props = this.props;
 
-    this.websocket.onerror = () => {
-      setConnectionState({
+    if (uriIndex >= props.uriList.length) {
+      props.setConnectionState({
         connectionState: ConnectionState.ERROR,
         errMsg: 'The connection is down. Please rerun your Python script.',
       });
+      return;
+    }
+
+    const uri = props.uriList[uriIndex];
+    this.websocket = new WebSocket(uri);
+
+    this.websocket.onmessage = ({ data }) => {
+      this.handleMessage(data, props.onMessage);
     };
 
-    setConnectionState({connectionState: ConnectionState.CONNECTED});
+    this.websocket.onopen = () => {
+      props.setConnectionState({
+        connectionState: ConnectionState.CONNECTED,
+      });
+    };
+
+    this.websocket.onclose = () => {
+      props.setConnectionState({
+        connectionState: ConnectionState.DISCONNECTED,
+      });
+    };
+
+    this.websocket.onerror = () => {
+      this.connect(uriIndex + 1);
+    };
   }
 
   /**
    * Encdes the message with the outgoingMessageType and sends it over the wire.
    */
   sendToProxy(obj) {
+    if (!this.websocket) return;
     const msg = BackMsg.create(obj);
     const buffer = BackMsg.encode(msg).finish();
-    this.websocket.send(buffer)
+    this.websocket.send(buffer);
   }
 
   handleMessage(data, onMessage) {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex;
-    this.nextMessageIndex += 1
+    this.nextMessageIndex += 1;
 
     // Read in the message data.
     const reader = new FileReader();
-    reader.readAsArrayBuffer(data)
+    reader.readAsArrayBuffer(data);
     reader.onloadend = () => {
       if (this.messageQueue === undefined) {
         console.log("We don't have a message queue. This is bad.")
-        return
+        return;
       }
 
       const resultArray = new Uint8Array(reader.result);
@@ -84,8 +106,8 @@ class WebsocketConnection {
         delete this.messageQueue[dispatchMessageIndex];
         this.lastDispatchedMessageIndex = dispatchMessageIndex;
       }
-    }
+    };
   }
-};
+}
 
 export default WebsocketConnection;

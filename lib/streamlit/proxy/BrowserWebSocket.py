@@ -1,12 +1,14 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""Websocket handler class which the web client connects to."""
+"""Websocket handler class for connections to the browser."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
+
+import urllib
 
 from tornado import gen
 from tornado.concurrent import futures
@@ -19,9 +21,10 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit.proxy import Proxy
 from streamlit.proxy import process_runner
+from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class BrowserWebSocket(WebSocketHandler):
@@ -37,10 +40,8 @@ class BrowserWebSocket(WebSocketHandler):
         self._is_open = False
 
     def check_origin(self, origin):
-        """Ignore CORS."""
-        # WARNING.  EXTREMELY UNSECURE.
-        # See http://www.tornadoweb.org/en/stable/websocket.html#configuration
-        return True
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
 
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
@@ -55,12 +56,15 @@ class BrowserWebSocket(WebSocketHandler):
 
         try:
             # Send the opening message
-            LOGGER.info('Browser websocket opened for "%s"', self._report_name)
+            LOGGER.debug(
+                'Browser websocket opened for "%s"', self._report_name)
             self._send_new_connection_msg()
 
-            # Get a ProxyConnection object to coordinate sending deltas over this report name.
+            # Get a ProxyConnection object to coordinate sending deltas over
+            # this report name.
             self._connection, self._queue = (
-                yield self._proxy.on_client_opened(self._report_name, self))
+                yield self._proxy.on_browser_connection_opened(
+                    self._report_name, self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
@@ -72,7 +76,8 @@ class BrowserWebSocket(WebSocketHandler):
             loop.spawn_callback(self.do_loop)
 
         except KeyError as e:
-            LOGGER.info('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
@@ -87,32 +92,29 @@ class BrowserWebSocket(WebSocketHandler):
 
         try:
             while self._is_open:
-                if not self._proxy.proxy_connection_is_registered(self._connection):
-                    LOGGER.debug('The proxy connection for "%s" is not registered.',
-                                 self._report_name)
-                    self._connection, self._queue = (
-                        yield self._proxy.on_client_waiting_for_proxy_conn(
-                                self._report_name, self,
-                                self._connection, self._queue))
-                    LOGGER.debug('Got a new connection ("%s") : %s',
-                                 self._connection.name, self._connection)
-                    LOGGER.debug('Got a new queue : "%s"', self._queue)
-
+                self._connection, self._queue = (
+                    yield self._proxy.get_latest_connection_and_queue(
+                            self._report_name, self,
+                            self._connection, self._queue))
                 if not self._queue.is_closed():
                     yield self._queue.flush_queue(self)
                 elif not indicated_closed:
-                    LOGGER.debug('The queue for "%s" is closed.' % self._connection.name)
+                    LOGGER.debug(
+                        'The queue for "%s" is closed.'
+                        % self._connection.name)
                     indicated_closed = True
 
                 yield gen.sleep(throttle_secs)
             LOGGER.debug('Closing loop for "%s"', self._connection.name)
         except KeyError as e:
-            LOGGER.info('Attempting to access non-existant report "%s"', e)
+            LOGGER.debug(
+                'Browser attempting to access non-existant report "%s"', e)
         except WebSocketClosedError:
             pass
 
         if self._connection is not None:
-            self._proxy.on_client_closed(self._connection, self._queue)
+            self._proxy.on_browser_connection_closed(
+                self._connection, self._queue)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
@@ -129,19 +131,19 @@ class BrowserWebSocket(WebSocketHandler):
 
     @gen.coroutine
     def _send_new_connection_msg(self):
-        """Send message to browser with local configuration settings."""
+        """Send message to browser with client configuration settings."""
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.sharing_enabled = (
             config.get_option('s3.sharingEnabled'))
         LOGGER.debug(
-            'New Client Connection: sharing_enabled=%s' %
+            'New browser connection: sharing_enabled=%s' %
             msg.new_connection.sharing_enabled)
 
         msg.new_connection.remotely_track_usage = (
             config.get_option('browser.remotelyTrackUsage'))
         LOGGER.debug(
-            'New Client Connection: remotely_track_usage=%s' %
+            'New browser connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
@@ -177,23 +179,28 @@ class BrowserWebSocket(WebSocketHandler):
         def progress(percent):
             progress_msg = protobuf.ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
 
         # Indicate that the save is starting.
         try:
             yield progress(0)
 
-            files = connection.serialize_report_to_files()
-            cloud = self._proxy.get_cloud_storage()
-            url = yield cloud.upload_report(connection.id, files, progress)
+            files = connection.serialize_final_report_to_files()
+            storage = self._proxy.get_storage()
+            url = yield storage.save_report_files(
+                connection.id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
+            err_msg = f'{type(e).__name__}: {str(e) or "No further details."}'
             progress_msg = protobuf.ForwardMsg()
-            progress_msg.report_uploaded = 'ERROR: ' + str(e)
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            progress_msg.report_uploaded = err_msg
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
             raise e

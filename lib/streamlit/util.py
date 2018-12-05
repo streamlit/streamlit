@@ -1,7 +1,7 @@
 # -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""A bunch of useful utilites."""
+"""A bunch of useful utilities."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -13,55 +13,39 @@ import base58
 import contextlib
 import functools
 import os
-import pwd
+import platform
+import socket
+import subprocess
 import threading
+import urllib
 import uuid
 
-__STREAMLIT_LOCAL_ROOT = '.streamlit'
-__CACHE = dict() # use insead of {} for 2/3 compatibility
+try:
+    import urllib.request  # for Python3
+except ImportError:
+    pass
 
-def __cache(path, serialize, deserialize):
-    """Performs two levels of caching:
 
-    1. The data is cached to disk.
-    2. The data is memoized future reference.
+STREAMLIT_ROOT_DIRECTORY = '.streamlit'
 
-    Arguments are as follows:
+# Magic strings used to mark exceptions that have been handled by Streamlit's
+# excepthook. These string should be printed to stderr.
+EXCEPTHOOK_IDENTIFIER_STR = (
+    'Streamlit has caught the following unhandled exception...')
 
-    path - path to save the data
-    serialize - serialize to string function
-    deserialize - deserialize from string function
 
-    NOTE: The wrapped function must take no arguments!
-    """
-    def decorator(func):
-        cached_value = []
-        lock = threading.Lock()
-        def wrapped_func():
-            with lock:
-                if not cached_value:
-                    try:
-                        with streamlit_read(path) as input:
-                            cached_value.append(deserialize(input.read()))
-                    except FileNotFoundError:
-                        cached_value.append(func())
-                        with streamlit_write(path) as output:
-                            output.write(serialize(cached_value[0]))
-                return cached_value[0]
-        return wrapped_func
-    return decorator
+# URL for checking the current machine's external IP address.
+_AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+
+
+# URL of Streamlit's help page.
+HELP_DOC = 'http://streamlit.io/docs/help/'
+
 
 def _decode_ascii(str):
     """Decodes a string as ascii."""
     return str.decode('ascii')
 
-@__cache('local_uuid.txt', str, uuid.UUID)
-def get_local_id():
-    """Returns a local id which identifies this user to the database."""
-    # mac = str(uuid.getnode())
-    # user = pwd.getpwuid(os.geteuid()).pw_name
-    # return uuid.uuid3(uuid.NAMESPACE_DNS, bytes(mac + user))
-    return uuid.uuid4()
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
@@ -72,7 +56,7 @@ def streamlit_read(path, binary=False):
     with read('foo.txt') as foo:
         ...
 
-    opens the file `{__STREAMLIT_LOCAL_ROOT}/foo.txt`
+    opens the file `{STREAMLIT_ROOT_DIRECTORY}/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
@@ -80,8 +64,9 @@ def streamlit_read(path, binary=False):
     mode = 'r'
     if binary:
         mode += 'b'
-    with open(os.path.join(__STREAMLIT_LOCAL_ROOT, path), mode) as handle:
+    with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
+
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
@@ -92,7 +77,7 @@ def streamlit_write(path, binary=False):
         with open_ensuring_path('foo/bar.txt') as bar:
             ...
 
-    opens the file {__STREAMLIT_LOCAL_ROOT}/foo/bar.txt for writing,
+    opens the file {STREAMLIT_ROOT_DIRECTORY}/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
@@ -101,12 +86,13 @@ def streamlit_write(path, binary=False):
     mode = 'w'
     if binary:
         mode += 'b'
-    path = os.path.join(__STREAMLIT_LOCAL_ROOT, path)
+    path = os.path.join(STREAMLIT_ROOT_DIRECTORY, path)
     directory = os.path.split(path)[0]
     if not os.path.exists(directory):
         os.makedirs(directory)
     with open(path, mode) as handle:
         yield handle
+
 
 def escape_markdown(raw_string):
     """Returns a new string which escapes all markdown metacharacters.
@@ -131,6 +117,7 @@ def escape_markdown(raw_string):
         result = result.replace(character, '\\' + character)
     return result
 
+
 def get_static_dir():
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
@@ -145,6 +132,7 @@ def memoize(func):
             result.append(func())
         return result[0]
     return wrapped_func
+
 
 def write_proto(ws, msg):
     """Writes a proto to a websocket.
@@ -166,3 +154,103 @@ def write_proto(ws, msg):
 def build_report_id():
     """Randomly generate a report ID."""
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+def make_blocking_http_get(url, timeout=5):
+    try:
+        return urllib.request.urlopen(url, timeout=timeout).read()
+    except Exception:
+        return None
+
+
+_external_ip = None
+
+
+def get_external_ip():
+    """Get the *external* IP address of the current machine.
+
+    Returns
+    -------
+    string
+        The external IPv4 address of the current machine.
+
+    """
+    global _external_ip
+
+    if _external_ip is not None:
+        return _external_ip
+
+    response = make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
+
+    if response is None:
+        LOGGER.warning(
+            'Did not auto detect external IP.\n'
+            f'Please go to {HELP_DOC} for debugging hints.')
+    else:
+        _external_ip = response.decode('utf-8').strip()
+
+    return _external_ip
+
+
+_internal_ip = None
+
+
+def get_internal_ip():
+    """Get the *local* IP address of the current machine.
+
+    From: https://stackoverflow.com/a/28950776
+
+    Returns
+    -------
+    string
+        The local IPv4 address of the current machine.
+
+    """
+    global _internal_ip
+
+    if _internal_ip is not None:
+        return _internal_ip
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        _internal_ip = s.getsockname()[0]
+    except Exception:
+        _internal_ip = '127.0.0.1'
+    finally:
+        s.close()
+
+    return _internal_ip
+
+
+def open_browser(url):
+    """Open a web browser pointing to a given URL.
+
+    We use this function instead of Python's `webbrowser` module because this
+    way we can capture stdout/stderr to avoid polluting the terminal with the
+    browser's messages. For example, Chrome always prints things like "Created
+    new window in existing browser session", and those get on the user's way.
+
+    url : str
+        The URL. Must include the protocol.
+
+    """
+
+    system = platform.system()
+
+    if system == 'Linux':
+        cmd = ['xdg-open', url]
+    elif system == 'Darwin':
+        cmd = ['open', url]
+    elif system == 'Windows':
+        cmd = ['start', '""', url]
+    else:
+        raise Error('Cannot open browser in platform "%s"' % system)
+
+    with open(os.devnull, 'w') as devnull:
+        subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+
+
+class Error(Exception):
+    pass

@@ -19,11 +19,11 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import websocket_connect
 
 from streamlit import config
-from streamlit.util import write_proto
+from streamlit import util
 from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 # Websocket arguments.
 WS_ARGS = {
@@ -68,7 +68,7 @@ class Connection(object):
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
         #
-        # VERY IMPORTANT: The key to understanding local threading in Streamlit
+        # VERY IMPORTANT: The key to understanding client threading in Streamlit
         # is that self._queue acts like a thread-safe channel for data (in this
         # case deltas) from the main thread (e.g. st.write()) to the proxy
         # connection thread (e.g. flush_queue()). To ensure the thread-safety
@@ -151,9 +151,10 @@ class Connection(object):
             yield self._transmit_through_websocket(ws, initial_msg)
             return
         except IOError:
-            LOGGER.info(f'First connection to {uri} failed. No proxy running?')
+            LOGGER.debug(
+                f'First connection to {uri} failed. No proxy running?')
 
-        LOGGER.info('Starting proxy.')
+        LOGGER.debug('Starting proxy.')
         yield self._launch_proxy()
 
         LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
@@ -165,7 +166,7 @@ class Connection(object):
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
             # cleanup thread can now run.
-            LOGGER.info(f'Failed to connect to proxy at {uri}.')
+            LOGGER.error(f'Failed to connect to proxy at {uri}.')
             self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
@@ -181,7 +182,7 @@ class Connection(object):
     def _transmit_through_websocket(self, ws, initial_msg):
         """Send queue data across the websocket as it becomes available."""
         # Send the header information across.
-        yield write_proto(ws, initial_msg)
+        yield util.write_proto(ws, initial_msg)
         LOGGER.debug('Just sent an initial_msg with: ' + str(sys.argv))
 
         # Send other information across.
@@ -230,7 +231,7 @@ class Connection(object):
                 time.sleep(FLUSH_QUEUE_SECONDS)
                 break
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_FAILED:
-                LOGGER.debug('Proxy connection failed. Ending the local script.')
+                LOGGER.debug('Proxy connection failed. Ending the client script.')
                 break
             else:
                 LOGGER.error(
@@ -242,6 +243,34 @@ class Connection(object):
 
         self._loop.add_callback(setattr, self, '_is_open', False)
         LOGGER.debug('Submitted callback to stop the connection thread.')
+
+        if config.get_option('client.tryToOutliveProxy'):
+            self._wait_for_proxy_to_close()
+
+        LOGGER.debug('Allowing script to exit')
+
+    def _wait_for_proxy_to_close(self):
+        host = config.get_option('client.proxyAddress')
+        port = config.get_option('client.proxyPort')
+        url = f'http://{host}:{port}/healthz'
+
+        LOGGER.debug('Waiting for proxy to close...')
+
+        MAX_WAIT = 10  # Wait at most 10 seconds.
+        SLEEP_TIME = 0.25
+        total_wait_so_far = 0
+
+        while True:
+            result = util.make_blocking_http_get(url, timeout=1)
+
+            if result is None:
+                break
+
+            time.sleep(SLEEP_TIME)
+            total_wait_so_far += SLEEP_TIME
+
+            if total_wait_so_far > MAX_WAIT:
+                break
 
 
 class ProxyConnectionError(Exception):

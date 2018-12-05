@@ -4,7 +4,7 @@ import streamlit as st
 import time
 
 st.title('Test of run-on-save')
-secs_to_wait = 10
+secs_to_wait = 5
 
 st.write('This should change every ', secs_to_wait, ' seconds: ', random())
 

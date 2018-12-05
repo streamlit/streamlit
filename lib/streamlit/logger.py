@@ -12,20 +12,20 @@ setup_2_3_shims(globals())
 import inspect
 import logging
 import sys
+import time
+
+from streamlit import development
 
 # Loggers for each name are saved here.
 LOGGERS = dict()
 
 # The global log level is set here across all names.
-LOG_LEVEL = logging.DEBUG
-
-# This boolean is True iff this is the proxy.
-THIS_IS_PROXY = False
+LOG_LEVEL = logging.INFO
 
 
 def set_log_level(level):
     """Set log level."""
-    logger = get_logger()
+    logger = get_logger(__name__)
 
     if isinstance(level, str):
         level = level.upper()
@@ -51,28 +51,22 @@ def set_log_level(level):
     LOG_LEVEL = log_level
 
 
-def set_this_is_proxy():
-    """Set the local boolean THIS_IS_PROXY."""
-    global THIS_IS_PROXY
-    THIS_IS_PROXY = True
-    for log in LOGGERS.values():
-        setup_formatter(log)
-
-
 def setup_formatter(logger):
     """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
     if hasattr(logger, 'streamlit_console_handler'):
         logger.removeHandler(logger.streamlit_console_handler)
 
-    # Creates the console handler for this logger.
-    global THIS_IS_PROXY
-    if THIS_IS_PROXY:
-        formatter = logging.Formatter('- PROXY %(levelname)-5s %(name)-20s: %(message)s')
-    else:
-        formatter = logging.Formatter('- LOCAL %(levelname)-5s %(name)-20s: %(message)s')
     logger.streamlit_console_handler = logging.StreamHandler()
-    logger.streamlit_console_handler.setFormatter(formatter)
+
+    if development.is_development_mode:
+        logging.Formatter.converter = time.gmtime
+        formatter = logging.Formatter(
+            fmt=(
+                '%(asctime)s.%(msecs)03d %(levelname) -7s '
+                '%(name)s: %(message)s'),
+            datefmt='%Y-%m-%dT%H:%M:%SZ')
+        logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
@@ -88,7 +82,7 @@ def init_aiohttp_logs():
         name = 'aiohttp.{}'.format(log)
         get_logger(name)
 
-    logger = get_logger()
+    logger = get_logger(__name__)
     logger.debug('Initialized aiohttp logs')
 
 
@@ -102,52 +96,35 @@ def init_tornado_logs():
         name = 'tornado.{}'.format(log)
         get_logger(name)
 
-    logger = get_logger()
+    logger = get_logger(__name__)
     logger.debug('Initialized tornado logs')
 
 
-def get_logger(name=None):
-    """Return a logger."""
-    global LOG_LEVEL
+def get_logger(name):
+    """Return a logger.
 
-    if not name:
-        caller = sys._getframe(1)
+    Parameters
+    ----------
+    name : str
+        The name of the logger to use. You should just pass in __name__.
 
-        filename = inspect.getfile(caller)
-        module = inspect.getmodule(caller)
+    Returns
+    -------
+    Logger
 
-        package = module.__package__
-        if package is None:
-            package = ''
-        modulename = inspect.getmodulename(filename)
-
-        # Join the name with periods, and get rid of any leading periods.
-        name = '.'.join([package, modulename])
-        while True:
-            if name == '':
-                name = 'null'
-                break
-            elif name[0] == '.':
-                name = name[1:]
-            else:
-                break
-
+    """
     if name in LOGGERS.keys():
         return LOGGERS[name]
 
     if name == 'root':
-        log = logging.getLogger()
+        logger = logging.getLogger()
     else:
-        log = logging.getLogger(name)
+        logger = logging.getLogger(name)
 
-    log.setLevel(LOG_LEVEL)
-    log.propagate = False
-    setup_formatter(log)
+    logger.setLevel(LOG_LEVEL)
+    logger.propagate = False
+    setup_formatter(logger)
 
-    LOGGERS[name] = log
+    LOGGERS[name] = logger
 
-    return log
-
-
-# Avoid dependency loop in 2.7 by importing this at the bottom.
-import streamlit.proxy  # noqa: F401
+    return logger

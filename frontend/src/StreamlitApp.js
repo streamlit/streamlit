@@ -42,7 +42,7 @@ import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
-import { PROXY_PORT_PROD } from './baseconsts';
+import { FETCH_PARAMS, IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -62,7 +62,7 @@ class StreamlitApp extends PureComponent {
         text: {
           format: TextProto.Format.INFO,
           body: 'Ready to receive data',
-        }
+        },
       }]),
       userSettings: {
         wideMode: false,
@@ -109,28 +109,31 @@ class StreamlitApp extends PureComponent {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const { query } = url.parse(window.location.href, true);
     if (query.name !== undefined) {
-        const reportName = query.name;
-        this.setReportName(reportName);
-        let uri = `ws://${window.location.hostname}:${PROXY_PORT_PROD}/stream/${encodeURIComponent(reportName)}`
-        this.connection = new WebsocketConnection({
-          uri: uri,
-          onMessage: this.handleMessage,
-          setConnectionState: this.setConnectionState,
-        });
+      const reportName = query.name;
+      this.setReportName(reportName);
+
+      // If dev, always connect to 8501, since window.location.port is the Node
+      // server's port 3000.
+      // If changed, also change config.py
+      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
+
+      const uri = getWsUrl(
+          window.location.hostname, port, reportName);
+
+      this.connection = new WebsocketConnection({
+        uriList: [uri],
+        onMessage: this.handleMessage,
+        setConnectionState: this.setConnectionState,
+      });
     } else if (query.id !== undefined) {
-        this.connection = new StaticConnection({
-          reportId: query.id,
-          onMessage: this.handleMessage,
-          setConnectionState: this.setConnectionState,
-          setReportName: this.setReportName,
-        });
+      this.connection = await this.getAppropriateConnection(query.id);
     } else {
       this.showSingleTextElement(
         'URL must contain either a report name or an ID.',
-        TextProto.Format.ERROR
+        TextProto.Format.ERROR,
       );
     }
   }
@@ -159,9 +162,9 @@ class StreamlitApp extends PureComponent {
       elements: fromJS([{
         type: 'text',
         text: {
-          format: format,
+          format,
           body: msg,
-        }
+        },
       }]),
     });
   }
@@ -201,10 +204,10 @@ class StreamlitApp extends PureComponent {
         this.clearOldElements();
       },
       uploadReportProgress: (progress) => {
-        this.openDialog({type: 'uploadProgress', progress: progress});
+        this.openDialog({ progress, type: 'uploadProgress' });
       },
       reportUploaded: (url) => {
-        this.openDialog({type: 'uploaded', url: url})
+        this.openDialog({ url, type: 'uploaded' })
       },
     });
   }
@@ -213,14 +216,14 @@ class StreamlitApp extends PureComponent {
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
-    this.setState({dialog: dialogProps});
+    this.setState({ dialog: dialogProps });
   }
 
   /**
    * Closes the upload dialog if it's open.
    */
   closeDialog() {
-    this.setState({dialog: undefined});
+    this.setState({ dialog: undefined });
   }
 
   /**
@@ -239,13 +242,13 @@ class StreamlitApp extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
-    const reportId = this.state.reportId;
-    this.setState(({elements}) => ({
-      elements: elements.update(delta.get('id'), (element) =>
-          dispatchOneOf(delta, 'type', {
-            newElement: (newElement) => newElement.set('reportId', reportId),
-            addRows: (newRows) => addRows(element, newRows),
-        }))
+    const { reportId } = this.state;
+    this.setState(({ elements }) => ({
+      elements: elements.update(delta.get('id'), element =>
+        dispatchOneOf(delta, 'type', {
+          newElement: newElement => newElement.set('reportId', reportId),
+          addRows: newRows => addRows(element, newRows),
+      })),
     }));
   }
 
@@ -254,22 +257,15 @@ class StreamlitApp extends PureComponent {
    */
   clearOldElements() {
     this.setState(({elements, reportId}) => ({
-      elements: elements
-          // Need to filter the element list first because the list can have
-          // can have "holes" in it (caused by enqueing elements with
-          // non-consecutive IDs). Without this, elt.get() (below) will fail
-          // sometimes because elt can be undefined.
-          .filter((elt) => elt)
-          .map((elt) => {
+      elements: elements.map((elt) => {
             if (elt.get('reportId') === reportId) {
               return elt;
-            } else {
-              return fromJS({
-                empty: {unused: true},
-                reportId: reportId,
-                type: "empty"
-              });
             }
+            return fromJS({
+              reportId,
+              empty: { unused: true },
+              type: 'empty',
+            });
           }),
     }));
   }
@@ -464,6 +460,59 @@ class StreamlitApp extends PureComponent {
       }
     });
   }
+
+  async getAppropriateConnection(reportId) {
+    const manifestUri = `reports/${reportId}/manifest.json`;
+
+    let manifestResponse;
+    let manifest;
+
+    try {
+      manifestResponse = await fetch(manifestUri, FETCH_PARAMS);
+      manifest = await manifestResponse.json();
+    } catch (error) {
+      this.setConnectionState({
+        connectionState: ConnectionState.ERROR,
+        errMsg: `Unable to find or parse report with ID "${reportId}": ${error}`
+      });
+    }
+
+    const {
+      name, proxyStatus, configuredProxyAddress, internalProxyIP,
+      externalProxyIP, proxyPort
+    } = manifest;
+
+    // If the proxy is running redirect immediately to proxy.
+    if (proxyStatus === 'running') {
+
+      const uriList = configuredProxyAddress ?
+        [ getWsUrl(configuredProxyAddress, proxyPort, name) ] :
+        [
+          getWsUrl(internalProxyIP, proxyPort, name),
+          getWsUrl(externalProxyIP, proxyPort, name),
+        ];
+
+      return new WebsocketConnection({
+        uriList,
+        onMessage: this.handleMessage,
+        setConnectionState: this.setConnectionState,
+      });
+    }
+
+    return new StaticConnection({
+      manifest,
+      reportId,
+      onMessage: this.handleMessage,
+      setConnectionState: this.setConnectionState,
+      setReportName: this.setReportName,
+    });
+  }
 }
+
+
+function getWsUrl(host, port, reportName) {
+  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
+}
+
 
 export default hotkeys(StreamlitApp);

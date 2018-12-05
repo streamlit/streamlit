@@ -20,7 +20,7 @@ from streamlit import protobuf
 from tornado import gen
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 # Largest message that can be sent via the WebSocket connection.
@@ -150,7 +150,16 @@ class ReportQueue(object):
 
 
 def send_message(ws, msg):
-    """Sends msg via the websocket"""
+    """Sends msg via the websocket.
+
+    Parameters
+    ----------
+    ws : WebSocket
+        The message through which we're sending this message.
+    msg : ForwardMsg
+        A Streamlit ForwardMsg to send over the websocket.
+
+    """
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:
@@ -160,7 +169,13 @@ def send_message(ws, msg):
     try:
         ws.write_message(msg_str, binary=True)
     except Exception as e:
-        send_exception(ws, msg, type(e), e.message)
+        # Not all exceptions have a `message` attribute.
+        # https://www.python.org/dev/peps/pep-0352/
+        try:
+            exception_message = e.message
+        except AttributeError:
+            exception_message = str(e)
+        send_exception(ws, msg, type(e), exception_message)
 
 
 def send_exception(ws, msg, exception_type, exception_message):
@@ -172,7 +187,7 @@ def send_exception(ws, msg, exception_type, exception_message):
 
     emsg = protobuf.ForwardMsg()
     emsg.delta.id = delta_id
-    emsg.delta.new_element.exception.type = exception_type
+    emsg.delta.new_element.exception.type = str(exception_type)
     emsg.delta.new_element.exception.message = exception_message
 
     ws.write_message(emsg.SerializeToString(), binary=True)

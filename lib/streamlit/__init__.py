@@ -24,7 +24,7 @@ import pkg_resources
 __version__ = pkg_resources.require("streamlit")[0].version
 
 # Must be at the top, to avoid circular dependency.
-from . import logger
+from streamlit import logger
 from streamlit import config
 logger.set_log_level(config.get_option('global.logLevel').upper())
 logger.init_tornado_logs()
@@ -32,9 +32,7 @@ LOGGER = logger.get_logger('root')
 
 import contextlib
 import functools
-import numpy as np
 import os
-import pandas as pd
 import re
 import sys
 import textwrap
@@ -45,27 +43,27 @@ import types
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
-from streamlit.caching import set_allow_caching as _set_allow_caching
 from streamlit.util import escape_markdown
 
 
 this_module = sys.modules[__name__]
 
-
-# If True, Streamlit will sent deltas to the Proxy. If False, all methods will
-# appear to work normally but not deltas will be sent to the Proxy.
-_enable_display = True
-
+# This delta generator has no queue so it can't send anything out on a
+# connection.
+_NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        con = DeltaConnection.get_connection()
-        con.set_enabled(_enable_display)
-        dg = con.get_delta_generator()
-        return method(dg, *args, **kwargs)
-    return wrapped_method
+        # Only output if the config allows us to.
+        if config.get_option('client.displayEnabled'):
+            connection = DeltaConnection.get_connection()
+            delta_generator = connection.get_delta_generator()
+        else:
+            delta_generator = _NULL_DELTA_GENERATOR
 
+        return method(delta_generator, *args, **kwargs)
+    return wrapped_method
 
 for name in dir(DeltaGenerator):
     member = getattr(DeltaGenerator, name)
@@ -108,10 +106,10 @@ def write(*args):
 
     """
     DATAFRAME_LIKE_TYPES = (
-        pd.DataFrame,
-        pd.Series,
-        pd.Index,
-        np.ndarray,
+        'DataFrame',
+        'Series',
+        'Index',
+        'ndarray',
     )
 
     HELP_TYPES = (
@@ -130,7 +128,7 @@ def write(*args):
         for arg in args:
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif isinstance(arg, DATAFRAME_LIKE_TYPES):
+            elif type(arg).__name__ in DATAFRAME_LIKE_TYPES:
                 flush_buffer()
                 dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
@@ -228,23 +226,3 @@ def echo():
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning(f'Unable to display code. {str(err)}')
-
-
-# TODO: Move to config.py when we refactor the config system.
-def set_config(options):
-    """Set config options for Streamlit.
-
-    Parameters
-    ----------
-    options : dict
-        A dictionary where keys are strings with the fully-qualified names of
-        config options (e.g. 'client.caching'), and keys are the config values.
-
-    """
-    local_display_enabled = options.get('client.displayEnabled')
-    if local_display_enabled is not None:
-        assert type(local_display_enabled) is bool
-        global _enable_display
-        _enable_display = local_display_enabled
-        con = DeltaConnection.get_connection()
-        con.set_enabled(_enable_display)

@@ -18,7 +18,7 @@ from PIL import Image
 
 # setup logging
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 def marshall_images(img, captions, width, proto_imgs, clamp):
     """

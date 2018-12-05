@@ -15,7 +15,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
 from streamlit.logger import get_logger
-LOGGER = get_logger()
+LOGGER = get_logger(__name__)
 
 
 class FSObserver(object):
@@ -51,7 +51,7 @@ class FSObserver(object):
 
         """
         self.key = FSObserver.get_key(connection)
-        LOGGER.info(f'Will observe file system for: {self.key}')
+        LOGGER.debug(f'Will observe file system for: {self.key}')
 
         self._observer = None
         self._callback = callback
@@ -63,7 +63,7 @@ class FSObserver(object):
 
         self._initialize_observer(connection.source_file_path)
 
-        # Set of clients who are interested in this observer being up.  When
+        # Set of consumers which are interested in this observer being up.  When
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()
@@ -78,7 +78,7 @@ class FSObserver(object):
 
         """
         if len(source_file_path) == 0:
-            LOGGER.info(f'No source file to watch. Running from REPL?')
+            LOGGER.debug(f'No source file to watch. Running from REPL?')
             return
 
         path_to_observe = os.path.dirname(source_file_path)
@@ -93,7 +93,7 @@ class FSObserver(object):
 
         try:
             observer.start()
-            LOGGER.info(f'Observing file system at {path_to_observe}')
+            LOGGER.debug(f'Observing file system at {path_to_observe}')
         except OSError as e:
             observer = None
             LOGGER.error(f'Could not start file system observer: {e}')
@@ -109,9 +109,9 @@ class FSObserver(object):
 
         """
         if self._is_closed:
-            LOGGER.info(f'Will not rerun source script.')
+            LOGGER.debug(f'Will not rerun source script.')
         else:
-            LOGGER.info(f'Rerunning source script.')
+            LOGGER.debug(f'Rerunning source script.')
             self._callback(self, event)
 
     def register_consumer(self, key):
@@ -145,7 +145,7 @@ class FSObserver(object):
         if key in self._consumers:
             self._consumers.remove(key)
 
-        LOGGER.info(f'Deregistered consumers. Now have {len(self._consumers)}')
+        LOGGER.debug(f'Deregistered consumers. Now have {len(self._consumers)}')
 
         if len(self._consumers) == 0:
             self._close()
@@ -163,7 +163,7 @@ class FSObserver(object):
 
     def _close(self):
         """Stop observing the file system."""
-        LOGGER.info(f'Closing file system observer for {self.key}')
+        LOGGER.debug(f'Closing file system observer for {self.key}')
         self._is_closed = True
 
         if self._observer is not None:
@@ -205,11 +205,11 @@ class FSEventHandler(PatternMatchingEventHandler):
         """
         new_md5 = _calc_md5(self._file_to_observe)
         if new_md5 != self._prev_md5:
-            LOGGER.info(f'File MD5 changed.')
+            LOGGER.debug(f'File MD5 changed.')
             self._prev_md5 = new_md5
             self._fn_to_run(event)
         else:
-            LOGGER.info(f'File MD5 did not change.')
+            LOGGER.debug(f'File MD5 did not change.')
 
 
 def _calc_md5(file_path):
