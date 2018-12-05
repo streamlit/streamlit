@@ -10,6 +10,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import unittest
+import os
 
 from streamlit import config
 from streamlit.ConfigOption import ConfigOption
@@ -17,6 +18,13 @@ from streamlit.ConfigOption import ConfigOption
 
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
+
+    def tearDown(self):
+        try:
+            del os.environ['TEST_ENV_VAR']
+        except:
+            pass
+        config._delete_option('_test.tomlTest')
 
     def test_simple_config_option(self):
         """Test creating a simple (constant) config option."""
@@ -149,7 +157,7 @@ class ConfigTest(unittest.TestCase):
         """Test config._update_config_with_toml()."""
         # Some useful variables.
         DUMMY_VAL_1, DUMMY_VAL_2 = 'Christopher', 'Walken'
-        DUMMY_DEFINTIION = '<test definition>'
+        DUMMY_DEFINITION = '<test definition>'
 
         # Create a dummy default option.
         config._create_option('_test.tomlTest',
@@ -164,7 +172,33 @@ class ConfigTest(unittest.TestCase):
             [_test]
             tomlTest="{DUMMY_VAL_2}"
         """
-        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINTIION)
+        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
         self.assertEqual(config.get_option('_test.tomlTest'), DUMMY_VAL_2)
         self.assertEqual(config.get_where_defined('_test.tomlTest'),
-            DUMMY_DEFINTIION)
+            DUMMY_DEFINITION)
+
+    def test_parsing_env_vars_in_toml(self):
+        """Test that environment variables get parsed in the TOML file."""
+        # Some useful variables.
+        DEFAULT_VAL, DESIRED_VAL = 'Christopher', 'Walken'
+        DUMMY_DEFINITION = '<test definition>'
+
+        # Create a dummy default option.
+        config._create_option('_test.tomlTest',
+            description='This option tests the TOML parser.',
+            default_val=DEFAULT_VAL)
+        self.assertEqual(config.get_option('_test.tomlTest'), DEFAULT_VAL)
+        self.assertEqual(config.get_where_defined('_test.tomlTest'),
+            ConfigOption.DEFAULT_DEFINITION)
+
+        os.environ['TEST_ENV_VAR'] = DESIRED_VAL
+
+        # Override it with some TOML
+        NEW_TOML = f"""
+            [_test]
+            tomlTest="env:TEST_ENV_VAR"
+        """
+        config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
+        self.assertEqual(config.get_option('_test.tomlTest'), DESIRED_VAL)
+        self.assertEqual(config.get_where_defined('_test.tomlTest'),
+            DUMMY_DEFINITION)

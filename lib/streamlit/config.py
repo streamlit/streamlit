@@ -94,6 +94,17 @@ def _create_option(
     return option
 
 
+def _delete_option(key):
+    """Remove option ConfigOption by key from global store.
+
+    For use in testing.
+    """
+    try:
+        del _config_options[key]
+    except:
+        pass
+
+
 # Config Section: Global #
 
 _create_section('global', 'Global options that apply across all of Streamlit.')
