@@ -581,7 +581,52 @@ def _update_config_with_toml(raw_toml, where_defined):
 
     for section, options in parsed_config_file.items():
         for name, value in options.items():
+            value = _maybe_read_env_variable(value)
             _set_option(f'{section}.{name}', value, where_defined)
+
+
+def _maybe_read_env_variable(value):
+    """If value is "env:foo", return value of environment variable "foo".
+
+    If value is not in the shape above, returns the value right back.
+
+    Parameters
+    ----------
+    value : any
+        The value to check
+
+    Returns
+    -------
+    any
+        Either returns value right back, or the value of the environment
+        variable.
+
+    """
+    if isinstance(value, string_types) and value.startswith('env:'):
+        var_name = value[len('env:'):]
+        env_var = os.environ.get(var_name)
+
+        if env_var is None:
+            LOGGER.error('No environment variable called %s' % var_name)
+        else:
+            return _maybe_convert_to_number(env_var)
+
+    return value
+
+
+def _maybe_convert_to_number(v):
+    """Convert v to int or float, or leave it as is."""
+    try:
+        return int(v)
+    except:
+        pass
+
+    try:
+        return float(v)
+    except:
+        pass
+
+    return v
 
 
 def _parse_config_file():
@@ -604,7 +649,7 @@ def _parse_config_file():
         sys.stderr.write(
             'Config ~/.streamlit/config.yaml is DEPRECATED. '
             'Please remove it and use ~/.streamlit/config.toml instead. For '
-            'any quetions, please contact Streamlit support over Slack. <3\n')
+            'any questions, please contact Streamlit support over Slack. <3\n')
 
     # Parse the config file.
     if not os.path.exists(config_filename):
