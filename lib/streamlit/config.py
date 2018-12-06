@@ -385,6 +385,9 @@ _create_option(
     's3.profile',
     description='''AWS credentials profile to use for saving data.
 
+        Set to empty string "" to use your default profile, as configured in
+        your shell environment.
+
         Default: (unset)
         ''',
     default_val=None)
