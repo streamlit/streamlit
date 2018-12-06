@@ -488,8 +488,8 @@ class StreamlitApp extends PureComponent {
       const uriList = configuredProxyAddress ?
         [ getWsUrl(configuredProxyAddress, proxyPort, name) ] :
         [
-          getWsUrl(internalProxyIP, proxyPort, name),
           getWsUrl(externalProxyIP, proxyPort, name),
+          getWsUrl(internalProxyIP, proxyPort, name),
         ];
 
       return new WebsocketConnection({
