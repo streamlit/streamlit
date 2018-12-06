@@ -74,7 +74,8 @@ class S3Storage(AbstractStorage):
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
-        elif access_key_id is not None:
+        # Don't check "is not None". See above.
+        elif access_key_id:
             secret_access_key = config.get_option('s3.secretAccessKey')
             self._s3_client = boto3.client(
                 's3',
