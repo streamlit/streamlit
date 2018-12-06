@@ -67,7 +67,10 @@ class S3Storage(AbstractStorage):
 
         aws_profile = config.get_option('s3.profile')
         access_key_id = config.get_option('s3.accessKeyId')
-        if aws_profile is not None:
+
+        # Don't check "is not None" because we want to allow users to set an
+        # empty string as a means to pull credentials from Amazon.
+        if aws_profile:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
