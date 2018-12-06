@@ -105,8 +105,11 @@ class S3Storage(AbstractStorage):
         # caught and disappearing.
         try:
             self._s3_client.head_bucket(Bucket=self._bucketname)
-        except botocore.exceptions.ClientError:
-            LOGGER.debug('"%s" bucket not found', self._bucketname)
+        except botocore.exceptions.ClientError as e:
+            LOGGER.warning(
+                '"%s" bucket not found. Do you have s3:HeadBucket permission?',
+                self._bucketname)
+            LOGGER.warning(e)
             return False
         return True
 
@@ -127,6 +130,7 @@ class S3Storage(AbstractStorage):
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
+                LOGGER.warning('Will attempt to create bucket')
                 yield self._create_bucket()
 
         except botocore.exceptions.NoCredentialsError:
