@@ -101,7 +101,7 @@ def _delete_option(key):
     """
     try:
         del _config_options[key]
-    except:
+    except Exception:
         pass
 
 
@@ -570,7 +570,7 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith('env:'):
+    if isinstance(value, string_types) and value.startswith('env:'):  # noqa F821
         var_name = value[len('env:'):]
         env_var = os.environ.get(var_name)
 
@@ -586,12 +586,12 @@ def _maybe_convert_to_number(v):
     """Convert v to int or float, or leave it as is."""
     try:
         return int(v)
-    except:
+    except Exception:
         pass
 
     try:
         return float(v)
-    except:
+    except Exception:
         pass
 
     return v
@@ -631,7 +631,7 @@ def _parse_config_file():
 
 def _check_conflicts():
     if (get_option('client.tryToOutliveProxy')
-        and not get_option('proxy.isRemote')):
+            and not get_option('proxy.isRemote')):
         LOGGER.warning(
             'The following combination of settings...\n'
             '  client.tryToOutliveProxy = true\n'
