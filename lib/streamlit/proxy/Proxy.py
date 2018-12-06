@@ -81,8 +81,7 @@ class Proxy(object):
         LOGGER.debug(
             f'Creating proxy with self._connections: {id(self._connections)}')
 
-        self._set_up_client_server()
-        self._set_up_browser_server()
+        self._set_up_server()
 
         # Remember whether we've seen any browser connections so that we can
         # display a helpful warming message if the proxy closed without having
@@ -92,31 +91,14 @@ class Proxy(object):
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
 
-    def _set_up_client_server(self):
+    def _set_up_server(self):
         # We have to import this in here to break a circular import reference
         # issue in Python 2.7.
         from streamlit.proxy import ClientWebSocket
-
-        routes = [
-            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
-            ('/healthz', _HealthHandler),
-        ]
-
-        app = web.Application(routes)
-        port = config.get_option('proxy.clientPort')
-
-        http_server = HTTPServer(app)
-        http_server.listen(port)
-
-        LOGGER.debug('Proxy HTTP server for client connections started on '
-                    'port {}'.format(port))
-
-    def _set_up_browser_server(self):
-        # We have to import this in here to break a circular import reference
-        # issue in Python 2.7.
         from streamlit.proxy import BrowserWebSocket
 
         routes = [
+            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
             ('/healthz', _HealthHandler),
         ]
@@ -132,16 +114,16 @@ class Proxy(object):
                 (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
             ])
         else:
-            LOGGER.debug('useNode == True, not serving static content from python.')
+            LOGGER.debug(
+                'useNode == True, not serving static content from python.')
 
         app = web.Application(routes)
-        port = config.get_option('proxy.browserPort')
+        port = config.get_option('proxy.port')
 
         http_server = HTTPServer(app)
         http_server.listen(port)
 
-        LOGGER.debug('Proxy HTTP server for browser connection started on '
-                    'port {}'.format(port))
+        LOGGER.debug('Proxy HTTP server for started on port {}'.format(port))
 
     def run_app(self):
         """Run web app."""

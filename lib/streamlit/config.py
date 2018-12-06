@@ -180,9 +180,9 @@ _create_option(
 def _client_proxy_port():
     """Port that the client should use to connect to the proxy.
 
-    Default: whatever value is set in proxy.clientPort.
+    Default: whatever value is set in proxy.port.
     """
-    return get_option('proxy.clientPort')
+    return get_option('proxy.port')
 
 
 # Config Section: Proxy #
@@ -259,55 +259,12 @@ _create_option(
     default_val=True)
 
 _create_option(
-    'proxy.clientPort',
+    'proxy.port',
     description='''
-        The port where the proxy will listen for client connections.
+        The port where the proxy will listen for client and browser
+        connections.
         ''',
-    default_val=8500)
-
-
-DEFAULT_BROWSER_PROXY_PORT = 8501
-
-
-@_create_option('proxy.browserPort')
-@util.memoize
-def _proxy_browser_port():
-    """The port where the proxy will listen for browser connections.
-
-    Default: 8501, but gets overriden by proxy.browserPortRange, if set.
-    """
-    # When using the Node server, always connect to 8501. This is hard-coded in
-    # JS as well. Otherwise, the browser would decide what port to connect to
-    # based on either:
-    #   1. window.location.port, which in dev is going to be (3000)
-    #   2. the proxyPort value in manifest.json, which only exists when
-    #   proxy.liveSave is true and the page is being served from storage.
-    if get_option('proxy.useNode'):
-        # IMPORTANT: If changed, also change baseconsts.js and StreamlitApp.js
-        return DEFAULT_BROWSER_PROXY_PORT
-
-    port_range = get_option('proxy.browserPortRange')
-
-    if port_range is None:
-        return DEFAULT_BROWSER_PROXY_PORT
-
-    assert len(port_range) == 2, (
-        'proxy.browserPortRange must be a 2-element list')
-
-    import random
-    return random.randint(port_range[0], port_range[1])
-
-
-# IMPORTANT: When reading config options in normal Streamlit code, read
-# proxy.browserPort instead.
-_create_option(
-    'proxy.browserPortRange',
-    description='''
-        Use this if you want the proxy to pick a random port for communication
-        with the browser. Accepts ranges in the form (min, max), such as
-        (49152, 65535).
-        ''',
-    default_val=None)
+    default_val=8501)
 
 
 # Config Section: Browser #
@@ -332,9 +289,9 @@ _create_option(
 def _browser_proxy_port():
     """Port that the browser should use to connect to the proxy.
 
-    Default: whatever value is set in proxy.browserPort.
+    Default: whatever value is set in proxy.port.
     """
-    return get_option('proxy.browserPort')
+    return get_option('proxy.port')
 
 
 # Config Section: S3 #
@@ -681,32 +638,33 @@ def _check_conflicts():
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
 
-    proxyPortManuallySet = (
-            get_where_defined('proxy.browserPort')
-            != ConfigOption.DEFAULT_DEFINITION)
+    # When using the Node server, we must always connect to 8501 (this is
+    # hard-coded in JS). Otherwise, the browser would decide what port to
+    # connect to based on either:
+    #   1. window.location.port, which in dev is going to be (3000)
+    #   2. the proxyPort value in manifest.json, which would work, but only
+    #   exists with proxy.liveSave.
 
-    portRangeManuallySet = (
-            get_where_defined('proxy.browserPortRange')
+    proxyPortManuallySet = (
+            get_where_defined('proxy.port')
             != ConfigOption.DEFAULT_DEFINITION)
 
     browserPortManuallySet = (
             get_where_defined('browser.proxyPort')
             != ConfigOption.DEFAULT_DEFINITION)
 
-    assert not (proxyPortManuallySet and portRangeManuallySet), (
-        'You cannot set both proxy.browserPort and proxy.browserPortRange')
+    clientPortManuallySet = (
+            get_where_defined('client.proxyPort')
+            != ConfigOption.DEFAULT_DEFINITION)
 
     assert not (proxyPortManuallySet and get_option('proxy.useNode')), (
-        'proxy.browserPort does not work when proxy.useNode is true. '
-        'See comment in config._proxy_browser_port()')
-
-    assert not (portRangeManuallySet and get_option('proxy.useNode')), (
-        'proxy.browserPortRange does not work when proxy.useNode is true. '
-        'See comment in config._proxy_browser_port()')
+        'proxy.port does not work when proxy.useNode is true. ')
 
     assert not (browserPortManuallySet and get_option('proxy.useNode')), (
-        'browser.proxyPort does not work when proxy.useNode is true. '
-        'See comment in config._proxy_browser_port()')
+        'browser.proxyPort does not work when proxy.useNode is true. ')
+
+    assert not (clientPortManuallySet and get_option('proxy.useNode')), (
+        'client.proxyPort does not work when proxy.useNode is true. ')
 
 
 def _clean_paragraphs(txt):
