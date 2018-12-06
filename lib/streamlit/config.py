@@ -345,6 +345,9 @@ def _s3_url():
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
+    Set s3.profile and s3.accessKeyId to empty string "" to use your
+    default profile, as configured in your shell environment.
+
     Default: if s3.sharingEnabled is set, uses credentials for
     share.streamlit.io. Disabled otherwise.
     """
@@ -385,8 +388,8 @@ _create_option(
     's3.profile',
     description='''AWS credentials profile to use for saving data.
 
-        Set to empty string "" to use your default profile, as configured in
-        your shell environment.
+        Set s3.profile and s3.accessKeyId to empty string "" to use your
+        default profile, as configured in your shell environment.
 
         Default: (unset)
         ''',
