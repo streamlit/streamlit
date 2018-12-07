@@ -135,7 +135,7 @@ class BrowserWebSocket(WebSocketHandler):
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.sharing_enabled = (
-            config.get_option('proxy.sharingEnabled'))
+            config.get_option('s3.sharingEnabled'))
         LOGGER.debug(
             'New browser connection: sharing_enabled=%s' %
             msg.new_connection.sharing_enabled)

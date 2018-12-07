@@ -266,19 +266,6 @@ _create_option(
         ''',
     default_val=8501)
 
-@_create_option('proxy.sharingEnabled')
-def _s3_sharing_enabled():
-    """Enables the ability to share reports to the cloud.
-
-    Shared reports are publically viewable by default, but you can set up own
-    AWS S3 bucket and credentials if you would like more control. See
-    s3.usePublicStorage for more info.
-
-    Default: true
-    """
-    # Fail gracefully when we're unable to grab credentials (ex: when offline)
-    return _get_public_credentials() is not None
-
 
 # Config Section: Browser #
 
@@ -314,11 +301,26 @@ _create_section(
     '''
     Configuration for report saving.
 
-    These only apply if proxy.sharingEnabled is true.
+    These only apply if s3.sharingEnabled is true.
 
     In addition, if customizing any of these settings, you should also set
     s3.usePublicStorage to false.
     ''')
+
+
+@_create_option('s3.sharingEnabled')
+def _s3_sharing_enabled():
+    """Enables the ability to share reports to the cloud.
+
+    Shared reports are publically viewable by default, but you can set up own
+    AWS S3 bucket and credentials if you would like more control. See
+    s3.usePublicStorage for more info.
+
+    Default: true
+    """
+    # Fail gracefully when we're unable to grab credentials (ex: when offline)
+    return _get_public_credentials() is not None
+
 
 _create_option(
     's3.usePublicStorage',
@@ -348,14 +350,14 @@ _create_option(
     credentials automatically as described in
     https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
     ''',
-    default_val=None)
+    default_val=None)  # If changing the default, change S3Storage.py too.
 
 _create_option(
     's3.secretAccessKey',
     visibility='obfuscated',
     description='''Secret access key to write to the S3 bucket.
 
-    Default: unset, which means we'll let AWS's libraries try to find the
+    Default: unset -- which means we'll let AWS's libraries try to find the
     credentials automatically as described in
     https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
     ''',
@@ -631,7 +633,7 @@ def _parse_config_file():
 
 def _set_overrides():
     # If using public storage, update s3 settings to match.
-    if (get_option('proxy.sharingEnabled')
+    if (get_option('s3.sharingEnabled')
             and get_option('s3.usePublicStorage')):
         creds = _get_public_credentials()
         where = 'an override, since s3.usePublicStorage is true.'

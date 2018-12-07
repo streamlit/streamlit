@@ -124,8 +124,8 @@ class S3Storage(AbstractStorage):
     @gen.coroutine
     def _s3_init(self):
         """Initialize s3 bucket."""
-        assert config.get_option('proxy.sharingEnabled'), (
-            'Sharing is disabled. See "proxy.sharingEnabled".')
+        assert config.get_option('s3.sharingEnabled'), (
+            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
