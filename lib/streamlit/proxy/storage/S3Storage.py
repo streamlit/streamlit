@@ -150,7 +150,7 @@ class S3Storage(AbstractStorage):
 
         See AbstractStorage for docs.
         """
-        LOGGER.debug('Saving report %d', report_id)
+        LOGGER.debug('Saving report %s', report_id)
         yield self._s3_init()
         static_files = yield self._get_static_upload_files()
         files_to_upload = static_files + files
