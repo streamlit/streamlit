@@ -647,6 +647,11 @@ def _set_overrides():
 
 
 def _check_conflicts():
+    if (get_option('s3.sharingEnabled')
+            and not get_option('s3.usePublicStorage')):
+        assert get_option('s3.bucket'), (
+            'For sharing, s3.bucket must be set')
+
     if (get_option('client.tryToOutliveProxy')
             and not get_option('proxy.isRemote')):
         LOGGER.warning(

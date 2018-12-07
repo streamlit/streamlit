@@ -46,8 +46,6 @@ class S3Storage(AbstractStorage):
         self._key_prefix = config.get_option('s3.keyPrefix')
         self._region = config.get_option('s3.region')
 
-        assert self._bucketname, 'For sharing, s3.bucket must be set'
-
         user = os.getenv('USER', None)
 
         if self._url and '{USER}' in self._url:
