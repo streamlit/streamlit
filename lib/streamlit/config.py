@@ -310,7 +310,7 @@ _create_section(
 
 @_create_option('s3.sharingEnabled')
 def _s3_sharing_enabled():
-    """Enables the ability to share reports to S3.
+    """Enable the ability to share reports to S3.
 
     Shared reports are publically viewable by default, but you can set up own
     AWS S3 bucket and credentials if you would like more control. See
