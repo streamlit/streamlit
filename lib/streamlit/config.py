@@ -9,7 +9,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import ast
 import os
 import sys
 import platform
@@ -108,6 +107,26 @@ def _delete_option(key):
 # Config Section: Global #
 
 _create_section('global', 'Global options that apply across all of Streamlit.')
+
+
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
+@_create_option('global.sharingMode')
+def _global_sharing_mode():
+    """Configure the ability to share reports to the cloud.
+
+    Should be set to one of these values:
+    - "off" : turn off sharing.
+    - "streamlit-public" : share to Streamlit's public cloud. Shared reports
+       will be viewable by anyone with the URL.
+    - "s3" : share to S3, based on the settings under the [s3] section of this
+      config file.
+
+    Default: 'streamlit-public'
+    """
+    # Fail gracefully when we're unable to grab credentials (ex: when offline)
+    if _get_public_credentials():
+        return 'streamlit-public'
+    return 'off'
 
 
 @_create_option('global.developmentMode', visibility='hidden')
@@ -232,7 +251,7 @@ def _proxy_is_remote():
 _create_option(
     'proxy.liveSave',
     description='''
-        Immediately save the report to S3 in such a way that enables live
+        Immediately share the report in such a way that enables live
         monitoring.
         ''',
     default_val=False)
@@ -297,41 +316,51 @@ def _browser_proxy_port():
 # Config Section: S3 #
 
 _create_section(
-    's3',
-    '''
-    Configuration for report saving.
-
-    These only apply if s3.sharingEnabled is true.
-
-    In addition, if customizing any of these settings, you should also set
-    s3.usePublicStorage to false.
-    ''')
+    's3', 'Configuration for when global.sharingMode is set to "s3".')
 
 
-@_create_option('s3.sharingEnabled')
-def _s3_sharing_enabled():
-    """Enable the ability to share reports to S3.
+@_create_option('s3.settingsInternal', visibility='hidden')
+def _settings_internal():
+    """Get dict with S3 sharing settings.
 
-    Shared reports are publically viewable by default, but you can set up own
-    AWS S3 bucket and credentials if you would like more control. See
-    s3.usePublicStorage for more info.
-
-    Default: true
+    This is what you should use when coding in Streamlit. Never read
+    get_config('s3.foo') directly.
     """
-    # Fail gracefully when we're unable to grab credentials (ex: when offline)
-    return _get_public_credentials() is not None
+    mode = get_option('global.sharingMode')
+    if mode == 's3':
+        return {
+            'bucket': get_option('s3.bucket'),
+            'url': get_option('s3.url'),
+            'accessKeyId': get_option('s3.accessKeyId'),
+            'secretAccessKey': get_option('s3.secretAccessKey'),
+            'keyPrefix': get_option('s3.keyPrefix'),
+            'region': get_option('s3.region'),
+            'profile': get_option('s3.profile'),
+        }
+
+    if mode == 'streamlit-public':
+        creds = _get_public_credentials()
+        if creds is not None:
+            return {
+                'bucket': creds.get('bucket'),
+                'url': creds.get('url'),
+                'accessKeyId': creds.get('accessKeyId'),
+                'secretAccessKey': creds.get('secretAccessKey'),
+                'keyPrefix': creds.get('keyPrefix') or '',
+                'region': creds.get('region'),
+                'profile': creds.get('profile'),
+            }
+
+    return None
 
 
-_create_option(
-    's3.usePublicStorage',
-    description='''Set to false to configure your own S3 storage.''',
-    default_val=True)
-
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.bucket',
     description='Name of the AWS S3 bucket to save reports.',
     default_val=None)
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.url',
     description='''URL root for external view of Streamlit reports.
@@ -341,6 +370,7 @@ _create_option(
     ''',
     default_val=None)
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.accessKeyId',
     visibility='obfuscated',
@@ -352,6 +382,7 @@ _create_option(
     ''',
     default_val=None)  # If changing the default, change S3Storage.py too.
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.secretAccessKey',
     visibility='obfuscated',
@@ -363,6 +394,7 @@ _create_option(
     ''',
     default_val=None)
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.keyPrefix',
     description='''The "subdirectory" within the S3 bucket where to save
@@ -371,6 +403,7 @@ _create_option(
         ''',
     default_val='')
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
@@ -379,6 +412,7 @@ _create_option(
     ''',
     default_val=None)
 
+# IMPORTANT: Do not use this in code! Use s3.settingsInternal
 _create_option(
     's3.profile',
     description='''AWS credentials profile to use for saving data.
@@ -395,6 +429,7 @@ def _get_public_credentials():
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
+        import ast
         return ast.literal_eval(response.decode('utf-8'))
     except Exception as e:
         LOGGER.warning(
@@ -627,30 +662,14 @@ def _parse_config_file():
     with open(config_filename) as input:
         _update_config_with_toml(input.read(), config_filename)
 
-    _set_overrides()
     _check_conflicts()
 
 
-def _set_overrides():
-    # If using public storage, update s3 settings to match.
-    if (get_option('s3.sharingEnabled')
-            and get_option('s3.usePublicStorage')):
-        creds = _get_public_credentials()
-        where = 'an override, since s3.usePublicStorage is true.'
-        _set_option('s3.accessKeyId', creds['accessKeyId'], where)
-        _set_option('s3.bucket', creds['bucket'], where)
-        _set_option('s3.secretAccessKey', creds['secretAccessKey'], where)
-        _set_option('s3.url', creds['url'], where)
-        _set_option('s3.keyPrefix', '', where)
-        _set_option('s3.profile', None, where)
-        _set_option('s3.region', None, where)
-
-
 def _check_conflicts():
-    if (get_option('s3.sharingEnabled')
-            and not get_option('s3.usePublicStorage')):
-        assert get_option('s3.bucket'), (
-            'For sharing, s3.bucket must be set')
+    s3_settings_internal = get_option('s3.settingsInternal')
+    if s3_settings_internal is not None:
+        assert s3_settings_internal.get('bucket'), (
+            'For sharing via S3, s3.bucket must be set')
 
     if (get_option('client.tryToOutliveProxy')
             and not get_option('proxy.isRemote')):

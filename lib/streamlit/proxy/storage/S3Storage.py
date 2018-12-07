@@ -41,10 +41,15 @@ class S3Storage(AbstractStorage):
         log.propagate = False
 
         # Config related stuff.
-        self._bucketname = config.get_option('s3.bucket')
-        self._url = config.get_option('s3.url')
-        self._key_prefix = config.get_option('s3.keyPrefix')
-        self._region = config.get_option('s3.region')
+        settings = config.get_option('s3.settingsInternal')
+
+        assert settings, (
+            'Sharing is disabled. See "s3.settingsInternal".')
+
+        self._bucketname = settings.get('bucket')
+        self._url = settings.get('url')
+        self._key_prefix = settings.get('keyPrefix')
+        self._region = settings.get('region')
 
         user = os.getenv('USER', None)
 
@@ -65,15 +70,15 @@ class S3Storage(AbstractStorage):
                 self._url,
                 self._s3_key('index.html', add_prefix=False))
 
-        aws_profile = config.get_option('s3.profile')
-        access_key_id = config.get_option('s3.accessKeyId')
+        aws_profile = settings.get('profile')
+        access_key_id = settings.get('accessKeyId')
 
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
         elif access_key_id is not None:
-            secret_access_key = config.get_option('s3.secretAccessKey')
+            secret_access_key = settings.get('secretAccessKey')
             self._s3_client = boto3.client(
                 's3',
                 aws_access_key_id=access_key_id,
@@ -122,8 +127,6 @@ class S3Storage(AbstractStorage):
     @gen.coroutine
     def _s3_init(self):
         """Initialize s3 bucket."""
-        assert config.get_option('s3.sharingEnabled'), (
-            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
@@ -132,7 +135,7 @@ class S3Storage(AbstractStorage):
 
         except botocore.exceptions.NoCredentialsError:
             LOGGER.error(
-                'please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
+                'Please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
                 'environment variables')
             raise errors.S3NoCredentials
 
