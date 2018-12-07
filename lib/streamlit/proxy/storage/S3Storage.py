@@ -46,6 +46,8 @@ class S3Storage(AbstractStorage):
         self._key_prefix = config.get_option('s3.keyPrefix')
         self._region = config.get_option('s3.region')
 
+        assert self._bucketname, 'For sharing, s3.bucket must be set'
+
         user = os.getenv('USER', None)
 
         if self._url and '{USER}' in self._url:
@@ -68,14 +70,11 @@ class S3Storage(AbstractStorage):
         aws_profile = config.get_option('s3.profile')
         access_key_id = config.get_option('s3.accessKeyId')
 
-        # Don't check "is not None" because we want to allow users to set an
-        # empty string as a means to pull credentials from Amazon.
-        if aws_profile:
+        if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
-        # Don't check "is not None". See above.
-        elif access_key_id:
+        elif access_key_id is not None:
             secret_access_key = config.get_option('s3.secretAccessKey')
             self._s3_client = boto3.client(
                 's3',
@@ -125,8 +124,8 @@ class S3Storage(AbstractStorage):
     @gen.coroutine
     def _s3_init(self):
         """Initialize s3 bucket."""
-        assert config.get_option('s3.sharingEnabled'), (
-            'Sharing is disabled. See "s3.sharingEnabled".')
+        assert config.get_option('proxy.sharingEnabled'), (
+            'Sharing is disabled. See "proxy.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:

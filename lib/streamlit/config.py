@@ -266,6 +266,19 @@ _create_option(
         ''',
     default_val=8501)
 
+@_create_option('proxy.sharingEnabled')
+def _s3_sharing_enabled():
+    """Enables the ability to share reports to the cloud.
+
+    Shared reports are publically viewable by default, but you can set up own
+    AWS S3 bucket and credentials if you would like more control. See
+    s3.usePublicStorage for more info.
+
+    Default: true
+    """
+    # Fail gracefully when we're unable to grab credentials (ex: when offline)
+    return _get_public_credentials() is not None
+
 
 # Config Section: Browser #
 
@@ -296,82 +309,62 @@ def _browser_proxy_port():
 
 # Config Section: S3 #
 
-_create_section('s3', 'Configuration for report saving.')
+_create_section(
+    's3',
+    '''
+    Configuration for report saving.
 
+    These only apply if proxy.sharingEnabled is true.
 
-@_create_option('s3.sharingEnabled')
-def _s3_sharing_enabled():
-    """Whether Streamlit is allowed tosave reports to s3.
+    In addition, if customizing any of these settings, you should also set
+    s3.usePublicStorage to false.
+    ''')
 
-    Default: false. But is automatically set ot true if s3.bucket is defined,
-    either by the user or using the default Streamlit credentials.
-    """
-    # Sharing is enabled if the user overrode 's3.bucket'.
-    using_default_bucket = (
-        _config_options['s3.bucket'].where_defined ==
-        ConfigOption.DEFAULT_DEFINITION)
-    if not using_default_bucket:
-        return True
+_create_option(
+    's3.usePublicStorage',
+    description='''Set to false to configure your own S3 storage.''',
+    default_val=True)
 
-    # Sharing is also enabled if successfully parse default credentials.
-    return _get_default_credentials() is not None
+_create_option(
+    's3.bucket',
+    description='Name of the AWS S3 bucket to save reports.',
+    default_val=None)
 
+_create_option(
+    's3.url',
+    description='''URL root for external view of Streamlit reports.
 
-@_create_option('s3.bucket')
-def _s3_bucket():
-    """Name of the AWS S3 bucket to save reports.
+    Default: unset -- which means we'll try to guess the URL based on the value
+    of s3.bucket.
+    ''',
+    default_val=None)
 
-    Default: if s3.sharingEnabled is set, defaults to "share.streamlit.io".
-    Disabled otherwise.
-    """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['bucket']
+_create_option(
+    's3.accessKeyId',
+    visibility='obfuscated',
+    description='''Access key to write to the S3 bucket.
 
+    Default: unset -- which means we'll let AWS's libraries try to find the
+    credentials automatically as described in
+    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
+    ''',
+    default_val=None)
 
-@_create_option('s3.url')
-def _s3_url():
-    """URL root for external view of Streamlit reports.
+_create_option(
+    's3.secretAccessKey',
+    visibility='obfuscated',
+    description='''Secret access key to write to the S3 bucket.
 
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
-    """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['url']
-
-
-@_create_option('s3.accessKeyId', visibility='obfuscated')
-def _s3_access_key_id():
-    """Access key to write to the S3 bucket.
-
-    Set s3.profile and s3.accessKeyId to empty string "" to use your
-    default profile, as configured in your shell environment.
-
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
-    """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['accessKeyId']
-
-
-@_create_option('s3.secretAccessKey', visibility='obfuscated')
-def _s3_secret_access_key():
-    """Secret access key to write to the S3 bucket.
-
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
-    """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['secretAccessKey']
-
+    Default: unset, which means we'll let AWS's libraries try to find the
+    credentials automatically as described in
+    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
+    ''',
+    default_val=None)
 
 _create_option(
     's3.keyPrefix',
-    description='''"Subdirectory" within the S3 bucket to save reports.
-        S3 calls paths "keys" which is why the keyPrefix is like a
+    description='''The "subdirectory" within the S3 bucket where to save
+        reports. S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory. Use "" to mean the root directory.
         ''',
     default_val='')
@@ -380,24 +373,21 @@ _create_option(
     's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
 
-        Default: (unset)
-        ''',
+    Default: (unset)
+    ''',
     default_val=None)
 
 _create_option(
     's3.profile',
     description='''AWS credentials profile to use for saving data.
 
-        Set s3.profile and s3.accessKeyId to empty string "" to use your
-        default profile, as configured in your shell environment.
-
-        Default: (unset)
-        ''',
-    default_val=None)
+    Default: (unset)
+    ''',
+    default_val=None)  # If changing the default, change S3Storage.py too.
 
 
 @util.memoize
-def _get_default_credentials():
+def _get_public_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
     LOGGER.debug('Getting remote Streamlit credentials.')
     try:
@@ -495,6 +485,10 @@ def show_config():
 
             if len(toml_default) > 0:
                 out.append(f'# Default: {toml_default}')
+            else:
+                # Don't say "Default: (unset)" here because this branch applies
+                # to complex config settings too.
+                pass
 
             is_manually_set = option.where_defined != ConfigOption.DEFAULT_DEFINITION
 
@@ -502,17 +496,16 @@ def show_config():
                 out.append(
                     f'# The value below was set in {option.where_defined}')
 
-            if option.visibility == 'obfuscated' and not is_manually_set:
-                out.append(f'{key} = (value hidden)')
+            toml_setting = toml.dumps({key: option.value})
+
+            if len(toml_setting) == 0:
+                out.append(f'#{key} =\n')
+
+            elif option.visibility == 'obfuscated':
+                out.append(f'{key} = (value hidden)\n')
 
             else:
-                toml_setting = toml.dumps({key: option.value})
-
-                if len(toml_setting) == 0:
-                    out.append(f'#{key} =\n')
-
-                else:
-                    out.append(toml_setting)
+                out.append(toml_setting)
 
     print('\n'.join(out))
 
@@ -632,7 +625,23 @@ def _parse_config_file():
     with open(config_filename) as input:
         _update_config_with_toml(input.read(), config_filename)
 
+    _set_overrides()
     _check_conflicts()
+
+
+def _set_overrides():
+    # If using public storage, update s3 settings to match.
+    if (get_option('proxy.sharingEnabled')
+            and get_option('s3.usePublicStorage')):
+        creds = _get_public_credentials()
+        where = 'an override, since s3.usePublicStorage is true.'
+        _set_option('s3.accessKeyId', creds['accessKeyId'], where)
+        _set_option('s3.bucket', creds['bucket'], where)
+        _set_option('s3.secretAccessKey', creds['secretAccessKey'], where)
+        _set_option('s3.url', creds['url'], where)
+        _set_option('s3.keyPrefix', '', where)
+        _set_option('s3.profile', None, where)
+        _set_option('s3.region', None, where)
 
 
 def _check_conflicts():
