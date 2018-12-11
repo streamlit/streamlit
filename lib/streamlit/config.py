@@ -398,6 +398,9 @@ _create_option(
     default_val=None)  # If changing the default, change S3Storage.py too.
 
 
+# TODO: Don't memoize! Otherwise, if the internet is down momentarily when this
+# function is first called then we'll have no credentials forever while the
+# proxy is up.
 @util.memoize
 def _get_public_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
