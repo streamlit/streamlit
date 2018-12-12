@@ -126,6 +126,7 @@ class StreamlitApp extends PureComponent {
       this.connection = new WebsocketConnection({
         uriList: [
           //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
+          //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
           uri,
         ],
         onMessage: this.handleMessage,

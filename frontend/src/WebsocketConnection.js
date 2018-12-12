@@ -8,9 +8,16 @@ import { ConnectionState } from './ConnectionState';
 
 
 /**
- * Timeout for the WebSocket connection attempt, in millis.
+ * Number of times to try to connect to websocket.
  */
-const CONNECTION_TIMEOUT_MS = 3000;
+const MAX_RETRIES = 3;
+
+
+/**
+ * Timeout for the WebSocket connection attempt, in millis. This grows by N
+ * with each Nth retry.
+ */
+const CONNECTION_TIMEOUT_MS = 2000;
 
 
 /**
@@ -28,19 +35,30 @@ class WebsocketConnection {
   constructor(props) {
     this.props = props;
 
-    // To guarantee packet transmission order, this is the index of the last
-    // dispatched incoming message.
+    /**
+     * To guarantee packet transmission order, this is the index of the last
+     * dispatched incoming message.
+     */
     this.lastDispatchedMessageIndex = -1;
 
-    // And this is the index of the next message we recieve.
+    /**
+     * And this is the index of the next message we recieve.
+     */
     this.nextMessageIndex = 0;
 
-    // This dictionary stores recieved messages that we haven't sent out yet
-    // (because we're still decoding previous messages)
+    /**
+     * This dictionary stores recieved messages that we haven't sent out yet
+     * (because we're still decoding previous messages)
+     */
     this.messageQueue = {};
 
     this.state = ConnectionState.DISCONNECTED;
     this.websocket = null;
+
+    /**
+     * Keep track of how many times we tried to connect.
+     */
+    this.attemptNumber = 1;
 
     this.connect(0);
   }
@@ -49,21 +67,35 @@ class WebsocketConnection {
     const { uriList, setConnectionState, onMessage } = this.props;
 
     if (uriIndex >= uriList.length) {
-      setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: 'The connection is down. Please rerun your Python script.',
-      });
-      return;
+      if (this.attemptNumber < MAX_RETRIES) {
+        uriIndex = 0;
+        this.attemptNumber += 1;
+      } else {
+        setConnectionState({
+          connectionState: ConnectionState.ERROR,
+          errMsg: 'The connection is down. Please rerun your Python script.',
+        });
+        return;
+      }
     }
+
+    let tryingNext = false;
+
+    const tryNext = () => {
+      if (!tryingNext) {
+        this.connect(uriIndex + 1);
+        tryingNext = true;
+      }
+    };
 
     const timeoutId = setTimeout(() => {
       if (this.websocket.readyState === 0) {
-        this.websocket.close();
         console.warn(
           `Websocket connection to ${uriList[uriIndex]} timed out`);
-        this.connect(uriIndex + 1);
+        this.websocket.close();
+        tryNext();
       }
-    }, CONNECTION_TIMEOUT_MS);
+    }, CONNECTION_TIMEOUT_MS * this.attemptNumber);
 
     const uri = uriList[uriIndex];
     this.websocket = new WebSocket(uri);
@@ -88,7 +120,7 @@ class WebsocketConnection {
 
     this.websocket.onerror = () => {
       clearTimeout(timeoutId);
-      this.connect(uriIndex + 1);
+      tryNext();
     };
   }
 
