@@ -67,9 +67,9 @@ class WebsocketConnection {
     const { uriList, setConnectionState, onMessage } = this.props;
 
     if (uriIndex >= uriList.length) {
+      this.attemptNumber += 1;
       if (this.attemptNumber < MAX_RETRIES) {
         uriIndex = 0;
-        this.attemptNumber += 1;
       } else {
         setConnectionState({
           connectionState: ConnectionState.ERROR,
