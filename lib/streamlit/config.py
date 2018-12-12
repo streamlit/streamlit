@@ -9,7 +9,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import ast
 import os
 import sys
 import platform
@@ -110,6 +109,21 @@ def _delete_option(key):
 _create_section('global', 'Global options that apply across all of Streamlit.')
 
 
+_create_option(
+    'global.sharingMode',
+    description='''
+        Configure the ability to share reports to the cloud.
+
+        Should be set to one of these values:
+        - "off" : turn off sharing.
+        - "streamlit-public" : share to Streamlit's public cloud. Shared reports
+           will be viewable by anyone with the URL.
+        - "s3" : share to S3, based on the settings under the [s3] section of this
+          config file.
+        ''',
+    default_val='streamlit-public')
+
+
 @_create_option('global.developmentMode', visibility='hidden')
 def _global_development_mode():
     """Are we in development mode.
@@ -191,11 +205,14 @@ _create_section('proxy', 'Configuration of the proxy server.')
 
 _create_option(
     'proxy.autoCloseDelaySecs',
-    description=(
-        'How long the proxy should stay open when there are '
-        'no connections. Can be set to inf for "infinity". '
-        'This delay only starts counting after the '
-        'reportExpirationSecs delay transpires.'),
+    description='''
+        How long the proxy should stay open when there are no connections.
+
+        Can be set to inf for "infinity".
+
+        Note: this delay only starts counting after the reportExpirationSecs
+        delay transpires.
+        ''',
     default_val=0)
 
 # TODO: In new config system, allow us to specify ranges
@@ -232,7 +249,7 @@ def _proxy_is_remote():
 _create_option(
     'proxy.liveSave',
     description='''
-        Immediately save the report to S3 in such a way that enables live
+        Immediately share the report in such a way that enables live
         monitoring.
         ''',
     default_val=False)
@@ -296,78 +313,67 @@ def _browser_proxy_port():
 
 # Config Section: S3 #
 
-_create_section('s3', 'Configuration for report saving.')
-
-
-@_create_option('s3.sharingEnabled')
-def _s3_sharing_enabled():
-    """Whether Streamlit is allowed tosave reports to s3.
-
-    Default: false. But is automatically set ot true if s3.bucket is defined,
-    either by the user or using the default Streamlit credentials.
-    """
-    # Sharing is enabled if the user overrode 's3.bucket'.
-    using_default_bucket = (
-        _config_options['s3.bucket'].where_defined ==
-        ConfigOption.DEFAULT_DEFINITION)
-    if not using_default_bucket:
-        return True
-
-    # Sharing is also enabled if successfully parse default credentials.
-    return _get_default_credentials() is not None
+_create_section(
+    's3', 'Configuration for when global.sharingMode is set to "s3".')
 
 
 @_create_option('s3.bucket')
 def _s3_bucket():
     """Name of the AWS S3 bucket to save reports.
 
-    Default: if s3.sharingEnabled is set, defaults to "share.streamlit.io".
-    Disabled otherwise.
+    Default: (unset)
     """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['bucket']
+    if get_option('global.sharingMode') == 'streamlit-public':
+        creds = _get_public_credentials()
+        return creds['bucket'] if creds else None
+    return None
 
 
 @_create_option('s3.url')
 def _s3_url():
     """URL root for external view of Streamlit reports.
 
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
+    Default: (unset)
     """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['url']
+    if get_option('global.sharingMode') == 'streamlit-public':
+        creds = _get_public_credentials()
+        return creds['url'] if creds else None
+    return None
 
 
 @_create_option('s3.accessKeyId', visibility='obfuscated')
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
+    Leave unset if you want to use an AWS profile.
+
+    Default: (unset)
     """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['accessKeyId']
+    if get_option('global.sharingMode') == 'streamlit-public':
+        creds = _get_public_credentials()
+        return creds['accessKeyId'] if creds else None
+    return None
 
 
 @_create_option('s3.secretAccessKey', visibility='obfuscated')
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
-    Default: if s3.sharingEnabled is set, uses credentials for
-    share.streamlit.io. Disabled otherwise.
+    Leave unset if you want to use an AWS profile.
+
+    Default: (unset)
     """
-    if not get_option('s3.sharingEnabled'):
-        return None
-    return _get_default_credentials()['secretAccessKey']
+    if get_option('global.sharingMode') == 'streamlit-public':
+        creds = _get_public_credentials()
+        return creds['secretAccessKey'] if creds else None
+    return None
 
 
 _create_option(
     's3.keyPrefix',
-    description='''"Subdirectory" within the S3 bucket to save reports.
+    description='''The "subdirectory" within the S3 bucket where to save
+        reports.
+
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory. Use "" to mean the root directory.
         ''',
@@ -377,26 +383,32 @@ _create_option(
     's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
 
-        Default: (unset)
-        ''',
+    Default: (unset)
+    ''',
     default_val=None)
 
 _create_option(
     's3.profile',
-    description='''AWS credentials profile to use for saving data.
+    description='''AWS credentials profile to use.
 
-        Default: (unset)
-        ''',
-    default_val=None)
+    Leave unset to use your default profile.
+
+    Default: (unset)
+    ''',
+    default_val=None)  # If changing the default, change S3Storage.py too.
 
 
+# TODO: Don't memoize! Otherwise, if the internet is down momentarily when this
+# function is first called then we'll have no credentials forever while the
+# proxy is up.
 @util.memoize
-def _get_default_credentials():
+def _get_public_credentials():
     STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
     LOGGER.debug('Getting remote Streamlit credentials.')
     try:
         response = urllib.request.urlopen(
             STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
+        import ast
         return ast.literal_eval(response.decode('utf-8'))
     except Exception as e:
         LOGGER.warning(
@@ -452,6 +464,14 @@ def get_where_defined(key):
     return _config_options[key].where_defined
 
 
+def _is_unset(option_name):
+    return get_where_defined(option_name) == ConfigOption.DEFAULT_DEFINITION
+
+
+def _is_manually_set(option_name):
+    return get_where_defined(option_name) != ConfigOption.DEFAULT_DEFINITION
+
+
 def show_config():
     """Show all the config options."""
     SKIP_SECTIONS = ('_test',)
@@ -489,24 +509,29 @@ def show_config():
 
             if len(toml_default) > 0:
                 out.append(f'# Default: {toml_default}')
+            else:
+                # Don't say "Default: (unset)" here because this branch applies
+                # to complex config settings too.
+                pass
 
-            is_manually_set = option.where_defined != ConfigOption.DEFAULT_DEFINITION
+            is_manually_set = (
+                option.where_defined != ConfigOption.DEFAULT_DEFINITION)
 
             if is_manually_set:
                 out.append(
                     f'# The value below was set in {option.where_defined}')
 
-            if option.visibility == 'obfuscated' and not is_manually_set:
-                out.append(f'{key} = (value hidden)')
+            toml_setting = toml.dumps({key: option.value})
+
+            if (len(toml_setting) == 0 or
+                    option.visibility == 'obfuscated'):
+                out.append(f'#{key} =\n')
+
+            elif option.visibility == 'obfuscated':
+                out.append(f'{key} = (value hidden)\n')
 
             else:
-                toml_setting = toml.dumps({key: option.value})
-
-                if len(toml_setting) == 0:
-                    out.append(f'#{key} =\n')
-
-                else:
-                    out.append(toml_setting)
+                out.append(toml_setting)
 
     print('\n'.join(out))
 
@@ -638,6 +663,8 @@ def _check_conflicts():
             '  proxy.isRemote = false\n'
             '...will cause scripts to block until the proxy is closed.')
 
+    # Node-related conflicts
+
     # When using the Node server, we must always connect to 8501 (this is
     # hard-coded in JS). Otherwise, the browser would decide what port to
     # connect to based on either:
@@ -645,26 +672,45 @@ def _check_conflicts():
     #   2. the proxyPort value in manifest.json, which would work, but only
     #   exists with proxy.liveSave.
 
-    proxyPortManuallySet = (
-            get_where_defined('proxy.port')
-            != ConfigOption.DEFAULT_DEFINITION)
+    if get_option('proxy.useNode'):
+        assert _is_unset('proxy.port'), (
+            'proxy.port does not work when proxy.useNode is true. ')
 
-    browserPortManuallySet = (
-            get_where_defined('browser.proxyPort')
-            != ConfigOption.DEFAULT_DEFINITION)
+        assert _is_unset('browser.proxyPort'), (
+            'browser.proxyPort does not work when proxy.useNode is true. ')
 
-    clientPortManuallySet = (
-            get_where_defined('client.proxyPort')
-            != ConfigOption.DEFAULT_DEFINITION)
+        assert _is_unset('client.proxyPort'), (
+            'client.proxyPort does not work when proxy.useNode is true. ')
 
-    assert not (proxyPortManuallySet and get_option('proxy.useNode')), (
-        'proxy.port does not work when proxy.useNode is true. ')
+    # Sharing-related conflicts
 
-    assert not (browserPortManuallySet and get_option('proxy.useNode')), (
-        'browser.proxyPort does not work when proxy.useNode is true. ')
+    if get_option('global.sharingMode') == 's3':
+        assert _is_manually_set('s3.bucket'), (
+            'When global.sharingMode is set to "s3", '
+            's3.bucket must also be set')
+        assert _is_manually_set('s3.bucket'), (
+            'For sharing via S3, s3.bucket must be set')
+        both_are_set = (
+            _is_manually_set('s3.accessKeyId') and
+            _is_manually_set('s3.secretAccessKey'))
+        both_are_unset = (
+            _is_unset('s3.accessKeyId') and
+            _is_unset('s3.secretAccessKey'))
+        assert both_are_set or both_are_unset, (
+            'In config.toml, s3.accessKeyId and s3.secretAccessKey must '
+            'either both be set or both be unset.')
 
-    assert not (clientPortManuallySet and get_option('proxy.useNode')), (
-        'client.proxyPort does not work when proxy.useNode is true. ')
+    if get_option('global.sharingMode') == 'streamlit-public':
+        WARNING_STR = (
+            'In config.toml, S3 should not be configured when '
+            'global.sharingMode is set to "streamlit-public".')
+        assert _is_unset('s3.bucket'), WARNING_STR
+        assert _is_unset('s3.url'), WARNING_STR
+        assert _is_unset('s3.accessKeyId'), WARNING_STR
+        assert _is_unset('s3.secretAccessKey'), WARNING_STR
+        assert _is_unset('s3.keyPrefix'), WARNING_STR
+        assert _is_unset('s3.region'), WARNING_STR
+        assert _is_unset('s3.profile'), WARNING_STR
 
 
 def _clean_paragraphs(txt):

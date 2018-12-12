@@ -56,8 +56,7 @@ class ConfigOption(object):
         ConfigOption.DEFAULT_DEFINITION means this file.
     visibility : 'visible' or 'hidden' or 'obfuscated'
         If 'hidden', will not include this when listing all options to users.
-        If 'obfuscated', will list it, but will only print out its actual value
-        if the value was manually set (i.e. not default).
+        If 'obfuscated', will list it, but will not print out its actual value.
 
     '''
 

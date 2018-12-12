@@ -40,11 +40,18 @@ class S3Storage(AbstractStorage):
         log = logging.getLogger('botocore')
         log.propagate = False
 
-        # Config related stuff.
+        assert config.get_option('global.sharingMode') != 'off', (
+            'Sharing is disabled. See "global.sharingMode".')
+
         self._bucketname = config.get_option('s3.bucket')
         self._url = config.get_option('s3.url')
         self._key_prefix = config.get_option('s3.keyPrefix')
         self._region = config.get_option('s3.region')
+
+        if config.get_option('global.sharingMode') == 'streamlit-public':
+            assert self._bucketname is not None, (
+                'Error fetching public credentials. '
+                'Are you connected to the internet?')
 
         user = os.getenv('USER', None)
 
@@ -58,7 +65,7 @@ class S3Storage(AbstractStorage):
 
         if not self._url:
             self._web_app_url = os.path.join(
-                'https://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
+                'http://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
                 self._s3_key('index.html'))
         else:
             self._web_app_url = os.path.join(
@@ -67,12 +74,13 @@ class S3Storage(AbstractStorage):
 
         aws_profile = config.get_option('s3.profile')
         access_key_id = config.get_option('s3.accessKeyId')
+        secret_access_key = config.get_option('s3.secretAccessKey')
+
         if aws_profile is not None:
             LOGGER.debug(f'Using AWS profile "{aws_profile}".')
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
-        elif access_key_id is not None:
-            secret_access_key = config.get_option('s3.secretAccessKey')
+        elif access_key_id is not None and secret_access_key is not None:
             self._s3_client = boto3.client(
                 's3',
                 aws_access_key_id=access_key_id,
@@ -101,8 +109,11 @@ class S3Storage(AbstractStorage):
         # caught and disappearing.
         try:
             self._s3_client.head_bucket(Bucket=self._bucketname)
-        except botocore.exceptions.ClientError:
-            LOGGER.debug('"%s" bucket not found', self._bucketname)
+        except botocore.exceptions.ClientError as e:
+            LOGGER.warning(
+                '"%s" bucket not found. Do you have s3:HeadBucket permission?',
+                self._bucketname)
+            LOGGER.warning(e)
             return False
         return True
 
@@ -118,16 +129,15 @@ class S3Storage(AbstractStorage):
     @gen.coroutine
     def _s3_init(self):
         """Initialize s3 bucket."""
-        assert config.get_option('s3.sharingEnabled'), (
-            'Sharing is disabled. See "s3.sharingEnabled".')
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
+                LOGGER.warning('Will attempt to create bucket')
                 yield self._create_bucket()
 
         except botocore.exceptions.NoCredentialsError:
             LOGGER.error(
-                'please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
+                'Please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
                 'environment variables')
             raise errors.S3NoCredentials
 
@@ -145,6 +155,7 @@ class S3Storage(AbstractStorage):
 
         See AbstractStorage for docs.
         """
+        LOGGER.debug('Saving report %s', report_id)
         yield self._s3_init()
         static_files = yield self._get_static_upload_files()
         files_to_upload = static_files + files
