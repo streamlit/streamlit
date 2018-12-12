@@ -47,6 +47,9 @@ import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
+import AWS from 'aws-sdk';
+import { GoogleLogin } from 'react-google-login';
+
 import './StreamlitApp.css';
 
 class StreamlitApp extends PureComponent {
@@ -390,6 +393,12 @@ class StreamlitApp extends PureComponent {
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
           </div>
+          <GoogleLogin
+           clientId="121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com"
+           buttonText="Login"
+           onSuccess={onSignIn}
+           onFailure={responseGoogle}
+          />
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
@@ -514,5 +523,51 @@ function getWsUrl(host, port, reportName) {
   return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
 }
 
+function onSignIn(googleUser) {
+  let authResult = googleUser.getAuthResponse();
+
+  if (authResult['access_token']) {
+    // adding google access token to Cognito credentials login map
+    AWS.config.region = 'us-west-2',
+    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: 'us-west-2:5fe7b884-1665-4a48-a20f-db5d719e02a8',
+      Logins: {
+        'accounts.google.com': authResult['id_token']
+      }
+    });
+
+    // obtain credentials
+    AWS.config.credentials.get((err) => {
+      if (!err) {
+        const { hostname, pathname, query } = url.parse(window.location.href, true);
+
+        const bucket = hostname
+        const version = pathname.split('/')[1];
+
+        const manifestKey = `${version}/reports/${query.id}/manifest.json`;
+
+        var s3 = new AWS.S3();
+
+        s3.getObject({Bucket: bucket, Key: manifestKey}, function(err, data) {
+          if (err)
+            console.log(err, err.stack);
+          else {
+            console.log(data.Body.toString('utf-8'));
+          }
+        });
+      } else {
+        console.log('YOU ARE NOT AUTHORISED TO QUERY AWS!');
+        console.log('ERROR: ' + err);
+      }
+    });
+
+  } else {
+    console.log('User not logged in!');
+  }
+}
+
+function responseGoogle(response) {
+  console.log(response);
+}
 
 export default hotkeys(StreamlitApp);

@@ -266,6 +266,12 @@ _create_option(
         ''',
     default_val=8501)
 
+_create_option(
+    'proxy.uploadPrivate',
+    description='''
+        Upload reports as private to s3
+        ''',
+    default_val=False)
 
 # Config Section: Browser #
 
