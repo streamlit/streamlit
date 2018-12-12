@@ -168,7 +168,9 @@ class Proxy(object):
 
         if open_new_browser_connection:
             if config.get_option('proxy.isRemote'):
-                _print_urls(connection, self._auto_close_delay_secs)
+                _print_urls(
+                    connection,
+                    self._auto_close_delay_secs + self._report_expiration_secs)
             else:
                 url = connection.get_url(
                     config.get_option('browser.proxyAddress'))
