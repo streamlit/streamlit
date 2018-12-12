@@ -8,6 +8,12 @@ import { ConnectionState } from './ConnectionState';
 
 
 /**
+ * Timeout for the WebSocket connection attempt, in millis.
+ */
+const CONNECTION_TIMEOUT_MS = 3000;
+
+
+/**
 * This class is the "brother" of StaticConnection. The class  connects to the
 * proxy and gets deltas over a websocket connection. It also implements:
 *
@@ -40,36 +46,48 @@ class WebsocketConnection {
   }
 
   connect(uriIndex) {
-    const props = this.props;
+    const { uriList, setConnectionState, onMessage } = this.props;
 
-    if (uriIndex >= props.uriList.length) {
-      props.setConnectionState({
+    if (uriIndex >= uriList.length) {
+      setConnectionState({
         connectionState: ConnectionState.ERROR,
         errMsg: 'The connection is down. Please rerun your Python script.',
       });
       return;
     }
 
-    const uri = props.uriList[uriIndex];
+    const timeoutId = setTimeout(() => {
+      if (this.websocket.readyState === 0) {
+        this.websocket.close();
+        console.warn(
+          `Websocket connection to ${uriList[uriIndex]} timed out`);
+        this.connect(uriIndex + 1);
+      }
+    }, CONNECTION_TIMEOUT_MS);
+
+    const uri = uriList[uriIndex];
     this.websocket = new WebSocket(uri);
 
     this.websocket.onmessage = ({ data }) => {
-      this.handleMessage(data, props.onMessage);
+      this.handleMessage(data, onMessage);
     };
 
     this.websocket.onopen = () => {
-      props.setConnectionState({
+      clearTimeout(timeoutId);
+      setConnectionState({
         connectionState: ConnectionState.CONNECTED,
       });
     };
 
     this.websocket.onclose = () => {
-      props.setConnectionState({
+      clearTimeout(timeoutId);
+      setConnectionState({
         connectionState: ConnectionState.DISCONNECTED,
       });
     };
 
     this.websocket.onerror = () => {
+      clearTimeout(timeoutId);
       this.connect(uriIndex + 1);
     };
   }
@@ -94,7 +112,7 @@ class WebsocketConnection {
     reader.readAsArrayBuffer(data);
     reader.onloadend = () => {
       if (this.messageQueue === undefined) {
-        console.log("We don't have a message queue. This is bad.")
+        console.error('No message queue.');
         return;
       }
 

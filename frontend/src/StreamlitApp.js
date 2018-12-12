@@ -124,7 +124,10 @@ class StreamlitApp extends PureComponent {
           window.location.hostname, port, reportName);
 
       this.connection = new WebsocketConnection({
-        uriList: [uri],
+        uriList: [
+          //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
+          uri,
+        ],
         onMessage: this.handleMessage,
         setConnectionState: this.setConnectionState,
       });
