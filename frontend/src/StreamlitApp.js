@@ -61,7 +61,7 @@ class StreamlitApp extends PureComponent {
         type: 'text',
         text: {
           format: TextProto.Format.INFO,
-          body: 'Ready to receive data',
+          body: 'Connecting...',
         },
       }]),
       userSettings: {
