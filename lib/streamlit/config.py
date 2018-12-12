@@ -215,9 +215,6 @@ _create_option(
         ''',
     default_val=0)
 
-# TODO: In new config system, allow us to specify ranges
-# for numeric values, so anything outside that range is
-# considered invalid.
 _create_option(
     'proxy.reportExpirationSecs',
     description=(
@@ -259,15 +256,6 @@ _create_option(
     description='Watch for filesystem changes and rerun reports.',
     default_val=True)
 
-# NOTE: We should make this a computed option by bringing
-# util.get_external_ip into this function.
-_create_option(
-    'proxy.externalIP',
-    description='''
-        An address for the proxy which can be accessed on the public Internet.
-        ''',
-    default_val=None)
-
 _create_option(
     'proxy.enableCORS',
     description='''
@@ -298,7 +286,7 @@ _create_option(
     description='''
         Internet address of the proxy server that the browser should connect
         to. Can be IP address or DNS name.''',
-    default_val=None)
+    default_val='localhost')
 
 
 @_create_option('browser.proxyPort')
@@ -468,7 +456,7 @@ def _is_unset(option_name):
     return get_where_defined(option_name) == ConfigOption.DEFAULT_DEFINITION
 
 
-def _is_manually_set(option_name):
+def is_manually_set(option_name):
     return get_where_defined(option_name) != ConfigOption.DEFAULT_DEFINITION
 
 
@@ -514,10 +502,10 @@ def show_config():
                 # to complex config settings too.
                 pass
 
-            is_manually_set = (
+            option_is_manually_set = (
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION)
 
-            if is_manually_set:
+            if option_is_manually_set:
                 out.append(
                     f'# The value below was set in {option.where_defined}')
 
@@ -685,14 +673,14 @@ def _check_conflicts():
     # Sharing-related conflicts
 
     if get_option('global.sharingMode') == 's3':
-        assert _is_manually_set('s3.bucket'), (
+        assert is_manually_set('s3.bucket'), (
             'When global.sharingMode is set to "s3", '
             's3.bucket must also be set')
-        assert _is_manually_set('s3.bucket'), (
+        assert is_manually_set('s3.bucket'), (
             'For sharing via S3, s3.bucket must be set')
         both_are_set = (
-            _is_manually_set('s3.accessKeyId') and
-            _is_manually_set('s3.secretAccessKey'))
+            is_manually_set('s3.accessKeyId') and
+            is_manually_set('s3.secretAccessKey'))
         both_are_unset = (
             _is_unset('s3.accessKeyId') and
             _is_unset('s3.secretAccessKey'))
