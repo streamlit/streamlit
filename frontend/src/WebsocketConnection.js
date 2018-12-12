@@ -58,7 +58,7 @@ class WebsocketConnection {
     /**
      * Keep track of how many times we tried to connect.
      */
-    this.attemptNumber = 1;
+    this.attemptNumber = 0;
 
     this.connect(0);
   }
@@ -95,7 +95,7 @@ class WebsocketConnection {
         this.websocket.close();
         tryNext();
       }
-    }, CONNECTION_TIMEOUT_MS * this.attemptNumber);
+    }, CONNECTION_TIMEOUT_MS * (this.attemptNumber + 1));
 
     const uri = uriList[uriIndex];
     this.websocket = new WebSocket(uri);
