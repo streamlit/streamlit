@@ -170,7 +170,7 @@ class BrowserWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        process_runner.run_with_out_of_process_error_handler(
+        process_runner.run_handling_errors_in_subprocess(
             cmd, self._connection.cwd)
 
     @gen.coroutine

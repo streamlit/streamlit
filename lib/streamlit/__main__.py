@@ -41,7 +41,7 @@ def run(args):
 
     source_file_path = args[0]
     cmd = [sys.executable] + list(args)
-    process_runner.run_with_in_process_error_handler(cmd)
+    process_runner.run_handling_errors_in_this_process(cmd)
 
 
 def kill_proxy(*args):

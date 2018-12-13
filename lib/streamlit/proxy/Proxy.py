@@ -550,6 +550,6 @@ def _on_fs_event(observer, event):  # noqa: D401
     LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
-    process_runner.run_with_out_of_process_error_handler(
+    process_runner.run_handling_errors_in_subprocess(
         observer.command_line,
         cwd=observer.cwd)

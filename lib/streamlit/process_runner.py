@@ -38,7 +38,7 @@ _TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
 _EXCEPTION_LINE_RE = re.compile('([A-Z][A-Za-z0-9]+): (.*)')
 
 
-def run_with_out_of_process_error_handler(cmd_in, cwd=None):
+def run_handling_errors_in_subprocess(cmd_in, cwd=None):
     """Run cmd_in in subprocess that opens another subprocess and shows errors.
 
     Parameters
@@ -68,7 +68,7 @@ def run_with_out_of_process_error_handler(cmd_in, cwd=None):
     subprocess.Popen(cmd, cwd=cwd)
 
 
-def run_with_in_process_error_handler(cmd, cwd=None):
+def run_handling_errors_in_this_process(cmd, cwd=None):
     """Run cmd in a subprocess and show errors in Streamlit.
 
     This must be called on a separate process from the one that is running the
