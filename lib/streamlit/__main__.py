@@ -34,7 +34,7 @@ def help(args):
 
 def run(args):
     """Run a Python script, piping stderr to Streamlit."""
-    import streamlit.proxy.process_runner as process_runner
+    import streamlit.process_runner as process_runner
     import sys
 
     assert len(args) > 0, 'You must specify a file to run'
