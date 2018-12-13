@@ -41,8 +41,8 @@ _TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
 _EXCEPTION_LINE_RE = re.compile('([A-Z][A-Za-z0-9]+): (.*)')
 
 
-def run_outside_proxy_process(cmd_in, cwd=None):
-    """Open a subprocess that will call `streamlit run` on a script.
+def run_without_error_handler(cmd, cwd=None):
+    """Run cmd in a subprocess.
 
     Parameters
     ----------
@@ -52,9 +52,20 @@ def run_outside_proxy_process(cmd_in, cwd=None):
     cwd : str or None
         The current working directory for this process.
 
-    source_file_path : str or None
-        The full path to the script that is being executed. This is used so we
-        can extract the name of the report.
+    """
+    subprocess.Popen(cmd, cwd=cwd)
+
+
+def run_with_out_of_process_error_handler(cmd_in, cwd=None):
+    """Run cmd_in in subprocess that opens another subprocess and shows errors.
+
+    Parameters
+    ----------
+    cmd_in : str or sequence of str
+        See the args parameter of Python's subprocess.Popen for more info.
+
+    cwd : str or None
+        The current working directory for this process.
 
     """
     if compatibility.running_py3():
@@ -71,11 +82,12 @@ def run_outside_proxy_process(cmd_in, cwd=None):
 
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
 
-    _run_with_error_handler(cmd, cwd)
+    # Note: The error handler gets added by 'streamlit run'.
+    run_without_error_handler(cmd, cwd)
 
 
-def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
-    """Execute a command in a subprocess.
+def run_with_in_process_error_handler(cmd, cwd=None):
+    """Run cmd in a subprocess and show errors in Streamlit.
 
     This must be called on a separate process from the one that is running the
     Proxy.
@@ -88,29 +100,7 @@ def run_assuming_outside_proxy_process(cmd, cwd=None, source_file_path=None):
     cwd : str or None
         The current working directory for this process.
 
-    source_file_path : str or None
-        The full path to the script that is being executed. This is used so we
-        can extract the name of the report.
-
     """
-    _run_with_error_handler(cmd, cwd)
-
-
-def run_streamlit_command(cmd):
-    """Run a Streamlit command, like "help".
-
-    Parameters
-    ----------
-    cmd : str
-        The command to run. Example: "help", "kill_proxy", etc.
-
-    """
-    # For some reason, Strealit commands must be run on a Shell. But they're
-    # trustworthy, so we let them.
-    subprocess.Popen(f'streamlit {cmd}', shell=True)
-
-
-def _run_with_error_handler(cmd, cwd=None):
     process = subprocess.Popen(
             cmd,
             cwd=cwd,
@@ -153,6 +143,20 @@ def _run_with_error_handler(cmd, cwd=None):
             # let's not replace the report with the contents of stderr because
             # that would be annoying.
             pass
+
+
+def run_streamlit_command(cmd):
+    """Run a Streamlit command, like "help".
+
+    Parameters
+    ----------
+    cmd : str
+        The command to run. Example: "help", "kill_proxy", etc.
+
+    """
+    # For some reason, Strealit commands must be run on a Shell. But they're
+    # trustworthy, so we let them.
+    subprocess.Popen(f'streamlit {cmd}', shell=True)
 
 
 def _to_list_of_str(the_list):

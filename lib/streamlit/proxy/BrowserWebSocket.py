@@ -170,7 +170,8 @@ class BrowserWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        process_runner.run_outside_proxy_process(cmd, self._connection.cwd)
+        process_runner.run_with_out_of_process_error_handler(
+            cmd, self._connection.cwd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):

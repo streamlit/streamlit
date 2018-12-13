@@ -41,9 +41,7 @@ def run(args):
 
     source_file_path = args[0]
     cmd = [sys.executable] + list(args)
-    process_runner.run_assuming_outside_proxy_process(
-        cmd=cmd,
-        source_file_path=source_file_path)
+    process_runner.run_with_in_process_error_handler(cmd)
 
 
 def kill_proxy(*args):
