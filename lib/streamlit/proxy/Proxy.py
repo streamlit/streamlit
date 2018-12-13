@@ -34,7 +34,7 @@ from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import util
-from streamlit.proxy import process_runner
+from streamlit import process_runner
 from streamlit.proxy import proxy_util
 from streamlit.proxy.FSObserver import FSObserver
 from streamlit.proxy.storage.S3Storage import S3Storage as Storage
@@ -552,5 +552,4 @@ def _on_fs_event(observer, event):  # noqa: D401
 
     process_runner.run_with_out_of_process_error_handler(
         observer.command_line,
-        observer.cwd,
-        )
+        cwd=observer.cwd)

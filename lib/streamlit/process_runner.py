@@ -7,16 +7,13 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import os
 import subprocess
 import sys
 import shlex
 import re
 
 from streamlit import compatibility
-from streamlit import protobuf
 from streamlit import util
-from streamlit.DeltaConnection import DeltaConnection
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -39,21 +36,6 @@ _TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
 # RegEx that matches strings that look like "Foo: bar boz"
 # This RegEx is meant to be used in single-line strings.
 _EXCEPTION_LINE_RE = re.compile('([A-Z][A-Za-z0-9]+): (.*)')
-
-
-def run_without_error_handler(cmd, cwd=None):
-    """Run cmd in a subprocess.
-
-    Parameters
-    ----------
-    cmd : str or sequence of str
-        See the args parameter of Python's subprocess.Popen for more info.
-
-    cwd : str or None
-        The current working directory for this process.
-
-    """
-    subprocess.Popen(cmd, cwd=cwd)
 
 
 def run_with_out_of_process_error_handler(cmd_in, cwd=None):
@@ -80,10 +62,10 @@ def run_with_out_of_process_error_handler(cmd_in, cwd=None):
     else:
         cmd_list = _to_list_of_str(cmd_in)
 
+    # The error handler gets added by 'streamlit run'.
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
 
-    # Note: The error handler gets added by 'streamlit run'.
-    run_without_error_handler(cmd, cwd)
+    subprocess.Popen(cmd, cwd=cwd)
 
 
 def run_with_in_process_error_handler(cmd, cwd=None):
@@ -145,18 +127,19 @@ def run_with_in_process_error_handler(cmd, cwd=None):
             pass
 
 
-def run_streamlit_command(cmd):
-    """Run a Streamlit command, like "help".
+def run_python_module(module, *args):
+    """Run a Python module's main function in a subprocess.
 
     Parameters
     ----------
-    cmd : str
-        The command to run. Example: "help", "kill_proxy", etc.
+    module : str
+        The fully-qualified module name, like 'streamlit' or 'streamlit.proxy'.
+    *args : tuple of str
+        The arguments to pass when running the module, if any.
 
     """
-    # For some reason, Strealit commands must be run on a Shell. But they're
-    # trustworthy, so we let them.
-    subprocess.Popen(f'streamlit {cmd}', shell=True)
+    cmd = [sys.executable, '-m', module] + list(args)
+    subprocess.Popen(cmd)
 
 
 def _to_list_of_str(the_list):

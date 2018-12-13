@@ -9,7 +9,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import os
 import sys
 import threading
 import time
@@ -20,6 +19,7 @@ from tornado.websocket import websocket_connect
 
 from streamlit import config
 from streamlit import util
+from streamlit import process_runner
 from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 
 from streamlit.logger import get_logger
@@ -174,7 +174,7 @@ class Connection(object):
     def _launch_proxy(self):
         """Launch the proxy server."""
         wait_for_proxy_secs = config.get_option('client.waitForProxySecs')
-        os.system('python -m streamlit.proxy &')
+        process_runner.run_python_module('streamlit.proxy')
         LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
         yield gen.sleep(wait_for_proxy_secs)
 
