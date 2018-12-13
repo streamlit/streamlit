@@ -58,10 +58,13 @@ def url_is_from_allowed_origins(url):
         util.get_external_ip(),
     ]
 
+    s3_url = config.get_option('s3.url')
+
+    if s3_url is not None:
+        parsed = urllib.parse.urlparse(s3_url)
+        allowed_domains.append(parsed.hostname)
+
     if config.is_manually_set('browser.proxyAddress'):
         allowed_domains.append(config.get_option('browser.proxyAddress'))
-
-    if config.is_manually_set('client.proxyAddress'):
-        allowed_domains.append(config.get_option('client.proxyAddress'))
 
     return any(hostname == d for d in allowed_domains)
