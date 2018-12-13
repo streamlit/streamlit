@@ -19,7 +19,7 @@ from streamlit import util
 
 
 def url_is_from_allowed_origins(url):
-    """Returns True if URL is from allowed origins (for CORS purpose).
+    """Return True if URL is from allowed origins (for CORS purpose).
 
     Allowed origins:
     1. localhost
@@ -57,5 +57,11 @@ def url_is_from_allowed_origins(url):
         util.get_internal_ip(),
         util.get_external_ip(),
     ]
+
+    if config.is_manually_set('browser.proxyAddress'):
+        allowed_domains.append(config.get_option('browser.proxyAddress'))
+
+    if config.is_manually_set('client.proxyAddress'):
+        allowed_domains.append(config.get_option('client.proxyAddress'))
 
     return any(hostname == d for d in allowed_domains)
