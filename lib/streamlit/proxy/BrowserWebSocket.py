@@ -8,8 +8,6 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import urllib
-
 from tornado import gen
 from tornado.concurrent import futures
 from tornado.concurrent import run_on_executor

@@ -14,6 +14,7 @@ import random
 
 from streamlit import util
 
+
 class UtilTest(unittest.TestCase):
     """Test Streamlit utility functions."""
 

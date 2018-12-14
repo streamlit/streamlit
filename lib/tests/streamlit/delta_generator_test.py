@@ -14,8 +14,8 @@ import unittest
 
 from streamlit.DeltaGenerator import DeltaGenerator, _export
 from streamlit.ReportQueue import ReportQueue
-from streamlit import compatibility
 from streamlit import protobuf
+
 
 def unwrap(dg, name):
     """Return unwrapped method 'name' from class 'dg'."""
@@ -26,6 +26,7 @@ def unwrap(dg, name):
     except AttributeError:
         # Python 3 way. running_py3()
         return method.__wrapped__
+
 
 class DeltaGeneratorDecoratorTest(unittest.TestCase):
     """Test Decorators."""

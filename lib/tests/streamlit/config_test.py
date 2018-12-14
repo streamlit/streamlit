@@ -22,7 +22,7 @@ class ConfigTest(unittest.TestCase):
     def tearDown(self):
         try:
             del os.environ['TEST_ENV_VAR']
-        except:
+        except Exception:
             pass
         config._delete_option('_test.tomlTest')
 

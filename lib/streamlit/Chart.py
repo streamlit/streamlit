@@ -56,15 +56,15 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 from streamlit import data_frame_proto
+from streamlit import case_converters
+from streamlit import chart_config
+from streamlit import DictBuilder as DictBuilderModule
 from streamlit.ChartComponent import ChartComponent
-from streamlit.DictBuilder import ForEachColumn, ValueCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME, INDEX_COLUMN_DESIGNATOR
-from streamlit.caseconverters import to_upper_camel_case, to_lower_camel_case, to_snake_case
-from streamlit.chartconfig import CHART_TYPES, CHART_COMPONENTS, CHART_TYPES_SNAKE, REQUIRED_COMPONENTS
+
 from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 current_module = __import__(__name__)
-
-LOGGER = get_logger(__name__)
 
 
 class Chart(object):
@@ -96,7 +96,7 @@ class Chart(object):
 
         """
         import pandas as pd
-        assert type in CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
+        assert type in chart_config.CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
         self._type = type
         self._width = width
@@ -119,7 +119,7 @@ class Chart(object):
 
     def marshall(self, proto_chart):
         """Load this chart data into that proto_chart."""
-        proto_chart.type = to_upper_camel_case(self._type)
+        proto_chart.type = case_converters.to_upper_camel_case(self._type)
         data_frame_proto.marshall_data_frame(self._data, proto_chart.data)
         proto_chart.width = self._width
         proto_chart.height = self._height
@@ -132,7 +132,7 @@ class Chart(object):
 
         for (key, value) in self._props:
             proto_prop = proto_chart.props.add()
-            proto_prop.key = to_lower_camel_case(key)
+            proto_prop.key = case_converters.to_lower_camel_case(key)
             proto_prop.value = value
 
     def _append_missing_data_components(self):
@@ -144,7 +144,8 @@ class Chart(object):
         (specified via ForEachColumn), and their children can use special
         identifiers such as ColumnAtCurrentIndex, and ValueCycler.
         """
-        required_components = REQUIRED_COMPONENTS.get(self._type, None)
+        required_components = chart_config.REQUIRED_COMPONENTS.get(
+            self._type, None)
 
         if required_components is None:
             return
@@ -153,7 +154,7 @@ class Chart(object):
 
         for required_component in required_components:
 
-            if isinstance(required_component, ForEachColumn):
+            if isinstance(required_component, DictBuilderModule.ForEachColumn):
                 numRepeats = len(self._data.columns)
                 comp_name, comp_value = required_component.content_to_repeat
             else:
@@ -188,16 +189,16 @@ class Chart(object):
             of the current column.
 
         """
-        if value == CURRENT_COLUMN_NAME:
+        if value == DictBuilderModule.CURRENT_COLUMN_NAME:
             i = currCycle
             if i >= len(self._data.columns):
                 raise IndexError('Index {} out of bounds'.format(i))
             return self._data.columns[i]
 
-        elif value == INDEX_COLUMN_NAME:
-            return INDEX_COLUMN_DESIGNATOR
+        elif value == DictBuilderModule.INDEX_COLUMN_NAME:
+            return DictBuilderModule.INDEX_COLUMN_DESIGNATOR
 
-        elif isinstance(value, ValueCycler):
+        elif isinstance(value, DictBuilderModule.ValueCycler):
             return value.get(currCycle)
 
         else:
@@ -241,8 +242,9 @@ def register_component(component_name, implemented):
 
 
 # Add methods to Chart class, for each component in CHART_COMPONENTS.
-for component_name, implemented in CHART_COMPONENTS.items():
-    register_component(to_snake_case(component_name), implemented)
+for component_name, implemented in chart_config.CHART_COMPONENTS.items():
+    register_component(
+        case_converters.to_snake_case(component_name), implemented)
 
 
 def register_type_builder(chart_type):
@@ -257,7 +259,7 @@ def register_type_builder(chart_type):
         A string with the upper-camel-case name of the chart type to add.
 
     """
-    chart_type_snake = to_snake_case(chart_type)
+    chart_type_snake = case_converters.to_snake_case(chart_type)
 
     def type_builder(data, **kwargs):
         kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
@@ -268,5 +270,5 @@ def register_type_builder(chart_type):
 
 # Add syntax-sugar builder functions to this module, to allow us to do things
 # like FooChart(data) instead of Chart(data, 'foo_chart').
-for chart_type in CHART_TYPES:
+for chart_type in chart_config.CHART_TYPES:
     register_type_builder(chart_type)

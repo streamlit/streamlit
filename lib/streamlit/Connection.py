@@ -60,6 +60,7 @@ class Connection(object):
             Function to call when the connection is made.
         on_cleanup : callable
             Function to call when the connection is destroyed.
+
         """
         # This is the event loop to talk with the proxy.
         self._loop = IOLoop(make_current=False)
