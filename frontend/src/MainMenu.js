@@ -61,7 +61,7 @@ class MainMenu extends Component {
           <DropdownItem
               disabled={!this.props.isProxyConnected}
               onClick={this.props.rerunCallback}>
-            <span>Edit Command</span>
+            <span>Edit command</span>
             <span className="shortcut">&#x21e7;R</span>
           </DropdownItem>
 
@@ -88,7 +88,7 @@ class MainMenu extends Component {
           <DropdownItem
               disabled={this.props.isHelpPage || !this.props.isProxyConnected}
               onClick={this.props.helpCallback}>
-            Quick Help
+            Quick help
           </DropdownItem>
 
         </DropdownMenu>
