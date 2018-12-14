@@ -58,7 +58,7 @@ setup_2_3_shims(globals())
 from streamlit import data_frame_proto
 from streamlit import case_converters
 from streamlit import chart_config
-from streamlit import DictBuilder as DictBuilderModule
+from streamlit import dict_builder
 from streamlit.ChartComponent import ChartComponent
 
 from streamlit.logger import get_logger
@@ -154,7 +154,7 @@ class Chart(object):
 
         for required_component in required_components:
 
-            if isinstance(required_component, DictBuilderModule.ForEachColumn):
+            if isinstance(required_component, dict_builder.ForEachColumn):
                 numRepeats = len(self._data.columns)
                 comp_name, comp_value = required_component.content_to_repeat
             else:
@@ -189,16 +189,16 @@ class Chart(object):
             of the current column.
 
         """
-        if value == DictBuilderModule.CURRENT_COLUMN_NAME:
+        if value == dict_builder.CURRENT_COLUMN_NAME:
             i = currCycle
             if i >= len(self._data.columns):
                 raise IndexError('Index {} out of bounds'.format(i))
             return self._data.columns[i]
 
-        elif value == DictBuilderModule.INDEX_COLUMN_NAME:
-            return DictBuilderModule.INDEX_COLUMN_DESIGNATOR
+        elif value == dict_builder.INDEX_COLUMN_NAME:
+            return dict_builder.INDEX_COLUMN_DESIGNATOR
 
-        elif isinstance(value, DictBuilderModule.ValueCycler):
+        elif isinstance(value, dict_builder.ValueCycler):
             return value.get(currCycle)
 
         else:
