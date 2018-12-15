@@ -34,7 +34,13 @@ class Table extends PureComponent {
         <div className="streamlit-table">
           <ReactTable className={hasNoData ? 'empty-table' : ''}>
             <thead>
-              <TableRows df={df} header />
+              <TableRows
+                df={df}
+                header={true}
+                headerRows={headerRows}
+                rows={rows}
+                cols={cols}
+              />
             </thead>
             <tbody>
               { hasNoData ?
@@ -71,8 +77,8 @@ class Table extends PureComponent {
  * df         - The dataFrame to display.
  * header     - Whether to display the header.
  * headerRows - Number of rows in the header.
- * rows       - number of rows in the table (header + data).
- * cols       - numver of colums in the table.
+ * rows       - Number of rows in the table (header + data).
+ * cols       - Number of colums in the table.
  */
 function TableRows({df, header, headerRows, rows, cols}) {
   const startRow = header ? 0 : headerRows;
