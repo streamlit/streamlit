@@ -149,48 +149,23 @@ class ProxyConnection(object):
         """
         self._browser_queues.remove(queue)
 
-    def get_url_for_client_webbrowser(self):
-        """Get URL for this report, for access from client machine's browser.
-
-        Returns
-        -------
-        str
-            The URL.
-
-        """
-        return _get_report_url(
-            config.get_option('client.proxyAddress'), self.name)
-
-    def get_external_url(self):
-        """Get the URL for this report, for access from outside this LAN.
-
-        Returns
-        -------
-        str
-            The URL.
-
-        """
-        external_ip = config.get_option('proxy.externalIP')
-
-        if external_ip:
-            LOGGER.debug(f'proxy.externalIP set to {external_ip}')
-        else:
-            LOGGER.debug('proxy.externalIP not set, attempting to autodetect IP')
-            external_ip = util.get_external_ip()
-
-        return _get_report_url(external_ip, self.name)
-
-    def get_internal_url(self):
+    def get_url(self, proxy_address):
         """Get the URL for this report, for access from inside this LAN.
 
+        Parameters
+        ----------
+        proxy_address : str
+            The IP or DNS address to use for the proxy.
+
         Returns
         -------
         str
             The URL.
 
         """
-        internal_ip = util.get_internal_ip()
-        return _get_report_url(internal_ip, self.name)
+        port = _get_browser_address_bar_port()
+        quoted_name = urllib.parse.quote_plus(self.name)
+        return f'http://{proxy_address}:{port}/?name={quoted_name}'
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -294,29 +269,6 @@ class ProxyConnection(object):
 class _Status(object):
     DONE = 'done'
     RUNNING = 'running'
-
-
-def _get_report_url(host, name):
-    """Return the URL of report defined by (host, name).
-
-    Parameters
-    ----------
-    host : str
-        The hostname or IP address of the current machine.
-
-    name : str
-        The name of the report.
-
-    Returns
-    -------
-    string
-        The report's URL.
-
-    """
-    port = _get_browser_address_bar_port()
-
-    quoted_name = urllib.parse.quote_plus(name)
-    return 'http://{}:{}/?name={}'.format(host, port, quoted_name)
 
 
 def _get_browser_address_bar_port():

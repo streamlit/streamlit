@@ -64,7 +64,7 @@ class StreamlitApp extends PureComponent {
         type: 'text',
         text: {
           format: TextProto.Format.INFO,
-          body: 'Ready to receive data',
+          body: 'Connecting...',
         },
       }]),
       userSettings: {
@@ -127,7 +127,11 @@ class StreamlitApp extends PureComponent {
           window.location.hostname, port, reportName);
 
       this.connection = new WebsocketConnection({
-        uriList: [uri],
+        uriList: [
+          //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
+          //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
+          uri,
+        ],
         onMessage: this.handleMessage,
         setConnectionState: this.setConnectionState,
       });

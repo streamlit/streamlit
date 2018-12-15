@@ -34,7 +34,7 @@ from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import util
-from streamlit.proxy import process_runner
+from streamlit import process_runner
 from streamlit.proxy import proxy_util
 from streamlit.proxy.FSObserver import FSObserver
 from streamlit.proxy.storage.S3Storage import S3Storage as Storage
@@ -168,9 +168,13 @@ class Proxy(object):
 
         if open_new_browser_connection:
             if config.get_option('proxy.isRemote'):
-                _print_urls(connection, self._auto_close_delay_secs)
+                _print_urls(
+                    connection,
+                    self._auto_close_delay_secs + self._report_expiration_secs)
             else:
-                util.open_browser(connection.get_url_for_client_webbrowser())
+                url = connection.get_url(
+                    config.get_option('browser.proxyAddress'))
+                util.open_browser(url)
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -507,25 +511,33 @@ class _HealthHandler(web.RequestHandler):
         return proxy_util.url_is_from_allowed_origins(origin)
 
 
-def _print_urls(connection, autoCloseDelaySecs):
-    external_url = connection.get_external_url()
-    internal_url = connection.get_internal_url()
-
-    if autoCloseDelaySecs != float('inf'):
-        timeout_msg = f'within {int(autoCloseDelaySecs)} seconds'
+def _print_urls(connection, waitSecs):
+    if waitSecs != float('inf'):
+        timeout_msg = f'within {waitSecs} seconds'
     else:
         timeout_msg = ''
 
-    if config.get_option('proxy.isRemote'):
-        LOGGER.debug(
-            f'External URL: {external_url}, Internal URL: {internal_url}')
+    if config.is_manually_set('browser.proxyAddress'):
+        url = connection.get_url(
+            config.get_option('browser.proxyAddress'))
+
+        LOGGER.info(textwrap.dedent(f'''
+            ════════════════════════════════════════════════════════════
+            Open the URL below in your browser {timeout_msg}
+            REPORT URL: {url}
+            ════════════════════════════════════════════════════════════
+        '''))
+
     else:
-        print(textwrap.dedent(f'''
-            =============================================================
+        external_url = connection.get_url(util.get_external_ip())
+        internal_url = connection.get_url(util.get_internal_ip())
+
+        LOGGER.info(textwrap.dedent(f'''
+            ════════════════════════════════════════════════════════════
             Open one of the URLs below in your browser {timeout_msg}
-            External URL: {external_url}
-            Internal URL: {internal_url}
-            =============================================================
+            EXTERNAL REPORT URL: {external_url}
+            INTERNAL REPORT URL: {internal_url}
+            ════════════════════════════════════════════════════════════
         '''))
 
 
@@ -538,7 +550,6 @@ def _on_fs_event(observer, event):  # noqa: D401
     LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
-    process_runner.run_outside_proxy_process(
+    process_runner.run_handling_errors_in_subprocess(
         observer.command_line,
-        observer.cwd,
-        )
+        cwd=observer.cwd)

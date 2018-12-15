@@ -19,8 +19,8 @@ from tornado.websocket import WebSocketHandler
 
 from streamlit import config
 from streamlit import protobuf
+from streamlit import process_runner
 from streamlit.proxy import Proxy
-from streamlit.proxy import process_runner
 from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
@@ -135,7 +135,7 @@ class BrowserWebSocket(WebSocketHandler):
         msg = protobuf.ForwardMsg()
 
         msg.new_connection.sharing_enabled = (
-            config.get_option('s3.sharingEnabled'))
+            config.get_option('global.sharingMode') != 'off')
         LOGGER.debug(
             'New browser connection: sharing_enabled=%s' %
             msg.new_connection.sharing_enabled)
@@ -158,7 +158,7 @@ class BrowserWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'help':
                 LOGGER.debug('Received command to display help.')
-                process_runner.run_streamlit_command('help')
+                process_runner.run_python_module('streamlit', 'help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
@@ -170,7 +170,8 @@ class BrowserWebSocket(WebSocketHandler):
 
     @run_on_executor
     def _run(self, cmd):
-        process_runner.run_outside_proxy_process(cmd, self._connection.cwd)
+        process_runner.run_handling_errors_in_subprocess(
+            cmd, self._connection.cwd)
 
     @gen.coroutine
     def _save_cloud(self, connection, ws):

@@ -113,7 +113,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.21.0`.
+**Note:** The current version is `0.22.1`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (Like, 3 lines above :) )
