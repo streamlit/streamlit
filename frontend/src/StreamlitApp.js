@@ -175,7 +175,7 @@ class StreamlitApp extends PureComponent {
         this.openDialog({ progress, type: 'uploadProgress' });
       },
       reportUploaded: (uploadUrl) => {
-        this.openDialog({ uploadUrl, type: 'uploaded' });
+        this.openDialog({ url: uploadUrl, type: 'uploaded' });
       },
     });
   }
