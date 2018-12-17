@@ -3,9 +3,25 @@ ARG PYTHON_VERSION=2.7
 #######################################################################
 # Frontend image
 #######################################################################
-# We need to "mount" the frontend image so we can extract the built
-# static contents and include in the proxy.
-FROM st/frontend as frontend
+FROM node:carbon-slim as frontend
+
+# frontend/.dockerignore is what ignores node_modules
+COPY frontend/. /frontend/
+COPY protobuf/. /protobuf/
+
+WORKDIR /frontend
+
+# Install packages
+RUN npm install
+
+# Create protobuf.js
+RUN ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./src/protobuf.js
+
+# Build static content which puts it into frontend/build
+RUN npm run build
+
+# Get rid of map files.
+RUN find /frontend -type 'f' -iname '*.map' -exec rm -f {} \;
 
 #######################################################################
 # Proxy build
@@ -25,7 +41,7 @@ COPY protobuf/. /protobuf/
 RUN protoc --proto_path=/protobuf /protobuf/*.proto --python_out=/st/streamlit/protobuf
 
 # Copy the frontend static content from the frontend image.
-COPY --from=frontend /frontend/. /st/streamlit/static/
+COPY --from=frontend /frontend/build/. /st/streamlit/static/
 
 WORKDIR /st
 
@@ -43,8 +59,7 @@ ENV PYTHONUNBUFFERED 1
 # dependencies compiles something so thats why its there.  This image
 # size is not ideal.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    apt-utils apt-transport-https curl ca-certificates \
-    build-essential locales
+    build-essential
 
 COPY --from=build /st/dist/streamlit*.whl /st/
 COPY lib/entrypoint.sh /
