@@ -34,29 +34,29 @@ import VegaLiteChart from './elements/VegaLiteChart';
 import Video from './elements/Video';
 
 // Other local imports.
-import MainMenu from './MainMenu';
 import ConnectionState from './ConnectionState';
 import ConnectionStatus from './ConnectionStatus';
-import WebsocketConnection from './WebsocketConnection';
+import LoginBox from './LoginBox';
+import MainMenu from './MainMenu';
+import Resolver from './Resolver';
 import StaticConnection from './StaticConnection';
 import StreamlitDialog from './StreamlitDialog';
+import WebsocketConnection from './WebsocketConnection';
 
+import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
 import { ForwardMsg, Text as TextProto } from './protobuf';
-import { FETCH_PARAMS, IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
+import { getObject, configureCredentials } from './s3';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
-import AWS from 'aws-sdk';
-import { GoogleLogin } from 'react-google-login';
-
 import './StreamlitApp.css';
+
 
 class StreamlitApp extends PureComponent {
   constructor(props) {
     super(props);
 
-    // Initially the state reflects that no data has been received.
     this.state = {
       reportId: '<null>',
       reportName: null,
@@ -70,90 +70,51 @@ class StreamlitApp extends PureComponent {
       userSettings: {
         wideMode: false,
       },
+      // XXX TODO: Separate this into state.showLoginBox and
+      // this.userLoginResolver.
+      userLoginResolver: null,
     };
 
     // Bind event handlers.
-    this.handleReconnect = this.handleReconnect.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
-    this.saveSettings = this.saveSettings.bind(this);
-    this.setConnectionState = this.setConnectionState.bind(this);
-    this.isProxyConnected = this.isProxyConnected.bind(this);
-    this.setReportName = this.setReportName.bind(this);
-    this.saveReport = this.saveReport.bind(this);
     this.displayHelp = this.displayHelp.bind(this);
+    this.handleMessage = this.handleMessage.bind(this);
+    this.isProxyConnected = this.isProxyConnected.bind(this);
+    this.onLogInError = this.onLogInError.bind(this);
+    this.onLogInSuccess = this.onLogInSuccess.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
+    this.saveReport = this.saveReport.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
+    this.setConnectionState = this.setConnectionState.bind(this);
+    this.setReportName = this.setReportName.bind(this);
   }
 
-  /**
-   * Global keyboard shortcuts.
-   */
-  hot_keys = {
-    // The r key reruns the script.
-    'r': {
-      priority: 1,
-      handler: () => this.rerunScript(),
-    },
-
-    // The shift+r key opens the rerun script dialog.
-    'shift+r': {
-      priority: 1,
-      handler: () => this.openRerunScriptDialog(),
-    },
-
-    // The enter key runs the "default action" of the dialog.
-    'enter': {
-      priority: 1,
-      handler: () => {
-        if (this.state.dialog && this.state.dialog.defaultAction)
-          this.state.dialog.defaultAction();
-      },
-    }
-  }
-
-  async componentDidMount() {
+  componentDidMount() {
     const { query } = url.parse(window.location.href, true);
-    if (query.name !== undefined) {
-      const reportName = query.name;
+    const reportName = query.name;
+    const reportId = query.id;
+
+    if (reportName !== undefined) {
       this.setReportName(reportName);
+      this.connectBasedOnWindowUrl(reportName);
 
-      // If dev, always connect to 8501, since window.location.port is the Node
-      // server's port 3000.
-      // If changed, also change config.py
-      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
+    } else if (reportId !== undefined) {
+      try {
+        this.connectBasedOnManifest(reportId);
+      } catch (err) {
+        this.setConnectionState({
+          connectionState: ConnectionState.ERROR,
+          errMsg: err.message,
+        });
+      }
 
-      const uri = getWsUrl(
-          window.location.hostname, port, reportName);
-
-      this.connection = new WebsocketConnection({
-        uriList: [
-          //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
-          //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
-          uri,
-        ],
-        onMessage: this.handleMessage,
-        setConnectionState: this.setConnectionState,
-      });
-    } else if (query.id !== undefined) {
-      this.connection = await this.getAppropriateConnection(query.id);
     } else {
-      this.showSingleTextElement(
-        'URL must contain either a report name or an ID.',
-        TextProto.Format.ERROR,
-      );
+      this.setConnectionState({
+        connectionState: ConnectionState.ERROR,
+        errMsg: 'URL must contain either a report name or an ID.',
+      });
     }
-  }
-
-  componentWillUnmount() {
-  }
-
-  /**
-   * Callback when we establish a websocket connection.
-   */
-  handleReconnect() {
-    // Initially the state reflects that no data has been received.
-    this.showSingleTextElement('Established connection.', TextProto.Format.WARNING);
   }
 
   /**
@@ -213,8 +174,8 @@ class StreamlitApp extends PureComponent {
       uploadReportProgress: (progress) => {
         this.openDialog({ progress, type: 'uploadProgress' });
       },
-      reportUploaded: (url) => {
-        this.openDialog({ url, type: 'uploaded' })
+      reportUploaded: (uploadUrl) => {
+        this.openDialog({ uploadUrl, type: 'uploaded' });
       },
     });
   }
@@ -255,7 +216,7 @@ class StreamlitApp extends PureComponent {
         dispatchOneOf(delta, 'type', {
           newElement: newElement => newElement.set('reportId', reportId),
           addRows: newRows => addRows(element, newRows),
-      })),
+        })),
     }));
   }
 
@@ -263,17 +224,17 @@ class StreamlitApp extends PureComponent {
    * Empties out all elements whose reportIds are no longer current.
    */
   clearOldElements() {
-    this.setState(({elements, reportId}) => ({
+    this.setState(({ elements, reportId }) => ({
       elements: elements.map((elt) => {
-            if (elt.get('reportId') === reportId) {
-              return elt;
-            }
-            return fromJS({
-              reportId,
-              empty: { unused: true },
-              type: 'empty',
-            });
-          }),
+        if (elt.get('reportId') === reportId) {
+          return elt;
+        }
+        return fromJS({
+          reportId,
+          empty: { unused: true },
+          type: 'empty',
+        });
+      }),
     }));
   }
 
@@ -289,12 +250,12 @@ class StreamlitApp extends PureComponent {
       });
     } else {
       this.openDialog({
-        type: "warning",
+        type: 'warning',
         msg: (
           <div>
-            You do not have Amazon S3 or Google GCS sharing configured.
+            You do not have sharing configured.
             Please contact&nbsp;
-              <a href="mailto:hello@streamlit.io">Streamlit Support</a>
+            <a href="mailto:hello@streamlit.io">Streamlit Support</a>
             &nbsp;to setup sharing.
           </div>
         ),
@@ -308,9 +269,9 @@ class StreamlitApp extends PureComponent {
   openRerunScriptDialog() {
     if (this.isProxyConnected()) {
       this.openDialog({
-        type: "rerunScript",
+        type: 'rerunScript',
         getCommandLine: (() => this.state.commandLine),
-        setCommandLine: ((commandLine) => this.setState({commandLine})),
+        setCommandLine: (commandLine => this.setState({ commandLine })),
         rerunCallback: this.rerunScript,
 
         // This will be called if enter is pressed.
@@ -330,7 +291,7 @@ class StreamlitApp extends PureComponent {
       trackEventRemotely('rerunScript', 'newInteraction');
       this.sendBackMsg({
         type: 'rerunScript',
-        rerunScript: this.state.commandLine
+        rerunScript: this.state.commandLine,
       });
     } else {
       console.warn('Cannot rerun script when proxy is disconnected.');
@@ -344,7 +305,7 @@ class StreamlitApp extends PureComponent {
     trackEventRemotely('displayHelp', 'newInteraction');
     this.sendBackMsg({
       type: 'help',
-      help: true
+      help: true,
     });
   }
 
@@ -366,10 +327,11 @@ class StreamlitApp extends PureComponent {
    * Sets the connection state to given value defined in ConnectionStatus.js.
    * errMsg is an optional error message to display on the screen.
    */
-  setConnectionState({connectionState, errMsg}) {
-    this.setState({connectionState: connectionState});
-    if (errMsg)
+  setConnectionState({ connectionState, errMsg }) {
+    this.setState({ connectionState: connectionState });
+    if (errMsg) {
       this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
+    }
   }
 
   /**
@@ -386,8 +348,8 @@ class StreamlitApp extends PureComponent {
    * Sets the reportName in state and upates the title bar.
    */
   setReportName(reportName) {
-    document.title = `${reportName} (Streamlit)`
-    this.setState({reportName});
+    document.title = `${reportName} · Streamlit`;
+    this.setState({ reportName });
   }
 
   render() {
@@ -397,12 +359,6 @@ class StreamlitApp extends PureComponent {
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
           </div>
-          <GoogleLogin
-           clientId="121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com"
-           buttonText="Login"
-           onSuccess={onSignIn}
-           onFailure={responseGoogle}
-          />
           <ConnectionStatus connectionState={this.state.connectionState} />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
@@ -424,14 +380,24 @@ class StreamlitApp extends PureComponent {
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
-              <AutoSizer className="main">
-                { ({width}) => this.renderElements(width) }
-              </AutoSizer>
+              {this.state.userLoginResolver !== null ?
+                <LoginBox
+                  onSuccess={this.onLogInSuccess}
+                  onFailure={this.onLogInError}
+                />
+              :
+                <AutoSizer className="main">
+                  { ({ width }) => this.renderElements(width) }
+                </AutoSizer>
+              }
             </Col>
           </Row>
 
           <StreamlitDialog
-            dialogProps={{...this.state.dialog, onClose: this.closeDialog}}
+            dialogProps={{
+              ...this.state.dialog,
+              onClose: this.closeDialog,
+            }}
           />
 
         </Container>
@@ -444,27 +410,27 @@ class StreamlitApp extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
-          audio: (audio) => <Audio audio={audio} width={width}/>,
-          balloons: (balloons) => <Balloons balloons={balloons}/>,
-          chart: (chart) => <Chart chart={chart} width={width}/>,
-          dataFrame: (df) => <DataFrame df={df} width={width}/>,
-          deckGlChart: (el) => <DeckGlChart element={el} width={width}/>,
-          docString: (doc) => <DocString element={doc} width={width}/>,
-          empty: (empty) => undefined,
-          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
-          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          map: (map) => <Map map={map} width={width}/>,
-          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
-          table: (df) => <Table df={df} width={width}/>,
-          text: (text) => <Text element={text} width={width}/>,
-          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
-          video: (video) => <Video video={video} width={width}/>,
+          audio: audio => <Audio audio={audio} width={width} />,
+          balloons: balloons => <Balloons balloons={balloons} />,
+          chart: chart => <Chart chart={chart} width={width} />,
+          dataFrame: df => <DataFrame df={df} width={width} />,
+          deckGlChart: el => <DeckGlChart element={el} width={width} />,
+          docString: doc => <DocString element={doc} width={width} />,
+          empty: empty => undefined,
+          exception: exc => <ExceptionElement element={exc} width={width} />,
+          imgs: imgs => <ImageList imgs={imgs} width={width} />,
+          map: map => <Map map={map} width={width} />,
+          progress: p => <Progress value={p.get('value')} style={{width}} />,
+          table: df => <Table df={df} width={width} />,
+          text: text => <Text element={text} width={width} />,
+          vegaLiteChart: chart => <VegaLiteChart chart={chart} width={width} />,
+          video: video => <Video video={video} width={width} />,
         });
       } catch (err) {
-        return <Alert color="warning" style={{width}}>{err.message}</Alert>;
+        return <Alert color="warning" style={{ width }}>{err.message}</Alert>;
       }
     }).push(
-      <div style={{width}} className="footer"/>
+      <div style={{ width }} className="footer" />
     ).flatMap((element, indx) => {
       if (element) {
         return [<div className="element-container" key={indx}>{element}</div>];
@@ -474,52 +440,123 @@ class StreamlitApp extends PureComponent {
     });
   }
 
-  async getAppropriateConnection(reportId) {
-    const manifestUri = `reports/${reportId}/manifest.json`;
+  connectBasedOnWindowUrl(reportName) {
+    // If dev, always connect to 8501, since window.location.port is the Node
+    // server's port 3000.
+    // If changed, also change config.py
+    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
+    const uri = getWsUrl(window.location.hostname, port, reportName);
 
-    let manifestResponse;
-    let manifest;
+    this.connection = new WebsocketConnection({
+      uriList: [
+        //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
+        //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
+        uri,
+      ],
+      onMessage: this.handleMessage,
+      setConnectionState: this.setConnectionState,
+    });
+  }
 
-    try {
-      manifestResponse = await fetch(manifestUri, FETCH_PARAMS);
-      manifest = await manifestResponse.json();
-    } catch (error) {
-      this.setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: `Unable to find or parse report with ID "${reportId}": ${error}`
-      });
-    }
+  /**
+   * Opens either a static connection or a websocket connection, based on what
+   * the manifest says.
+   */
+  async connectBasedOnManifest(reportId) {
+    const manifest = await this.fetchManifestAndHandleErrors(reportId);
 
     const {
       name, proxyStatus, configuredProxyAddress, internalProxyIP,
-      externalProxyIP, proxyPort
+      externalProxyIP, proxyPort,
     } = manifest;
 
-    // If the proxy is running redirect immediately to proxy.
+    // If the proxy is running, connect to proxy websocket...
     if (proxyStatus === 'running') {
-
       const uriList = configuredProxyAddress ?
-        [ getWsUrl(configuredProxyAddress, proxyPort, name) ] :
+        [getWsUrl(configuredProxyAddress, proxyPort, name)] :
         [
           getWsUrl(externalProxyIP, proxyPort, name),
           getWsUrl(internalProxyIP, proxyPort, name),
         ];
 
-      return new WebsocketConnection({
+      this.connection = new WebsocketConnection({
         uriList,
         onMessage: this.handleMessage,
         setConnectionState: this.setConnectionState,
       });
+
+    // ...otherwise, connect to S3.
+    } else {
+      this.connection = new StaticConnection({
+        manifest,
+        reportId,
+        onMessage: this.handleMessage,
+        setConnectionState: this.setConnectionState,
+        setReportName: this.setReportName,
+      });
+    }
+  }
+
+  async fetchManifestAndHandleErrors(reportId) {
+    let manifest;
+    let loginRequired = false;
+
+    try {
+      manifest = await fetchManifest(reportId);
+    } catch (err) {
+      if (err.message === 'PermissionError') {
+        loginRequired = true;
+      } else {
+        throw err;
+      }
     }
 
-    return new StaticConnection({
-      manifest,
-      reportId,
-      onMessage: this.handleMessage,
-      setConnectionState: this.setConnectionState,
-      setReportName: this.setReportName,
-    });
+    if (loginRequired) {
+      const idToken = await this.getUserLogin();
+      await configureCredentials(idToken);
+      manifest = await fetchManifest(reportId);
+    }
+
+    if (!manifest) {
+      throw new Error(`Unable to fetch report manifest. Unknown error.`);
+    }
+
+    return manifest;
   }
+
+  async getUserLogin() {
+    const userLoginResolver = new Resolver();
+    this.setState({ userLoginResolver });
+
+    const idToken = await userLoginResolver.promise;
+    this.setState({ userLoginResolver: null });
+
+    return idToken;
+  }
+
+  onLogInSuccess(googleUser) {
+    const authResult = googleUser.getAuthResponse();
+
+    if (authResult['access_token']) {
+      this.state.userLoginResolver.resolve(authResult['id_token']);
+    } else {
+      this.state.userLoginResolver.reject('Error signing in.');
+    }
+  }
+
+  onLogInError(response) {
+    this.state.userLoginResolver.reject(`Error signing in. ${response}`);
+  }
+}
+
+
+async function fetchManifest(reportId) {
+  const { hostname, pathname } = url.parse(window.location.href, true);
+  const bucket = hostname;
+  const version = pathname.split('/')[1];
+  const manifestKey = `${version}/reports/${reportId}/manifest.json`;
+  const data = await getObject({ Bucket: bucket, Key: manifestKey });
+  return data.json();
 }
 
 
@@ -527,51 +564,5 @@ function getWsUrl(host, port, reportName) {
   return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
 }
 
-function onSignIn(googleUser) {
-  let authResult = googleUser.getAuthResponse();
-
-  if (authResult['access_token']) {
-    // adding google access token to Cognito credentials login map
-    AWS.config.region = 'us-west-2',
-    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-      IdentityPoolId: 'us-west-2:5fe7b884-1665-4a48-a20f-db5d719e02a8',
-      Logins: {
-        'accounts.google.com': authResult['id_token']
-      }
-    });
-
-    // obtain credentials
-    AWS.config.credentials.get((err) => {
-      if (!err) {
-        const { hostname, pathname, query } = url.parse(window.location.href, true);
-
-        const bucket = hostname
-        const version = pathname.split('/')[1];
-
-        const manifestKey = `${version}/reports/${query.id}/manifest.json`;
-
-        var s3 = new AWS.S3();
-
-        s3.getObject({Bucket: bucket, Key: manifestKey}, function(err, data) {
-          if (err)
-            console.log(err, err.stack);
-          else {
-            console.log(data.Body.toString('utf-8'));
-          }
-        });
-      } else {
-        console.log('YOU ARE NOT AUTHORISED TO QUERY AWS!');
-        console.log('ERROR: ' + err);
-      }
-    });
-
-  } else {
-    console.log('User not logged in!');
-  }
-}
-
-function responseGoogle(response) {
-  console.log(response);
-}
 
 export default hotkeys(StreamlitApp);

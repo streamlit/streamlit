@@ -183,12 +183,12 @@ class S3Storage(AbstractStorage):
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):
-        upload_private = config.get_option('proxy.uploadPrivate')
+        set_private_acl = config.get_option('s3.setPrivateAcl')
         for i, (path, data) in enumerate(files):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
                 mime_type = 'application/octet-stream'
-            if upload_private and path.startswith('report'):
+            if set_private_acl and path.startswith('report'):
                 acl = 'private'
             else:
                 acl = 'public-read'
