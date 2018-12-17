@@ -1,5 +1,3 @@
-import logging
-import time
 import unittest
 
 import pytest
@@ -9,15 +7,11 @@ from streamlit.ConfigOption import ConfigOption
 
 class ConfigOptionTest(unittest.TestCase):
 
-    def test_foo(self):
-
-        self.assertTrue(True)
-
     def test_invalid_key(self):
         key = 'broken'
         with pytest.raises(AssertionError) as e:
-            c = ConfigOption(key)
-        self.assertEquals( 
+            ConfigOption(key)
+        self.assertEquals(
             'Key "%s" has invalid format.' % key,
             str(e.value))
 
@@ -48,8 +42,8 @@ class ConfigOptionTest(unittest.TestCase):
             @c
             def someRandomFunction():
                 pass
-            
-        self.assertEquals( 
+
+        self.assertEquals(
             'Complex config options require doc strings for their description.',
             str(e.value))
 
@@ -63,9 +57,9 @@ class ConfigOptionTest(unittest.TestCase):
         def someRandomFunction():
             """Random docstring."""
             return my_value
-        
+
         self.assertEquals(my_value, c.value)
-            
+
     def test_set_value(self):
         my_value = 'myValue'
         where_defined = 'im defined here'
@@ -73,9 +67,10 @@ class ConfigOptionTest(unittest.TestCase):
         key = 'mysection.myName'
         c = ConfigOption(key)
         c.set_value(my_value, where_defined)
-        
+
         self.assertEquals(my_value, c.value)
         self.assertEquals(where_defined, c.where_defined)
+
 
 if __name__ == '__main__':
     unittest.main()
