@@ -70,10 +70,16 @@ def _create_element(method):
                 method(self, element, *args, **kwargs)
             return self._new_element(create_element)
         except Exception as e:
-            self.exception(e)
+            # First, write the delta to stderr.
             import sys
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, file=sys.stderr)
+
+            # Now write the delta to the report. (To avoid infinite recursion,
+            # we make sure that the exception didn't occur *within* st.exception
+            # itself!)
+            if method.__name__ != 'exception':
+                self.exception(e)
 
     return wrapped_method
 
