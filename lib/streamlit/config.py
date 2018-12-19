@@ -357,7 +357,7 @@ def _s3_secret_access_key():
 
 
 _create_option(
-    's3.setPrivateAcl',
+    's3.requireLoginToView',
     description='''Make the shared report visible only to users who have been
         granted view permission.
         ''',

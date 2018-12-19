@@ -14,7 +14,7 @@
 import url from 'url';
 import { ConnectionState } from './ConnectionState';
 import { Text as TextProto, Delta } from './protobuf';
-import { getObject } from './s3';
+import { getObject } from './s3helper';
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
