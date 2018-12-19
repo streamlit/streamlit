@@ -354,10 +354,10 @@ def display_reference():
     st.write("""
         Every Streamlit method (except `st.write`) returns a handle
         which can be used for animation. Just call your favorite
-        streamlit function (e.g. `st.xyz()`) on the handle (e.g. `handle.xyz()`)
+        Streamlit function (e.g. `st.xyz()`) on the handle (e.g. `handle.xyz()`)
         and it will update that point in the report.
 
-        Additionally, you can use `add_rows()` to add numpy arrays or
+        Additionally, you can use `add_rows()` to append numpy arrays or
         DataFrames to existing elements.
     """)
 
