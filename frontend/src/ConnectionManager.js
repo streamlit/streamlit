@@ -72,6 +72,8 @@ export default class ConnectionManager extends PureComponent {
     );
   }
 
+  // Public methods.
+
   /**
    * Indicates whether we're connected to the proxy.
    */
@@ -88,6 +90,8 @@ export default class ConnectionManager extends PureComponent {
       console.warn(`Cannot send message when proxy is disconnected: ${obj}`);
     }
   }
+
+  // Private methods.
 
   async connect() {
     const { query } = url.parse(window.location.href, true);
