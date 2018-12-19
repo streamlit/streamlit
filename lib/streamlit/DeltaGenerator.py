@@ -17,11 +17,11 @@ import sys
 import textwrap
 import traceback
 
+from streamlit import case_converters
 from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
-from streamlit.caseconverters import to_snake_case
-from streamlit.chartconfig import CHART_TYPES
+from streamlit import chart_config
 
 EXPORT_FLAG = '__export__'
 
@@ -70,10 +70,16 @@ def _create_element(method):
                 method(self, element, *args, **kwargs)
             return self._new_element(create_element)
         except Exception as e:
-            self.exception(e)
+            # First, write the delta to stderr.
             import sys
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, file=sys.stderr)
+
+            # Now write the delta to the report. (To avoid infinite recursion,
+            # we make sure that the exception didn't occur *within* st.exception
+            # itself!)
+            if method.__name__ != 'exception':
+                self.exception(e)
 
     return wrapped_method
 
@@ -396,8 +402,8 @@ class DeltaGenerator(object):
             foo={'bar': {'bar': 123}}.
 
         """
-        from streamlit import VegaLiteChart
-        VegaLiteChart.marshall(element.vega_lite_chart, data, spec, **kwargs)
+        from streamlit import vega_lite
+        vega_lite.marshall(element.vega_lite_chart, data, spec, **kwargs)
 
     @_export
     @_create_element
@@ -645,8 +651,8 @@ class DeltaGenerator(object):
                 }])
 
         """
-        from streamlit import DeckGlChart
-        DeckGlChart.marshall(element.deck_gl_chart, data, spec, **kwargs)
+        from streamlit import deck_gl
+        deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_export
     @_create_element
@@ -733,5 +739,5 @@ def _register_native_chart_method(chart_type):
 
 
 # Add chart-building methods to DeltaGenerator
-for chart_type in CHART_TYPES:
-    _register_native_chart_method(to_snake_case(chart_type))
+for chart_type in chart_config.CHART_TYPES:
+    _register_native_chart_method(case_converters.to_snake_case(chart_type))

@@ -1,10 +1,10 @@
 """App Unittest."""
-try:
-    import http.client as status
-except ImportError:
-    import httplib as status
-
-from tornado.testing import AsyncHTTPTestCase
+#try:
+#    import http.client as status
+#except ImportError:
+#    import httplib as status
+#
+#from tornado.testing import AsyncHTTPTestCase
 
 # Disabled all of this because it was failing.
 # Made a ticket to fix this: https://trello.com/c/J34ANHhR

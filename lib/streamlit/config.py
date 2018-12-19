@@ -710,8 +710,6 @@ def _check_conflicts():
         assert is_manually_set('s3.bucket'), (
             'When global.sharingMode is set to "s3", '
             's3.bucket must also be set')
-        assert is_manually_set('s3.bucket'), (
-            'For sharing via S3, s3.bucket must be set')
         both_are_set = (
             is_manually_set('s3.accessKeyId') and
             is_manually_set('s3.secretAccessKey'))

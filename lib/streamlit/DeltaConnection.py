@@ -12,7 +12,6 @@ import inspect
 import os
 import sys
 import urllib
-import uuid
 
 from streamlit import config
 from streamlit import streamlit_msg_proto
@@ -91,6 +90,7 @@ class DeltaConnection(object):
         Report, e.g. adding new elements.
         """
         return self._delta_generator
+
 
 def _build_uri(report_id):
     """Create the Proxy's WebSocket URI for this report."""

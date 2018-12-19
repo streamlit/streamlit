@@ -1,5 +1,12 @@
 # Instructions for pushing official streamlit docker images.
 
+The difference between this directory `dockerhub` and `docker` is that
+dockerhub builds an image with streamlit that is fetched from pypi ie
+installed via `pip install`
+
+The `docker` directory builds an docker image from the git repo and
+those images are only used for development.
+
 ## Login
 ```
 $ docker login

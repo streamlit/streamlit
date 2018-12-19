@@ -9,20 +9,37 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import unittest
+import copy
 import os
+import textwrap
+import unittest
+
+import pytest
+
+from mock import patch
 
 from streamlit import config
 from streamlit.ConfigOption import ConfigOption
+
+SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
+CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
 
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
+    def setUp(self):
+        self.patch1 = patch.object(config, '_section_descriptions', new=copy.deepcopy(SECTION_DESCRIPTIONS))
+        self.patch2 = patch.object(config, '_config_options', new=copy.deepcopy(CONFIG_OPTIONS))
+        self.patch1.start()
+        self.patch2.start()
+
     def tearDown(self):
+        self.patch1.stop()
+        self.patch2.stop()
         try:
             del os.environ['TEST_ENV_VAR']
-        except:
+        except Exception:
             pass
         config._delete_option('_test.tomlTest')
 
@@ -202,3 +219,247 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.get_option('_test.tomlTest'), DESIRED_VAL)
         self.assertEqual(config.get_where_defined('_test.tomlTest'),
             DUMMY_DEFINITION)
+
+    def test_delete_option(self):
+        config.set_option('s3.bucket', 'some.bucket')
+        config._delete_option('s3.bucket')
+        with pytest.raises(RuntimeError) as e:
+            config.get_option('s3.bucket')
+        self.assertEquals(str(e.value), 'Config key "s3.bucket" not defined.')
+
+        config._delete_option('s3.bucket')
+
+    @patch.object(config, '_section_descriptions', new=copy.deepcopy(SECTION_DESCRIPTIONS))
+    @patch.object(config, '_config_options', new=copy.deepcopy(CONFIG_OPTIONS))
+    def test_parse_config_file_no_home(self):
+            del os.environ['HOME']
+            with pytest.raises(RuntimeError) as e:
+                config._parse_config_file()
+            self.assertEquals('No home directory.', str(e.value))
+
+    def test_sections_order(self):
+        sections = ['_test', u'global', u'client', u'proxy', u'browser', u's3']
+        keys = config._section_descriptions.keys()
+        self.assertEquals(sections, keys)
+
+    def test_config_option_keys(self):
+        config_options = [
+            u'browser.proxyAddress',
+            u'browser.proxyPort',
+            u'browser.remotelyTrackUsage',
+            u'client.caching',
+            u'client.displayEnabled',
+            u'client.proxyAddress',
+            u'client.proxyPort',
+            u'client.throttleSecs',
+            u'client.tryToOutliveProxy',
+            u'client.waitForProxySecs',
+            u'global.developmentMode',
+            u'global.logLevel',
+            u'global.sharingMode',
+            u'proxy.autoCloseDelaySecs',
+            u'proxy.enableCORS',
+            u'proxy.isRemote',
+            u'proxy.liveSave',
+            u'proxy.port',
+            u'proxy.reportExpirationSecs',
+            u'proxy.useNode',
+            u'proxy.watchFileSystem',
+            u's3.accessKeyId',
+            u's3.bucket',
+            u's3.keyPrefix',
+            u's3.profile',
+            u's3.region',
+            u's3.secretAccessKey',
+            u's3.url']
+        keys = sorted(config._config_options.keys())
+        self.assertEquals(config_options, keys)
+
+    def test_clean_paragraphs(self):
+        # from https://www.lipsum.com/
+        input = textwrap.dedent('''
+            Lorem              ipsum dolor sit amet,
+            consectetur adipiscing elit.
+
+               Curabitur ac fermentum eros.
+
+            Maecenas                   libero est,
+                    ultricies
+            eget ligula eget,    ''')
+
+        truth = [
+            u'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+            u'Curabitur ac fermentum eros.',
+            u'Maecenas libero est, ultricies eget ligula eget,']
+
+        result = config._clean_paragraphs(input)
+        self.assertEquals(truth, result)
+
+    def test_clean(self):
+        result = config._clean(' clean    this         text  ')
+        self.assertEquals('clean this text', result)
+
+    # TODO(armando): Test logging statements via testfixtures.log_capture
+    # Test conflicts doesnt actually do anything but log warnings.
+    def test_check_conflicts_1(self):
+        config._set_option('client.tryToOutliveProxy', True, 'test')
+        config._set_option('proxy.isRemote', False, 'test')
+        config._check_conflicts()
+
+    def test_check_conflicts_2(self):
+        config._set_option('proxy.useNode', True, 'test')
+        config._set_option('proxy.port', 1234, 'test')
+        with pytest.raises(AssertionError) as e:
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'proxy.port does not work when proxy.useNode is true. ')
+
+    def test_check_conflicts_2a(self):
+        config._set_option('proxy.useNode', True, 'test')
+        config._set_option('browser.proxyPort', 1234, 'test')
+        with pytest.raises(AssertionError) as e:
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'browser.proxyPort does not work when proxy.useNode is true. ')
+
+    def test_check_conflicts_2b(self):
+        config._set_option('proxy.useNode', True, 'test')
+        config._set_option('client.proxyPort', 1234, 'test')
+        with pytest.raises(AssertionError) as e:
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'client.proxyPort does not work when proxy.useNode is true. ')
+
+    def test_check_conflicts_3(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option('global.sharingMode', 's3', 'test')
+            config._set_option('s3.bucket', None, '<default>')
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'When global.sharingMode is set to "s3", s3.bucket must also be set')
+
+    def test_check_conflicts_4(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option('global.sharingMode', 's3', 'test')
+            config._set_option('s3.bucket', 'some.bucket', 'test')
+            config._set_option('s3.accessKeyId', 'some.key', 'test')
+            config._set_option('s3.secretAccessKey', None, '<default>')
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'In config.toml, s3.accessKeyId and s3.secretAccessKey must either both be set or both be unset.')
+
+    def test_check_conflicts_5(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option('global.sharingMode', 'streamlit-public', 'test')
+            config._set_option('s3.profile', 'some.profile', 'test')
+            config._check_conflicts()
+        self.assertEquals(str(e.value), 'In config.toml, S3 should not be configured when global.sharingMode is set to "streamlit-public".')
+
+    def test_maybe_convert_to_number(self):
+        self.assertEquals(1234, config._maybe_convert_to_number('1234'))
+        self.assertEquals(1234.5678, config._maybe_convert_to_number('1234.5678'))
+        self.assertEquals('1234.5678ex', config._maybe_convert_to_number('1234.5678ex'))
+
+    def test_maybe_read_env_variable(self):
+        self.assertEquals('env:RANDOM_TEST', config._maybe_read_env_variable('env:RANDOM_TEST'))
+        os.environ['RANDOM_TEST'] = '1234'
+        self.assertEquals(1234, config._maybe_read_env_variable('env:RANDOM_TEST'))
+
+    def test_update_config_with_toml(self):
+        self.assertEquals(True, config.get_option('client.caching'))
+        toml = textwrap.dedent('''
+           [client]
+           caching = false
+        ''')
+        config._update_config_with_toml(toml, 'test')
+        self.assertEquals(False, config.get_option('client.caching'))
+
+    def test_set_option(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option('not.defined', 'no.value', 'test')
+        self.assertEquals(str(e.value), 'Key "not.defined" is not defined.')
+
+        config._set_option('client.caching', 'test', 'test')
+        self.assertEquals('test', config.get_option('client.caching'))
+
+    def test_is_manually_set(self):
+        config._set_option('s3.bucket', 'some.bucket', 'test')
+        self.assertEquals(True, config.is_manually_set('s3.bucket'))
+
+        config._set_option('s3.bucket', 'some.bucket', '<default>')
+        self.assertEquals(False, config.is_manually_set('s3.bucket'))
+
+    def test_is_unset(self):
+        config._set_option('s3.bucket', 'some.bucket', 'test')
+        self.assertEquals(False, config._is_unset('s3.bucket'))
+
+        config._set_option('s3.bucket', 'some.bucket', '<default>')
+        self.assertEquals(True, config._is_unset('s3.bucket'))
+
+    def test_get_where_defined(self):
+        config._set_option('s3.bucket', 'some.bucket', 'test')
+        self.assertEquals('test', config.get_where_defined('s3.bucket'))
+
+        with pytest.raises(RuntimeError) as e:
+            config.get_where_defined('doesnt.exist')
+        self.assertEquals(str(e.value), 'Config key "doesnt.exist" not defined.')
+
+    def test_get_options(self):
+        config._set_option('s3.bucket', 'some.bucket', 'test')
+        self.assertEquals('some.bucket', config.get_option('s3.bucket'))
+
+        with pytest.raises(RuntimeError) as e:
+            config.get_option('doesnt.exist')
+        self.assertEquals(str(e.value), 'Config key "doesnt.exist" not defined.')
+
+    def test_s3(self):
+        self.assertEquals(None, config._s3_secret_access_key._get_val_func())
+        self.assertEquals(None, config._s3_access_key_id._get_val_func())
+        self.assertEquals(None, config._s3_url._get_val_func())
+        self.assertEquals(None, config._s3_bucket._get_val_func())
+        with patch('streamlit.config._get_public_credentials') as p:
+            p.return_value = {}
+            config.set_option('global.sharingMode', 'streamlit-public')
+            self.assertEquals(None, config._s3_secret_access_key._get_val_func())
+            self.assertEquals(None, config._s3_access_key_id._get_val_func())
+            self.assertEquals(None, config._s3_url._get_val_func())
+            self.assertEquals(None, config._s3_bucket._get_val_func())
+
+        with patch('streamlit.config._get_public_credentials') as p:
+            p.return_value = {
+                'secretAccessKey': 'sekrit',
+                'accessKeyId': 'sekrit2',
+                'url': 'http://test.url',
+                'bucket': 'some.bucket',
+            }
+            config.set_option('global.sharingMode', 'streamlit-public')
+            self.assertEquals('sekrit', config._s3_secret_access_key._get_val_func())
+            self.assertEquals('sekrit2', config._s3_access_key_id._get_val_func())
+            self.assertEquals('http://test.url', config._s3_url._get_val_func())
+            self.assertEquals('some.bucket', config._s3_bucket._get_val_func())
+
+    def test_browser_proxy_port(self):
+        config.set_option('proxy.port', 1234)
+        self.assertEquals(1234, config._browser_proxy_port._get_val_func())
+
+    def test_proxy_is_remote(self):
+        config.set_option('proxy.liveSave', True)
+        self.assertEquals(True, config._proxy_is_remote._get_val_func())
+
+    def test_proxy_use_node(self):
+        config.set_option('global.developmentMode', True)
+        self.assertEquals(True, config._proxy_use_node._get_val_func())
+
+    def test_client_proxy_port(self):
+        config.set_option('proxy.port', 1234)
+        self.assertEquals(1234, config._client_proxy_port._get_val_func())
+
+        toml = textwrap.dedent('''
+           [client]
+           proxyPort = 4321
+        ''')
+        config._update_config_with_toml(toml, 'test')
+        self.assertEquals(4321, config.get_option('client.proxyPort'))
+
+    def test_global_log_level_debug(self):
+        config.set_option('global.developmentMode', True)
+        self.assertEquals(u'debug', config._global_log_level._get_val_func())
+
+    def test_global_log_level(self):
+        config.set_option('global.developmentMode', False)
+        self.assertEquals(u'info', config._global_log_level._get_val_func())

@@ -9,8 +9,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.DictBuilder import ForEachColumn, ColorCycler, CURRENT_COLUMN_NAME, INDEX_COLUMN_NAME
-from streamlit.caseconverters import to_snake_case
+from streamlit import dict_builder
+from streamlit import case_converters
 
 # Set of ReChart chart types accepted by Streamlit.
 CHART_TYPES = set([
@@ -27,7 +27,7 @@ CHART_TYPES = set([
 
 # Set of snake-case strings containing the ReChart chart types accepted by
 # Streamlit.
-CHART_TYPES_SNAKE = set(map(to_snake_case, CHART_TYPES))
+CHART_TYPES_SNAKE = set(map(case_converters.to_snake_case, CHART_TYPES))
 
 # Map of string->boolean, mapping ReChart component names to true/false
 # depending on whether Streamlit supports that component.
@@ -86,7 +86,7 @@ BASIC_REQUIRED_COMPONENTS = (
     }),
     ('x_axis', {
         'stroke': '#101620',
-        'data_key': INDEX_COLUMN_NAME,
+        'data_key': dict_builder.INDEX_COLUMN_NAME,
     }),
     ('y_axis', {
         'stroke': '#101620',
@@ -103,10 +103,10 @@ BASIC_REQUIRED_COMPONENTS = (
 REQUIRED_COMPONENTS = {
     'line_chart': (
         BASIC_REQUIRED_COMPONENTS +
-        (ForEachColumn(('line', {
-            'data_key': CURRENT_COLUMN_NAME,
+        (dict_builder.ForEachColumn(('line', {
+            'data_key': dict_builder.CURRENT_COLUMN_NAME,
             'dot': 'false',
-            'stroke': ColorCycler(),
+            'stroke': dict_builder.ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
         })),)
@@ -114,10 +114,10 @@ REQUIRED_COMPONENTS = {
 
     'area_chart': (
         BASIC_REQUIRED_COMPONENTS +
-        (ForEachColumn(('area', {
-            'data_key': CURRENT_COLUMN_NAME,
-            'fill': ColorCycler(),
-            'stroke': ColorCycler(),
+        (dict_builder.ForEachColumn(('area', {
+            'data_key': dict_builder.CURRENT_COLUMN_NAME,
+            'fill': dict_builder.ColorCycler(),
+            'stroke': dict_builder.ColorCycler(),
             'type': 'linear',
             'is_animation_active': 'false',
         })),)
@@ -125,9 +125,9 @@ REQUIRED_COMPONENTS = {
 
     'bar_chart': (
         BASIC_REQUIRED_COMPONENTS +
-        (ForEachColumn(('bar', {
-            'data_key': CURRENT_COLUMN_NAME,
-            'fill': ColorCycler(),
+        (dict_builder.ForEachColumn(('bar', {
+            'data_key': dict_builder.CURRENT_COLUMN_NAME,
+            'fill': dict_builder.ColorCycler(),
             'is_animation_active': 'false',
         })),)
     ),
