@@ -147,7 +147,7 @@ export default class ConnectionManager extends PureComponent {
    * the manifest says.
    */
   async connectBasedOnManifest(reportId) {
-    const manifest = await this.fetchManifestAndHandleErrors(reportId);
+    const manifest = await this.fetchManifestWithPossibleLogin(reportId);
 
     const connection = manifest.proxyStatus === 'running' ?
       this.connectToRunningProxyFromManifest(manifest) :
@@ -186,7 +186,7 @@ export default class ConnectionManager extends PureComponent {
     });
   }
 
-  async fetchManifestAndHandleErrors(reportId) {
+  async fetchManifestWithPossibleLogin(reportId) {
     let manifest;
     let permissionError = false;
 
