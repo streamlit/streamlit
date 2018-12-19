@@ -271,6 +271,7 @@ _create_option(
         ''',
     default_val=8501)
 
+
 # Config Section: Browser #
 
 _create_section('browser', 'Configuration of browser front-end.')

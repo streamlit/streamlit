@@ -40,7 +40,15 @@ export async function configureCredentials(idToken) {
 /**
  * Get an Object from S3. This smartly chooses whether hit the HTTP server in
  * front of S3 or whether to hit the S3 API server based.
- * You should use this in place of s3.getObject.
+ *
+ * The reason why you'd want to do this is to make setup easier for clients who
+ * have their own S3 setups but do not want to use auth (maybe because they're
+ * in a VPN). This way there's no need for them to mess with things like
+ * Cognito, IAM, roles, and so on -- which would be required if using the S3
+ * API.
+ *
+ * So you should *always* use this instead of s3.getObject.
+ *
  * Arguments: {Key: string, Bucket: string}
  */
 export async function getObject(args) {
