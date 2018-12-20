@@ -65,9 +65,9 @@ load into the dataframe.
 So let's try out this function and see what happens:
 
 ```python
-data_load_state = st.write('Loading data...')
+data_load_state = st.text('Loading data...')
 data = load_data(10000)
-data_load_state.write('Loading data... done!')
+data_load_state.text('Loading data... done!')
 ```
 
 Well, that's... _underwelming_ ☹
@@ -86,7 +86,7 @@ st.write(data)
 ...ugh. Another. Long. Wait.
 
 Wouldn't it be amazing if we could **avoid repeating this lenghty step** every
-time we re-ran the script? 
+time we re-ran the script?
 
 Streamlit to the rescue! Let's have a conversation about caching.
 
@@ -217,7 +217,7 @@ So replace the previous snippet with the following:
 hour_to_filter = 17
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
-st.subheader('Map of all pickups at %d:00' % d)
+st.subheader('Map of all pickups at %d:00' % hour_to_filter)
 st.map(filtered_data)
 ```
 
