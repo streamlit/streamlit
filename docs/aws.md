@@ -101,3 +101,15 @@ $ aws s3 ls
 2018-08-14 12:37:59 share.streamlit.io
 2018-05-17 14:08:08 streamlit
 ```
+
+## Upload your SSH key.
+### Generate an SSH Key
+Github has a pretty good doc on creating SSH keys if you dont have one.
+* [https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
+
+### Import SSH key
+```
+$ aws ec2 import-key-pair --key-name "someuser" --public-key-material file://~/.ssh/someuser.pub
+# I suggest
+$ aws ec2 import-key-pair --key-name "user@streamlit" --public-key-material file://~/.ssh/someuser.pub
+```
