@@ -52,7 +52,7 @@ def kill_proxy(*args):
     found_proxy = False
 
     for p in psutil.process_iter(attrs=['name', 'username']):
-        if ('python' in p.name()
+        if (('python' in p.name() or 'Python' in p.name())
                 and 'streamlit.proxy' in p.cmdline()
                 and getpass.getuser() == p.info['username']):
             print('Killing proxy with PID %d' % p.pid)
