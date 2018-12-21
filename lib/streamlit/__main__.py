@@ -52,6 +52,8 @@ def kill_proxy(*args):
     found_proxy = False
 
     for p in psutil.process_iter(attrs=['name', 'username']):
+        # Check for both "python" and "Python" in the process name. The latter
+        # is required in some Mac installs. Probably related to Homebrew.
         if (('python' in p.name() or 'Python' in p.name())
                 and 'streamlit.proxy' in p.cmdline()
                 and getpass.getuser() == p.info['username']):
