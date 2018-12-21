@@ -8,8 +8,9 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import os
 import hashlib
+import os
+import time
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
@@ -63,7 +64,7 @@ class FSObserver(object):
 
         self._initialize_observer(connection.source_file_path)
 
-        # Set of consumers which are interested in this observer being up.  When
+        # Set of consumers which are interested in this observer being up. When
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()
@@ -145,7 +146,8 @@ class FSObserver(object):
         if key in self._consumers:
             self._consumers.remove(key)
 
-        LOGGER.debug(f'Deregistered consumers. Now have {len(self._consumers)}')
+        LOGGER.debug(
+            f'Deregistered consumers. Now have {len(self._consumers)}')
 
         if len(self._consumers) == 0:
             self._close()
@@ -212,6 +214,13 @@ class FSEventHandler(PatternMatchingEventHandler):
             LOGGER.debug(f'File MD5 did not change.')
 
 
+# How many times to try to grab the MD5 hash.
+MAX_RETRIES = 5
+
+# How long to wait between retries.
+RETRY_WAIT_SECS = 0.1
+
+
 def _calc_md5(file_path):
     """Calculate the MD5 checksum of the given file.
 
@@ -226,6 +235,21 @@ def _calc_md5(file_path):
         The MD5 checksum.
 
     """
+    file_str = None
+
+    # There's a race condition where sometimes file_path no longer exists when
+    # we try to read it (since the file is in the process of being written).
+    # So here we retry a few times using this loop. See issue #186.
+    for i in range(MAX_RETRIES):
+        try:
+            with open(file_path) as f:
+                file_str = f.read()
+                break
+        except FileNotFoundError as e:
+            if i >= MAX_RETRIES - 1:
+                raise e
+            time.sleep(RETRY_WAIT_SECS)
+
     md5 = hashlib.md5()
-    md5.update(open(file_path).read().encode('utf-8'))
+    md5.update(file_str.encode('utf-8'))
     return md5.digest()
