@@ -85,6 +85,9 @@ h6, .h6 {
 header {
   border-top: 2px solid #FFFD80;
   border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
   position: fixed;
   top: 0;
   left: 0;
