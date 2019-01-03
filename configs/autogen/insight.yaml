@@ -1,0 +1,198 @@
+Description: "\nStreamlit cloud formation template to create a single EC2 instance\
+  \ in a new VPC.\n**WARNING** This template creates an Amazon EC2 instance. You will\
+  \ be billed\nfor the AWS resources used if you create a stack from this template.\n"
+Mappings:
+  RegionMap:
+    ap-northeast-1:
+      AMI: ami-031ce7af929321d3a
+    ap-southeast-1:
+      AMI: ami-09dfb1478dc499b95
+    eu-west-1:
+      AMI: ami-0827ddd2d8e38aa56
+    sa-east-1:
+      AMI: ami-0a28b3352c3479371
+    us-east-1:
+      AMI: ami-0f9e8c4a1305ecd22
+    us-west-1:
+      AMI: ami-01eeae51446aeffdb
+    us-west-2:
+      AMI: ami-0d0ff0945ae093aea
+Outputs:
+  SshCommand:
+    Description: SshCommand
+    Value: !Join
+      - ''
+      - - ssh ubuntu@
+        - !GetAtt 'Ec2Instance.PublicIp'
+  SshIp:
+    Description: SshIp
+    Value: !GetAtt 'Ec2Instance.PublicIp'
+  StreamlitEndpoint:
+    Description: Streamlit endpoint
+    Value: !Join
+      - ''
+      - - !GetAtt 'Ec2Instance.PublicIp'
+        - :8501
+Parameters:
+  Ec2InstanceType:
+    AllowedValues:
+      - t3.medium
+      - p2.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    Default: t3.medium
+    Description: EC2 Instance Type
+    Type: String
+  SshKeyName:
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  SshLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: '0.0.0.0/0'
+    Description: ' The IP address range that can be used to SSH to the EC2 instances'
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+Resources:
+  Ec2Instance:
+    Properties:
+      ImageId: !FindInMap
+        - RegionMap
+        - !Ref 'AWS::Region'
+        - AMI
+      InstanceType: !Ref 'Ec2InstanceType'
+      KeyName: !Ref 'SshKeyName'
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
+          DeleteOnTermination: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref 'Ec2InstanceSecurityGroup'
+          SubnetId: !Ref 'Subnet'
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit EC2 Instance (${AWS::StackName})'
+      UserData: !Base64
+        Fn::Join:
+          - ''
+          - - "#!/bin/bash\n"
+            - "echo \"prepend domain-name-servers 8.8.8.8;\" >> \"/etc/dhcp/dhclient.conf\"\
+              \nservice networking restart || true\n"
+            - "sleep 5 \n"
+            - "/home/ubuntu/anaconda2/bin/pip install streamlit \n"
+            - "/home/ubuntu/anaconda3/bin/pip install streamlit \n"
+    Type: AWS::EC2::Instance
+  Ec2InstanceSecurityGroup:
+    Properties:
+      GroupDescription: Enable Streamlit access via port 8501 and SSH access via port
+        22
+      SecurityGroupIngress:
+        - CidrIp: !Ref 'SshLocation'
+          FromPort: '22'
+          IpProtocol: tcp
+          ToPort: '22'
+        - CidrIp: !Ref 'SshLocation'
+          FromPort: '8501'
+          IpProtocol: tcp
+          ToPort: '8501'
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit Security Group (${AWS::StackName})'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::SecurityGroup
+  IPAddress:
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref 'Ec2Instance'
+    Type: AWS::EC2::EIP
+  InboundAllNetworkAclEntry:
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: 'false'
+      NetworkAclId: !Ref 'NetworkAcl'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+    Type: AWS::EC2::NetworkAclEntry
+  InternetGateway:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit InternetGateway (${AWS::StackName})'
+    Type: AWS::EC2::InternetGateway
+  NetworkAcl:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit Network ACL (${AWS::StackName})'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::NetworkAcl
+  OutBoundAllNetworkAclEntry:
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: 'true'
+      NetworkAclId: !Ref 'NetworkAcl'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+    Type: AWS::EC2::NetworkAclEntry
+  Route:
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'InternetGateway'
+      RouteTableId: !Ref 'RouteTable'
+    Type: AWS::EC2::Route
+  RouteTable:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit RouteTable (${AWS::StackName})'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::RouteTable
+  Subnet:
+    Properties:
+      CidrBlock: 172.17.255.0/24
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit Subnet (${AWS::StackName})'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::Subnet
+  SubnetNetworkAclAssociation:
+    Properties:
+      NetworkAclId: !Ref 'NetworkAcl'
+      SubnetId: !Ref 'Subnet'
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+  SubnetRouteTableAssociation:
+    Properties:
+      RouteTableId: !Ref 'RouteTable'
+      SubnetId: !Ref 'Subnet'
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC:
+    Properties:
+      CidrBlock: 172.17.0.0/16
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub 'Streamlit VPC (${AWS::StackName})'
+    Type: AWS::EC2::VPC
+  VPCGatewayAttachment:
+    Properties:
+      InternetGatewayId: !Ref 'InternetGateway'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::VPCGatewayAttachment
