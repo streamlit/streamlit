@@ -239,7 +239,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_sections_order(self):
         sections = ['_test', u'global', u'client', u'proxy', u'browser', u's3']
-        keys = config._section_descriptions.keys()
+        keys = list(config._section_descriptions.keys())
         self.assertEquals(sections, keys)
 
     def test_config_option_keys(self):
