@@ -437,9 +437,23 @@ class ConfigTest(unittest.TestCase):
         config.set_option('proxy.port', 1234)
         self.assertEquals(1234, config._browser_proxy_port._get_val_func())
 
-    def test_proxy_is_remote(self):
+    def test_proxy_is_remote_via_liveSave(self):
         config.set_option('proxy.liveSave', True)
         self.assertEquals(True, config._proxy_is_remote._get_val_func())
+
+    def test_proxy_is_remote_via_atom_plugin(self):
+        config.set_option('proxy.liveSave', False)
+        os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN'] = 'True'
+        self.assertEquals(True, config._proxy_is_remote._get_val_func())
+
+    def test_proxy_is_remote_via_headless(self):
+        if 'DISPLAY' in os.environ.keys():
+            del os.environ['DISPLAY']
+        if 'IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN' in os.environ.keys():
+            del os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN']
+        with patch('streamlit.config.platform.system') as p:
+            p.return_value = 'Linux'
+            self.assertEquals(True, config._proxy_is_remote._get_val_func())
 
     def test_proxy_use_node(self):
         config.set_option('global.developmentMode', True)
