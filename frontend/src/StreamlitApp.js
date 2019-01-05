@@ -350,12 +350,9 @@ class StreamlitApp extends PureComponent {
    */
   sendBackMsg(msg) {
     if (this.connection) {
-      console.error('Sending back message:');
-      console.error(msg);
       this.connection.sendToProxy(msg);
     } else {
-      console.error('Cannot send a back message without a connection:');
-      console.error(msg);
+      console.error('Cannot send a back message without a connection:', msg);
     }
   }
 
