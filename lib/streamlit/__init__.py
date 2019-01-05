@@ -166,8 +166,8 @@ def spinner(text):
 
     """
     try:
-        # Set the message 0.1 seconds in the future to avoid annoying flickering
-        # if this spinner runs too quickly.
+        # Set the message 0.1 seconds in the future to avoid annoying
+        # flickering if this spinner runs too quickly.
         DELAY_SECS = 0.1
         message = empty()  # noqa: F821
         display_message = True
