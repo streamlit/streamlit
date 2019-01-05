@@ -15,6 +15,7 @@ import os
 import pickle
 import re
 import shutil
+import struct
 
 from functools import wraps
 
@@ -24,6 +25,36 @@ from streamlit import util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+class CacheError(Exception):
+  pass
+
+def read_from_cache(path):
+    try:
+        with util.streamlit_read(path, binary=True) as input:
+            rv = pickle.load(input)
+            LOGGER.debug('Cache HIT: ' + str(type(rv)))
+    except util.Error as e:
+        LOGGER.debug(e)
+        raise CacheError(f'Unable to read from cache: {e}')
+    return rv
+
+def write_to_cache(path, rv):
+    try:
+        with util.streamlit_write(path, binary=True) as output:
+            pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
+    # In python 2, its pickle struct error.
+    # In python 3, its an open error in util.
+    except (util.Error, struct.error) as e:
+        LOGGER.debug(e)
+        # Cleanup file so we don't leave zero byte files.
+        try:
+            os.remove(path)
+        except (FileNotFoundError, IOError, OSError):
+            pass
+        raise CacheError(f'Unable to write to cache: {e}')
+    LOGGER.debug('Cache MISS: ' + str(type(rv)))
+
 
 def cache(func):
     """Function decorator to memoize input function, saving to disk.
@@ -61,14 +92,10 @@ def cache(func):
 
             # Load the file (hit) or compute the function (miss).
             try:
-                with util.streamlit_read(path, binary=True) as input:
-                    rv = pickle.load(input)
-                    LOGGER.debug('Cache HIT: ' + str(type(rv)))
-            except FileNotFoundError:
+                rv = read_from_cache(path)
+            except (FileNotFoundError, IOError, OSError):
                 rv = func(*argc, **argv)
-                with util.streamlit_write(path, binary=True) as output:
-                    pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-                LOGGER.debug('Cache MISS: ' + str(type(rv)))
+                write_to_cache(path, rv)
         return rv
 
     # Make this a well-behaved decorator by preserving important function

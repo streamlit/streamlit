@@ -44,8 +44,11 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 if not config.get_option('global.developmentMode'):
-    # Don't show per-request logs.
-    logging.getLogger('tornado.access').setLevel(logging.WARNING)
+    # Hide logs unless they're super important.
+    # Example of stuff we don't care about: 404 about .js.map files.
+    logging.getLogger('tornado.access').setLevel(logging.ERROR)
+    logging.getLogger('tornado.application').setLevel(logging.ERROR)
+    logging.getLogger('tornado.general').setLevel(logging.ERROR)
 
 
 class Proxy(object):

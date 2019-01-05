@@ -237,10 +237,16 @@ def _proxy_is_remote():
 
     Default: false unless we are on a Linux box where DISPLAY is unset.
     """
-    live_save = get_option('proxy.liveSave')
+    is_live_save_on = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
     is_headless = (not os.getenv('DISPLAY'))
-    return live_save or (is_linux and is_headless)
+    is_running_in_editor_plugin = (
+        os.getenv('IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN') is not None)
+    return (
+        is_live_save_on or
+        (is_linux and is_headless) or
+        is_running_in_editor_plugin
+    )
 
 
 _create_option(
