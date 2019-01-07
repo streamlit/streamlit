@@ -4,11 +4,8 @@
  */
 
 import AWS from 'aws-sdk';
-import { FETCH_PARAMS } from './baseconsts';
+import { FETCH_PARAMS, AWS_REGION, COGNITO_IDENTITY_POOL_ID } from './baseconsts';
 
-
-const REGION = 'us-west-2';
-const IDENTITY_POOL_ID = 'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06';
 
 let s3 = null;
 let haveCredentials = false;
@@ -23,10 +20,11 @@ export async function configureCredentials(idToken) {
     console.warn('Grabbing credentials again. This should never happen.');
   }
 
-  AWS.config.region = REGION;
+  AWS.config.region = AWS_REGION;
 
   AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-    IdentityPoolId: IDENTITY_POOL_ID,
+    // These keys are capitalized funnily on purpose. That's the actual API.
+    IdentityPoolId: COGNITO_IDENTITY_POOL_ID,
     Logins: {
       'accounts.google.com': idToken,
     },

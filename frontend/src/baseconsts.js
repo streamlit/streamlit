@@ -29,3 +29,15 @@ export const FETCH_PARAMS = {
     credentials: 'same-origin',
     mode: 'cors',
 };
+
+/**
+ * Region of our AWS S3 bucket.
+ */
+export const AWS_REGION = 'us-west-2';
+
+/**
+ * Pool ID for Cognito credentials.
+ */
+export const COGNITO_IDENTITY_POOL_ID =
+    'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06';
+
