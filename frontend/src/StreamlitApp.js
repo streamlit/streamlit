@@ -16,7 +16,6 @@ import {
   Row,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
-import url from 'url';
 
 // Display Elements
 import Audio from './elements/Audio';
@@ -34,26 +33,24 @@ import VegaLiteChart from './elements/VegaLiteChart';
 import Video from './elements/Video';
 
 // Other local imports.
+import LoginBox from './LoginBox';
 import MainMenu from './MainMenu';
-import ConnectionState from './ConnectionState';
-import ConnectionStatus from './ConnectionStatus';
-import WebsocketConnection from './WebsocketConnection';
-import StaticConnection from './StaticConnection';
+import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
+import ConnectionManager from './ConnectionManager';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
-import { FETCH_PARAMS, IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
 
+
 class StreamlitApp extends PureComponent {
   constructor(props) {
     super(props);
 
-    // Initially the state reflects that no data has been received.
     this.state = {
       reportId: '<null>',
       reportName: null,
@@ -67,90 +64,26 @@ class StreamlitApp extends PureComponent {
       userSettings: {
         wideMode: false,
       },
+      showLoginBox: false,
     };
 
+    this.connectionManager = null;
+    this.userLoginResolver = new Resolver();
+
     // Bind event handlers.
-    this.handleReconnect = this.handleReconnect.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
     this.closeDialog = this.closeDialog.bind(this);
-    this.saveSettings = this.saveSettings.bind(this);
-    this.setConnectionState = this.setConnectionState.bind(this);
-    this.isProxyConnected = this.isProxyConnected.bind(this);
-    this.setReportName = this.setReportName.bind(this);
-    this.saveReport = this.saveReport.bind(this);
     this.displayHelp = this.displayHelp.bind(this);
+    this.getUserLogin =this.getUserLogin.bind(this);
+    this.handleConnectionError = this.handleConnectionError.bind(this);
+    this.handleMessage = this.handleMessage.bind(this);
+    this.isProxyConnected = this.isProxyConnected.bind(this);
+    this.onLogInError = this.onLogInError.bind(this);
+    this.onLogInSuccess = this.onLogInSuccess.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
-  }
-
-  /**
-   * Global keyboard shortcuts.
-   */
-  hot_keys = {
-    // The r key reruns the script.
-    'r': {
-      priority: 1,
-      handler: () => this.rerunScript(),
-    },
-
-    // The shift+r key opens the rerun script dialog.
-    'shift+r': {
-      priority: 1,
-      handler: () => this.openRerunScriptDialog(),
-    },
-
-    // The enter key runs the "default action" of the dialog.
-    'enter': {
-      priority: 1,
-      handler: () => {
-        if (this.state.dialog && this.state.dialog.defaultAction)
-          this.state.dialog.defaultAction();
-      },
-    }
-  }
-
-  async componentDidMount() {
-    const { query } = url.parse(window.location.href, true);
-    if (query.name !== undefined) {
-      const reportName = query.name;
-      this.setReportName(reportName);
-
-      // If dev, always connect to 8501, since window.location.port is the Node
-      // server's port 3000.
-      // If changed, also change config.py
-      const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
-
-      const uri = getWsUrl(
-          window.location.hostname, port, reportName);
-
-      this.connection = new WebsocketConnection({
-        uriList: [
-          //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
-          //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
-          uri,
-        ],
-        onMessage: this.handleMessage,
-        setConnectionState: this.setConnectionState,
-      });
-    } else if (query.id !== undefined) {
-      this.connection = await this.getAppropriateConnection(query.id);
-    } else {
-      this.showSingleTextElement(
-        'URL must contain either a report name or an ID.',
-        TextProto.Format.ERROR,
-      );
-    }
-  }
-
-  componentWillUnmount() {
-  }
-
-  /**
-   * Callback when we establish a websocket connection.
-   */
-  handleReconnect() {
-    // Initially the state reflects that no data has been received.
-    this.showSingleTextElement('Established connection.', TextProto.Format.WARNING);
+    this.saveReport = this.saveReport.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
+    this.setReportName = this.setReportName.bind(this);
   }
 
   /**
@@ -211,7 +144,7 @@ class StreamlitApp extends PureComponent {
         this.openDialog({ progress, type: 'uploadProgress' });
       },
       reportUploaded: (url) => {
-        this.openDialog({ url, type: 'uploaded' })
+        this.openDialog({ url, type: 'uploaded' });
       },
     });
   }
@@ -252,7 +185,7 @@ class StreamlitApp extends PureComponent {
         dispatchOneOf(delta, 'type', {
           newElement: newElement => newElement.set('reportId', reportId),
           addRows: newRows => addRows(element, newRows),
-      })),
+        })),
     }));
   }
 
@@ -260,17 +193,17 @@ class StreamlitApp extends PureComponent {
    * Empties out all elements whose reportIds are no longer current.
    */
   clearOldElements() {
-    this.setState(({elements, reportId}) => ({
+    this.setState(({ elements, reportId }) => ({
       elements: elements.map((elt) => {
-            if (elt.get('reportId') === reportId) {
-              return elt;
-            }
-            return fromJS({
-              reportId,
-              empty: { unused: true },
-              type: 'empty',
-            });
-          }),
+        if (elt.get('reportId') === reportId) {
+          return elt;
+        }
+        return fromJS({
+          reportId,
+          empty: { unused: true },
+          type: 'empty',
+        });
+      }),
     }));
   }
 
@@ -278,24 +211,28 @@ class StreamlitApp extends PureComponent {
    * Callback to call when we want to save the report.
    */
   saveReport() {
-    if (this.state.sharingEnabled) {
-      trackEventRemotely('saveReport', 'newInteraction');
-      this.sendBackMsg({
-        type: 'cloudUpload',
-        cloudUpload: true,
-      });
-    } else {
-      this.openDialog({
-        type: "warning",
-        msg: (
-          <div>
-            You do not have Amazon S3 or Google GCS sharing configured.
-            Please contact&nbsp;
+    if (this.isProxyConnected()) {
+      if (this.state.sharingEnabled) {
+        trackEventRemotely('saveReport', 'newInteraction');
+        this.sendBackMsg({
+          type: 'cloudUpload',
+          cloudUpload: true,
+        });
+      } else {
+        this.openDialog({
+          type: 'warning',
+          msg: (
+            <div>
+              You do not have sharing configured.
+              Please contact&nbsp;
               <a href="mailto:hello@streamlit.io">Streamlit Support</a>
-            &nbsp;to setup sharing.
-          </div>
-        ),
-      });
+              &nbsp;to setup sharing.
+            </div>
+          ),
+        });
+      }
+    } else {
+      console.warn('Cannot save report when proxy is disconnected');
     }
   }
 
@@ -305,9 +242,9 @@ class StreamlitApp extends PureComponent {
   openRerunScriptDialog() {
     if (this.isProxyConnected()) {
       this.openDialog({
-        type: "rerunScript",
+        type: 'rerunScript',
         getCommandLine: (() => this.state.commandLine),
-        setCommandLine: ((commandLine) => this.setState({commandLine})),
+        setCommandLine: (commandLine => this.setState({ commandLine })),
         rerunCallback: this.rerunScript,
 
         // This will be called if enter is pressed.
@@ -327,7 +264,7 @@ class StreamlitApp extends PureComponent {
       trackEventRemotely('rerunScript', 'newInteraction');
       this.sendBackMsg({
         type: 'rerunScript',
-        rerunScript: this.state.commandLine
+        rerunScript: this.state.commandLine,
       });
     } else {
       console.warn('Cannot rerun script when proxy is disconnected.');
@@ -341,7 +278,7 @@ class StreamlitApp extends PureComponent {
     trackEventRemotely('displayHelp', 'newInteraction');
     this.sendBackMsg({
       type: 'help',
-      help: true
+      help: true,
     });
   }
 
@@ -349,39 +286,36 @@ class StreamlitApp extends PureComponent {
    * Sends a message back to the proxy.
    */
   sendBackMsg(msg) {
-    if (this.connection) {
-      this.connection.sendToProxy(msg);
+    if (this.connectionManager) {
+      this.connectionManager.sendMessage(msg);
     } else {
-      console.error('Cannot send a back message without a connection:', msg);
+      console.error(`Not connected. Cannot send back message: ${msg}`);
     }
   }
 
   /**
-   * Sets the connection state to given value defined in ConnectionStatus.js.
-   * errMsg is an optional error message to display on the screen.
+   * Updates the report body when there's a connection error.
    */
-  setConnectionState({connectionState, errMsg}) {
-    this.setState({connectionState: connectionState});
-    if (errMsg)
-      this.showSingleTextElement(errMsg, TextProto.Format.WARNING);
+  handleConnectionError(errMsg) {
+    this.showSingleTextElement(
+      `Connection error: ${errMsg}`, TextProto.Format.WARNING);
   }
 
   /**
-   * Indicates whether we're connect to the proxy.
+   * Indicates whether we're connected to the proxy.
    */
   isProxyConnected() {
-    return !(
-      this.state.connectionState === ConnectionState.STATIC ||
-      this.state.connectionState === ConnectionState.DISCONNECTED ||
-      this.state.connectionState === null);
+    return this.connectionManager ?
+      this.connectionManager.isConnected() :
+      false;
   }
 
   /**
    * Sets the reportName in state and upates the title bar.
    */
   setReportName(reportName) {
-    document.title = `${reportName} (Streamlit)`
-    this.setState({reportName});
+    document.title = `${reportName} · Streamlit`;
+    this.setState({ reportName });
   }
 
   render() {
@@ -391,10 +325,15 @@ class StreamlitApp extends PureComponent {
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
           </div>
-          <ConnectionStatus connectionState={this.state.connectionState} />
+          <ConnectionManager ref={c => this.connectionManager = c}
+            getUserLogin={this.getUserLogin}
+            onMessage={this.handleMessage}
+            onConnectionError={this.handleConnectionError}
+            setReportName={this.setReportName}
+          />
           <MainMenu
             isHelpPage={this.state.reportName === 'help'}
-            isProxyConnected={this.isProxyConnected()}
+            isProxyConnected={this.isProxyConnected}
             helpCallback={this.displayHelp}
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
@@ -412,14 +351,24 @@ class StreamlitApp extends PureComponent {
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
-              <AutoSizer className="main">
-                { ({width}) => this.renderElements(width) }
-              </AutoSizer>
+              {this.state.showLoginBox ?
+                <LoginBox
+                  onSuccess={this.onLogInSuccess}
+                  onFailure={this.onLogInError}
+                />
+              :
+                <AutoSizer className="main">
+                  { ({ width }) => this.renderElements(width) }
+                </AutoSizer>
+              }
             </Col>
           </Row>
 
           <StreamlitDialog
-            dialogProps={{...this.state.dialog, onClose: this.closeDialog}}
+            dialogProps={{
+              ...this.state.dialog,
+              onClose: this.closeDialog,
+            }}
           />
 
         </Container>
@@ -432,27 +381,27 @@ class StreamlitApp extends PureComponent {
       try {
         if (!element) throw new Error('Transmission error.');
         return dispatchOneOf(element, 'type', {
-          audio: (audio) => <Audio audio={audio} width={width}/>,
-          balloons: (balloons) => <Balloons balloons={balloons}/>,
-          chart: (chart) => <Chart chart={chart} width={width}/>,
-          dataFrame: (df) => <DataFrame df={df} width={width}/>,
-          deckGlChart: (el) => <DeckGlChart element={el} width={width}/>,
-          docString: (doc) => <DocString element={doc} width={width}/>,
-          empty: (empty) => undefined,
-          exception: (exc) => <ExceptionElement element={exc} width={width}/>,
-          imgs: (imgs) => <ImageList imgs={imgs} width={width}/>,
-          map: (map) => <Map map={map} width={width}/>,
-          progress: (p) => <Progress value={p.get('value')} style={{width}}/>,
-          table: (df) => <Table df={df} width={width}/>,
-          text: (text) => <Text element={text} width={width}/>,
-          vegaLiteChart: (chart) => <VegaLiteChart chart={chart} width={width}/>,
-          video: (video) => <Video video={video} width={width}/>,
+          audio: audio => <Audio audio={audio} width={width} />,
+          balloons: balloons => <Balloons balloons={balloons} />,
+          chart: chart => <Chart chart={chart} width={width} />,
+          dataFrame: df => <DataFrame df={df} width={width} />,
+          deckGlChart: el => <DeckGlChart element={el} width={width} />,
+          docString: doc => <DocString element={doc} width={width} />,
+          empty: empty => undefined,
+          exception: exc => <ExceptionElement element={exc} width={width} />,
+          imgs: imgs => <ImageList imgs={imgs} width={width} />,
+          map: map => <Map map={map} width={width} />,
+          progress: p => <Progress value={p.get('value')} style={{width}} />,
+          table: df => <Table df={df} width={width} />,
+          text: text => <Text element={text} width={width} />,
+          vegaLiteChart: chart => <VegaLiteChart chart={chart} width={width} />,
+          video: video => <Video video={video} width={width} />,
         });
       } catch (err) {
-        return <Alert color="warning" style={{width}}>{err.message}</Alert>;
+        return <Alert color="warning" style={{ width }}>{err.message}</Alert>;
       }
     }).push(
-      <div style={{width}} className="footer"/>
+      <div style={{ width }} className="footer" />
     ).flatMap((element, indx) => {
       if (element) {
         return [<div className="element-container" key={indx}>{element}</div>];
@@ -462,58 +411,27 @@ class StreamlitApp extends PureComponent {
     });
   }
 
-  async getAppropriateConnection(reportId) {
-    const manifestUri = `reports/${reportId}/manifest.json`;
+  async getUserLogin() {
+    this.setState({ showLoginBox: true });
+    const idToken = await this.userLoginResolver.promise;
+    this.setState({ showLoginBox: false });
 
-    let manifestResponse;
-    let manifest;
+    return idToken;
+  }
 
-    try {
-      manifestResponse = await fetch(manifestUri, FETCH_PARAMS);
-      manifest = await manifestResponse.json();
-    } catch (error) {
-      this.setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: `Unable to find or parse report with ID "${reportId}": ${error}`
-      });
+  onLogInSuccess({ accessToken, idToken }) {
+    if (accessToken) {
+      this.userLoginResolver.resolve(idToken);
+    } else {
+      this.userLoginResolver.reject('Error signing in.');
     }
+  }
 
-    const {
-      name, proxyStatus, configuredProxyAddress, internalProxyIP,
-      externalProxyIP, proxyPort
-    } = manifest;
-
-    // If the proxy is running redirect immediately to proxy.
-    if (proxyStatus === 'running') {
-
-      const uriList = configuredProxyAddress ?
-        [ getWsUrl(configuredProxyAddress, proxyPort, name) ] :
-        [
-          getWsUrl(externalProxyIP, proxyPort, name),
-          getWsUrl(internalProxyIP, proxyPort, name),
-        ];
-
-      return new WebsocketConnection({
-        uriList,
-        onMessage: this.handleMessage,
-        setConnectionState: this.setConnectionState,
-      });
-    }
-
-    return new StaticConnection({
-      manifest,
-      reportId,
-      onMessage: this.handleMessage,
-      setConnectionState: this.setConnectionState,
-      setReportName: this.setReportName,
-    });
+  onLogInError(msg) {
+    this.userLoginResolver.reject(`Error signing in. ${msg}`);
   }
 }
 
-
-function getWsUrl(host, port, reportName) {
-  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
-}
 
 
 export default hotkeys(StreamlitApp);

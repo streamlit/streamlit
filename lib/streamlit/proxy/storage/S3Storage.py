@@ -183,16 +183,21 @@ class S3Storage(AbstractStorage):
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):
+        set_private_acl = config.get_option('s3.requireLoginToView')
         for i, (path, data) in enumerate(files):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
                 mime_type = 'application/octet-stream'
+            if set_private_acl and path.startswith('report'):
+                acl = 'private'
+            else:
+                acl = 'public-read'
             self._s3_client.put_object(
                 Bucket=self._bucketname,
                 Body=data,
                 Key=self._s3_key(path),
                 ContentType=mime_type,
-                ACL='public-read')
+                ACL=acl)
             LOGGER.debug('Uploaded: "%s"' % path)
 
             if progress_coroutine:

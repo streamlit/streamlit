@@ -11,9 +11,10 @@
  *   send_to_proxy() - raises an exception because there's no proxy connection
  */
 
+import url from 'url';
 import { ConnectionState } from './ConnectionState';
-import { FETCH_PARAMS } from './baseconsts';
 import { Text as TextProto, Delta } from './protobuf';
+import { getObject } from './s3helper';
 
 /**
 * This class is the "brother" of WebsocketConnection. The class implements
@@ -25,56 +26,62 @@ import { Text as TextProto, Delta } from './protobuf';
 *   sendToProxy() - raises an exception because there's no proxy connection
 */
 class StaticConnection {
-  constructor(
-      { reportId, manifest, onMessage, setConnectionState, setReportName }) {
+  constructor({
+    reportId, manifest, onMessage, setConnectionState, setReportName
+  }) {
     this.state = ConnectionState.STATIC;
 
     const { name, nDeltas } = manifest;
     setConnectionState({ connectionState: ConnectionState.STATIC });
     setReportName(name);
 
-    for (let id = 0 ; id < nDeltas ; id++) {
+    // TODO: Unify with StreamlitApp.js
+    const { hostname, pathname } = url.parse(window.location.href, true);
+    const bucket = hostname;
+    const version = pathname.split('/')[1];
+
+    for (let id = 0; id < nDeltas; id++) {
       // Insert a loading message for this element.
-      onMessage(textElement({id,
+      onMessage(textElement({
+        id,
         body: `Loading element ${id}...`,
-        format: TextProto.Format.INFO
+        format: TextProto.Format.INFO,
       }));
-      const deltaUri = `reports/${reportId}/${id}.delta`;
-      fetch(deltaUri, FETCH_PARAMS).then((response) => {
-        return response.arrayBuffer();
-      }).then((arrayBuffer) => {
-        onMessage({
-          type: 'delta',
-          delta: Delta.decode(new Uint8Array(arrayBuffer))
+      const deltaKey = `${version}/reports/${reportId}/${id}.delta`;
+
+      getObject({ Bucket: bucket, Key: deltaKey })
+        .then(response => response.arrayBuffer())
+        .then((arrayBuffer) => {
+          onMessage({
+            type: 'delta',
+            delta: Delta.decode(new Uint8Array(arrayBuffer)),
+          });
+        }).catch((error) => {
+          onMessage(textElement({
+            id,
+            body: `Error loading element ${id}: ${error}`,
+            format: TextProto.Format.ERROR,
+          }));
         });
-      }).catch((error) => {
-        onMessage(textElement({id,
-          body: `Error loading element ${id}: ${error}`,
-          format: TextProto.Format.ERROR
-        }));
-      });
     }
   }
-};
+}
 
 /**
  * Returns the json to construct a message which places an element at a
  * particular location in the document.
  */
-function textElement({id, body, format}) {
+function textElement({ id, body, format }) {
   return {
     type: 'delta',
     delta: {
-      id: id,
+      id,
       type: 'newElement',
       newElement: {
         type: 'text',
-        text: {
-          body: body,
-          format: format,
-        }
-      }
-    }
+        text: { body, format },
+      },
+    },
   };
 }
 

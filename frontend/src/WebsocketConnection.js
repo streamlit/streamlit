@@ -125,9 +125,10 @@ class WebsocketConnection {
   }
 
   /**
-   * Encdes the message with the outgoingMessageType and sends it over the wire.
+   * Encodes the message with the outgoingMessageType and sends it over the
+   * wire.
    */
-  sendToProxy(obj) {
+  sendMessage(obj) {
     if (!this.websocket) return;
     const msg = BackMsg.create(obj);
     const buffer = BackMsg.encode(msg).finish();

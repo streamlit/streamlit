@@ -4,6 +4,7 @@
  */
 
 export const ConnectionState = {
+  INITIAL: 'initial',
   CONNECTED: 'connected',
   DISCONNECTED: 'disconnected',
   ERROR: 'error',

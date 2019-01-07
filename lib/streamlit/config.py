@@ -16,9 +16,9 @@ import toml
 import urllib
 import collections
 
-from streamlit.ConfigOption import ConfigOption
-from streamlit import util
 from streamlit import development
+from streamlit import util
+from streamlit.ConfigOption import ConfigOption
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -364,6 +364,13 @@ def _s3_secret_access_key():
 
 
 _create_option(
+    's3.requireLoginToView',
+    description='''Make the shared report visible only to users who have been
+        granted view permission.
+        ''',
+    default_val=False)
+
+_create_option(
     's3.keyPrefix',
     description='''The "subdirectory" within the S3 bucket where to save
         reports.
@@ -459,10 +466,38 @@ def get_where_defined(key):
 
 
 def _is_unset(option_name):
+    """Check if a given option has not been set by the user.
+
+    Parameters
+    ----------
+    option_name : str
+        The option to check
+
+
+    Returns
+    -------
+    bool
+        True if the option has not been set by the user.
+
+    """
     return get_where_defined(option_name) == ConfigOption.DEFAULT_DEFINITION
 
 
 def is_manually_set(option_name):
+    """Check if a given option was actually defined by the user.
+
+    Parameters
+    ----------
+    option_name : str
+        The option to check
+
+
+    Returns
+    -------
+    bool
+        True if the option has been set by the user.
+
+    """
     return get_where_defined(option_name) != ConfigOption.DEFAULT_DEFINITION
 
 
