@@ -104,6 +104,9 @@ class FSObserver(object):
 
         This simply calls the callback function passed during construction.
 
+        IMPORTANT: This method runs in a thread owned by the watchdog module
+        (i.e. *not* in the Tornado IO loop).
+
         Parameters
         ----------
         event : FileSystemEvent
@@ -176,7 +179,11 @@ class FSObserver(object):
 
 
 class FSEventHandler(PatternMatchingEventHandler):
-    """Object that calls a function whenever a watched file changes."""
+    """Object that calls a function whenever a watched file changes.
+
+    IMPORTANT: This object's methods run in a thread owned by the watchdog
+    module (i.e. *not* in the Tornado IO loop).
+    """
 
     def __init__(self, fn_to_run, file_to_observe):
         """Constructor.

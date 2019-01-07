@@ -547,8 +547,8 @@ def _print_urls(connection, waitSecs):
 def _on_fs_event(observer, event):  # noqa: D401
     """Callback for FS events.
 
-    Note: this will run in the Observer thread (created by the watchdog
-    module).
+    IMPORTANT: This method runs in a thread owned by the watchdog module
+    (i.e. *not* in the Tornado IO loop).
     """
     LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
