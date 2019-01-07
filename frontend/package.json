@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.22.1",
+  "version": "0.22.2",
   "private": true,
   "dependencies": {
     "aws-sdk": "^2.374.0",

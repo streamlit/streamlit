@@ -1,0 +1,14 @@
+[
+    {
+        "ParameterValue": "t3.medium", 
+        "ParameterKey": "Ec2InstanceType"
+    }, 
+    {
+        "ParameterValue": "0.0.0.0/0", 
+        "ParameterKey": "SshLocation"
+    }, 
+    {
+        "ParameterValue": "", 
+        "ParameterKey": "SshKeyName"
+    }
+]
