@@ -54,7 +54,7 @@ def kill_proxy(*args):
     for p in psutil.process_iter(attrs=['name', 'username']):
         # Check for both "python" and "Python" in the process name. The latter
         # is required in some Mac installs. Probably related to Homebrew.
-        if (('python' in p.name() or 'Python' in p.name())
+        if (p.name() in ('python', 'Python')
                 and 'streamlit.proxy' in p.cmdline()
                 and getpass.getuser() == p.info['username']):
             print('Killing proxy with PID %d' % p.pid)
