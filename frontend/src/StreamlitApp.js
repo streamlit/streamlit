@@ -87,6 +87,32 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
+   * Global keyboard shortcuts.
+   */
+  hot_keys = {
+    // The r key reruns the script.
+    'r': {
+      priority: 1,
+      handler: () => this.rerunScript(),
+    },
+
+    // The shift+r key opens the rerun script dialog.
+    'shift+r': {
+      priority: 1,
+      handler: () => this.openRerunScriptDialog(),
+    },
+
+    // The enter key runs the "default action" of the dialog.
+    'enter': {
+      priority: 1,
+      handler: () => {
+        if (this.state.dialog && this.state.dialog.defaultAction)
+          this.state.dialog.defaultAction();
+      },
+    }
+  }
+
+  /**
    * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
    *
