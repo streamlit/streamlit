@@ -507,7 +507,13 @@ def stop_proxy_on_exception(is_coroutine=False):
 
 class _HealthHandler(web.RequestHandler):
     def get(self):
-        self.write('ok')
+        from streamlit.proxy.ClientWebSocket import ClientWebSocketStatus
+        if ClientWebSocketStatus.is_opened():
+            self.write('ok')
+        else:
+            # 503 is SERVICE_UNAVAILABLE
+            self.set_status(503)
+            self.write('notready')
 
     def check_origin(self, origin):
         """Set up CORS."""

@@ -23,6 +23,18 @@ from streamlit.proxy import proxy_util
 LOGGER = get_logger(__name__)
 
 
+class ClientWebSocketStatus(object):
+    _is_opened = False
+
+    @classmethod
+    def set_opened(cls):
+        cls._is_opened = True
+
+    @classmethod
+    def is_opened(cls):
+        return cls._is_opened
+
+
 class ClientWebSocket(WebSocketHandler):
     """Websocket handler class which the local python library connects to."""
 
@@ -49,6 +61,7 @@ class ClientWebSocket(WebSocketHandler):
         self._report_name = urllib.parse.unquote_plus(self._report_name)
         self._connection = None
         LOGGER.debug('Client websocket opened for %s', self._report_name)
+        ClientWebSocketStatus.set_opened()
 
     @Proxy.stop_proxy_on_exception()
     def on_message(self, message):
