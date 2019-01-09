@@ -218,10 +218,10 @@ _create_option(
 _create_option(
     'proxy.reportExpirationSecs',
     description=(
-        'How long reports should be stored in memory for when '
+        'How long reports should be stored in memory for when the '
         'script is done and there are no viewers. '
         'For best results make sure this is >= 3.'),
-    default_val=10.1)
+    default_val=60)
 
 
 @_create_option('proxy.useNode', visibility='hidden')
