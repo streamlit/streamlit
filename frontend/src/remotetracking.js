@@ -18,24 +18,31 @@ let trackUsage = true;
  */
 export function initRemoteTracker({remotelyTrackUsage}) {
   if (remotelyTrackUsage != null) trackUsage = remotelyTrackUsage;
+
+  if (remotelyTrackUsage) {
+    window.mixpanel.opt_in_tracking();
+  } else {
+    window.mixpanel.opt_out_tracking();
+  }
+
   console.log('Track stats remotely: ', trackUsage);
 }
 
 /**
  * Params:
- *   event: a string with the name of the event that should be tracked.
- *   category: one of ['newInteraction', 'newMessage']
+ *   eventName: the event name as a string.
+ *   opts: other stuff to track.
  */
-export function trackEventRemotely(event, category) {
+export function trackEventRemotely(eventName, opts = {}) {
   if (!trackUsage) return;
-  if (!window.gtag) return;
+  if (!window.mixpanel) return;
 
   // Print to console, for transparency.
-  console.log('Tracking stat datapoint: ', event);
+  console.log('Tracking stat datapoint: ', eventName, opts);
 
-  window.gtag('event', event, {
-    event_category: category,
-    event_label: IS_DEV_ENV ? 'dev' : 'prod',
-    //value: value,  // Optional
+  window.mixpanel.track(eventName, {
+    ...opts,
+    source: 'browser',
+    dev: IS_DEV_ENV,
   });
 }

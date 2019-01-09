@@ -112,6 +112,10 @@ class StreamlitApp extends PureComponent {
     }
   }
 
+  async componentDidMount() {
+    trackEventRemotely('viewReport');
+  }
+
   /**
    * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
@@ -143,13 +147,13 @@ class StreamlitApp extends PureComponent {
         initRemoteTracker({
           remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
         });
-        trackEventRemotely('newConnection', 'newMessage');
+        trackEventRemotely('createReport');
         this.setState({
           sharingEnabled: connectionProperties.get('sharingEnabled'),
         });
       },
       newReport: (newReportMsg) => {
-        trackEventRemotely('newReport', 'newMessage');
+        trackEventRemotely('updateReport');
         this.setState({
           reportId: newReportMsg.get('id'),
           commandLine: newReportMsg.get('commandLine').toJS().join(' '),
@@ -239,7 +243,7 @@ class StreamlitApp extends PureComponent {
   saveReport() {
     if (this.isProxyConnected()) {
       if (this.state.sharingEnabled) {
-        trackEventRemotely('saveReport', 'newInteraction');
+        trackEventRemotely('shareReport');
         this.sendBackMsg({
           type: 'cloudUpload',
           cloudUpload: true,
@@ -287,7 +291,7 @@ class StreamlitApp extends PureComponent {
   rerunScript() {
     this.closeDialog();
     if (this.isProxyConnected()) {
-      trackEventRemotely('rerunScript', 'newInteraction');
+      trackEventRemotely('rerunScript');
       this.sendBackMsg({
         type: 'rerunScript',
         rerunScript: this.state.commandLine,
@@ -301,7 +305,7 @@ class StreamlitApp extends PureComponent {
    * Tells the proxy to display the inline help dialog.
    */
   displayHelp() {
-    trackEventRemotely('displayHelp', 'newInteraction');
+    trackEventRemotely('displayHelp');
     this.sendBackMsg({
       type: 'help',
       help: true,
