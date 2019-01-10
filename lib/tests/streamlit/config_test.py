@@ -270,6 +270,7 @@ class ConfigTest(unittest.TestCase):
             u's3.keyPrefix',
             u's3.profile',
             u's3.region',
+            u's3.requireLoginToView',
             u's3.secretAccessKey',
             u's3.url']
         keys = sorted(config._config_options.keys())
