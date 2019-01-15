@@ -70,6 +70,11 @@ class Proxy(object):
         # get_storage() which is why it starts off as null.
         self._storage = None
 
+        # This becomes True when this Proxy is ready for a browser to connect
+        # to it (meaning the HTTP and WebSocket endpoints are ready, and there
+        # is at least one report registered)
+        self.is_ready_for_browser_connection = False
+
         # How long to keep the proxy alive for, when there are no connections.
         self._auto_close_delay_secs = config.get_option(
             'proxy.autoCloseDelaySecs')
@@ -103,7 +108,7 @@ class Proxy(object):
         routes = [
             ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
-            ('/healthz', _HealthHandler),
+            ('/healthz', _HealthHandler, dict(proxy=self)),
         ]
 
         if not config.get_option('proxy.useNode'):
@@ -178,6 +183,8 @@ class Proxy(object):
                 url = connection.get_url(
                     config.get_option('browser.proxyAddress'))
                 util.open_browser(url)
+
+        self.is_ready_for_browser_connection = True
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -506,9 +513,11 @@ def stop_proxy_on_exception(is_coroutine=False):
 
 
 class _HealthHandler(web.RequestHandler):
+    def initialize(self, proxy):
+        self._proxy = proxy
+
     def get(self):
-        from streamlit.proxy.ClientWebSocket import ClientWebSocketStatus
-        if ClientWebSocketStatus.is_opened():
+        if self._proxy.is_ready_for_browser_connection:
             self.write('ok')
         else:
             # 503 is SERVICE_UNAVAILABLE
