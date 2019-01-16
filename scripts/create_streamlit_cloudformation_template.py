@@ -190,6 +190,8 @@ class Insight(object):
                         # user knows its still installing.
                         'echo -e \'#!/bin/sh\necho Streamlit is still installing. Please try again in a few minutes.\n\' > /usr/local/bin/streamlit \n',
                         'chmod +x /usr/local/bin/streamlit \n',
+                        # Create ~/sshfs dir which is the target of the sshfs mount commmand
+                        'install -o ubuntu -g ubuntu -m 755 -d ~ubuntu/sshfs \n',
                         # Install streamlit.
                         '/home/ubuntu/anaconda3/bin/pip install streamlit \n',
                         # Install rmate.
