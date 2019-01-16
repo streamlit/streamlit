@@ -68,6 +68,7 @@ class FSObserver(object):
         # this is empty and deregister_consumer() is called, the observer stops
         # watching for filesystem updates.
         self._consumers = set()
+        self.register_consumer(self.key)
 
     def _initialize_observer(self, source_file_path):
         """Initialize the filesystem observer.
