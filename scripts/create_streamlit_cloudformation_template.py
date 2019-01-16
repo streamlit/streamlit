@@ -207,7 +207,8 @@ class Insight(object):
                         # Get streamlit config which has the proxy wait
                         # for 2 minutes and any other options we added.
                         'curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n',
-                        'install -D -m 755 -o ubuntu -t ~ubuntu/.streamlit /tmp/config.toml \n',
+                        'install -m 755 -o ubuntu -g ubuntu -d ~ubuntu/.streamlit \n',
+                        'install -m 600 -o ubuntu -g ubuntu -t ~ubuntu/.streamlit /tmp/config.toml \n',
                     ]
                 )),
                 Tags=Tags(

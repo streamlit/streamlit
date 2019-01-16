@@ -106,7 +106,8 @@ Resources:
             - "ln -fs /home/ubuntu/anaconda3/bin/streamlit /usr/local/bin/streamlit\
               \ \n"
             - "curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n"
-            - "install -D -m 755 -o ubuntu -t ~ubuntu/.streamlit /tmp/config.toml\
+            - "install -m 755 -o ubuntu -g ubuntu -d ~ubuntu/.streamlit \n"
+            - "install -m 600 -o ubuntu -g ubuntu -t ~ubuntu/.streamlit /tmp/config.toml\
               \ \n"
     Type: AWS::EC2::Instance
   Ec2InstanceSecurityGroup:
