@@ -52,8 +52,7 @@ class Insight(object):
         # Order matters
         self.setup_parameters()
         self.add_ami_mappings()
-        self.create_vpc()
-        self.setup_network()
+        self.setup_security_group()
         self.add_ec2_instance()
         self.create()
 
@@ -93,10 +92,20 @@ class Insight(object):
                 'Ec2InstanceType',
                 Type='String',
                 Description='EC2 Instance Type',
-                Default='t3.medium',
+                Default='t2.medium',
                 # There should be more listed here.
                 AllowedValues=[
-                    't3.medium', 'p2.xlarge',
+                    't2.nano',
+                    't2.micro',
+                    't2.small',
+                    't2.medium',
+                    't2.large',
+                    't2.xlarge',
+                    't2.2xlarge',
+                    'm4.large',
+                    'c4.large',
+                    'r3.large',
+                    'p2.xlarge'
                 ],
                 ConstraintDescription='Must be a valid EC2 instance type.',
             ),
@@ -117,107 +126,20 @@ class Insight(object):
                 ConstraintDescription=(
                     "must be a valid IP CIDR range of the form x.x.x.x/x."),
             ),
+            'VpcId': Parameter(
+                'VpcId',
+                Description='VPC ID to use',
+                Type='AWS::EC2::VPC::Id',
+            ),
+            'SubnetId': Parameter(
+                'SubnetId',
+                Description='Subnet ID to use',
+                Type='AWS::EC2::Subnet::Id',
+            ),
         })
 
-    def create_vpc(self):
+    def setup_security_group(self):
         self._resources.update({
-            'VPC': ec2.VPC(
-                'VPC',
-                CidrBlock='172.17.0.0/16',
-                Tags=Tags(
-                    Application=self._stack_id,
-                    Name=Sub('Streamlit VPC (${AWS::StackName})'),
-                ),
-            ),
-        }) 
-
-        self._resources.update({
-            'Subnet': ec2.Subnet(
-                'Subnet',
-                CidrBlock='172.17.255.0/24',
-                VpcId=Ref(self._resources['VPC']),
-                Tags=Tags(
-                    Application=self._stack_id,
-                    Name=Sub('Streamlit Subnet (${AWS::StackName})'),
-                ),
-            ),
-            'InternetGateway': ec2.InternetGateway(
-                'InternetGateway',
-                Tags=Tags(
-                    Application=self._stack_id,
-                    Name=Sub('Streamlit InternetGateway (${AWS::StackName})'),
-                ),
-            ),
-            'RouteTable': ec2.RouteTable(
-                'RouteTable',
-                VpcId=Ref(self._resources['VPC']),
-                Tags=Tags(
-                    Application=self._stack_id,
-                    Name=Sub('Streamlit RouteTable (${AWS::StackName})'),
-                ),
-            ),
-        }) 
-
-        self._resources.update({
-            'VPCGatewayAttachment': ec2.VPCGatewayAttachment(
-                'VPCGatewayAttachment',
-                VpcId=Ref(self._resources['VPC']),
-                InternetGatewayId=Ref(self._resources['InternetGateway']),
-            ),
-            'Route': ec2.Route(
-                'Route',
-                DependsOn='VPCGatewayAttachment',
-                GatewayId=Ref(self._resources['InternetGateway']),
-                DestinationCidrBlock='0.0.0.0/0',
-                RouteTableId=Ref(self._resources['RouteTable']),
-            ),
-            'SubnetRouteTableAssociation': ec2.SubnetRouteTableAssociation(
-                'SubnetRouteTableAssociation',
-                SubnetId=Ref(self._resources['Subnet']),
-                RouteTableId=Ref(self._resources['RouteTable']),
-            ),
-        }) 
-
-
-    def setup_network(self):
-        self._resources.update({
-            'NetworkAcl': ec2.NetworkAcl(
-                'NetworkAcl',
-                VpcId=Ref(self._resources['VPC']),
-                Tags=Tags(
-                    Application=self._stack_id,
-                    Name=Sub('Streamlit Network ACL (${AWS::StackName})'),
-                ),
-            ),
-        }) 
-
-        self._resources.update({
-            'InboundAllNetworkAclEntry': ec2.NetworkAclEntry(
-                'InboundAllNetworkAclEntry',
-                NetworkAclId=Ref(self._resources['NetworkAcl']),
-                RuleNumber='100',
-                Protocol='-1',
-                Egress='false',
-                RuleAction='allow',
-                CidrBlock='0.0.0.0/0',
-            ),
-            'OutBoundAllNetworkAclEntry': ec2.NetworkAclEntry(
-                'OutBoundAllNetworkAclEntry',
-                NetworkAclId=Ref(self._resources['NetworkAcl']),
-                RuleNumber='100',
-                Protocol='-1',
-                Egress='true',
-                RuleAction='allow',
-                CidrBlock='0.0.0.0/0',
-            ),
-        }) 
-
-        self._resources.update({
-            'SubnetNetworkAclAssociation': ec2.SubnetNetworkAclAssociation(
-                'SubnetNetworkAclAssociation',
-                SubnetId=Ref(self._resources['Subnet']),
-                NetworkAclId=Ref(self._resources['NetworkAcl']),
-            ),
             'Ec2InstanceSecurityGroup': ec2.SecurityGroup(
                 'Ec2InstanceSecurityGroup',
                 GroupDescription='Enable Streamlit access via port 8501 and SSH access via port 22',
@@ -233,16 +155,13 @@ class Insight(object):
                         ToPort='8501',
                         CidrIp=Ref(self._parameters['SshLocation'])),
                 ],
-                VpcId=Ref(self._resources['VPC']),
+                VpcId=Ref(self._parameters['VpcId']),
                 Tags=Tags(
                     Application=self._stack_id,
                     Name=Sub('Streamlit Security Group (${AWS::StackName})'),
                 ),
             ),
         })
-
-
-
 
 
     def add_ec2_instance(self):
@@ -260,18 +179,33 @@ class Insight(object):
                         AssociatePublicIpAddress='true',
                         DeviceIndex='0',
                         DeleteOnTermination='true',
-                        SubnetId=Ref(self._resources['Subnet']),
+                        SubnetId=Ref(self._parameters['SubnetId']),
                     ),
-                ],        
+                ],
                 UserData=Base64(Join(
                     '',
                     [
                         '#!/bin/bash\n',
-                        'echo "prepend domain-name-servers 8.8.8.8;" >> "/etc/dhcp/dhclient.conf"\n'
-                        'service networking restart || true\n',
-                        'sleep 5 \n',
-                        '/home/ubuntu/anaconda2/bin/pip install streamlit \n',
+                        # Add a temporary /usr/local/bin/streamlit so
+                        # user knows its still installing.
+                        'echo -e \'#!/bin/sh\necho Streamlit is still installing. Please try again in a few minutes.\n\' > /usr/local/bin/streamlit \n',
+                        'chmod +x /usr/local/bin/streamlit \n',
+                        # Install streamlit.
                         '/home/ubuntu/anaconda3/bin/pip install streamlit \n',
+                        # Install rmate.
+                        'curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rmate/master/rmate \n',
+                        'chmod +x /usr/local/bin/rmate \n',
+                        # After streamlit is installed, remove the
+                        # temporary script and add a link to point to
+                        # streamlit in the anaconda directory.  This is
+                        # needed so we dont have to make the user to
+                        # `rehash` in order to pick up the new location.
+                        'rm -f /usr/local/bin/streamlit \n',
+                        'ln -fs /home/ubuntu/anaconda3/bin/streamlit /usr/local/bin/streamlit \n',
+                        # Get streamlit config which has the proxy wait
+                        # for 2 minutes and any other options we added.
+                        'curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n',
+                        'install -D -m 755 -o ubuntu -t ~ubuntu/.streamlit /tmp/config.toml \n',
                     ]
                 )),
                 Tags=Tags(
@@ -284,7 +218,6 @@ class Insight(object):
         self._resources.update({
             'IPAddress': ec2.EIP(
                 'IPAddress',
-                DependsOn='VPCGatewayAttachment',
                 Domain='vpc',
                 InstanceId=Ref(self._resources['Ec2Instance']),
             ),
@@ -341,7 +274,6 @@ class Insight(object):
         """Write cloudformation template to file."""
         directory = os.path.dirname(__file__)
         config_path = os.path.join(directory, '../configs/autogen')
-        print config_path
         if not os.path.exists(config_path):
             os.makedirs(config_path)
         yaml_file = os.path.abspath(os.path.join(
@@ -368,9 +300,9 @@ class Insight(object):
     def write_parameters(self):
         # This is why its JSON and not yaml. https://github.com/aws/aws-cli/issues/2275
         p = []
-        for k,v in self._parameters.iteritems():
-            value = v.properties.get('Default')
-            if not value: 
+        for k in sorted(self._parameters.keys()):
+            value = self._parameters.get(k).properties.get('Default')
+            if not value:
                 value = ''
             p.append({
                 'ParameterKey': k,
@@ -385,7 +317,7 @@ class Insight(object):
             config_path,
             '%s_parameters.json' % self._name))
 
-        data = json.dumps(p, indent=4)
+        data = json.dumps(p, indent=4, sort_keys=True, separators=(',', ': '))
 
         update = True
         try:

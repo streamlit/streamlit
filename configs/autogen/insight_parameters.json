@@ -1,14 +1,22 @@
 [
     {
-        "ParameterValue": "t3.medium", 
-        "ParameterKey": "Ec2InstanceType"
-    }, 
+        "ParameterKey": "Ec2InstanceType",
+        "ParameterValue": "t2.medium"
+    },
     {
-        "ParameterValue": "0.0.0.0/0", 
-        "ParameterKey": "SshLocation"
-    }, 
+        "ParameterKey": "SshKeyName",
+        "ParameterValue": ""
+    },
     {
-        "ParameterValue": "", 
-        "ParameterKey": "SshKeyName"
+        "ParameterKey": "SshLocation",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "SubnetId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VpcId",
+        "ParameterValue": ""
     }
 ]
