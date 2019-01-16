@@ -1,5 +1,6 @@
 from random import random
 import os
+import platform
 import streamlit as st
 import time
 
@@ -18,12 +19,28 @@ for i in range(secs_to_wait, 0, -1):
 
 status.text('Touching %s' % __file__)
 
-cmd = (
-    'sed -i '
-    "'s/^# MODIFIED AT:.*/# MODIFIED AT: %s/' %s" % (time.time(), __file__))
+platform_system = platform.system()
+
+if platform_system == 'Linux':
+    cmd = (
+        'sed -i '
+        "'s/^# MODIFIED AT:.*/# MODIFIED AT: %s/' %s" %
+        (time.time(), __file__))
+
+elif platform_system == 'Darwin':
+    cmd = (
+        'sed -i bak '
+        "'s/^# MODIFIED AT:.*/# MODIFIED AT: %s/' %s" %
+        (time.time(), __file__))
+
+elif platform_system == 'Windows':
+    raise Error('Windows not supported')
+
+else:
+    raise Error('Unknown platform')
 
 os.system(cmd)
 
 status.text('Touched %s' % __file__)
 
-# MODIFIED AT: 1539388206.99
+# MODIFIED AT: 1547668308.38

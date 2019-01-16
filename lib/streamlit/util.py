@@ -11,6 +11,7 @@ setup_2_3_shims(globals())
 # flake8: noqa
 import base58
 import contextlib
+import errno
 import functools
 import os
 import platform
@@ -24,6 +25,9 @@ try:
     import urllib.request  # for Python3
 except ImportError:
     pass
+
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 
 STREAMLIT_ROOT_DIRECTORY = '.streamlit'
@@ -61,6 +65,10 @@ def streamlit_read(path, binary=False):
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
     """
+    filename = os.path.abspath(os.path.join(STREAMLIT_ROOT_DIRECTORY, path))
+    if os.stat(filename).st_size == 0:
+       raise Error(f'Read zero byte file: "{filename}"')
+
     mode = 'r'
     if binary:
         mode += 'b'
@@ -90,8 +98,15 @@ def streamlit_write(path, binary=False):
     directory = os.path.split(path)[0]
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open(path, mode) as handle:
-        yield handle
+    try:
+        with open(path, mode) as handle:
+            yield handle
+    except OSError as e:
+        msg = [f'Unable to write file: {os.path.abspath(path)}']
+        if e.errno == errno.EINVAL and platform.system() == 'Darwin':
+            msg.append('Python is limited to files below 2GB on OSX. '
+                       'See https://bugs.python.org/issue24658')
+        raise Error('\n'.join(msg))
 
 
 def escape_markdown(raw_string):

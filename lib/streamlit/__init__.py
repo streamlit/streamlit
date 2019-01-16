@@ -32,7 +32,6 @@ LOGGER = logger.get_logger('root')
 
 import contextlib
 import functools
-import os
 import re
 import sys
 import textwrap
@@ -52,6 +51,7 @@ this_module = sys.modules[__name__]
 # connection.
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
+
 def _wrap_delta_generator_method(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
@@ -64,6 +64,7 @@ def _wrap_delta_generator_method(method):
 
         return method(delta_generator, *args, **kwargs)
     return wrapped_method
+
 
 for name in dir(DeltaGenerator):
     member = getattr(DeltaGenerator, name)
@@ -165,8 +166,8 @@ def spinner(text):
 
     """
     try:
-        # Set the message 0.1 seconds in the future to avoid annoying flickering
-        # if this spinner runs too quickly.
+        # Set the message 0.1 seconds in the future to avoid annoying
+        # flickering if this spinner runs too quickly.
         DELAY_SECS = 0.1
         message = empty()  # noqa: F821
         display_message = True

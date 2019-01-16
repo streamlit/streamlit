@@ -7,6 +7,7 @@ future-fstrings>=0.4.0
 future>=0.16.0
 futures>=2.2.0            # via s3transfer, tornado
 jmespath>=0.9.0           # via boto3, botocore
+mock==2.0.0
 numpy>=1.14.0             # via pandas
 pandas>=0.23.0
 pillow>=5.0.0

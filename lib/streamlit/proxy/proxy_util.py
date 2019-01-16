@@ -19,7 +19,7 @@ from streamlit import util
 
 
 def url_is_from_allowed_origins(url):
-    """Returns True if URL is from allowed origins (for CORS purpose).
+    """Return True if URL is from allowed origins (for CORS purpose).
 
     Allowed origins:
     1. localhost
@@ -57,5 +57,14 @@ def url_is_from_allowed_origins(url):
         util.get_internal_ip(),
         util.get_external_ip(),
     ]
+
+    s3_url = config.get_option('s3.url')
+
+    if s3_url is not None:
+        parsed = urllib.parse.urlparse(s3_url)
+        allowed_domains.append(parsed.hostname)
+
+    if config.is_manually_set('browser.proxyAddress'):
+        allowed_domains.append(config.get_option('browser.proxyAddress'))
 
     return any(hostname == d for d in allowed_domains)

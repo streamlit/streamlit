@@ -12,5 +12,4 @@ from .ProxyConnection import ProxyConnection
 from .BrowserWebSocket import BrowserWebSocket
 from .ClientWebSocket import ClientWebSocket
 from .Proxy import Proxy
-import streamlit.proxy.process_runner
 import streamlit.proxy.proxy_util

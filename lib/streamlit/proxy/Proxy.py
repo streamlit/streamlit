@@ -34,7 +34,7 @@ from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import util
-from streamlit.proxy import process_runner
+from streamlit import process_runner
 from streamlit.proxy import proxy_util
 from streamlit.proxy.FSObserver import FSObserver
 from streamlit.proxy.storage.S3Storage import S3Storage as Storage
@@ -44,8 +44,11 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 if not config.get_option('global.developmentMode'):
-    # Don't show per-request logs.
-    logging.getLogger('tornado.access').setLevel(logging.WARNING)
+    # Hide logs unless they're super important.
+    # Example of stuff we don't care about: 404 about .js.map files.
+    logging.getLogger('tornado.access').setLevel(logging.ERROR)
+    logging.getLogger('tornado.application').setLevel(logging.ERROR)
+    logging.getLogger('tornado.general').setLevel(logging.ERROR)
 
 
 class Proxy(object):
@@ -67,6 +70,11 @@ class Proxy(object):
         # get_storage() which is why it starts off as null.
         self._storage = None
 
+        # This becomes True when this Proxy is ready for a browser to connect
+        # to it (meaning the HTTP and WebSocket endpoints are ready, and there
+        # is at least one report registered)
+        self.is_ready_for_browser_connection = False
+
         # How long to keep the proxy alive for, when there are no connections.
         self._auto_close_delay_secs = config.get_option(
             'proxy.autoCloseDelaySecs')
@@ -81,8 +89,7 @@ class Proxy(object):
         LOGGER.debug(
             f'Creating proxy with self._connections: {id(self._connections)}')
 
-        self._set_up_client_server()
-        self._set_up_browser_server()
+        self._set_up_server()
 
         # Remember whether we've seen any browser connections so that we can
         # display a helpful warming message if the proxy closed without having
@@ -92,33 +99,16 @@ class Proxy(object):
         # Avoids an exception by guarding against twice stopping the event loop.
         self._stopped = False
 
-    def _set_up_client_server(self):
+    def _set_up_server(self):
         # We have to import this in here to break a circular import reference
         # issue in Python 2.7.
         from streamlit.proxy import ClientWebSocket
-
-        routes = [
-            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
-            ('/healthz', _HealthHandler),
-        ]
-
-        app = web.Application(routes)
-        port = config.get_option('proxy.clientPort')
-
-        http_server = HTTPServer(app)
-        http_server.listen(port)
-
-        LOGGER.debug('Proxy HTTP server for client connections started on '
-                    'port {}'.format(port))
-
-    def _set_up_browser_server(self):
-        # We have to import this in here to break a circular import reference
-        # issue in Python 2.7.
         from streamlit.proxy import BrowserWebSocket
 
         routes = [
+            ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
             ('/stream/(.*)', BrowserWebSocket, dict(proxy=self)),
-            ('/healthz', _HealthHandler),
+            ('/healthz', _HealthHandler, dict(proxy=self)),
         ]
 
         if not config.get_option('proxy.useNode'):
@@ -132,16 +122,16 @@ class Proxy(object):
                 (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
             ])
         else:
-            LOGGER.debug('useNode == True, not serving static content from python.')
+            LOGGER.debug(
+                'useNode == True, not serving static content from python.')
 
         app = web.Application(routes)
-        port = config.get_option('proxy.browserPort')
+        port = config.get_option('proxy.port')
 
         http_server = HTTPServer(app)
         http_server.listen(port)
 
-        LOGGER.debug('Proxy HTTP server for browser connection started on '
-                    'port {}'.format(port))
+        LOGGER.debug('Proxy HTTP server for started on port {}'.format(port))
 
     def run_app(self):
         """Run web app."""
@@ -186,9 +176,15 @@ class Proxy(object):
 
         if open_new_browser_connection:
             if config.get_option('proxy.isRemote'):
-                _print_urls(connection, self._auto_close_delay_secs)
+                _print_urls(
+                    connection,
+                    self._auto_close_delay_secs + self._report_expiration_secs)
             else:
-                util.open_browser(connection.get_url_for_client_webbrowser())
+                url = connection.get_url(
+                    config.get_option('browser.proxyAddress'))
+                util.open_browser(url)
+
+        self.is_ready_for_browser_connection = True
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
@@ -517,46 +513,61 @@ def stop_proxy_on_exception(is_coroutine=False):
 
 
 class _HealthHandler(web.RequestHandler):
+    def initialize(self, proxy):
+        self._proxy = proxy
+
     def get(self):
-        self.write('ok')
+        if self._proxy.is_ready_for_browser_connection:
+            self.write('ok')
+        else:
+            # 503 is SERVICE_UNAVAILABLE
+            self.set_status(503)
+            self.write('notready')
 
     def check_origin(self, origin):
         """Set up CORS."""
         return proxy_util.url_is_from_allowed_origins(origin)
 
 
-def _print_urls(connection, autoCloseDelaySecs):
-    external_url = connection.get_external_url()
-    internal_url = connection.get_internal_url()
-
-    if autoCloseDelaySecs != float('inf'):
-        timeout_msg = f'within {int(autoCloseDelaySecs)} seconds'
+def _print_urls(connection, waitSecs):
+    if waitSecs != float('inf'):
+        timeout_msg = f'within {waitSecs} seconds'
     else:
         timeout_msg = ''
 
-    if config.get_option('proxy.isRemote'):
-        LOGGER.debug(
-            f'External URL: {external_url}, Internal URL: {internal_url}')
+    if config.is_manually_set('browser.proxyAddress'):
+        url = connection.get_url(
+            config.get_option('browser.proxyAddress'))
+
+        LOGGER.info(textwrap.dedent(f'''
+            ════════════════════════════════════════════════════════════
+            Open the URL below in your browser {timeout_msg}
+            REPORT URL: {url}
+            ════════════════════════════════════════════════════════════
+        '''))
+
     else:
-        print(textwrap.dedent(f'''
-            =============================================================
+        external_url = connection.get_url(util.get_external_ip())
+        internal_url = connection.get_url(util.get_internal_ip())
+
+        LOGGER.info(textwrap.dedent(f'''
+            ════════════════════════════════════════════════════════════
             Open one of the URLs below in your browser {timeout_msg}
-            External URL: {external_url}
-            Internal URL: {internal_url}
-            =============================================================
+            EXTERNAL REPORT URL: {external_url}
+            INTERNAL REPORT URL: {internal_url}
+            ════════════════════════════════════════════════════════════
         '''))
 
 
 def _on_fs_event(observer, event):  # noqa: D401
     """Callback for FS events.
 
-    Note: this will run in the Observer thread (created by the watchdog
-    module).
+    IMPORTANT: This method runs in a thread owned by the watchdog module
+    (i.e. *not* in the Tornado IO loop).
     """
     LOGGER.debug(
         f'File system event: [{event.event_type}] {event.src_path}.')
 
-    process_runner.run_outside_proxy_process(
+    process_runner.run_handling_errors_in_subprocess(
         observer.command_line,
-        observer.cwd,
-        )
+        cwd=observer.cwd)

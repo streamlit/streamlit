@@ -10,7 +10,7 @@ setup_2_3_shims(globals())
 import json
 
 from streamlit import data_frame_proto
-from streamlit.caseconverters import to_lower_camel_case, convert_dict_keys
+from streamlit import case_converters
 from streamlit.dicttools import unflatten
 
 from streamlit.logger import get_logger
@@ -52,7 +52,8 @@ def marshall(proto, data=None, spec=None, **kwargs):
         data = layer.pop('data')
 
         layer_proto = proto.layers.add()
-        fixed_layer = convert_dict_keys(to_lower_camel_case, layer)
+        fixed_layer = case_converters.convert_dict_keys(
+            case_converters.to_lower_camel_case, layer)
         layer_proto.spec = json.dumps(fixed_layer)
         # TODO: If several layers use the same data frame, the data gets resent
         # for each layer. Need to improve this.

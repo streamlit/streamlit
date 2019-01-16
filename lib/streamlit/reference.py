@@ -351,14 +351,27 @@ def display_reference():
             lengthy_computation()
 
     st.header('Animation')
-    st.write(
-        'Every Streamlit method (except `st.write`) returns a handle '
-        'which can be used for animation.')
+    st.write("""
+        Every Streamlit method (except `st.write`) returns a handle
+        which can be used for animation. Just call your favorite
+        Streamlit function (e.g. `st.xyz()`) on the handle (e.g. `handle.xyz()`)
+        and it will update that point in the report.
+
+        Additionally, you can use `add_rows()` to append numpy arrays or
+        DataFrames to existing elements.
+    """)
 
     with st.echo():
+        import numpy as np
         import time
-        my_bar = st.progress(0)
 
-        for percent_complete in range(100):
-            my_bar.progress(percent_complete + 1)
+        bar = st.progress(0)
+        complete = st.text('0% complete')
+        graph = st.line_chart(np.random.randn(1, 2))
+
+        for i in range(100):
+            bar.progress(i+1)
+            complete.text('%i%% complete' % (i+1))
+            graph.add_rows(np.random.randn(1, 2))
+
             time.sleep(0.1)
