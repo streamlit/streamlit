@@ -36,10 +36,19 @@ Outputs:
 Parameters:
   Ec2InstanceType:
     AllowedValues:
-      - t3.medium
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - m4.large
+      - c4.large
+      - r3.large
       - p2.xlarge
     ConstraintDescription: Must be a valid EC2 instance type.
-    Default: t3.medium
+    Default: t2.medium
     Description: EC2 Instance Type
     Type: String
   SshKeyName:
@@ -54,6 +63,12 @@ Parameters:
     MaxLength: '18'
     MinLength: '9'
     Type: String
+  SubnetId:
+    Description: Subnet ID to use
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Description: VPC ID to use
+    Type: AWS::EC2::VPC::Id
 Resources:
   Ec2Instance:
     Properties:
@@ -69,7 +84,7 @@ Resources:
           DeviceIndex: '0'
           GroupSet:
             - !Ref 'Ec2InstanceSecurityGroup'
-          SubnetId: !Ref 'Subnet'
+          SubnetId: !Ref 'SubnetId'
       Tags:
         - Key: Application
           Value: !Ref 'AWS::StackId'
@@ -79,11 +94,19 @@ Resources:
         Fn::Join:
           - ''
           - - "#!/bin/bash\n"
-            - "echo \"prepend domain-name-servers 8.8.8.8;\" >> \"/etc/dhcp/dhclient.conf\"\
-              \nservice networking restart || true\n"
-            - "sleep 5 \n"
-            - "/home/ubuntu/anaconda2/bin/pip install streamlit \n"
+            - "echo -e '#!/bin/sh\necho Streamlit is still installing. Please try\
+              \ again in a few minutes.\n' > /usr/local/bin/streamlit \n"
+            - "chmod +x /usr/local/bin/streamlit \n"
             - "/home/ubuntu/anaconda3/bin/pip install streamlit \n"
+            - "curl -o /usr/local/bin/rmate https://raw.githubusercontent.com/aurora/rmate/master/rmate\
+              \ \n"
+            - "chmod +x /usr/local/bin/rmate \n"
+            - "rm -f /usr/local/bin/streamlit \n"
+            - "ln -fs /home/ubuntu/anaconda3/bin/streamlit /usr/local/bin/streamlit\
+              \ \n"
+            - "curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n"
+            - "install -D -m 755 -o ubuntu -t ~ubuntu/.streamlit /tmp/config.toml\
+              \ \n"
     Type: AWS::EC2::Instance
   Ec2InstanceSecurityGroup:
     Properties:
@@ -103,96 +126,10 @@ Resources:
           Value: !Ref 'AWS::StackId'
         - Key: Name
           Value: !Sub 'Streamlit Security Group (${AWS::StackName})'
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref 'VpcId'
     Type: AWS::EC2::SecurityGroup
   IPAddress:
-    DependsOn: VPCGatewayAttachment
     Properties:
       Domain: vpc
       InstanceId: !Ref 'Ec2Instance'
     Type: AWS::EC2::EIP
-  InboundAllNetworkAclEntry:
-    Properties:
-      CidrBlock: '0.0.0.0/0'
-      Egress: 'false'
-      NetworkAclId: !Ref 'NetworkAcl'
-      Protocol: '-1'
-      RuleAction: allow
-      RuleNumber: '100'
-    Type: AWS::EC2::NetworkAclEntry
-  InternetGateway:
-    Properties:
-      Tags:
-        - Key: Application
-          Value: !Ref 'AWS::StackId'
-        - Key: Name
-          Value: !Sub 'Streamlit InternetGateway (${AWS::StackName})'
-    Type: AWS::EC2::InternetGateway
-  NetworkAcl:
-    Properties:
-      Tags:
-        - Key: Application
-          Value: !Ref 'AWS::StackId'
-        - Key: Name
-          Value: !Sub 'Streamlit Network ACL (${AWS::StackName})'
-      VpcId: !Ref 'VPC'
-    Type: AWS::EC2::NetworkAcl
-  OutBoundAllNetworkAclEntry:
-    Properties:
-      CidrBlock: '0.0.0.0/0'
-      Egress: 'true'
-      NetworkAclId: !Ref 'NetworkAcl'
-      Protocol: '-1'
-      RuleAction: allow
-      RuleNumber: '100'
-    Type: AWS::EC2::NetworkAclEntry
-  Route:
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref 'InternetGateway'
-      RouteTableId: !Ref 'RouteTable'
-    Type: AWS::EC2::Route
-  RouteTable:
-    Properties:
-      Tags:
-        - Key: Application
-          Value: !Ref 'AWS::StackId'
-        - Key: Name
-          Value: !Sub 'Streamlit RouteTable (${AWS::StackName})'
-      VpcId: !Ref 'VPC'
-    Type: AWS::EC2::RouteTable
-  Subnet:
-    Properties:
-      CidrBlock: 172.17.255.0/24
-      Tags:
-        - Key: Application
-          Value: !Ref 'AWS::StackId'
-        - Key: Name
-          Value: !Sub 'Streamlit Subnet (${AWS::StackName})'
-      VpcId: !Ref 'VPC'
-    Type: AWS::EC2::Subnet
-  SubnetNetworkAclAssociation:
-    Properties:
-      NetworkAclId: !Ref 'NetworkAcl'
-      SubnetId: !Ref 'Subnet'
-    Type: AWS::EC2::SubnetNetworkAclAssociation
-  SubnetRouteTableAssociation:
-    Properties:
-      RouteTableId: !Ref 'RouteTable'
-      SubnetId: !Ref 'Subnet'
-    Type: AWS::EC2::SubnetRouteTableAssociation
-  VPC:
-    Properties:
-      CidrBlock: 172.17.0.0/16
-      Tags:
-        - Key: Application
-          Value: !Ref 'AWS::StackId'
-        - Key: Name
-          Value: !Sub 'Streamlit VPC (${AWS::StackName})'
-    Type: AWS::EC2::VPC
-  VPCGatewayAttachment:
-    Properties:
-      InternetGatewayId: !Ref 'InternetGateway'
-      VpcId: !Ref 'VPC'
-    Type: AWS::EC2::VPCGatewayAttachment
