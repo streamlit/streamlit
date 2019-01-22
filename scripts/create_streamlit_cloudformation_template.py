@@ -24,6 +24,8 @@ import troposphere.ec2 as ec2
 from troposphere import (Base64, Equals, FindInMap, GetAtt, Join, Or, Output, Parameter,
                          Ref, Select, Split, Sub, Tags, Template)
 
+from troposphere import cloudformation, iam
+
 logging.Formatter.converter = time.gmtime
 logging.basicConfig(
     level=logging.DEBUG,
@@ -52,6 +54,7 @@ class Insight(object):
         # Order matters
         self.setup_parameters()
         self.add_ami_mappings()
+        self.setup_self_terminating_stack()
         self.setup_security_group()
         self.add_ec2_instance()
         self.create()
@@ -136,6 +139,97 @@ class Insight(object):
                 Description='Subnet ID to use',
                 Type='AWS::EC2::Subnet::Id',
             ),
+            'StackTTL': Parameter(
+                'StackTTL',
+                Description='Duration in StackTTLUnits after which the stack should be deleted ie. EC2 will be DELETED after 7 weeks',
+                Type='Number',
+                Default='7'
+            ),
+            'StackTTLUnits': Parameter(
+                'StackTTLUnits',
+                Type='String',
+                Description='Units for StackTTL Value',
+                Default='weeks',
+                AllowedValues=[
+                    'minutes',
+                    'hours',
+                    'days',
+                    'weeks',
+                    'months',
+                ],
+            ),
+        })
+
+    def setup_self_terminating_stack(self):
+        # From https://aws.amazon.com/blogs/devops/scheduling-automatic-deletion-of-application-environments/
+        self._resources.update({
+            'StackDeletorRole': iam.Role(
+                'StackDeletorRole',
+                Metadata={
+                    'Description': 'Some comment',
+                },
+                AssumeRolePolicyDocument={
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": 'ec2.amazonaws.com',
+                        },
+                        "Action": ["sts:AssumeRole"]
+                    }]
+                },
+                Path='/',
+                Policies=[
+                    iam.Policy(
+                        PolicyName="AllowStackDeletionPolicy",
+                        PolicyDocument={
+                          "Version" : "2012-10-17",
+                          "Statement": [
+                            {
+                              "Effect": "Allow",
+                              "Action": [ "cloudformation:DeleteStack" ],
+                              "Resource": Sub('arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'),
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [ "ec2:DescribeInstances", "ec2:describeAddresses" ],
+                                "Resource": "*"
+                            },
+                            {
+                              "Effect": "Allow",
+                              "Action": [ "ec2:TerminateInstances", "ec2:DeleteSecurityGroup" ],
+                              "Resource": "*",
+                              "Condition": { "StringEquals": { "ec2:ResourceTag/aws:cloudformation:stack-id": Sub('${AWS::StackId}')}},
+                            },
+                            {
+                              "Effect": "Allow",
+                              "Action": [ "iam:DeleteInstanceProfile", "iam:RemoveRoleFromInstanceProfile" ],
+                              "Resource": Sub('arn:aws:iam::${AWS::AccountId}:instance-profile/${AWS::StackName}-Ec2IamInstanceProfile-*'),
+                            },
+                            {
+                              "Effect": "Allow",
+                              "Action": [ "iam:DeleteRole", "iam:DeleteRolePolicy" ],
+                              "Resource": Sub('arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-StackDeletorRole-*'),
+                            },
+                            {
+                              "Effect": "Allow",
+                              "Action": [ "ec2:disassociateAddress", "ec2:releaseAddress" ],
+                              # TODO: secure this.
+                              "Resource": "*",
+                            },
+                          ]
+                        }
+                    ),
+                ],
+            )
+        })
+
+        self._resources.update({
+            'Ec2IamInstanceProfile': iam.InstanceProfile(
+                'Ec2IamInstanceProfile',
+                Path='/',
+                Roles=[Ref(self._resources['StackDeletorRole'])],
+                DependsOn='StackDeletorRole',
+            ),
         })
 
     def setup_security_group(self):
@@ -160,9 +254,9 @@ class Insight(object):
                     Application=self._stack_id,
                     Name=Sub('Streamlit Security Group (${AWS::StackName})'),
                 ),
+                DependsOn='StackDeletorRole',
             ),
         })
-
 
     def add_ec2_instance(self):
         self._resources.update({
@@ -186,6 +280,12 @@ class Insight(object):
                     '',
                     [
                         '#!/bin/bash\n',
+                        '# Install the files and packages from the metadata\n',
+                        '/usr/local/bin/cfn-init -v ',
+                        '         --stack ', self._stack_name,
+                        '         --resource Ec2Instance ',
+                        '         --configsets InstallAndConfigure ',
+                        '         --region ', self._region, '\n',
                         # Add a temporary /usr/local/bin/streamlit so
                         # user knows its still installing.
                         'echo -e \'#!/bin/sh\necho Streamlit is still installing. Please try again in a few minutes.\n\' > /usr/local/bin/streamlit \n',
@@ -211,10 +311,37 @@ class Insight(object):
                         'install -m 600 -o ubuntu -g ubuntu -t ~ubuntu/.streamlit /tmp/config.toml \n',
                     ]
                 )),
+                Metadata=cloudformation.Metadata(
+                    cloudformation.Init(
+                        cloudformation.InitConfigSets(InstallAndConfigure=['config']),
+                        config=cloudformation.InitConfig(
+                            files={
+                                '/usr/local/bin/deletestack.sh' : {
+                                    'content' : Join('\n', [
+                                        Sub('aws cloudformation delete-stack --region ${AWS::Region} --stack-name ${AWS::StackName}'),
+                                    ]),
+                                    'mode'    : '000444',
+                                    'owner'   : 'root',
+                                    'group'   : 'root'
+                                },
+                            },
+                            commands={
+                                'schedule_stack_deletion': {
+                                    'command': Join('', [
+                                        'at -f /usr/local/bin/deletestack.sh "now + ',
+                                        Ref(self._parameters['StackTTL']), ' ', Ref(self._parameters['StackTTLUnits']), '"'
+                                    ]),
+                                }
+                            }
+                        )
+                    )
+                ),
                 Tags=Tags(
                     Application=self._stack_id,
                     Name=Sub('Streamlit EC2 Instance (${AWS::StackName})'),
                 ),
+                IamInstanceProfile=Ref(self._resources['Ec2IamInstanceProfile']),
+                DependsOn='StackDeletorRole',
             ),
         })
 
@@ -223,6 +350,7 @@ class Insight(object):
                 'IPAddress',
                 Domain='vpc',
                 InstanceId=Ref(self._resources['Ec2Instance']),
+                DependsOn='StackDeletorRole',
             ),
         })
 

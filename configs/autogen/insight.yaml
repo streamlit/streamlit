@@ -63,6 +63,21 @@ Parameters:
     MaxLength: '18'
     MinLength: '9'
     Type: String
+  StackTTL:
+    Default: '7'
+    Description: Duration in StackTTLUnits after which the stack should be deleted
+      ie. EC2 will be DELETED after 7 weeks
+    Type: Number
+  StackTTLUnits:
+    AllowedValues:
+      - minutes
+      - hours
+      - days
+      - weeks
+      - months
+    Default: weeks
+    Description: Units for StackTTL Value
+    Type: String
   SubnetId:
     Description: Subnet ID to use
     Type: AWS::EC2::Subnet::Id
@@ -70,8 +85,41 @@ Parameters:
     Description: VPC ID to use
     Type: AWS::EC2::VPC::Id
 Resources:
-  Ec2Instance:
+  Ec2IamInstanceProfile:
+    DependsOn: StackDeletorRole
     Properties:
+      Path: /
+      Roles:
+        - !Ref 'StackDeletorRole'
+    Type: AWS::IAM::InstanceProfile
+  Ec2Instance:
+    DependsOn: StackDeletorRole
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          commands:
+            schedule_stack_deletion:
+              command: !Join
+                - ''
+                - - 'at -f /usr/local/bin/deletestack.sh "now + '
+                  - !Ref 'StackTTL'
+                  - ' '
+                  - !Ref 'StackTTLUnits'
+                  - '"'
+          files:
+            /usr/local/bin/deletestack.sh:
+              content: !Join
+                - "\n"
+                - - !Sub 'aws cloudformation delete-stack --region ${AWS::Region}
+                    --stack-name ${AWS::StackName}'
+              group: root
+              mode: '000444'
+              owner: root
+        configSets:
+          InstallAndConfigure:
+            - config
+    Properties:
+      IamInstanceProfile: !Ref 'Ec2IamInstanceProfile'
       ImageId: !FindInMap
         - RegionMap
         - !Ref 'AWS::Region'
@@ -94,6 +142,15 @@ Resources:
         Fn::Join:
           - ''
           - - "#!/bin/bash\n"
+            - "# Install the files and packages from the metadata\n"
+            - '/usr/local/bin/cfn-init -v '
+            - '         --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource Ec2Instance '
+            - '         --configsets InstallAndConfigure '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - "\n"
             - "echo -e '#!/bin/sh\necho Streamlit is still installing. Please try\
               \ again in a few minutes.\n' > /usr/local/bin/streamlit \n"
             - "chmod +x /usr/local/bin/streamlit \n"
@@ -111,6 +168,7 @@ Resources:
               \ \n"
     Type: AWS::EC2::Instance
   Ec2InstanceSecurityGroup:
+    DependsOn: StackDeletorRole
     Properties:
       GroupDescription: Enable Streamlit access via port 8501 and SSH access via port
         22
@@ -131,7 +189,58 @@ Resources:
       VpcId: !Ref 'VpcId'
     Type: AWS::EC2::SecurityGroup
   IPAddress:
+    DependsOn: StackDeletorRole
     Properties:
       Domain: vpc
       InstanceId: !Ref 'Ec2Instance'
     Type: AWS::EC2::EIP
+  StackDeletorRole:
+    Metadata:
+      Description: Some comment
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - cloudformation:DeleteStack
+                Effect: Allow
+                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+              - Action:
+                  - ec2:DescribeInstances
+                  - ec2:describeAddresses
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - ec2:TerminateInstances
+                  - ec2:DeleteSecurityGroup
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/aws:cloudformation:stack-id: !Sub '${AWS::StackId}'
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - iam:DeleteInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                Effect: Allow
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:instance-profile/${AWS::StackName}-Ec2IamInstanceProfile-*'
+              - Action:
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                Effect: Allow
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-StackDeletorRole-*'
+              - Action:
+                  - ec2:disassociateAddress
+                  - ec2:releaseAddress
+                Effect: Allow
+                Resource: '*'
+            Version: '2012-10-17'
+          PolicyName: AllowStackDeletionPolicy
+    Type: AWS::IAM::Role

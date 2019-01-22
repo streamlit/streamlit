@@ -12,6 +12,14 @@
         "ParameterValue": "0.0.0.0/0"
     },
     {
+        "ParameterKey": "StackTTL",
+        "ParameterValue": "7"
+    },
+    {
+        "ParameterKey": "StackTTLUnits",
+        "ParameterValue": "weeks"
+    },
+    {
         "ParameterKey": "SubnetId",
         "ParameterValue": ""
     },
