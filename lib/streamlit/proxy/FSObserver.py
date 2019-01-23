@@ -22,83 +22,54 @@ LOGGER = get_logger(__name__)
 class FSObserver(object):
     """A file system observer."""
 
-    @staticmethod
-    def get_key(connection):
-        """Get unique ID for this connection, for FS observation purposes.
-
-        Parameters
-        ----------
-        connection : ProxyConnection
-            The connection the ID is for.
-
-        """
-        return (
-            connection.cwd,
-            connection.command_line[0])
-
-    def __init__(self, connection, callback):
+    def __init__(self, source_file_path, callback):
         """Constructor.
 
         Parameters
         ----------
-        connection : ProxyConnection
-            The connection that is asking for an observer to be created.
+        source_file_path : str
+            File that should be observed.
         callback: callback
             The function that should get called when something changes in
-            path_to_observe. This function will be called on the observer
+            source_file_path. This function will be called on the observer
             thread, which is created by the watchdog module. Parameters:
-            - FSObserver: the object that is calling the callback.
             - FileSystemEvent: the event.
 
         """
-        self.key = FSObserver.get_key(connection)
-        LOGGER.debug(f'Will observe file system for: {self.key}')
+        self._file_path = source_file_path
+        LOGGER.debug('Will observe file system for %s', self._file_path)
 
         self._observer = None
         self._callback = callback
-        self._is_closed = False
+        self._is_observing = False
 
-        # Things we want to expose to the callback:
-        self.command_line = connection.command_line
-        self.cwd = connection.cwd
+        # Set of browser tabs which are interested in this observer being up.
+        # When this is empty and deregister_browser() is called, the observer
+        # stops watching for filesystem updates.
+        self._browsers = set()
 
-        self._initialize_observer(connection.source_file_path)
-
-        # Set of consumers which are interested in this observer being up. When
-        # this is empty and deregister_consumer() is called, the observer stops
-        # watching for filesystem updates.
-        self._consumers = set()
-        self.register_consumer(self.key)
-
-    def _initialize_observer(self, source_file_path):
-        """Initialize the filesystem observer.
-
-        Parameters
-        ----------
-        source_file_path : str
-            Full path of the file that initiated the report.
-
-        """
-        if len(source_file_path) == 0:
-            LOGGER.debug(f'No source file to watch. Running from REPL?')
+    def _initialize_observer(self):
+        """Initialize the filesystem observer."""
+        if len(self._file_path) == 0:
+            LOGGER.debug('No source file to watch. Running from REPL?')
             return
 
-        path_to_observe = os.path.dirname(source_file_path)
+        folder = os.path.dirname(self._file_path)
 
         fsev_handler = FSEventHandler(
             fn_to_run=self._on_event,
-            file_to_observe=source_file_path,
-        )
+            file_to_observe=self._file_path)
 
-        observer = Observer()
-        observer.schedule(fsev_handler, path_to_observe, recursive=False)
+        self._is_observing = True
+        self._observer = Observer()
+        self._observer.schedule(fsev_handler, folder, recursive=False)
 
         try:
-            observer.start()
-            LOGGER.debug(f'Observing file system at {path_to_observe}')
+            self._observer.start()
+            LOGGER.debug('Observing file system at %s', folder)
         except OSError as e:
-            observer = None
-            LOGGER.error(f'Could not start file system observer: {e}')
+            self._observer = None
+            LOGGER.error('Could not start file system observer %s', e)
 
     def _on_event(self, event):
         """Event handler for filesystem changes.
@@ -113,47 +84,47 @@ class FSObserver(object):
         event : FileSystemEvent
 
         """
-        if self._is_closed:
-            LOGGER.debug(f'Will not rerun source script.')
+        if self._is_observing:
+            LOGGER.debug('Rerunning source script.')
+            self._callback(event)
         else:
-            LOGGER.debug(f'Rerunning source script.')
-            self._callback(self, event)
+            LOGGER.debug('Will not rerun source script.')
 
-    def register_consumer(self, key):
-        """Tell observer that it's in use by consumer identified by key.
+    def register_browser(self, browser_key):
+        """Tell observer that it's in use by browser identified by key.
 
-        While at least one consumer is interested in this observer, it will not
+        While at least one browser is interested in this observer, it will not
         be disposed of.
 
         Parameters
         ----------
-        key : any
-            A unique identifier of the consumer that is interested in this
-            observer.
+        browser_key : str
+            A unique identifier of the browser.
 
         """
-        self._consumers.add(key)
+        if len(self._browsers) == 0:
+            self._initialize_observer()
+        self._browsers.add(browser_key)
+        LOGGER.debug('Registered browsers. Now have %s', len(self._browsers))
 
-    def deregister_consumer(self, key):
-        """Tell observer that it's no longer useful for a given consumer.
+    def deregister_browser(self, browser_key):
+        """Tell observer that it's no longer useful for a given browser.
 
-        When no more consumers are interested in this observer, it will be
+        When no more browsers are interested in this observer, it will be
         disposed of.
 
         Parameters
         ----------
-        key : any
-            A unique identifier of the consumer that is interested in this
-            observer.
+        browser_key : str
+            A unique identifier of the browser.
 
         """
-        if key in self._consumers:
-            self._consumers.remove(key)
+        if browser_key in self._browsers:
+            self._browsers.remove(browser_key)
 
-        LOGGER.debug(
-            f'Deregistered consumers. Now have {len(self._consumers)}')
+        LOGGER.debug('Deregistered browsers. Now have %s', len(self._browsers))
 
-        if len(self._consumers) == 0:
+        if len(self._browsers) == 0:
             self._close()
 
     def is_closed(self):
@@ -165,18 +136,22 @@ class FSObserver(object):
             True if closed.
 
         """
-        return self._is_closed
+        return not self._is_observing
 
     def _close(self):
         """Stop observing the file system."""
-        LOGGER.debug(f'Closing file system observer for {self.key}')
-        self._is_closed = True
+        if self._observer is None:
+            return
 
-        if self._observer is not None:
-            self._observer.stop()
+        LOGGER.debug(
+            'Closing file system observer for %s',
+            self._file_path)
 
-            # Wait til thread terminates.
-            self._observer.join(timeout=5)
+        self._is_observing = False
+        self._observer.stop()
+
+        # Wait til thread terminates.
+        self._observer.join(timeout=5)
 
 
 class FSEventHandler(PatternMatchingEventHandler):
@@ -215,11 +190,11 @@ class FSEventHandler(PatternMatchingEventHandler):
         """
         new_md5 = _calc_md5(self._file_to_observe)
         if new_md5 != self._prev_md5:
-            LOGGER.debug(f'File MD5 changed.')
+            LOGGER.debug('File MD5 changed.')
             self._prev_md5 = new_md5
             self._fn_to_run(event)
         else:
-            LOGGER.debug(f'File MD5 did not change.')
+            LOGGER.debug('File MD5 did not change.')
 
 
 # How many times to try to grab the MD5 hash.
@@ -256,6 +231,8 @@ def _calc_md5(file_path):
         except FileNotFoundError as e:
             if i >= MAX_RETRIES - 1:
                 raise e
+            # OK to call time.sleep() here (instead of ioloop.sleep() because
+            # this is running on another thread.
             time.sleep(RETRY_WAIT_SECS)
 
     md5 = hashlib.md5()

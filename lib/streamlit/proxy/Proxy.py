@@ -61,8 +61,7 @@ class Proxy(object):
         # then the proxy shuts down.
         self._connections = dict()
 
-        # Map of key->FSObserver, where key is a tuple obtained with
-        # FSObserver.get_key(proxy_connection).
+        # Map of file_path->FSObserver
         self._fs_observers = dict()
 
         # This object represents a connection to an S3 bucket or other cloud
@@ -267,11 +266,13 @@ class Proxy(object):
         loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
     @gen.coroutine
-    def on_browser_connection_opened(self, report_name, ws):  # noqa: D401
+    def on_browser_connection_opened(self, browser_key, report_name, ws):  # noqa: D401
         """Called when a browser connection is opened.
 
         Parameters
         ----------
+        browser_key : str
+            A unique identifier of the browser connection.
         report_name : str
             The name of the report the browser connection is for.
         ws : BrowserWebSocket
@@ -285,21 +286,23 @@ class Proxy(object):
 
         """
         connection, queue = yield self._register_browser(report_name, ws)
-        self._maybe_add_fs_observer(connection)
+        self._maybe_add_fs_observer(connection, browser_key)
         raise gen.Return((connection, queue))
 
-    def on_browser_connection_closed(self, connection, queue):  # noqa: D401
+    def on_browser_connection_closed(self, browser_key, connection, queue):  # noqa: D401
         """Called when a browser connection is closed.
 
         Parameters
         ----------
+        browser_key : str
+            A unique identifier of the browser connection.
         connection : ProxyConnection
             The ProxyConnection for the browser connection that just closed.
         queue : ReportQueue
             The queue for the closed browser connection.
 
         """
-        self._remove_fs_observer(connection)
+        self._remove_fs_observer(connection, browser_key)
         self._deregister_browser(connection, queue)
 
     @gen.coroutine
@@ -419,7 +422,7 @@ class Proxy(object):
         LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
 
-    def _maybe_add_fs_observer(self, connection):
+    def _maybe_add_fs_observer(self, connection, browser_key):
         """Start observing filesystem and store observer in self._fs_observers.
 
         Obeys config option proxy.watchFileSystem. If False, does not observe.
@@ -429,6 +432,8 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder to
             observe.
+        browser_key : str
+            A unique identifier of the browser connection.
 
         """
         if not config.get_option('proxy.watchFileSystem'):
@@ -439,16 +444,17 @@ class Proxy(object):
                 'Will not observe file system since keepAlive is True')
             return
 
-        key = FSObserver.get_key(connection)
-        observer = self._fs_observers.get(key)
+        file_path = connection.source_file_path
+        observer = self._fs_observers.get(file_path)
 
         if observer is None:
-            observer = FSObserver(connection, _on_fs_event)
-            self._fs_observers[key] = observer
-        else:
-            observer.register_consumer(connection)
+            callback = _build_fsobserver_callback(connection)
+            observer = FSObserver(connection.source_file_path, callback)
+            self._fs_observers[file_path] = observer
 
-    def _remove_fs_observer(self, connection):
+        observer.register_browser(browser_key)
+
+    def _remove_fs_observer(self, connection, browser_key):
         """Stop observing filesystem.
 
         Parameters
@@ -456,15 +462,17 @@ class Proxy(object):
         connection : ProxyConnection
             Connection object containing information about the folder we should
             stop observing.
+        browser_key : str
+            A unique identifier of the browser connection.
 
         """
-        key = FSObserver.get_key(connection)
-        observer = self._fs_observers.get(key)
+        file_path = connection.source_file_path
+        observer = self._fs_observers.get(file_path)
 
         if observer is not None:
-            observer.deregister_consumer(connection)
+            observer.deregister_browser(browser_key)
             if observer.is_closed():
-                del self._fs_observers[key]
+                del self._fs_observers[file_path]
 
 
 def stop_proxy_on_exception(is_coroutine=False):
@@ -559,15 +567,18 @@ def _print_urls(connection, waitSecs):
         '''))
 
 
-def _on_fs_event(observer, event):  # noqa: D401
-    """Callback for FS events.
+def _build_fsobserver_callback(connection):
+    """Builds a callback for the FSObserver."""
 
-    IMPORTANT: This method runs in a thread owned by the watchdog module
-    (i.e. *not* in the Tornado IO loop).
-    """
-    LOGGER.debug(
-        f'File system event: [{event.event_type}] {event.src_path}.')
+    def callback(event):
+        # IMPORTANT: This method runs in a thread owned by the watchdog module
+        # (i.e. *not* in the Tornado IO loop).
+        LOGGER.debug(
+            'File system event: [%s] %s',
+            event.event_type, event.src_path)
 
-    process_runner.run_handling_errors_in_subprocess(
-        observer.command_line,
-        cwd=observer.cwd)
+        process_runner.run_handling_errors_in_subprocess(
+            connection.command_line,
+            cwd=connection.cwd)
+
+    return callback

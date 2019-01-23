@@ -62,7 +62,7 @@ class BrowserWebSocket(WebSocketHandler):
             # this report name.
             self._connection, self._queue = (
                 yield self._proxy.on_browser_connection_opened(
-                    self._report_name, self))
+                    self._get_key(), self._report_name, self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
@@ -112,7 +112,11 @@ class BrowserWebSocket(WebSocketHandler):
 
         if self._connection is not None:
             self._proxy.on_browser_connection_closed(
-                self._connection, self._queue)
+                self._get_key(), self._connection, self._queue)
+
+    def _get_key(self):
+        """Return a key that uniquely identifies this WebSocket connection."""
+        return str(self)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
