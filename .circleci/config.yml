@@ -1,0 +1,54 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6.1
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "lib/requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            # TODO(armando): Cache all of this via something like https://medium.com/@chrisbanes/circleci-cache-key-over-many-files-c9e07f4d471a
+            # install protobuf v3
+            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+            sudo apt-get update -y
+            sudo apt-get install -y protobuf-compiler
+            # install nodejs via nvm
+            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+            nvm install --lts=dubnium
+            # activate virtual environment
+            python3 -m venv venv
+            . venv/bin/activate
+            # install dependencies
+            make init
+            make develop
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "lib/requirements.txt" }}
+
+      # run tests including code coverage
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            make pycoverage
