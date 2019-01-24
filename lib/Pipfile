@@ -4,9 +4,35 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+flake8 = "*"
+mock = "*"
 pipenv = "*"
 pytest = "*"
+pytest-cov = "*"
+testfixtures = "*"
+twine = "*"
 wheel = "*"
 
 [packages]
+base58 = "*"
+# backport of collections.abc
+backports-abc = {version="*", markers="python_version < '3.0'"}
+botocore = "*"
+boto3 = "*"
+click = "*"
+docutils = "*"
+enum-compat = "*"
+future-fstrings = "*"
+# python3 code backported to python2
+future = "*"
+# specifically concurrent.futures in python2
+futures = {version="*", markers="python_version < '3.0'"}
+numpy = "*"
+pandas = "*"
+pillow = "*"
+protobuf = "*"
+psutil = "*"
+toml = "*"
 tornado = "*"
+tzlocal = "*"
+watchdog = "*"
