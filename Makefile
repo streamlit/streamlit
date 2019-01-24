@@ -15,25 +15,16 @@ help:
 	@echo " publish-site - Builds and pushes the site to prod."
 
 .PHONY: init
-init: setup requirements react-init protobuf # react-build release
+init: setup pipenv react-init protobuf # react-build release
 
 .PHONY: build
 build: react-build
 
 setup:
-	pip install pip-tools
+	pip install pip-tools pipenv
 
-# NOTE: Got rid of these next two steps because pip-compile is too strict about
-# versions.
-
-# lib/install_requirements.txt: lib/install_requirements.in
-# 	pip-compile lib/install_requirements.in
-
-# lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
-# 	pip-compile lib/requirements.in
-
-requirements: lib/requirements.txt lib/install_requirements.txt
-	pip install -r lib/requirements.txt
+pipenv: lib/Pipfile lib/Pipfile.lock
+	cd lib; pipenv install --dev
 
 pylint:
 	# Linting

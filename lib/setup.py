@@ -1,11 +1,10 @@
 import setuptools
 
-try: # for pip >= 10
-    from pip._internal.req import parse_requirements
-except ImportError: # for pip <= 9.0.3
-    from pip.req import parse_requirements
+from pipenv.project import Project
+from pipenv.utils import convert_deps_to_pip
 
-requirements = parse_requirements('install_requirements.txt', session=False)
+pfile = Project(chdir=False).parsed_pipfile
+requirements = convert_deps_to_pip(pfile['packages'], r=False)
 
 def readme():
     with open('README.md') as f:
@@ -24,7 +23,7 @@ setuptools.setup(
     packages = setuptools.find_packages(exclude=['tests', 'tests.*']),
 
     # Requirements
-    install_requires = [str(x.req) for x in requirements],
+    install_requires = requirements,
 
     zip_safe = False,  # install source files not egg
     include_package_data = True,  # copy html and friends
