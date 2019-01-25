@@ -3,10 +3,18 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-3.6.6
+      - test-3.5.6
+      - test-2.7.15
+
 jobs:
-  build:
+  test-3.6.6: &test-template
     docker:
-      - image: circleci/python:3.6.1
+      - image: circleci/python:3.6.6-jessie
 
     working_directory: ~/repo
 
@@ -35,21 +43,33 @@ jobs:
             source "$NVM_DIR/nvm.sh"
             nvm install --lts=dubnium
             # activate virtual environment
-            python3 -m venv venv
-            . venv/bin/activate
+            if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
+              pip install virtualenv
+              python -m virtualenv ${CIRCLE_JOB}
+            else
+              python -m venv ${CIRCLE_JOB}
+            fi
+            . ${CIRCLE_JOB}/bin/activate
             # install dependencies
             make init
             make develop
 
       - save_cache:
           paths:
-            - ./venv
+            - ./${CIRCLE_JOB}
           key: v1-dependencies-{{ checksum "lib/Pipfile" }}
 
       # run tests including code coverage
       - run:
           name: run tests
           command: |
-            . venv/bin/activate
+            . ${CIRCLE_JOB}/bin/activate
             make pycoverage
-
+  test-3.5.6:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.5.6-jessie
+  test-2.7.15:
+    <<: *test-template
+    docker:
+      - image: circleci/python:2.7.15-jessie
