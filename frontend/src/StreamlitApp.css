@@ -46,7 +46,8 @@ h1, .h1 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 2.5rem;
-  margin: 2.5rem 0 0 0;
+  margin: 2.5rem 0 1.5rem 0;
+  line-height: 1em;
 }
 
 h1:first-child, .h1:first-child {
@@ -57,29 +58,41 @@ h2, .h2 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 2.0rem;
-  margin: 3rem 0 0 0;
+  margin: 2.5rem 0 1rem 0;
+  line-height: 1em;
 }
 
 h3, .h3 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   font-size: 1.25rem;
-  margin: 0.25rem 0 0 0;
+  margin: 1.5rem 0 1rem 0;
+  line-height: 1em;
+}
+
+h4, .h4 {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1.0rem;
+  margin: 1.5rem 0 1rem 0;
+  line-height: 1em;
 }
 
 h5, .h5 {
   font-family: 'IBM Plex Sans', sans-serif;
-  font-weight: 300;
-  font-size: 1.25rem;
-  margin: 0.25rem 0 0 0;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin: 1.5rem 0 0.5rem 0;
+  line-height: 1em;
 }
 
 h6, .h6 {
   font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
-  font-size: 1rem;
-  text-transform: uppercase;
-  margin: 0;
+  font-size: 0.8rem;
+  margin: 1.5rem 0 0.5rem 0;
+  line-height: 1em;
 }
 
 header {
@@ -174,6 +187,10 @@ button:focus {
 .streamlit-container .element-container {
   display: inline-block;
   margin-bottom: 1rem;
+}
+
+.streamlit-container hr {
+  border-color: #F0F3F9;
 }
 
 .streamlit-container .footer {

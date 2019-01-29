@@ -17,15 +17,6 @@ message Text {
     // A JSON object. Stored as a string.
     JSON = 2;
 
-    // Corresponds to the <h1> tag.
-    TITLE = 3;
-
-    // Corresponds to the <h2> tag.
-    HEADER = 4;
-
-    // Corresponds to the <h3> tag.
-    SUB_HEADER = 5;
-
     // Shows an error message.
     ERROR = 6;
 

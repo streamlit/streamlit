@@ -162,45 +162,45 @@ class DeltaGenerator(object):
 
     @_export
     @_create_element
-    def title(self, element, string):
-        """Display string in title formatting.
+    def title(self, element, body):
+        """Display text in title formatting.
 
         Parameters
         ----------
-        string : str
-            The string to display.
+        body : str
+            The text to display.
 
         """
-        element.text.body = str(string)
-        element.text.format = protobuf.Text.TITLE
+        element.text.body = '# %s' % textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
 
     @_export
     @_create_element
-    def header(self, element, string):
-        """Display string in header formatting.
+    def header(self, element, body):
+        """Display text in header formatting.
 
         Parameters
         ----------
-        string : str
-            The string to display.
+        body : str
+            The text to display.
 
         """
-        element.text.body = str(string)
-        element.text.format = protobuf.Text.HEADER
+        element.text.body = '## %s' % textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
 
     @_export
     @_create_element
-    def subheader(self, element, string):
-        """Display string in subheader formatting.
+    def subheader(self, element, body):
+        """Display text in subheader formatting.
 
         Parameters
         ----------
-        string : str
-            The string to display.
+        body : str
+            The text to display.
 
         """
-        element.text.body = str(string)
-        element.text.format = protobuf.Text.SUB_HEADER
+        element.text.body = '### %s' % textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
 
     @_export
     @_create_element
@@ -364,7 +364,7 @@ class DeltaGenerator(object):
 
     @_export
     def dataframe(self, df):
-        """Display a dataframe.
+        """Display a dataframe as an interactive table.
 
         Parameters
         ----------

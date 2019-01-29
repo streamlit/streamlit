@@ -34,7 +34,7 @@ class Text extends PureComponent {
       case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={body} />
+            <ReactMarkdown source={body} escapeHtml={false} />
           </div>
         );
 
@@ -71,20 +71,6 @@ class Text extends PureComponent {
               name={false}
               style={{font: ""}}  // Unset so we can style via a CSS file.
             />
-          </div>
-        );
-
-      case TextProto.Format.TITLE:
-      case TextProto.Format.HEADER:
-      case TextProto.Format.SUB_HEADER:
-        const className = {
-          [TextProto.Format.TITLE]: 'h1',
-          [TextProto.Format.HEADER]: 'h2',
-          [TextProto.Format.SUB_HEADER]: 'h3',
-        }[format]
-        return (
-          <div className={className} style={{width}}>
-            {body}
           </div>
         );
 

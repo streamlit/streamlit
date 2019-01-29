@@ -95,7 +95,7 @@ def write(*args):
         - write(data_frame) : Displays the DataFrame as a table.
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
-        - write(module)     : Displays infomration about the module.
+        - write(module)     : Displays information about the module.
         - write(obj)        : The default is to print str(obj).
 
     Examples

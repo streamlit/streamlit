@@ -84,10 +84,7 @@ class DeltaGeneratorTextTest(unittest.TestCase):
     def test_generic_text(self):
         """Test protobuf.Text generic str(body) stuff."""
         test_data = {
-            'title': protobuf.Text.TITLE,
             'text': protobuf.Text.PLAIN,
-            'header': protobuf.Text.HEADER,
-            'subheader': protobuf.Text.SUB_HEADER,
             'error': protobuf.Text.ERROR,
             'warning': protobuf.Text.WARNING,
             'info': protobuf.Text.INFO,
