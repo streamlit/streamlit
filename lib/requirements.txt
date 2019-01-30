@@ -22,7 +22,7 @@ enum34==1.1.6             # via enum-compat, flake8
 flake8-docstrings==1.3.0
 flake8-polyfill==1.0.2    # via flake8-docstrings
 flake8==3.5.0
-funcsigs==1.0.2           # via pytest
+funcsigs==1.0.2
 future-fstrings==0.4.3
 future==0.16.0
 futures>=3.0.0

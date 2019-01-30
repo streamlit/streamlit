@@ -9,6 +9,12 @@ message DocString {
   // The module of the object
   string module = 2;
 
-  // The doc string a string.
+  // The doc string.
   string doc_string = 3;
+
+  // The type of the object.
+  string type = 4;
+
+  // The signature of the object, if it's a function. Else, unset.
+  string signature = 5;
 }

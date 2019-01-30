@@ -275,9 +275,7 @@ class DeltaGenerator(object):
     def help(self, element, obj):
         """Display object's doc string, nicely formatted.
 
-        Displays the doc string for this object. If the doc string is
-        represented as ReStructuredText, then it will be converted to
-        Markdown in the browser before display.
+        Displays the doc string for this object.
 
         Parameters
         ----------
@@ -291,17 +289,8 @@ class DeltaGenerator(object):
             st.help(st.write)
 
         """
-        if not hasattr(obj, '__name__'):
-            raise RuntimeError(f'help() expects module or method, not type `{type(obj).__name__}`')
-        element.doc_string.name = obj.__name__
-        try:
-            element.doc_string.module = obj.__module__
-        except AttributeError:
-            pass
-        doc_string = obj.__doc__
-        if not isinstance(doc_string, string_types):  # noqa: F821
-            doc_string = f'No docs available.'
-        element.doc_string.doc_string = textwrap.dedent(doc_string).strip()
+        from streamlit import doc_string
+        doc_string.marshall(element, obj)
 
     @_export
     @_create_element
