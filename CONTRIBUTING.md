@@ -167,6 +167,9 @@ streamlit help
 streamlit help
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
+python
+>>> import streamlit as st
+>>> st.write('testing')
 ```
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
@@ -187,6 +190,10 @@ Post the release notes and declare victory!
 git commit -am "version <version number>"
 git tag <version number>
 git push origin <version number>
+git push origin develop
+git checkout master
+git pull
+git rebase develop
 ```
 
 #### Go Back to Develop Mode
