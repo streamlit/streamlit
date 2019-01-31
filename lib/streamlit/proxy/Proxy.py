@@ -450,6 +450,13 @@ class Proxy(object):
             return
 
         file_path = connection.source_file_path
+
+        if len(file_path) == 0:
+            # DeltaConnection.py sets source_file_path to '' when running from
+            # the REPL.
+            LOGGER.debug('Will not observe file ""')
+            return
+
         observer = self._report_observers.get(file_path)
 
         if observer is None:
