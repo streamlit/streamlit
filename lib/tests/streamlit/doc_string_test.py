@@ -87,7 +87,7 @@ class DocStringTest(unittest.TestCase):
         else:
             self.assertEquals(ds.type, '<class \'function\'>')
         self.assertEquals(ds.signature, '(df)')
-        self.assertTrue(ds.doc_string.startswith('Display a dataframe.'))
+        self.assertTrue(ds.doc_string.startswith('Display a dataframe'))
 
     def test_st_cache(self):
         """Test st.cache function (since it's from the 'caching' module)."""
