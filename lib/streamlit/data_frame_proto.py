@@ -72,7 +72,12 @@ def _marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.MultiIndex:
         for level in pandas_index.levels:
             _marshall_index(level, proto_index.multi_index.levels.add())
-        for label in pandas_index.labels:
+        if hasattr(pandas_index, 'codes'):
+            index_codes = pandas_index.codes
+        else:
+            # Deprecated in Pandas 0.24
+            index_codes = pandas_index.labels
+        for label in index_codes:
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
         if pandas_index.tz is None:
