@@ -24,8 +24,9 @@ platform_system = platform.system()
 if platform_system == 'Linux':
     cmd = (
         'sed -i '
-        "'s/^# MODIFIED AT:.*/# MODIFIED AT: %s/' %s" %
-        (time.time(), __file__))
+        "'s/^# MODIFIED AT:.*/# MODIFIED AT: %(time)s/' %(file)s"
+        ' && touch %(file)s' %  # sed on Linux modifies a different file.
+        {'time': time.time(), 'file': __file__})
 
 elif platform_system == 'Darwin':
     cmd = (

@@ -36,9 +36,13 @@ from streamlit import config
 from streamlit import util
 from streamlit import process_runner
 from streamlit.proxy import proxy_util
-from streamlit.proxy.FSObserver import FSObserver
 from streamlit.proxy.storage.S3Storage import S3Storage as Storage
 from streamlit.streamlit_msg_proto import new_report_msg
+
+try:
+    from streamlit.proxy.fs_observer import ReportObserver
+except ImportError:
+    from streamlit.proxy.polling_fs_observer import ReportObserver
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -61,8 +65,8 @@ class Proxy(object):
         # then the proxy shuts down.
         self._connections = dict()
 
-        # Map of file_path->FSObserver
-        self._fs_observers = dict()
+        # Map of file_path->ReportObserver
+        self._report_observers = dict()
 
         # This object represents a connection to an S3 bucket or other cloud
         # storage solution. It is instantiated lazily by calling
@@ -154,6 +158,7 @@ class Proxy(object):
         LOGGER.debug('Stopping proxy')
         if not self._stopped:
             IOLoop.current().stop()
+        ReportObserver.close()
         self._stopped = True
 
     def register_proxy_connection(self, connection):
@@ -286,7 +291,7 @@ class Proxy(object):
 
         """
         connection, queue = yield self._register_browser(report_name, ws)
-        self._maybe_add_fs_observer(connection, browser_key)
+        self._maybe_add_report_observer(connection, browser_key)
         raise gen.Return((connection, queue))
 
     def on_browser_connection_closed(self, browser_key, connection, queue):  # noqa: D401
@@ -302,7 +307,7 @@ class Proxy(object):
             The queue for the closed browser connection.
 
         """
-        self._remove_fs_observer(connection, browser_key)
+        self._remove_report_observer(connection, browser_key)
         self._deregister_browser(connection, queue)
 
     @gen.coroutine
@@ -422,8 +427,8 @@ class Proxy(object):
         LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
 
-    def _maybe_add_fs_observer(self, connection, browser_key):
-        """Start observing filesystem and store observer in self._fs_observers.
+    def _maybe_add_report_observer(self, connection, browser_key):
+        """Start observer and store observer in self._report_observers.
 
         Obeys config option proxy.watchFileSystem. If False, does not observe.
 
@@ -445,16 +450,17 @@ class Proxy(object):
             return
 
         file_path = connection.source_file_path
-        observer = self._fs_observers.get(file_path)
+        observer = self._report_observers.get(file_path)
 
         if observer is None:
             callback = _build_fsobserver_callback(connection)
-            observer = FSObserver(connection.source_file_path, callback)
-            self._fs_observers[file_path] = observer
+            observer = ReportObserver(
+                connection.source_file_path, callback)
+            self._report_observers[file_path] = observer
 
         observer.register_browser(browser_key)
 
-    def _remove_fs_observer(self, connection, browser_key):
+    def _remove_report_observer(self, connection, browser_key):
         """Stop observing filesystem.
 
         Parameters
@@ -467,12 +473,12 @@ class Proxy(object):
 
         """
         file_path = connection.source_file_path
-        observer = self._fs_observers.get(file_path)
+        observer = self._report_observers.get(file_path)
 
         if observer is not None:
             observer.deregister_browser(browser_key)
-            if observer.is_closed():
-                del self._fs_observers[file_path]
+            if not observer.is_observing_file():
+                del self._report_observers[file_path]
 
 
 def stop_proxy_on_exception(is_coroutine=False):
@@ -570,13 +576,9 @@ def _print_urls(connection, waitSecs):
 def _build_fsobserver_callback(connection):
     """Builds a callback for the FSObserver."""
 
-    def callback(event):
+    def callback():
         # IMPORTANT: This method runs in a thread owned by the watchdog module
         # (i.e. *not* in the Tornado IO loop).
-        LOGGER.debug(
-            'File system event: [%s] %s',
-            event.event_type, event.src_path)
-
         process_runner.run_handling_errors_in_subprocess(
             connection.command_line,
             cwd=connection.cwd)
