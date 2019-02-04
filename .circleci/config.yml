@@ -32,6 +32,7 @@ jobs:
 
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+            make react-init
 
       - run:
           name: create virtual envs
@@ -46,8 +47,7 @@ jobs:
             . ${CIRCLE_JOB}/bin/activate
             make setup
             make pipenv
-            make react-init
-            make protobuf
+            make develop
 
       - run:
           name: protobuf
@@ -57,11 +57,7 @@ jobs:
             sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
             sudo apt-get update -y
             sudo apt-get install -y protobuf-compiler
-
-      - run:
-          name: make develop
-          command: |
-            make develop
+            make protobuf
 
       # run tests including code coverage
       - run:
