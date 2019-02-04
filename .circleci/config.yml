@@ -47,16 +47,22 @@ jobs:
           name: create virtual envs
           command: |
             # activate virtual environment
-            if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
-              pip install virtualenv
-              python -m virtualenv venv
+            if [ ! -d venv ] ; then
+              if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
+                pip install virtualenv
+                python -m virtualenv venv
+              else
+                python -m venv venv
+              fi
+              source venv/bin/activate
+              make setup
+              make pipenv
+              deactivate
             else
-              python -m venv venv
+              echo 'Virtualenv already exists, not creating'
             fi
             echo 'source venv/bin/activate' >> $BASH_ENV
-            . venv/bin/activate
-            make setup
-            make pipenv
+            source venv/bin/activate
             make develop
 
       - run:
