@@ -30,18 +30,25 @@ jobs:
           keys:
           - python-venv-{{ checksum "lib/Pipfile.lock" }}
 
+      - restore_cache:
+          keys:
+          - nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+
       - run:
           name: install nvm
           command: |
-            # install nodejs via nvm
-            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            nvm install --lts=dubnium
-
+            if [ ! -d ~/.nvm ] ; then
+              # install nodejs via nvm
+              curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+              source "$HOME/.nvm/nvm.sh"
+              nvm install --lts=dubnium
+            fi
+            if [ ! -d frontend/node_modules ] ; then
+              source "$HOME/.nvm/nvm.sh"
+              make react-init
+            fi
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            make react-init
 
       - run:
           name: create virtual envs
@@ -85,6 +92,12 @@ jobs:
           key: python-venv-{{ checksum "lib/Pipfile.lock" }}
           paths:
             - venv
+
+      - save_cache:
+          key: nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          paths:
+            - frontend/node_modules
+            - ~/.nvm
 
   test-3.5.6:
     <<: *test-template
