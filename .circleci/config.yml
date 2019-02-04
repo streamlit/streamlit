@@ -22,6 +22,15 @@ jobs:
       - checkout
 
       - run:
+          name: Copy python specific Pipfile.lock
+          command: |
+            cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
+
+      - restore_cache:
+          keys:
+          - python-venv-{{ checksum "lib/Pipfile.lock" }}
+
+      - run:
           name: install nvm
           command: |
             # install nodejs via nvm
@@ -65,6 +74,12 @@ jobs:
           name: run tests
           command: |
             make pycoverage
+
+      - save_cache:
+          key: python-venv-{{ checksum "lib/Pipfile.lock" }}
+          paths:
+            - venv
+
   test-3.5.6:
     <<: *test-template
     docker:
