@@ -51,7 +51,10 @@ jobs:
             fi
             . ${CIRCLE_JOB}/bin/activate
             # install dependencies
-            make init
+            make setup
+            make pipenv
+            make react-init
+            make protobuf
             make develop
 
       - save_cache:
