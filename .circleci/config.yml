@@ -26,6 +26,11 @@ jobs:
           command: |
             cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
 
+      - run:
+          name: create checksum for all protobufs.
+          command: |
+            md5sum protobuf/*.proto > ~/protobuf.md5
+
       - restore_cache:
           keys:
           - python-venv-{{ checksum "lib/Pipfile.lock" }}
@@ -33,6 +38,10 @@ jobs:
       - restore_cache:
           keys:
           - nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+
+      - restore_cache:
+          keys:
+          - protobuf-{{ checksum "~/protobuf.md5" }}
 
       - run:
           name: install nvm
@@ -75,12 +84,18 @@ jobs:
       - run:
           name: protobuf
           command: |
-            # install protobuf v3
-            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            sudo apt-get update -y
-            sudo apt-get install -y protobuf-compiler
-            make protobuf
+            # There's a chance this file could be a cached version when
+            # the protobuf cache is restored, so checkout from github to
+            # make sure.
+            git checkout -- lib/streamlit/protobuf/__init__.py
+            if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+              # install protobuf v3
+              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+              sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+              sudo apt-get update -y
+              sudo apt-get install -y protobuf-compiler
+              make protobuf
+            fi
 
       # run tests including code coverage
       - run:
@@ -98,6 +113,12 @@ jobs:
           paths:
             - frontend/node_modules
             - ~/.nvm
+
+      - save_cache:
+          key: protobuf-{{ checksum "~/protobuf.md5" }}
+          paths:
+            - frontend/src/protobuf.js
+            - lib/streamlit/protobuf
 
   test-3.5.6:
     <<: *test-template
