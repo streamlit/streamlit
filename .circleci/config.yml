@@ -40,11 +40,12 @@ jobs:
             # activate virtual environment
             if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
               pip install virtualenv
-              python -m virtualenv ${CIRCLE_JOB}
+              python -m virtualenv venv
             else
-              python -m venv ${CIRCLE_JOB}
+              python -m venv venv
             fi
-            . ${CIRCLE_JOB}/bin/activate
+            echo 'source venv/bin/activate' >> $BASH_ENV
+            . venv/bin/activate
             make setup
             make pipenv
             make develop
@@ -63,7 +64,6 @@ jobs:
       - run:
           name: run tests
           command: |
-            . ${CIRCLE_JOB}/bin/activate
             make pycoverage
   test-3.5.6:
     <<: *test-template
