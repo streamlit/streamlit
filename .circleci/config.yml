@@ -21,13 +21,6 @@ jobs:
     steps:
       - checkout
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "lib/Pipfile" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
       - run:
           name: install nvm
           command: |
@@ -66,11 +59,6 @@ jobs:
           name: make develop
           command: |
             make develop
-
-      - save_cache:
-          paths:
-            - ./${CIRCLE_JOB}
-          key: v1-dependencies-{{ checksum "lib/Pipfile" }}
 
       # run tests including code coverage
       - run:
