@@ -19,32 +19,36 @@ jobs:
     working_directory: ~/repo
 
     steps:
-      - checkout
+      - checkout:
+          name: Checkout Streamlit code
 
       - run:
-          name: Copy python specific Pipfile.lock
+          name: Copy Python specific Pipfile.lock
           command: |
             cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
 
       - run:
-          name: create checksum for all protobufs.
+          name: Create checksum for all protobufs
           command: |
             md5sum protobuf/*.proto > ~/protobuf.md5
 
       - restore_cache:
+          name: Restore virtualenv from cache
           keys:
           - python-venv-{{ checksum "lib/Pipfile.lock" }}
 
       - restore_cache:
+          name: Restore nvm and node_modules from cache
           keys:
           - nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
 
       - restore_cache:
+          name: Restore protobufs from cache
           keys:
           - protobuf-{{ checksum "~/protobuf.md5" }}
 
       - run:
-          name: install nvm
+          name: Install NVM ie nodejs
           command: |
             if [ ! -d ~/.nvm ] ; then
               # install nodejs via nvm
@@ -60,7 +64,7 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run:
-          name: create virtual envs
+          name: Create virtualenvs and run pipenv
           command: |
             # activate virtual environment
             if [ ! -d venv ] ; then
@@ -82,7 +86,7 @@ jobs:
             make develop
 
       - run:
-          name: protobuf
+          name: Generate protobufs
           command: |
             # There's a chance this file could be a cached version when
             # the protobuf cache is restored, so checkout from github to
@@ -99,22 +103,25 @@ jobs:
 
       # run tests including code coverage
       - run:
-          name: run tests
+          name: Run python tests.
           command: |
             make pycoverage
 
       - save_cache:
+          name: Save virtualenv to cache
           key: python-venv-{{ checksum "lib/Pipfile.lock" }}
           paths:
             - venv
 
       - save_cache:
+          name: Save nvm and node_modules to cache
           key: nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
 
       - save_cache:
+          name: Save generated protobufs to cache
           key: protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
             - frontend/src/protobuf.js
