@@ -29,19 +29,17 @@ jobs:
           - v1-dependencies-
 
       - run:
-          name: install dependencies
+          name: install nvm
           command: |
-            # TODO(armando): Cache all of this via something like https://medium.com/@chrisbanes/circleci-cache-key-over-many-files-c9e07f4d471a
-            # install protobuf v3
-            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            sudo apt-get update -y
-            sudo apt-get install -y protobuf-compiler
             # install nodejs via nvm
             curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
             export NVM_DIR="$HOME/.nvm"
             source "$NVM_DIR/nvm.sh"
             nvm install --lts=dubnium
+
+      - run:
+          name: create virtual envs
+          command: |
             # activate virtual environment
             if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
               pip install virtualenv
@@ -50,11 +48,23 @@ jobs:
               python -m venv ${CIRCLE_JOB}
             fi
             . ${CIRCLE_JOB}/bin/activate
-            # install dependencies
             make setup
             make pipenv
             make react-init
             make protobuf
+
+      - run:
+          name: protobuf
+          command: |
+            # install protobuf v3
+            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+            sudo apt-get update -y
+            sudo apt-get install -y protobuf-compiler
+
+      - run:
+          name: make develop
+          command: |
             make develop
 
       - save_cache:
