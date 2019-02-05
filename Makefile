@@ -15,25 +15,26 @@ help:
 	@echo " publish-site - Builds and pushes the site to prod."
 
 .PHONY: init
-init: setup requirements react-init protobuf # react-build release
+init: setup pipenv react-init protobuf # react-build release
 
 .PHONY: build
 build: react-build
 
 setup:
-	pip install pip-tools
+	pip install pip-tools pipenv
 
-# NOTE: Got rid of these next two steps because pip-compile is too strict about
-# versions.
+PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
-# lib/install_requirements.txt: lib/install_requirements.in
-# 	pip-compile lib/install_requirements.in
-
-# lib/requirements.txt: lib/requirements.in lib/install_requirements.txt
-# 	pip-compile lib/requirements.in
-
-requirements: lib/requirements.txt lib/install_requirements.txt
-	pip install -r lib/requirements.txt
+pipenv: lib/Pipfile
+# In CircleCI, dont generate Pipfile.lock This is only used for development.
+ifndef CIRCLECI
+	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
+else
+	echo "Running in CircleCI, not generating requirements."
+endif
+	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
+	# Dont update lockfile and install whatever is in lock.
+	cd lib; pipenv install --ignore-pipfile --dev
 
 pylint:
 	# Linting
