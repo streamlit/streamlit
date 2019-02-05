@@ -19,56 +19,141 @@ jobs:
     working_directory: ~/repo
 
     steps:
-      - checkout
+      - checkout:
+          name: Checkout Streamlit code
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "lib/Pipfile" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
+      - run:
+          # We use the python Pipfile.lock as the cache key.
+          # If dependencies haven't changed then use the cache.
+          name: Copy Python specific Pipfile.lock
+          command: |
+            cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
 
       - run:
-          name: install dependencies
+          # There is no lock file for the protobufs so we run a checksum
+          # across all the protos and save that to a file to use as
+          # cache key.
+          name: Create checksum for all protobufs
           command: |
-            # TODO(armando): Cache all of this via something like https://medium.com/@chrisbanes/circleci-cache-key-over-many-files-c9e07f4d471a
-            # install protobuf v3
-            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            sudo apt-get update -y
-            sudo apt-get install -y protobuf-compiler
-            # install nodejs via nvm
-            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            nvm install --lts=dubnium
-            # activate virtual environment
-            if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
-              pip install virtualenv
-              python -m virtualenv ${CIRCLE_JOB}
-            else
-              python -m venv ${CIRCLE_JOB}
+            md5sum protobuf/*.proto > ~/protobuf.md5
+
+      #################################################################
+      # Restore from cache
+      #################################################################
+      - restore_cache:
+          name: Restore virtualenv from cache
+          keys:
+          - python-venv-{{ checksum "lib/Pipfile.lock" }}
+
+      - restore_cache:
+          name: Restore nvm and node_modules from cache
+          keys:
+          - nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+
+      - restore_cache:
+          name: Restore protobufs from cache
+          keys:
+          - protobuf-{{ checksum "~/protobuf.md5" }}
+
+      #################################################################
+      # Run 'make init'
+      #################################################################
+      - run:
+          name: Install NVM ie nodejs
+          command: |
+            if [ ! -d ~/.nvm ] ; then
+              # install nodejs via nvm
+              curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+              source "$HOME/.nvm/nvm.sh"
+              nvm install --lts=dubnium
             fi
-            . ${CIRCLE_JOB}/bin/activate
-            # install dependencies
-            make init
+            if [ ! -d frontend/node_modules ] ; then
+              source "$HOME/.nvm/nvm.sh"
+              make react-init
+            fi
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+
+      - run:
+          name: Create virtualenvs and run pipenv
+          command: |
+            # activate virtual environment
+            if [ ! -d venv ] ; then
+              if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
+                pip install virtualenv
+                python -m virtualenv venv
+              else
+                python -m venv venv
+              fi
+              source venv/bin/activate
+              make setup
+              make pipenv
+              deactivate
+            else
+              echo 'Virtualenv already exists, not creating'
+            fi
+            echo 'source venv/bin/activate' >> $BASH_ENV
+
+      - run:
+          name: Run make develop
+          command: |
             make develop
 
-      - save_cache:
-          paths:
-            - ./${CIRCLE_JOB}
-          key: v1-dependencies-{{ checksum "lib/Pipfile" }}
-
-      # run tests including code coverage
       - run:
-          name: run tests
+          name: Generate protobufs
           command: |
-            . ${CIRCLE_JOB}/bin/activate
+            # There's a chance this file could be a cached version when
+            # the protobuf cache is restored, so checkout from github to
+            # make sure.
+            git checkout -- lib/streamlit/protobuf/__init__.py
+            if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+              # install protobuf v3
+              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+              sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+              sudo apt-get update -y
+              sudo apt-get install -y protobuf-compiler
+              make protobuf
+            fi
+
+      #################################################################
+      # Run make pycoverage
+      #################################################################
+      - run:
+          name: Run python tests.
+          command: |
             make pycoverage
+
+      #################################################################
+      # Save cache for python virtualenv, node_modules, protobuf
+      #################################################################
+      - save_cache:
+          name: Save virtualenv to cache
+          key: python-venv-{{ checksum "lib/Pipfile.lock" }}
+          paths:
+            - venv
+
+      - save_cache:
+          name: Save nvm and node_modules to cache
+          key: nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          paths:
+            - frontend/node_modules
+            - ~/.nvm
+
+      - save_cache:
+          name: Save generated protobufs to cache
+          key: protobuf-{{ checksum "~/protobuf.md5" }}
+          paths:
+            - frontend/src/protobuf.js
+            - lib/streamlit/protobuf
+
   test-3.5.6:
     <<: *test-template
     docker:
       - image: circleci/python:3.5.6-jessie
+
   test-2.7.15:
     <<: *test-template
     docker:
