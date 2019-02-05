@@ -23,7 +23,7 @@ build: react-build
 setup:
 	pip install pip-tools pipenv
 
-PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
+PY_VERSION := python-$(shell python -c 'import platform; print(platform.python_version())')
 
 pipenv: lib/Pipfile
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
