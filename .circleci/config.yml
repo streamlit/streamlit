@@ -22,16 +22,27 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
       - run:
+          # We use the python Pipfile.lock as the cache key.
+          # If dependencies haven't changed then use the cache.
           name: Copy Python specific Pipfile.lock
           command: |
             cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
 
       - run:
+          # There is no lock file for the protobufs so we run a checksum
+          # across all the protos and save that to a file to use as
+          # cache key.
           name: Create checksum for all protobufs
           command: |
             md5sum protobuf/*.proto > ~/protobuf.md5
 
+      #################################################################
+      # Restore from cache
+      #################################################################
       - restore_cache:
           name: Restore virtualenv from cache
           keys:
@@ -47,6 +58,9 @@ jobs:
           keys:
           - protobuf-{{ checksum "~/protobuf.md5" }}
 
+      #################################################################
+      # Run 'make init'
+      #################################################################
       - run:
           name: Install NVM ie nodejs
           command: |
@@ -82,7 +96,10 @@ jobs:
               echo 'Virtualenv already exists, not creating'
             fi
             echo 'source venv/bin/activate' >> $BASH_ENV
-            source venv/bin/activate
+
+      - run:
+          name: Run make develop
+          command: |
             make develop
 
       - run:
@@ -101,12 +118,17 @@ jobs:
               make protobuf
             fi
 
-      # run tests including code coverage
+      #################################################################
+      # Run make pycoverage
+      #################################################################
       - run:
           name: Run python tests.
           command: |
             make pycoverage
 
+      #################################################################
+      # Save cache for python virtualenv, node_modules, protobuf
+      #################################################################
       - save_cache:
           name: Save virtualenv to cache
           key: python-venv-{{ checksum "lib/Pipfile.lock" }}
@@ -131,6 +153,7 @@ jobs:
     <<: *test-template
     docker:
       - image: circleci/python:3.5.6-jessie
+
   test-2.7.15:
     <<: *test-template
     docker:
