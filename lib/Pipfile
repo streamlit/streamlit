@@ -21,6 +21,14 @@ botocore = "*"
 boto3 = "*"
 click = "*"
 docutils = "*"
+# TODO(aaj-st): Find a better way to make testing work without having to
+#               hardcode entrypoints.  Issue #307 will remove this.
+# anaconda2/3-2018.12 has entrypoints 0.2.3 installed, 0.3 which is the
+# latest version released 2019.01.07 can't be installed into /opt/conda
+# because entrypoints==0.2.3 was installed via distutils,
+# so the easiest way to get anaconda?-2018.12 working on circleci is to
+# pin this version 0.2.3 which was released 2017.06.08
+entrypoints = "==0.2.3"
 enum-compat = "*"
 future-fstrings = "*"
 # python3 code backported to python2
