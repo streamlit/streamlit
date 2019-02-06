@@ -37,11 +37,13 @@ jobs:
             fi
 
       - run:
-          # We use the python Pipfile.lock as the cache key.
+          # We use the python Pipfile.lock as the cache key and also
+          # the hash of the current python.
           # If dependencies haven't changed then use the cache.
-          name: Copy Python specific Pipfile.lock
+          name: Create python cache key.
           command: |
-            cp -f lib/Pipfile.locks/${CIRCLE_JOB} lib/Pipfile.lock
+            md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
+            md5sum $(which python) >> ~/python_version.md5
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
@@ -49,7 +51,7 @@ jobs:
           # cache key.
           name: Create checksum for all protobufs
           command: |
-            md5sum protobuf/*.proto > ~/protobuf.md5
+            md5sum protobuf/*.proto $(which python) > ~/protobuf.md5
 
       #################################################################
       # Restore from cache
@@ -57,7 +59,7 @@ jobs:
       - restore_cache:
           name: Restore virtualenv from cache
           keys:
-          - v0-python-venv-{{ checksum "lib/Pipfile.lock" }}
+          - v0-python-venv-{{ checksum "~/python_version.md5" }}
 
       - restore_cache:
           name: Restore nvm and node_modules from cache
@@ -142,7 +144,7 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v0-python-venv-{{ checksum "lib/Pipfile.lock" }}
+          key: v0-python-venv-{{ checksum "~/python_version.md5" }}
           paths:
             - venv
 
