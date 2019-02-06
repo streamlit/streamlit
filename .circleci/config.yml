@@ -5,14 +5,14 @@
 version: 2
 workflows:
   version: 2
-  test:
+  circleci:
     jobs:
-      - test-3.6.6
-      - test-3.5.6
-      - test-2.7.15
+      - python-3.6.6
+      - python-3.5.6
+      - python-2.7.15
 
 jobs:
-  test-3.6.6: &test-template
+  python-3.6.6: &job-template
     docker:
       - image: circleci/python:3.6.6-jessie
 
@@ -30,7 +30,7 @@ jobs:
           # If dependencies haven't changed then use the cache.
           name: Copy Python specific Pipfile.lock
           command: |
-            cp -f lib/Pipfile.locks/${PYTHON_VERSION} lib/Pipfile.lock
+            cp -f lib/Pipfile.locks/${CIRCLE_JOB} lib/Pipfile.lock
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
@@ -46,17 +46,17 @@ jobs:
       - restore_cache:
           name: Restore virtualenv from cache
           keys:
-          - python-venv-{{ checksum "lib/Pipfile.lock" }}
+          - v0-python-venv-{{ checksum "lib/Pipfile.lock" }}
 
       - restore_cache:
           name: Restore nvm and node_modules from cache
           keys:
-          - nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          - v0-nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
 
       - restore_cache:
           name: Restore protobufs from cache
           keys:
-          - protobuf-{{ checksum "~/protobuf.md5" }}
+          - v0-protobuf-{{ checksum "~/protobuf.md5" }}
 
       #################################################################
       # Run 'make init'
@@ -82,7 +82,7 @@ jobs:
           command: |
             # activate virtual environment
             if [ ! -d venv ] ; then
-              if [ "${CIRCLE_JOB}" = "test-2.7.15" ] ; then
+              if [ "${CIRCLE_JOB}" = "python-2.7.15" ] ; then
                 pip install virtualenv
                 python -m virtualenv venv
               else
@@ -131,30 +131,30 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: python-venv-{{ checksum "lib/Pipfile.lock" }}
+          key: v0-python-venv-{{ checksum "lib/Pipfile.lock" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          key: v0-nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
 
       - save_cache:
           name: Save generated protobufs to cache
-          key: protobuf-{{ checksum "~/protobuf.md5" }}
+          key: v0-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
             - frontend/src/protobuf.js
             - lib/streamlit/protobuf
 
-  test-3.5.6:
-    <<: *test-template
+  python-3.5.6:
+    <<: *job-template
     docker:
       - image: circleci/python:3.5.6-jessie
 
-  test-2.7.15:
-    <<: *test-template
+  python-2.7.15:
+    <<: *job-template
     docker:
       - image: circleci/python:2.7.15-jessie
