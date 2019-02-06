@@ -7,10 +7,18 @@ workflows:
   version: 2
   circleci:
     jobs:
-      - python-3.6.6
-      - python-3.5.6
+      - miniconda3-4.5.12:
+          filters:
+            branches:
+              only:
+                - develop
       - python-2.7.15
-      - miniconda3-4.5.12
+      - python-3.5.6:
+          filters:
+            branches:
+              only:
+                - develop
+      - python-3.6.6
 
 jobs:
   python-3.6.6: &job-template
