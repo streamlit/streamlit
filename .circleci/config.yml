@@ -63,6 +63,11 @@ jobs:
       # Restore from cache
       #################################################################
       - restore_cache:
+          name: Restore /opt/conda from cache
+          keys:
+          - v0-opt-conda-{{ checksum "~/python_version.md5" }}
+
+      - restore_cache:
           name: Restore virtualenv from cache
           keys:
           - v0-python-venv-{{ checksum "~/python_version.md5" }}
@@ -125,24 +130,38 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run:
-          name: Create virtualenvs and run pipenv
+          name: Run make pipenv and create virtualenv if necessary.
           command: |
-            # activate virtual environment
-            if [ ! -d venv ] ; then
-              if [ "${CIRCLE_JOB}" = "python-2.7.15" ] ; then
-                pip install virtualenv
-                python -m virtualenv venv
+            if echo ${CIRCLE_JOB} | egrep -qi conda ; then
+              echo 'In conda, not creating virtualenv'
+              if pip freeze | grep -qi pipenv ; then
+                echo 'skipping make setup and make pipenv'
               else
-                python -m venv venv
+                # pip install psutil requires gcc.
+                apt-get update -y
+                apt-get install -y build-essential
+                make setup
+                make pipenv
               fi
-              source venv/bin/activate
-              make setup
-              make pipenv
-              deactivate
+              mkdir -p venv
             else
-              echo 'Virtualenv already exists, not creating'
+              echo 'Not in conda, checking for virtualenv'
+              if [ ! -d venv ] ; then
+                if [ "${CIRCLE_JOB}" == "python-2.7.15" ] ; then
+                  pip install virtualenv
+                  python -m virtualenv venv
+                else
+                  python -m venv venv
+                fi
+                source venv/bin/activate
+                make setup
+                make pipenv
+                deactivate
+              else
+                echo 'Virtualenv already exists, not creating'
+              fi
+              echo 'source venv/bin/activate' >> $BASH_ENV
             fi
-            echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run:
           name: Run make develop
@@ -176,6 +195,12 @@ jobs:
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
       #################################################################
+      - save_cache:
+          name: Save /opt/conda to cache
+          key: v0-opt-conda-{{ checksum "~/python_version.md5" }}
+          paths:
+            - /opt/conda
+
       - save_cache:
           name: Save virtualenv to cache
           key: v0-python-venv-{{ checksum "~/python_version.md5" }}
