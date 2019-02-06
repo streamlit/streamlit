@@ -26,6 +26,17 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
+          name: set environment variables if in conda.
+          command: |
+            if conda info; then
+              echo "Conda found, setting variables."
+              ./scripts/anaconda_version.sh >> $BASH_ENV
+              echo 'export SUDO=""' >> $BASH_ENV
+            else
+              echo 'export SUDO="sudo"' >> $BASH_ENV
+            fi
+
+      - run:
           # We use the python Pipfile.lock as the cache key.
           # If dependencies haven't changed then use the cache.
           name: Copy Python specific Pipfile.lock
@@ -111,10 +122,10 @@ jobs:
             git checkout -- lib/streamlit/protobuf/__init__.py
             if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
               # install protobuf v3
-              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-              sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-              sudo apt-get update -y
-              sudo apt-get install -y protobuf-compiler
+              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
+              ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y protobuf-compiler
               make protobuf
             fi
 
