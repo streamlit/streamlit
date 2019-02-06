@@ -52,6 +52,12 @@ jobs:
             md5sum $(which python) >> ~/python_version.md5
 
       - run:
+          name: Create node_modules cache key.
+          command: |
+            md5sum frontend/package-lock.json > ~/package-lock.md5
+            md5sum $(which python) >> ~/package-lock.md5
+
+      - run:
           # There is no lock file for the protobufs so we run a checksum
           # across all the protos and save that to a file to use as
           # cache key.
@@ -75,7 +81,7 @@ jobs:
       - restore_cache:
           name: Restore nvm and node_modules from cache
           keys:
-          - v0-nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          - v1-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
 
       - restore_cache:
           name: Restore protobufs from cache
@@ -209,7 +215,7 @@ jobs:
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v0-nvm_node_modules-{{ checksum "frontend/package-lock.json" }}
+          key: v1-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
