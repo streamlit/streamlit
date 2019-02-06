@@ -33,8 +33,13 @@ jobs:
               echo "Conda found, setting variables."
               ./scripts/anaconda_version.sh >> $BASH_ENV
               echo 'export SUDO=""' >> $BASH_ENV
+              touch make.bin
+              md5sum make.bin > ~/make.md5
+              rm -f make.bin
             else
               echo 'export SUDO="sudo"' >> $BASH_ENV
+              cp -f /usr/bin/make make.bin
+              md5sum make.bin > ~/make.md5
             fi
 
       - run:
@@ -71,6 +76,34 @@ jobs:
           name: Restore protobufs from cache
           keys:
           - v0-protobuf-{{ checksum "~/protobuf.md5" }}
+
+      - restore_cache:
+          name: Restore make from cache
+          keys:
+          - v0_make.bin-{{ checksum "~/make.md5" }}
+
+      #################################################################
+      # Pre Make commands
+      #################################################################
+      - run:
+          name: install make
+          command: |
+            if [ -s make.bin ] ; then
+              echo "make.bin does exists and is non zero"
+            else
+              echo "/usr/bin/make doesnt exist, installing"
+              apt-get update -y
+              apt-get install -y make
+              cp -f /usr/bin/make make.bin
+            fi
+            ${SUDO} cp -f make.bin /usr/bin/make
+
+      - save_cache:
+          name: Save make to cache
+          key: v0_make.bin-{{ checksum "~/make.md5" }}
+          paths:
+            - make.bin
+
 
       #################################################################
       # Run 'make init'
