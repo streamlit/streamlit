@@ -1,85 +1,127 @@
 # Contributing to Streamlit
 
-[Streamlit](../README.md) is a stateless alternative to Jupyter notebooks for machine learning and data science. Here we explain how to install and contribute to the Streamlit library itself. **Note:** Users of Streamlit don't need to go through all these steps (only those working on the library itself).
+Thanks for your interest in contributing to Streamlit! Please read the
+instructions in this file for information on how we do things around here.
 
-## Installation
 
+## Getting started
 
-#### 1. Install `npm` or `nvm`
+### Requirements
 
-###### MacOS
+#### MacOS
 
-No instructions at present. Please feel free to add your own.
+```bash
+# Some Apple dev tools
+$ xcode-select --install, developer.apple.com/downloads
 
-###### On Debian-based Linux
+# Install Homebrew
+$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-```
-sudo apt install npm
-```
-
-#### 2. Install Python 3.6 or Later
-
-You may want a [virtual environment](docs/python-virtual-envornment.md).
-
-#### 3. Install the `protobuf` compiler
-
-###### On MacOS
-```
-brew install protobuf
-```
-###### On Linux
-```
-sudo apt-get install protobuf-compiler
+# Install NPM and the ProtoBuf compiler
+$ brew install npm protobuf
 ```
 
-#### 4. Initialize the Library
+#### Ubuntu
 
-To install the Python and Javascxript libraries, compile the Protobufs, run:
+```bash
+# Install NPM, PIP, and the ProtoBuf compiler
+$ sudo apt-get install npm python-pip protobuf-compiler
 ```
+
+
+### Not a requirement, but you probably want this
+
+```bash
+$ curl https://pyenv.run | bash
+$ pip install virtualenv
+$ pyenv install 2.7
+$ pyenv install 3.6
+```
+
+
+### Grab the code
+
+For the repo on Github and then:
+
+```bash
+$ git clone https://github.com/[username]/streamlit
+$ cd streamlit
+$ git checkout develop
+$ git checkout -b [yourbranch]
+```
+
+Now run:
+
+```bash
+$ make init && make install && make build && make develop
+```
+
+Where:
+1. `make init` installs Streamlit's Python and Javascript dependencies,
+   and compiles our Protobufs
+2. `make install` builds and installs Streamlit into your Python environment.
+3. `make build` builds the static assets.
+4. `make develop` makes it so you can edit the Python source files inside
+   `lib/streamlit/` and not have to reinstall the Python package with `make
+   install` every time.
+
+
+### Now test it out!
+
+Test that everything above worked by running:
+```bash
+$ python -m examples/animation.py
+```
+above and you should see a Streamlit report with a progressbar in a browser.
+
+
+## Development cycle
+
+The basic developer workflow is that you run a React development server in
+the background which will automatically recompile Javascript and CSS when
+necessary.
+
+To start the dev server, open up a new terminal window and run:
+
+```bash
+$ cd frontend
+$ npm start
+```
+
+Note that this server listens on port 3000 rather than 8501 (i.e. Streamlit's
+production port). Normally you don't have to worry about this, but it may
+matter when you're developing certain features.
+
+
+### When you modify Python, JS, or CSS code...
+
+With the setup above, when you change the Python or Javascript Code everything
+should automatically _just work_.
+
+The only exception is if you modify the Proxy code, and the proxy is already
+running. In that case you should kill the old proxy before you try out the new
+code:
+
+```bash
+$ streamlit kill_proxy
+```
+
+### When you update protobufs...
+
+If you ever modify our protos, you'll need to run the command below to compile
+to the proto into libraries that can be used in Python and JS:
+
+```bash
+$ make protobuf
+```
+
+#### When change Javascript or Python dependencies...
+
+```bash
 make init
 ```
-To point `streamlit` into your source tree, run:
-```
-make develop
-```
-Test this by running:
-```
-python -m streamlit
-```
-and you should see a list of commands.
 
-## Developing Streamlit
-
-#### Ordinary Development Cycle
-
-The basic developer workflow is that you run a `react` development server in the
-background which will automatically recompile Javascript and CSS when necessary.
-
-To start the server, open up a new terminal window and run:
-```
-cd frontend ; npm start
-```
-Happy coding!
-
-#### When You Change the Python or Javascript Code
-
-Everything should automatically still work. :)
-
-#### When You Update Protobufs
-
-You need to run:
-```
-make protobuf
-```
-
-#### When Change Javascript of Python Dependencies
-
-Rerun:
-```
-make init
-```
-
-#### Testing The Static Saving
+#### Testing the "Static Saving" feature
 
 Create a bundle with the static files.
 ```
@@ -91,9 +133,57 @@ open http://localhost:3000/?id=example
 ```
 Then load a page and click the save icon.
 
-## Coding Conventions
 
-Streamlit coding conventions can be found [here](docs/conventions.md).
+## Branching model
+
+We follow [this amazing model](https://nvie.com/posts/a-successful-git-branching-model).
+That is:
+- The branch that has the latest prod version is `master`.
+- The branch that has the latest code is `develop`.
+- You should always start working by forking off `streamlit/streamlit`
+  into your personal repo and branching off of `develop`.
+- When done with your changes, send a PR to merge your changes into
+  `streamlit/streamlit`'s `develop` branch. Then make sure pick a reviewer
+  from the list.
+- If working on a large feature that will be broken into multiple PRs, create a
+  feature branch at `streamlit/streamlit`. After their reviews, each PR should
+  be merged into this branch. When all PRs are done, merge the feature branch
+  into `streamlit/streamlit`'s develop.
+
+
+## Sending a pull request
+
+Make sure your pull request includes:
+- What the PR is all about.
+- What is changed in the code. Walk the reader through the code review with a
+  few sentences.
+- How to try out your changes.
+
+And always lint and test your code prior to sending out the PR. That is, try
+the following in the latest Python 2.x and 3.x:
+- `make pylint`
+- `python admin/streamlit_test.py`
+- `make pytest`
+- ~`make js-test`~ Actually, this is not working right now.
+
+
+## Coding conventions
+
+Streamlit's coding conventions can be found [here](docs/conventions.md).
+
+
+## Versioning convention
+
+We use [SemVer 2.0](https://semver.org) with a couple of changes since SemVer
+is more for libraries than for user-facing products.
+
+Given a version number MAJOR.MINOR.PATCH, increment the:
+- MAJOR version when you make incompatible API changes
+  _OR_ bring in life-changing user-facing features,
+- MINOR version when you add functionality in a backwards-compatible
+  manner, and
+- PATCH version when you make backwards-compatible bug fixes.
+
 
 ## Publishing to `PyPi`
 
@@ -176,12 +266,14 @@ Also, if possible, test the wheel in:
 - On Linux
 
 #### Distribute the Wheel
+
 ```
 make distribute
 ```
 Then test it on Mac and Linux.
 
 #### Post the Release Notes to Slack
+
 Post the release notes and declare victory!
 
 #### Create a New Tag for this Version
