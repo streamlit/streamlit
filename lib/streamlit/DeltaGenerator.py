@@ -396,7 +396,7 @@ class DeltaGenerator(object):
 
     @_export
     @_create_element
-    def pyplot(self, element, fig=None):
+    def pyplot(self, element, fig=None, **kwargs):
         """Display a matplotlib.pyplot image.
 
         Parameters
@@ -404,6 +404,9 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        **kwargs : any
+            Arguments to pass to Matplotlib's savefig function.
 
         """
         from streamlit import image_proto
@@ -419,8 +422,13 @@ class DeltaGenerator(object):
         if not fig:
             fig = plt
 
+        # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
+        # So here we pick double of that to make things look good in a high
+        # DPI display.
+        dpi = kwargs.get('dpi', 200)
+
         image = io.BytesIO()
-        fig.savefig(image, format='png')
+        fig.savefig(image, format='png', dpi=dpi)
         image_proto.marshall_images(image, None, -2, element.imgs, False)
 
     # TODO: Make this accept files and strings/bytes as input.
