@@ -1,11 +1,21 @@
 <header>
   <ul class="contents">
     {{ if .IsHome }}
-      <li>Streamlit</li>
+      <li class="logo">Streamlit</a></li>
     {{ else }}
-      <li class="logo"><a href="/">Streamlit</a></li
-      ><li><a href="/docs">Docs</a></li
-      ><li><a href="mailto:hello@streamlit.io">Contact</a></li>
+      <li class="logo"><a href="/">Streamlit</a></li>
     {{ end }}
+
+    {{ $isSecretArea := (hasPrefix .File.Path "_") }}
+    {{ $currentPage := . }}
+
+    {{ $menu := (cond $isSecretArea .Site.Menus.secret .Site.Menus.main) }}
+
+    {{ range $menu }}
+    <li class="{{if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }}active{{end}}">
+      <a href="{{ .URL }}">{{ .Name }}</a>
+    </li>
+    {{ end }}
+
   </ul>
 </header>
