@@ -24,6 +24,12 @@ setup:
 	pip install pip-tools pipenv
 
 PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
+ANACONDA_VERSION := $(shell ./scripts/anaconda_version.sh only)
+ifdef ANACONDA_VERSION
+PY_VERSION := $(ANACONDA_VERSION)
+else
+PY_VERSION := python-$(PY_VERSION)
+endif
 
 pipenv: lib/Pipfile
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
@@ -33,8 +39,12 @@ else
 	echo "Running in CircleCI, not generating requirements."
 endif
 	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
+ifndef CIRCLECI
 	# Dont update lockfile and install whatever is in lock.
 	cd lib; pipenv install --ignore-pipfile --dev
+else
+	cd lib; pipenv install --ignore-pipfile --dev --system
+endif
 
 pylint:
 	# Linting
