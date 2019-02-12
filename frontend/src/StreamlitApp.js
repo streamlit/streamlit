@@ -39,7 +39,7 @@ import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
 import ConnectionManager from './ConnectionManager';
 
-import { ForwardMsg, Text as TextProto } from './protobuf';
+import { ForwardMsg, ReRun, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -63,6 +63,7 @@ class StreamlitApp extends PureComponent {
       }]),
       userSettings: {
         wideMode: false,
+        clearCache: false,
       },
       showLoginBox: false,
     };
@@ -201,6 +202,7 @@ class StreamlitApp extends PureComponent {
       userSettings: {
         ...this.state.userSettings,
         wideMode: settings.wideMode,
+        clearCache: settings.clearCache,
       },
     });
   }
@@ -293,8 +295,11 @@ class StreamlitApp extends PureComponent {
     if (this.isProxyConnected()) {
       trackEventRemotely('rerunScript');
       this.sendBackMsg({
-        type: 'rerunScript',
-        rerunScript: this.state.commandLine,
+        type: 'rerun',
+        rerun: {
+          commandLine: this.state.commandLine,
+          clearCache: this.state.userSettings.clearCache,
+        },
       });
     } else {
       console.warn('Cannot rerun script when proxy is disconnected.');

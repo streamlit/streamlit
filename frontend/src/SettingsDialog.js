@@ -56,6 +56,16 @@ class SettingsDialog extends PureComponent {
             {" "}
             Show reports in wide mode
           </label>
+          <label>
+            <input
+                type="checkbox"
+                name="clearCache"
+                checked={this.state.clearCache}
+                onChange={this.handleCheckboxChange}
+                />
+            {" "}
+            Clear cache when rerunning report
+          </label>
         </ModalBody>
 
         <ModalFooter>

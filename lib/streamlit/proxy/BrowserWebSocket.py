@@ -15,6 +15,7 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketClosedError
 from tornado.websocket import WebSocketHandler
 
+from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
 from streamlit import process_runner
@@ -163,8 +164,10 @@ class BrowserWebSocket(WebSocketHandler):
                 process_runner.run_python_module('streamlit', 'help')
             elif msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
-            elif msg_type == 'rerun_script':
-                yield self._run(backend_msg.rerun_script)
+            elif msg_type == 'rerun':
+                if backend_msg.rerun.clear_cache:
+                    caching.clear_cache()
+                yield self._run(backend_msg.rerun.command_line)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:

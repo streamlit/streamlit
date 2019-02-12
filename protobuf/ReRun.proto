@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// ReRun Message
+message ReRun {
+  // Asks the proxy to run the script with this given command line.
+  string command_line = 1;
+
+  // Clear caching before rerunning script.
+  bool clear_cache = 2;
+}
