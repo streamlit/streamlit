@@ -39,21 +39,21 @@ class UtilTest(unittest.TestCase):
 
     def test_decode_ascii(self):
         """Test streamlit.util._decode_ascii."""
-        self.assertEquals('test string.', util._decode_ascii(b'test string.'))
+        self.assertEqual('test string.', util._decode_ascii(b'test string.'))
 
     @patch('streamlit.util.open', mock_open(read_data="data"))
     def test_streamlit_read(self):
         """Test streamlit.util.streamlit.read."""
         with util.streamlit_read('/some/cache/file') as input:
             data = input.read()
-        self.assertEquals('data', data)
+        self.assertEqual('data', data)
 
     @patch('streamlit.util.open', mock_open(read_data=b'\xaa\xbb'))
     def test_streamlit_read_binary(self):
         """Test streamlit.util.streamlit.read."""
         with util.streamlit_read('/some/cache/file', binary=True) as input:
             data = input.read()
-        self.assertEquals(b'\xaa\xbb', data)
+        self.assertEqual(b'\xaa\xbb', data)
 
     @patch('streamlit.util.open', mock_open(read_data="data"))
     def test_streamlit_read_zero_bytes(self):
@@ -62,7 +62,7 @@ class UtilTest(unittest.TestCase):
         with pytest.raises(util.Error) as e:
             with util.streamlit_read('/some/cache/file') as input:
                 data = input.read()
-        self.assertEquals(str(e.value), 'Read zero byte file: "/some/cache/file"')
+        self.assertEqual(str(e.value), 'Read zero byte file: "/some/cache/file"')
 
     def test_streamlit_write(self):
         """Test streamlit.util.streamlit.write."""
@@ -85,4 +85,4 @@ class UtilTest(unittest.TestCase):
                 'Python is limited to files below 2GB on OSX. '
                 'See https://bugs.python.org/issue24658'
             )
-            self.assertEquals(str(e.value), error_msg)
+            self.assertEqual(str(e.value), error_msg)

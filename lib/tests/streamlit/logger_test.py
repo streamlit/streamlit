@@ -22,7 +22,7 @@ class LoggerTest(unittest.TestCase):
     #     }
     #     for k, v in data.items():
     #         streamlit.logger.set_log_level(k)
-    #         self.assertEquals(v, logging.getLogger().getEffectiveLevel())
+    #         self.assertEqual(v, logging.getLogger().getEffectiveLevel())
 
     def test_set_log_level_by_constant(self):
         """Test streamlit.logger.set_log_level."""
@@ -35,14 +35,14 @@ class LoggerTest(unittest.TestCase):
         ]
         for k in data:
             streamlit.logger.set_log_level(k)
-            self.assertEquals(k, logging.getLogger().getEffectiveLevel())
+            self.assertEqual(k, logging.getLogger().getEffectiveLevel())
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
         with pytest.raises(SystemExit) as e:
             streamlit.logger.set_log_level(90)
-        self.assertEquals(e.type, SystemExit)
-        self.assertEquals(e.value.code, 1)
+        self.assertEqual(e.type, SystemExit)
+        self.assertEqual(e.value.code, 1)
 
     # Need to fix this test:
     # https://trello.com/c/ZwNR7fWI
@@ -50,14 +50,14 @@ class LoggerTest(unittest.TestCase):
     #     """Test streamlit.logger.set_log_level."""
     #     streamlit.logger.set_log_level('debug')
     #     test1 = streamlit.logger.get_logger('test1')
-    #     self.assertEquals(logging.DEBUG, test1.getEffectiveLevel())
+    #     self.assertEqual(logging.DEBUG, test1.getEffectiveLevel())
     #
     #     streamlit.logger.set_log_level('warning')
-    #     self.assertEquals(logging.WARNING, test1.getEffectiveLevel())
+    #     self.assertEqual(logging.WARNING, test1.getEffectiveLevel())
     #
     #     streamlit.logger.set_log_level('critical')
     #     test2 = streamlit.logger.get_logger('test2')
-    #     self.assertEquals(logging.CRITICAL, test2.getEffectiveLevel())
+    #     self.assertEqual(logging.CRITICAL, test2.getEffectiveLevel())
 
     def test_init_aiohttp_logs(self):
         """Test streamlit.logger.init_aiohttp_logs."""
@@ -67,7 +67,7 @@ class LoggerTest(unittest.TestCase):
         truth = ['aiohttp.access', 'aiohttp.client',
                  'aiohttp.internal', 'aiohttp.server', 'aiohttp.web',
                  'aiohttp.websocket']
-        self.assertEquals(sorted(truth), sorted(loggers))
+        self.assertEqual(sorted(truth), sorted(loggers))
 
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
@@ -76,7 +76,7 @@ class LoggerTest(unittest.TestCase):
                    if 'tornado.' in x]
         truth = ['tornado.access', 'tornado.application',
                  'tornado.general']
-        self.assertEquals(sorted(truth), sorted(loggers))
+        self.assertEqual(sorted(truth), sorted(loggers))
 
     # Need to fix this test:
     # https://trello.com/c/ZwNR7fWI

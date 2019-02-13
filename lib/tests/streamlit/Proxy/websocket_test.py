@@ -24,4 +24,4 @@
 #         """Test BrowserWebSocket class."""
 #         path = '/'
 #         resp = self.fetch(path, method='GET')
-#         self.assertEquals(resp.code, status.NOT_FOUND)
+#         self.assertEqual(resp.code, status.NOT_FOUND)
