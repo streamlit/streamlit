@@ -8,12 +8,18 @@ workflows:
   circleci:
     jobs:
       - miniconda3-4.5.12:
+          requires:
+            - python-3.6.6
           filters:
             branches:
               only:
                 - develop
-      - python-2.7.15
+      - python-2.7.15:
+          requires:
+            - python-3.6.6
       - python-3.5.6:
+          requires:
+            - python-3.6.6
           filters:
             branches:
               only:
@@ -191,6 +197,8 @@ jobs:
             git checkout -- lib/streamlit/protobuf/__init__.py
             if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
               # install protobuf v3
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y gnupg
               echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
               ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
               ${SUDO} apt-get update -y
