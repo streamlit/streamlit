@@ -12,9 +12,12 @@
     {{ $menu := (cond $isSecretArea .Site.Menus.secret .Site.Menus.main) }}
 
     {{ range $menu }}
-    <li class="{{if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }}active{{end}}">
-      <a href="{{ .URL }}">{{ .Name }}</a>
-    </li>
+      {{ $isCurrent := or ($currentPage.IsMenuCurrent "main" .) ($currentPage.IsMenuCurrent "secret" .) }}
+      {{ $hasCurrent := or ($currentPage.HasMenuCurrent "main" .) ($currentPage.HasMenuCurrent "secret" .) }}
+
+      <li class="{{if or $isCurrent $hasCurrent}}active{{end}}">
+        <a href="{{ .URL }}">{{ .Name }}</a>
+      </li>
     {{ end }}
 
   </ul>

@@ -1,77 +1,47 @@
-{{ define "main" }}
-  <div class="contents">
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google-site-verification" content="DVVce32YjZewjhFnokQfYn-cLWl8_ca4F5Wy5D_J-Nw">
+<script type="text/javascript" async="" src="https://www.google-analytics.com/analytics.js"></script>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-122023594-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
-    <section class="row">
-      <div class="main-text">
-
-        <h1>What if data science could be delightful all the way to production?</h1>
-
-        <p>
-          At Streamlit, we're working hard on a new architecture for data
-          science and machine learning that we think you&rsquo;ll love. Sound
-          interesting? Request early access below.
-        </p>
-
-        <form
-            action="https://script.google.com/macros/s/AKfycbybsXsHyw_NjgLr5LupCGh8AAZTp6U00eiWd5TA3L4roSvI4ES8/exec"
-            method="POST"
-            target="hiddenFrame"
-            id="main-form"
-            onsubmit="return onSubmit()"
-            >
-
-          <div class="field">
-            <input
-                id="signup-email"
-                name="email"
-                placeholder="you@probablygmail.com"
-                required="true"
-                type="email"
-                />
-            <div class="focus-border"></div>
-          </div>
-
-          <div class="field" id="button-field">
-            <input
-                id="signup-success"
-                type="button"
-                value="✔️ We got you"
-                disabled="true"
-                class="hidden"
-                />
-            <input
-                id="signup-button"
-                type="submit"
-                value="I want to try it out!"
-                />
-          </div>
-
-        </form>
-      </div>
-    </section>
-
+  gtag('config', 'UA-122023594-1');
+</script>
+<title>Streamlit - Home</title>
+<link rel="shortcut icon" href="favicon.png"/>
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600,700" rel="stylesheet">
+<link rel="stylesheet" href="/css/static.css">
+<body class="page-grid layout-xo4fo">
+  <div class="site-header">
+    <div class="cell">
+      <a href="home.html">
+        <img alt="Streamlit" class="db" src="/images/streamlit.svg" width="103">
+      </a>
+    </div>
+    <div class="cell"><a href="/jobs">We’re hiring →</a></div>
   </div>
-
+  <main class="home">
+    <h1 class="headline-pai4u-lg">Data science reimagined.</h1>
+    <p>
+      Install in seconds, open your favorite IDE, and experience brilliant live coding.
+    </p>
+    <form class="email-signup-roo9u" id="signupForm"
+        method="POST" target="hiddenFrame"
+        action="https://script.google.com/macros/s/AKfycbybsXsHyw_NjgLr5LupCGh8AAZTp6U00eiWd5TA3L4roSvI4ES8/exec">
+      <p class="mb1"><input class="text" name="email" id="emailField" placeholder="Enter your email address" required type="email"></p>
+      <button class="button" data-submitted-value="Thanks! We’ll be in touch" type="submit">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M9 22l-10-10.598 2.798-2.859 7.149 7.473 13.144-14.016 2.909 2.806z" fill="#3a829d" /></svg><span>I’m in!</span>
+      </button>
+    </form>
+  </main>
+  <div class="site-footer home">Copyright 2018 Streamlit Inc. &nbsp; • &nbsp; hello@streamlit.io</div>
   <iframe name="hiddenFrame" width="0" height="0" border="0" style="display: none;"></iframe>
-
-  <script>
-
-    var signupEmail = document.getElementById('signup-email');
-    var formEl = document.getElementById('main-form');
-
-    function onSubmit() {
-      if (signupEmail.value.trim().length == 0) {
-        return false;
-      }
-
-      formEl.classList.add('success');
-
-      window.setTimeout(function() {
-        signupEmail.value = '';
-        formEl.classList.remove('success');
-      }, 4000);
-
-      return true;
-    }
-  </script>
-{{ end }}
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.slim.min.js"></script>
+  <script src="/js/static.js"></script>
+</body>
+</html>

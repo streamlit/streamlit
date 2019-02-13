@@ -7,16 +7,17 @@ pygmentsUseClasses=true
 pygmentsCodeFences=true
 
 [menu]
+  # NOTE: The URLs below must end in "/"
 
   [[menu.main]]
   identifier = "jobs"
-  name = "We're hiring →"
-  url = "/jobs"
+  name = "Jobs"
+  url = "/jobs/"
 
   [[menu.secret]]
-  identifier = "_docs"
+  identifier = "_/docs"
   name = "Docs"
-  url = "/_docs"
+  url = "/_/docs/"
   weight = 10
 
   [[menu.secret]]
