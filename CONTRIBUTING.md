@@ -169,7 +169,8 @@ the following in the latest Python 2.x and 3.x:
 
 ## Coding conventions
 
-Streamlit's coding conventions can be found [here](docs/conventions.md).
+Streamlit's coding conventions can be found
+[here](contrib/docs/conventions.md).
 
 
 ## Versioning convention
@@ -189,7 +190,7 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 
 #### Write The Release notes
 
-Place them [here](docs/release-notes.md). Then:
+Place them [here](contrib/docs/release-notes.md). Then:
 
 #### Make Sure You Don't Have the Proxy Running
 
@@ -250,11 +251,12 @@ Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
 pip install ../streamlit/lib/dist/streamlit-0.20.0-py3-none-any.whl
-streamlit help
+streamlit hello
+python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
 python -m streamlit clear_cache
-streamlit help
-streamlit help
+python ../streamlit/examples/reference.py
+python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
 python

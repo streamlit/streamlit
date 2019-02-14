@@ -12,6 +12,10 @@ pytest-cov = "*"
 testfixtures = "*"
 twine = "*"
 wheel = "*"
+# Doc builder packages:
+Sphinx = "*"
+sphinx-rtd-theme = "*"
+recommonmark = "*"
 
 [packages]
 base58 = "*"

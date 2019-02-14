@@ -1,4 +1,5 @@
 # -*- coding: future_fstrings -*-
+# Copyright 2018 Streamlit Inc. All rights reserved.
 
 """This is a script which is run when the Streamlit package is executed."""
 
@@ -7,7 +8,6 @@ from __future__ import print_function, division, absolute_import
 # Not importing unicode_literals from __future__ because click doesn't like it.
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
-
 
 import click
 
@@ -28,8 +28,15 @@ def clear_cache(args):
 def help(args):
     """Show help in browser."""
     print('Showing help page in browser...')
-    import streamlit.reference
-    streamlit.reference.display_reference()
+    from streamlit import util
+    util.open_browser('http://streamlit.io/secret/docs')
+
+
+def hello(args):
+    """Runs the Hello World script."""
+    print('Showing Hello World script in browser...')
+    import streamlit.hello
+    streamlit.hello.run()
 
 
 def run(args):
@@ -78,6 +85,7 @@ def show_config(*args):
 
 COMMAND_HANDLERS = dict(
     clear_cache = clear_cache,
+    hello = hello,
     help = help,
     kill_proxy = kill_proxy,
     run = run,

@@ -75,12 +75,12 @@ class Chart(object):
 
         Parameters
         ----------
+        data : np.Array or pd.DataFrame
+            Data to be plotted. Series are referenced by column name.
+
         type : str
             A string with the snake-case chart type. Example: 'area_chart',
             'bar_chart', etc...
-
-        data : np.Array or pd.DataFrame
-            Data to be plotted. Series are referenced by column name.
 
         width : int
             The chart's width. Defaults to 0, which means "the default width"
@@ -91,12 +91,13 @@ class Chart(object):
             rather than actually 0px.
 
         kwargs : anything
-            Keyword arguments containg properties to be added to the ReChart's
-            top-level element.
+            Keyword arguments containing properties to be added to the
+            ReChart's top-level element.
 
         """
         import pandas as pd
-        assert type in chart_config.CHART_TYPES_SNAKE, f'Did not recognize "{type}" type.'
+        assert type in chart_config.CHART_TYPES_SNAKE, \
+            f'Did not recognize "{type}" type.'
         self._data = pd.DataFrame(data)
         self._type = type
         self._width = width

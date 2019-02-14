@@ -159,10 +159,7 @@ class BrowserWebSocket(WebSocketHandler):
             LOGGER.debug('Received the following backend message:')
             LOGGER.debug(backend_msg)
             msg_type = backend_msg.WhichOneof('type')
-            if msg_type == 'help':
-                LOGGER.debug('Received command to display help.')
-                process_runner.run_python_module('streamlit', 'help')
-            elif msg_type == 'cloud_upload':
+            if msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
             elif msg_type == 'rerun':
                 if backend_msg.rerun.clear_cache:

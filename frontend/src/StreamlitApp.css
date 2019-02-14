@@ -175,18 +175,35 @@ button:focus {
   background-color: #F63366;
 }
 
-.streamlit-container {
+
+.streamlit-regular .streamlit-container {
   margin-top: 80px;
 }
 
-.wide .streamlit-container {
+.streamlit-wide .streamlit-container {
+  margin-top: 80px;
   width: unset;
   max-width: unset;
+}
+
+.streamlit-embedded .streamlit-container {
+  width: unset;
+  max-width: unset;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.streamlit-embedded header {
+  display: none;
 }
 
 .streamlit-container .element-container {
   display: inline-block;
   margin-bottom: 1rem;
+}
+
+.streamlit-container .element-container:last-child {
+  margin-bottom: 0;
 }
 
 .streamlit-container hr {

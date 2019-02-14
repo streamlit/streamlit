@@ -26,6 +26,7 @@ CONFUSING_STREAMLIT_MODULES = (
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = (
     '(self, element, ',
+    '(self, _, ',
     '(self, ',
 )
 

@@ -78,7 +78,10 @@ for name in dir(DeltaGenerator):
 def write(*args):
     """Write arguments to the report.
 
-    Unlike other streamlit functions, write() has some unique properties:
+    This is the swiss-army knife of Streamlit commands. It does different
+    things depending on what you throw at it.
+
+    Unlike other Streamlit commands, write() has some unique properties:
 
         1. You can pass in multiple arguments, all of which will be written.
         2. Its behavior depends on the input types as follows.
@@ -98,12 +101,39 @@ def write(*args):
         - write(module)     : Displays information about the module.
         - write(obj)        : The default is to print str(obj).
 
-    Examples
-    --------
-    ::
-        write('Hello, *World!*')
-        write('1 + 1 = ', 2)
-        write('This is a DataFrame', data_frame, 'No, really!!')
+    Example
+    -------
+
+    Its simplest use case is to draw Markdown-formatted text, whenever the
+    input is a string:
+
+    >>> write('Hello, *World!*')
+
+    .. output::
+       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       height: 50px
+
+    As mentioned earlier, `st.write()` also accepts other data formats, such as
+    numbers, data frames, and assorted objects:
+
+    >>> st.write(1234)
+    >>> st.write(pd.DataFrame({
+    ...     'first column': [1, 2, 3, 4],
+    ...     'second column': [10, 20, 30, 40],
+    ... }))
+
+    .. output::
+       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
+       height: 250px
+
+    Finally, you can pass in multiple arguments to do things like:
+
+    >>> st.write('1 + 1 = ', 2)
+    >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
+
+    .. output::
+       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
+       height: 300px
 
     """
     DATAFRAME_LIKE_TYPES = (
@@ -157,12 +187,12 @@ def spinner(text):
     text : str
         A message to display while executing that block
 
-    Examples
-    --------
-    ::
-        with st.spinner('Wait for it...'):
-            time.sleep(5)
-        st.success('Done!')
+    Example
+    -------
+
+    >>> with st.spinner('Wait for it...'):
+    >>>     time.sleep(5)
+    >>> st.success('Done!')
 
     """
     try:
@@ -190,13 +220,13 @@ def spinner(text):
 
 @contextlib.contextmanager
 def echo():
-    """Render the given code, then execute it.
+    """Use in a `with` block to draw some code on the report, then execute it.
 
     Example
     -------
-    ::
-        with st.echo():
-            st.write('This code will be printed')
+
+    >>> with st.echo():
+    >>>     st.write('This code will be printed')
 
     """
     from streamlit.compatibility import running_py3

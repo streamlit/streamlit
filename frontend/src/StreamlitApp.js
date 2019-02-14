@@ -16,6 +16,7 @@ import {
   Row,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
+import url from 'url';
 
 // Display Elements
 import Audio from './elements/Audio';
@@ -73,7 +74,6 @@ class StreamlitApp extends PureComponent {
 
     // Bind event handlers.
     this.closeDialog = this.closeDialog.bind(this);
-    this.displayHelp = this.displayHelp.bind(this);
     this.getUserLogin =this.getUserLogin.bind(this);
     this.handleConnectionError = this.handleConnectionError.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
@@ -114,6 +114,9 @@ class StreamlitApp extends PureComponent {
   }
 
   async componentDidMount() {
+    if (isEmbeddedInIFrame()) {
+      document.body.classList.add('embedded');
+    }
     trackEventRemotely('viewReport');
   }
 
@@ -307,17 +310,6 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
-   * Tells the proxy to display the inline help dialog.
-   */
-  displayHelp() {
-    trackEventRemotely('displayHelp');
-    this.sendBackMsg({
-      type: 'help',
-      help: true,
-    });
-  }
-
-  /**
    * Sends a message back to the proxy.
    */
   sendBackMsg(msg) {
@@ -354,8 +346,15 @@ class StreamlitApp extends PureComponent {
   }
 
   render() {
+    const outerDivClass =
+        isEmbeddedInIFrame() ?
+          'streamlit-embedded' :
+        this.state.userSettings.wideMode ?
+          'streamlit-wide' :
+          'streamlit-regular';
+
     return (
-      <div className={this.state.userSettings.wideMode ? 'wide' : ''}>
+      <div className={outerDivClass}>
         <header>
           <div id="brand">
             <a href="http://streamlit.io">Streamlit</a>
@@ -367,9 +366,7 @@ class StreamlitApp extends PureComponent {
             setReportName={this.setReportName}
           />
           <MainMenu
-            isHelpPage={this.state.reportName === 'help'}
             isProxyConnected={this.isProxyConnected}
-            helpCallback={this.displayHelp}
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
@@ -467,6 +464,14 @@ class StreamlitApp extends PureComponent {
   }
 }
 
+
+/**
+ * Returns true if the URL parameters indicated that we're embedded in an
+ * iframe.
+ */
+function isEmbeddedInIFrame() {
+  return url.parse(window.location.href, true).query.embed === 'true';
+}
 
 
 export default hotkeys(StreamlitApp);

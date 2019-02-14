@@ -1,13 +1,10 @@
----
-title: "Streamlit tutorial: caching, mapping, and more!"
-weight: 101
----
+# Tutorial 2: Caching, mapping, and more!
 
-*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
-
-At this point, you have probably [already set up Streamlit](/docs/installation/),
-and even created [your first Streamlit report](/docs/tutorial). So now let's get down to a more
-concrete example of how you'd use Streamlit when trying to accomplish a real world task.
+At this point, you have probably [already set up Streamlit](/getting_started),
+and even created [your first Streamlit
+report](/tutorial/tutorial1_first_steps). So now let's get down to a more
+concrete example of how you'd use Streamlit when trying to accomplish a real
+world task.
 
 ## The task
 
@@ -33,11 +30,11 @@ st.title('Uber pickups in NYC')
 
 ...and then running the script.
 
-As usual, **when you run the script your Streamlit report will automatically pop
-up in your browser**. Of course, at this point it's just a blank canvas.
+As usual, **when you run the script your Streamlit report will automatically
+pop up in your browser**. Of course, at this point it's just a blank canvas.
 
-_**REMINDER:** We recommend **arranging your browser window and text editor side
-by side,** so you can always see both at the same time._
+_**REMINDER:** We recommend **arranging your browser window and text editor
+side by side,** so you can always see both at the same time._
 
 
 ## Fetching some data
@@ -70,13 +67,14 @@ data = load_data(10000)
 data_load_state.text('Loading data... done!')
 ```
 
-Well, that's... _underwelming_ ☹
+Well, that's... _underwhelming_ ☹
 
-Turns out, downloading the data takes a long time. Who knew?! And converting the
-date column to datetime costs us another huge chunk time. That's quite annoying.
+Turns out, downloading the data takes a long time. Who knew?! And converting
+the date column to datetime costs us another huge chunk time. That's quite
+annoying.
 
-And just to show you exactly _how annoying_ this is, let's go ahead and **take a
-look at the data we just loaded**:
+And just to show you exactly _how annoying_ this is, let's go ahead and **take
+a look at the data we just loaded**:
 
 ```python
 st.subheader('Raw data')
@@ -85,7 +83,7 @@ st.write(data)
 
 ...ugh. Another. Long. Wait.
 
-Wouldn't it be amazing if we could **avoid repeating this lenghty step** every
+Wouldn't it be amazing if we could **avoid repeating this lengthy step** every
 time we re-ran the script?
 
 Streamlit to the rescue! Let's have a conversation about caching.
@@ -131,9 +129,9 @@ that whenever the function is called it should check three things:
 1. The actual code that makes up the body of the function
 1. The input parameters that you called the function with
 
-If this is the first time Streamlit has seen those three items, with those exact
-values, and in that exact combination, it runs the function and stores the
-result in a local cache.
+If this is the first time Streamlit has seen those three items, with those
+exact values, and in that exact combination, it runs the function and stores
+the result in a local cache.
 
 Then, next time the function is called, if those three values have not changed
 Streamlit knows it can skip executing the function altogether. Instead, it just
@@ -150,8 +148,8 @@ annotated function.
 
 For example, the `load_data` function above depends on a couple of global
 variables. If we change those variables, Streamlit will have no knowledge of
-that and will keep returning the cached output as if they never changed to begin
-with.
+that and will keep returning the cached output as if they never changed to
+begin with.
 
 Similarly, if the annotated function depends on code that lives outside of it,
 and that outside code changes, the cache mechanism will be none-the-wiser. Same
@@ -164,13 +162,17 @@ transformational.
 
 So if nothing else, here's what you should take from this tutorial:
 
-_**PRO TIP:** Whenever you have a long-running computation in your code,
-consider refactoring it so you can use_ `@st.cache`_, if possible._
+```eval_rst
+.. tip::
+   Whenever you have a long-running computation in your code, consider
+   refactoring it so you can use ``@st.cache``, if possible.
+```
 
 ---
 
 OK, sidebar over. Now that you know how the cache mechanism works, let's get
-back to the task at hand: understanding Uber's passenger pickup patterns in NYC.
+back to the task at hand: understanding Uber's passenger pickup patterns in
+NYC.
 
 ## Drawing a histogram
 
@@ -179,7 +181,8 @@ that, let's break down all the pickup times into at histogram, binned by hour:
 
 ```python
 st.subheader('Number of pickups by hour')
-hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0, 24))[0]
+hist_values = np.histogram(
+    data[DATE_COLUMN].dt.hour, bins=24, range=(0, 24))[0]
 st.bar_chart(hist_values)
 ```
 
@@ -199,13 +202,14 @@ st.map(data)
 ```
 
 **Yes, really. Drawing a map is _that_ simple.** Just call `st.map` and pass in
-a datset where come column is named `lat` and another `lon`.
+a dataset where come column is named `lat` and another `lon`.
 
 And since this is not the 90s, the map is interactive: go ahead and try panning
 and zooming it a bit!
 
 But let's do one better. In the previous section, we learned that the peak Uber
-hour is 17:00, so you may be wondering "what are the peak Uber _locations_ at 5pm?"
+hour is 17:00, so you may be wondering "what are the peak Uber _locations_ at
+5pm?"
 
 Well, that should be easy to find out: just filter the map to show only pickups
 between 5--6pm and find out.

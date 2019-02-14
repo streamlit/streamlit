@@ -9,7 +9,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from functools import wraps
+import functools
 import io
 import json
 import random
@@ -43,6 +43,32 @@ def _export(method):
     return method
 
 
+def _wraps_with_cleaned_sig(wrapped):
+    """Simplify the function signature by removing "self" and "element".
+
+    Removes "self" and "element" from function signature, since signatures are
+    visible in our user-facing docs and these elements make no sense to the
+    user.
+    """
+    fake_wrapped = functools.partial(wrapped, None, None)
+    fake_wrapped.__doc__ = wrapped.__doc__
+
+    # These fields are used by wraps(), but in Python 2 partial() does not
+    # produce them.
+    fake_wrapped.__module__ = wrapped.__module__
+    fake_wrapped.__name__ = wrapped.__name__
+
+    return functools.wraps(fake_wrapped)
+
+
+def _clean_up_sig(method):
+    @_wraps_with_cleaned_sig(method)
+    def wrapped_method(self, *args, **kwargs):
+        return method(self, None, *args, **kwargs)
+    return wrapped_method
+
+
+
 def _create_element(method):
     """Wrap function to easily create a Delta-generating method.
 
@@ -63,7 +89,7 @@ def _create_element(method):
         A new DeltaGenerator method with arguments (self, ...)
 
     """
-    @wraps(method)
+    @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def create_element(element):
@@ -110,7 +136,15 @@ class DeltaGenerator(object):
     @_export
     @_create_element
     def balloons(self, element):
-        """Draw celebratory balloons."""
+        """Draw celebratory balloons.
+
+        Example
+        -------
+        >>> st.balloons()
+
+        ...then watch your report and get ready for a celebration!
+
+        """
         element.balloons.type = protobuf.Balloons.DEFAULT
         element.balloons.execution_id = random.randrange(0xFFFFFFFF)
 
@@ -124,6 +158,14 @@ class DeltaGenerator(object):
         body : str
             The string to display.
 
+        Example
+        -------
+        >>> st.text('This is some text.')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
+           height: 50px
+
         """
         element.text.body = str(body)
         element.text.format = protobuf.Text.PLAIN
@@ -136,7 +178,16 @@ class DeltaGenerator(object):
         Parameters
         ----------
         body : str
-            The string to display as Markdown.
+            The string to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
+
+        Example
+        -------
+        >>> st.markdown('Streamlit is **_really_ cool**.')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
+           height: 50px
 
         """
         element.text.body = textwrap.dedent(body).strip()
@@ -154,6 +205,23 @@ class DeltaGenerator(object):
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
+        Example
+        -------
+        >>> st.json({
+        ...     'foo': 'bar',
+        ...     'baz': 'boz',
+        ...     'stuff': [
+        ...         'stuff 1',
+        ...         'stuff 2',
+        ...         'stuff 3',
+        ...         'stuff 5',
+        ...     ],
+        ... })
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
+           height: 280px
+
         """
         element.text.body = (
                 body if isinstance(body, string_types)  # noqa: F821
@@ -165,10 +233,21 @@ class DeltaGenerator(object):
     def title(self, element, body):
         """Display text in title formatting.
 
+        Each document should have a single `st.title()`, although this is not
+        enforced.
+
         Parameters
         ----------
         body : str
             The text to display.
+
+        Example
+        -------
+        >>> st.title('This is a title')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
+           height: 100px
 
         """
         element.text.body = '# %s' % textwrap.dedent(body).strip()
@@ -184,6 +263,14 @@ class DeltaGenerator(object):
         body : str
             The text to display.
 
+        Example
+        -------
+        >>> st.header('This is a header')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
+           height: 100px
+
         """
         element.text.body = '## %s' % textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
@@ -197,6 +284,14 @@ class DeltaGenerator(object):
         ----------
         body : str
             The text to display.
+
+        Example
+        -------
+        >>> st.subheader('This is a subheader')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
+           height: 100px
 
         """
         element.text.body = '### %s' % textwrap.dedent(body).strip()
@@ -212,6 +307,10 @@ class DeltaGenerator(object):
         body : str
             The error text to display.
 
+        Example
+        -------
+        >>> st.error('This is an error')
+
         """
         element.text.body = str(body)
         element.text.format = protobuf.Text.ERROR
@@ -225,6 +324,10 @@ class DeltaGenerator(object):
         ----------
         body : str
             The warning text to display.
+
+        Example
+        -------
+        >>> st.warning('This is a warning')
 
         """
         element.text.body = str(body)
@@ -240,6 +343,10 @@ class DeltaGenerator(object):
         body : str
             The info text to display.
 
+        Example
+        -------
+        >>> st.info('This is a purely informational message')
+
         """
         element.text.body = str(body)
         element.text.format = protobuf.Text.INFO
@@ -253,6 +360,10 @@ class DeltaGenerator(object):
         ----------
         body : str
             The success text to display.
+
+        Example
+        -------
+        >>> st.warning('This is a success message!')
 
         """
         element.text.body = str(body)
@@ -284,9 +395,16 @@ class DeltaGenerator(object):
 
         Example
         -------
-        To learn how the st.write function works, call::
 
-            st.help(st.write)
+        Don't remember how to initialize a dataframe? Try this:
+
+        >>> st.help(pandas.DataFrame)
+
+        Want to quickly check what datatype is output by a certain function?
+        Try:
+
+        >>> x = my_poorly_documented_function()
+        >>> st.help(x)
 
         """
         from streamlit import doc_string
@@ -305,6 +423,11 @@ class DeltaGenerator(object):
             If None or False, does not show display the trace. If True,
             tries to capture a trace automatically. If a Traceback object,
             displays the given traceback.
+
+        Example
+        -------
+        >>> e = RuntimeError('This is an exception of type RuntimeError')
+        >>> st.exception(e)
 
         """
         element.exception.type = type(exception).__name__
@@ -352,13 +475,26 @@ class DeltaGenerator(object):
         element.exception.stack_trace.extend(stack_trace)
 
     @_export
-    def dataframe(self, df):
+    @_clean_up_sig
+    def dataframe(self, _, df):
         """Display a dataframe as an interactive table.
 
         Parameters
         ----------
         df : Panda.DataFrame, Numpy.Array, or list
             The dataframe to display.
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(50, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.dataframe(df)  # Same as st.write(df)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
+           height: 330px
 
         """
         from streamlit import data_frame_proto
@@ -383,12 +519,39 @@ class DeltaGenerator(object):
             Data to be plotted.
 
         spec : dict
-            The Vega Lite spec for the chart.
+            The Vega Lite spec for the chart. See
+            https://vega.github.io/vega-lite/docs/ for more info.
 
         **kwargs : any
-            Same as spec, but as keywords. Keys are "unflattened" at the
-            underscore characters. For example, foo_bar_baz=123 becomes
-            foo={'bar': {'bar': 123}}.
+            Same as spec, but as keywords.
+
+        Example
+        -------
+
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(200, 3),
+        ...     columns=['a', 'b', 'c'])
+        >>>
+        >>> st.vega_lite_chart(df, {
+        ...     'mark': 'circle',
+        ...     'encoding': {
+        ...         'x': {'field': 'a', 'type': 'quantitative'},
+        ...         'y': {'field': 'b', 'type': 'quantitative'},
+        ...         'size': {'field': 'c', 'type': 'quantitative'},
+        ...         'color': {'field': 'c', 'type': 'quantitative'},
+        ...     },
+        ... })
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           height: 200px
+
+        Examples of Vega Lite usage without Streamlit can be found at
+        https://vega.github.io/vega-lite/examples/. Most of those can be easily
+        translated to the syntax shown above.
 
         """
         from streamlit import vega_lite
@@ -407,6 +570,30 @@ class DeltaGenerator(object):
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
+
+        Example
+        -------
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>>
+        >>> arr = np.random.normal(1, 1, size=100)
+        >>> plt.hist(arr, bins=20)
+        >>>
+        >>> st.pyplot()
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
+           height: 530px
+
+        Notes
+        -----
+        Matplotlib support several different types of "backends". If you're
+        getting an error using Matplotlib with Streamlit, try setting your
+        backend to "TkAgg"::
+
+            echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
+
+        For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
         from streamlit import image_proto
@@ -457,6 +644,18 @@ class DeltaGenerator(object):
         clamp : bool
             Clamp the image to the given range.
 
+        Example
+        -------
+        >>> from PIL import Image
+        >>> image = Image.open('sunrise.jpg')
+        >>>
+        >>> st.image(image, caption='Sunrise by the mountains',
+        ...          use_column_width=True)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=YCFaqPgmgpEz7jwE4tHAzY
+           height: 630px
+
         """
         from streamlit import image_proto
         if use_column_width:
@@ -488,6 +687,17 @@ class DeltaGenerator(object):
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
+        Example
+        -------
+        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_bytes = audio_file.read()
+        >>>
+        >>> st.audio(audio_bytes, format='audio/ogg')
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
+           height: 400px
+
         """
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
@@ -510,6 +720,17 @@ class DeltaGenerator(object):
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
+        Example
+        -------
+        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_bytes = video_file.read()
+        >>>
+        >>> st.video(video_bytes)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
+           height: 600px
+
         """
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
@@ -527,13 +748,16 @@ class DeltaGenerator(object):
         value : int
             The percentage complete: 0 <= value <= 100
 
-        Examples
-        --------
+        Example
+        -------
         Here is an example of a progress bar increasing over time:
-            import time
-            my_bar = st.progress(0)
-            for percent_complete in range(100):
-                my_bar.progress(percent_complete + 1)
+
+        >>> import time
+        >>>
+        >>> my_bar = st.progress(0)
+        >>>
+        >>> for percent_complete in range(100):
+        ...     my_bar.progress(percent_complete + 1)
 
         """
         element.progress.value = value
@@ -546,16 +770,15 @@ class DeltaGenerator(object):
         The placeholder can be filled any time by calling methods on the return
         value.
 
-        Examples
-        --------
-        ::
-            my_placeholder = st.empty()
-
-            # Replace image with some text.
-            my_placeholder.text("Hello world!")
-
-            # Replace the placeholder with an image.
-            my_placeholder.image(my_image_bytes)
+        Example
+        -------
+        >>> my_placeholder = st.empty()
+        >>>
+        >>> # Now replace the placeholder with some text:
+        >>> my_placeholder.text("Hello world!")
+        >>>
+        >>> # And replace the text with an image:
+        >>> my_placeholder.image(my_image_bytes)
 
         """
         # The protobuf needs something to be set
@@ -571,6 +794,21 @@ class DeltaGenerator(object):
         points : Panda.DataFrame, Numpy.Array, or list
             The points to display. Must have 'lat' and 'lon' columns.
 
+        Example
+        -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...     columns=['lat', 'lon'])
+        >>>
+        >>> st.map(df)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=7Sr8jMkKDc6E6Y5y2v2MNk
+           height: 600px
+
         """
         from streamlit import data_frame_proto
         LAT_LON = ['lat', 'lon']
@@ -582,70 +820,116 @@ class DeltaGenerator(object):
     @_export
     @_create_element
     def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
-        """Draw a map chart using the DeckGL library.
+        """Draw a map chart using the Deck.GL library.
 
-        See https://deck.gl/#/documentation for more info.
+        This API closely follows Deck.GL's JavaScript API
+        (https://deck.gl/#/documentation), with a few small adaptations and
+        some syntax sugar.
 
         Parameters
         ----------
+
         data : list or Numpy Array or DataFrame or None
             Data to be plotted, if no layer specified.
 
         spec : dict
-            Keys/values in this dict can be:
-            - Anything accepted by DeckGl's top level element.
+            Keys in this dict can be:
+
+            - Anything accepted by Deck.GL's top level element, such as
+              "viewport", "height", "width".
+
             - "layers": a list of dicts containing information to build a new
-              DeckGl layer in the map. Each layer accepts the following keys:
+              Deck.GL layer in the map. Each layer accepts the following keys:
+
                 - "data" : DataFrame
-                    The data for that layer.
-                - "type" : str - a layer type accepted by DeckGl
-                    The layer type, such as 'HexagonLayer', 'ScatterplotLayer',
-                    etc.
-                - "encoding" : dict - Accessors accepted by that layer type.
-                  The keys should be the accessor name without the "get"
-                  prefix. For example instead of "getColor" you should
-                  useinstead of "getColor" you should use "color". If strings,
-                  these get automatically transformed into getters for that
-                  column.
-                - And anything accepted by that layer type
+                  The data for the current layer.
+
+                - "type" : str
+                  A layer type accepted by Deck.GL, such as "HexagonLayer",
+                  "ScatterplotLayer", "TextLayer"
+
+                - "encoding" : dict
+                  A mapping connecting specific fields in the dataset to
+                  properties of the chart. The exact keys that are accepted
+                  depend on the "type" field, above.
+
+                  For example, Deck.GL"s documentation for ScatterplotLayer
+                  shows you can use a "getRadius" field to individually set
+                  the radius of each circle in the plot. So here you would
+                  set "encoding": {"getRadius": "my_column"} where
+                  "my_column" is the name of the column containing the radius
+                  data.
+
+                  For things like "getPosition", which expect an array rather
+                  than a scalar value, we provide alternates that make the
+                  API simpler to use with dataframes:
+
+                  - Instead of "getPosition" : use "getLatitude" and
+                    "getLongitude".
+                  - Instead of "getSourcePosition" : use "getLatitude" and
+                    "getLongitude".
+                  - Instead of "getTargetPosition" : use "getTargetLatitude"
+                    and "getTargetLongitude".
+                  - Instead of "getColor" : use "getColorR", "getColorG",
+                    "getColorB", and (optionally) "getColorA", for red,
+                    green, blue and alpha.
+                  - Instead of "getSourceColor" : use the same as above.
+                  - Instead of "getTargetColor" : use "getTargetColorR", etc.
+
+                - Plus anything accepted by that layer type. For example, for
+                  ScatterplotLayer you can set fields like "opacity", "filled",
+                  "stroked", and so on.
 
         **kwargs : any
             Same as spec, but as keywords. Keys are "unflattened" at the
             underscore characters. For example, foo_bar_baz=123 becomes
             foo={'bar': {'bar': 123}}.
 
-        Examples
-        --------
-            # If you pass in a dataframe and no spec, you get a scatter plot.
-            st.deck_gl_chart(my_data_frame)
+        Example
+        -------
+        For convenience, if you pass in a dataframe and no spec, you get a
+        scatter plot:
 
-            # For anything else, pass in a spec and no top-level dataframe. For
-            # instance:
-            st.deck_gl_chart(
-                viewport={
-                    'latitude': 37.76,
-                    'longitude': -122.4,
-                    'zoom': 11,
-                    'pitch': 50,
-                },
-                layers=[{
-                    'type': 'HexagonLayer',
-                    'data': my_dataframe,
-                    'radius': 200,
-                    'elevationScale': 4,
-                    'elevationRange': [0, 1000],
-                    'pickable': True,
-                    'extruded': True,
-                }, {
-                    'type': 'ScatterplotLayer',
-                    'data': my_other_dataframe,
-                    'pickable': True,
-                    'autoHighlight': True,
-                    'radiusScale': 0.02,
-                    'encoding': {
-                        'radius': 'exits',
-                    },
-                }])
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...    columns=['lat', 'lon'])
+        ...
+        >>> st.deck_gl_chart(df)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
+           height: 530px
+
+        The dataframe must have columns called 'lat'/'latitude' or
+        'lon'/'longitude'.
+
+        If you want to do something more interesting, pass in a spec with its
+        own data, and no top-level dataframe. For instance:
+
+        >>> st.deck_gl_chart(
+        ...     viewport={
+        ...         'latitude': 37.76,
+        ...         'longitude': -122.4,
+        ...         'zoom': 11,
+        ...         'pitch': 50,
+        ...     },
+        ...     layers=[{
+        ...         'type': 'HexagonLayer',
+        ...         'data': df,
+        ...         'radius': 200,
+        ...         'elevationScale': 4,
+        ...         'elevationRange': [0, 1000],
+        ...         'pickable': True,
+        ...         'extruded': True,
+        ...     }, {
+        ...         'type': 'ScatterplotLayer',
+        ...         'data': df,
+        ...     }])
+        ...
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           height: 530px
 
         """
         from streamlit import deck_gl
@@ -656,22 +940,62 @@ class DeltaGenerator(object):
     def table(self, element, df):
         """Display a static table.
 
+        This differs from `st.dataframe` in that the table in this case is
+        static: its entire contents are just layed out directly on the page.
+
         Parameters
         ----------
         df : Panda.DataFrame, Numpy.Array, or list
             The table data.
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 5),
+        ...    columns=('col %d' % i for i in range(5)))
+        ...
+        >>> st.table(df)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           height: 480px
 
         """
         from streamlit import data_frame_proto
         data_frame_proto.marshall_data_frame(df, element.table)
 
     def add_rows(self, df):
-        """Concat dataframes to the bottom of another.
+        """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
         ----------
         df : Panda.DataFrame, Numpy.Array, or list
             The table to concat.
+
+        Example
+        -------
+        >>> df1 = pd.DataFrame(
+        ...    np.random.randn(50, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> my_table = st.table(df1)
+        >>>
+        >>> df2 = pd.DataFrame(
+        ...    np.random.randn(50, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> my_table.add_rows(df2)
+        >>> # Now the table shown in the Streamlit report contains the data for
+        >>> # df1 followed by the data for df2.
+
+        And you can do the same with plots. For example, if you want to add
+        more data to a line chart:
+
+        >>> # Assuming df1 and df2 from the example above still exist...
+        >>> my_chart = st.line_chart(df1)
+        >>> my_chart.add_rows(df2)
+        >>> # Now the chart shown in the Streamlit report contains the data for
+        >>> # df1 followed by the data for df2.
 
         """
         from streamlit import data_frame_proto
@@ -729,6 +1053,7 @@ def _register_native_chart_method(chart_type):
 
     """
     @_export
+    @_wraps_with_cleaned_sig(Chart.__init__)
     def chart_method(self, data, **kwargs):
         return self._native_chart(Chart(data, type=chart_type, **kwargs))
 

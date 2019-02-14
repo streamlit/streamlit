@@ -76,7 +76,6 @@ def main():
     # First run the 'streamlit commands'
     run_commands('Basic Commands', [
         'streamlit version',
-        'streamlit help'
     ])
 
     run_commands('Examples', [

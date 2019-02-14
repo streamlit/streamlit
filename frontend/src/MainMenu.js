@@ -15,7 +15,7 @@ import {
 } from 'reactstrap';
 import './MainMenu.css';
 
-const ONLINE_DOCS_URL = 'http://streamlit.io/docs';
+const ONLINE_DOCS_URL = 'http://streamlit.io/secret/docs';
 
 /**
  *
@@ -83,14 +83,6 @@ class MainMenu extends Component {
           <DropdownItem
               onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
             Documentation
-          </DropdownItem>
-
-          <DropdownItem
-              disabled={
-                this.props.isHelpPage || !this.props.isProxyConnected()
-              }
-              onClick={this.props.helpCallback}>
-            Quick help
           </DropdownItem>
 
         </DropdownMenu>

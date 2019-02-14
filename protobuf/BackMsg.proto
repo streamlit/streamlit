@@ -6,7 +6,7 @@ import "ReRun.proto";
 message BackMsg {
   oneof type {
     // Set to true to ask the proxy to display the inline help.
-    bool help = 1;
+    // bool help = 1;  DEPRECATED
 
     // Set to true to ask the proxy to upload the report.
     bool cloud_upload = 2;
