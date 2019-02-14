@@ -6,7 +6,7 @@
       <li class="logo"><a href="/">Streamlit</a></li>
     {{ end }}
 
-    {{ $isSecretArea := (hasPrefix .File.Path "_") }}
+    {{ $isSecretArea := (hasPrefix .File.Path "secret/") }}
     {{ $currentPage := . }}
 
     {{ $menu := (cond $isSecretArea .Site.Menus.secret .Site.Menus.main) }}

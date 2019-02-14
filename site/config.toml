@@ -15,9 +15,9 @@ pygmentsCodeFences=true
   url = "/jobs/"
 
   [[menu.secret]]
-  identifier = "_/docs"
+  identifier = "secret/docs"
   name = "Docs"
-  url = "/_/docs/"
+  url = "/secret/docs/"
   weight = 10
 
   [[menu.secret]]
