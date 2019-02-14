@@ -139,7 +139,8 @@ loc:
 
 # Distributes the package to PyPi
 distribute:
-	cd lib/dist ; ls -t *.whl | head -n 1 | xargs twine upload
+	cd lib/dist; \
+		twine upload $$(ls -t *.whl | head -n 1)
 
 .PHONY: docker-build-frontend
 docker-build-frontend:
