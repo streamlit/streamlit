@@ -5,3 +5,22 @@ MetaDataFormat = "yaml"
 Paginate = 20
 pygmentsUseClasses=true
 pygmentsCodeFences=true
+
+[menu]
+  # NOTE: The URLs below must end in "/"
+
+  [[menu.main]]
+  identifier = "jobs"
+  name = "Jobs"
+  url = "/jobs/"
+
+  [[menu.secret]]
+  identifier = "_/docs"
+  name = "Docs"
+  url = "/_/docs/"
+  weight = 10
+
+  [[menu.secret]]
+  name = "Contact"
+  url = "mailto:hello@streamlit.io"
+  weight = 100

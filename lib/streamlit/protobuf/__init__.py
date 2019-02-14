@@ -27,6 +27,7 @@ from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
 from Delta_pb2 import Delta
 from Element_pb2 import Element
 from ForwardMsg_pb2 import ForwardMsg
+from ReRun_pb2 import ReRun
 from Text_pb2 import Text
 
 import DataTransform_pb2 as DataTransform

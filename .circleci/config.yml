@@ -3,53 +3,256 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2
+workflows:
+  version: 2
+  circleci:
+    jobs:
+      - miniconda3-4.5.12:
+          requires:
+            - python-3.6.6
+          filters:
+            branches:
+              only:
+                - develop
+      - python-2.7.15:
+          requires:
+            - python-3.6.6
+      - python-3.5.6:
+          requires:
+            - python-3.6.6
+          filters:
+            branches:
+              only:
+                - develop
+      - python-3.6.6
+
 jobs:
-  build:
+  python-3.6.6: &job-template
     docker:
-      - image: circleci/python:3.6.1
+      - image: circleci/python:3.6.6-jessie
 
     working_directory: ~/repo
 
     steps:
-      - checkout
+      - checkout:
+          name: Checkout Streamlit code
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "lib/requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
+      - run:
+          name: set environment variables if in conda.
+          command: |
+            if conda info; then
+              echo "Conda found, setting variables."
+              ./scripts/anaconda_version.sh >> $BASH_ENV
+              echo 'export SUDO=""' >> $BASH_ENV
+              touch make.bin
+              md5sum make.bin > ~/make.md5
+              rm -f make.bin
+            else
+              echo 'export SUDO="sudo"' >> $BASH_ENV
+              cp -f /usr/bin/make make.bin
+              md5sum make.bin > ~/make.md5
+            fi
 
       - run:
-          name: install dependencies
+          # We use the python Pipfile.lock as the cache key and also
+          # the hash of the current python.
+          # If dependencies haven't changed then use the cache.
+          name: Create python cache key.
           command: |
-            # TODO(armando): Cache all of this via something like https://medium.com/@chrisbanes/circleci-cache-key-over-many-files-c9e07f4d471a
-            # install protobuf v3
-            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            sudo apt-get update -y
-            sudo apt-get install -y protobuf-compiler
-            # install nodejs via nvm
-            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            nvm install --lts=dubnium
-            # activate virtual environment
-            python3 -m venv venv
-            . venv/bin/activate
-            # install dependencies
-            make init
-            make develop
+            md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
+            md5sum $(which python) >> ~/python_version.md5
+
+      - run:
+          name: Create node_modules cache key.
+          command: |
+            md5sum frontend/package-lock.json > ~/package-lock.md5
+            md5sum $(which python) >> ~/package-lock.md5
+
+      - run:
+          # There is no lock file for the protobufs so we run a checksum
+          # across all the protos and save that to a file to use as
+          # cache key.
+          name: Create checksum for all protobufs
+          command: |
+            md5sum protobuf/*.proto $(which python) > ~/protobuf.md5
+
+      #################################################################
+      # Restore from cache
+      #################################################################
+      - restore_cache:
+          name: Restore /opt/conda from cache
+          keys:
+          - v11-opt-conda-{{ checksum "~/python_version.md5" }}
+
+      - restore_cache:
+          name: Restore virtualenv from cache
+          keys:
+          - v11-python-venv-{{ checksum "~/python_version.md5" }}
+
+      - restore_cache:
+          name: Restore nvm and node_modules from cache
+          keys:
+          - v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+
+      - restore_cache:
+          name: Restore protobufs from cache
+          keys:
+          - v11-protobuf-{{ checksum "~/protobuf.md5" }}
+
+      - restore_cache:
+          name: Restore make from cache
+          keys:
+          - v11_make.bin-{{ checksum "~/make.md5" }}
+
+      #################################################################
+      # Pre Make commands
+      #################################################################
+      - run:
+          name: install make
+          command: |
+            if [ -s make.bin ] ; then
+              echo "make.bin does exists and is non zero"
+            else
+              echo "/usr/bin/make doesnt exist, installing"
+              apt-get update -y
+              apt-get install -y make
+              cp -f /usr/bin/make make.bin
+            fi
+            ${SUDO} cp -f make.bin /usr/bin/make
 
       - save_cache:
+          name: Save make to cache
+          key: v11_make.bin-{{ checksum "~/make.md5" }}
           paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "lib/requirements.txt" }}
+            - make.bin
 
-      # run tests including code coverage
+
+      #################################################################
+      # Run 'make init'
+      #################################################################
       - run:
-          name: run tests
+          name: Install NVM ie nodejs
           command: |
-            . venv/bin/activate
+            if [ ! -d ~/.nvm ] ; then
+              # install nodejs via nvm
+              curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+              source "$HOME/.nvm/nvm.sh"
+              nvm install --lts=dubnium
+            fi
+            if [ ! -d frontend/node_modules ] ; then
+              source "$HOME/.nvm/nvm.sh"
+              make react-init
+            fi
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+
+      - run:
+          name: Run make pipenv and create virtualenv if necessary.
+          command: |
+            if echo ${CIRCLE_JOB} | egrep -qi conda ; then
+              echo 'In conda, not creating virtualenv'
+              if pip freeze | grep -qi pipenv ; then
+                echo 'skipping make setup and make pipenv'
+              else
+                # pip install psutil requires gcc.
+                apt-get update -y
+                apt-get install -y build-essential
+                make setup
+                make pipenv
+              fi
+              mkdir -p venv
+            else
+              echo 'Not in conda, checking for virtualenv'
+              if [ ! -d venv ] ; then
+                if [ "${CIRCLE_JOB}" == "python-2.7.15" ] ; then
+                  pip install virtualenv
+                  python -m virtualenv venv
+                else
+                  python -m venv venv
+                fi
+                source venv/bin/activate
+                make setup
+                make pipenv
+                deactivate
+              else
+                echo 'Virtualenv already exists, not creating'
+              fi
+              echo 'source venv/bin/activate' >> $BASH_ENV
+            fi
+
+      - run:
+          name: Run make develop
+          command: |
+            make develop
+
+      - run:
+          name: Generate protobufs
+          command: |
+            # There's a chance this file could be a cached version when
+            # the protobuf cache is restored, so checkout from github to
+            # make sure.
+            git checkout -- lib/streamlit/protobuf/__init__.py
+            if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+              # install protobuf v3
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y gnupg
+              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
+              ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y protobuf-compiler
+              make protobuf
+            fi
+
+      #################################################################
+      # Run make pycoverage
+      #################################################################
+      - run:
+          name: Run python tests.
+          command: |
             make pycoverage
 
+      #################################################################
+      # Save cache for python virtualenv, node_modules, protobuf
+      #################################################################
+      - save_cache:
+          name: Save /opt/conda to cache
+          key: v11-opt-conda-{{ checksum "~/python_version.md5" }}
+          paths:
+            - /opt/conda
+
+      - save_cache:
+          name: Save virtualenv to cache
+          key: v11-python-venv-{{ checksum "~/python_version.md5" }}
+          paths:
+            - venv
+
+      - save_cache:
+          name: Save nvm and node_modules to cache
+          key: v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+          paths:
+            - frontend/node_modules
+            - ~/.nvm
+
+      - save_cache:
+          name: Save generated protobufs to cache
+          key: v11-protobuf-{{ checksum "~/protobuf.md5" }}
+          paths:
+            - frontend/src/protobuf.js
+            - lib/streamlit/protobuf
+
+  python-3.5.6:
+    <<: *job-template
+    docker:
+      - image: circleci/python:3.5.6-jessie
+
+  python-2.7.15:
+    <<: *job-template
+    docker:
+      - image: circleci/python:2.7.15-jessie
+  miniconda3-4.5.12:
+    <<: *job-template
+    docker:
+      - image: continuumio/miniconda3:4.5.12

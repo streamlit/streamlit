@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "ReRun.proto";
+
 // A backend message from the browser to the proxy.
 message BackMsg {
   oneof type {
@@ -9,7 +11,10 @@ message BackMsg {
     // Set to true to ask the proxy to upload the report.
     bool cloud_upload = 2;
 
-    // Asks the proxy to run the script with this given command line.
-    string rerun_script = 3;
+    // DEPRECATED: Asks the proxy to run the script with this given command line.
+    // string rerun_script = 3;
+
+    // Asks the proxy to run the script with this object
+    ReRun rerun = 4;
   }
 }

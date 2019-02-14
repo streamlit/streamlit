@@ -1,0 +1,47 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+flake8 = "*"
+mock = "*"
+pipenv = "*"
+pytest = "*"
+pytest-cov = "*"
+testfixtures = "*"
+twine = "*"
+wheel = "*"
+
+[packages]
+base58 = "*"
+# backport of collections.abc
+backports-abc = {version="*", markers="python_version < '3.0'"}
+botocore = "*"
+boto3 = "*"
+click = "*"
+docutils = "*"
+# TODO(aaj-st): Find a better way to make testing work without having to
+#               hardcode entrypoints.  Issue #307 will remove this.
+# anaconda2/3-2018.12 has entrypoints 0.2.3 installed, 0.3 which is the
+# latest version released 2019.01.07 can't be installed into /opt/conda
+# because entrypoints==0.2.3 was installed via distutils,
+# so the easiest way to get anaconda?-2018.12 working on circleci is to
+# pin this version 0.2.3 which was released 2017.06.08
+entrypoints = "==0.2.3"
+enum-compat = "*"
+future-fstrings = "*"
+# python3 code backported to python2
+future = "*"
+# specifically concurrent.futures in python2
+futures = {version="*", markers="python_version < '3.0'"}
+numpy = "*"
+pandas = "*"
+# 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
+pillow = "!=5.1.0"
+protobuf = "*"
+psutil = "*"
+toml = "*"
+tornado = "*"
+tzlocal = "*"
+watchdog = "*"

@@ -1,9 +1,56 @@
 # Streamlit Coding Conventions
 
-## `config.yaml`
+## Every language
+- Set up your editor to use our `.editorconfig file` (see
+  [http://editorconfig.org])
+- Set up a linter in your editor!
+- Always include the Streamlit license header in all files:
 
-This is the file which contains user- and project-specific configuration options.
+  > Copyright 2018 Streamlit Inc. All rights reserved.
 
-### Config Naming Convention
+- Never leave commented-out code in the codebase.
 
-We use **camelCase** config parameters.
+## Python
+
+We use [PEP8 style](https://pep8.org) for Python code, with a few adjustments:
+
+### Imports
+
+* Always put Python2/3 compatibility imports at the top of the import list
+* Imports should be split into groups, in this order:
+  - Compat
+  - Standard library
+  - 3rd party
+  - Streamlit
+* Imports within each group should be sorted
+* Imports should not wrap (makes them easier to sort)
+* Don’t import items from modules; import the entire module instead:
+  - WRONG: `from streamlit.mymodule import internal_function`
+  - RIGHT: `from streamlit import mymodule`
+* The exception to the above is classes. You should import them this way:
+  - RIGHT: `from streamlit.MyClass import MyClass`
+* Only one import per line:
+  - WRONG: `from streamlit import module1, module2`
+  - RIGHT:
+  ```
+  from streamlit import module1
+  from streamlit import module2
+  ```
+
+### Doctstrings
+
+* Use [Numpydoc style](https://numpydoc.readthedocs.io/en/latest/format.html).
+
+### Logging and printing
+
+The main principle here is "anything the user may want to able to easily pipe
+into a file / another process should go into `stdout`, everything else
+`stderr`".
+
+This means you should always have logs, warnings, errors, and notices end up in
+`stderr`. Never `stdout`.
+
+
+## JavaScript
+
+We use the [AirBNB style](https://github.com/airbnb/javascript).

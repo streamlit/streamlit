@@ -35,8 +35,11 @@ header li {
 }
 
 header li.logo {
-  border-right: 1px solid #E6E9EF;
   padding: 0 1em 0 0;
+}
+
+header li.active a {
+  border-bottom: 1px solid;
 }
 
 footer {
