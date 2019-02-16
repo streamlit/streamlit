@@ -30,7 +30,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     # Merge spec with unflattened kwargs, where kwargs take precedence.
     # This only works for string keys, but kwarg keys are strings anyways.
-    spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
+    spec = dict(spec, **unflatten(kwargs))
 
     if 'layers' not in spec:
         spec['layers'] = []
@@ -64,41 +64,3 @@ def marshall(proto, data=None, spec=None, **kwargs):
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.
     proto.spec = json.dumps(spec)
-
-
-# See accessors for layers at
-# https://github.com/uber/deck.gl/tree/master/docs/layers
-_ENCODINGS = set([
-    'getAlignmentBaseline',
-    'getAngle',
-    'getCentroid',
-    'getColor',
-    'getColorValue',
-    'getDashArray',
-    'getElevation',
-    'getElevationValue',
-    'getFillColor',
-    'getIcon',
-    'getLineColor',
-    'getLineDashArray',
-    'getNormal',
-    'getPath',
-    'getPolygon',
-    'getPosition',
-    'getRadius',
-    'getSize',
-    'getSourceColor',
-    'getSourcePosition',
-    'getStrokeWidth',
-    'getTargetColor',
-    'getTargetPosition',
-    'getText',
-    'getTextAnchor',
-    'getWeight',
-
-    # Streamlit-specific:
-    'getLatitude',
-    'getLongitude',
-    'getTargetLatitude',
-    'getTargetLongitude',
-])

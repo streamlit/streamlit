@@ -1,11 +1,6 @@
----
-title: "Streamlit tutorial: the basics"
-weight: 100
----
+# Tutorial 1: First steps
 
-*If you hit any issues going through this tutorial, check out our [Help](/docs/help/) page.*
-
-Now that you have [already set up Streamlit](/docs/installation/), open up a
+Now that you have [already set up Streamlit](/getting_started), open up a
 text editor and paste this in:
 
 ```python
@@ -21,11 +16,14 @@ Python file:
 $ python hello.py
 ```
 
-This will open a new tab in your web browser, containg a Streamlit _report_.
+This will open a new tab in your web browser, containing a Streamlit _report_.
 A report is Streamlit's magical graphical frontend for your programs.
 
-_**PRO TIP:** We recommend **arranging your browser window and text editor side
-by side,** so you can always see both at the same time._
+```eval_rst
+.. tip::
+   We recommend **arranging your browser window and text editor side by side,**
+   so you can always see both at the same time.
+```
 
 ## Making updates
 
@@ -65,10 +63,13 @@ df = np.random.randn(50, 7)
 st.write(df)
 ```
 
-_**NOTE:** From now on, I won't tell you to save your program again. Just assume
-that's what you should do whenever you want your report to update. And right now
-is one of those times: go ahead and save `hello.py` to see the latest
-changes!_
+```eval_rst
+.. note::
+  From now on, I won't tell you to save your program again. Just assume
+  that's what you should do whenever you want your report to update. And right now
+  is one of those times: go ahead and save `hello.py` to see the latest
+  changes!
+```
 
 As you can see, you can use `st.write()` on a Numpy array to render a dataset
 into a table in your report. What's more, Streamlit also supports plain Python
@@ -169,10 +170,10 @@ st.write('...and now we\'re done!')
 ```
 
 Now re-run the script, scroll to the bottom of the page, and marvel at all the
-_progress_ we've made 😜
+_progress_ we've made.
 
-Finally, let's **celebrate this ocasion** by appending just one last command to
-our script:
+Finally, let's **celebrate this occasion** by appending just one last command
+to our script:
 
 ```python
 st.balloons()
@@ -185,13 +186,14 @@ st.balloons()
 
 Now you should have a basic idea of how to use Streamlit in your own scripts:
 just `import streamlit as st` and experiment away from there! A good way to
-start is by copy/pasting code snippets straight from the Streamlit cheatsheet.
-Just run `streamlit help` on a terminal to see it, or click the *Quick
-help* item in Streamlit's top-right menu.
+start is by copy/pasting code snippets straight from the Streamlit
+documentation. Just run `streamlit help` on a terminal to get to the docs, or
+click the *Documentation* item in Streamlit's top-right menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
 Streamlit on your day-to-day --- and we'll introduce you to some more advanced
-Streamlit commands. Click here for [part 2 of our tutorial](/docs/tutorial2/).
+Streamlit commands. Click here for [part 2 of the
+tutorial](/tutorial/tutorial2_caching).
 
 ## Appendix: the final script
 
@@ -234,3 +236,4 @@ for i in range(100):
 st.write('...and now we\'re done!')
 st.balloons()
 ```
+

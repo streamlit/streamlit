@@ -115,7 +115,7 @@ function buildLayer(layer) {
   const type = spec.type ? spec.type.toLowerCase() : '';
   delete spec.type;
 
-  parseEncodings(type, spec);
+  parseGetters(type, spec);
 
   switch (type) {
     case 'arclayer':
@@ -251,9 +251,8 @@ function getColorFromColorRGBAColumns(d) {
 }
 
 function getSourceColorFromSourceColorRGBAColumns(d) {
-  return d.sourceColorR && d.sourceColorG && d.sourceColorB ?
-    [d.sourceColorR, d.sourceColorG, d.sourceColorB,
-      d.sourceColorA == null ? 255 : d.sourceColorA] :
+  return d.colorR && d.colorG && d.colorB ?
+    [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
     DEFAULT_COLOR;
 }
 
@@ -264,74 +263,41 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
     DEFAULT_COLOR;
 }
 
-/**
- * Converts spec from
- *
- *     {
- *       ...
- *       encoding: {
- *         foo: 'bar',
- *       },
- *       ...
- *     }
- *
- * to:
- *
- *     {
- *       ...
- *       getFoo: d => d.bar,
- *       ...
- *     }
- */
-function parseEncodings(type, spec) {
-  /* eslint-disable no-param-reassign */
-  const { encoding } = spec;
-  if (!encoding) return;
-
-  delete spec.encoding;
-
+function parseGetters(type, spec) {
   // If this is a layer that accepts a getPosition argument, build that
   // argument from getLatiude and getLongitude.
   if (POSITION_LAYER_TYPES.has(type) &&
-      encoding.getLatitude &&
-      encoding.getLongitude) {
-    const latField = encoding.getLatitude;
-    const lonField = encoding.getLongitude;
-    encoding.getPosition = (d) => [d[lonField], d[latField]];
+      spec.getLatitude &&
+      spec.getLongitude) {
+    const latField = spec.getLatitude;
+    const lonField = spec.getLongitude;
+    spec.getPosition = (d) => [d[lonField], d[latField]];
   }
 
   // Same as the above, but for getSourcePosition/getTargetPosition.
   if (SOURCE_TARGET_POSITION_LAYER_TYPES.has(type) &&
-      encoding.getLatitude &&
-      encoding.getLongitude &&
-      encoding.getTargetLatitude &&
-      encoding.getTargetLongitude) {
-    const latField = encoding.getLatitude;
-    const lonField = encoding.getLongitude;
-    const latField2 = encoding.getTargetLatitude;
-    const lonField2 = encoding.getTargetLongitude;
-    encoding.getSourcePosition = (d) => [d[lonField], d[latField]];
-    encoding.getTargetPosition = (d) => [d[lonField2], d[latField2]];
+      spec.getLatitude &&
+      spec.getLongitude &&
+      spec.getTargetLatitude &&
+      spec.getTargetLongitude) {
+    const latField = spec.getLatitude;
+    const lonField = spec.getLongitude;
+    const latField2 = spec.getTargetLatitude;
+    const lonField2 = spec.getTargetLongitude;
+    spec.getSourcePosition = (d) => [d[lonField], d[latField]];
+    spec.getTargetPosition = (d) => [d[lonField2], d[latField2]];
   }
 
-  Object.keys(encoding).forEach((key) => {
-    const v = encoding[key];
-    spec[makeGetterName(key)] =
+  Object.keys(spec).forEach((key) => {
+    if (!key.startsWith('get')) return;
+    const v = spec[key];
+    spec[key] =
         typeof v === 'function' ?
-            v :                       // Leave functions untouched.
-            typeof v === 'string' ?
-                d => d[v] :           // Make getters from strings.
-                () => v;              // Make constant function otherwise.
+            v :                   // Leave functions untouched.
+        typeof v === 'string' ?
+            d => d[v] :           // Make getters from strings.
+            () => v;              // Make constant function otherwise.
   });
-}
-
-
-/**
- * Convert a string 'foo' to its getter name 'getFoo', if needed.
- */
-function makeGetterName(key) {
-  if (key.startsWith('get')) return key;
-  return `get${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 
 

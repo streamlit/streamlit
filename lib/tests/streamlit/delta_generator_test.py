@@ -15,17 +15,7 @@ import unittest
 from streamlit.DeltaGenerator import DeltaGenerator, _export
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
-
-
-def unwrap(dg, name):
-    """Return unwrapped method 'name' from class 'dg'."""
-    method = getattr(dg, name)
-    try:
-        # Python 2 way.
-        return method.func_closure[0].cell_contents
-    except AttributeError:
-        # Python 3 way. running_py3()
-        return method.__wrapped__
+from streamlit import util
 
 
 class DeltaGeneratorDecoratorTest(unittest.TestCase):
@@ -93,12 +83,10 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
         string_data = 'Some string'
         for name, format in test_data.items():
-            method = unwrap(self._dg, name)
+            method = getattr(self._dg, name)
+            method(string_data)
 
-            delta = protobuf.Delta()
-            element = delta.new_element
-            method(self._dg, element, string_data)
-
+            element = get_element(self._dg)
             self.assertEquals(string_data, getattr(element, 'text').body)
             self.assertEquals(format, getattr(element, 'text').format)
 
@@ -108,15 +96,12 @@ class DeltaGeneratorTextTest(unittest.TestCase):
             'key': 'value',
         }
 
-        method = unwrap(self._dg, 'json')
-
         # Testing python object
-        delta = protobuf.Delta()
-        element = delta.new_element
-        method(self._dg, element, json_data)
+        self._dg.json(json_data)
 
         json_string = json.dumps(json_data)
 
+        element = get_element(self._dg)
         self.assertEquals(json_string, element.text.body)
         self.assertEquals(protobuf.Text.JSON, element.text.format)
 
@@ -124,13 +109,10 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         """Test protobuf.Text.JSON string."""
         json_string = u'{"key": "value"}'
 
-        method = unwrap(self._dg, 'json')
-
         # Testing JSON string
-        delta = protobuf.Delta()
-        element = delta.new_element
-        method(self._dg, element, json_string)
+        self._dg.json(json_string)
 
+        element = get_element(self._dg)
         self.assertEquals(json_string, element.text.body)
         self.assertEquals(protobuf.Text.JSON, element.text.format)
 
@@ -138,24 +120,17 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         """Test protobuf.Text.MARKDOWN."""
         test_string = '    data         '
 
-        method = unwrap(self._dg, 'markdown')
+        self._dg.markdown(test_string)
 
-        delta = protobuf.Delta()
-        element = delta.new_element
-        method(self._dg, element, test_string)
-
+        element = get_element(self._dg)
         self.assertEquals(u'data', element.text.body)
         self.assertEquals(protobuf.Text.MARKDOWN, element.text.format)
 
     def test_empty(self):
         """Test protobuf.Empty."""
-        method = unwrap(self._dg, 'empty')
+        self._dg.empty()
 
-        delta = protobuf.Delta()
-        element = delta.new_element
-        # raise RuntimeError(f'method: {method} dg: {self._dg}')
-        method(self._dg, element)
-
+        element = get_element(self._dg)
         self.assertEquals(True, element.empty.unused)
 
 
@@ -164,14 +139,14 @@ class DeltaGeneratorProgressTest(unittest.TestCase):
 
     def test_progress(self):
         """Test protobuf.Progress."""
-        self._dg = DeltaGenerator(None)
-
-        method = unwrap(self._dg, 'progress')
-
-        delta = protobuf.Delta()
-        element = delta.new_element
+        dg = DeltaGenerator(ReportQueue())
 
         some_value = 42
-        method(self._dg, element, some_value)
+        dg.progress(some_value)
 
+        element = get_element(dg)
         self.assertEquals(some_value, element.progress.value)
+
+
+def get_element(dg):
+    return dg._queue.get_deltas()[-1].new_element
