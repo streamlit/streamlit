@@ -162,7 +162,7 @@ Resources:
             - "rm -f /usr/local/bin/streamlit \n"
             - "ln -fs /home/ubuntu/anaconda3/bin/streamlit /usr/local/bin/streamlit\
               \ \n"
-            - "curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n"
+            - "curl -o /tmp/config.toml https://streamlit.io/cf/config.toml \n"
             - "install -m 755 -o ubuntu -g ubuntu -d ~ubuntu/.streamlit \n"
             - "install -m 600 -o ubuntu -g ubuntu -t ~ubuntu/.streamlit /tmp/config.toml\
               \ \n"

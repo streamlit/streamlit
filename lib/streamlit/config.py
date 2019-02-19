@@ -404,7 +404,7 @@ _create_option(
 # proxy is up.
 @util.memoize
 def _get_public_credentials():
-    STREAMLIT_CREDENTIALS_URL = 'http://streamlit.io/tmp/st_pub_write.json'
+    STREAMLIT_CREDENTIALS_URL = 'https://streamlit.io/tmp/st_pub_write.json'
     LOGGER.debug('Getting remote Streamlit credentials.')
     try:
         response = urllib.request.urlopen(

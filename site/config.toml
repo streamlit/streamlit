@@ -1,5 +1,5 @@
 title = "Streamlit"
-baseURL = "http://streamlit.io/"
+baseURL = "//streamlit.io/"
 languageCode = "en-us"
 MetaDataFormat = "yaml"
 Paginate = 20
@@ -18,7 +18,7 @@ pygmentsCodeFences=true
   # This part of the site is build/published separately.
   # See instructions in docs/README.md
   name = "Docs"
-  url = "http://streamlit.io/secret/docs/"
+  url = "//streamlit.io/secret/docs/"
   weight = 10
 
   [[menu.secret]]

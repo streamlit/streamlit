@@ -357,7 +357,7 @@ class StreamlitApp extends PureComponent {
       <div className={outerDivClass}>
         <header>
           <div id="brand">
-            <a href="http://streamlit.io">Streamlit</a>
+            <a href="//streamlit.io">Streamlit</a>
           </div>
           <ConnectionManager ref={c => this.connectionManager = c}
             getUserLogin={this.getUserLogin}

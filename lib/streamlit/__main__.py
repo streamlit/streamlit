@@ -29,7 +29,7 @@ def help(args):
     """Show help in browser."""
     print('Showing help page in browser...')
     from streamlit import util
-    util.open_browser('http://streamlit.io/secret/docs')
+    util.open_browser('https://streamlit.io/secret/docs')
 
 
 def hello(args):

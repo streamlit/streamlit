@@ -163,7 +163,7 @@ class DeltaGenerator(object):
         >>> st.text('This is some text.')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
            height: 50px
 
         """
@@ -186,7 +186,7 @@ class DeltaGenerator(object):
         >>> st.markdown('Streamlit is **_really_ cool**.')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
            height: 50px
 
         """
@@ -219,7 +219,7 @@ class DeltaGenerator(object):
         ... })
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
            height: 280px
 
         """
@@ -246,7 +246,7 @@ class DeltaGenerator(object):
         >>> st.title('This is a title')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
            height: 100px
 
         """
@@ -268,7 +268,7 @@ class DeltaGenerator(object):
         >>> st.header('This is a header')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
            height: 100px
 
         """
@@ -290,7 +290,7 @@ class DeltaGenerator(object):
         >>> st.subheader('This is a subheader')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
            height: 100px
 
         """
@@ -493,7 +493,7 @@ class DeltaGenerator(object):
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
 
         """
@@ -546,7 +546,7 @@ class DeltaGenerator(object):
         ... })
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
         Examples of Vega Lite usage without Streamlit can be found at
@@ -582,7 +582,7 @@ class DeltaGenerator(object):
         >>> st.pyplot()
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
            height: 530px
 
         Notes
@@ -653,7 +653,7 @@ class DeltaGenerator(object):
         ...          use_column_width=True)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=YCFaqPgmgpEz7jwE4tHAzY
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=YCFaqPgmgpEz7jwE4tHAzY
            height: 630px
 
         """
@@ -695,7 +695,7 @@ class DeltaGenerator(object):
         >>> st.audio(audio_bytes, format='audio/ogg')
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
            height: 400px
 
         """
@@ -728,7 +728,7 @@ class DeltaGenerator(object):
         >>> st.video(video_bytes)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
            height: 600px
 
         """
@@ -806,7 +806,7 @@ class DeltaGenerator(object):
         >>> st.map(df)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=7Sr8jMkKDc6E6Y5y2v2MNk
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=7Sr8jMkKDc6E6Y5y2v2MNk
            height: 600px
 
         """
@@ -897,7 +897,7 @@ class DeltaGenerator(object):
         >>> st.deck_gl_chart(df)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
            height: 530px
 
         The dataframe must have columns called 'lat'/'latitude' or
@@ -928,7 +928,7 @@ class DeltaGenerator(object):
         ...
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
            height: 530px
 
         """
@@ -957,7 +957,7 @@ class DeltaGenerator(object):
         >>> st.table(df)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
            height: 480px
 
         """

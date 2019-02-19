@@ -11,10 +11,10 @@ class StOutput(Directive):
     --------
 
         .. output::
-        http://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
+        https://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
 
         .. output::
-        http://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
+        https://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
         height: 5rem; border: 1px solid red;
 
     """
