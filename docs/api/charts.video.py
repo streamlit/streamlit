@@ -6,7 +6,7 @@ def read_file_from_url(url):
     return urllib.request.urlopen(url).read()
 
 file_bytes = read_file_from_url(
-    'http://streamlit.io/media/Star%20-%206962.mp4')
+    'https://streamlit.io/media/Star%20-%206962.mp4')
 
 st.video(file_bytes)
 

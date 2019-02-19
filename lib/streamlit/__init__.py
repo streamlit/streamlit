@@ -110,7 +110,7 @@ def write(*args):
     >>> write('Hello, *World!*')
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -123,7 +123,7 @@ def write(*args):
     ... }))
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
        height: 250px
 
     Finally, you can pass in multiple arguments to do things like:
@@ -132,7 +132,7 @@ def write(*args):
     >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
        height: 300px
 
     """

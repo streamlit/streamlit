@@ -22,7 +22,7 @@ for line in process.stdout.readlines():
         match = REPORT_MANIFEST.match(filename)
         if match:
             id, version = match.group('id'), match.group('version')
-            st.write('- [`%s`](http://share.streamlit.io/%s/index.html?id=%s) (`%s`) (%s)' % \
+            st.write('- [`%s`](https://share.streamlit.io/%s/index.html?id=%s) (`%s`) (%s)' % \
                 (id, version, id, version, date))
     except ValueError:
         st.warning('Trouble parsing "%s".' % line)

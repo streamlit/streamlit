@@ -306,7 +306,7 @@ class Insight(object):
                         'ln -fs /home/ubuntu/anaconda3/bin/streamlit /usr/local/bin/streamlit \n',
                         # Get streamlit config which has the proxy wait
                         # for 2 minutes and any other options we added.
-                        'curl -o /tmp/config.toml http://streamlit.io/cf/config.toml \n',
+                        'curl -o /tmp/config.toml https://streamlit.io/cf/config.toml \n',
                         'install -m 755 -o ubuntu -g ubuntu -d ~ubuntu/.streamlit \n',
                         'install -m 600 -o ubuntu -g ubuntu -t ~ubuntu/.streamlit /tmp/config.toml \n',
                     ]

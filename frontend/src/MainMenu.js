@@ -15,7 +15,7 @@ import {
 } from 'reactstrap';
 import './MainMenu.css';
 
-const ONLINE_DOCS_URL = 'http://streamlit.io/secret/docs';
+const ONLINE_DOCS_URL = '//streamlit.io/secret/docs';
 
 /**
  *

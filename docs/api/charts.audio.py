@@ -6,7 +6,7 @@ def read_file_from_url(url):
     return urllib.request.urlopen(url).read()
 
 file_bytes = read_file_from_url(
-    'http://streamlit.io/media/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
+    'https://streamlit.io/media/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
 
 st.audio(file_bytes, format='audio/ogg')
 

@@ -8,7 +8,7 @@ def read_file_from_url(url):
     return urllib.request.urlopen(url).read()
 
 file_bytes = read_file_from_url(
-    'http://streamlit.io/media/photo-1548407260-da850faa41e3.jpeg')
+    'https://streamlit.io/media/photo-1548407260-da850faa41e3.jpeg')
 image = Image.open(BytesIO(file_bytes))
 
 st.image(image, caption='Sunrise by the mountains',
