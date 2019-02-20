@@ -8,7 +8,7 @@ Sometimes you hit a roadblock. That's natural, in coding.
 
 Below are a few problems our users have seen, and ways they solved them in the
 past. If what you're looking for is not on this page, let us know at
-[hello@streamlit.io](mailto:hello+support@streamlit.io).
+[help@streamlit.io](mailto:help@streamlit.io).
 
 
 ## First things to try...
@@ -37,7 +37,7 @@ st.write(st.__version__)
 ```
 
 ...and make sure it says the same version as above. If not the same version,
-[contact us](mailto:hello+support@streamlit.io) for help setting up your
+[contact us](mailto:help@streamlit.io) for help setting up your
 environment.
 
 One more thing to try: sometimes the browser caches Streamlit's JavaScript code
@@ -55,7 +55,7 @@ port=8765
 ```
 
 See if you can reproduce your bug again now. If the answer is _yes_,
-continue reading this page or [contact us](mailto:hello+support@streamlit.io).
+continue reading this page or [contact us](mailto:help@streamlit.io).
 
 
 ## Remote operation: report URL doesn't load
