@@ -16,6 +16,8 @@ wheel = "*"
 Sphinx = "*"
 sphinx-rtd-theme = "*"
 recommonmark = "*"
+# Packages used in unit tests:
+altair = "*"
 
 [packages]
 base58 = "*"
