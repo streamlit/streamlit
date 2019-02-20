@@ -8,7 +8,55 @@ Sometimes you hit a roadblock. That's natural, in coding.
 
 Below are a few problems our users have seen, and ways they solved them in the
 past. If what you're looking for is not on this page, let us know at
-hello@streamlit.io.
+[hello@streamlit.io](mailto:hello+support@streamlit.io).
+
+
+## First things to try...
+
+We try to fix bugs quickly, so many times a problem will go away when you
+upgrade Streamlit. So the first thing to try when having an issue is upgrading
+to the latest version of Streamlit:
+
+```bash
+$ pip install --upgrade streamlit
+$ streamlit kill_proxy
+$ streamlit version
+```
+
+...and then verify that the version number printed is `0.26.0`.
+
+**Try reproducing the issue now.**
+
+If not fixed, let's check whether your Python environment is set up correctly.
+Edit the Streamlit script where you're experiencing your issue,
+**comment everything out, and add these lines instead:**
+
+```python
+import streamlit as st
+st.write(st.__version__)
+```
+
+...and make sure it says the same version as above. If not the same version,
+[contact us](mailto:hello+support@streamlit.io) for help setting up your
+environment.
+
+One more thing to try: sometimes the browser caches Streamlit's JavaScript code
+too aggressively. There are two ways to address it:
+
+1) Try pressing `Ctrl-Shift-R` or `⌘-Shift-R` to do a hard refresh in
+Chrome/Firefox.
+
+2) Try using Streamlit on another port. This way the browser starts the page
+with a brand new cache. For that, add this to `~/.streamlit/config.toml`:
+
+```ini
+[proxy]
+port=8765
+```
+
+See if you can reproduce your bug again now. If the answer is _yes_,
+continue reading this page or [contact us](mailto:hello+support@streamlit.io).
+
 
 ## Remote operation: report URL doesn't load
 
