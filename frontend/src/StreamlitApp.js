@@ -40,7 +40,7 @@ import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
 import ConnectionManager from './ConnectionManager';
 
-import { ForwardMsg, ReRun, Text as TextProto } from './protobuf';
+import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
@@ -426,7 +426,7 @@ class StreamlitApp extends PureComponent {
           progress: p => <Progress value={p.get('value')} style={{width}} />,
           table: df => <Table df={df} width={width} />,
           text: text => <Text element={text} width={width} />,
-          vegaLiteChart: chart => <VegaLiteChart chart={chart} width={width} />,
+          vegaLiteChart: el => <VegaLiteChart element={el} width={width} />,
           video: video => <Video video={video} width={width} />,
         });
       } catch (err) {
