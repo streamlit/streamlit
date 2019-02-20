@@ -16,6 +16,7 @@ help:
 	@echo " site         - Builds the site at /site/public."
 	@echo " devel-site   - Starts the dev server for the site."
 	@echo " publish-site - Builds and pushes the site to prod."
+	@echo " pytest       - Runs unittests"
 
 .PHONY: init
 init: setup pipenv react-init protobuf # react-build release
