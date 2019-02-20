@@ -210,6 +210,7 @@ Update the version in the following locations:
   - `CONTRIBUTING.md` (Like, 3 lines above :) )
   - `lib/setup.py`
   - `frontend/package.json`
+  - `docs/troubleshooting.md`
 
 Then, so things like `package-lock.json` get updated, run:
 ```
