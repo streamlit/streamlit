@@ -6,20 +6,11 @@ from dateutil.parser import parse
 
 st.title('Vega Lite support')
 
-st.header('Bar chart')
+st.header('Different ways to get the exact same plot')
 
 df = pd.DataFrame([['A', 'B', 'C', 'D'], [28, 55, 43, 91]], index=['a', 'b']).T
 
-st.write('This...')
-
-st.vega_lite_chart(df,
-    mark='bar',
-    x_field='a',
-    x_type='ordinal',
-    y_field='b',
-    y_type='quantitative')
-
-st.write('...is the same is this:')
+st.write('Using a top-level `df` and a `spec` dict:')
 
 st.vega_lite_chart(df, {
     'mark': 'bar',
@@ -28,6 +19,55 @@ st.vega_lite_chart(df, {
       'y': {'field': 'b', 'type': 'quantitative'}
     }
   })
+
+st.write('Using a top-level `df` and keywords as a spec:')
+
+st.vega_lite_chart(df,
+    mark='bar',
+    x_field='a',
+    x_type='ordinal',
+    y_field='b',
+    y_type='quantitative')
+
+st.write('Putting the `df` inside the spec, as a `dataset`:')
+
+st.vega_lite_chart({
+    'datasets': {
+        'foo': df,
+    },
+    'data': {
+        'name': 'foo',
+    },
+    'mark': 'bar',
+    'encoding': {
+      'x': {'field': 'a', 'type': 'ordinal'},
+      'y': {'field': 'b', 'type': 'quantitative'}
+    }
+  })
+
+st.write('Putting the `df` inside the spec, as inline `data`:')
+
+st.vega_lite_chart({
+    'data': df,
+    'mark': 'bar',
+    'encoding': {
+      'x': {'field': 'a', 'type': 'ordinal'},
+      'y': {'field': 'b', 'type': 'quantitative'}
+    }
+  })
+
+st.write(
+    'Putting the `df` inside the spec, as inline `data` (different notation):')
+
+st.vega_lite_chart({
+    'data': {'value': df},
+    'mark': 'bar',
+    'encoding': {
+      'x': {'field': 'a', 'type': 'ordinal'},
+      'y': {'field': 'b', 'type': 'quantitative'}
+    }
+  })
+
 
 # -
 

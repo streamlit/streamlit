@@ -518,7 +518,8 @@ class DeltaGenerator(object):
         Parameters
         ----------
         data : list, numpy.ndarray, pandas.DataFrame or None
-            Data to be plotted.
+            Data to be plotted. May also be passed inside the spec dict, to
+            more closely follow the Vega Lite API.
 
         spec : dict
             The Vega Lite spec for the chart. See
