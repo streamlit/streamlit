@@ -14,7 +14,7 @@ building the future of data science.
 Based in the heart of San Francisco, we’re a diverse, collaborative team of
 elite technologists from Google, X, Twitter, Carnegie Mellon Computer Science,
 and Stanford Business School. We have funding from top VCs like
-[Gradient](gradient.google) (Google’s AI Investment Arm), and we're growing
-quickly. If you’re passionate about ML/data science, let’s talk!
+[Gradient](https://gradient.google) (Google’s AI Investment Arm), and we're
+growing quickly. If you’re passionate about ML/data science, let’s talk!
 
 Here are our currently available positions:

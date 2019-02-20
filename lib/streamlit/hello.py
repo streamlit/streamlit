@@ -22,7 +22,7 @@ def run():
         take a look at our
         [tutorials and documentation](https://streamlit.io/secret/docs) next.
         And feel free to ask us questions any time at
-        [hello@streamlit.io](mailto:hello+support@streamlit.io).
+        [help@streamlit.io](mailto:help@streamlit.io).
 
         To celebrate this magic moment, below we're generating a bunch of
         random numbers in a loop for around 10 seconds. Enjoy!
