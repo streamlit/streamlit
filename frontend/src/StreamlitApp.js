@@ -64,7 +64,6 @@ class StreamlitApp extends PureComponent {
       }]),
       userSettings: {
         wideMode: false,
-        clearCache: false,
       },
       showLoginBox: false,
     };
@@ -74,7 +73,7 @@ class StreamlitApp extends PureComponent {
 
     // Bind event handlers.
     this.closeDialog = this.closeDialog.bind(this);
-    this.getUserLogin =this.getUserLogin.bind(this);
+    this.getUserLogin = this.getUserLogin.bind(this);
     this.handleConnectionError = this.handleConnectionError.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
     this.isProxyConnected = this.isProxyConnected.bind(this);
@@ -82,6 +81,8 @@ class StreamlitApp extends PureComponent {
     this.onLogInSuccess = this.onLogInSuccess.bind(this);
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
     this.rerunScript = this.rerunScript.bind(this);
+    this.openClearCacheDialog = this.openClearCacheDialog.bind(this);
+    this.clearCache = this.clearCache.bind(this);
     this.saveReport = this.saveReport.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.setReportName = this.setReportName.bind(this);
@@ -111,7 +112,7 @@ class StreamlitApp extends PureComponent {
           this.state.dialog.defaultAction();
       },
     }
-  }
+  };
 
   async componentDidMount() {
     if (isEmbeddedInIFrame()) {
@@ -298,14 +299,41 @@ class StreamlitApp extends PureComponent {
     if (this.isProxyConnected()) {
       trackEventRemotely('rerunScript');
       this.sendBackMsg({
-        type: 'rerun',
-        rerun: {
-          commandLine: this.state.commandLine,
-          clearCache: this.state.userSettings.clearCache,
-        },
+        type: 'rerunScript',
+        rerunScript: this.state.commandLine,
       });
     } else {
       console.warn('Cannot rerun script when proxy is disconnected.');
+    }
+  }
+
+  /**
+   * Shows a dialog asking the user to confirm they want to clear the cache
+   */
+  openClearCacheDialog() {
+    if (this.isProxyConnected()) {
+      this.openDialog({
+        type: 'clearCache',
+        confirmCallback: this.clearCache,
+
+        // This will be called if enter is pressed.
+        defaultAction: this.close,
+      });
+    } else {
+      console.warn('Cannot clear cache: proxy is disconnected');
+    }
+  }
+
+  /**
+   * Asks the server to clear the st_cache
+   */
+  clearCache() {
+    this.closeDialog();
+    if (this.isProxyConnected()) {
+      trackEventRemotely('clearCache');
+      this.sendBackMsg({type: 'clearCache', clearCache: true});
+    } else {
+      console.warn('Cannot clear cache: proxy is disconnected');
     }
   }
 
@@ -370,6 +398,7 @@ class StreamlitApp extends PureComponent {
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
+            clearCacheCallback={this.openClearCacheDialog}
             settingsCallback={() => this.openDialog({
               type: 'settings',
               isOpen: true,
