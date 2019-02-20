@@ -60,6 +60,7 @@ API
 - :doc:`api/charts`
 
   - :func:`streamlit.pyplot`
+  - :func:`streamlit.altair_chart`
   - :func:`streamlit.vega_lite_chart`
   - :func:`streamlit.deck_gl_chart`
   - :func:`streamlit.line_chart`

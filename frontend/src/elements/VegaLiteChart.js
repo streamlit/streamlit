@@ -39,17 +39,19 @@ class VegaLiteChart extends Component {
 
   render() {
     try {
-      const chart = this.props.chart;
+      const el = this.props.element;
 
-      const spec = JSON.parse(chart.get('spec'));
+      const spec = JSON.parse(el.get('spec'));
       maybeAddAutosizing(spec);
 
-      const dataProto = chart.get('data');
-      let dataObj;
-
-      if (dataProto && dataProto.get('data')) {
-        const dataArr = getDataArray(dataProto);
-        dataObj = {values: dataArr};
+      const dataObj = getInlineData(el);
+      const datasets = getDataSets(el, spec);
+      if (datasets) {
+        if (!spec.data) {
+          throw new Error(
+              'Must specify "data" field when using "dataset"');
+        }
+        spec.datasets = datasets;
       }
 
       const height = spec.height == null ? 200 : spec.height;
@@ -81,8 +83,8 @@ class VegaLiteChart extends Component {
    * which is faster.
    */
   shouldComponentUpdate(newProps, newState) {
-    const data0 = this.props.chart.get('data');
-    const data1 = newProps.chart.get('data');
+    const data0 = this.props.element.get('data');
+    const data1 = newProps.element.get('data');
 
     if (!data0 || !data1) return true;
     if (!data0.get('data') || !data1.get('data')) return true;
@@ -90,8 +92,8 @@ class VegaLiteChart extends Component {
     const [numRows0, numCols0] = tableGetRowsAndCols(data0.get('data'));
     const [numRows1, numCols1] = tableGetRowsAndCols(data1.get('data'));
 
-    const spec0 = this.props.chart.get('spec');
-    const spec1 = newProps.chart.get('spec');
+    const spec0 = this.props.element.get('spec');
+    const spec1 = newProps.element.get('spec');
 
     const dataChanged = data0 !== data1;
     const specChanged = spec0 !== spec1;
@@ -101,7 +103,7 @@ class VegaLiteChart extends Component {
     // whole chart.
     if (specChanged || widthChanged) {
       return true;
-    } 
+    }
 
     // Just a small optimization: if spec, width, and data are all the same,
     // we know there's no need to redraw anything and can quit here.
@@ -116,7 +118,6 @@ class VegaLiteChart extends Component {
         data0[0] === data1[0] && data0[numRows0 - 1] === data1[numRows0 - 1]) {
 
       if (numRows0 < numRows1) {
-        console.log('data1: ', data1);
         this.addRows(data1, numRows0);
         // Since we're handling the redraw using VegaLite's addRows(), tell
         // React not to redraw the chart.
@@ -136,7 +137,6 @@ class VegaLiteChart extends Component {
   addRows(data, startIndex) {
     if (!this.vegaView) throw new Error('Chart has not been drawn yet');
     const rows = getDataArray(data, startIndex);
-    console.log(rows);
     // TODO: Support adding rows to datasets with different names.
     // "data_0" is what Vega calls the 0th unnamed dataset.
     this.vegaView.insert('data_0', rows);
@@ -165,7 +165,39 @@ class VegaLiteChart extends Component {
 }
 
 
+function getInlineData(el) {
+  const dataProto = el.get('data');
+
+  if (!dataProto) {
+    return null;
+  }
+
+  const dataArr = getDataArray(dataProto);
+  return {values: dataArr};
+}
+
+
+function getDataSets(el, spec) {
+  if (!el.get('datasets') || el.get('datasets').isEmpty()) {
+    return null;
+  }
+
+  const datasets = {};
+
+  el.get('datasets').forEach((x, i) => {
+    if (!x) return;
+    datasets[x.get('name')] = getDataArray(x.get('data'));
+  });
+
+  return datasets;
+}
+
+
 function getDataArray(dataProto, startIndex=0) {
+  if (!dataProto.get('data')) return [];
+  if (!dataProto.get('index')) return [];
+  if (!dataProto.get('columns')) return [];
+
   const dataArr = [];
   const [rows, cols] = tableGetRowsAndCols(dataProto.get('data'));
 

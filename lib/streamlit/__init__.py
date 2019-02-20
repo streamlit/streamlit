@@ -42,7 +42,7 @@ import types
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
 from streamlit.caching import cache  # Just for export.
-from streamlit.util import escape_markdown
+from streamlit import util
 
 
 this_module = sys.modules[__name__]
@@ -100,6 +100,8 @@ def write(*args):
         - write(func)       : Displays information about a function.
         - write(module)     : Displays information about the module.
         - write(obj)        : The default is to print str(obj).
+        - write(fig)        : Displays a Matplotlib figure.
+        - write(altair)     : Displays an Altair chart.
 
     Example
     -------
@@ -135,6 +137,25 @@ def write(*args):
        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
        height: 300px
 
+    Oh, one more thing: `st.write` accepts chart objects too! For example:
+
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> import altair as alt
+    >>>
+    >>> df = pd.DataFrame(
+    ...     np.random.randn(200, 3),
+    ...     columns=['a', 'b', 'c'])
+    ...
+    >>> c = alt.Chart(df).mark_circle().encode(
+    ...     x='a', y='b', size='c', color='c')
+    >>>
+    >>> st.write(c)
+
+    .. output::
+       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+       height: 200px
+
     """
     DATAFRAME_LIKE_TYPES = (
         'DataFrame',
@@ -168,8 +189,12 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
+            elif util.is_type(arg, 'altair.vegalite.v2.api.Chart'):
+                altair_chart(arg)
+            elif util.is_type(arg, 'matplotlib.figure.Figure'):
+                pyplot(arg)
             else:
-                string_buffer.append('`%s`' % escape_markdown(str(arg)))
+                string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
 
         flush_buffer()
 

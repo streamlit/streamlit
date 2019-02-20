@@ -2,17 +2,20 @@ syntax = "proto3";
 
 import "DataFrame.proto";
 import "DataTransform.proto";
+import "NamedDataSet.proto";
 
 message VegaLiteChart {
   // The a JSON-formatted string with the Vega Lite spec.
   string spec = 1;
 
-  // The dataframe that will be used as the chart's main data source.
-  // NOTE: Differently from Vega Lite, we only support 1 dataframe per chart
-  // right now.
+  // The dataframe that will be used as the chart's main data source, if
+  // specified using Vega Lite's inline API.
   DataFrame data = 2;
 
-  // Specifies any transformation that should be applied to the data first, for
-  // this type of chart to work.
-  DataTransform data_transform = 3;
+  // Dataframes associated with this chart using Vega Lite's datasets API, if
+  // any.
+  repeated NamedDataSet datasets = 4;
+
+  // Deprecated:
+  //DataTransform data_transform = 3;  // Removed this misguided functionality.
 }

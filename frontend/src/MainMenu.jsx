@@ -65,6 +65,13 @@ class MainMenu extends Component {
             <span className="shortcut">&#x21e7;R</span>
           </DropdownItem>
 
+          <DropdownItem
+            disabled={!this.props.isProxyConnected()}
+            onClick={this.props.clearCacheCallback}>
+            <span>Clear cache</span>
+            <span className="shortcut">C</span>
+          </DropdownItem>
+
           <DropdownItem divider/>
 
           <DropdownItem
@@ -87,8 +94,8 @@ class MainMenu extends Component {
 
         </DropdownMenu>
       </Dropdown>
-    )
-  };
-};
+    );
+  }
+}
 
 export default MainMenu;
