@@ -967,9 +967,9 @@ class DeltaGenerator(object):
 
         """
         from streamlit import data_frame_proto
+        data_frame_proto.marshall_data_frame(df, element.table)
 
     def add_rows(self, df):
-        data_frame_proto.marshall_data_frame(df, element.table)
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
