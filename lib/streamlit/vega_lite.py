@@ -21,8 +21,9 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     See DeltaGenerator.vega_lite_chart for docs.
     """
-    if data is None:
-        data = []
+    if type(data) in dict_types and spec is None:
+        spec = data
+        data = None
 
     if spec is None:
         spec = dict()
@@ -31,8 +32,34 @@ def marshall(proto, data=None, spec=None, **kwargs):
     # This only works for string keys, but kwarg keys are strings anyways.
     spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
 
+    # Support this API:
+    #   {datasets: {foo: df1, bar: df2}, ...}
+    if 'datasets' in spec:
+        for k, v in spec['datasets'].items():
+            dataset = proto.datasets.add()
+            dataset.name = str(k)
+            data_frame_proto.marshall_data_frame(v, dataset.data)
+        del spec['datasets']
+
+    # Support these APIs:
+    #   {data: df}
+    #   {data: {value: df, ...}}
+    #   {data: {url: 'url'}}
+    if 'data' in spec:
+        data_spec = spec['data']
+
+        if type(data_spec) in dict_types:
+            if 'value' in data_spec:
+                data = data_spec['value']
+                del data_spec['value']
+        else:
+            data = data_spec
+            del spec['data']
+
     proto.spec = json.dumps(spec)
-    data_frame_proto.marshall_data_frame(data, proto.data)
+
+    if data is not None:
+        data_frame_proto.marshall_data_frame(data, proto.data)
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html

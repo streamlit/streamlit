@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "DataFrame.proto";
+
+// A dataset that can be referenced by name.
+message NamedDataSet {
+  // The dataset name.
+  string name = 1;
+
+  // The data itself.
+  DataFrame data = 2;
+}
