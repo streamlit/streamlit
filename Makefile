@@ -62,6 +62,11 @@ pycoverage:
 	# testing + code coverage
 	cd lib; PYTHONPATH=. pytest -v -l $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
 
+.PHONY: user-tests
+user-tests:
+	flake8 --ignore=E402,E128 user-tests/
+	pytest -v -l user-tests/
+
 install:
 	cd lib ; python setup.py install
 

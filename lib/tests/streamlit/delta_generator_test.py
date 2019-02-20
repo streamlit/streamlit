@@ -49,9 +49,9 @@ class DeltaGeneratorClassTest(unittest.TestCase):
         """Test default DeltaGenerator()."""
         dg = DeltaGenerator(self._mock_queue)
 
-        self.assertEquals(dg._queue, self._mock_queue)
+        self.assertEqual(dg._queue, self._mock_queue)
         self.assertTrue(dg._generate_new_ids)
-        self.assertEquals(dg._next_id, 0)
+        self.assertEqual(dg._next_id, 0)
         self.assertFalse(hasattr(dg, '_id'))
 
     def test_constructor_with_id(self):
@@ -60,7 +60,7 @@ class DeltaGeneratorClassTest(unittest.TestCase):
         dg = DeltaGenerator(self._mock_queue, id=some_id)
 
         self.assertFalse(dg._generate_new_ids)
-        self.assertEquals(dg._id, some_id)
+        self.assertEqual(dg._id, some_id)
         self.assertFalse(hasattr(dg, '_next_id'))
 
 
@@ -87,8 +87,8 @@ class DeltaGeneratorTextTest(unittest.TestCase):
             method(string_data)
 
             element = get_element(self._dg)
-            self.assertEquals(string_data, getattr(element, 'text').body)
-            self.assertEquals(format, getattr(element, 'text').format)
+            self.assertEqual(string_data, getattr(element, 'text').body)
+            self.assertEqual(format, getattr(element, 'text').format)
 
     def test_json_object(self):
         """Test protobuf.Text.JSON object."""
@@ -102,8 +102,8 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         json_string = json.dumps(json_data)
 
         element = get_element(self._dg)
-        self.assertEquals(json_string, element.text.body)
-        self.assertEquals(protobuf.Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.text.body)
+        self.assertEqual(protobuf.Text.JSON, element.text.format)
 
     def test_json_string(self):
         """Test protobuf.Text.JSON string."""
@@ -113,8 +113,8 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         self._dg.json(json_string)
 
         element = get_element(self._dg)
-        self.assertEquals(json_string, element.text.body)
-        self.assertEquals(protobuf.Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.text.body)
+        self.assertEqual(protobuf.Text.JSON, element.text.format)
 
     def test_markdown(self):
         """Test protobuf.Text.MARKDOWN."""
@@ -123,15 +123,15 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         self._dg.markdown(test_string)
 
         element = get_element(self._dg)
-        self.assertEquals(u'data', element.text.body)
-        self.assertEquals(protobuf.Text.MARKDOWN, element.text.format)
+        self.assertEqual(u'data', element.text.body)
+        self.assertEqual(protobuf.Text.MARKDOWN, element.text.format)
 
     def test_empty(self):
         """Test protobuf.Empty."""
         self._dg.empty()
 
         element = get_element(self._dg)
-        self.assertEquals(True, element.empty.unused)
+        self.assertEqual(True, element.empty.unused)
 
 
 class DeltaGeneratorProgressTest(unittest.TestCase):
@@ -145,7 +145,7 @@ class DeltaGeneratorProgressTest(unittest.TestCase):
         dg.progress(some_value)
 
         element = get_element(dg)
-        self.assertEquals(some_value, element.progress.value)
+        self.assertEqual(some_value, element.progress.value)
 
 
 def get_element(dg):

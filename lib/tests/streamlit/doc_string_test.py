@@ -31,14 +31,14 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, my_func)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'my_func')
-        self.assertEquals(ds.module, 'doc_string_test')
+        self.assertEqual(ds.name, 'my_func')
+        self.assertEqual(ds.module, 'doc_string_test')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.type, '<type \'function\'>')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-        self.assertEquals(ds.signature, '(some_param, another_param=123)')
-        self.assertEquals(ds.doc_string, 'This is the doc')
+            self.assertEqual(ds.type, '<class \'function\'>')
+        self.assertEqual(ds.signature, '(some_param, another_param=123)')
+        self.assertEqual(ds.doc_string, 'This is the doc')
 
     def test_basic_func_without_doc(self):
         """Test basic function without docstring."""
@@ -49,14 +49,14 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, my_func)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'my_func')
-        self.assertEquals(ds.module, 'doc_string_test')
+        self.assertEqual(ds.name, 'my_func')
+        self.assertEqual(ds.module, 'doc_string_test')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.type, '<type \'function\'>')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-        self.assertEquals(ds.signature, '(some_param, another_param=123)')
-        self.assertEquals(ds.doc_string, 'No docs available.')
+            self.assertEqual(ds.type, '<class \'function\'>')
+        self.assertEqual(ds.signature, '(some_param, another_param=123)')
+        self.assertEqual(ds.doc_string, 'No docs available.')
 
     def test_deltagenerator_func(self):
         """Test Streamlit DeltaGenerator function."""
@@ -64,14 +64,14 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, st.audio)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'audio')
-        self.assertEquals(ds.module, 'streamlit')
+        self.assertEqual(ds.name, 'audio')
+        self.assertEqual(ds.module, 'streamlit')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
-            self.assertEquals(ds.signature, '(data, format=u\'audio/wav\')')
+            self.assertEqual(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.signature, '(data, format=u\'audio/wav\')')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-            self.assertEquals(ds.signature, '(data, format=\'audio/wav\')')
+            self.assertEqual(ds.type, '<class \'function\'>')
+            self.assertEqual(ds.signature, '(data, format=\'audio/wav\')')
         self.assertTrue(ds.doc_string.startswith('Display an audio player'))
 
     def test_unwrapped_deltagenerator_func(self):
@@ -80,13 +80,13 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, st.dataframe)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'dataframe')
-        self.assertEquals(ds.module, 'streamlit')
+        self.assertEqual(ds.name, 'dataframe')
+        self.assertEqual(ds.module, 'streamlit')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.type, '<type \'function\'>')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-        self.assertEquals(ds.signature, '(df)')
+            self.assertEqual(ds.type, '<class \'function\'>')
+        self.assertEqual(ds.signature, '(df)')
         self.assertTrue(ds.doc_string.startswith('Display a dataframe'))
 
     def test_st_cache(self):
@@ -95,13 +95,13 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, st.cache)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'cache')
-        self.assertEquals(ds.module, 'streamlit')
+        self.assertEqual(ds.name, 'cache')
+        self.assertEqual(ds.module, 'streamlit')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.type, '<type \'function\'>')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-        self.assertEquals(ds.signature, '(func)')
+            self.assertEqual(ds.type, '<class \'function\'>')
+        self.assertEqual(ds.signature, '(func)')
         self.assertTrue(ds.doc_string.startswith('Function decorator to'))
 
     def test_st_write(self):
@@ -110,13 +110,13 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, st.write)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'write')
-        self.assertEquals(ds.module, 'streamlit')
+        self.assertEqual(ds.name, 'write')
+        self.assertEqual(ds.module, 'streamlit')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'function\'>')
+            self.assertEqual(ds.type, '<type \'function\'>')
         else:
-            self.assertEquals(ds.type, '<class \'function\'>')
-        self.assertEquals(ds.signature, '(*args)')
+            self.assertEqual(ds.type, '<class \'function\'>')
+        self.assertEqual(ds.signature, '(*args)')
         self.assertTrue(ds.doc_string.startswith('Write arguments to the'))
 
     def test_builtin_func(self):
@@ -125,14 +125,14 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, dir)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, 'dir')
+        self.assertEqual(ds.name, 'dir')
         if is_python_2:
-            self.assertEquals(ds.module, '__builtin__')
-            self.assertEquals(ds.type, '<type \'builtin_function_or_method\'>')
+            self.assertEqual(ds.module, '__builtin__')
+            self.assertEqual(ds.type, '<type \'builtin_function_or_method\'>')
         else:
-            self.assertEquals(ds.module, 'builtins')
-            self.assertEquals(ds.type, '<class \'builtin_function_or_method\'>')
-        self.assertEquals(ds.signature, '')
+            self.assertEqual(ds.module, 'builtins')
+            self.assertEqual(ds.type, '<class \'builtin_function_or_method\'>')
+        self.assertEqual(ds.signature, '')
         self.assertTrue(len(ds.doc_string) > 0)
 
     def test_builtin_obj(self):
@@ -141,11 +141,11 @@ class DocStringTest(unittest.TestCase):
         doc_string.marshall(delta.new_element, 123)
 
         ds = delta.new_element.doc_string
-        self.assertEquals(ds.name, '')
-        self.assertEquals(ds.module, '')
+        self.assertEqual(ds.name, '')
+        self.assertEqual(ds.module, '')
         if is_python_2:
-            self.assertEquals(ds.type, '<type \'int\'>')
+            self.assertEqual(ds.type, '<type \'int\'>')
         else:
-            self.assertEquals(ds.type, '<class \'int\'>')
-        self.assertEquals(ds.signature, '')
+            self.assertEqual(ds.type, '<class \'int\'>')
+        self.assertEqual(ds.signature, '')
         self.assertTrue(len(ds.doc_string) > 0)
