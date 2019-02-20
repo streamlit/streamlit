@@ -104,6 +104,12 @@ class StreamlitApp extends PureComponent {
       handler: () => this.openRerunScriptDialog(),
     },
 
+    // 'c' clears the cache
+    'c': {
+      priority: 1,
+      handler: () => this.openClearCacheDialog(),
+    },
+
     // The enter key runs the "default action" of the dialog.
     'enter': {
       priority: 1,
@@ -317,7 +323,7 @@ class StreamlitApp extends PureComponent {
         confirmCallback: this.clearCache,
 
         // This will be called if enter is pressed.
-        defaultAction: this.close,
+        defaultAction: this.clearCache,
       });
     } else {
       console.warn('Cannot clear cache: proxy is disconnected');
