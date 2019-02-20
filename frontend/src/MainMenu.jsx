@@ -69,6 +69,7 @@ class MainMenu extends Component {
             disabled={!this.props.isProxyConnected()}
             onClick={this.props.clearCacheCallback}>
             <span>Clear cache</span>
+            <span className="shortcut">C</span>
           </DropdownItem>
 
           <DropdownItem divider/>
