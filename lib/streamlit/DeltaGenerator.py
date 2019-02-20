@@ -563,6 +563,43 @@ class DeltaGenerator(object):
 
     @_export
     @_with_element
+    def altair_chart(self, element, altair_chart):
+        """Display a chart using the Altair library.
+
+        Parameters
+        ----------
+        altair_chart : altair.vegalite.v2.api.Chart
+            The Altair chart object to display.
+
+        Example
+        -------
+
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> import altair as alt
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(200, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> c = alt.Chart(df).mark_circle().encode(
+        ...     x='a', y='b', size='c', color='c')
+        >>>
+        >>> st.altair_chart(c)
+
+        .. output::
+           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           height: 200px
+
+        Examples of Altair charts can be found at
+        https://altair-viz.github.io/gallery/.
+
+        """
+        from streamlit import vega_lite
+        vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
+
+    @_export
+    @_with_element
     def pyplot(self, element, fig=None, **kwargs):
         """Display a matplotlib.pyplot image.
 

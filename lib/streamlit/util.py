@@ -267,5 +267,30 @@ def open_browser(url):
         subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
 
+def is_type(obj, fqn_type_str):
+    """Check type without importing expensive modules.
+
+    Parameters
+    ----------
+    obj : any
+        The object to type-check.
+    fqn_type_str : str
+        The fully-qualified type string.
+
+    Example
+    -------
+
+    To check whether somthing is a Matplotlib Figure without importing
+    matplotlib, use:
+
+    >>> is_type(foo, 'matplotlib.figure.Figure')
+
+    """
+    the_type = type(obj)
+    module = the_type.__module__
+    name = the_type.__name__
+    return fqn_type_str == '%s.%s' % (module, name)
+
+
 class Error(Exception):
     pass
