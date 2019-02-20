@@ -938,7 +938,7 @@ class DeltaGenerator(object):
 
         """
         from streamlit import deck_gl
-        deck_gl.marshall(element, data, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_export
     @_with_element
