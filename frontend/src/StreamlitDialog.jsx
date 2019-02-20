@@ -30,6 +30,7 @@ function StreamlitDialog({dialogProps}) {
     'uploaded': uploadedDialog,
     'warning': warningDialog,
     'rerunScript': rerunScriptDialog,
+    'clearCache': clearCacheDialog,
     'settings': settingsDialog,
     [undefined]: noDialog,
   };
@@ -139,6 +140,28 @@ function rerunScriptDialog(
       <ModalFooter>
         <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
         <Button color="primary" onClick={rerunCallback}>Rerun</Button>
+      </ModalFooter>
+    </BasicDialog>
+  );
+}
+
+/**
+ * Dialog shown when the user wants to clear the cache.
+ *
+ * confirmCallback - callback to send the clear_cache request to the Proxy
+ * onClose         - callback to close the dialog
+ */
+function clearCacheDialog({ confirmCallback, onClose }) {
+  return (
+    <BasicDialog onClose={onClose}>
+      <ModalBody>
+        <div className="streamlit-container">
+          Are you sure you want to clear the <code>@st.cache</code> function cache?
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
+        <Button color="primary" onClick={confirmCallback}>Clear cache</Button>
       </ModalFooter>
     </BasicDialog>
   );

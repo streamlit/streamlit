@@ -50,6 +50,19 @@ $ git checkout develop
 $ git checkout -b [yourbranch]
 ```
 
+### Set up your environment
+
+Create a virtual environment for streamlit using your favorite tool (`virtualenv`, `pipenv`, etc) and activate it:
+
+```bash
+$ cd lib
+$ pipenv --three
+$ pipenv install --dev
+$ pipenv shell
+```
+
+Note that, with pipenv, this process should be done from within the lib/ directory, which is where the project's Pipfile lives.
+
 Now run:
 
 ```bash
@@ -65,12 +78,22 @@ Where:
    `lib/streamlit/` and not have to reinstall the Python package with `make
    install` every time.
 
+### Start the dev server
+
+From a new shell, run
+
+```bash
+$ cd frontend
+$ npm start
+```
+
+This starts streamlit's node dev server (see below), which serves static files to your local streamlit reports.
 
 ### Now test it out!
 
 Test that everything above worked by running:
 ```bash
-$ python -m examples/animation.py
+$ python examples/animation.py
 ```
 above and you should see a Streamlit report with a progressbar in a browser.
 
@@ -297,4 +320,26 @@ If everything works and you want to go back to coding, then revert to
 development mode by typing:
 ```
 make develop
+```
+
+## Troubleshooting
+
+* On Mac OS Mojave, pyenv fails to install python versions with "zlib not available"
+  ```
+  $ xcode-select --install
+  $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+  ```
+  - (See https://github.com/pyenv/pyenv/issues/1219 for more info)
+
+* Running a streamlit script fails with "SyntaxError: encoding problem: future_fstrings"
+  - Uninstall and reinstall `future-fstrings`:
+  - `$ pip uninstall future-fstrings && pip install future-fstrings`
+
+* Unable to run unittests (pytest not installed)
+
+Ensure the Pipfile's dev packages are installed
+
+```
+$ cd lib
+$ pipenv install --dev
 ```

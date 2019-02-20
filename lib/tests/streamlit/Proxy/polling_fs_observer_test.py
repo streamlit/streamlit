@@ -98,7 +98,7 @@ class PollingFsObserverTest(AsyncTestCase):
         self.os.stat = lambda x: FakeStat(102)
         self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '2'
 
-        self.wait(timeout=2 * polling_fs_observer._POLLING_PERIOD_SECS)
+        self.wait(timeout=4 * polling_fs_observer._POLLING_PERIOD_SECS)
         cb_marker.assert_called_once()
 
         ro.deregister_browser(1234)

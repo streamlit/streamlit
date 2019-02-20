@@ -161,10 +161,10 @@ class BrowserWebSocket(WebSocketHandler):
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'cloud_upload':
                 yield self._save_cloud(connection, ws)
-            elif msg_type == 'rerun':
-                if backend_msg.rerun.clear_cache:
-                    caching.clear_cache()
-                yield self._run(backend_msg.rerun.command_line)
+            elif msg_type == 'rerun_script':
+                yield self._run(backend_msg.rerun_script)
+            elif msg_type == 'clear_cache':
+                caching.clear_cache(True)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
