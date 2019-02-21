@@ -227,7 +227,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.26.1`.
+**Note:** The current version is `0.27.0`.
 
 Update the version in the following locations:
   - `CONTRIBUTING.md` (Like, 3 lines above :) )
@@ -235,7 +235,7 @@ Update the version in the following locations:
   - `frontend/package.json`
   - `docs/troubleshooting.md`
 
-Then, so things like `package-lock.json` get updated, run:
+Then, so things like `frontend/package-lock.json` get updated, run:
 ```
 make init
 ```
@@ -275,6 +275,8 @@ Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
 pip install ../streamlit/lib/dist/streamlit-0.20.0-py3-none-any.whl
+streamlit kill_proxy  # Just in case.
+streamlit version  # Make sure it's the right version.
 streamlit hello
 python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
@@ -290,6 +292,32 @@ python
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
 - On Linux
+
+
+#### Rebuild and publish the docs
+
+We do this right before distributing the wheel because the docs get compiled
+different depending on the Python version -- and we want to make sure they're
+always up to date.
+
+First, you should see whether the docs look right on your local machine:
+
+```
+make devel-docs
+```
+
+...now check out http://localhost:8000 and browse around to see if there are
+any obvious issues.
+
+If everything is good, let's push it to S3!
+
+```
+make publish-docs
+```
+
+NOTE: You may have to clear your browser's cache to see changes in
+https://strealmit.io.
+
 
 #### Distribute the Wheel
 
