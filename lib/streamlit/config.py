@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Loads the configuration data."""
@@ -45,7 +44,8 @@ def _create_section(section, description):
 
 
 def _create_option(
-        key, description=None, default_val=None, visibility='visible'):
+        key, description=None, default_val=None, visibility='visible',
+        deprecated=False, deprecation_text=None, expiration_date=None):
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -83,7 +83,8 @@ def _create_option(
     '''
     option = ConfigOption(
         key, description=description, default_val=default_val,
-        visibility=visibility)
+        visibility=visibility, deprecated=deprecated,
+        deprecation_text=deprecation_text, expiration_date=expiration_date)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -285,7 +286,10 @@ _create_section('browser', 'Configuration of browser front-end.')
 _create_option(
     'browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
-    default_val=True)
+    default_val=True,
+    deprecated=True,
+    deprecation_text='Use browser.gatherUsageStats instead.',
+    expiration_date='2019-06-28')
 
 _create_option(
     'browser.proxyAddress',
@@ -293,6 +297,14 @@ _create_option(
         Internet address of the proxy server that the browser should connect
         to. Can be IP address or DNS name.''',
     default_val='localhost')
+
+
+@_create_option('browser.gatherUsageStats')
+def _gather_usage_stats():
+    """Whether to send usage statistics to Streamlit."""
+    if is_manually_set('browser.remotelyTrackUsage'):
+        return get_option('browser.remotelyTrackUsage')
+    return True
 
 
 @_create_option('browser.proxyPort')
@@ -527,11 +539,22 @@ def show_config():
             if option.visibility == 'hidden':
                 continue
 
+            if option.is_expired():
+                continue
+
             key = option.key.split('.')[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
             for txt in description_paragraphs:
                 out.append(f'# {txt}')
+
+            if option.deprecated:
+                out.append('#')
+                out.append('# DEPRECATED.')
+                out.append('#     %s' % option.deprecation_text)
+                out.append('#     This option will be removed on or after %s.'
+                           % option.expiration_date)
+                out.append('#')
 
             toml_default = toml.dumps({'default': option.default_val})
             toml_default = toml_default[10:].strip()
@@ -659,7 +682,7 @@ def _parse_config_file():
         raise RuntimeError('No home directory.')
     config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
-    # DEPRECATION WARNINGL: Eventually we should get rid of this code.
+    # DEPRECATION WARNING: Remove this code after 2019-04-01
     old_config_file_exists = os.path.exists(
         os.path.join(home, '.streamlit', 'config.yaml'))
     this_may_be_proxy = False
@@ -668,10 +691,13 @@ def _parse_config_file():
     elif os.path.split(sys.argv[0])[1] == 'streamlit':
         this_may_be_proxy = True
     if old_config_file_exists and not this_may_be_proxy:
-        sys.stderr.write(
-            'Config ~/.streamlit/config.yaml is DEPRECATED. '
-            'Please remove it and use ~/.streamlit/config.toml instead. For '
-            'any questions, please contact Streamlit support over Slack. <3\n')
+        LOGGER.warning(
+            '\n'
+            '════════════════════════════════════════════════\n'
+            'Config ~/.streamlit/config.yaml is DEPRECATED.\n'
+            'Support for this file will be removed on or after 2019-04-01.\n'
+            'Please remove it and use ~/.streamlit/config.toml instead.\n'
+            '════════════════════════════════════════════════\n')
 
     # Parse the config file.
     if not os.path.exists(config_filename):

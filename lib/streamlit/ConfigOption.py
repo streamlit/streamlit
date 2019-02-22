@@ -1,5 +1,4 @@
 # -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """This class stores a key-value pair for the config system."""
@@ -9,7 +8,11 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import datetime
 import re
+
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 
 class ConfigOption(object):
@@ -54,9 +57,17 @@ class ConfigOption(object):
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
-    visibility : 'visible' or 'hidden' or 'obfuscated'
+    visibility : {'visible', 'hidden', 'obfuscated'}
         If 'hidden', will not include this when listing all options to users.
         If 'obfuscated', will list it, but will not print out its actual value.
+    deprecated: bool
+        Whether this config option is deprecated.
+    deprecation_text : str or None
+        If this config option is deprecated, set to a string explaining what to
+        use instead.
+    expiration_date : str or None
+        If this config option is deprecated, this is the date at which it
+        will no longer be accepted. Format: 'YYYY-MM-DD'.
 
     '''
 
@@ -66,7 +77,8 @@ class ConfigOption(object):
 
     def __init__(
             self, key, description=None, default_val=None,
-            visibility='visible'):
+            visibility='visible', deprecated=False, deprecation_text=None,
+            expiration_date=None):
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -77,8 +89,16 @@ class ConfigOption(object):
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
-        visibility : 'visible' or 'hidden' or 'obfuscated'
+        visibility : {'visible', 'hidden', 'obfuscated'}
             Whether this option should be shown to users.
+        deprecated: bool
+            Whether this config option is deprecated.
+        deprecation_text : str or None
+            If this config option is deprecated, set to a string explaining what to
+            use instead.
+        expiration_date : str or None
+            If this config option is deprecated, this is the date at which it
+            will no longer be accepted. Format: 'YYYY-MM-DD'.
 
         """
         # Parse out the section and name.
@@ -94,6 +114,15 @@ class ConfigOption(object):
 
         self.visibility = visibility
         self.default_val = default_val
+        self.deprecated = deprecated
+
+        if self.deprecated:
+            assert expiration_date, \
+                'expiration_date is required for deprecated items'
+            assert deprecation_text, \
+                'deprecation_text is required for deprecated items'
+            self.expiration_date = expiration_date
+            self.deprecation_text = deprecation_text
 
         # Set the value.
         self._get_val_func = None
@@ -141,3 +170,54 @@ class ConfigOption(object):
         """
         self._get_val_func = lambda: value
         self.where_defined = where_defined
+
+        if (self.deprecated and
+                where_defined != ConfigOption.DEFAULT_DEFINITION):
+
+            details = {
+                'key': self.key,
+                'file': self.where_defined,
+                'explanation': self.deprecation_text,
+                'date': self.expiration_date,
+            }
+
+            if self.is_expired():
+                raise DeprecationError(
+                    '\n'
+                    '════════════════════════════════════════════════\n'
+                    '%(key)s IS NO LONGER SUPPORTED.\n'
+                    '%(explanation)s\n'
+                    'Please update %(file)s.\n'
+                    '════════════════════════════════════════════════\n'
+                    % details)
+            else:
+                LOGGER.warning(
+                    '\n'
+                    '════════════════════════════════════════════════\n'
+                    '%(key)s IS DEPRECATED.\n'
+                    '%(explanation)s\n'
+                    'This option will be removed on or after %(date)s.\n'
+                    'Please update %(file)s.\n'
+                    '════════════════════════════════════════════════\n'
+                    % details)
+
+    def is_expired(self):
+        """Returns true if expiration_date is in the past."""
+        if not self.deprecated:
+            return False
+
+        expiration_date = _parse_yyyymmdd_str(self.expiration_date)
+        now = datetime.datetime.now()
+        return now > expiration_date
+
+
+def _parse_yyyymmdd_str(date_str):
+    return datetime.datetime(*[int(token) for token in date_str.split('-')])
+
+
+class Error(Exception):
+    pass
+
+
+class DeprecationError(Error):
+    pass

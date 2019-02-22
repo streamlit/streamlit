@@ -27,7 +27,7 @@ DEFAULT_CONFIG = textwrap.dedent('''
     sharingMode = "off"
 
     [browser]
-    remotelyTrackUsage = false
+    gatherUsageStats = false
 ''')
 
 with set_fake_home(), patch(

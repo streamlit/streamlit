@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from streamlit.ConfigOption import ConfigOption
+from streamlit.ConfigOption import ConfigOption, DeprecationError
 
 
 class ConfigOptionTest(unittest.TestCase):
@@ -70,6 +70,35 @@ class ConfigOptionTest(unittest.TestCase):
 
         self.assertEqual(my_value, c.value)
         self.assertEqual(where_defined, c.where_defined)
+
+    def test_deprecated_expired(self):
+        my_value = 'myValue'
+        where_defined = 'im defined here'
+
+        key = 'mysection.myName'
+
+        c = ConfigOption(
+                key, deprecated=True, deprecation_text='dep text',
+                expiration_date='2000-01-01')
+
+        with self.assertRaises(DeprecationError):
+            c.set_value(my_value, where_defined)
+
+        self.assertTrue(c.is_expired())
+
+    def test_deprecated_unexpired(self):
+        my_value = 'myValue'
+        where_defined = 'im defined here'
+
+        key = 'mysection.myName'
+
+        c = ConfigOption(
+                key, deprecated=True, deprecation_text='dep text',
+                expiration_date='2100-01-01')
+
+        c.set_value(my_value, where_defined)
+
+        self.assertFalse(c.is_expired())
 
 
 if __name__ == '__main__':

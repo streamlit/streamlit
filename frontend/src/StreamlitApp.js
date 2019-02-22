@@ -156,7 +156,7 @@ class StreamlitApp extends PureComponent {
     dispatchOneOf(msg, 'type', {
       newConnection: (connectionProperties) => {
         initRemoteTracker({
-          remotelyTrackUsage: connectionProperties.get('remotelyTrackUsage'),
+          gatherUsageStats: connectionProperties.get('gatherUsageStats'),
         });
         trackEventRemotely('createReport');
         this.setState({

@@ -144,7 +144,7 @@ class BrowserWebSocket(WebSocketHandler):
             msg.new_connection.sharing_enabled)
 
         msg.new_connection.remotely_track_usage = (
-            config.get_option('browser.remotelyTrackUsage'))
+            config.get_option('browser.gatherUsageStats'))
         LOGGER.debug(
             'New browser connection: remotely_track_usage=%s' %
             msg.new_connection.remotely_track_usage)
