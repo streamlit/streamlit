@@ -11,6 +11,7 @@ setup_2_3_shims(globals())
 
 import json
 import unittest
+import pandas as pd
 
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
@@ -127,6 +128,46 @@ class DeltaGeneratorProgressTest(unittest.TestCase):
         element = get_element(dg)
         self.assertEqual(some_value, element.progress.value)
 
+
+class DeltaGeneratorChartTest(unittest.TestCase):
+    """Test DeltaGenerator Charts."""
+
+    def setUp(self):
+        """Setup."""
+        self._dg = DeltaGenerator(ReportQueue())
+
+    def test_line_chart(self):
+        """Test dg.line_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.line_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'LineChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
+
+    def test_area_chart(self):
+        """Test dg.area_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.area_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'AreaChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
+
+    def test_bar_chart(self):
+        """Test dg.bar_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.bar_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'BarChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
 
 def get_element(dg):
     return dg._queue.get_deltas()[-1].new_element

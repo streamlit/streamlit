@@ -17,11 +17,9 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import case_converters
 from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
-from streamlit import chart_config
 
 # setup logging
 from streamlit.logger import get_logger
@@ -464,11 +462,105 @@ class DeltaGenerator(object):
                 df, delta.data_frame)
         return self._enqueue_new_element_delta(set_data_frame)
 
-    def _native_chart(self, chart):
+    # TODO: Either remove this or make it public. This is only used in the
+    # mnist demo right now.
+    @_with_element
+    def _native_chart(self, element, chart):
         """Display a chart."""
-        def set_chart(delta):
-            chart.marshall(delta.chart)
-        return self._enqueue_new_element_delta(set_chart)
+        chart.marshall(element.chart)
+
+    @_with_element
+    def line_chart(self, element, data, width=0, height=0):
+        """Display a line chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.line_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
+            height: 200px
+
+        """
+        chart = Chart(data, type='line_chart', width=width, height=height)
+        chart.marshall(element.chart)
+
+    @_with_element
+    def area_chart(self, element, data, width=0, height=0):
+        """Display a area chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.area_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
+            height: 200px
+
+        """
+        chart = Chart(data, type='area_chart', width=width, height=height)
+        chart.marshall(element.chart)
+
+    @_with_element
+    def bar_chart(self, element, data, width=0, height=0):
+        """Display a bar chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     [[20, 30, 50]],
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.bar_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
+            height: 200px
+
+        """
+        chart = Chart(data, type='bar_chart', width=width, height=height)
+        chart.marshall(element.chart)
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
@@ -1027,24 +1119,3 @@ class DeltaGenerator(object):
 
         self._queue(delta)
         return generator
-
-
-def _register_native_chart_method(chart_type):
-    """Add a chart-building method to DeltaGenerator for a specific chart type.
-
-    Parameters
-    ----------
-    chart_type : str
-        The snake-case name of the chart type to add.
-
-    """
-    @_wraps_with_cleaned_sig(Chart.__init__)
-    def chart_method(self, data, **kwargs):
-        return self._native_chart(Chart(data, type=chart_type, **kwargs))
-
-    setattr(DeltaGenerator, chart_type, chart_method)
-
-
-# Add chart-building methods to DeltaGenerator
-for chart_type in chart_config.CHART_TYPES:
-    _register_native_chart_method(case_converters.to_snake_case(chart_type))
