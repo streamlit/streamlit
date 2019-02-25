@@ -12,30 +12,10 @@ setup_2_3_shims(globals())
 import json
 import unittest
 
-from streamlit.DeltaGenerator import DeltaGenerator, _export
+from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
 from streamlit import util
-
-
-class DeltaGeneratorDecoratorTest(unittest.TestCase):
-    """Test Decorators."""
-
-    def test_export(self):
-        """Test DeltaGenerator decorator export_to_st."""
-        def method():
-            pass
-
-        # undecorated function shouldn't have export_to_io
-        self.assertFalse(hasattr(method, '__export__'))
-
-        # Run decorator
-        _export(method)
-
-        # undecorated function should have export_to_io
-        self.assertTrue(hasattr(method, '__export__'))
-        # and it should be True
-        self.assertTrue(getattr(method, '__export__'))
 
 
 class DeltaGeneratorClassTest(unittest.TestCase):

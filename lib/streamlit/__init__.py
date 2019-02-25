@@ -40,7 +40,7 @@ import traceback
 import types
 
 from streamlit.DeltaConnection import DeltaConnection
-from streamlit.DeltaGenerator import DeltaGenerator, EXPORT_FLAG
+from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.caching import cache  # Just for export.
 from streamlit import util
 
@@ -52,7 +52,7 @@ this_module = sys.modules[__name__]
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
 
-def _wrap_delta_generator_method(method):
+def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
         # Only output if the config allows us to.
@@ -66,14 +66,41 @@ def _wrap_delta_generator_method(method):
     return wrapped_method
 
 
-for name in dir(DeltaGenerator):
-    member = getattr(DeltaGenerator, name)
+# DeltaGenerator methods:
 
-    if hasattr(member, EXPORT_FLAG):
-        method = member
-        # We introduce this level of indirection to wrap 'method' in a closure.
-        setattr(this_module, name, _wrap_delta_generator_method(method))
+altair_chart    = _with_dg(DeltaGenerator.altair_chart)  # noqa: E221
+area_chart      = _with_dg(DeltaGenerator.area_chart)  # noqa: E221
+audio           = _with_dg(DeltaGenerator.audio)  # noqa: E221
+balloons        = _with_dg(DeltaGenerator.balloons)  # noqa: E221
+bar_chart       = _with_dg(DeltaGenerator.bar_chart)  # noqa: E221
+dataframe       = _with_dg(DeltaGenerator.dataframe)  # noqa: E221
+deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
+empty           = _with_dg(DeltaGenerator.empty)  # noqa: E221
+error           = _with_dg(DeltaGenerator.error)  # noqa: E221
+exception       = _with_dg(DeltaGenerator.exception)  # noqa: E221
+header          = _with_dg(DeltaGenerator.header)  # noqa: E221
+help            = _with_dg(DeltaGenerator.help)  # noqa: E221
+image           = _with_dg(DeltaGenerator.image)  # noqa: E221
+info            = _with_dg(DeltaGenerator.info)  # noqa: E221
+json            = _with_dg(DeltaGenerator.json)  # noqa: E221
+line_chart      = _with_dg(DeltaGenerator.line_chart)  # noqa: E221
+map             = _with_dg(DeltaGenerator.map)  # noqa: E221
+markdown        = _with_dg(DeltaGenerator.markdown)  # noqa: E221
+progress        = _with_dg(DeltaGenerator.progress)  # noqa: E221
+pyplot          = _with_dg(DeltaGenerator.pyplot)  # noqa: E221
+subheader       = _with_dg(DeltaGenerator.subheader)  # noqa: E221
+success         = _with_dg(DeltaGenerator.success)  # noqa: E221
+table           = _with_dg(DeltaGenerator.table)  # noqa: E221
+text            = _with_dg(DeltaGenerator.text)  # noqa: E221
+title           = _with_dg(DeltaGenerator.title)  # noqa: E221
+vega_lite_chart = _with_dg(DeltaGenerator.vega_lite_chart)  # noqa: E221
+video           = _with_dg(DeltaGenerator.video)  # noqa: E221
+warning         = _with_dg(DeltaGenerator.warning)  # noqa: E221
 
+_text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
+
+
+# Special methods:
 
 def write(*args):
     """Write arguments to the report.
