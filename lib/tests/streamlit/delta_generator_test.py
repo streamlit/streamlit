@@ -16,7 +16,6 @@ import pandas as pd
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
-from streamlit import util
 
 
 class DeltaGeneratorClassTest(unittest.TestCase):
@@ -106,6 +105,19 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         element = get_element(self._dg)
         self.assertEqual(u'data', element.text.body)
         self.assertEqual(protobuf.Text.MARKDOWN, element.text.format)
+
+    def test_code(self):
+        """Test st.code()"""
+        code = "print('Hello, %s!' % 'Streamlit')"
+        expected_body = '```python\n%s\n```' % code
+
+        self._dg.code(code, language='python')
+        element = get_element(self._dg)
+
+        # st.code() creates a MARKDOWN text object that wraps
+        # the body inside a codeblock declaration
+        self.assertEqual(element.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(element.text.body, expected_body)
 
     def test_empty(self):
         """Test protobuf.Empty."""

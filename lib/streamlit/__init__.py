@@ -73,6 +73,7 @@ area_chart      = _with_dg(DeltaGenerator.area_chart)  # noqa: E221
 audio           = _with_dg(DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(DeltaGenerator.bar_chart)  # noqa: E221
+code            = _with_dg(DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(DeltaGenerator.dataframe)  # noqa: E221
 deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty           = _with_dg(DeltaGenerator.empty)  # noqa: E221
@@ -305,7 +306,7 @@ def echo():
                     break
                 lines_to_display.append(line)
         lines_to_display = textwrap.dedent(''.join(lines_to_display))
-        code.markdown(f'```\n{lines_to_display}\n```')
+        code.code(lines_to_display, 'python')
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning(f'Unable to display code. {str(err)}')

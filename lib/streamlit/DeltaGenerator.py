@@ -17,7 +17,6 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
 
@@ -174,6 +173,37 @@ class DeltaGenerator(object):
 
         """
         element.text.body = textwrap.dedent(body).strip()
+        element.text.format = protobuf.Text.MARKDOWN
+
+    @_with_element
+    def code(self, element, body, language='python'):
+        """Display a code block with optional syntax highlighting.
+
+        (This is a convenience wrapper around `st.markdown()`)
+
+        Parameters
+        ----------
+        body : str
+            The string to display as code.
+
+        language : str
+            The language that the code is written in, for syntax highlighting.
+            If omitted, the code will be unstyled.
+
+        Example
+        -------
+        >>> code = '''def hello():
+        ...     print("Hello, Streamlit!")'''
+        >>> st.code(code, language='python')
+
+        .. output::
+           http://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
+           height: 100px
+
+        """
+        markdown = '```%(language)s\n%(body)s\n```' % \
+                   {'language': language or '', 'body': body}
+        element.text.body = textwrap.dedent(markdown).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element

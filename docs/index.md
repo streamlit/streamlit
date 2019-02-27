@@ -50,6 +50,7 @@ API
   - :func:`streamlit.title`
   - :func:`streamlit.header`
   - :func:`streamlit.subheader`
+  - :func:`streamlit.code`
 
 - :doc:`api/data`
 
