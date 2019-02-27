@@ -181,5 +181,47 @@ class DeltaGeneratorChartTest(unittest.TestCase):
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
 
+
+class DeltaGeneratorImageTest(unittest.TestCase):
+    """Test DeltaGenerator Images"""
+
+    def setUp(self):
+        self._dg = DeltaGenerator(ReportQueue())
+
+    def test_image_from_url(self):
+        """Tests dg.image with single and multiple image URLs"""
+
+        url = 'https://streamlit.io/an_image.png'
+        caption = 'ahoy!'
+
+        # single URL
+        dg = self._dg.image(url, caption=caption, width=200)
+        element = get_element(dg)
+        self.assertEqual(element.imgs.width, 200)
+        self.assertEqual(len(element.imgs.imgs), 1)
+        self.assertEqual(element.imgs.imgs[0].url, url)
+        self.assertEqual(element.imgs.imgs[0].caption, caption)
+
+        # multiple URLs
+        dg = self._dg.image([url] * 5, caption=[caption] * 5, width=200)
+        element = get_element(dg)
+        self.assertEqual(len(element.imgs.imgs), 5)
+        self.assertEqual(element.imgs.imgs[4].url, url)
+        self.assertEqual(element.imgs.imgs[4].caption, caption)
+
+    def test_unequal_images_and_captions_error(self):
+        """Tests that the number of images and captions must match, or
+        an exception is generated"""
+
+        url = 'https://streamlit.io/an_image.png'
+        caption = 'ahoy!'
+
+        self._dg.image([url] * 5, caption=[caption] * 2)
+
+        element = get_element(self._dg)
+        self.assertEqual(element.exception.message,
+                         'Cannot pair 2 captions with 5 images.')
+
+
 def get_element(dg):
     return dg._queue.get_deltas()[-1].new_element

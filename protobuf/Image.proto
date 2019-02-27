@@ -2,7 +2,10 @@ syntax = "proto3";
 
 // An image which can be displayed on the screen.
 message Image {
-  string base_64_png = 1;
+  oneof type {
+    string base_64_png = 1;
+    string url = 3;
+  }
   string caption = 2;
 }
 

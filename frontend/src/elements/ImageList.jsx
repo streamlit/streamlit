@@ -4,9 +4,25 @@
  */
 
 import React, { PureComponent } from 'react';
-import { Alert }  from 'reactstrap';
+import { Alert } from 'reactstrap';
 
 import './ImageList.css';
+
+/**
+ * Returns an image source string, suitable for use in <img src=...>,
+ * from an Image protobuf object.
+ * An Image protobuf can contain either a URL string or a base64-encoded PNG.
+ */
+function getImageSrcString(imgProto) {
+  const type = imgProto.get('type');
+  if (type === 'base_64Png') {
+    return `data:image/png;base64,${imgProto.get('base_64Png')}`
+  } else if (type === 'url') {
+    return imgProto.get('url');
+  }
+
+  throw new Error(`Unrecognized Image protobuf type ${type}`);
+}
 
 /**
  * Functional element for a horizontal list of images.
@@ -38,7 +54,7 @@ class ImageList extends PureComponent {
             <div className="image-container" key={indx}>
               <img
                 style={{width: imgWidth}}
-                src={`data:image/png;base64,${img.get('base_64Png')}`}
+                src={getImageSrcString(img)}
                 alt={indx}
               />
               <div className="caption"> {img.get('caption')} </div>

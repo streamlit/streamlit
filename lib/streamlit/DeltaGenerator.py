@@ -748,10 +748,11 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        image : numpy.ndarray, list of numpy.ndarray, or BytesIO
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
+            OR a URL to fetch the image from
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
             Image caption. If displaying multiple images, caption should be a
@@ -762,7 +763,10 @@ class DeltaGenerator(object):
             If True, set the image width to the column width. This overrides
             the `width` parameter.
         clamp : bool
-            Clamp the image to the given range.
+            Clamp image pixel values to a valid range ([0-255] per channel).
+            This is only meaningful for byte array images; the parameter is
+            ignored for image URLs. If this is not set, and an image has an
+            out-of-range value, an error will be thrown.
 
         Example
         -------
