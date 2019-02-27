@@ -98,6 +98,7 @@ clean:
 	rm -rf lib/streamlit/static
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
+	rm -rf conda/streamlit-forge
 
 .PHONY: clean-docs
 clean-docs:
