@@ -45,6 +45,7 @@ PYTHON = {
     'CONTRIBUTING.md': r'(?P<pre>.*Note.*current version is `).*(?P<post>`.$)',
     'lib/setup.py': r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
     'docs/troubleshooting.md': r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
+    'conda/streamlit/meta.yaml': r'(?P<pre>.* version = ").*(?P<post>" %}$)',
 }
 
 NODE = {
