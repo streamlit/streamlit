@@ -22,6 +22,26 @@ requirements:
 
   run:
     - python
+    # TODO(armando): Make this list automatic.
+    # This is just a copy of the python3 dependencies from lib/Pipfile
+    # with the exception of purposely not including watchdog.
+    - base58
+    - botocore
+    - boto3
+    - click
+    - docutils
+    - entrypoints
+    - enum-compat
+    - future_fstrings
+    - future
+    - numpy
+    - pandas
+    - pillow
+    - protobuf
+    - psutil
+    - toml
+    - tornado
+    - tzlocal
 
 about:
   home: https://streamlit.io
