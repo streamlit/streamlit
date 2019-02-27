@@ -25,12 +25,9 @@ Someone finds a bug so you release a new internal version for testing.
 
 Then we can go to alpha, rc1, rc2, etc. but eventually its
 0.15.3
-
-See the following links for more examples.
-* https://semver.org/
-* https://www.python.org/dev/peps/pep-0440/
 """
 import fileinput
+import logging
 import os
 import re
 import sys
@@ -44,11 +41,15 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # These regex's are super greedy in that it actually matches everything
 # but the version number so we can throw any valid PEP440 version in
 # there.
-STUFF = {
+PYTHON = {
     'CONTRIBUTING.md': r'(?P<pre>.*Note.*current version is `).*(?P<post>`.$)',
+    'lib/setup.py': r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
+    'docs/troubleshooting.md': r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
+}
+
+NODE = {
     'frontend/package-lock.json': r'(?P<pre>^  "version": ").*(?P<post>",$)',
     'frontend/package.json': r'(?P<pre>^  "version": ").*(?P<post>",$)',
-    'lib/setup.py': r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
 }
 
 
@@ -68,8 +69,8 @@ def verify_pep440(version):
         raise(e)
 
 
-def main():
-    """Run main loop."""
+def update_files(data, python=True):
+    """Update files with new version number."""
 
     if len(sys.argv) != 2:
         e = Exception('Specify PEP440 version: "%s 1.2.3"' % sys.argv[0])
@@ -77,11 +78,29 @@ def main():
 
     version = verify_pep440(sys.argv[1])
 
-    for key, value in STUFF.items():
-        filename = os.path.join(BASE_DIR, key)
+    # Use normal sem versions for non python things ie node.
+    if not python:
+        version = version.base_version
+
+    for filename, regex in data.items():
+        filename = os.path.join(BASE_DIR, filename)
+        matched = False
+        pattern = re.compile(regex)
         for line in fileinput.input(filename, inplace=1):
-            line = re.sub(value, r'\g<pre>%s\g<post>' % version, line.rstrip())
+            if pattern.match(line.rstrip()):
+                matched = True
+            line = re.sub(regex, r'\g<pre>%s\g<post>' % version, line.rstrip())
             print(line)
+        if not matched:
+            logging.error('In file "%s", did not find regex "%s"',
+                          filename, regex)
+
+
+def main():
+    """Run main loop."""
+
+    update_files(PYTHON)
+    update_files(NODE, python=False)
 
 
 if __name__ == '__main__':

@@ -199,7 +199,8 @@ Streamlit's coding conventions can be found
 ## Versioning convention
 
 We use [SemVer 2.0](https://semver.org) with a couple of changes since SemVer
-is more for libraries than for user-facing products.
+is more for libraries than for user-facing products so we're following
+more of [PEP440](https://www.python.org/dev/peps/pep-0440/)
 
 Given a version number MAJOR.MINOR.PATCH, increment the:
 - MAJOR version when you make incompatible API changes
@@ -229,15 +230,12 @@ and make sure that none of the lines say `proxy`.
 
 **Note:** The current version is `0.27.0`.
 
-Update the version in the following locations:
-  - `CONTRIBUTING.md` (Like, 3 lines above :) )
-  - `lib/setup.py`
-  - `frontend/package.json`
-  - `docs/troubleshooting.md`
-
-Then, so things like `frontend/package-lock.json` get updated, run:
+There's a [script](scripts/update_version.py) that will update all the
+version numbers across different files, including this one.  See the
+[script](scripts/update_version.py) for more details but its usage is
+very simple.
 ```
-make init
+$ python scripts/update_version.py 1.2.3
 ```
 
 #### Test that Static Loading works
