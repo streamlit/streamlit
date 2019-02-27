@@ -21,7 +21,10 @@ setup_2_3_shims(globals())
 
 # Give the package a version.
 import pkg_resources
-__version__ = pkg_resources.require("streamlit")[0].version
+
+# This used to be pkg_resources.require('streamlit') but it would cause
+# pex files to fail. See #394 for more details.
+__version__ = pkg_resources.get_distribution('streamlit').version
 
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger
