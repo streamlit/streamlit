@@ -89,6 +89,11 @@ Vagrant.configure("2") do |config|
       [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
       nvm install --lts=dubnium
     fi
+    if [ ! -d ~vagrant/anaconda3 ] ; then
+      curl -s -O https://repo.anaconda.com/archive/Anaconda3-2018.12-Linux-x86_64.sh
+      bash Anaconda3-2018.12-Linux-x86_64.sh -b
+      echo 'export PATH=~/anaconda3/bin:${PATH}'>>~/.bashrc
+    fi
     if [ ! -d ~vagrant/.pyenv ] ; then
       git clone https://github.com/pyenv/pyenv.git ~/.pyenv
       echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
