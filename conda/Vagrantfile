@@ -78,5 +78,12 @@ Vagrant.configure("2") do |config|
     sudo apt-get install -y build-essential python3 python3-pip
     # Needed to start X
     sudo apt-get install -y xfce4 firefox xdg-utils
+    if [ ! -d ~vagrant/.nvm ] ; then
+      curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+      nvm install --lts=dubnium
+    fi
   SHELL
 end
