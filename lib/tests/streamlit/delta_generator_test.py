@@ -11,31 +11,11 @@ setup_2_3_shims(globals())
 
 import json
 import unittest
+import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator, _export
+from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit import protobuf
-from streamlit import util
-
-
-class DeltaGeneratorDecoratorTest(unittest.TestCase):
-    """Test Decorators."""
-
-    def test_export(self):
-        """Test DeltaGenerator decorator export_to_st."""
-        def method():
-            pass
-
-        # undecorated function shouldn't have export_to_io
-        self.assertFalse(hasattr(method, '__export__'))
-
-        # Run decorator
-        _export(method)
-
-        # undecorated function should have export_to_io
-        self.assertTrue(hasattr(method, '__export__'))
-        # and it should be True
-        self.assertTrue(getattr(method, '__export__'))
 
 
 class DeltaGeneratorClassTest(unittest.TestCase):
@@ -126,6 +106,19 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         self.assertEqual(u'data', element.text.body)
         self.assertEqual(protobuf.Text.MARKDOWN, element.text.format)
 
+    def test_code(self):
+        """Test st.code()"""
+        code = "print('Hello, %s!' % 'Streamlit')"
+        expected_body = '```python\n%s\n```' % code
+
+        self._dg.code(code, language='python')
+        element = get_element(self._dg)
+
+        # st.code() creates a MARKDOWN text object that wraps
+        # the body inside a codeblock declaration
+        self.assertEqual(element.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(element.text.body, expected_body)
+
     def test_empty(self):
         """Test protobuf.Empty."""
         self._dg.empty()
@@ -146,6 +139,88 @@ class DeltaGeneratorProgressTest(unittest.TestCase):
 
         element = get_element(dg)
         self.assertEqual(some_value, element.progress.value)
+
+
+class DeltaGeneratorChartTest(unittest.TestCase):
+    """Test DeltaGenerator Charts."""
+
+    def setUp(self):
+        """Setup."""
+        self._dg = DeltaGenerator(ReportQueue())
+
+    def test_line_chart(self):
+        """Test dg.line_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.line_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'LineChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
+
+    def test_area_chart(self):
+        """Test dg.area_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.area_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'AreaChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
+
+    def test_bar_chart(self):
+        """Test dg.bar_chart."""
+        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+
+        dg = self._dg.bar_chart(data)
+
+        element = get_element(dg)
+        self.assertEqual(element.chart.type, 'BarChart')
+        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
+        self.assertEqual(len(element.chart.components), 8)
+
+
+class DeltaGeneratorImageTest(unittest.TestCase):
+    """Test DeltaGenerator Images"""
+
+    def setUp(self):
+        self._dg = DeltaGenerator(ReportQueue())
+
+    def test_image_from_url(self):
+        """Tests dg.image with single and multiple image URLs"""
+
+        url = 'https://streamlit.io/an_image.png'
+        caption = 'ahoy!'
+
+        # single URL
+        dg = self._dg.image(url, caption=caption, width=200)
+        element = get_element(dg)
+        self.assertEqual(element.imgs.width, 200)
+        self.assertEqual(len(element.imgs.imgs), 1)
+        self.assertEqual(element.imgs.imgs[0].url, url)
+        self.assertEqual(element.imgs.imgs[0].caption, caption)
+
+        # multiple URLs
+        dg = self._dg.image([url] * 5, caption=[caption] * 5, width=200)
+        element = get_element(dg)
+        self.assertEqual(len(element.imgs.imgs), 5)
+        self.assertEqual(element.imgs.imgs[4].url, url)
+        self.assertEqual(element.imgs.imgs[4].caption, caption)
+
+    def test_unequal_images_and_captions_error(self):
+        """Tests that the number of images and captions must match, or
+        an exception is generated"""
+
+        url = 'https://streamlit.io/an_image.png'
+        caption = 'ahoy!'
+
+        self._dg.image([url] * 5, caption=[caption] * 2)
+
+        element = get_element(self._dg)
+        self.assertEqual(element.exception.message,
+                         'Cannot pair 2 captions with 5 images.')
 
 
 def get_element(dg):

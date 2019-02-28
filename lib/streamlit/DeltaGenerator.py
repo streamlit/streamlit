@@ -17,13 +17,8 @@ import sys
 import textwrap
 import traceback
 
-from streamlit import case_converters
-from streamlit import config
 from streamlit import protobuf
 from streamlit.Chart import Chart
-from streamlit import chart_config
-
-EXPORT_FLAG = '__export__'
 
 # setup logging
 from streamlit.logger import get_logger
@@ -31,16 +26,6 @@ LOGGER = get_logger(__name__)
 
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
-
-
-def _export(method):
-    """Wrap function to mark method to be exported to Streamlit package.
-
-    This is a function decorator. If using several decorators, make sure this
-    is the outermost decorator, i.e. the one that is at the top.
-    """
-    setattr(method, EXPORT_FLAG, True)
-    return method
 
 
 def _wraps_with_cleaned_sig(wrapped):
@@ -133,7 +118,6 @@ class DeltaGenerator(object):
             self._generate_new_ids = False
             self._id = id
 
-    @_export
     @_with_element
     def balloons(self, element):
         """Draw celebratory balloons.
@@ -148,7 +132,6 @@ class DeltaGenerator(object):
         element.balloons.type = protobuf.Balloons.DEFAULT
         element.balloons.execution_id = random.randrange(0xFFFFFFFF)
 
-    @_export
     @_with_element
     def text(self, element, body):
         """Write fixed-width text.
@@ -170,7 +153,6 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.PLAIN
 
-    @_export
     @_with_element
     def markdown(self, element, body):
         """Display string formatted as Markdown.
@@ -193,7 +175,37 @@ class DeltaGenerator(object):
         element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
-    @_export
+    @_with_element
+    def code(self, element, body, language='python'):
+        """Display a code block with optional syntax highlighting.
+
+        (This is a convenience wrapper around `st.markdown()`)
+
+        Parameters
+        ----------
+        body : str
+            The string to display as code.
+
+        language : str
+            The language that the code is written in, for syntax highlighting.
+            If omitted, the code will be unstyled.
+
+        Example
+        -------
+        >>> code = '''def hello():
+        ...     print("Hello, Streamlit!")'''
+        >>> st.code(code, language='python')
+
+        .. output::
+           http://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
+           height: 100px
+
+        """
+        markdown = '```%(language)s\n%(body)s\n```' % \
+                   {'language': language or '', 'body': body}
+        element.text.body = textwrap.dedent(markdown).strip()
+        element.text.format = protobuf.Text.MARKDOWN
+
     @_with_element
     def json(self, element, body):
         """Display object or string as a pretty-printed JSON string.
@@ -228,7 +240,6 @@ class DeltaGenerator(object):
                 else json.dumps(body))
         element.text.format = protobuf.Text.JSON
 
-    @_export
     @_with_element
     def title(self, element, body):
         """Display text in title formatting.
@@ -253,7 +264,6 @@ class DeltaGenerator(object):
         element.text.body = '# %s' % textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
-    @_export
     @_with_element
     def header(self, element, body):
         """Display text in header formatting.
@@ -275,7 +285,6 @@ class DeltaGenerator(object):
         element.text.body = '## %s' % textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
-    @_export
     @_with_element
     def subheader(self, element, body):
         """Display text in subheader formatting.
@@ -297,7 +306,6 @@ class DeltaGenerator(object):
         element.text.body = '### %s' % textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.MARKDOWN
 
-    @_export
     @_with_element
     def error(self, element, body):
         """Display error message.
@@ -315,7 +323,6 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.ERROR
 
-    @_export
     @_with_element
     def warning(self, element, body):
         """Display warning message.
@@ -333,7 +340,6 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.WARNING
 
-    @_export
     @_with_element
     def info(self, element, body):
         """Display an informational message.
@@ -351,7 +357,6 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.INFO
 
-    @_export
     @_with_element
     def success(self, element, body):
         """Display a success message.
@@ -369,20 +374,6 @@ class DeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.SUCCESS
 
-    @_export
-    def link(self, *args, **kwargs):
-        """Create an element showing a link. DEPRECATED.
-
-        Parameters
-        ----------
-        body : str
-            The link.
-
-        """
-        raise RuntimeError(
-            'Link() is deprecated. Please use markdown() instead.')
-
-    @_export
     @_with_element
     def help(self, element, obj):
         """Display object's doc string, nicely formatted.
@@ -411,7 +402,6 @@ class DeltaGenerator(object):
         from streamlit import doc_string
         doc_string.marshall(element, obj)
 
-    @_export
     @_with_element
     def exception(self, element, exception, exception_traceback=None):
         """Display an exception.
@@ -459,7 +449,6 @@ class DeltaGenerator(object):
             stack_trace = traceback.format_list(extracted_traceback)
         element.exception.stack_trace.extend(stack_trace)
 
-    @_export
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
         """Display an exception.
@@ -475,7 +464,6 @@ class DeltaGenerator(object):
         element.exception.message = message
         element.exception.stack_trace.extend(stack_trace)
 
-    @_export
     @_clean_up_sig
     def dataframe(self, _, df):
         """Display a dataframe as an interactive table.
@@ -504,13 +492,106 @@ class DeltaGenerator(object):
                 df, delta.data_frame)
         return self._enqueue_new_element_delta(set_data_frame)
 
-    def _native_chart(self, chart):
+    # TODO: Either remove this or make it public. This is only used in the
+    # mnist demo right now.
+    @_with_element
+    def _native_chart(self, element, chart):
         """Display a chart."""
-        def set_chart(delta):
-            chart.marshall(delta.chart)
-        return self._enqueue_new_element_delta(set_chart)
+        chart.marshall(element.chart)
 
-    @_export
+    @_with_element
+    def line_chart(self, element, data, width=0, height=0):
+        """Display a line chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.line_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
+            height: 200px
+
+        """
+        chart = Chart(data, type='line_chart', width=width, height=height)
+        chart.marshall(element.chart)
+
+    @_with_element
+    def area_chart(self, element, data, width=0, height=0):
+        """Display a area chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.area_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
+            height: 200px
+
+        """
+        chart = Chart(data, type='area_chart', width=width, height=height)
+        chart.marshall(element.chart)
+
+    @_with_element
+    def bar_chart(self, element, data, width=0, height=0):
+        """Display a bar chart.
+
+        Parameters
+        ----------
+        data : list, numpy.ndarray, pandas.DataFrame or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     [[20, 30, 50]],
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.bar_chart(chart_data)
+
+        .. output::
+            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
+            height: 200px
+
+        """
+        chart = Chart(data, type='bar_chart', width=width, height=height)
+        chart.marshall(element.chart)
+
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
         """Display a chart using the Vega Lite library.
@@ -561,7 +642,6 @@ class DeltaGenerator(object):
         vega_lite.marshall(
             element.vega_lite_chart, data, spec, **kwargs)
 
-    @_export
     @_with_element
     def altair_chart(self, element, altair_chart):
         """Display a chart using the Altair library.
@@ -598,7 +678,6 @@ class DeltaGenerator(object):
         from streamlit import vega_lite
         vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
 
-    @_export
     @_with_element
     def pyplot(self, element, fig=None, **kwargs):
         """Display a matplotlib.pyplot image.
@@ -661,7 +740,6 @@ class DeltaGenerator(object):
             image, None, -2, element.imgs, False)
 
     # TODO: Make this accept files and strings/bytes as input.
-    @_export
     @_with_element
     def image(
             self, element, image, caption=None, width=None,
@@ -670,10 +748,11 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        image : numpy.ndarray, list of numpy.ndarray, or BytesIO
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
+            OR a URL to fetch the image from
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
             Image caption. If displaying multiple images, caption should be a
@@ -684,7 +763,10 @@ class DeltaGenerator(object):
             If True, set the image width to the column width. This overrides
             the `width` parameter.
         clamp : bool
-            Clamp the image to the given range.
+            Clamp image pixel values to a valid range ([0-255] per channel).
+            This is only meaningful for byte array images; the parameter is
+            ignored for image URLs. If this is not set, and an image has an
+            out-of-range value, an error will be thrown.
 
         Example
         -------
@@ -709,13 +791,6 @@ class DeltaGenerator(object):
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp)
 
-    # TODO: remove `img()`, now replaced by `image()`
-    @_export
-    def img(self, *args, **kwargs):
-        """Display an image or list of images. DEPRECATED."""
-        raise RuntimeError('DEPRECATED. Please use image() instead.')
-
-    @_export
     @_with_element
     def audio(self, element, data, format='audio/wav'):
         """Display an audio player.
@@ -748,7 +823,6 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.audio, data)
         element.audio.format = format
 
-    @_export
     @_with_element
     def video(self, element, data, format='video/mp4'):
         """Display a video player.
@@ -781,7 +855,6 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
-    @_export
     @_with_element
     def progress(self, element, value):
         """Display a progress bar.
@@ -805,7 +878,6 @@ class DeltaGenerator(object):
         """
         element.progress.value = value
 
-    @_export
     @_with_element
     def empty(self, element):
         """Add a placeholder to the report.
@@ -827,7 +899,6 @@ class DeltaGenerator(object):
         # The protobuf needs something to be set
         element.empty.unused = True
 
-    @_export
     @_with_element
     def map(self, element, points):
         """Display a map with points on it.
@@ -860,7 +931,6 @@ class DeltaGenerator(object):
         data_frame_proto.marshall_data_frame(
             points[LAT_LON], element.map.points)
 
-    @_export
     @_with_element
     def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
         """Draw a map chart using the Deck.GL library.
@@ -978,7 +1048,6 @@ class DeltaGenerator(object):
         from streamlit import deck_gl
         deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
-    @_export
     @_with_element
     def table(self, element, df=None):
         """Display a static table.
@@ -1084,25 +1153,3 @@ class DeltaGenerator(object):
 
         self._queue(delta)
         return generator
-
-
-def _register_native_chart_method(chart_type):
-    """Add a chart-building method to DeltaGenerator for a specific chart type.
-
-    Parameters
-    ----------
-    chart_type : str
-        The snake-case name of the chart type to add.
-
-    """
-    @_export
-    @_wraps_with_cleaned_sig(Chart.__init__)
-    def chart_method(self, data, **kwargs):
-        return self._native_chart(Chart(data, type=chart_type, **kwargs))
-
-    setattr(DeltaGenerator, chart_type, chart_method)
-
-
-# Add chart-building methods to DeltaGenerator
-for chart_type in chart_config.CHART_TYPES:
-    _register_native_chart_method(case_converters.to_snake_case(chart_type))

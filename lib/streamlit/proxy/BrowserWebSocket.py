@@ -164,7 +164,11 @@ class BrowserWebSocket(WebSocketHandler):
             elif msg_type == 'rerun_script':
                 yield self._run(backend_msg.rerun_script)
             elif msg_type == 'clear_cache':
-                caching.clear_cache(True)
+                # Setting verbose=True causes clear_cache to print to stdout.
+                # Since this command was initiated from the browser, the user
+                # doesn't need to see the results of the command in their
+                # terminal.
+                caching.clear_cache(verbose=False)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:

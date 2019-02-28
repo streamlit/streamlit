@@ -138,7 +138,18 @@ def run_python_module(module, *args):
         The arguments to pass when running the module, if any.
 
     """
-    cmd = [sys.executable, '-m', module] + list(args)
+    executable = sys.executable
+
+    # When running as a pex file (https://github.com/pantsbuild/pex),
+    # sys.executable won't be able to find streamlit.proxy or any module
+    # that's not in the system python.  Pex modifies sys.path so the pex
+    # file is the first path and that's how we determine we're running
+    # in the pex file.
+    if re.match(r'.*pex$', sys.path[0]):
+        executable = sys.path[0]
+        LOGGER.debug('Running as a pex file: %s', executable)
+
+    cmd = [executable, '-m', module] + list(args)
     subprocess.Popen(cmd)
 
 

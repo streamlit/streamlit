@@ -20,50 +20,56 @@ from PIL import Image
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
-def marshall_images(img, captions, width, proto_imgs, clamp):
+# Imagelist types returned from _get_imagelist_and_type
+IMAGE_TYPE_URL = 'image_type_url'
+IMAGE_TYPE_BYTES = 'image_type_bytes'
+
+
+def marshall_images(image_data, captions, width, proto_imgs, clamp):
     """
-    Mashalls img and captions into a protobuf.ImageList.
+    Mashalls image_data and captions into a protobuf.ImageList.
 
-    Args
-    ----
-    img: list of NumPy images or a buffer containing image bytes.
-    captions: list of caption strings.
-    width: the image width.
-    proto_imgs: the ImageList proto to fill.
-    clamp: If true, clamp image values to given range. Otherwise,
-    will throw an exception if the image is out of range.
+    Parameters
+    ----------
+    image_data : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
+        Monochrome image of shape (w,h) or (w,h,1)
+        OR a color image of shape (w,h,3)
+        OR an RGBA image of shape (w,h,4)
+        OR a URL to fetch the image from
+        OR a list of one of the above, to display multiple images.
+    captions : str or list of str
+        Image caption. If displaying multiple images, caption should be a
+        list of captions (one for each image).
+    width : int
+        Image width. -1 means use the image width, -2 means use column width.
+    clamp : bool
+        Clamp image pixel values to a valid range ([0-255] per channel).
+        This is only meaningful for byte array images; the parameter is
+        ignored for image URLs. If this is not set, and an image has an
+        out-of-range value, an error will be thrown.
+    proto_imgs : ImageList
+        The ImageList protobuf object to fill out
     """
-    # Convert into cannonical form.
-    if isinstance(img, BytesIO):
-        img.seek(0)
-        pil_img = Image.open(img)
-        pil_imgs = [pil_img]
-    else:
-        # extra map enables support for arrays of PIL images
-        try:
-            numpy_imgs = np.array(img)
-        except TypeError:
-            LOGGER.debug(f'Unable to convert {type(img)} directly to an array.')
-            numpy_imgs = np.array(list(map(np.array, img)))
-        numpy_imgs = convert_to_uint8(numpy_imgs, clamp)
-        numpy_imgs = convert_to_4_color_channels(numpy_imgs)
-        numpy_imgs = convert_imgs_to_list(numpy_imgs)
-        pil_imgs = list(map(Image.fromarray, numpy_imgs))
 
-    captions = convert_captions_to_list(captions, len(pil_imgs))
+    image_list, image_type = _get_imagelist_and_type(image_data, clamp)
+    captions = convert_captions_to_list(captions, len(image_list))
 
-    # Load it into the protobuf.
-    for (img, caption) in zip(pil_imgs, captions):
-        img_bytes = BytesIO()
-        img.save(img_bytes, format='PNG')
-        img_bytes = img_bytes.getvalue()
-
+    # Load images into the protobuf.
+    for (image_data, caption) in zip(image_list, captions):
         proto_img = proto_imgs.imgs.add()
-        proto_img.base_64_png = base64.b64encode(img_bytes).decode('utf-8')
         proto_img.caption = caption
+
+        if image_type == IMAGE_TYPE_URL:
+            proto_img.url = image_data
+        else:
+            img_bytes = BytesIO()
+            image_data.save(img_bytes, format='PNG')
+            img_bytes = img_bytes.getvalue()
+            proto_img.base_64_png = base64.b64encode(img_bytes).decode('utf-8')
 
     # Assign the width parameter.
     proto_imgs.width = width
+
 
 def convert_to_uint8(imgs, clamp):
     """
@@ -96,6 +102,7 @@ def convert_to_uint8(imgs, clamp):
         raise RuntimeError(f'Illegal image format: {imgs.dtype}')
     return imgs.astype(np.uint8)
 
+
 def convert_to_4_color_channels(imgs):
     """Final dimension should be 3 for three color channels."""
     if imgs.shape[-1] == 4:
@@ -114,6 +121,7 @@ def convert_to_4_color_channels(imgs):
             return convert_to_4_color_channels(imgs.transpose((1, 2, 3, 0)))
     raise RuntimeError('Array shape cannot be displayed as an image.')
 
+
 def convert_imgs_to_list(imgs):
     """Convert single images into a length 1 array."""
     if len(imgs.shape) == 3:
@@ -122,6 +130,7 @@ def convert_imgs_to_list(imgs):
         return list(imgs)
     else:
         raise RuntimeError(f'Illegal image array shape: {imgs.shape}')
+
 
 def convert_captions_to_list(captions, n_imgs):
     """Canonicalize the caption format and ensure one caption per image."""
@@ -136,3 +145,55 @@ def convert_captions_to_list(captions, n_imgs):
         f"Cannot pair {len(captions)} captions with {n_imgs} images."
 
     return captions
+
+
+def _get_imagelist_and_type(input, clamp):
+    """
+    Converts 'input' into a list of URL strings or a list of
+    image byte arrays.
+
+    Parameters
+    ----------
+    input : numpy.ndarray, list of numpy.ndarray, or BytesIO
+        Monochrome image of shape (w,h) or (w,h,1)
+        OR a color image of shape (w,h,3)
+        OR an RGBA image of shape (w,h,4)
+        OR a URL to fetch the image from
+        OR a list of one of the above, to display multiple images.
+    clamp : bool
+        Clamp image pixel values to a valid range ([0-255] per channel).
+        This is only meaningful for byte array images; the parameter is
+        ignored for image URLs. If this is not set, and an image has an
+        out-of-range value, an error will be thrown.
+
+    Returns
+    -------
+    (image_list, image_type) : A tuple containing a list of
+    URL strings OR image byte arrays (suitable for sticking into an ImageList
+    proto), and a constant indicating the images' type - either
+    'image_type_url' or 'image_type_bytes'
+    """
+    if isinstance(input, str):
+        # Input is a single URL - wrap it in a list.
+        return [input], IMAGE_TYPE_URL
+    elif isinstance(input, list) and len(input) > 0 and isinstance(input[0], str):
+        # Input is a list of URLs
+        return input, IMAGE_TYPE_URL
+    else:
+        if isinstance(input, BytesIO):
+            input.seek(0)
+            pil_img = Image.open(input)
+            image_list = [pil_img]
+        else:
+            # extra map enables support for arrays of PIL images
+            try:
+                numpy_imgs = np.array(input)
+            except TypeError:
+                LOGGER.debug(f'Unable to convert {type(input)} directly to an array.')
+                numpy_imgs = np.array(list(map(np.array, input)))
+            numpy_imgs = convert_to_uint8(numpy_imgs, clamp)
+            numpy_imgs = convert_to_4_color_channels(numpy_imgs)
+            numpy_imgs = convert_imgs_to_list(numpy_imgs)
+            image_list = list(map(Image.fromarray, numpy_imgs))
+
+        return image_list, IMAGE_TYPE_BYTES
