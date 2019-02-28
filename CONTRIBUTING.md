@@ -199,7 +199,8 @@ Streamlit's coding conventions can be found
 ## Versioning convention
 
 We use [SemVer 2.0](https://semver.org) with a couple of changes since SemVer
-is more for libraries than for user-facing products.
+is more for libraries than for user-facing products so we're following
+more of [PEP440](https://www.python.org/dev/peps/pep-0440/)
 
 Given a version number MAJOR.MINOR.PATCH, increment the:
 - MAJOR version when you make incompatible API changes
@@ -227,17 +228,14 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.27.0`.
+**Note:** The current version is `0.28.0`.
 
-Update the version in the following locations:
-  - `CONTRIBUTING.md` (Like, 3 lines above :) )
-  - `lib/setup.py`
-  - `frontend/package.json`
-  - `docs/troubleshooting.md`
-
-Then, so things like `frontend/package-lock.json` get updated, run:
+There's a [script](scripts/update_version.py) that will update all the
+version numbers across different files, including this one.  See the
+[script](scripts/update_version.py) for more details but its usage is
+very simple.
 ```
-make init
+$ python scripts/update_version.py 1.2.3
 ```
 
 #### Test that Static Loading works
@@ -318,6 +316,43 @@ make publish-docs
 NOTE: You may have to clear your browser's cache to see changes in
 https://strealmit.io.
 
+#### Create the Conda packages from the Wheel
+
+* First sync from s3 the existing repo.  This is needed because we have
+  to rebuild the index with the old contents.
+```
+$ aws s3 sync \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    --profile streamlit
+```
+
+* You should not be in a pyenv or virtualenv.  You should have anaconda3
+installed so that conda is in your path before running the next command
+which will build the conda packages.  The packages will be in
+streamlit/conda/streamlit-forge
+```
+$ make create-conda-packages
+```
+
+* Now you should test that these packages actually work by temporarily
+  serving the packages locally.
+```
+$ make serve-conda
+```
+
+* There's a file called [conda/streamlit-dev.yml](conda/streamlit-dev.yml)
+that can be used to create a conda virtual environment.
+```
+$ conda env create -f conda/streamlit-dev.yml
+$ conda activate streamlit-dev
+(streamlit-dev) $ streamlit hello
+```
+
+* Sync back to s3
+```
+$ aws s3 sync $(git rev-parse --show-toplevel)/conda/streamlit-forge/ s3://repo.streamlit.io/streamlit-forge/ --acl public-read
+```
 
 #### Distribute the Wheel
 

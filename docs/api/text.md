@@ -20,4 +20,5 @@ multiple arguments, and multiple data types.
 .. autofunction:: streamlit.title
 .. autofunction:: streamlit.header
 .. autofunction:: streamlit.subheader
+.. autofunction:: streamlit.code
 ```

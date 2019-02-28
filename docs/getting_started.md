@@ -48,7 +48,7 @@ terminal:
 $ mkdir -p ~/.streamlit
 $ cat << EOF >> ~/.streamlit/config.toml
 [browser]
-remotelyTrackUsage = false
+gatherUsageStats = false
 EOF
 ```
 

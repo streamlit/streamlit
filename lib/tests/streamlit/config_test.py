@@ -244,6 +244,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_config_option_keys(self):
         config_options = [
+            u'browser.gatherUsageStats',
             u'browser.proxyAddress',
             u'browser.proxyPort',
             u'browser.remotelyTrackUsage',

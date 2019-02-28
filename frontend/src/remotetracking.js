@@ -14,12 +14,12 @@ let trackUsage = true;
 
 /**
  * Params:
- *   remotelyTrackUsage: a boolean. If true, we'll track usage remotely.
+ *   gatherUsageStats: a boolean. If true, we'll track usage remotely.
  */
-export function initRemoteTracker({remotelyTrackUsage}) {
-  if (remotelyTrackUsage != null) trackUsage = remotelyTrackUsage;
+export function initRemoteTracker({gatherUsageStats}) {
+  if (gatherUsageStats != null) trackUsage = gatherUsageStats;
 
-  if (remotelyTrackUsage) {
+  if (gatherUsageStats) {
     window.mixpanel.opt_in_tracking();
   } else {
     window.mixpanel.opt_out_tracking();

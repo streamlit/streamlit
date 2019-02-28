@@ -23,7 +23,7 @@ $ streamlit kill_proxy
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.27.0`.
+...and then verify that the version number printed is `0.28.0`.
 
 **Try reproducing the issue now.**
 
@@ -83,4 +83,26 @@ your script:
 
 ```bash
 $ streamlit kill_proxy
+```
+
+## Pex doesn't work with Streamlit.
+
+[Pex](https://github.com/pantsbuild/pex) can be used with Streamlit but
+it has to be run without any entry points.
+
+Correct:
+```
+$ pex streamlit -o streamlit.pex
+$ pex /path/to/streamlit.whl -o streamlit.pex
+```
+
+Incorrect:
+```
+$ pex streamlit -c streamlit.pex -o streamlit.pex
+$ pex /path/to/streamlit.whl -c streamlit.pex -o streamlit.pex
+```
+
+Here's an example of using the Pex file.
+```
+$ ./streamlit.pex script.py
 ```

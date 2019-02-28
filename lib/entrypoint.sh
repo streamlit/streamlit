@@ -9,7 +9,7 @@ mkdir -p ~/.streamlit
 cat >~/.streamlit/config.yaml <<EOF
 client:
   # Whether Streamlit should remotely record usage stats
-  remotelyTrackUsage: false
+  gatherUsageStats: false
 
 # Enable development configuration.  Without these two lines, docker
 # logs won't output anything.

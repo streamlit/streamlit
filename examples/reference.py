@@ -186,15 +186,17 @@ image_bytes = read_file_from_url(image_url)
 
 if image_bytes is not None:
     with st.echo():
+        # We can pass URLs to st.image:
+        st.image(image_url, caption='Sunset', use_column_width=True)
+
         # For some reason, `PIL` requires you to import `Image` this way.
         from PIL import Image
         image = Image.open(BytesIO(image_bytes))
 
-        st.image(image, caption='Sunset', use_column_width=True)
-
         array = np.array(image).transpose((2, 0, 1))
         channels = array.reshape(array.shape + (1,))
 
+        # st.image also accepts byte arrays:
         st.image(channels, caption=['Red', 'Green', 'Blue'], width=200)
 
 st.header('Visualizing data as images via OpenCV')

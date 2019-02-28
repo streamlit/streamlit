@@ -5,16 +5,17 @@
  * @fileoverview Represents formatted text.
  */
 
-import React, { PureComponent} from 'react';
+import React, { PureComponent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ReactJson from 'react-json-view';
-import { Alert }  from 'reactstrap';
+import { Alert } from 'reactstrap';
 import { Text as TextProto } from '../protobuf';
+import CodeBlock from './CodeBlock';
 import './Text.css';
 
- /**
-  * Functional element representing formatted text.
-  */
+/**
+ * Functional element representing formatted text.
+ */
 class Text extends PureComponent {
   render() {
     const {element, width} = this.props;
@@ -34,7 +35,7 @@ class Text extends PureComponent {
       case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={body} escapeHtml={false} />
+            <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
           </div>
         );
 
