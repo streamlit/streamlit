@@ -228,7 +228,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.27.0`.
+**Note:** The current version is `0.28.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -321,9 +321,11 @@ https://strealmit.io.
 * First sync from s3 the existing repo.  This is needed because we have
   to rebuild the index with the old contents.
 ```
-aws s3 sync s3://repo.streamlit.io/streamlit-forge/ $(git rev-parse --show-toplevel)/conda/streamlit-forge/
+$ aws s3 sync \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    --profile streamlit
 ```
-
 
 * You should not be in a pyenv or virtualenv.  You should have anaconda3
 installed so that conda is in your path before running the next command
