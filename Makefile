@@ -98,6 +98,7 @@ clean:
 	rm -rf lib/streamlit/static
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
+	rm -rf conda/streamlit-forge
 
 .PHONY: clean-docs
 clean-docs:
@@ -182,3 +183,10 @@ distribute:
 .PHONY: docker-build-frontend
 docker-build-frontend:
 	cd docker/streamlit ; docker-compose build frontend
+
+.PHONY: create-conda-packages serve-conda
+create-conda-packages:
+	cd conda ; ./create_packages.sh
+
+serve-conda:
+	cd conda ; python -m http.server 8000
