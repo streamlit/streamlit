@@ -197,7 +197,7 @@ class DeltaGenerator(object):
         >>> st.code(code, language='python')
 
         .. output::
-           http://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
+           https://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
            height: 100px
 
         """
@@ -523,7 +523,7 @@ class DeltaGenerator(object):
         >>> st.line_chart(chart_data)
 
         .. output::
-            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
+            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
             height: 200px
 
         """
@@ -554,7 +554,7 @@ class DeltaGenerator(object):
         >>> st.area_chart(chart_data)
 
         .. output::
-            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
+            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
             height: 200px
 
         """
@@ -585,7 +585,7 @@ class DeltaGenerator(object):
         >>> st.bar_chart(chart_data)
 
         .. output::
-            http://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
+            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
             height: 200px
 
         """
@@ -668,7 +668,7 @@ class DeltaGenerator(object):
         >>> st.altair_chart(c)
 
         .. output::
-           http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
         Examples of Altair charts can be found at
