@@ -183,3 +183,10 @@ distribute:
 .PHONY: docker-build-frontend
 docker-build-frontend:
 	cd docker/streamlit ; docker-compose build frontend
+
+.PHONY: create-conda-packages serve-conda
+create-conda-packages:
+	cd conda ; ./create_packages.sh
+
+serve-conda:
+	cd conda ; python -m http.server 8000

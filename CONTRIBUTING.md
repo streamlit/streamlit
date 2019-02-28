@@ -316,6 +316,41 @@ make publish-docs
 NOTE: You may have to clear your browser's cache to see changes in
 https://strealmit.io.
 
+#### Create the Conda packages from the Wheel
+
+* First sync from s3 the existing repo.  This is needed because we have
+  to rebuild the index with the old contents.
+```
+aws s3 sync s3://repo.streamlit.io/streamlit-forge/ $(git rev-parse --show-toplevel)/conda/streamlit-forge/
+```
+
+
+* You should not be in a pyenv or virtualenv.  You should have anaconda3
+installed so that conda is in your path before running the next command
+which will build the conda packages.  The packages will be in
+streamlit/conda/streamlit-forge
+```
+$ make create-conda-packages
+```
+
+* Now you should test that these packages actually work by temporarily
+  serving the packages locally.
+```
+$ make serve-conda
+```
+
+* There's a file called [conda/streamlit-dev.yml](conda/streamlit-dev.yml)
+that can be used to create a conda virtual environment.
+```
+$ conda env create -f conda/streamlit-dev.yml
+$ conda activate streamlit-dev
+(streamlit-dev) $ streamlit hello
+```
+
+* Sync back to s3
+```
+$ aws s3 sync $(git rev-parse --show-toplevel)/conda/streamlit-forge/ s3://repo.streamlit.io/streamlit-forge/ --acl public-read
+```
 
 #### Distribute the Wheel
 
