@@ -75,15 +75,34 @@ Vagrant.configure("2") do |config|
     sudo apt-get update -y
     sudo apt-get install -y htop curl
     # Development packages
-    sudo apt-get install -y build-essential python3 python3-pip
+    sudo apt-get install -y build-essential
     # Needed to start X
     sudo apt-get install -y xfce4 firefox xdg-utils
+    # Needed for `make protobuf`
+    sudo apt-get install -y protobuf-compiler
+    # for pyenv
+    sudo apt-get install -y make libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
     if [ ! -d ~vagrant/.nvm ] ; then
       curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
       export NVM_DIR="$HOME/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
       [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
       nvm install --lts=dubnium
+    fi
+    if [ ! -d ~vagrant/.pyenv ] ; then
+      git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+      echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+      echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+      echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> ~/.bashrc
+      export PATH=$HOME/.pyenv/bin:$PATH
+      pyenv init -
+      pyenv install 3.6.6
+
+      git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+      echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+
+      pyenv virtualenv-init -
+      pyenv virtualenv 3.6.6 streamlit
     fi
   SHELL
 end
