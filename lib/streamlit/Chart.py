@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A Python wrapper around ReChart charts.
@@ -97,7 +95,7 @@ class Chart(object):
         """
         import pandas as pd
         assert type in chart_config.CHART_TYPES_SNAKE, \
-            f'Did not recognize "{type}" type.'
+            'Did not recognize "%s" type.' % type
         self._data = pd.DataFrame(data)
         self._type = type
         self._width = width
@@ -193,7 +191,7 @@ class Chart(object):
         if value == dict_builder.CURRENT_COLUMN_NAME:
             i = currCycle
             if i >= len(self._data.columns):
-                raise IndexError('Index {} out of bounds'.format(i))
+                raise IndexError('Index %s out of bounds' % i)
             return self._data.columns[i]
 
         elif value == dict_builder.INDEX_COLUMN_NAME:

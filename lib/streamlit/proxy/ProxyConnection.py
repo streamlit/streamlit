@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Stores information about client and browser connections for a report."""
@@ -165,7 +164,11 @@ class ProxyConnection(object):
         """
         port = _get_browser_address_bar_port()
         quoted_name = urllib.parse.quote_plus(self.name)
-        return f'http://{proxy_address}:{port}/?name={quoted_name}'
+        return ('http://%(proxy_address)s:%(port)s/?name=%(quoted_name)s' % {
+            'proxy_address': proxy_address,
+            'port': port,
+            'quoted_name': quoted_name,
+        })
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -179,7 +182,7 @@ class ProxyConnection(object):
             live.
 
         """
-        LOGGER.debug(f'Serializing running report')
+        LOGGER.debug('Serializing running report')
         manifest = self._build_manifest(
             status=_Status.RUNNING,
             external_proxy_ip=util.get_external_ip(),
@@ -187,7 +190,10 @@ class ProxyConnection(object):
         )
 
         manifest_json = json.dumps(manifest).encode('utf-8')
-        return [(f'reports/{self.id}/manifest.json', manifest_json)]
+        return [(
+            'reports/%s/manifest.json' % self.id,
+            manifest_json
+        )]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -200,7 +206,8 @@ class ProxyConnection(object):
             of serialized Deltas.
 
         """
-        LOGGER.debug(f'Serializing final report')
+        LOGGER.debug('Serializing final report')
+
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
         manifest = self._build_manifest(
@@ -208,13 +215,18 @@ class ProxyConnection(object):
             n_deltas=len(deltas)
         )
         manifest_json = json.dumps(manifest).encode('utf-8')
-        return (
-            [(f'reports/{self.id}/{idx}.delta', delta.SerializeToString())
-                for idx, delta in enumerate(deltas)] +
-            # Must be at the end, so clients don't connect and read the
-            # manifest while the deltas haven't been saved yet.
-            [(f'reports/{self.id}/manifest.json', manifest_json)]
-        )
+
+        delta_tuples = [(
+            'reports/%(id)s/%(idx)s.delta' % {'id': self.id, 'idx': idx},
+            delta.SerializeToString()
+        ) for idx, delta in enumerate(deltas)]
+
+        manifest_tuple = [(
+            'reports/%(id)s/manifest.json' % {'id': self.id}, manifest_json)]
+
+        # Manifest must be at the end, so clients don't connect and read the
+        # manifest while the deltas haven't been saved yet.
+        return delta_tuples + manifest_json
 
     def _build_manifest(
             self, status, n_deltas=None, external_proxy_ip=None,

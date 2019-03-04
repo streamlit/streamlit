@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A library of useful utilities."""
@@ -36,7 +34,7 @@ def read_from_cache(path):
             LOGGER.debug('Cache HIT: ' + str(type(rv)))
     except util.Error as e:
         LOGGER.debug(e)
-        raise CacheError(f'Unable to read from cache: {e}')
+        raise CacheError('Unable to read from cache: %s' % e)
     return rv
 
 def write_to_cache(path, rv):
@@ -52,7 +50,7 @@ def write_to_cache(path, rv):
             os.remove(path)
         except (FileNotFoundError, IOError, OSError):
             pass
-        raise CacheError(f'Unable to write to cache: {e}')
+        raise CacheError('Unable to write to cache: %s' % e)
     LOGGER.debug('Cache MISS: ' + str(type(rv)))
 
 
@@ -95,19 +93,19 @@ def cache(func):
 
         # Temporarily display this message while computing this function.
         if len(argc) == 0 and len(argv) == 0:
-            message = f'Running {func.__name__}().'
+            message = 'Running %s().' % func.__name__
         else:
-            message = f'Running {func.__name__}(...).'
+            message = 'Running %s(...).' % func.__name__
         with st.spinner(message):
             # Calculate the filename hash.
             hasher = hashlib.new('md5')
-            LOGGER.debug('Created the hasher. (%s)' % func.__name__)
+            LOGGER.debug('Created the hasher. (%s)', func.__name__)
             arg_string = pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL)
-            LOGGER.debug('Hashing %i bytes. (%s)' % (len(arg_string), func.__name__))
+            LOGGER.debug('Hashing %i bytes. (%s)', (len(arg_string), func.__name__))
             hasher.update(arg_string)
             hasher.update(inspect.getsource(func).encode('utf-8'))
-            path = f'cache/f{hasher.hexdigest()}.pickle'
-            LOGGER.debug('Cache filename: ' + path)
+            path = 'cache/%s.pickle' % hasher.hexdigest()
+            LOGGER.debug('Cache filename: %s', path)
 
             # Load the file (hit) or compute the function (miss).
             try:
@@ -134,6 +132,6 @@ def clear_cache(verbose=False):
     if os.path.isdir(cache_path):
         shutil.rmtree(cache_path)
         if verbose:
-            print(f'Cleared {cache_path} directory.')
+            print('Cleared %s directory.' % cache_path)
     elif verbose:
-        print(f'No such directory {cache_path} so nothing to clear. :)')
+        print('No such directory %s so nothing to clear. :)' % cache_path)

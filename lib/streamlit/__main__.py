@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """This is a script which is run when the Streamlit package is executed."""
@@ -16,7 +15,11 @@ def print_usage(args):
     """Print this help message."""
     print("\nWhere [MODE] is one of:")
     for command, handler in COMMAND_HANDLERS.items():
-        print(f'  {command:<13} - {handler.__doc__}')
+        print(
+            '  %(command)13s - %(doc)s' % {
+                'command': command,
+                'doc': handler.__doc__
+            })
 
 
 def clear_cache(args):

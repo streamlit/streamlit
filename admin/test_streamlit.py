@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """Runs all the scripts in the examples folder (except this one)."""
 
 # Python 2/3 compatibility
@@ -40,17 +38,23 @@ def run_commands(section_header, commands, skip_last_input=False):
     st.header(section_header)
     for i, command in enumerate(commands):
         # Display the status.
-        status.warning(f'Running {section_header} {i+1}/{len(commands)} : ' +
-            command)
-        st.subheader(f'{i+1}/{len(commands)} : {command}')
-        print(f'Running `{command}`...')
+        vars = {
+            'section_header': section_header,
+            'total': len(commands),
+            'command': command,
+            'v': i + 1,
+        }
+        status.warning(
+            'Running %(section_header)s %(v)s/%(total)s : %(command)s' % vars)
+        st.subheader('%(v)s/%(total)s : %(command)s' % vars)
+        print('Running `%s`...' % command)
 
         # Run the command.
         exit_code = os.system(command)
         if exit_code == 0:
             st.success('Exit Code: 0')
         else:
-            st.error(f'Exit Code: {exit_code}')
+            st.error('Exit Code: %s' % exit_code)
 
         #
         last_command = (i + 1 == len(commands))
@@ -79,18 +83,21 @@ def main():
     ])
 
     run_commands('Examples', [
-        f'streamlit run {EXAMPLE_DIR}/{filename}'
+        'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {
+                'EXAMPLE_DIR': EXAMPLE_DIR,
+                'filename': filename,
+            }
             for filename in os.listdir(EXAMPLE_DIR)
             if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
     ])
 
     run_commands('Caching', [
-        f'streamlit clear_cache',
-        f'streamlit run {EXAMPLE_DIR}/caching.py'
+        'streamlit clear_cache',
+        'streamlit run %s/caching.py' % EXAMPLE_DIR
     ])
 
     run_commands('MNIST', [
-        f'streamlit run {EXAMPLE_DIR}/mnist-cnn.py'
+        'streamlit run %s/mnist-cnn.py' % EXAMPLE_DIR
     ], skip_last_input=True)
 
     status.success('Completed all tests!')

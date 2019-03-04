@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
 """doc_string unit test."""

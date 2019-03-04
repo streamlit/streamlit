@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """
@@ -84,22 +82,25 @@ def convert_to_uint8(imgs, clamp):
             return imgs
         elif np.amax(np.absolute(imgs)) > 200 and max <= 1.0:
             raise RuntimeError(
-                f'{image_type} images must be on the range {min} to {max}. ' +
-                'Try dividing your image values by 255.0.')
+                '%(image_type)s images must be on the range %(min)s to '
+                '%(max)s. Try dividing your image values by 255.0.' %
+                {'image_type': image_type, 'min': min, 'max': max})
         else:
             raise RuntimeError(
-                f'{image_type} images must be on the range {min} to {max}. ' +
-                'Use clamp=True to clamp the image to that range.')
+                '%(image_type)s images must be on the range %(min)s to '
+                '%(max)s. Use clamp=True to clamp the image to that range.' %
+                {'image_type': image_type, 'min': min, 'max': max})
 
     if issubclass(imgs.dtype.type, np.floating):
-        LOGGER.debug(f"Expanding range of floating point image: clamp={clamp}")
+        LOGGER.debug(
+            'Expanding range of floating point image: clamp=%s', clamp)
         imgs = clamp_range(imgs, 0.0, 1.0, 'Floating point')
         imgs = imgs * 255
     elif issubclass(imgs.dtype.type, np.integer):
-        LOGGER.debug("Clipping an integer-type image.")
+        LOGGER.debug('Clipping an integer-type image.')
         imgs = clamp_range(imgs, 0, 255, 'Integer-type')
     else:
-        raise RuntimeError(f'Illegal image format: {imgs.dtype}')
+        raise RuntimeError('Illegal image format: %s' % imgs.dtype)
     return imgs.astype(np.uint8)
 
 
@@ -129,7 +130,7 @@ def convert_imgs_to_list(imgs):
     elif len(imgs.shape) == 4:
         return list(imgs)
     else:
-        raise RuntimeError(f'Illegal image array shape: {imgs.shape}')
+        raise RuntimeError('Illegal image array shape: %s' % imgs.shape)
 
 
 def convert_captions_to_list(captions, n_imgs):
@@ -142,7 +143,10 @@ def convert_captions_to_list(captions, n_imgs):
         captions = list(map(str, captions))
 
     assert len(captions) == n_imgs, \
-        f"Cannot pair {len(captions)} captions with {n_imgs} images."
+        'Cannot pair %(len)s captions with %(n_imgs)s images.' % {
+            'len': len(captions),
+            'n_imgs': n_imgs,
+        }
 
     return captions
 
@@ -189,7 +193,9 @@ def _get_imagelist_and_type(input, clamp):
             try:
                 numpy_imgs = np.array(input)
             except TypeError:
-                LOGGER.debug(f'Unable to convert {type(input)} directly to an array.')
+                LOGGER.debug(
+                    'Unable to convert %s directly to an array.',
+                    type(input))
                 numpy_imgs = np.array(list(map(np.array, input)))
             numpy_imgs = convert_to_uint8(numpy_imgs, clamp)
             numpy_imgs = convert_to_4_color_channels(numpy_imgs)

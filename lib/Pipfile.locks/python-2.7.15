@@ -95,14 +95,6 @@
             "index": "pypi",
             "version": "==0.17.1"
         },
-        "future-fstrings": {
-            "hashes": [
-                "sha256:79c2f1b25d7c8d162d0a134471ec904090015122553742bb88c9ac1d60017136",
-                "sha256:891c5d5f073b3e3ff686bebde0a4c45c479065f45c8cbd6de19323d5a50738a8"
-            ],
-            "index": "pypi",
-            "version": "==0.4.5"
-        },
         "futures": {
             "hashes": [
                 "sha256:9ec02aa7d674acb8618afb127e27fde7fc68994c0437ad759fa094a574adb265",

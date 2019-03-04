@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Connection management methods."""
@@ -96,14 +95,15 @@ def _build_uri(report_id):
     """Create the Proxy's WebSocket URI for this report."""
     name = _build_name(report_id)
 
-    LOGGER.debug(f'Report name: "{name}"')
+    LOGGER.debug('Report name: "%s"', name)
 
     server = config.get_option('client.proxyAddress')
     port = config.get_option('client.proxyPort')
     report_name = urllib.parse.quote_plus(name)
-    uri = f'ws://{server}:{port}/new/{report_name}'
+    uri = ('ws://%(server)s:%(port)s/new/%(report_name)s' %
+        {'server': server, 'port': port, 'report_name': report_name})
 
-    LOGGER.debug(f'Report WebSocket URI: "{uri}"')
+    LOGGER.debug('Report WebSocket URI: "%s"', uri)
 
     return uri
 

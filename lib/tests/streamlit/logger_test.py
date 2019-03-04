@@ -59,16 +59,6 @@ class LoggerTest(unittest.TestCase):
     #     test2 = streamlit.logger.get_logger('test2')
     #     self.assertEqual(logging.CRITICAL, test2.getEffectiveLevel())
 
-    def test_init_aiohttp_logs(self):
-        """Test streamlit.logger.init_aiohttp_logs."""
-        streamlit.logger.init_aiohttp_logs()
-        loggers = [x for x in streamlit.logger.LOGGERS.keys()
-                   if 'aiohttp.' in x]
-        truth = ['aiohttp.access', 'aiohttp.client',
-                 'aiohttp.internal', 'aiohttp.server', 'aiohttp.web',
-                 'aiohttp.websocket']
-        self.assertEqual(sorted(truth), sorted(loggers))
-
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
         streamlit.logger.init_tornado_logs()

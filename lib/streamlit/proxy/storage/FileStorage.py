@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Handles a connecton to an S3 bucket to send Report data."""
@@ -26,11 +25,11 @@ class FileStorage(AbstractStorage):
 
     def __init__(self):
         """Constructor."""
-        LOGGER.debug(f'FileStorage __init__')
+        LOGGER.debug('FileStorage __init__')
         super(FileStorage, self).__init__()
-        LOGGER.debug(f'FileStorage post super')
+        LOGGER.debug('FileStorage post super')
         self._dir = self._mkdir()
-        LOGGER.debug(f'mkdir')
+        LOGGER.debug('mkdir')
 
     def _mkdir(self):
         cwd = os.getcwd()
@@ -56,7 +55,7 @@ class FileStorage(AbstractStorage):
                 report_path = os.path.dirname(full_filename)
                 _recursively_create_folder(report_path)
 
-            LOGGER.debug(f'Writing file {full_filename}')
+            LOGGER.debug('Writing file %s', full_filename)
 
             with open(full_filename, 'wb') as f:
                 f.write(data)
@@ -67,7 +66,7 @@ class FileStorage(AbstractStorage):
                 else:
                     yield
 
-        LOGGER.debug(f'Done writing files!')
+        LOGGER.debug('Done writing files!')
         raise gen.Return(report_path)
 
 

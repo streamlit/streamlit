@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Connection management methods."""
@@ -64,7 +62,7 @@ class Connection(object):
         """
         # This is the event loop to talk with the proxy.
         self._loop = IOLoop(make_current=False)
-        LOGGER.debug(f'Created io loop {self._loop}.')
+        LOGGER.debug('Created io loop %s.', self._loop)
 
         # This ReportQueue stores deltas until they're ready to be transmitted
         # over the websocket.
@@ -120,12 +118,12 @@ class Connection(object):
         """Open a connection to the server in a separate thread."""
         def connection_thread():
             self._loop.make_current()
-            LOGGER.debug(f'Running proxy on loop {IOLoop.current()}.')
+            LOGGER.debug('Running proxy on loop %s.', IOLoop.current())
             self._loop.run_sync(
                 lambda: self._attempt_connection(uri, initial_msg))
             self._loop.close()
             LOGGER.debug(
-                'Exit. (deltas remaining = %s)' % len(self._queue._deltas))
+                'Exit. (deltas remaining = %s)', len(self._queue._deltas))
 
         connection_thread = threading.Thread(target=connection_thread)
         connection_thread.daemon = False
@@ -144,7 +142,7 @@ class Connection(object):
             Connection._PROXY_CONNECTION_DISCONNECTED)
         assert already_connected, 'Already connectd to the proxy.'
 
-        LOGGER.debug(f'First attempt to connect to proxy at {uri}.')
+        LOGGER.debug('First attempt to connect to proxy at %s.', uri)
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
             self._proxy_connection_status = (
@@ -153,12 +151,12 @@ class Connection(object):
             return
         except IOError:
             LOGGER.debug(
-                f'First connection to {uri} failed. No proxy running?')
+                'First connection to %s failed. No proxy running?', uri)
 
         LOGGER.debug('Starting proxy.')
         yield self._launch_proxy()
 
-        LOGGER.debug(f'Second attempt to connect to proxy at {uri}.')
+        LOGGER.debug('Second attempt to connect to proxy at %s.', uri)
         try:
             ws = yield websocket_connect(uri, **WS_ARGS)
             self._proxy_connection_status = (
@@ -167,7 +165,7 @@ class Connection(object):
         except IOError:
             # Indicate that we failed to connect to the proxy so that the
             # cleanup thread can now run.
-            LOGGER.error(f'Failed to connect to proxy at {uri}.')
+            LOGGER.error('Failed to connect to proxy at %s.', uri)
             self._proxy_connection_status = Connection._PROXY_CONNECTION_FAILED
             raise ProxyConnectionError(uri)
 
@@ -176,7 +174,9 @@ class Connection(object):
         """Launch the proxy server."""
         wait_for_proxy_secs = config.get_option('client.waitForProxySecs')
         process_runner.run_python_module('streamlit.proxy')
-        LOGGER.debug('Sleeping %f seconds while waiting Proxy to start', wait_for_proxy_secs)
+        LOGGER.debug(
+            'Sleeping %f seconds while waiting Proxy to start',
+            wait_for_proxy_secs)
         yield gen.sleep(wait_for_proxy_secs)
 
     @gen.coroutine
@@ -188,8 +188,8 @@ class Connection(object):
 
         # Send other information across.
         throttle_secs = config.get_option('client.throttleSecs')
-        LOGGER.debug(f'Websocket Transmit ws = {ws}')
-        LOGGER.debug(f'Websocket Transmit queue = {self._queue}')
+        LOGGER.debug('Websocket Transmit ws = %s', ws)
+        LOGGER.debug('Websocket Transmit queue = %s', self._queue)
 
         while self._is_open:
             yield self._queue.flush_queue(ws)
@@ -197,7 +197,8 @@ class Connection(object):
 
         LOGGER.debug('Connection closing. Flushing queue for the last time.')
         yield self._queue.flush_queue(ws)
-        LOGGER.debug('Finished flusing the queue writing=%s' % ws.stream.writing())
+        LOGGER.debug(
+            'Finished flusing the queue writing=%s', ws.stream.writing())
         yield ws.close()
         LOGGER.debug('Closed the connection object.')
 
@@ -222,7 +223,8 @@ class Connection(object):
 
             if elapsed_time > FINAL_WAIT_SECONDS:
                 LOGGER.debug(
-                    f'Waited {FINAL_WAIT_SECONDS} for proxy to connect. Exiting.')
+                    'Waited %s for proxy to connect. Exiting.',
+                    FINAL_WAIT_SECONDS)
                 break
             elif self._proxy_connection_status == Connection._PROXY_CONNECTION_DISCONNECTED:
                 time.sleep(PROXY_CONNECTION_POLL_INTERVAL_SECONDS)
@@ -253,7 +255,7 @@ class Connection(object):
     def _wait_for_proxy_to_close(self):
         host = config.get_option('client.proxyAddress')
         port = config.get_option('client.proxyPort')
-        url = f'http://{host}:{port}/healthz'
+        url = 'http://%(host)s:%(port)s/healthz' % {'host': host, 'port': port}
 
         LOGGER.debug('Waiting for proxy to close...')
 
@@ -286,5 +288,5 @@ class ProxyConnectionError(Exception):
             The URI of the Streamlit Proxy that errored out.
 
         """
-        msg = f'Unable to connect to proxy at {uri}.'
+        msg = 'Unable to connect to proxy at %s.' % uri
         super(ProxyConnectionError, self).__init__(msg)

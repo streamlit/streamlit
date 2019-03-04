@@ -1,5 +1,5 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
 
 """Loads the configuration data."""
 
@@ -529,7 +529,7 @@ def show_config():
             continue
 
         out.append('')
-        out.append(f'[{section}]')
+        out.append('[%s]' % section)
         out.append('')
 
         for key, option in _config_options.items():
@@ -546,7 +546,7 @@ def show_config():
             description_paragraphs = _clean_paragraphs(option.description)
 
             for txt in description_paragraphs:
-                out.append(f'# {txt}')
+                out.append('# %s' % txt)
 
             if option.deprecated:
                 out.append('#')
@@ -560,7 +560,7 @@ def show_config():
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                out.append(f'# Default: {toml_default}')
+                out.append('# Default: %s' % toml_default)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -571,16 +571,16 @@ def show_config():
 
             if option_is_manually_set:
                 out.append(
-                    f'# The value below was set in {option.where_defined}')
+                    '# The value below was set in %s' % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
             if (len(toml_setting) == 0 or
                     option.visibility == 'obfuscated'):
-                out.append(f'#{key} =\n')
+                out.append('#%s =\n' % key)
 
             elif option.visibility == 'obfuscated':
-                out.append(f'{key} = (value hidden)\n')
+                out.append('%s = (value hidden)\n' % key)
 
             else:
                 out.append(toml_setting)
@@ -627,7 +627,9 @@ def _update_config_with_toml(raw_toml, where_defined):
     for section, options in parsed_config_file.items():
         for name, value in options.items():
             value = _maybe_read_env_variable(value)
-            _set_option(f'{section}.{name}', value, where_defined)
+            _set_option(
+                '%(section)s.%(name)s' % {'section': section, 'name': name},
+                value, where_defined)
 
 
 def _maybe_read_env_variable(value):

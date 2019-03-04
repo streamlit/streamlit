@@ -1,5 +1,5 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
 
 """This class stores a key-value pair for the config system."""
 
@@ -106,7 +106,7 @@ class ConfigOption(object):
         key_format = \
             r'(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
         match = re.match(key_format, self.key)
-        assert match, (f'Key "{self.key}" has invalid format.')
+        assert match, 'Key "%s" has invalid format.' % self.key
         self.section, self.name = match.group('section'), match.group('name')
 
         # This string is like a comment. If None, it should be set in __call__.

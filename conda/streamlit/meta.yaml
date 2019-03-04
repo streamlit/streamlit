@@ -32,7 +32,6 @@ requirements:
     - docutils
     - entrypoints
     - enum-compat
-    - future_fstrings
     - future
     - numpy
     - pandas

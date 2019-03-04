@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """The crypt of top secret undocumented Streamlit API calls."""
 
 # Python 2/3 compatibility

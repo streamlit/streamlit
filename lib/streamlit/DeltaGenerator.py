@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
@@ -722,7 +720,7 @@ class DeltaGenerator(object):
             import matplotlib.pyplot as plt
             plt.ioff()
         except ImportError:
-            raise ImportError(f'pyplot() command requires matplotlib')
+            raise ImportError('pyplot() command requires matplotlib')
 
         # You can call .savefig() on a Figure object or directly on the pyplot
         # module, in which case you're doing it to the latest Figure.

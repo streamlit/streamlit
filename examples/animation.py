@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """This script demonstrates animation in streamlit."""
 
 # Python 2/3 compatibility

@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Exports everything that should be visible to Streamlit users.
@@ -312,4 +310,4 @@ def echo():
         code.code(lines_to_display, 'python')
 
     except FileNotFoundError as err:  # noqa: F821
-        code.warning(f'Unable to display code. {str(err)}')
+        code.warning('Unable to display code. %s' % err)

@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Example of (almost) everything that's possible in streamlit."""
@@ -174,8 +173,8 @@ def read_file_from_url(url):
     try:
         return urllib.request.urlopen(url).read()
     except urllib.error.URLError:
-        st.error(f'Unable to load file from {url}. '
-                 'Is the internet connected?')
+        st.error('Unable to load file from %s. '
+                 'Is the internet connected?' % url)
     except Exception as e:
         st.exception(e)
     return None
@@ -258,7 +257,7 @@ st.header('Progress Bars')
 
 with st.echo():
     for percent in [0, 25, 50, 75, 100]:
-        st.write(f'{percent}% progress:')
+        st.write('%s%% progress:' % percent)
         st.progress(percent)
 
 st.header('Help')

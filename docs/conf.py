@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 # Configuration file for the Sphinx documentation builder.
+# -*- coding: utf-8 -*-
 
 import recommonmark
 from recommonmark.transform import AutoStructify

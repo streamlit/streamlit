@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
@@ -91,7 +89,7 @@ def _marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.Float64Index:
         proto_index.float_64_index.data.data.extend(pandas_index)
     else:
-        raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
+        raise RuntimeError("Can't handle %s yet." % type(pandas_index))
 
 
 def _marshall_table(pandas_table, proto_table):
@@ -134,7 +132,7 @@ def _marshall_any_array(pandas_array, proto_array):
             pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
-        raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
+        raise RuntimeError('Dtype %s not understood.' % pandas_array.dtype)
 
 
 def add_rows(delta1, delta2):
@@ -164,7 +162,8 @@ def _concat_index(index1, index2):
     # Otherwise, dispatch based on type.
     type1 = index1.WhichOneof('type')
     type2 = index2.WhichOneof('type')
-    assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
+        {'type1': type1, 'type2': type2}
 
     if type1 == 'plain_index':
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
@@ -180,7 +179,7 @@ def _concat_index(index1, index2):
     elif type1 == 'timedelta_index':
         index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
     else:
-        raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
+        raise NotImplementedError('Cannot concatenate "%s" indices.' % type)
 
 
 def _concat_any_array(any_array_1, any_array_2):
@@ -192,7 +191,8 @@ def _concat_any_array(any_array_1, any_array_2):
 
     type1 = any_array_1.WhichOneof('type')
     type2 = any_array_2.WhichOneof('type')
-    assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
+        {'type1': type1, 'type2': type2}
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 
@@ -210,7 +210,7 @@ def _get_data_frame(delta):
     elif delta_type == 'add_rows':
         return delta.add_rows
     else:
-        raise RuntimeError(f'Cannot extract DataFrame from {delta_type}.')
+        raise RuntimeError('Cannot extract DataFrame from %s.' % delta_type)
 
 
 def _index_len(index):

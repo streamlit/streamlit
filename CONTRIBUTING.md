@@ -394,10 +394,6 @@ make develop
   ```
   - (See https://github.com/pyenv/pyenv/issues/1219 for more info)
 
-* Running a streamlit script fails with "SyntaxError: encoding problem: future_fstrings"
-  - Uninstall and reinstall `future-fstrings`:
-  - `$ pip uninstall future-fstrings && pip install future-fstrings`
-
 * Unable to run unittests (pytest not installed)
 
 Ensure the Pipfile's dev packages are installed
