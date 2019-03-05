@@ -221,12 +221,12 @@ class ProxyConnection(object):
             delta.SerializeToString()
         ) for idx, delta in enumerate(deltas)]
 
-        manifest_tuple = [(
+        manifest_tuples = [(
             'reports/%(id)s/manifest.json' % {'id': self.id}, manifest_json)]
 
         # Manifest must be at the end, so clients don't connect and read the
         # manifest while the deltas haven't been saved yet.
-        return delta_tuples + manifest_json
+        return delta_tuples + manifest_tuples
 
     def _build_manifest(
             self, status, n_deltas=None, external_proxy_ip=None,
