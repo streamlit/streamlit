@@ -64,12 +64,17 @@ def kill_proxy(*args):
     for p in psutil.process_iter(attrs=['name', 'username']):
         # Attention: p.name() sometimes is 'python', sometimes 'Python', and
         # sometimes '/crazycondastuff/python'.
-        if (('python' in p.name() or 'Python' in p.name())
-                and 'streamlit.proxy' in p.cmdline()
-                and getpass.getuser() == p.info['username']):
-            print('Killing proxy with PID %d' % p.pid)
-            p.kill()
-            found_proxy = True
+        try:
+          if (('python' in p.name() or 'Python' in p.name())
+                  and 'streamlit.proxy' in p.cmdline()
+                  and getpass.getuser() == p.info['username']):
+              print('Killing proxy with PID %d' % p.pid)
+              p.kill()
+              found_proxy = True
+        # Ignore zombie process
+        except psutil.ZombieProcess as e:
+            pass
+
     if not found_proxy:
         print('No Streamlit proxies found.')
 
