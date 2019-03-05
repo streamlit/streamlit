@@ -7,47 +7,69 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.logger import get_logger
-
 import tzlocal
 
+from streamlit import util
+
+from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 np = None
 pd = None
 
 
-def marshall_data_frame(df, proto_df):
+def marshall_data_frame(data, proto_df):
     """Convert a pandas.DataFrame into a protobuf.DataFrame.
 
     Parameters
     ----------
-    df : Panda.DataFrame, Numpy.Array, or list
-        Input. Something that can be converted to a dataframe.
-    proto_df : Protobuf.DataFrame
+    data : pandas.DataFrame, numpy.ndarray, Iterable, dict, DataFrame or None
+        Something that is or can be converted to a dataframe.
+    proto_df : protobuf.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
 
     """
+    df = convert_anything_to_df(data)
+
+    # Convert df into an iterable of columns (each of type Series).
+    df_data = (
+        df.iloc[:, col]
+        for col in range(len(df.columns)))
+
     import numpy
     import pandas
     global pd, np
     np = numpy
     pd = pandas
 
-    if type(df) is pd.DataFrame:
-        pandas_df = df
-    elif type(df) is np.ndarray and len(df.shape) == 0:
-        pandas_df = pd.DataFrame([])
-    else:
-        pandas_df = pd.DataFrame(df)
+    _marshall_table(df_data, proto_df.data)
+    _marshall_index(df.columns, proto_df.columns)
+    _marshall_index(df.index, proto_df.index)
 
-    pandas_df_data = (
-        pandas_df.iloc[:, col]
-        for col in range(len(pandas_df.columns))
-    )
-    _marshall_table(pandas_df_data, proto_df.data)
-    _marshall_index(pandas_df.columns, proto_df.columns)
-    _marshall_index(pandas_df.index, proto_df.index)
+
+def convert_anything_to_df(df):
+    """Try to convert different formats to a Pandas Dataframe.
+
+    Parameters
+    ----------
+    df : ndarray, Iterable, dict, DataFrame, None, or any
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    """
+    if util.is_type(df, 'pandas.core.frame.DataFrame'):
+        return df
+
+    import pandas as pd
+
+    if util.is_type(df, 'numpy.ndarray') and len(df.shape) == 0:
+        return pd.DataFrame([])
+
+    # Try to convert to pandas.DataFrame. This will raise an error is df is not
+    # compatible with the pandas.DataFrame constructor.
+    return pd.DataFrame(df)
 
 
 def _marshall_index(pandas_index, proto_index):
@@ -57,7 +79,8 @@ def _marshall_index(pandas_index, proto_index):
     proto_index  - Protobuf.Index (output)
     """
     if type(pandas_index) == pd.Index:
-        _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
+        _marshall_any_array(
+            np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         min = pandas_index.min()
         max = pandas_index.max()
@@ -81,9 +104,11 @@ def _marshall_index(pandas_index, proto_index):
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.datetime_index.data.data.extend(
+            pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.TimedeltaIndex:
-        proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.timedelta_index.data.data.extend(
+            pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:
         proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.Float64Index:
@@ -147,6 +172,12 @@ def add_rows(delta1, delta2):
     df1 = _get_data_frame(delta1)
     df2 = _get_data_frame(delta2)
 
+    if len(df1.data.cols) == 0:
+        if len(df2.data.cols) == 0:
+            return
+        df1.CopyFrom(df2)
+        return
+
     _concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         _concat_any_array(col1, col2)
@@ -156,6 +187,7 @@ def _concat_index(index1, index2):
     """Contact index2 into index1."""
     # Special case if index1 is empty.
     if _index_len(index1) == 0:
+        index1.Clear()
         index1.CopyFrom(index2)
         return
 
@@ -177,7 +209,8 @@ def _concat_index(index1, index2):
     elif type1 == 'datetime_index':
         index1.datetime_index.data.data.extend(index2.datetime_index.data.data)
     elif type1 == 'timedelta_index':
-        index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
+        index1.timedelta_index.data.data.extend(
+            index2.timedelta_index.data.data)
     else:
         raise NotImplementedError('Cannot concatenate "%s" indices.' % type)
 

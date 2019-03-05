@@ -73,7 +73,7 @@ class Chart(object):
 
         Parameters
         ----------
-        data : np.Array or pd.DataFrame
+        data : pandas.DataFrame, numpy.ndarray, Iterable, or dict
             Data to be plotted. Series are referenced by column name.
 
         type : str
@@ -96,7 +96,7 @@ class Chart(object):
         import pandas as pd
         assert type in chart_config.CHART_TYPES_SNAKE, \
             'Did not recognize "%s" type.' % type
-        self._data = pd.DataFrame(data)
+        self._data = data_frame_proto.convert_anything_to_df(data)
         self._type = type
         self._width = width
         self._height = height

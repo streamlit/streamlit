@@ -21,19 +21,32 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     See DeltaGenerator.vega_lite_chart for docs.
     """
+    # Support passing data inside spec['datasets'] and spec['data'].
+    # (The data gets pulled out of the spec dict later on.)
     if type(data) in dict_types and spec is None:
         spec = data
         data = None
+        if not _looks_like_vega_lite_spec(spec):
+            raise ValueError('Invalid Vega Lite chart spec: %s' % spec)
 
-    if spec is None:
-        spec = dict()
+    # Support passing in kwargs. Example:
+    #   marshall(proto, {foo: 'bar'}, baz='boz')
+    if len(kwargs):
+        # Support passing no spec arg, but filling it with kwargs.
+        # Example:
+        #   marshall(proto, baz='boz')
+        if spec is None:
+            spec = dict()
 
-    # Merge spec with unflattened kwargs, where kwargs take precedence.
-    # This only works for string keys, but kwarg keys are strings anyways.
-    spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
+        # Merge spec with unflattened kwargs, where kwargs take precedence.
+        # This only works for string keys, but kwarg keys are strings anyways.
+        spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
 
-    # Support this API:
-    #   {datasets: {foo: df1, bar: df2}, ...}
+    if len(spec) == 0:
+        raise ValueError('Vega Lite charts require a non-empty spec dict.')
+
+    # Pull data out of spec dict when it's in a 'dataset' key:
+    #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
     if 'datasets' in spec:
         for k, v in spec['datasets'].items():
             dataset = proto.datasets.add()
@@ -41,10 +54,10 @@ def marshall(proto, data=None, spec=None, **kwargs):
             data_frame_proto.marshall_data_frame(v, dataset.data)
         del spec['datasets']
 
-    # Support these APIs:
-    #   {data: df}
-    #   {data: {value: df, ...}}
-    #   {data: {url: 'url'}}
+    # Pull data out of spec dict when it's in a 'data' key:
+    #   marshall(proto, {data: df})
+    #   marshall(proto, {data: {value: df, ...}})
+    #   marshall(proto, {data: {url: 'url'}})
     if 'data' in spec:
         data_spec = spec['data']
 
@@ -60,6 +73,12 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     if data is not None:
         data_frame_proto.marshall_data_frame(data, proto.data)
+
+
+def _looks_like_vega_lite_spec(spec):
+    # Vega Lite specs require both a 'mark' key and a 'data' key. Here we only
+    # check for 'mark' because we allow passing in the data separately.
+    return 'mark' in spec
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html

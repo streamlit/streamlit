@@ -463,13 +463,13 @@ class DeltaGenerator(object):
         element.exception.stack_trace.extend(stack_trace)
 
     @_clean_up_sig
-    def dataframe(self, _, df):
+    def dataframe(self, _, data=None):
         """Display a dataframe as an interactive table.
 
         Parameters
         ----------
-        df : Panda.DataFrame, Numpy.Array, or list
-            The dataframe to display.
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+            The data to display.
 
         Example
         -------
@@ -486,8 +486,7 @@ class DeltaGenerator(object):
         """
         from streamlit import data_frame_proto
         def set_data_frame(delta):
-            data_frame_proto.marshall_data_frame(
-                df, delta.data_frame)
+            data_frame_proto.marshall_data_frame(data, delta.data_frame)
         return self._enqueue_new_element_delta(set_data_frame)
 
     # TODO: Either remove this or make it public. This is only used in the
@@ -503,7 +502,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : list, numpy.ndarray, pandas.DataFrame or None
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict or DataFrame
             Data to be plotted.
 
         width : int
@@ -534,7 +533,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : list, numpy.ndarray, pandas.DataFrame or None
+        data : pandas.DataFrame, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
@@ -565,7 +564,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : list, numpy.ndarray, pandas.DataFrame or None
+        data : pandas.DataFrame, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
@@ -596,11 +595,11 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : list, numpy.ndarray, pandas.DataFrame or None
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             Data to be plotted. May also be passed inside the spec dict, to
             more closely follow the Vega Lite API.
 
-        spec : dict
+        spec : dict or None
             The Vega Lite spec for the chart. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
@@ -898,13 +897,13 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, points):
+    def map(self, element, data):
         """Display a map with points on it.
 
         Parameters
         ----------
-        points : Panda.DataFrame, Numpy.Array, or list
-            The points to display. Must have 'lat' and 'lon' columns.
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+            The data to be plotted. Must have 'lat' and 'lon' columns.
 
         Example
         -------
@@ -924,10 +923,10 @@ class DeltaGenerator(object):
         """
         from streamlit import data_frame_proto
         LAT_LON = ['lat', 'lon']
-        assert set(points.columns) >= set(LAT_LON), \
-            'Map points must contain "lat" and "lon" columns.'
+        assert set(data.columns) >= set(LAT_LON), \
+            'Map data must contain "lat" and "lon" columns.'
         data_frame_proto.marshall_data_frame(
-            points[LAT_LON], element.map.points)
+            data[LAT_LON], element.map.points)
 
     @_with_element
     def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
@@ -940,7 +939,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
 
-        data : list or Numpy Array or DataFrame or None
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             Data to be plotted, if no layer specified.
 
         spec : dict
@@ -1047,7 +1046,7 @@ class DeltaGenerator(object):
         deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_with_element
-    def table(self, element, df=None):
+    def table(self, element, data=None):
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
@@ -1055,7 +1054,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        df : Panda.DataFrame, Numpy.Array, or list
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             The table data.
 
         Example
@@ -1072,14 +1071,14 @@ class DeltaGenerator(object):
 
         """
         from streamlit import data_frame_proto
-        data_frame_proto.marshall_data_frame(df, element.table)
+        data_frame_proto.marshall_data_frame(data, element.table)
 
-    def add_rows(self, df):
+    def add_rows(self, data=None):
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
         ----------
-        df : Panda.DataFrame, Numpy.Array, or list
+        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             The table to concat.
 
         Example
@@ -1108,13 +1107,16 @@ class DeltaGenerator(object):
         >>> # df1 followed by the data for df2.
 
         """
-        from streamlit import data_frame_proto
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
+
+        from streamlit import data_frame_proto
+
         delta = protobuf.Delta()
         delta.id = self._id
-        data_frame_proto.marshall_data_frame(df, delta.add_rows)
+        data_frame_proto.marshall_data_frame(data, delta.add_rows)
         self._queue(delta)
+
         return self
 
     def _enqueue_new_element_delta(self, marshall_element):

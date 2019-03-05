@@ -49,6 +49,10 @@ export function dataFrameGetDimensions(df) {
  * Returns [rows, cls] for this table.
  */
 export function tableGetRowsAndCols(table) {
+  if (!table) {
+    return [0, 0];
+  }
+
   const cols = table.get('cols').size;
   if (cols === 0) {
     return [0, 0];
@@ -229,14 +233,20 @@ function anyArrayData(anyArray) {
  * Concatenates delta1 and delta2 together, returning a new Delta.
  */
 export function addRows(element, newRows) {
-  const newDataFrame = getDataFrame(element)
+  const existingDataFrame = getDataFrame(element);
+
+  if (!existingDataFrame) {
+    return setDataFrame(element, newRows);
+  }
+
+  existingDataFrame
     .update('index', (index) => (
       concatIndex(index, newRows.get('index'))))
     .updateIn(['data', 'cols'], (cols) => (
         cols.zipWith((col1, col2) => concatAnyArray(col1, col2),
           newRows.getIn(['data', 'cols']))
       ));
-  return setDataFrame(element, newDataFrame);
+  return setDataFrame(element, existingDataFrame);
 }
 
 /**
