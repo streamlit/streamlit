@@ -63,7 +63,11 @@ def run_handling_errors_in_subprocess(cmd_in, cwd=None):
     # The error handler gets added by 'streamlit run'.
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
 
-    subprocess.Popen(cmd, cwd=cwd)
+    # Wait is needed so that the proxy can cleanup after the command is
+    # run which is usually a rerun script.  Without the wait, the
+    # subprocess turns into a zombie process.
+    p = subprocess.Popen(cmd, cwd=cwd)
+    p.wait()
 
 
 def run_handling_errors_in_this_process(cmd, cwd=None):
