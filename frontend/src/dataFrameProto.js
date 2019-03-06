@@ -7,10 +7,64 @@
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
-import { dispatchOneOf, updateOneOf } from './immutableProto';
+import { dispatchOneOf, mapOneOf, updateOneOf } from './immutableProto';
 import { format } from './format';
 
 export const INDEX_COLUMN_DESIGNATOR = 'index';
+
+const STRING_COLLATOR = new Intl.Collator('en', {
+  numeric: false,
+  sensitivity: 'base',
+});
+
+function compareValues(a, b) {
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  }
+  return 0;
+}
+
+function compareStrings(a, b) {
+  // using a Collator is faster than string.localeCompare:
+  // https://stackoverflow.com/questions/14677060/400x-sorting-speedup-by-switching-a-localecompareb-to-ab-1ab10/52369951#52369951
+  return STRING_COLLATOR.compare(a, b);
+}
+
+/**
+ * Returns the row indices for a DataFrame, sorted based on the values in the given
+ * columnIdx. (Note that the columnIdx is 0-based, and so does *not* include the header column;
+ * similarly, the sorted row indices will not include the header row.)
+ */
+export function getSortedDataRowIndices(df, sortColumnIdx, sortAscending) {
+  const table = df.get('data');
+  const [nRows, nCols] = tableGetRowsAndCols(table);
+  if (sortColumnIdx < 0 || sortColumnIdx >= nCols) {
+    throw new Error(`Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
+  }
+
+  const col = table.getIn(['cols', sortColumnIdx]);
+  const cmp = mapOneOf(col, 'type', {
+    strings: compareStrings,
+    doubles: compareValues,
+    int64s: compareValues,
+    datetimes: compareValues,
+    timedeltas: compareValues,
+  });
+
+  const indices = new Array(nRows);
+  for (let i = 0; i < nRows; i += 1) {
+    indices[i] = i;
+  }
+  indices.sort((aRowIdx, bRowIdx) => {
+    const aValue = tableData(table, sortColumnIdx, aRowIdx);
+    const bValue = tableData(table, sortColumnIdx, bRowIdx);
+    return sortAscending ? cmp(aValue, bValue) : cmp(bValue, aValue);
+  });
+
+  return indices;
+}
 
 /**
  * Returns a dictionary of integers:
@@ -131,10 +185,17 @@ export function dataFrameGet(df, col, row) {
 }
 
 /**
- * Returns the given element from the table.
+ * Returns the given element from the table, formatted for display.
  */
 export function tableGet(table, columnIndex, rowIndex) {
-   return anyArrayGet(table.getIn(['cols', columnIndex]), rowIndex);
+  return anyArrayGet(table.getIn(['cols', columnIndex]), rowIndex);
+}
+
+/**
+ * Returns the raw data of the given element from the table.
+ */
+export function tableData(table, columnIndex, rowIndex) {
+  return anyArrayData(table.getIn(['cols', columnIndex])).get(rowIndex);
 }
 
 /**

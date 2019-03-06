@@ -25,6 +25,17 @@
 }
 
 .streamlit-container .dataframe.row-header,
+.streamlit-container .dataframe.col-header {
+  /* Row headers are click-to-sort, so we make the text unselectable.
+    Column headers are also unselectable, so that clicking to sort the
+    column's row header doesn't result in the entire column being selected */
+  user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
+}
+
+.streamlit-container .dataframe.row-header,
 .streamlit-container .dataframe.col-header,
 .streamlit-container .dataframe.data {
   overflow: hidden;
