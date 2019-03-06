@@ -99,6 +99,8 @@ API
 
   - :func:`streamlit.empty`
   - :func:`streamlit.help`
+  - :func:`streamlit.get_option`
+  - :func:`streamlit.set_option`
 
 .. :func:`genindex`
 .. :func:`modindex`

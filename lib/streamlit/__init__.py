@@ -102,6 +102,9 @@ warning         = _with_dg(DeltaGenerator.warning)  # noqa: E221
 _native_chart   = _with_dg(DeltaGenerator._native_chart)  # noqa: E221
 _text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
 
+# Config
+set_option = config.set_option
+get_option = config.get_option
 
 # Special methods:
 
