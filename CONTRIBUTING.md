@@ -351,7 +351,11 @@ $ conda activate streamlit-dev
 
 * Sync back to s3
 ```
-$ aws s3 sync $(git rev-parse --show-toplevel)/conda/streamlit-forge/ s3://repo.streamlit.io/streamlit-forge/ --acl public-read
+$ aws s3 sync \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    --acl public-read \
+    --profile streamlit
 ```
 
 #### Distribute the Wheel
