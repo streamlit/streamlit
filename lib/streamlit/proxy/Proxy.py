@@ -25,6 +25,7 @@ setup_2_3_shims(globals())
 
 import functools
 import logging
+import os
 import textwrap
 import traceback
 
@@ -431,6 +432,26 @@ class Proxy(object):
         LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
 
+    def _get_file_path(self, connection):
+        """Get file path from connection."""
+        file_path = connection.source_file_path
+
+        # If running as a module, ie python -m foo.bar, then the file_path
+        # is actually /path/to/runpy.py  Instead we should use the
+        # command_line which would be /path/to/foo/bar.py
+        if os.path.basename(file_path) == 'runpy.py':
+            file_path = connection.command_line[0]
+            LOGGER.debug(
+                'Running as module using connection.command_line(%s)'
+                ' as file_path.', file_path)
+
+        if len(file_path) == 0:
+            # DeltaConnection.py sets source_file_path to '' when running from
+            # the REPL.
+            return None
+
+        return file_path
+
     def _maybe_add_report_observer(self, connection, browser_key):
         """Start observer and store observer in self._report_observers.
 
@@ -453,20 +474,16 @@ class Proxy(object):
                 'Will not observe file system since keepAlive is True')
             return
 
-        file_path = connection.source_file_path
+        file_path = self._get_file_path(connection)
 
-        if len(file_path) == 0:
-            # DeltaConnection.py sets source_file_path to '' when running from
-            # the REPL.
-            LOGGER.debug('Will not observe file ""')
-            return
+        if file_path == None:
+            LOGGER.debug('Will not observe file')
 
         observer = self._report_observers.get(file_path)
 
         if observer is None:
             callback = _build_fsobserver_callback(connection)
-            observer = ReportObserver(
-                connection.source_file_path, callback)
+            observer = ReportObserver(file_path, callback)
             self._report_observers[file_path] = observer
 
         observer.register_browser(browser_key)
