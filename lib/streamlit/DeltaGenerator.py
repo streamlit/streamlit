@@ -51,7 +51,6 @@ def _clean_up_sig(method):
     return wrapped_method
 
 
-
 def _with_element(method):
     """Wrap function and pass a NewElement proto to be filled.
 
@@ -485,6 +484,7 @@ class DeltaGenerator(object):
 
         """
         from streamlit import data_frame_proto
+
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(
                 df, delta.data_frame)
@@ -730,10 +730,18 @@ class DeltaGenerator(object):
         # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
         # So here we pick double of that to make things look good in a high
         # DPI display.
-        dpi = kwargs.get('dpi', 200)
+        options = {
+            'dpi': 200,
+            'format': 'png',
+        }
+        # If some of the options are passed in from kwargs then replace
+        # the values in options with the ones from kwargs
+        options = {a: kwargs.get(a, b) for a, b in options.items()}
+        # Merge options back into kwargs.
+        kwargs.update(options)
 
         image = io.BytesIO()
-        fig.savefig(image, format='png', dpi=dpi)
+        fig.savefig(image, **kwargs)
         image_proto.marshall_images(
             image, None, -2, element.imgs, False)
 
