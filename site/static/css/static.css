@@ -340,7 +340,7 @@ a:hover {
   }
 
   .layout-xo4fo::after {
-    background: url(../images/decoration.png) no-repeat center 38% #e8eaeb;
+    background: url(/images/decoration.png) no-repeat center 38% #e8eaeb;
     background-size: 100%;
     content: "";
     display: block;
@@ -354,7 +354,7 @@ a:hover {
 
 @media (max-width: 999px) {
   .layout-xo4fo::after {
-    background: url(../images/decoration-sm.png) no-repeat top #e8eaeb;
+    background: url(/images/decoration-sm.png) no-repeat top #e8eaeb;
     background-size: 120%;
     content: "";
     display: block;
@@ -456,7 +456,7 @@ a.button {
 }
 
 .button.var--play::before {
-  background-image: url(../images/play.svg);
+  background-image: url(/images/play.svg);
 }
 
 .ratio-box {
@@ -513,7 +513,7 @@ a.button {
   z-index: 0;
 }
 .background-ob9si::before {
-  background: url(../images/ellipse-light-fallback.jpg) no-repeat right;
+  background: url(/images/ellipse-light-fallback.jpg) no-repeat right;
   background-size: cover;
   content: "";
   pointer-events: none;
@@ -595,7 +595,7 @@ a.button {
 
   .background-so9ir-lg {
     background-color: #5c6863;
-    background-image: url(../images/ellipses-fallback.jpg);
+    background-image: url(/images/ellipses-fallback.jpg);
     background-size: cover;
     overflow: hidden;
     position: absolute;
