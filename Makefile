@@ -132,7 +132,10 @@ publish-docs: docs
 	#
 		aws cloudfront create-invalidation \
 			--distribution-id=E5G9JPT7IOJDV \
-			--paths '/secret/docs/*' \
+			--paths \
+				'/secret/docs/*' \
+				'/secret/docs/api/*' \
+				'/secret/docs/tutorial/*' \
 			--profile streamlit
 
 .PHONY: site
