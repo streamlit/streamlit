@@ -55,8 +55,13 @@ def run_handling_errors_in_subprocess(cmd_in, cwd=None):
 
     if (type(cmd_in) in string_types  # noqa: F821
             or type(cmd_in) == unicode_str):
-        # Split string around whitespaces, but respect quotes.
-        cmd_list = shlex.split(cmd_in)
+        if sys.platform == 'win32':
+            # Windows is special
+            # https://stackoverflow.com/questions/33560364/python-windows-parsing-command-lines-with-shlex
+            cmd_list = [cmd_in]
+        else:
+            # Split string around whitespaces, but respect quotes.
+            cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
 
