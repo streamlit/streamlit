@@ -227,11 +227,6 @@ button:focus {
   height: 0.9rem;
 }
 
-.sort-arrow-icon {
-  width: 0.7rem;
-  height: 0.7rem;
-}
-
 @media (max-width: 768px) {
   header,
   .wide header {
