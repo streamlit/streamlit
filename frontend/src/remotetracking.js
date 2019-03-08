@@ -19,7 +19,7 @@ let trackUsage = true;
 export function initRemoteTracker({gatherUsageStats}) {
   if (gatherUsageStats != null) trackUsage = gatherUsageStats;
 
-  if (gatherUsageStats) {
+  if (trackUsage) {
     window.mixpanel.opt_in_tracking();
   } else {
     window.mixpanel.opt_out_tracking();
