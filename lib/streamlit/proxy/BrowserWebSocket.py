@@ -142,11 +142,11 @@ class BrowserWebSocket(WebSocketHandler):
             'New browser connection: sharing_enabled=%s',
             msg.new_connection.sharing_enabled)
 
-        msg.new_connection.remotely_track_usage = (
+        msg.new_connection.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
         LOGGER.debug(
-            'New browser connection: remotely_track_usage=%s',
-            msg.new_connection.remotely_track_usage)
+            'New browser connection: gather_usage_stats=%s',
+            msg.new_connection.gather_usage_stats)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
 
