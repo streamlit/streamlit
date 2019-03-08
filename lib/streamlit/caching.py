@@ -101,7 +101,8 @@ def cache(func):
             hasher = hashlib.new('md5')
             LOGGER.debug('Created the hasher. (%s)', func.__name__)
             arg_string = pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL)
-            LOGGER.debug('Hashing %i bytes. (%s)', (len(arg_string), func.__name__))
+            LOGGER.debug('Hashing %i bytes. %s',
+                len(arg_string), func.__name__)
             hasher.update(arg_string)
             hasher.update(inspect.getsource(func).encode('utf-8'))
             path = 'cache/%s.pickle' % hasher.hexdigest()

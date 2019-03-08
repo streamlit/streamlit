@@ -12,55 +12,69 @@ import { SortDirection } from '../SortDirection';
 class DataFrameCell extends PureComponent {
   render() {
     const {
-      columnIndex, rowIndex, className, style, contents, columnSortDirection, headerClickedCallback,
+      columnIndex, rowIndex, className, style, contents, columnSortDirection,
+      headerClickedCallback, sortedByUser
     } = this.props;
 
     let onClick;
     let role;
     let tabIndex;
+    let title;
+
+    const isDescending = columnSortDirection === SortDirection.DESCENDING;
+
     if (headerClickedCallback != null && rowIndex === 0) {
       onClick = () => headerClickedCallback(columnIndex);
-      role = "button";
+      role = 'button';
       tabIndex = 0;
-    } else {
-      onClick = undefined;
-      role = undefined;
-      tabIndex = undefined;
+      title = columnSortDirection === null ?
+        'Sort by this column' :
+        `Sorted by this column (${isDescending ? 'descending' : 'ascending'})`;
     }
 
     // The sort icon is only drawn in the top row
-    const sortIcon = rowIndex === 0 ? this.drawSortIcon(columnSortDirection) : undefined;
+    const sortIcon = rowIndex === 0 ?
+        drawSortIcon(columnSortDirection) :
+        undefined;
 
     return (
-      <div className={className} style={style} onClick={onClick} role={role} tabIndex={tabIndex}>
-        {sortIcon}
+      <div
+        className={className}
+        style={style}
+        onClick={onClick}
+        role={role}
+        tabIndex={tabIndex}
+        title={title}
+      >
+        {sortedByUser ? sortIcon : ''}
         {contents}
       </div>
-      );
+    );
   }
+}
 
-  drawSortIcon(sortDirection) {
-    // If these icons are changed, you may also need to update DataFrame.SORT_ICON_WIDTH
-    // to ensure proper column width padding
-    switch (sortDirection) {
-      case SortDirection.ASCENDING:
-        return (
-          <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-            <use xlinkHref="./open-iconic.min.svg#arrow-thick-top"/>
-          </svg>
-        );
 
-      case SortDirection.DESCENDING:
-        return (
-          <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-            <use xlinkHref="./open-iconic.min.svg#arrow-thick-bottom"/>
-          </svg>
-        );
+function drawSortIcon(sortDirection) {
+  // If these icons are changed, you may also need to update DataFrame.SORT_ICON_WIDTH
+  // to ensure proper column width padding
+  switch (sortDirection) {
+    case SortDirection.ASCENDING:
+      return (
+        <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
+          <use xlinkHref="./open-iconic.min.svg#chevron-top" />
+        </svg>
+      );
 
-      case undefined:
-      default:
-        return null;
-    }
+    case SortDirection.DESCENDING:
+      return (
+        <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
+          <use xlinkHref="./open-iconic.min.svg#chevron-bottom" />
+        </svg>
+      );
+
+    case undefined:
+    default:
+      return null;
   }
 }
 
@@ -82,13 +96,23 @@ DataFrameCell.propTypes = {
   /** Additional css styling for the cell */
   style: PropTypes.object.isRequired,
 
-  /** The HTML contents of the cell. Added to the DOM as a child of this DataFrameCell  */
+  /**
+   * The HTML contents of the cell. Added to the DOM as a child of this
+   * DataFrameCel.
+   */
   contents: PropTypes.node.isRequired,
 
   /**
-   * The {@link SortDirection} for this column, or undefined if the column is unsorted.
-   * No sorting is done here - this property is used to determine which, if any, sort icon
-   * to draw in column-header cells.
+   * If true, then the table's sorting was manually set by the user, by
+   * clicking on a column header. We only show the sort arrow when this is
+   * true.
+   */
+  sortedByUser: PropTypes.bool.isRequired,
+
+  /**
+   * The {@link SortDirection} for this column, or undefined if the column is
+   * unsorted. No sorting is done here - this property is used to determine
+   * which, if any, sort icon to draw in column-header cells.
    */
   columnSortDirection: PropTypes.string,
 

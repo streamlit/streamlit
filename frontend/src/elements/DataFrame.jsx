@@ -24,6 +24,8 @@ class DataFrame extends PureComponent {
     super(props);
     this.multGridRef = React.createRef();
     this.state = {
+      sortedByUser: false,
+
       /**
        * Index of the column on which the table is sorted.
        * (Column 0 = row indices).
@@ -44,7 +46,8 @@ class DataFrame extends PureComponent {
     return ({ columnIndex, key, rowIndex, style }) => {
       const { classes, contents } = cellContentsGetter(columnIndex, rowIndex);
       const headerClickedCallback = rowIndex === 0 ? this.toggleSortOrder : null;
-      const sortDirection = columnIndex === this.state.sortColumn ? this.state.sortDirection : null;
+      const sortDirection = columnIndex === this.state.sortColumn ?
+          this.state.sortDirection : null;
       return (
         <DataFrameCell
           key={key}
@@ -53,6 +56,7 @@ class DataFrame extends PureComponent {
           className={classes}
           style={style}
           contents={contents}
+          sortedByUser={this.state.sortedByUser}
           columnSortDirection={sortDirection}
           headerClickedCallback={headerClickedCallback}
         />
@@ -76,6 +80,7 @@ class DataFrame extends PureComponent {
     this.setState({
       sortColumn: columnIndex,
       sortDirection,
+      sortedByUser: true,
     });
   }
 
