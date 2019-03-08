@@ -300,14 +300,15 @@ export function addRows(element, newRows) {
     return setDataFrame(element, newRows);
   }
 
-  existingDataFrame
+  const newDataFrame = existingDataFrame
     .update('index', (index) => (
       concatIndex(index, newRows.get('index'))))
     .updateIn(['data', 'cols'], (cols) => (
         cols.zipWith((col1, col2) => concatAnyArray(col1, col2),
           newRows.getIn(['data', 'cols']))
       ));
-  return setDataFrame(element, existingDataFrame);
+
+  return setDataFrame(element, newDataFrame);
 }
 
 /**
