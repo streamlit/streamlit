@@ -478,6 +478,7 @@ class Proxy(object):
 
         if file_path == None:
             LOGGER.debug('Will not observe file')
+            return
 
         observer = self._report_observers.get(file_path)
 
