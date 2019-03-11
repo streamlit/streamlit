@@ -31,11 +31,14 @@ EXCLUDED_FILENAMES = (
 )
 
 
-def run_commands(section_header, commands, skip_last_input=False):
+def run_commands(section_header, commands, skip_last_input=False,
+                 comment=None):
     """Run a list of commands, displaying them within the given section."""
     global auto_run, status
 
     st.header(section_header)
+    if comment:
+        st.write(comment)
     for i, command in enumerate(commands):
         # Display the status.
         vars = {
@@ -81,6 +84,11 @@ def main():
     run_commands('Basic Commands', [
         'streamlit version',
     ])
+
+    run_commands(
+        'Standard System Errors',
+        ['streamlit run does_not_exist.py'],
+        comment='Checks to see that file not found error is caught')
 
     run_commands('Examples', [
         'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {
