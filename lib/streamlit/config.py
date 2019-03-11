@@ -682,7 +682,8 @@ def _maybe_convert_to_number(v):
 def _parse_config_file():
     """Parse the config file and update config parameters."""
     # Find the path to the config file.
-    home = os.getenv('HOME', None)
+    # os.path.expanduser works on OSX, Linux and Windows
+    home = os.path.expanduser('~')
     if home is None:
         raise RuntimeError('No home directory.')
     config_filename = os.path.join(home, '.streamlit', 'config.toml')
