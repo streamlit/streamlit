@@ -1,20 +1,19 @@
 """Runs all the scripts in the examples folder (except this one)."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-
 import os
 import sys
-import time
 import streamlit as st
 from streamlit import compatibility
 
 # This is how we get user input
 if not compatibility.running_py3():
-    input = raw_input
+    input = raw_input  # noqa: F821
 
 # True means we run through all tests automatically.
 auto_run = False
@@ -30,6 +29,7 @@ EXCLUDED_FILENAMES = (
     # Exclude caching because we special case it.
     'caching.py',
 )
+
 
 def run_commands(section_header, commands, skip_last_input=False):
     """Run a list of commands, displaying them within the given section."""
@@ -67,6 +67,7 @@ def run_commands(section_header, commands, skip_last_input=False):
                 print('Turning on auto run.')
                 auto_run = True
 
+
 def main():
     global status
 
@@ -76,7 +77,6 @@ def main():
 
     status = st.warning('Initializing...')
 
-
     # First run the 'streamlit commands'
     run_commands('Basic Commands', [
         'streamlit version',
@@ -84,24 +84,24 @@ def main():
 
     run_commands('Examples', [
         'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {
-                'EXAMPLE_DIR': EXAMPLE_DIR,
-                'filename': filename,
-            }
-            for filename in os.listdir(EXAMPLE_DIR)
-            if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+            'EXAMPLE_DIR': EXAMPLE_DIR,
+            'filename': filename,
+        } for filename in os.listdir(EXAMPLE_DIR)
+        if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
     ])
 
-    run_commands('Caching', [
-        'streamlit clear_cache',
-        'streamlit run %s/caching.py' % EXAMPLE_DIR
-    ])
+    run_commands(
+        'Caching',
+        ['streamlit clear_cache',
+         'streamlit run %s/caching.py' % EXAMPLE_DIR])
 
-    run_commands('MNIST', [
-        'streamlit run %s/mnist-cnn.py' % EXAMPLE_DIR
-    ], skip_last_input=True)
+    run_commands(
+        'MNIST', ['streamlit run %s/mnist-cnn.py' % EXAMPLE_DIR],
+        skip_last_input=True)
 
     status.success('Completed all tests!')
     st.balloons()
+
 
 if __name__ == '__main__':
     main()

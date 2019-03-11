@@ -16,11 +16,9 @@ from streamlit import util
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
-
 # String that Python prints at the beginning of a trace dump. This is not
 # guaranteed to be present in all exceptions.
 _TRACE_START_STR = 'Traceback (most recent call last):'
-
 
 # When an exception prints to stderr, the printed traceback contains lines
 # like:
@@ -29,7 +27,6 @@ _TRACE_START_STR = 'Traceback (most recent call last):'
 # This RegEx matches those, in multiline strings.
 # NOTE: these kinds of lines seem to print out for all exceptions.
 _TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
-
 
 # RegEx that matches strings that look like "Foo: bar boz"
 # This RegEx is meant to be used in single-line strings.
@@ -51,7 +48,7 @@ def run_handling_errors_in_subprocess(cmd_in, cwd=None):
     if compatibility.running_py3():
         unicode_str = str
     else:
-        unicode_str = unicode
+        unicode_str = unicode  # noqa: F821
 
     if (type(cmd_in) in string_types  # noqa: F821
             or type(cmd_in) == unicode_str):
@@ -90,10 +87,7 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
         The current working directory for this process.
 
     """
-    process = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            stderr=subprocess.PIPE)
+    process = subprocess.Popen(cmd, cwd=cwd, stderr=subprocess.PIPE)
 
     # Wait for the process to end and grab all data from stderr.
     # (We use this instead of .wait() because .communicate() grabs *all data*
