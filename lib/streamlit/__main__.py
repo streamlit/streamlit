@@ -71,8 +71,10 @@ def kill_proxy(*args):
               print('Killing proxy with PID %d' % p.pid)
               p.kill()
               found_proxy = True
-        # Ignore zombie process
-        except psutil.ZombieProcess as e:
+        # Ignore zombie process and proceses that have terminated
+        # already.  ie you can't call process.name() on a process that
+        # has terminated.
+        except (psutil.ZombieProcess, psutil.NoSuchProcess) as e:
             pass
 
     if not found_proxy:
