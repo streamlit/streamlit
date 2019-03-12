@@ -260,7 +260,20 @@ def open_browser(url):
     elif system == 'Darwin':
         cmd = ['open', url]
     elif system == 'Windows':
-        cmd = ['start', '""', url]
+        # Windows has a few bugs.
+        # * os.devnull doesnt exist so the open command below fails
+        # * subprocess doesnt actually pop up the browser even though
+        #   'start url' works from the command prompt
+        # * tornado for whatever reason doesnt map / to /index.html and
+        #   you get a 404.
+        data = urllib.parse.urlsplit(url)
+        (scheme, netloc, path, query, fragment) = data
+        if re.match(r'^/$', path):
+            path = '/index.html'
+        url = urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
+        import webbrowser
+        webbrowser.open(url)
+        return
     else:
         raise Error('Cannot open browser in platform "%s"' % system)
 
