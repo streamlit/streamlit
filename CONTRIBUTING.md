@@ -228,7 +228,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.28.0`.
+**Note:** The current version is `0.29.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -254,6 +254,7 @@ Test that it works:
 ```
 make install
 make pytest
+streamlit kill_proxy
 python admin/test_streamlit.py
 ```
 Check that all elements and figures work properly and the browser connection
@@ -283,9 +284,7 @@ python ../streamlit/examples/reference.py
 python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
-python
->>> import streamlit as st
->>> st.write('testing')
+python -c 'import streamlit as st; st.write("testing")'
 ```
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
@@ -295,7 +294,7 @@ Also, if possible, test the wheel in:
 #### Rebuild and publish the docs
 
 We do this right before distributing the wheel because the docs get compiled
-different depending on the Python version -- and we want to make sure they're
+differently depending on the Python version -- and we want to make sure they're
 always up to date.
 
 First, you should see whether the docs look right on your local machine:
@@ -314,7 +313,7 @@ make publish-docs
 ```
 
 NOTE: You may have to clear your browser's cache to see changes in
-https://strealmit.io.
+https://streamlit.io.
 
 #### Create the Conda packages from the Wheel
 
