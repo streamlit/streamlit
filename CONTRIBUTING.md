@@ -228,7 +228,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.28.0`.
+**Note:** The current version is `0.29.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -254,6 +254,7 @@ Test that it works:
 ```
 make install
 make pytest
+streamlit kill_proxy
 python admin/test_streamlit.py
 ```
 Check that all elements and figures work properly and the browser connection
@@ -283,9 +284,7 @@ python ../streamlit/examples/reference.py
 python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
-python
->>> import streamlit as st
->>> st.write('testing')
+python -c 'import streamlit as st; st.write("testing")'
 ```
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
@@ -295,7 +294,7 @@ Also, if possible, test the wheel in:
 #### Rebuild and publish the docs
 
 We do this right before distributing the wheel because the docs get compiled
-different depending on the Python version -- and we want to make sure they're
+differently depending on the Python version -- and we want to make sure they're
 always up to date.
 
 First, you should see whether the docs look right on your local machine:
@@ -314,7 +313,7 @@ make publish-docs
 ```
 
 NOTE: You may have to clear your browser's cache to see changes in
-https://strealmit.io.
+https://streamlit.io.
 
 #### Create the Conda packages from the Wheel
 
@@ -351,7 +350,11 @@ $ conda activate streamlit-dev
 
 * Sync back to s3
 ```
-$ aws s3 sync $(git rev-parse --show-toplevel)/conda/streamlit-forge/ s3://repo.streamlit.io/streamlit-forge/ --acl public-read
+$ aws s3 sync \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    --acl public-read \
+    --profile streamlit
 ```
 
 #### Distribute the Wheel
@@ -393,10 +396,6 @@ make develop
   $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
   ```
   - (See https://github.com/pyenv/pyenv/issues/1219 for more info)
-
-* Running a streamlit script fails with "SyntaxError: encoding problem: future_fstrings"
-  - Uninstall and reinstall `future-fstrings`:
-  - `$ pip uninstall future-fstrings && pip install future-fstrings`
 
 * Unable to run unittests (pytest not installed)
 

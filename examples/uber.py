@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """An example of showing geographic data."""
 
 # Python 2/3 compatibility
@@ -29,13 +27,13 @@ def display_uber_data(hour):
     data = load_data(100000)
     data = data[data[DATE_TIME].dt.hour == hour]
 
-    st.subheader(f'Geo Data at {hour}h')
+    st.subheader('Geo Data at %sh' % hour)
     st.map(data[data[DATE_TIME].dt.hour == hour])
 
-    st.subheader(f'Usage By Minute at {hour}h')
+    st.subheader('Usage By Minute at %sh' % hour)
     st.bar_chart(np.histogram(data[DATE_TIME].dt.minute, bins=60, range=(0,60))[0])
 
-    st.subheader(f'Raw Data at {hour}h')
+    st.subheader('Raw Data at %sh' % hour)
     st.write(data)
 
 if __name__ == '__main__':

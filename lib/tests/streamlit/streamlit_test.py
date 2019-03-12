@@ -2,6 +2,8 @@ import os
 import re
 import unittest
 
+import streamlit as st
+
 from streamlit import __version__
 
 
@@ -23,3 +25,19 @@ class StreamlitTest(unittest.TestCase):
     def test_streamlit_version(self):
         """Test streamlit.__version__."""
         self.assertEqual(__version__, get_version())
+
+    def test_get_option(self):
+        """Test streamlit.get_option."""
+        # This is set in lib/tests/conftest.py to False
+        self.assertEqual(False, st.get_option('browser.gatherUsageStats'))
+
+    def test_set_option(self):
+        """Test streamlit.set_option."""
+        # This is set in lib/tests/conftest.py to off
+        self.assertEqual('off', st.get_option('global.sharingMode'))
+
+        st.set_option('global.sharingMode', 'streamlit-public')
+        self.assertEqual(
+            'streamlit-public',
+            st.get_option('global.sharingMode')
+        )

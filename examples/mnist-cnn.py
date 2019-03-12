@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """An example of monitoring a simple neural net as it trains."""
 
 # Python 2/3 compatibility
@@ -29,12 +27,12 @@ class MyCallback(keras.callbacks.Callback):
     def on_train_begin(self, logs=None):
         st.header('Summary')
         self._summary_chart = self._create_chart('area', 300)
-        self._summary_stats = st.text(f'{"epoch":>8s} :  0')
+        self._summary_stats = st.text('%8s :  0' % 'epoch')
         st.header('Training Log')
 
     def on_epoch_begin(self, epoch, logs=None):
         self._epoch = epoch
-        st.subheader(f'Epoch {epoch}')
+        st.subheader('Epoch %s' % epoch)
         self._epoch_chart = self._create_chart('line')
         self._epoch_progress = st.info('No stats yet.')
         self._epoch_summary = st.empty()
@@ -50,7 +48,10 @@ class MyCallback(keras.callbacks.Callback):
             self.params['samples']
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
         self._epoch_summary.text(
-            f"loss: {logs['loss']:>7.5f} | acc: {logs['acc']:>7.5f}")
+            'loss: %(loss)7.5f | acc: %(acc)7.5f' % {
+                'loss': logs['loss'],
+                'acc': logs['acc'],
+            })
 
     def on_epoch_end(self, epoch, logs=None):
         # st.write('**Summary**')
@@ -58,13 +59,17 @@ class MyCallback(keras.callbacks.Callback):
         test_data = self._x_test[indices]
         prediction = np.argmax(self.model.predict(test_data), axis=1)
         st.image(1.0 - test_data, caption=prediction)
-        summary = '\n'.join(f'{k:>8s} : {v:>8.5f}' for (k, v) in logs.items())
+        summary = '\n'.join(
+            '%(k)8s : %(v)8.5f' % {'k': k, 'v': v}
+            for (k, v) in logs.items())
         st.text(summary)
-        self._summary_stats.text(f'{"epoch":>8s} :  {epoch}\n{summary}')
+        self._summary_stats.text(
+            '%(epoch)8s :  %(epoch)s\n%(summary)s' %
+            {'epoch': epoch, 'summary': summary})
 
     def _create_chart(self, type='line', height=0):
         empty_data = pd.DataFrame(columns=['loss', 'acc'])
-        epoch_chart = Chart(empty_data, f'{type}_chart', height=height)
+        epoch_chart = Chart(empty_data, '%s_chart' % type, height=height)
         epoch_chart.y_axis(type='number',
             y_axis_id="loss_axis", allow_data_overflow="true")
         epoch_chart.y_axis(type='number', orientation='right',

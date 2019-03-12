@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Declares the ReportObserver class, that watches the file system.
@@ -280,8 +279,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         """Return true if this object has 1+ files in its event filter."""
         return len(self._observed_files) > 0
 
-    def on_modified(self, event):
-        """Handle when file is modified.
+    def handle_file_change_event(self, event):
+        """Handle when file is changed.
+
+        The events that can call this are modification, creation or moved
+        events.
 
         Parameters
         ----------
@@ -295,6 +297,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         # Check for both modified and moved files, because many programs write
         # to a backup file then rename (i.e. move) it.
         if event.event_type == events.EVENT_TYPE_MODIFIED:
+            file_path = event.src_path
+        # On OSX with VI, on save, the file is deleted, the swap file is
+        # modified and then the original file is created hence why we
+        # capture EVENT_TYPE_CREATED
+        elif event.event_type == events.EVENT_TYPE_CREATED:
             file_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
             file_path = event.dest_path
@@ -324,3 +331,13 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         LOGGER.debug('File MD5 changed: %s', file_path)
         file_info['md5'] = new_md5
         file_info['fn']()
+
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        self.handle_file_change_event(event)
+
+    def on_modified(self, event):
+        if event.is_directory:
+            return
+        self.handle_file_change_event(event)

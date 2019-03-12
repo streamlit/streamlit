@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Handles a connecton to an S3 bucket to send Report data."""
@@ -77,7 +76,7 @@ class S3Storage(AbstractStorage):
         secret_access_key = config.get_option('s3.secretAccessKey')
 
         if aws_profile is not None:
-            LOGGER.debug(f'Using AWS profile "{aws_profile}".')
+            LOGGER.debug('Using AWS profile "%s".', aws_profile)
             self._s3_client = boto3.Session(
                 profile_name=aws_profile).client('s3')
         elif access_key_id is not None and secret_access_key is not None:
@@ -86,7 +85,7 @@ class S3Storage(AbstractStorage):
                 aws_access_key_id=access_key_id,
                 aws_secret_access_key=secret_access_key)
         else:
-            LOGGER.debug(f'Using default AWS profile.')
+            LOGGER.debug('Using default AWS profile.')
             self._s3_client = boto3.client('s3')
 
     @run_on_executor
@@ -198,7 +197,7 @@ class S3Storage(AbstractStorage):
                 Key=self._s3_key(path),
                 ContentType=mime_type,
                 ACL=acl)
-            LOGGER.debug('Uploaded: "%s"' % path)
+            LOGGER.debug('Uploaded: "%s"', path)
 
             if progress_coroutine:
                 yield progress_coroutine(math.ceil(100 * (i + 1) / len(files)))

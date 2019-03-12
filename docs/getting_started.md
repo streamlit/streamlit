@@ -8,20 +8,37 @@ Installing Streamlit is just a one-line operation! But first there are some
 prerequisites that we must get out of the out of the way:
 
 1. Streamlit requires Python 2.7 or higher, or 3.6 or higher.
-2. You'll also need the `pip` tool for installing Python packages.
+2. You'll also need **one of** the following Python package managers:
+   - **PIP**:
    [Here](https://pip.pypa.io/en/stable/installing/) is how you can install
-   `pip`.
+   PIP.
+   - **Conda**: You can find [instructions
+     here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html?highlight=conda).
 
 ## Installation
 
-You can install Streamlit by typing the following line into a terminal:
+You can install Streamlit by typing one of the following into a terminal:
+
+### Installation via PIP
 
 ```bash
 $ pip install streamlit
 ```
 
-**...and you're done!** So now you can go ahead and try launching our
-included "hello world" report:
+### Installation via Conda
+
+```bash
+# Add required channels.
+$ conda config --add channels conda-forge
+$ conda config --add channels https://repo.streamlit.io/streamlit-forge
+
+# Install Streamlit!
+$ conda install streamlit
+```
+
+## Testing it out
+Now that you installed Streamlit, go ahead and try launching our included
+"hello world" report:
 
 ```bash
 $ streamlit hello

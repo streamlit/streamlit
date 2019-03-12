@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
@@ -58,7 +57,7 @@ def marshall(proto, obj):
     doc_string = inspect.getdoc(obj)
 
     if doc_string is None:
-        doc_string = f'No docs available.'
+        doc_string = 'No docs available.'
 
     proto.doc_string.doc_string = doc_string
 

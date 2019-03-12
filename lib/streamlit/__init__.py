@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Exports everything that should be visible to Streamlit users.
@@ -101,8 +99,12 @@ vega_lite_chart = _with_dg(DeltaGenerator.vega_lite_chart)  # noqa: E221
 video           = _with_dg(DeltaGenerator.video)  # noqa: E221
 warning         = _with_dg(DeltaGenerator.warning)  # noqa: E221
 
+_native_chart   = _with_dg(DeltaGenerator._native_chart)  # noqa: E221
 _text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
 
+# Config
+set_option = config.set_option
+get_option = config.get_option
 
 # Special methods:
 
@@ -312,4 +314,4 @@ def echo():
         code.code(lines_to_display, 'python')
 
     except FileNotFoundError as err:  # noqa: F821
-        code.warning(f'Unable to display code. {str(err)}')
+        code.warning('Unable to display code. %s' % err)

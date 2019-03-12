@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """This is a script which is run when the Streamlit package is executed."""
@@ -16,7 +15,11 @@ def print_usage(args):
     """Print this help message."""
     print("\nWhere [MODE] is one of:")
     for command, handler in COMMAND_HANDLERS.items():
-        print(f'  {command:<13} - {handler.__doc__}')
+        print(
+            '  %(command)13s - %(doc)s' % {
+                'command': command,
+                'doc': handler.__doc__
+            })
 
 
 def clear_cache(args):
@@ -61,12 +64,17 @@ def kill_proxy(*args):
     for p in psutil.process_iter(attrs=['name', 'username']):
         # Attention: p.name() sometimes is 'python', sometimes 'Python', and
         # sometimes '/crazycondastuff/python'.
-        if (('python' in p.name() or 'Python' in p.name())
-                and 'streamlit.proxy' in p.cmdline()
-                and getpass.getuser() == p.info['username']):
-            print('Killing proxy with PID %d' % p.pid)
-            p.kill()
-            found_proxy = True
+        try:
+          if (('python' in p.name() or 'Python' in p.name())
+                  and 'streamlit.proxy' in p.cmdline()
+                  and getpass.getuser() == p.info['username']):
+              print('Killing proxy with PID %d' % p.pid)
+              p.kill()
+              found_proxy = True
+        # Ignore zombie process
+        except psutil.ZombieProcess as e:
+            pass
+
     if not found_proxy:
         print('No Streamlit proxies found.')
 

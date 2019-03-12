@@ -1,5 +1,5 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
 
 """A proxy server between the Streamlit client and web browser.
 
@@ -25,6 +25,7 @@ setup_2_3_shims(globals())
 
 import functools
 import logging
+import os
 import textwrap
 import traceback
 
@@ -90,7 +91,8 @@ class Proxy(object):
             self._report_expiration_secs == float('inf'))
 
         LOGGER.debug(
-            f'Creating proxy with self._connections: {id(self._connections)}')
+            'Creating proxy with self._connections: %s',
+            id(self._connections))
 
         self._set_up_server()
 
@@ -118,11 +120,13 @@ class Proxy(object):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
-            LOGGER.debug(f'Serving static content from {static_path}')
+            LOGGER.debug('Serving static content from %s', static_path)
 
             routes.extend([
-                (r"/()$", web.StaticFileHandler, {'path': f'{static_path}/index.html'}),
-                (r"/(.*)", web.StaticFileHandler, {'path': f'{static_path}/'}),
+                (r"/()$", web.StaticFileHandler,
+                    {'path': '%s/index.html' % static_path}),
+                (r"/(.*)", web.StaticFileHandler,
+                    {'path': '%s/' % static_path}),
             ])
         else:
             LOGGER.debug(
@@ -134,7 +138,7 @@ class Proxy(object):
         http_server = HTTPServer(app)
         http_server.listen(port)
 
-        LOGGER.debug('Proxy HTTP server for started on port {}'.format(port))
+        LOGGER.debug('Proxy HTTP server for started on port %s', port)
 
     def run_app(self):
         """Run web app."""
@@ -148,7 +152,7 @@ class Proxy(object):
             LOGGER.warning(
                 'Connection timeout to proxy.\n'
                 'Did you try to connect and nothing happened? '
-                f'Go to {util.HELP_DOC} for debugging hints.')
+                'Go to %s for debugging hints.', util.HELP_DOC)
 
     def stop(self):
         """Stop proxy.
@@ -166,10 +170,10 @@ class Proxy(object):
 
         So that browser connections can connect to it.
         """
-        LOGGER.debug(f'Registering proxy connection for "{connection.name}"')
+        LOGGER.debug('Registering proxy connection for "%s"', connection.name)
         LOGGER.debug(
-            f'About to start registration: '
-            f'{list(self._connections.keys())} ({id(self._connections)})')
+            'About to start registration: %s (%s)',
+            list(self._connections.keys()), id(self._connections))
 
         # Open the browser and connect it to this report_name
         # (i.e. connection.name) if we don't have one open already.
@@ -192,7 +196,7 @@ class Proxy(object):
 
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
-            LOGGER.debug(f'In connection timeout for "{connection.name}".')
+            LOGGER.debug('In connection timeout for "%s".', connection.name)
             connection.end_grace_period()
             self.schedule_potential_deregister_and_stop(connection)
 
@@ -200,8 +204,8 @@ class Proxy(object):
             connection_timeout()
 
         LOGGER.debug(
-            f'Finished registering connection: '
-            f'{list(self._connections.keys())} ({id(self._connections)})')
+            'Finished registering connection: %s (%s)',
+            list(self._connections.keys()), id(self._connections))
 
     def schedule_potential_deregister_and_stop(self, connection):
         """Try to deregister proxy connection.
@@ -227,8 +231,8 @@ class Proxy(object):
             self.schedule_potential_stop()
 
         LOGGER.debug(
-            f'Will wait {self._report_expiration_secs}s before deregistering '
-            'connection')
+            'Will wait %ss before deregistering connection',
+            self._report_expiration_secs)
 
         loop = IOLoop.current()
         loop.call_later(self._report_expiration_secs, potentially_unregister)
@@ -244,8 +248,8 @@ class Proxy(object):
 
         """
         del self._connections[connection.name]
-        LOGGER.debug(f'Got rid of connection {connection.name}')
-        LOGGER.debug(f'Total connections left: {len(self._connections)}')
+        LOGGER.debug('Got rid of connection %s', connection.name)
+        LOGGER.debug('Total connections left: %s', len(self._connections))
 
     def _proxy_connection_is_registered(self, connection):
         """Return true if this connection is registered to its name."""
@@ -265,8 +269,8 @@ class Proxy(object):
                 self.stop()
 
         LOGGER.debug(
-            f'Will check in {self._auto_close_delay_secs}s if there are no '
-            'more connections: ')
+            'Will check in %ss if there are no more connections: ',
+            self._auto_close_delay_secs)
         loop = IOLoop.current()
         loop.call_later(self._auto_close_delay_secs, potentially_stop)
 
@@ -416,8 +420,9 @@ class Proxy(object):
 
         LOGGER.debug(
             'Added new browser connection. '
-            f'Id: {connection.id}, '
-            f'Command line: {connection.command_line}')
+            'Id: %s, '
+            'Command line: %s',
+            connection.id, connection.command_line)
 
         raise gen.Return((connection, queue))
 
@@ -426,6 +431,26 @@ class Proxy(object):
         connection.remove_browser_queue(queue)
         LOGGER.debug('Removed the browser connection for "%s"', connection.name)
         self.schedule_potential_deregister_and_stop(connection)
+
+    def _get_file_path(self, connection):
+        """Get file path from connection."""
+        file_path = connection.source_file_path
+
+        # If running as a module, ie python -m foo.bar, then the file_path
+        # is actually /path/to/runpy.py  Instead we should use the
+        # command_line which would be /path/to/foo/bar.py
+        if os.path.basename(file_path) == 'runpy.py':
+            file_path = connection.command_line[0]
+            LOGGER.debug(
+                'Running as module using connection.command_line(%s)'
+                ' as file_path.', file_path)
+
+        if len(file_path) == 0:
+            # DeltaConnection.py sets source_file_path to '' when running from
+            # the REPL.
+            return None
+
+        return file_path
 
     def _maybe_add_report_observer(self, connection, browser_key):
         """Start observer and store observer in self._report_observers.
@@ -449,20 +474,17 @@ class Proxy(object):
                 'Will not observe file system since keepAlive is True')
             return
 
-        file_path = connection.source_file_path
+        file_path = self._get_file_path(connection)
 
-        if len(file_path) == 0:
-            # DeltaConnection.py sets source_file_path to '' when running from
-            # the REPL.
-            LOGGER.debug('Will not observe file ""')
+        if file_path == None:
+            LOGGER.debug('Will not observe file')
             return
 
         observer = self._report_observers.get(file_path)
 
         if observer is None:
             callback = _build_fsobserver_callback(connection)
-            observer = ReportObserver(
-                connection.source_file_path, callback)
+            observer = ReportObserver(file_path, callback)
             self._report_observers[file_path] = observer
 
         observer.register_browser(browser_key)
@@ -497,17 +519,18 @@ def stop_proxy_on_exception(is_coroutine=False):
             def wrapped_coroutine(web_socket_handler, *args, **kwargs):
                 try:
                     LOGGER.debug(
-                        f'Running wrapped version of COROUTINE {callback}')
-                    LOGGER.debug(f'About to yield {callback}')
+                        'Running wrapped version of COROUTINE %s', callback)
+                    LOGGER.debug('About to yield %s', callback)
                     rv = yield callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'About to return {rv}')
+                    LOGGER.debug('About to return %s', rv)
                     raise gen.Return(rv)
                 except gen.Return:
-                    LOGGER.debug(f'Passing through COROUTINE return value:')
+                    LOGGER.debug('Passing through COROUTINE return value')
                     raise
                 except Exception as e:
                     LOGGER.debug(
-                        f'Caught a COROUTINE exception: "{e}" ({type(e)})')
+                        'Caught a COROUTINE exception: "%(e)s" (%(type)s)',
+                        {'e': e, 'type': type(e)})
                     traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
@@ -519,9 +542,11 @@ def stop_proxy_on_exception(is_coroutine=False):
             def wrapped_callback(web_socket_handler, *args, **kwargs):
                 try:
                     return callback(web_socket_handler, *args, **kwargs)
-                    LOGGER.debug(f'Running wrapped version of {callback}')
+                    LOGGER.debug('Running wrapped version of %s', callback)
                 except Exception as e:
-                    LOGGER.debug(f'Caught an exception: "{e}" ({type(e)})')
+                    LOGGER.debug(
+                        'Caught an exception: "%(e)s" (%(type)s)',
+                        {'e': e, 'type': type(e)})
                     traceback.print_exc()
                     web_socket_handler._proxy.stop()
                     LOGGER.debug('Stopped the proxy.')
@@ -552,7 +577,7 @@ class _HealthHandler(web.RequestHandler):
 
 def _print_urls(connection, waitSecs):
     if waitSecs != float('inf'):
-        timeout_msg = f'within {waitSecs} seconds'
+        timeout_msg = 'within %s seconds' % waitSecs
     else:
         timeout_msg = ''
 
@@ -560,24 +585,24 @@ def _print_urls(connection, waitSecs):
         url = connection.get_url(
             config.get_option('browser.proxyAddress'))
 
-        LOGGER.info(textwrap.dedent(f'''
+        LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
             Open the URL below in your browser {timeout_msg}
             REPORT URL: {url}
             ════════════════════════════════════════════════════════════
-        '''))
+        '''), {'url': url, 'timeout_msg': timeout_msg})
 
     else:
         external_url = connection.get_url(util.get_external_ip())
         internal_url = connection.get_url(util.get_internal_ip())
 
-        LOGGER.info(textwrap.dedent(f'''
+        LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
             Open one of the URLs below in your browser {timeout_msg}
             EXTERNAL REPORT URL: {external_url}
             INTERNAL REPORT URL: {internal_url}
             ════════════════════════════════════════════════════════════
-        '''))
+        '''), {'external_url': external_url, 'internal_url': internal_url})
 
 
 def _build_fsobserver_callback(connection):

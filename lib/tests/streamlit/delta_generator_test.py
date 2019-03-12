@@ -1,8 +1,5 @@
-# -*- coding: future_fstrings -*-
-
+# Copyright 2019 Streamlit Inc. All rights reserved.
 """DeltaGenerator Unittest."""
-
-# Copyright 2018 Streamlit Inc. All rights reserved.
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import

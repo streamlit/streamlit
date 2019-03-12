@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Smooths out some differences between python 2 and 3. It is meant to
@@ -62,8 +60,8 @@ def setup_2_3_shims(caller_globals):
         for illegal_package_name in illegal_package_names:
             illegal_source_file = illegal_package_name + '.py'
             assert illegal_source_file not in current_directory_files, \
-                f'File "{illegal_source_file}" overrides a built-in package name.' \
-                ' Please rename it.'
+                'File "%s" overrides a built-in package name.' \
+                ' Please rename it.' % illegal_source_file
 
         # Do a bunch of dark monkey patching magic.
         from future.standard_library import install_aliases

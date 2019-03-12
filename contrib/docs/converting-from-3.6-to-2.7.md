@@ -12,8 +12,6 @@
 ## Template for a 2/3 compatible Python File
 
 ```python
-# -*- coding: future_fstrings -*-
-
 """Include module docstring here."""
 
 # Python 2/3 compatibility

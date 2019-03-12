@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 # Python 2/3 compatibility
@@ -65,7 +63,11 @@ def run_handling_errors_in_subprocess(cmd_in, cwd=None):
     # The error handler gets added by 'streamlit run'.
     cmd = [sys.executable, '-m', 'streamlit', 'run'] + cmd_list
 
-    subprocess.Popen(cmd, cwd=cwd)
+    # Wait is needed so that the proxy can cleanup after the command is
+    # run which is usually a rerun script.  Without the wait, the
+    # subprocess turns into a zombie process.
+    p = subprocess.Popen(cmd, cwd=cwd)
+    p.wait()
 
 
 def run_handling_errors_in_this_process(cmd, cwd=None):
@@ -142,10 +144,8 @@ def run_python_module(module, *args):
 
     # When running as a pex file (https://github.com/pantsbuild/pex),
     # sys.executable won't be able to find streamlit.proxy or any module
-    # that's not in the system python.  Pex modifies sys.path so the pex
-    # file is the first path and that's how we determine we're running
-    # in the pex file.
-    if re.match(r'.*pex$', sys.path[0]):
+    # that's not in the system python.
+    if util.is_pex():
         executable = sys.path[0]
         LOGGER.debug('Running as a pex file: %s', executable)
 

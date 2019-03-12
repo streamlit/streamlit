@@ -1,4 +1,4 @@
-# Undertanding Streamlit's core mechanics
+# Understanding Streamlit's core mechanics
 
 **Working with Streamlit is simple:** first you sprinkle a few _Streamlit
 commands_ into a normal Python script, and then you run the script

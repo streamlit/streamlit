@@ -31,7 +31,6 @@ boto3 = "*"
 click = "*"
 docutils = "*"
 enum-compat = "*"
-future-fstrings = "*"
 # python3 code backported to python2
 future = "*"
 # specifically concurrent.futures in python2

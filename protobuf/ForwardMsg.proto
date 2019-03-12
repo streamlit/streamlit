@@ -33,7 +33,7 @@ message NewConnection {
 
   // If true, tells Streamlit to log datpoints for our own stats when the user
   // performs certain actions.
-  bool remotely_track_usage = 2;
+  bool gather_usage_stats = 2;
 }
 
 // This is the first message that is sent when the connection is opened.
