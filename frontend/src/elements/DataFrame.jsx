@@ -24,8 +24,6 @@ class DataFrame extends PureComponent {
     super(props);
     this.multGridRef = React.createRef();
     this.state = {
-      sortedByUser: false,
-
       /**
        * If true, then the user manually clicked on a column header to sort the
        * table.
