@@ -119,6 +119,11 @@ message CSSStyle {
 message CellStyle {
   repeated CSSStyle css = 1;
   string display_value = 2;       // e.g. '21.96%'
+
+  // The default value for a string field in proto3 is '', so we need
+  // this extra bool to indicate the presence of a user-specified
+  // display_value, which itself could be ''.
+  bool has_display_value = 3;
 }
 
 message CellStyleArray {

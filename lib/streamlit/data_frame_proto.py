@@ -117,8 +117,9 @@ def _marshall_styles(proto_table_style, df, styler):
                 proto_css.value = css.value
 
             display_value = display_values.get((row, col), None)
-            if display_value:
+            if display_value is not None:
                 proto_cell_style.display_value = display_value
+                proto_cell_style.has_display_value = True
 
 
 def _get_css_styles(translated_style):

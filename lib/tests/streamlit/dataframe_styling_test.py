@@ -35,6 +35,7 @@ class DataFrameStylingTest(unittest.TestCase):
             for col in range(cols):
                 style = get_cell_style(proto_df, col, row)
                 self.assertEqual(style.display_value, '')
+                self.assertEqual(style.has_display_value, False)
                 self.assertEqual(len(style.css), 0)
 
     def test_format(self):
@@ -91,6 +92,7 @@ class DataFrameStylingTest(unittest.TestCase):
         """Asserts that cells in a column have the given display_values"""
         for row in range(len(display_values)):
             style = get_cell_style(proto_df, col, row)
+            self.assertEqual(style.has_display_value, display_values[row] is not None)
             self.assertEqual(style.display_value, display_values[row])
 
     def _assert_column_css_styles(self, proto_df, col, expected_styles):

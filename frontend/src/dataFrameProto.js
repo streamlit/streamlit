@@ -215,7 +215,12 @@ export function tableStyleGetDisplayValue(tableStyle, columnIndex, rowIndex) {
     return undefined;
   }
 
-  return tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex, 'displayValue'], undefined);
+  const cellStyle = tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex], undefined);
+  if (cellStyle == null) {
+    return undefined;
+  }
+
+  return cellStyle.get('hasDisplayValue') ? cellStyle.get('displayValue') : undefined;
 }
 
 /**

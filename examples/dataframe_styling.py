@@ -55,7 +55,8 @@ x = st.dataframe(df.style.set_properties(**{
     'background-color': 'black',
     'color': 'lawngreen',
 }))
-x.add_rows(pd.DataFrame(np.random.randn(5, 5)).style.set_properties(**{
+x.add_rows(pd.DataFrame(np.random.randn(3, 5)).style.set_properties(**{
     'background-color': 'lawngreen',
     'color': 'black',
 }))
+x.add_rows(pd.DataFrame(np.random.randn(2, 5)).style.format(lambda value: '' if value > 0 else '*'))
