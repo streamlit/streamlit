@@ -43,8 +43,9 @@ def main():
     # st.pyplot with no args
     st.header('st.pyplot with no args')
     st.write('This should show a plot with labels and images cut off')
+    x = st.info('Loading...')
     with st.echo():
-        st.pyplot(fig)
+        x.pyplot(fig)
 
     # generate an image file via matplotlib with kwargs
     fakefile = io.BytesIO()
@@ -53,6 +54,7 @@ def main():
         'dpi': 1200,
         'bbox_extra_artists': (txt,),
         'bbox_inches': 'tight',
+        'format': 'png',  # Required for some Matplotlib backends.
     }
 
     st.header('fig.savefig')
@@ -60,17 +62,21 @@ def main():
              'with st.image.  This shows the correct "image"')
 
     st.code('kwargs = ' + pprint.pformat(kwargs), language='python')
+    x = st.info('Loading...')
     with st.echo():
         fig.savefig(fakefile, **kwargs)
 
         from PIL import Image
         image = Image.open(fakefile)
-        st.image(image, use_column_width=True)
+        x.image(image, use_column_width=True)
 
     # st.pyplot with kwags
     st.header('st.pyplot with the same kwargs as fig.savefig')
+    x = st.info('Loading...')
     with st.echo():
-        st.pyplot(fig, **kwargs)
+        x.pyplot(fig, **kwargs)
+
+    st.success('Done!')
 
 
 if __name__ == '__main__':

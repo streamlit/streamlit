@@ -54,3 +54,7 @@ def run():
         PS: Want to know how we did this?
         [You can learn about it here.](https://streamlit.io/secret/docs/core_mechanics.html)
     ''')
+
+
+if __name__ == '__main__':
+    run()
