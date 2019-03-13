@@ -47,18 +47,23 @@ class DataFrame extends PureComponent {
    * Returns a function that creates a DataFrameCell component for the given cell.
    */
   getCellRenderer(cellContentsGetter) {
-    return ({ columnIndex, key, rowIndex, style }) => {
-      const { classes, contents } = cellContentsGetter(columnIndex, rowIndex);
+    return ({ columnIndex, key, rowIndex, style: baseStyle }) => {
+      const { classes, styles: additionalStyles, contents } = cellContentsGetter(columnIndex, rowIndex);
       const headerClickedCallback = rowIndex === 0 ? this.toggleSortOrder : null;
       const sortDirection = columnIndex === this.state.sortColumn ?
           this.state.sortDirection : null;
+
+      // Merge our base styles with any additional cell-specific
+      // styles returned by the cellContentsGetter
+      const styles = { ...baseStyle, ...additionalStyles };
+
       return (
         <DataFrameCell
           key={key}
           columnIndex={columnIndex}
           rowIndex={rowIndex}
           className={classes}
-          style={style}
+          style={styles}
           contents={contents}
           sortedByUser={this.state.sortedByUser}
           columnSortDirection={sortDirection}
@@ -237,6 +242,14 @@ class DataFrame extends PureComponent {
 /**
  * Returns a function which can access individual cell data in a DataFrame.
  *
+ * The returned function has the form:
+ *
+ * cellContentsGetter(columnIndex: int, rowIndex: int) -> {
+ *    classes: str - a css class string
+ *    styles: {property1: value1, ...} - css styles to apply to the cell
+ *    contents: str - the cell's formatted display string
+ * }
+ *
  * df                   - a DataFrame
  * headerRows           - the number of frozen rows
  * headerCols           - the number of frozen columns
@@ -259,7 +272,7 @@ function getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices 
       }
     }
 
-    let { contents, type } = dataFrameGet(df, columnIndex, rowIndex);
+    let { contents, styles, type } = dataFrameGet(df, columnIndex, rowIndex);
 
     // All table elements have class 'dataframe'.
     let classes = `dataframe ${type}`;
@@ -268,7 +281,7 @@ function getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices 
     contents = toFormattedString(contents);
 
     // Put it all together
-    return {classes, contents};
+    return {classes, styles, contents};
   };
 }
 

@@ -5,6 +5,7 @@
   "dependencies": {
     "aws-sdk": "^2.374.0",
     "bootstrap": "^4.1.3",
+    "camelcase": "^5.2.0",
     "deck.gl": "^6.0.5",
     "immutable": "^3.8.2",
     "leaflet": "^1.3.4",
