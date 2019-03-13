@@ -33,4 +33,9 @@ setuptools.setup(
             'streamlit = streamlit.__main__:main',
         ],
     },
+
+    # For Windows so that streamlit * commands work ie.
+    # - streamlit version
+    # - streamlit hello
+    scripts=['bin/streamlit.cmd'],
 )
