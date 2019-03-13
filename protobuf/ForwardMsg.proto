@@ -34,6 +34,9 @@ message NewConnection {
   // If true, tells Streamlit to log datpoints for our own stats when the user
   // performs certain actions.
   bool gather_usage_stats = 2;
+
+  // Python streamlit version.
+  string streamlit_version = 3;
 }
 
 // This is the first message that is sent when the connection is opened.
