@@ -13,6 +13,7 @@ import {
   Modal,
   ModalBody,
   ModalFooter,
+  ModalHeader,
   Progress,
   // Row,
   // UncontrolledTooltip,
@@ -26,6 +27,7 @@ import './StreamlitDialog.css';
 function StreamlitDialog({dialogProps}) {
   // This table of functions constructs the dialog based on dialogProps.type
   const populateDialogTable = {
+    'about': aboutDialog,
     'uploadProgress': uploadProgressDialog,
     'uploaded': uploadedDialog,
     'warning': warningDialog,
@@ -189,6 +191,29 @@ function typeNotRecognizedDialog({type, onClose}) {
   return (
     <BasicDialog onClose={onClose}>
       <ModalBody>{`Dialog type "${type}" not recognized.`}</ModalBody>
+    </BasicDialog>
+  );
+}
+
+/**
+ * About Dialog
+ * streamlitVersion - proxy streamlit version
+ * onClose          - callback to close the dialog
+ */
+function aboutDialog({streamlitVersion, onClose}) {
+  return (
+    <BasicDialog onClose={onClose}>
+      <ModalHeader toggle={onClose}>About</ModalHeader>
+      <ModalBody>
+        <div>
+            Streamlit v{streamlitVersion}<br/>
+            <a href='https://streamlit.io'>https://streamlit.io</a><br/>
+            Copyright 2019 Streamlit Inc. All rights reserved.
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button color="primary" onClick={onClose}>Close</Button>
+      </ModalFooter>
     </BasicDialog>
   );
 }
