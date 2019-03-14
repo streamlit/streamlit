@@ -393,6 +393,7 @@ class StreamlitApp extends PureComponent {
     return (
       <div className={outerDivClass}>
         <header>
+          <div className="decoration"></div>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
           </div>

@@ -54,7 +54,7 @@ class SettingsDialog extends PureComponent {
                 onChange={this.handleCheckboxChange}
                 />
             {" "}
-            Show reports in wide mode
+            Show report in wide mode
           </label>
         </ModalBody>
 
