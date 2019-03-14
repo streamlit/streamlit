@@ -228,7 +228,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.27.0`.
+**Note:** The current version is `0.29.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -254,6 +254,7 @@ Test that it works:
 ```
 make install
 make pytest
+streamlit kill_proxy
 python admin/test_streamlit.py
 ```
 Check that all elements and figures work properly and the browser connection
@@ -283,9 +284,7 @@ python ../streamlit/examples/reference.py
 python ../streamlit/examples/reference.py
 python -m streamlit clear_cache
 python ../streamlit/examples/mnist-cnn.py
-python
->>> import streamlit as st
->>> st.write('testing')
+python -c 'import streamlit as st; st.write("testing")'
 ```
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
@@ -295,7 +294,7 @@ Also, if possible, test the wheel in:
 #### Rebuild and publish the docs
 
 We do this right before distributing the wheel because the docs get compiled
-different depending on the Python version -- and we want to make sure they're
+differently depending on the Python version -- and we want to make sure they're
 always up to date.
 
 First, you should see whether the docs look right on your local machine:
@@ -314,8 +313,49 @@ make publish-docs
 ```
 
 NOTE: You may have to clear your browser's cache to see changes in
-https://strealmit.io.
+https://streamlit.io.
 
+#### Create the Conda packages from the Wheel
+
+* First sync from s3 the existing repo.  This is needed because we have
+  to rebuild the index with the old contents.
+```
+$ aws s3 sync \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    --profile streamlit
+```
+
+* You should not be in a pyenv or virtualenv.  You should have anaconda3
+installed so that conda is in your path before running the next command
+which will build the conda packages.  The packages will be in
+streamlit/conda/streamlit-forge
+```
+$ make create-conda-packages
+```
+
+* Now you should test that these packages actually work by temporarily
+  serving the packages locally.
+```
+$ make serve-conda
+```
+
+* There's a file called [conda/streamlit-dev.yml](conda/streamlit-dev.yml)
+that can be used to create a conda virtual environment.
+```
+$ conda env create -f conda/streamlit-dev.yml
+$ conda activate streamlit-dev
+(streamlit-dev) $ streamlit hello
+```
+
+* Sync back to s3
+```
+$ aws s3 sync \
+    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+    s3://repo.streamlit.io/streamlit-forge/ \
+    --acl public-read \
+    --profile streamlit
+```
 
 #### Distribute the Wheel
 
@@ -356,10 +396,6 @@ make develop
   $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
   ```
   - (See https://github.com/pyenv/pyenv/issues/1219 for more info)
-
-* Running a streamlit script fails with "SyntaxError: encoding problem: future_fstrings"
-  - Uninstall and reinstall `future-fstrings`:
-  - `$ pip uninstall future-fstrings && pip install future-fstrings`
 
 * Unable to run unittests (pytest not installed)
 

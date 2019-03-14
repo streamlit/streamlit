@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 """Test saving a Streamlit report."""
 
 # Python 2/3 compatibility
@@ -12,4 +10,5 @@ import random
 
 st.subheader('Test Saving')
 
-st.write(f'**Please save this report and check for this number: `{random.randint(0, 2 ** 32)}`.**')
+r = random.randint(0, 2 ** 32)
+st.write('**Please save this report and check for this number: `%s`.**' % r)

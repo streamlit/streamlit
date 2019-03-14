@@ -10,6 +10,9 @@ message DataFrame {
 
   // List of column names. (Multiple implies a multi-index.)
   Index columns = 3;
+
+  // Cell style and formatting data. Optional.
+  TableStyle style = 4;
 }
 
 // An index in the dataFrame
@@ -108,6 +111,25 @@ message UInt32Array {
   repeated uint32 data = 1;
 }
 
+message CSSStyle {
+  string property = 1;
+  string value = 2;
+}
+
+message CellStyle {
+  repeated CSSStyle css = 1;
+  string display_value = 2;       // e.g. '21.96%'
+
+  // The default value for a string field in proto3 is '', so we need
+  // this extra bool to indicate the presence of a user-specified
+  // display_value, which itself could be ''.
+  bool has_display_value = 3;
+}
+
+message CellStyleArray {
+  repeated CellStyle styles = 1;
+}
+
 message AnyArray {
   oneof type {
     StringArray strings = 1;
@@ -120,4 +142,8 @@ message AnyArray {
 
 message Table {
   repeated AnyArray cols = 1;
+}
+
+message TableStyle {
+  repeated CellStyleArray cols = 1;
 }

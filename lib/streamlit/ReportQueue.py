@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """
@@ -100,7 +98,8 @@ class ReportQueue(object):
             # Keep flushing the deltas until the queue is empty
             while True:
                 sent_more_deltas = yield send_deltas()
-                LOGGER.debug('Sent a final set of deltas: %s' % sent_more_deltas)
+                LOGGER.debug(
+                    'Sent a final set of deltas: %s', sent_more_deltas)
                 if not sent_more_deltas:
                     LOGGER.debug('No more deltas to send.')
                     break

@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """A bunch of useful utilities."""
@@ -15,8 +14,10 @@ import errno
 import functools
 import os
 import platform
+import re
 import socket
 import subprocess
+import sys
 import threading
 import urllib
 import uuid
@@ -53,21 +54,21 @@ def _decode_ascii(str):
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
-    f"""Opens a context to read this file relative to the streamlit path.
+    """Opens a context to read this file relative to the streamlit path.
 
     For example:
 
     with read('foo.txt') as foo:
         ...
 
-    opens the file `{STREAMLIT_ROOT_DIRECTORY}/foo.txt`
+    opens the file `%s/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """
+    """ % STREAMLIT_ROOT_DIRECTORY
     filename = os.path.abspath(os.path.join(STREAMLIT_ROOT_DIRECTORY, path))
     if os.stat(filename).st_size == 0:
-       raise Error(f'Read zero byte file: "{filename}"')
+       raise Error('Read zero byte file: "%s"' % filename)
 
     mode = 'r'
     if binary:
@@ -78,19 +79,19 @@ def streamlit_read(path, binary=False):
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
-    r"""
+    """
     Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
         with open_ensuring_path('foo/bar.txt') as bar:
             ...
 
-    opens the file {STREAMLIT_ROOT_DIRECTORY}/foo/bar.txt for writing,
+    opens the file %s/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """
+    """ % STREAMLIT_ROOT_DIRECTORY
     mode = 'w'
     if binary:
         mode += 'b'
@@ -102,7 +103,7 @@ def streamlit_write(path, binary=False):
         with open(path, mode) as handle:
             yield handle
     except OSError as e:
-        msg = [f'Unable to write file: {os.path.abspath(path)}']
+        msg = ['Unable to write file: %s' % os.path.abspath(path)]
         if e.errno == errno.EINVAL and platform.system() == 'Darwin':
             msg.append('Python is limited to files below 2GB on OSX. '
                        'See https://bugs.python.org/issue24658')
@@ -200,7 +201,7 @@ def get_external_ip():
     if response is None:
         LOGGER.warning(
             'Did not auto detect external IP.\n'
-            f'Please go to {HELP_DOC} for debugging hints.')
+            'Please go to %s for debugging hints.', HELP_DOC)
     else:
         _external_ip = response.decode('utf-8').strip()
 
@@ -259,7 +260,20 @@ def open_browser(url):
     elif system == 'Darwin':
         cmd = ['open', url]
     elif system == 'Windows':
-        cmd = ['start', '""', url]
+        # Windows has a few bugs.
+        # * os.devnull doesnt exist so the open command below fails
+        # * subprocess doesnt actually pop up the browser even though
+        #   'start url' works from the command prompt
+        # * tornado for whatever reason doesnt map / to /index.html and
+        #   you get a 404.
+        data = urllib.parse.urlsplit(url)
+        (scheme, netloc, path, query, fragment) = data
+        if re.match(r'^/$', path):
+            path = '/index.html'
+        url = urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
+        import webbrowser
+        webbrowser.open(url)
+        return
     else:
         raise Error('Cannot open browser in platform "%s"' % system)
 
@@ -294,3 +308,14 @@ def is_type(obj, fqn_type_str):
 
 class Error(Exception):
     pass
+
+
+def is_pex():
+    """Return if streamlit running in pex.
+
+    Pex modifies sys.path so the pex file is the first path and that's
+    how we determine we're running in the pex file.
+    """
+    if re.match(r'.*pex$', sys.path[0]):
+        return True
+    return False

@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Logging module."""
@@ -40,7 +38,7 @@ def set_log_level(level):
     elif level == 'DEBUG' or level == logging.DEBUG:
         log_level = logging.DEBUG
     else:
-        msg = 'undefined log level "{}"'.format(level)
+        msg = 'undefined log level "%s"' % level
         logger.critical(msg)
         sys.exit(1)
 
@@ -72,20 +70,6 @@ def setup_formatter(logger):
     logger.addHandler(logger.streamlit_console_handler)
 
 
-def init_aiohttp_logs():
-    """Initialize aiohttp logs."""
-    global LOGGER
-
-    # https://docs.aiohttp.org/en/stable/logging.html
-    logs = ['access', 'client', 'internal', 'server', 'web', 'websocket']
-    for log in logs:
-        name = 'aiohttp.{}'.format(log)
-        get_logger(name)
-
-    logger = get_logger(__name__)
-    logger.debug('Initialized aiohttp logs')
-
-
 def init_tornado_logs():
     """Initialize tornado logs."""
     global LOGGER
@@ -93,7 +77,7 @@ def init_tornado_logs():
     # http://www.tornadoweb.org/en/stable/log.html
     logs = ['access', 'application', 'general']
     for log in logs:
-        name = 'tornado.{}'.format(log)
+        name = 'tornado.%s' % log
         get_logger(name)
 
     logger = get_logger(__name__)

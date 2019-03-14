@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Websocket handler class for connections to the browser."""
@@ -15,6 +14,7 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketClosedError
 from tornado.websocket import WebSocketHandler
 
+from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
@@ -99,8 +99,8 @@ class BrowserWebSocket(WebSocketHandler):
                     yield self._queue.flush_queue(self)
                 elif not indicated_closed:
                     LOGGER.debug(
-                        'The queue for "%s" is closed.'
-                        % self._connection.name)
+                        'The queue for "%s" is closed.',
+                        self._connection.name)
                     indicated_closed = True
 
                 yield gen.sleep(throttle_secs)
@@ -140,14 +140,16 @@ class BrowserWebSocket(WebSocketHandler):
         msg.new_connection.sharing_enabled = (
             config.get_option('global.sharingMode') != 'off')
         LOGGER.debug(
-            'New browser connection: sharing_enabled=%s' %
+            'New browser connection: sharing_enabled=%s',
             msg.new_connection.sharing_enabled)
 
-        msg.new_connection.remotely_track_usage = (
+        msg.new_connection.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
         LOGGER.debug(
-            'New browser connection: remotely_track_usage=%s' %
-            msg.new_connection.remotely_track_usage)
+            'New browser connection: gather_usage_stats=%s',
+            msg.new_connection.gather_usage_stats)
+
+        msg.new_connection.streamlit_version = __version__
 
         yield self.write_message(msg.SerializeToString(), binary=True)
 
@@ -205,7 +207,8 @@ class BrowserWebSocket(WebSocketHandler):
                 progress_msg.SerializeToString(), binary=True)
         except Exception as e:
             # Horrible hack to show something if something breaks.
-            err_msg = f'{type(e).__name__}: {str(e) or "No further details."}'
+            err_msg = '%s: %s' % (
+                type(e).__name__, str(e) or "No further details.")
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = err_msg
             yield ws.write_message(

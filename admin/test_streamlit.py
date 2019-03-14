@@ -1,22 +1,19 @@
-# -*- coding: future_fstrings -*-
-
 """Runs all the scripts in the examples folder (except this one)."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-
 import os
 import sys
-import time
 import streamlit as st
 from streamlit import compatibility
 
 # This is how we get user input
 if not compatibility.running_py3():
-    input = raw_input
+    input = raw_input  # noqa: F821
 
 # True means we run through all tests automatically.
 auto_run = False
@@ -33,24 +30,34 @@ EXCLUDED_FILENAMES = (
     'caching.py',
 )
 
-def run_commands(section_header, commands, skip_last_input=False):
+
+def run_commands(section_header, commands, skip_last_input=False,
+                 comment=None):
     """Run a list of commands, displaying them within the given section."""
     global auto_run, status
 
     st.header(section_header)
+    if comment:
+        st.write(comment)
     for i, command in enumerate(commands):
         # Display the status.
-        status.warning(f'Running {section_header} {i+1}/{len(commands)} : ' +
-            command)
-        st.subheader(f'{i+1}/{len(commands)} : {command}')
-        print(f'Running `{command}`...')
+        vars = {
+            'section_header': section_header,
+            'total': len(commands),
+            'command': command,
+            'v': i + 1,
+        }
+        status.warning(
+            'Running %(section_header)s %(v)s/%(total)s : %(command)s' % vars)
+        st.subheader('%(v)s/%(total)s : %(command)s' % vars)
+        print('Running `%s`...' % command)
 
         # Run the command.
         exit_code = os.system(command)
         if exit_code == 0:
             st.success('Exit Code: 0')
         else:
-            st.error(f'Exit Code: {exit_code}')
+            st.error('Exit Code: %s' % exit_code)
 
         #
         last_command = (i + 1 == len(commands))
@@ -63,6 +70,7 @@ def run_commands(section_header, commands, skip_last_input=False):
                 print('Turning on auto run.')
                 auto_run = True
 
+
 def main():
     global status
 
@@ -72,29 +80,36 @@ def main():
 
     status = st.warning('Initializing...')
 
-
     # First run the 'streamlit commands'
     run_commands('Basic Commands', [
         'streamlit version',
     ])
 
+    run_commands(
+        'Standard System Errors',
+        ['streamlit run does_not_exist.py'],
+        comment='Checks to see that file not found error is caught')
+
     run_commands('Examples', [
-        f'streamlit run {EXAMPLE_DIR}/{filename}'
-            for filename in os.listdir(EXAMPLE_DIR)
-            if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+        'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {
+            'EXAMPLE_DIR': EXAMPLE_DIR,
+            'filename': filename,
+        } for filename in os.listdir(EXAMPLE_DIR)
+        if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
     ])
 
-    run_commands('Caching', [
-        f'streamlit clear_cache',
-        f'streamlit run {EXAMPLE_DIR}/caching.py'
-    ])
+    run_commands(
+        'Caching',
+        ['streamlit clear_cache',
+         'streamlit run %s/caching.py' % EXAMPLE_DIR])
 
-    run_commands('MNIST', [
-        f'streamlit run {EXAMPLE_DIR}/mnist-cnn.py'
-    ], skip_last_input=True)
+    run_commands(
+        'MNIST', ['streamlit run %s/mnist-cnn.py' % EXAMPLE_DIR],
+        skip_last_input=True)
 
     status.success('Completed all tests!')
     st.balloons()
+
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """
@@ -23,7 +21,7 @@ sys.path.append(dir_path)
 from BackMsg_pb2 import BackMsg
 from Balloons_pb2 import Balloons
 from Chart_pb2 import Chart
-from DataFrame_pb2 import DataFrame, Index, Table, AnyArray
+from DataFrame_pb2 import DataFrame, Index, Table, AnyArray, CellStyle, CSSStyle
 from Delta_pb2 import Delta
 from Element_pb2 import Element
 from ForwardMsg_pb2 import ForwardMsg

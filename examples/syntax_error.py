@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 import streamlit as st
 import sys
 

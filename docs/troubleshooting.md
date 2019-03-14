@@ -23,7 +23,7 @@ $ streamlit kill_proxy
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.27.0`.
+...and then verify that the version number printed is `0.29.0`.
 
 **Try reproducing the issue now.**
 
@@ -85,24 +85,33 @@ your script:
 $ streamlit kill_proxy
 ```
 
-## Pex doesn't work with Streamlit.
+## Using Streamlit with Pex
 
-[Pex](https://github.com/pantsbuild/pex) can be used with Streamlit but
-it has to be run without any entry points.
+Streamlit has experimental support for [Pex](https://github.com/pantsbuild/pex)
+binaries, but with one limitation: the package must not have an entry point.
 
-Correct:
-```
-$ pex streamlit -o streamlit.pex
-$ pex /path/to/streamlit.whl -o streamlit.pex
-```
+For instance:
 
-Incorrect:
-```
-$ pex streamlit -c streamlit.pex -o streamlit.pex
-$ pex /path/to/streamlit.whl -c streamlit.pex -o streamlit.pex
+```bash
+$ pex streamlit foo bar -o mypexbinary.pex
 ```
 
-Here's an example of using the Pex file.
-```
-$ ./streamlit.pex script.py
-```
+...which means you can do things like:
+
+- Running an interactive console:
+  ```bash
+  $ ./mypexbinary.pex
+  >>> import streamlit as st
+  >>> st.write('Hello from the console!')
+  ```
+
+- Running a script:
+  ```bash
+  $ ./mypexbinary.pex myscript.py
+  ```
+
+- Running the Streamlit CLI tool:
+  ```bash
+  $ ./mypexbinary.pex -m streamlit hello
+  $ ./mypexbinary.pex -m streamlit kill_proxy
+  ```

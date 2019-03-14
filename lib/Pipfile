@@ -19,6 +19,9 @@ recommonmark = "*"
 # Packages used in unit tests:
 altair = "*"
 
+# TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
+# When you update the packages here, you have to update
+# conda/streamlit/meta.yaml as well.
 [packages]
 base58 = "*"
 # backport of collections.abc
@@ -28,7 +31,6 @@ boto3 = "*"
 click = "*"
 docutils = "*"
 enum-compat = "*"
-future-fstrings = "*"
 # python3 code backported to python2
 future = "*"
 # specifically concurrent.futures in python2

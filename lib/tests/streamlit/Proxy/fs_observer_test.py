@@ -1,4 +1,3 @@
-# -*- coding: future_fstrings -*-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """fs_observer unit test."""
@@ -186,7 +185,7 @@ class FsObserverTest(unittest.TestCase):
         self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '2'
 
         ev = events.FileSystemEvent('/this/is/my/file.py')
-        ev.event_type = events.EVENT_TYPE_CREATED  # Wrong type
+        ev.event_type = events.EVENT_TYPE_DELETED  # Wrong type
         folder_handler.on_modified(ev)
 
         # This is the test:

@@ -1,7 +1,4 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
-
 """Config System Unittest."""
 
 # Python 2/3 compatibility
@@ -185,10 +182,10 @@ class ConfigTest(unittest.TestCase):
             ConfigOption.DEFAULT_DEFINITION)
 
         # Override it with some TOML
-        NEW_TOML = f"""
+        NEW_TOML = """
             [_test]
-            tomlTest="{DUMMY_VAL_2}"
-        """
+            tomlTest="%s"
+        """ % DUMMY_VAL_2
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
         self.assertEqual(config.get_option('_test.tomlTest'), DUMMY_VAL_2)
         self.assertEqual(config.get_where_defined('_test.tomlTest'),
@@ -211,7 +208,7 @@ class ConfigTest(unittest.TestCase):
         os.environ['TEST_ENV_VAR'] = DESIRED_VAL
 
         # Override it with some TOML
-        NEW_TOML = f"""
+        NEW_TOML = """
             [_test]
             tomlTest="env:TEST_ENV_VAR"
         """
@@ -228,14 +225,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(str(e.value), 'Config key "s3.bucket" not defined.')
 
         config._delete_option('s3.bucket')
-
-    @patch.object(config, '_section_descriptions', new=copy.deepcopy(SECTION_DESCRIPTIONS))
-    @patch.object(config, '_config_options', new=copy.deepcopy(CONFIG_OPTIONS))
-    def test_parse_config_file_no_home(self):
-            del os.environ['HOME']
-            with pytest.raises(RuntimeError) as e:
-                config._parse_config_file()
-            self.assertEqual('No home directory.', str(e.value))
 
     def test_sections_order(self):
         sections = ['_test', u'global', u'client', u'proxy', u'browser', u's3']

@@ -1,5 +1,3 @@
-# -*- coding: future_fstrings -*-
-
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
@@ -9,47 +7,219 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit.logger import get_logger
-
+from collections import namedtuple
+import re
 import tzlocal
 
+from streamlit import util
+
+from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 np = None
 pd = None
 
+CSSStyle = namedtuple('CSSStyle', ['property', 'value'])
 
-def marshall_data_frame(df, proto_df):
+
+def marshall_data_frame(data, proto_df):
     """Convert a pandas.DataFrame into a protobuf.DataFrame.
 
     Parameters
     ----------
-    df : Panda.DataFrame, Numpy.Array, or list
-        Input. Something that can be converted to a dataframe.
-    proto_df : Protobuf.DataFrame
-        Output. The protobuf for a Streamlit DataFrame proto.
+    data : pandas.DataFrame, numpy.ndarray, Iterable, dict, DataFrame, Styler, or None
+        Something that is or can be converted to a dataframe.
 
+    proto_df : protobuf.DataFrame
+        Output. The protobuf for a Streamlit DataFrame proto.
     """
+    df = convert_anything_to_df(data)
+
+    # Convert df into an iterable of columns (each of type Series).
+    df_data = (
+        df.iloc[:, col]
+        for col in range(len(df.columns)))
+
     import numpy
     import pandas
     global pd, np
     np = numpy
     pd = pandas
 
-    if type(df) is pd.DataFrame:
-        pandas_df = df
-    elif type(df) is np.ndarray and len(df.shape) == 0:
-        pandas_df = pd.DataFrame([])
-    else:
-        pandas_df = pd.DataFrame(df)
+    _marshall_table(df_data, proto_df.data)
+    _marshall_index(df.columns, proto_df.columns)
+    _marshall_index(df.index, proto_df.index)
 
-    pandas_df_data = (
-        pandas_df.iloc[:, col]
-        for col in range(len(pandas_df.columns))
-    )
-    _marshall_table(pandas_df_data, proto_df.data)
-    _marshall_index(pandas_df.columns, proto_df.columns)
-    _marshall_index(pandas_df.index, proto_df.index)
+    if _is_pandas_styler(data):
+        _marshall_styles(proto_df.style, df, data)
+
+
+def convert_anything_to_df(df):
+    """Try to convert different formats to a Pandas Dataframe.
+
+    Parameters
+    ----------
+    df : ndarray, Iterable, dict, DataFrame, Styler, None, or any
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    """
+    if util.is_type(df, 'pandas.core.frame.DataFrame'):
+        return df
+
+    if _is_pandas_styler(df):
+        return df.data
+
+    import pandas as pd
+
+    if util.is_type(df, 'numpy.ndarray') and len(df.shape) == 0:
+        return pd.DataFrame([])
+
+    # Try to convert to pandas.DataFrame. This will raise an error is df is not
+    # compatible with the pandas.DataFrame constructor.
+    return pd.DataFrame(df)
+
+
+def _is_pandas_styler(obj):
+    return util.is_type(obj, 'pandas.io.formats.style.Styler')
+
+
+def _marshall_styles(proto_table_style, df, styler):
+    """Adds pandas.Styler styling data to a protobuf.DataFrame
+
+    Parameters
+    ----------
+    proto_table_style : protobuf.TableStyle
+    df : pandas.DataFrame
+    styler : pandas.Styler holding styling data for the data frame
+    """
+
+    # NB: we're using protected members of Styler to get this data,
+    # which is non-ideal and could break if Styler's interface changes.
+
+    styler._compute()
+    translated_style = styler._translate()
+
+    css_styles = _get_css_styles(translated_style)
+    display_values = _get_custom_display_values(df, translated_style)
+
+    nrows, ncols = df.shape
+    for col in range(ncols):
+        proto_col = proto_table_style.cols.add()
+        for row in range(nrows):
+            proto_cell_style = proto_col.styles.add()
+
+            for css in css_styles.get((row, col), []):
+                proto_css = proto_cell_style.css.add()
+                proto_css.property = css.property
+                proto_css.value = css.value
+
+            display_value = display_values.get((row, col), None)
+            if display_value is not None:
+                proto_cell_style.display_value = display_value
+                proto_cell_style.has_display_value = True
+
+
+def _get_css_styles(translated_style):
+    """Parses pandas.Styler style dictionary into a
+    {(row, col): [CSSStyle]} dictionary
+    """
+    # Create {(row, col): [CSSStyle]} from translated_style['cellstyle']
+    # translated_style['cellstyle'] has the shape:
+    # [
+    #   {
+    #       'props': [['color', ' black'], ['background-color', 'orange'], ['', '']],
+    #       'selector': 'row0_col0'
+    #   }
+    #   ...
+    # ]
+
+    cell_selector_regex = re.compile(r'row(\d+)_col(\d+)')
+
+    css_styles = {}
+    for cell_style in translated_style['cellstyle']:
+        cell_selector = cell_style['selector']  # a string of the form 'row0_col0'
+        match = cell_selector_regex.match(cell_selector)
+        if not match:
+            raise RuntimeError('Failed to parse cellstyle selector "%s"' % cell_selector)
+        row = int(match.group(1))
+        col = int(match.group(2))
+        css_declarations = []
+        props = cell_style['props']
+        for prop in props:
+            if not isinstance(prop, list) or len(prop) != 2:
+                raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+            name = str(prop[0]).strip()
+            value = str(prop[1]).strip()
+            if name and value:
+                css_declarations.append(CSSStyle(property=name, value=value))
+
+        css_styles[(row, col)] = css_declarations
+
+    return css_styles
+
+
+def _get_custom_display_values(df, translated_style):
+    """Parses pandas.Styler style dictionary into a
+    {(row, col): display_value} dictionary for cells whose display format
+    has been customized.
+    """
+    # Create {(row, col): display_value} from translated_style['body']
+    # translated_style['body'] has the shape:
+    # [
+    #   [ // row
+    #     {  // cell or header
+    #       'id': 'level0_row0' (for row header) | 'row0_col0' (for cells)
+    #       'value': 1.329212
+    #       'display_value': '132.92%'
+    #       ...
+    #     }
+    #   ]
+    # ]
+
+    default_formatter = df.style._display_funcs[(0, 0)]
+    def has_custom_display_value(cell):
+        value = cell['value']
+        display_value = cell['display_value']
+        if value == display_value:
+            return False
+
+        # Pandas applies a default style to all float values, regardless
+        # of whether they have a user-specified display format. We test
+        # for that here.
+        return default_formatter(value) != display_value
+
+    cell_selector_regex = re.compile(r'row(\d+)_col(\d+)')
+    header_selector_regex = re.compile(r'level(\d+)_row(\d+)')
+
+    display_values = {}
+    for row in translated_style['body']:
+        # row is a List[Dict], containing format data for each cell in the row,
+        # plus an extra first entry for the row header, which we skip
+        found_row_header = False
+        for cell in row:
+            cell_id = cell['id']  # a string in the form 'row0_col0'
+            if header_selector_regex.match(cell_id):
+                if not found_row_header:
+                    # We don't care about processing row headers, but as
+                    # a sanity check, ensure we only see one per row
+                    found_row_header = True
+                    continue
+                else:
+                    raise RuntimeError('Found unexpected row header "%s"' % cell)
+            match = cell_selector_regex.match(cell_id)
+            if not match:
+                raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
+
+            # Only store display values that differ from the cell's default
+            if has_custom_display_value(cell):
+                row = int(match.group(1))
+                col = int(match.group(2))
+                display_values[(row, col)] = str(cell['display_value'])
+
+    return display_values
 
 
 def _marshall_index(pandas_index, proto_index):
@@ -59,7 +229,8 @@ def _marshall_index(pandas_index, proto_index):
     proto_index  - Protobuf.Index (output)
     """
     if type(pandas_index) == pd.Index:
-        _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
+        _marshall_any_array(
+            np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         min = pandas_index.min()
         max = pandas_index.max()
@@ -83,15 +254,17 @@ def _marshall_index(pandas_index, proto_index):
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.datetime_index.data.data.extend(
+            pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.TimedeltaIndex:
-        proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.timedelta_index.data.data.extend(
+            pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:
         proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.Float64Index:
         proto_index.float_64_index.data.data.extend(pandas_index)
     else:
-        raise RuntimeError(f"Can't handle {type(pandas_index)} yet.")
+        raise RuntimeError("Can't handle %s yet." % type(pandas_index))
 
 
 def _marshall_table(pandas_table, proto_table):
@@ -134,7 +307,7 @@ def _marshall_any_array(pandas_array, proto_array):
             pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
-        raise RuntimeError(f'Dtype {pandas_array.dtype} not understood.')
+        raise RuntimeError('Dtype %s not understood.' % pandas_array.dtype)
 
 
 def add_rows(delta1, delta2):
@@ -149,22 +322,32 @@ def add_rows(delta1, delta2):
     df1 = _get_data_frame(delta1)
     df2 = _get_data_frame(delta2)
 
+    if len(df1.data.cols) == 0:
+        if len(df2.data.cols) == 0:
+            return
+        df1.CopyFrom(df2)
+        return
+
     _concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         _concat_any_array(col1, col2)
+    for (style_col1, style_col2) in zip(df1.style.cols, df2.style.cols):
+        _concat_cell_style_array(style_col1, style_col2)
 
 
 def _concat_index(index1, index2):
     """Contact index2 into index1."""
     # Special case if index1 is empty.
     if _index_len(index1) == 0:
+        index1.Clear()
         index1.CopyFrom(index2)
         return
 
     # Otherwise, dispatch based on type.
     type1 = index1.WhichOneof('type')
     type2 = index2.WhichOneof('type')
-    assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
+        {'type1': type1, 'type2': type2}
 
     if type1 == 'plain_index':
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
@@ -178,9 +361,10 @@ def _concat_index(index1, index2):
     elif type1 == 'datetime_index':
         index1.datetime_index.data.data.extend(index2.datetime_index.data.data)
     elif type1 == 'timedelta_index':
-        index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
+        index1.timedelta_index.data.data.extend(
+            index2.timedelta_index.data.data)
     else:
-        raise NotImplementedError(f'Cannot concatenate "{type}" indices.')
+        raise NotImplementedError('Cannot concatenate "%s" indices.' % type)
 
 
 def _concat_any_array(any_array_1, any_array_2):
@@ -192,8 +376,19 @@ def _concat_any_array(any_array_1, any_array_2):
 
     type1 = any_array_1.WhichOneof('type')
     type2 = any_array_2.WhichOneof('type')
-    assert type1 == type2, f'Cannot concatenate {type1} with {type2}.'
+    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
+        {'type1': type1, 'type2': type2}
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
+
+
+def _concat_cell_style_array(style_array1, style_array2):
+    """Concat elements from any_array_2 into any_array_1."""
+    # Special case if array1 is empty
+    if len(style_array1.styles) == 0:
+        style_array1.CopyFrom(style_array2)
+        return
+
+    style_array1.styles.extend(style_array2.styles)
 
 
 def _get_data_frame(delta):
@@ -210,7 +405,7 @@ def _get_data_frame(delta):
     elif delta_type == 'add_rows':
         return delta.add_rows
     else:
-        raise RuntimeError(f'Cannot extract DataFrame from {delta_type}.')
+        raise RuntimeError('Cannot extract DataFrame from %s.' % delta_type)
 
 
 def _index_len(index):
