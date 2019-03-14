@@ -24,3 +24,12 @@
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.8rem;
 }
+
+h5.modal-title {
+  font-family: IBM Plex Sans,sans-serif;
+  font-size: 1.25rem;
+  margin: 0;
+  font-weight: 300;
+  line-height: 1.5;
+  text-transform: none;
+}
