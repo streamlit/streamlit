@@ -108,7 +108,7 @@ header {
   align-items: center;
 }
 
-.wide header {
+.streamlit-wide header {
   background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
 }
 
@@ -233,7 +233,7 @@ button:focus {
 
 @media (max-width: 768px) {
   header,
-  .wide header {
+  .streamlit-wide header {
     position: absolute;
     background: unset;
   }
