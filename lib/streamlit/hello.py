@@ -31,7 +31,7 @@ def run():
     status_text = st.empty()
     chart = st.line_chart(np.random.randn(10, 1))
 
-    for i in range(100):
+    for i in range(1, 101):
         # Update progress bar.
         progress_bar.progress(i)
 
@@ -54,3 +54,7 @@ def run():
         PS: Want to know how we did this?
         [You can learn about it here.](https://streamlit.io/secret/docs/core_mechanics.html)
     ''')
+
+
+if __name__ == '__main__':
+    run()

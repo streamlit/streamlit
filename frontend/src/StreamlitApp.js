@@ -66,6 +66,7 @@ class StreamlitApp extends PureComponent {
         wideMode: false,
       },
       showLoginBox: false,
+      streamlitVersion: null,
     };
 
     this.connectionManager = null;
@@ -161,7 +162,9 @@ class StreamlitApp extends PureComponent {
         trackEventRemotely('createReport');
         this.setState({
           sharingEnabled: connectionProperties.get('sharingEnabled'),
+          streamlitVersion: connectionProperties.get('streamlitVersion'),
         });
+        console.log('Streamlit version: ', this.state.streamlitVersion);
       },
       newReport: (newReportMsg) => {
         trackEventRemotely('updateReport');
@@ -390,6 +393,7 @@ class StreamlitApp extends PureComponent {
     return (
       <div className={outerDivClass}>
         <header>
+          <div className="decoration"></div>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
           </div>
@@ -410,6 +414,11 @@ class StreamlitApp extends PureComponent {
               isOpen: true,
               settings: this.state.userSettings,
               onSave: this.saveSettings,
+            })}
+            aboutCallback={() => this.openDialog({
+              type: 'about',
+              streamlitVersion: this.state.streamlitVersion,
+              onClose: this.closeDialog,
             })}
           />
         </header>

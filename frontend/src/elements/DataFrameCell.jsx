@@ -13,7 +13,7 @@ class DataFrameCell extends PureComponent {
   render() {
     const {
       columnIndex, rowIndex, className, style, contents, columnSortDirection,
-      headerClickedCallback, sortedByUser
+      headerClickedCallback, sortedByUser,
     } = this.props;
 
     let onClick;

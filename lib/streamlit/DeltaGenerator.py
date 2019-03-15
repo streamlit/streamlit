@@ -467,8 +467,14 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The data to display.
+
+            If 'data' is a pandas.Styler, it will be used to style its
+            underyling DataFrame. Streamlit supports custom cell
+            values and colors. (It does not support some of the more exotic
+            pandas styling features, like bar charts, hovering, and captions.)
+            Styler support is experimental!
 
         Example
         -------
@@ -502,7 +508,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict or DataFrame
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict or None
             Data to be plotted.
 
         width : int
@@ -533,7 +539,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
@@ -564,7 +570,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
@@ -595,7 +601,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             Data to be plotted. May also be passed inside the spec dict, to
             more closely follow the Vega Lite API.
 
@@ -910,7 +916,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The data to be plotted. Must have 'lat' and 'lon' columns.
 
         Example
@@ -947,7 +953,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
 
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             Data to be plotted, if no layer specified.
 
         spec : dict
@@ -1058,11 +1064,11 @@ class DeltaGenerator(object):
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
-        static: its entire contents are just layed out directly on the page.
+        static: its entire contents are just laid out directly on the page.
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The table data.
 
         Example
@@ -1086,7 +1092,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The table to concat.
 
         Example

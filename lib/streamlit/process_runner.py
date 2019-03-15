@@ -16,11 +16,9 @@ from streamlit import util
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
-
 # String that Python prints at the beginning of a trace dump. This is not
 # guaranteed to be present in all exceptions.
 _TRACE_START_STR = 'Traceback (most recent call last):'
-
 
 # When an exception prints to stderr, the printed traceback contains lines
 # like:
@@ -30,10 +28,20 @@ _TRACE_START_STR = 'Traceback (most recent call last):'
 # NOTE: these kinds of lines seem to print out for all exceptions.
 _TRACE_FILE_LINE_RE = re.compile('^  File ".*", line [0-9]+', re.MULTILINE)
 
-
 # RegEx that matches strings that look like "Foo: bar boz"
 # This RegEx is meant to be used in single-line strings.
 _EXCEPTION_LINE_RE = re.compile('([A-Z][A-Za-z0-9]+): (.*)')
+
+# A standard system error message looks like the following:
+# * "python: can't open file 'script.py': [Errno 2] No such file or directory"
+# * "python: can't open file 'script.py': [Errno 13] Permission denied"
+# The regex below creates a python regex named match to extract the
+# following:
+# * errno - 'Errno 2'
+# * errmsg - 'No such file or directory'
+# * msg - '"python: can't open file 'script.py'"
+_ERRNO_RE = re.compile(
+    r'(?P<msg>.*):.*\[(?P<errno>Errno [0-9]+)] (?P<errmsg>.*)')
 
 
 def run_handling_errors_in_subprocess(cmd_in, cwd=None):
@@ -51,12 +59,17 @@ def run_handling_errors_in_subprocess(cmd_in, cwd=None):
     if compatibility.running_py3():
         unicode_str = str
     else:
-        unicode_str = unicode
+        unicode_str = unicode  # noqa: F821
 
     if (type(cmd_in) in string_types  # noqa: F821
             or type(cmd_in) == unicode_str):
-        # Split string around whitespaces, but respect quotes.
-        cmd_list = shlex.split(cmd_in)
+        if sys.platform == 'win32':
+            # Windows is special
+            # https://stackoverflow.com/questions/33560364/python-windows-parsing-command-lines-with-shlex
+            cmd_list = [cmd_in]
+        else:
+            # Split string around whitespaces, but respect quotes.
+            cmd_list = shlex.split(cmd_in)
     else:
         cmd_list = _to_list_of_str(cmd_in)
 
@@ -85,10 +98,7 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
         The current working directory for this process.
 
     """
-    process = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            stderr=subprocess.PIPE)
+    process = subprocess.Popen(cmd, cwd=cwd, stderr=subprocess.PIPE)
 
     # Wait for the process to end and grab all data from stderr.
     # (We use this instead of .wait() because .communicate() grabs *all data*
@@ -106,27 +116,39 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
     if stderr:
         print(stderr_str, file=sys.stderr)
 
-    if (process.returncode != 0 and len(stderr_str) > 0
-            # Look for magic string to check whether stderr has exception.
-            and _TRACE_FILE_LINE_RE.search(stderr_str)
-            # Only parse exceptions that were not handled by Streamlit already.
-            and util.EXCEPTHOOK_IDENTIFIER_STR not in stderr_str):
+    if process.returncode != 0 and len(stderr_str) > 0:
+        # Catch errors that are output by Python when parsing the script. In
+        # particular, here we look for errors that have a traceback.
+        if (_TRACE_FILE_LINE_RE.search(stderr_str)
+                # Only parse errors that were not handled by Streamlit already.
+                and util.EXCEPTHOOK_IDENTIFIER_STR not in stderr_str):
 
-        parsed_err = _parse_exception_text(stderr_str)
+            parsed_err = _parse_exception_text(stderr_str)
 
-        # This part of the code needs to be done in a process separate from the
-        # Proxy process, since st.foo creates WebSocket connection.
+            # This part of the code needs to be done in a process separate from
+            # the Proxy process, since st.foo creates WebSocket connection.
 
-        if parsed_err:
-            import streamlit as st
-            exc_type, exc_message, exc_tb = parsed_err
-            st._text_exception(exc_type, exc_message, exc_tb)
+            if parsed_err:
+                import streamlit as st
+                exc_type, exc_message, exc_tb = parsed_err
+                st._text_exception(exc_type, exc_message, exc_tb)
+            else:
+                # If we couldn't find the exception type, then maybe the script
+                # just returns an error code and prints something to stderr. So
+                # let's not replace the report with the contents of stderr
+                # because that would be annoying.
+                pass
+
+        # Catch errors that are output by the Python interpreter when it
+        # encounters OS-level issues when it tries to open the script itself.
+        # These always look like:
+        # "python: some message: [Errno some-number] some message".
         else:
-            # If we couldn't find the exception type, then maybe the script
-            # just returns an error code and prints something to stderr. So
-            # let's not replace the report with the contents of stderr because
-            # that would be annoying.
-            pass
+            m = _ERRNO_RE.match(stderr_str)
+            if m:
+                import streamlit as st
+                st._text_exception(
+                    m.group('errno'), m.group('errmsg'), [m.group('msg')])
 
 
 def run_python_module(module, *args):

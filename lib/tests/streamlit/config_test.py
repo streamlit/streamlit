@@ -226,14 +226,6 @@ class ConfigTest(unittest.TestCase):
 
         config._delete_option('s3.bucket')
 
-    @patch.object(config, '_section_descriptions', new=copy.deepcopy(SECTION_DESCRIPTIONS))
-    @patch.object(config, '_config_options', new=copy.deepcopy(CONFIG_OPTIONS))
-    def test_parse_config_file_no_home(self):
-            del os.environ['HOME']
-            with pytest.raises(RuntimeError) as e:
-                config._parse_config_file()
-            self.assertEqual('No home directory.', str(e.value))
-
     def test_sections_order(self):
         sections = ['_test', u'global', u'client', u'proxy', u'browser', u's3']
         keys = list(config._section_descriptions.keys())

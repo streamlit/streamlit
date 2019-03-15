@@ -92,6 +92,11 @@ class MainMenu extends Component {
             Documentation
           </DropdownItem>
 
+          <DropdownItem
+              onClick={() => this.props.aboutCallback()}>
+            About
+          </DropdownItem>
+
         </DropdownMenu>
       </Dropdown>
     );

@@ -14,6 +14,7 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketClosedError
 from tornado.websocket import WebSocketHandler
 
+from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
@@ -147,6 +148,8 @@ class BrowserWebSocket(WebSocketHandler):
         LOGGER.debug(
             'New browser connection: gather_usage_stats=%s',
             msg.new_connection.gather_usage_stats)
+
+        msg.new_connection.streamlit_version = __version__
 
         yield self.write_message(msg.SerializeToString(), binary=True)
 
