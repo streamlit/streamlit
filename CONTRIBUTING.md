@@ -228,7 +228,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.29.0`.
+**Note:** The current version is `0.30.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
