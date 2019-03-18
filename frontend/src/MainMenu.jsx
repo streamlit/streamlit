@@ -88,13 +88,13 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
-              onClick={() => this.props.aboutCallback()}>
-            About
+              onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
+            Documentation
           </DropdownItem>
 
           <DropdownItem
-              onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
-            Documentation
+              onClick={() => this.props.aboutCallback()}>
+            About
           </DropdownItem>
 
         </DropdownMenu>
