@@ -186,7 +186,7 @@ def write(*args):
     >>> st.write(c)
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
        height: 200px
 
     """
