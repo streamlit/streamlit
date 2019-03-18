@@ -212,9 +212,16 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 
 ## Publishing to `PyPi`
 
-#### Write The Release notes
+#### Start a new local branch
 
-Place them [here](contrib/docs/release-notes.md). Then:
+It's a good idea to start a new local branch before doing a release so you can
+cherrypick fixes into it if needed, without impacting develop.
+
+```
+git checkout develop
+git pull remote develop
+git checkout -b release
+```
 
 #### Make Sure You Don't Have the Proxy Running
 
@@ -372,12 +379,20 @@ Post the release notes and declare victory!
 
 ```
 git commit -am "version <version number>"
+
+# Create new tag
 git tag <version number>
-git push origin <version number>
-git push origin develop
+git push remote <version number>
+
+# Update master
 git checkout master
-git pull
-git rebase develop
+git pull remote master
+git merge release
+
+# Update develop
+git checkout develop
+git pull remote develop
+git merge release
 ```
 
 #### Go Back to Develop Mode
