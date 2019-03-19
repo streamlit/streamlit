@@ -17,7 +17,8 @@ help:
 	@echo " site         - Builds the site at /site/public."
 	@echo " devel-site   - Builds site and starts the dev server for the site."
 	@echo " publish-site - Builds site and pushes the site to prod."
-	@echo " pytest       - Runs unittests"
+	@echo " pytest       - Runs python unit tests"
+	@echo " js-lint      - Lints the frontend"
 
 .PHONY: init
 init: setup pipenv react-init protobuf # react-build release
@@ -181,8 +182,10 @@ react-build:
 		frontend/build/ lib/streamlit/static/
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
+.PHONY: js-lint
 js-lint:
-	cd frontend; ./node_modules/.bin/eslint src
+	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+	cd frontend; ./node_modules/.bin/eslint --max-warnings 0 src
 
 js-test:
 	cd frontend; npm run test
