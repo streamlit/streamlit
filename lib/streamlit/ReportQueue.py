@@ -62,7 +62,7 @@ class ReportQueue(object):
             self._id_map[delta.id] = index
             self._deltas.append(None)
 
-        # Combine the previous and new delta.
+        # Combine the previous and new delta if possible.
         self._deltas[index] = self.compose(self._deltas[index], delta)
 
     def get_deltas(self):
@@ -136,13 +136,14 @@ class ReportQueue(object):
 
     @staticmethod
     def compose(delta1, delta2):
-        """Combines the two given deltas into one."""
+        """Combines the two given deltas into one if possible."""
         if delta1 == None:
             return delta2
         elif delta2.WhichOneof('type') == 'new_element':
             return delta2
         elif delta2.WhichOneof('type') == 'add_rows':
-            data_frame_proto.add_rows(delta1, delta2)
+            data_frame_proto.add_rows(
+                delta1, delta2, name=delta2.add_rows.name)
             return delta1
 
         raise NotImplementedError('Need to implement the compose code.')

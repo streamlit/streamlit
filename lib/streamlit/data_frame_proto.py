@@ -264,7 +264,7 @@ def _marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.Float64Index:
         proto_index.float_64_index.data.data.extend(pandas_index)
     else:
-        raise RuntimeError("Can't handle %s yet." % type(pandas_index))
+        raise NotImplementedError("Can't handle %s yet." % type(pandas_index))
 
 
 def _marshall_table(pandas_table, proto_table):
@@ -288,7 +288,8 @@ def _marshall_any_array(pandas_array, proto_array):
         pandas_array = np.array(pandas_array)
 
     # Only works on 1D arrays.
-    assert len(pandas_array.shape) == 1, 'Array must be 1D.'
+    if len(pandas_array.shape) != 1:
+        raise ValueError('Array must be 1D.')
 
     # Perform type-conversion based on the array dtype.
     if issubclass(pandas_array.dtype.type, np.floating):
@@ -307,26 +308,31 @@ def _marshall_any_array(pandas_array, proto_array):
             pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
-        raise RuntimeError('Dtype %s not understood.' % pandas_array.dtype)
+        raise NotImplementedError(
+            'Dtype %s not understood.' % pandas_array.dtype)
 
 
-def add_rows(delta1, delta2):
+def add_rows(delta1, delta2, name=None):
     """Concat the DataFrame in delta2 to the DataFrame in delta1.
 
     Parameters
     ----------
     delta1 : Delta
     delta2 : Delta
+    name : str or None
 
     """
-    df1 = _get_data_frame(delta1)
-    df2 = _get_data_frame(delta2)
+    df1 = _get_data_frame(delta1, name)
+    df2 = _get_data_frame(delta2, name)
 
     if len(df1.data.cols) == 0:
         if len(df2.data.cols) == 0:
             return
         df1.CopyFrom(df2)
         return
+
+    if len(df1.data.cols) != len(df2.data.cols):
+        raise ValueError('Dataframes have incompatible shapes')
 
     _concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
@@ -346,8 +352,10 @@ def _concat_index(index1, index2):
     # Otherwise, dispatch based on type.
     type1 = index1.WhichOneof('type')
     type2 = index2.WhichOneof('type')
-    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
-        {'type1': type1, 'type2': type2}
+    if type1 != type2:
+        raise ValueError(
+            'Cannot concatenate %(type1)s with %(type2)s.' % \
+            {'type1': type1, 'type2': type2})
 
     if type1 == 'plain_index':
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
@@ -376,8 +384,10 @@ def _concat_any_array(any_array_1, any_array_2):
 
     type1 = any_array_1.WhichOneof('type')
     type2 = any_array_2.WhichOneof('type')
-    assert type1 == type2, 'Cannot concatenate %(type1)s with %(type2)s.' % \
-        {'type1': type1, 'type2': type2}
+    if type1 != type2:
+        raise ValueError(
+            'Cannot concatenate %(type1)s with %(type2)s.' % \
+            {'type1': type1, 'type2': type2})
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 
@@ -391,21 +401,53 @@ def _concat_cell_style_array(style_array1, style_array2):
     style_array1.styles.extend(style_array2.styles)
 
 
-def _get_data_frame(delta):
+def _get_data_frame(delta, name=None):
     """Extract the dataframe from a delta."""
     delta_type = delta.WhichOneof('type')
+
     if delta_type == 'new_element':
         element_type = delta.new_element.WhichOneof('type')
-        if element_type == 'data_frame':
+
+        # Some element types don't support named datasets.
+        if name and element_type in ('data_frame', 'table', 'chart'):
+            raise ValueError(
+                'Dataset names not supported for st.%s' % element_type)
+
+        if element_type in 'data_frame':
             return delta.new_element.data_frame
+        elif element_type in 'table':
+            return delta.new_element.table
         elif element_type == 'chart':
             return delta.new_element.chart.data
         elif element_type == 'vega_lite_chart':
-            return delta.new_element.vega_lite_chart.data
+            chart_proto = delta.new_element.vega_lite_chart
+            if name:
+                return _get_dataset(chart_proto.datasets, name)
+            elif len(chart_proto.datasets) == 1:
+                # Support the case where the dataset name was randomly given by
+                # the charting library (e.g. Altair) and the user has no
+                # knowledge of it.
+                return chart_proto.datasets[0].data
+            else:
+                return chart_proto.data
+        # TODO: Support DeckGL. Need to figure out how to handle layer indices
+        # first.
+
     elif delta_type == 'add_rows':
-        return delta.add_rows
+        if delta.add_rows.has_name and name != delta.add_rows.name:
+            raise ValueError('No dataset found with name "%s".' % name)
+        return delta.add_rows.data
     else:
-        raise RuntimeError('Cannot extract DataFrame from %s.' % delta_type)
+        raise ValueError('Cannot extract DataFrame from %s.' % delta_type)
+
+
+
+def _get_dataset(datasets_proto, name):
+    for dataset in datasets_proto:
+        if dataset.has_name and dataset.name == name:
+            return dataset.data
+
+    raise ValueError('No dataset found with name "%s".' % name)
 
 
 def _index_len(index):

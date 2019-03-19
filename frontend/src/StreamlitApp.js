@@ -229,7 +229,7 @@ class StreamlitApp extends PureComponent {
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
           newElement: newElement => newElement.set('reportId', reportId),
-          addRows: newRows => addRows(element, newRows),
+          addRows: namedDataSet => addRows(element, namedDataSet),
         })),
     }));
   }

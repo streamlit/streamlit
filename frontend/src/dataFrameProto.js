@@ -111,7 +111,7 @@ export function dataFrameGetDimensions(df) {
  * Returns [rows, cls] for this table.
  */
 export function tableGetRowsAndCols(table) {
-  if (!table) {
+  if (!table || !table.get('cols')) {
     return [0, 0];
   }
 
@@ -314,7 +314,6 @@ export function indexGet(index, level, i) {
 export function indexGetByName(index, name) {
   const len = indexLen(index);
   for (var i = 0; i < len; i++) {
-    console.log(`iter: ${i} comparing "${indexGet(index, 0, i)}" to "${name}".`);
     if (indexGet(index, 0, i) === name) {
       return i;
     }
@@ -359,13 +358,17 @@ function anyArrayData(anyArray) {
 }
 
 /**
- * Concatenates delta1 and delta2 together, returning a new Delta.
+ * Concatenates delta1 and delta2 together, returning a new element.
  */
-export function addRows(element, newRows) {
-  const existingDataFrame = getDataFrame(element);
+export function addRows(element, namedDataSet) {
+  const name = namedDataSet.get('hasName') ?
+      namedDataSet.get('name') : null;
+  const newRows = namedDataSet.get('data');
+
+  const existingDataFrame = getDataFrame(element, name);
 
   if (!existingDataFrame) {
-    return setDataFrame(element, newRows);
+    return setDataFrame(element, newRows, name);
   }
 
   const newDataFrame = existingDataFrame
@@ -383,7 +386,7 @@ export function addRows(element, newRows) {
       );
     });
 
-  return setDataFrame(element, newDataFrame);
+  return setDataFrame(element, newDataFrame, name);
 }
 
 /**
@@ -451,27 +454,91 @@ function concatCellStyleArray(array1, array2) {
 }
 
 /**
- * Extracts the dataframe from an element.
+ * Extracts the dataframe from an element. The name is only used if it makes
+ * sense for the given element.
  */
-function getDataFrame(element) {
+function getDataFrame(element, name = null) {
   return dispatchOneOf(element, 'type', {
     chart: (chart) => chart.get('data'),
     dataFrame: (df) => df,
+    table: (df) => df,
     deckGlMap: (el) => el.get('data'),
-    vegaLiteChart: (chart) => chart.get('data'),
+    vegaLiteChart: (chart) => getDataFrameByName(chart, name),
+  });
+}
+
+
+/**
+ * If name is null, gets DataFrame from element.data or element.datasets[0].
+ * If name is non-null, gets DataFrame from element.datasets matching the
+ * provided name.
+ */
+function getDataFrameByName(proto, name) {
+  if (name == null && proto.get('data') != null) {
+    return proto.get('data');
+  }
+
+  const namedDataSetEntry = getNamedDataSet(proto.get('datasets'), name);
+  return namedDataSetEntry[1].get('data');
+}
+
+
+/**
+ * If there is only one NamedDataSet, returns [0, NamedDataSet] with the 0th
+ * NamedDataSet.
+ * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
+ * matching the given name.
+ * If no matches, raises exception.
+ */
+function getNamedDataSet(namedDataSets, name) {
+  if (namedDataSets != null) {
+    if (namedDataSets.size === 1) {
+      const firstNamedDataSet = namedDataSets.first();
+      return [0, firstNamedDataSet];
+    }
+
+    const namedDataSetEntry = namedDataSets.findEntry(
+        ds => ds.get('hasName') && ds.get('name') === name);
+
+    if (namedDataSetEntry) {
+      return namedDataSetEntry;
+    }
+  }
+
+  throw new Error(`Element does not have a dataset named "${name}"`);
+}
+
+
+/**
+ * Sets the dataframe of this element.
+ * Returns a new element -- NOT A DATAFRAME!
+ */
+function setDataFrame(element, df, name = null) {
+  return updateOneOf(element, 'type', {
+    chart: (chart) => chart.set('data', df),
+    dataFrame: () => df,
+    table: () => df,
+    deckGlMap: (el) => el.set('data', df),
+    vegaLiteChart: (chart) => setDataFrameByName(chart, df, name),
   });
 }
 
 /**
- * Sets the dataframe of this element. Returning a new element.
+ * If name is null, puts df into proto.data.
+ * If name is non-null, puts df into proto.datasets using the provided name.
+ * Returns a new subelement -- NOT A DATAFRAME!
  */
-function setDataFrame(element, df) {
-  return updateOneOf(element, 'type', {
-    chart: (chart) => chart.set('data', df),
-    dataFrame: () => df,
-    deckGlMap: (el) => el.set('data', df),
-    vegaLiteChart: (chart) => chart.set('data', df),
-  });
+function setDataFrameByName(proto, df, name = null) {
+  if (name == null) {
+    return proto.set('data', df);
+  }
+
+  const namedDataSets = proto.get('datasets');
+
+  const namedDataSetEntry = getNamedDataSet(namedDataSets, name);
+  const namedDataSet = namedDataSetEntry[1].set('data', df);
+
+  return proto.setIn(['datasets', namedDataSetEntry[0]], namedDataSet);
 }
 
 /**
