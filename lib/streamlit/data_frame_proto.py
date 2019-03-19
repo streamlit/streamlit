@@ -50,8 +50,8 @@ def marshall_data_frame(data, proto_df):
     _marshall_index(df.columns, proto_df.columns)
     _marshall_index(df.index, proto_df.index)
 
-    if _is_pandas_styler(data):
-        _marshall_styles(proto_df.style, df, data)
+    styler = data if _is_pandas_styler(data) else None
+    _marshall_styles(proto_df.style, df, styler)
 
 
 def convert_anything_to_df(df):
@@ -86,24 +86,29 @@ def _is_pandas_styler(obj):
     return util.is_type(obj, 'pandas.io.formats.style.Styler')
 
 
-def _marshall_styles(proto_table_style, df, styler):
+def _marshall_styles(proto_table_style, df, styler=None):
     """Adds pandas.Styler styling data to a protobuf.DataFrame
 
     Parameters
     ----------
     proto_table_style : protobuf.TableStyle
     df : pandas.DataFrame
-    styler : pandas.Styler holding styling data for the data frame
+    styler : pandas.Styler holding styling data for the data frame, or
+        None if there's no style data to marshall
     """
 
     # NB: we're using protected members of Styler to get this data,
     # which is non-ideal and could break if Styler's interface changes.
 
-    styler._compute()
-    translated_style = styler._translate()
-
-    css_styles = _get_css_styles(translated_style)
-    display_values = _get_custom_display_values(df, translated_style)
+    if styler is not None:
+        styler._compute()
+        translated_style = styler._translate()
+        css_styles = _get_css_styles(translated_style)
+        display_values = _get_custom_display_values(df, translated_style)
+    else:
+        # If we have no Styler, we just make an empty CellStyle for each cell
+        css_styles = {}
+        display_values = {}
 
     nrows, ncols = df.shape
     for col in range(ncols):

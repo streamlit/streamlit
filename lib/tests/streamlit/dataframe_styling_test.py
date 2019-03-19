@@ -66,7 +66,7 @@ class DataFrameStylingTest(unittest.TestCase):
         proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
 
-    def test_add_rows_copies_styles(self):
+    def test_add_styled_rows(self):
         """Add rows should preserve existing styles and append new styles"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -80,6 +80,42 @@ class DataFrameStylingTest(unittest.TestCase):
 
         x = self._dg.dataframe(df1.style.applymap(lambda val: 'color: red'))
         x.add_rows(df2.style.applymap(lambda val: 'color: black'))
+
+        proto_df = self._get_element().data_frame
+        self._assert_column_css_styles(proto_df, 0, css_values)
+
+    def test_add_styled_rows_to_unstyled_rows(self):
+        """Adding styled rows to unstyled rows should work"""
+        df1 = pd.DataFrame([5, 6])
+        df2 = pd.DataFrame([7, 8])
+
+        css_values = [
+            set(),
+            set(),
+            {css_s('color', 'black')},
+            {css_s('color', 'black')},
+        ]
+
+        x = self._dg.dataframe(df1)
+        x.add_rows(df2.style.applymap(lambda val: 'color: black'))
+
+        proto_df = self._get_element().data_frame
+        self._assert_column_css_styles(proto_df, 0, css_values)
+
+    def test_add_unstyled_rows_to_styled_rows(self):
+        """Adding unstyled rows to styled rows should work"""
+        df1 = pd.DataFrame([5, 6])
+        df2 = pd.DataFrame([7, 8])
+
+        css_values = [
+            {css_s('color', 'black')},
+            {css_s('color', 'black')},
+            set(),
+            set(),
+        ]
+
+        x = self._dg.dataframe(df1.style.applymap(lambda val: 'color: black'))
+        x.add_rows(df2)
 
         proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
