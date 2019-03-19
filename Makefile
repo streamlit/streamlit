@@ -185,7 +185,7 @@ react-build:
 .PHONY: js-lint
 js-lint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	cd frontend; ./node_modules/.bin/eslint --max-warnings 0 src
+	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --max-warnings 0 src
 
 js-test:
 	cd frontend; npm run test

@@ -5,7 +5,7 @@
  * @fileoverview Implements a dialog that is used to configure user settings.
  */
 
-import React, {PureComponent} from 'react';
+import React, { PureComponent } from 'react';
 import {
   Button,
   Modal,
@@ -25,10 +25,10 @@ class SettingsDialog extends PureComponent {
     super(props);
 
     // Holds the settings that will be saved when the "save" button is clicked.
-    this.state = {...this.props.settings};
+    this.state = { ...this.props.settings };
 
     // Holds the actual settings that Streamlit is using.
-    this.settings = {...this.props.settings};
+    this.settings = { ...this.props.settings };
 
     this.handleDialogOpen = this.handleDialogOpen.bind(this);
     this.handleCheckboxChange = this.handleCheckboxChange.bind(this);
@@ -39,47 +39,47 @@ class SettingsDialog extends PureComponent {
   render() {
     return (
       <Modal
-          isOpen={this.props.isOpen}
-          toggle={this.handleCancelButtonClick}
-          onOpened={this.handleDialogOpen}
-          >
+        isOpen={this.props.isOpen}
+        toggle={this.handleCancelButtonClick}
+        onOpened={this.handleDialogOpen}
+      >
         <ModalHeader toggle={this.handleCancelButtonClick}>Settings</ModalHeader>
 
         <ModalBody>
           <label>
             <input
-                type="checkbox"
-                name="wideMode"
-                checked={this.state.wideMode}
-                onChange={this.handleCheckboxChange}
-                />
-            {" "}
+              type="checkbox"
+              name="wideMode"
+              checked={this.state.wideMode}
+              onChange={this.handleCheckboxChange}
+            />
+            {' '}
             Show report in wide mode
           </label>
         </ModalBody>
 
         <ModalFooter>
           <Button
-              color="secondary"
-              onClick={this.handleCancelButtonClick}>
+            color="secondary"
+            onClick={this.handleCancelButtonClick}>
             Cancel
           </Button>
           <Button
-              color="primary"
-              onClick={this.handleSaveButtonClick}>
+            color="primary"
+            onClick={this.handleSaveButtonClick}>
             Save
           </Button>
         </ModalFooter>
       </Modal>
-    )
-  };
+    );
+  }
 
   handleDialogOpen() {
-    this.setState({...this.settings});
+    this.setState({ ...this.settings });
   }
 
   changeSingleSetting(name, value) {
-    this.setState({[name]: value});
+    this.setState({ [name]: value });
   }
 
   handleCheckboxChange(e) {
@@ -93,10 +93,10 @@ class SettingsDialog extends PureComponent {
   }
 
   handleSaveButtonClick() {
-    this.settings = {...this.state};
-    this.props.onSave(this.settings)
+    this.settings = { ...this.state };
+    this.props.onSave(this.settings);
     this.props.onClose();
   }
-};
+}
 
 export default SettingsDialog;
