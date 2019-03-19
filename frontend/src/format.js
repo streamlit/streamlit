@@ -10,15 +10,15 @@
 import moment from 'moment';
 import momentDurationFormat from 'moment-duration-format';
 import numeral from 'numeral';
-momentDurationFormat(moment)
+momentDurationFormat(moment);
 
 class Duration {
   constructor(millis) {
-    this.millis = millis
+    this.millis = millis;
   }
 
   getTime() {
-    return this.millis
+    return this.millis;
   }
 }
 
@@ -43,28 +43,29 @@ class Format {
   durationToString(duration) {
     return moment.duration(duration.getTime()).format();
   }
-};
+}
 
 /**
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
 function toFormattedString(x) {
-  if (isFloat(x))
+  if (isFloat(x)) {
     return numeral(x).format('0,0.0000');
-  else if (x instanceof Date)
+  } else if (x instanceof Date) {
     return format.dateToString(x);
-  else if (x instanceof Duration)
+  } else if (x instanceof Duration) {
     return format.durationToString(x);
-  else
+  } else {
     return x.toString();
+  }
 }
 
 /**
  * Returns true if this number is a float.
  */
-function isFloat(n){
-    return Number(n) === n && n % 1 !== 0;
+function isFloat(n) {
+  return Number(n) === n && n % 1 !== 0;
 }
 
 const format = new Format();
-export { Duration, format, toFormattedString }
+export { Duration, format, toFormattedString };

@@ -8,7 +8,7 @@
 import React, { PureComponent} from 'react';
 import './ExceptionElement.css';
 
- /**
+/**
   * Functional element representing formatted text.
   */
 class ExceptionElement extends PureComponent {
@@ -16,8 +16,7 @@ class ExceptionElement extends PureComponent {
     const {element, width} = this.props;
     const type = element.get('type');
     let message = element.get('message');
-    if (message)
-      message = `: ${message}`
+    if (message) { message = `: ${message}`; }
     const stackTrace = element.get('stackTrace');
 
     // Put it all together into a nice little html view.

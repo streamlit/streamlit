@@ -48,8 +48,8 @@ class ConnectionStatus extends PureComponent {
     return (
       <div>
         <div
-            id="ConnectionStatus"
-            className={this.state.minimized ? 'minimized' : ''}>
+          id="ConnectionStatus"
+          className={this.state.minimized ? 'minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
             {this.drawIcon()}
           </svg>
@@ -61,26 +61,26 @@ class ConnectionStatus extends PureComponent {
           {this.drawTooltip()}
         </UncontrolledTooltip>
       </div>
-    )
+    );
   }
 
   drawIcon() {
     switch (this.props.connectionState) {
       case undefined:
-        return <use xlinkHref="./open-iconic.min.svg#ellipses" />
+        return <use xlinkHref="./open-iconic.min.svg#ellipses" />;
 
       case ConnectionState.CONNECTED:
-        return <use xlinkHref="./open-iconic.min.svg#bolt" />
+        return <use xlinkHref="./open-iconic.min.svg#bolt" />;
 
       case ConnectionState.DISCONNECTED:
-        return <use xlinkHref="./open-iconic.min.svg#circle-x" />
+        return <use xlinkHref="./open-iconic.min.svg#circle-x" />;
 
       case ConnectionState.STATIC:
-        return <use xlinkHref="./open-iconic.min.svg#cloud" />
+        return <use xlinkHref="./open-iconic.min.svg#cloud" />;
 
       case ConnectionState.ERROR:
       default:
-        return <use xlinkHref="./open-iconic.min.svg#warning" />
+        return <use xlinkHref="./open-iconic.min.svg#warning" />;
     }
   }
 
@@ -123,6 +123,6 @@ class ConnectionStatus extends PureComponent {
         return 'Something went wrong!';
     }
   }
-};
+}
 
 export default ConnectionStatus;

@@ -42,7 +42,8 @@ export function getSortedDataRowIndices(df, sortColumnIdx, sortAscending) {
   const table = df.get('data');
   const [nRows, nCols] = tableGetRowsAndCols(table);
   if (sortColumnIdx < 0 || sortColumnIdx >= nCols) {
-    throw new Error(`Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
+    throw new Error(
+      `Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
   }
 
   const col = table.getIn(['cols', sortColumnIdx]);
@@ -103,7 +104,7 @@ export function dataFrameGetDimensions(df) {
     dataRows,
     dataCols,
     cols,
-    rows
+    rows,
   };
 }
 
@@ -190,8 +191,8 @@ export function dataFrameGet(df, col, row) {
     } else {
       // If we have a formatted display value for the cell, return that.
       // Else return the data itself.
-      const customDisplayValue =
-        tableStyleGetDisplayValue(df.get('style'), col - headerCols, row - headerRows);
+      const customDisplayValue = tableStyleGetDisplayValue(
+        df.get('style'), col - headerCols, row - headerRows);
 
       const contents = customDisplayValue != null ?
         customDisplayValue :
@@ -199,7 +200,8 @@ export function dataFrameGet(df, col, row) {
 
       return {
         contents: contents,
-        styles: tableStyleGetCSS(df.get('style'), col - headerCols, row - headerRows) || {},
+        styles: tableStyleGetCSS(
+          df.get('style'), col - headerCols, row - headerRows) || {},
         type: 'data',
       };
     }
@@ -215,12 +217,14 @@ export function tableStyleGetDisplayValue(tableStyle, columnIndex, rowIndex) {
     return undefined;
   }
 
-  const cellStyle = tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex], undefined);
+  const cellStyle = tableStyle.getIn(
+    ['cols', columnIndex, 'styles', rowIndex], undefined);
   if (cellStyle == null) {
     return undefined;
   }
 
-  return cellStyle.get('hasDisplayValue') ? cellStyle.get('displayValue') : undefined;
+  return cellStyle.get('hasDisplayValue') ?
+    cellStyle.get('displayValue') : undefined;
 }
 
 /**
@@ -232,7 +236,8 @@ export function tableStyleGetCSS(tableStyle, columnIndex, rowIndex) {
     return undefined;
   }
 
-  const cssStyles = tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex, 'css'], undefined);
+  const cssStyles = tableStyle.getIn(
+    ['cols', columnIndex, 'styles', rowIndex, 'css'], undefined);
   if (cssStyles == null) {
     return undefined;
   }
@@ -303,7 +308,8 @@ export function indexGet(index, level, i) {
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
     float_64Index: (idx) => idx.getIn(['data', 'data', i]),
     datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
-    timedeltaIndex: (idx) => format.nanosToDuration(idx.getIn(['data', 'data', i])),
+    timedeltaIndex: (idx) => format.nanosToDuration(
+      idx.getIn(['data', 'data', i])),
   });
 }
 
@@ -313,7 +319,8 @@ export function indexGet(index, level, i) {
  */
 export function indexGetByName(index, name) {
   const len = indexLen(index);
-  for (var i = 0; i < len; i++) {
+  for (let i = 0; i < len; i++) {
+    console.log(`iter: ${i} comparing "${indexGet(index, 0, i)}" to "${name}".`);
     if (indexGet(index, 0, i) === name) {
       return i;
     }
@@ -362,7 +369,7 @@ function anyArrayData(anyArray) {
  */
 export function addRows(element, namedDataSet) {
   const name = namedDataSet.get('hasName') ?
-      namedDataSet.get('name') : null;
+    namedDataSet.get('name') : null;
   const newRows = namedDataSet.get('data');
 
   const existingDataFrame = getDataFrame(element, name);
@@ -498,7 +505,7 @@ function getNamedDataSet(namedDataSets, name) {
     }
 
     const namedDataSetEntry = namedDataSets.findEntry(
-        ds => ds.get('hasName') && ds.get('name') === name);
+      ds => ds.get('hasName') && ds.get('name') === name);
 
     if (namedDataSetEntry) {
       return namedDataSetEntry;

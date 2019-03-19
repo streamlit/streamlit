@@ -27,7 +27,7 @@ import { getObject } from './s3helper';
 */
 class StaticConnection {
   constructor({
-    reportId, manifest, onMessage, setConnectionState, setReportName
+    reportId, manifest, onMessage, setConnectionState, setReportName,
   }) {
     this.state = ConnectionState.STATIC;
 

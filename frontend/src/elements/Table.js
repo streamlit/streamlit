@@ -106,18 +106,18 @@ function TableRow({df, rowIdx, cols}) {
   for (let colIdx = 0; colIdx < cols; colIdx++) {
     const { contents, type } = dataFrameGet(df, colIdx, rowIdx);
     const formattedContents = toFormattedString(contents);
-    if (type === "corner") {
+    if (type === 'corner') {
       entries.push(<th key={colIdx}>&nbsp;</th>);
-    } else if (type === "row-header") {
+    } else if (type === 'row-header') {
       entries.push(<th key={colIdx} scope="row">{ formattedContents }</th>);
-    } else if (type === "col-header") {
+    } else if (type === 'col-header') {
       entries.push(<th key={colIdx}>{ formattedContents }</th>);
-    } else if (type === "data") {
+    } else if (type === 'data') {
       entries.push(<td key={colIdx}>{ formattedContents }</td>);
     } else {
-      throw new Error(`Cannot parse type "${type}".`)
+      throw new Error(`Cannot parse type "${type}".`);
     }
-  };
+  }
   return entries;
 }
 
