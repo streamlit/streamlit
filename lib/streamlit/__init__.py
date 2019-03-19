@@ -149,7 +149,7 @@ def write(*args):
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
-    numbers, data frames, and assorted objects:
+    numbers, data frames, styled data frames, and assorted objects:
 
     >>> st.write(1234)
     >>> st.write(pd.DataFrame({
@@ -195,6 +195,7 @@ def write(*args):
         'Series',
         'Index',
         'ndarray',
+        'Styler',
     )
 
     HELP_TYPES = (
