@@ -476,8 +476,8 @@ class DeltaGenerator(object):
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
 
-        Example
-        -------
+        Examples
+        --------
         >>> df = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -487,6 +487,19 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
+
+        You can also pass a Pandas Styler object to change the style of
+        the rendered DataFrame:
+
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.dataframe(df.style.highlight_max(axis=0))
+
+        .. output::
+           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
+           height: 285px
 
         """
         from streamlit import data_frame_proto
