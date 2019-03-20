@@ -19,7 +19,7 @@ except ImportError:
 
 from streamlit import protobuf
 from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
-    _clean_up_sig
+    _clean_up_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
 
 
@@ -49,6 +49,30 @@ class FakeDeltaGenerator(object):
         verify that None is indeed getting passed in.
         """
         return (element, arg0, data)
+
+    def fake_text_raise_exception(self, element, body):
+        """Fake text that raises exception."""
+        raise Exception('Exception in fake_text_raise_exception')
+
+    def exception(self, e):
+        """Create fake exception handler.
+
+        The real DeltaGenerator exception is more complicated.  We use
+        this so _with_element can find the exception method.  The real
+        exception method wil be tested later on.
+        """
+        self._exception_msg = str(e)
+
+    def _enqueue_new_element_delta(self, marshall_element):
+        """Fake enqueue new element delta.
+
+        The real DeltaGenerator method actually enqueues the deltas but
+        to test _with_element we just need this method to exist.  The
+        real enqueue_new_element_delta will be tested later on.
+        """
+        delta = protobuf.Delta()
+        marshall_element(delta.new_element)
+        return delta
 
 
 class DeltaGeneratorTest(unittest.TestCase):
@@ -88,6 +112,25 @@ class DeltaGeneratorTest(unittest.TestCase):
         dg = FakeDeltaGenerator()
         result = wrapped(dg, 'foo', data='bar')
         self.assertEqual(result, (None, 'foo', 'bar'))
+
+    def test_with_element(self):
+        wrapped = _with_element(FakeDeltaGenerator.fake_text)
+
+        dg = FakeDeltaGenerator()
+        data = 'some_text'
+        # This would really look like st.text(data) but since we're
+        # testng the wrapper, it looks like this.
+        element = wrapped(dg, data)
+        self.assertEqual(element.new_element.text.body, data)
+
+    def test_with_element_exception(self):
+        wrapped = _with_element(FakeDeltaGenerator.fake_text_raise_exception)
+
+        dg = FakeDeltaGenerator()
+        data = 'some_text'
+        wrapped(dg, data)
+        self.assertEqual(dg._exception_msg, 'Exception in fake_text_raise_exception')
+
 
 class DeltaGeneratorClassTest(unittest.TestCase):
     """Test DeltaGenerator Class."""
