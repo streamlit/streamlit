@@ -72,3 +72,8 @@ for i in range(1, num_rows):
     vega_el2.add_rows(df2)
     vega_el3.add_rows(foo=df2)
     altair_el.add_rows(df2)
+
+st.header('You should see an error below')
+st.write(
+    'The error below is caught in the Proxy, so this is a good test for that!')
+dataframe_el.add_rows(np.abs(np.random.randn(num_rows, 6)))

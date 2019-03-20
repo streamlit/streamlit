@@ -164,8 +164,17 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
             el = method(DATAFRAME)
 
             # This is what we're testing:
-            with self.assertRaises(ValueError):
-                el.add_rows(wrong_name=NEW_ROWS)
+            el.add_rows(wrong_name=NEW_ROWS)
+
+            # Make sure an "exception" element was enqueued.
+            el = self._dg._queue._deltas[-1].new_element
+            self.assertTrue(el.HasField('exception'))
+            self.assertEqual(el.exception.type, 'ValueError')
+            self.assertTrue(
+                el.exception.message.startswith(
+                    'Dataset names not supported for') or
+                el.exception.message.startswith(
+                    'No dataset found'))
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._queue._empty()
@@ -180,12 +189,14 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
             el = method(DATAFRAME)
 
             # This is what we're testing:
-            with self.assertRaises(ValueError):
-                el.add_rows(NEW_ROWS_WRONG_SHAPE)
+            el.add_rows(NEW_ROWS_WRONG_SHAPE)
+
+            # Make sure an "exception" element was enqueued.
+            el = self._dg._queue._deltas[-1].new_element
+            self.assertTrue(el.HasField('exception'))
+            self.assertEqual(el.exception.type, 'ValueError')
+            self.assertEqual(el.exception.message,
+                'Dataframes have incompatible shapes')
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._queue._empty()
-
-
-def get_element(dg):
-    return dg._queue._deltas[-1].new_element

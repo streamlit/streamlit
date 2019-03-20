@@ -46,24 +46,47 @@ class ReportQueue(object):
         self._state = QueueState.OPEN
         self._empty()
 
-    def __call__(self, delta):
-        """Adds a delta into this queue."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot add deltas after the queue closes.'
+    def __call__(self, delta, catch_exceptions=True):
+        """Adds a delta into this queue.
 
-        if self._state == QueueState.CLOSING:
-            LOGGER.debug('Warning: Enqueing a delta in a closing queue.')
+        Parameters
+        ----------
+        delta : Delta
+            The delta protobuf to enqueue.
 
-        # Store the index if necessary.
-        if (delta.id in self._id_map):
-            index = self._id_map[delta.id]
-        else:
-            index = len(self._deltas)
-            self._id_map[delta.id] = index
-            self._deltas.append(None)
+        catch_exceptions : bool
+            If true, will enqueue exceptions into this connection. Set to False
+            when enqueuing something from inside the exception handler below,
+            to avoid an infinite loop.
+        """
+        try:
+            assert self._state != QueueState.CLOSED, \
+                'Cannot add deltas after the queue closes.'
 
-        # Combine the previous and new delta if possible.
-        self._deltas[index] = self.compose(self._deltas[index], delta)
+            if self._state == QueueState.CLOSING:
+                LOGGER.debug('Warning: Enqueing a delta in a closing queue.')
+
+            # Store the index if necessary.
+            if delta.id in self._id_map:
+                index = self._id_map[delta.id]
+            else:
+                index = len(self._deltas)
+                self._id_map[delta.id] = index
+                self._deltas.append(None)
+
+            # Combine the previous and new delta if possible.
+            self._deltas[index] = self.compose(self._deltas[index], delta)
+
+        except Exception as e:
+            if catch_exceptions:
+                import streamlit.exception as exception_module
+                from streamlit import protobuf
+                delta = protobuf.Delta()
+                delta.id = max(self._id_map)
+                exception_module.marshall(delta.new_element, e)
+                self(delta, catch_exceptions=False)
+            else:
+                raise e
 
     def get_deltas(self):
         """Returns a list of deltas and clears this queue."""
