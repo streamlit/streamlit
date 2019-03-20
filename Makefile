@@ -14,9 +14,6 @@ help:
 	@echo " docs         - Generates HTML documentation at /docs/_build."
 	@echo " devel-docs   - Builds docs and starts a local server."
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
-	@echo " site         - Builds the site at /site/public."
-	@echo " devel-site   - Builds site and starts the dev server for the site."
-	@echo " publish-site - Builds site and pushes the site to prod."
 	@echo " pytest       - Runs python unit tests"
 	@echo " js-lint      - Lints the frontend"
 
@@ -137,27 +134,6 @@ publish-docs: docs
 				'/secret/docs/*' \
 				'/secret/docs/api/*' \
 				'/secret/docs/tutorial/*' \
-			--profile streamlit
-
-.PHONY: site
-site:
-	cd site; hugo
-
-.PHONY: devel-site
-devel-site:
-	cd site; hugo server -D
-
-.PHONY: publish-site
-publish-site: site
-	cd site; \
-		hugo; \
-		rm public/secret/index.*; \
-		aws s3 sync \
-				--acl public-read public s3://streamlit.io/ \
-				--profile streamlit
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths '/*' \
 			--profile streamlit
 
 .PHONY: protobuf
