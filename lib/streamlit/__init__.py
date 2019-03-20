@@ -132,6 +132,7 @@ def write(*args):
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
         - write(module)     : Displays information about the module.
+        - write(dict)       : Displays a dict as a JSON object
         - write(obj)        : The default is to print str(obj).
         - write(fig)        : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
@@ -227,6 +228,8 @@ def write(*args):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
+            elif type(arg) in dict_types:
+                json(arg)
             else:
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
 
