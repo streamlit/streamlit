@@ -7,7 +7,9 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import sys
 import unittest
+
 import pandas as pd
 
 try:
@@ -16,7 +18,8 @@ except ImportError:
     from funcsigs import signature
 
 from streamlit import protobuf
-from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig
+from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
+    _clean_up_sig
 from streamlit.ReportQueue import ReportQueue
 
 
@@ -38,6 +41,15 @@ class FakeDeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = protobuf.Text.PLAIN
 
+    def fake_dataframe(self, element, arg0, data=None):
+        """Fake dataframe.
+
+        In the real dataframe, element is set to _ but in reality the
+        decorator passes None in to what would be the element, so I want to
+        verify that None is indeed getting passed in.
+        """
+        return (element, arg0, data)
+
 
 class DeltaGeneratorTest(unittest.TestCase):
     """Test streamlit.DeltaGenerator methods."""
@@ -58,6 +70,24 @@ class DeltaGeneratorTest(unittest.TestCase):
         # Check clean signature
         sig = signature(wrapped)
         self.assertEqual(str(sig), '(body)')
+
+    def test_clean_up_sig(self):
+        wrapped = _clean_up_sig(FakeDeltaGenerator.fake_dataframe)
+
+        # Verify original signature
+        sig = signature(FakeDeltaGenerator.fake_dataframe)
+        self.assertEqual(str(sig), '(self, element, arg0, data=None)', str(sig))
+
+        # Check cleaned signature.
+        # On python2 it looks like: '(self, *args, **kwargs)'
+        if sys.version_info >= (3, 0):
+            sig = signature(wrapped)
+            self.assertEqual('(arg0, data=None)', str(sig))
+
+        # Check cleaned output.
+        dg = FakeDeltaGenerator()
+        result = wrapped(dg, 'foo', data='bar')
+        self.assertEqual(result, (None, 'foo', 'bar'))
 
 class DeltaGeneratorClassTest(unittest.TestCase):
     """Test DeltaGenerator Class."""
