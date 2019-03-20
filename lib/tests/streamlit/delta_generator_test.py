@@ -10,10 +10,54 @@ import json
 import unittest
 import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
-from streamlit import protobuf
+try:
+    from inspect import signature
+except ImportError:
+    from funcsigs import signature
 
+from streamlit import protobuf
+from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig
+from streamlit.ReportQueue import ReportQueue
+
+
+class FakeDeltaGenerator(object):
+    """Fake DeltaGenerator class.
+
+    The methods in this class are specifically here as to not use the
+    one in the actual delta generator.  This purely exists just to test the
+    DeltaGenerator Decorators without relying on the actual
+    DeltaGenerator methods.
+    """
+
+    def __init__(self):
+        """Constructor."""
+        pass
+
+    def fake_text(self, element, body):
+        """Fake text delta generator."""
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.PLAIN
+
+
+class DeltaGeneratorTest(unittest.TestCase):
+    """Test streamlit.DeltaGenerator methods."""
+
+    def test_wraps_with_cleaned_sig(self):
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
+        wrapped = wrapped_function.keywords.get('wrapped')
+
+        # Check meta data.
+        self.assertEqual(wrapped.__module__, 'delta_generator_test')
+        self.assertEqual(wrapped.__name__, 'fake_text')
+        self.assertEqual(wrapped.__doc__, 'Fake text delta generator.')
+
+        # Verify original signature
+        sig = signature(FakeDeltaGenerator.fake_text)
+        self.assertEqual(str(sig), '(self, element, body)')
+
+        # Check clean signature
+        sig = signature(wrapped)
+        self.assertEqual(str(sig), '(body)')
 
 class DeltaGeneratorClassTest(unittest.TestCase):
     """Test DeltaGenerator Class."""

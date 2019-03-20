@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
+funcsigs = {version="*", markers="python_version < '3.0'"}
 mock = "*"
 pipenv = "*"
 pytest = "*"
