@@ -5,38 +5,35 @@
  * @fileoverview Implements a dialog that is used to configure user settings.
  */
 
-import React, { PureComponent } from 'react';
-import {
-  Button,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from 'reactstrap';
+import * as React from 'react';
+import {ChangeEvent, PureComponent, ReactNode} from 'react';
+import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap';
 
-/**
- *
- */
-class SettingsDialog extends PureComponent {
-  /**
-   * Constructor.
-   */
-  constructor(props) {
+export interface Settings {
+  wideMode: boolean;
+}
+
+export interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (settings: Settings) => void;
+  settings: Settings;
+}
+
+class SettingsDialog extends PureComponent<Props, Settings> {
+  private _settings: Settings;
+
+  public constructor(props: Props) {
     super(props);
 
     // Holds the settings that will be saved when the "save" button is clicked.
-    this.state = { ...this.props.settings };
+    this.state = {...this.props.settings};
 
     // Holds the actual settings that Streamlit is using.
-    this.settings = { ...this.props.settings };
-
-    this.handleDialogOpen = this.handleDialogOpen.bind(this);
-    this.handleCheckboxChange = this.handleCheckboxChange.bind(this);
-    this.handleSaveButtonClick = this.handleSaveButtonClick.bind(this);
-    this.handleCancelButtonClick = this.handleCancelButtonClick.bind(this);
+    this._settings = {...this.props.settings};
   }
 
-  render() {
+  public render = (): ReactNode => {
     return (
       <Modal
         isOpen={this.props.isOpen}
@@ -72,31 +69,31 @@ class SettingsDialog extends PureComponent {
         </ModalFooter>
       </Modal>
     );
-  }
+  };
 
-  handleDialogOpen() {
-    this.setState({ ...this.settings });
-  }
+  private handleDialogOpen = () => {
+    this.setState({...this._settings});
+  };
 
-  changeSingleSetting(name, value) {
-    this.setState({ [name]: value });
-  }
+  private changeSingleSetting = (name: string, value: boolean) => {
+    this.setState({...this._settings, [name]: value});
+  };
 
-  handleCheckboxChange(e) {
+  private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
     this.changeSingleSetting(e.target.name, e.target.checked);
-  }
+  };
 
-  handleCancelButtonClick() {
+  private handleCancelButtonClick = () => {
     // Discard settings from this.state by not saving them in this.settings.
     // this.settings = {...this.state};
     this.props.onClose();
-  }
+  };
 
-  handleSaveButtonClick() {
-    this.settings = { ...this.state };
-    this.props.onSave(this.settings);
+  private handleSaveButtonClick = () => {
+    this._settings = {...this.state};
+    this.props.onSave(this._settings);
     this.props.onClose();
-  }
+  };
 }
 
 export default SettingsDialog;

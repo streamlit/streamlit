@@ -45,6 +45,8 @@ class Format {
   }
 }
 
+const format = new Format();
+
 /**
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
@@ -67,5 +69,4 @@ function isFloat(n) {
   return Number(n) === n && n % 1 !== 0;
 }
 
-const format = new Format();
 export { Duration, format, toFormattedString };

@@ -109,6 +109,63 @@ DeckGlChart.propTypes = {
 };
 
 
+/**
+ * Defines default getters for columns.
+ */
+const Defaults = {
+  ArcLayer: {
+    getSourceColor: getSourceColorFromSourceColorRGBAColumns,
+    getTargetColor: getTargetColorFromTargetColorRGBAColumns,
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
+  },
+
+  // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
+
+  GridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  HexagonLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  LineLayer: {
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
+  },
+
+  // IconLayer: TODO
+  // PathLayer: TODO
+
+  PointCloudLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromPositionXYZColumns,
+    getNormal: getNormalFromNormalXYZColumns,
+  },
+
+  // PolygonLayer: TODO
+
+  ScatterplotLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromLatLonColumns,
+    getRadius: d => fallback(d.radius, 100),
+  },
+
+  ScreenGridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+    getWeight: d => d.weight,
+  },
+
+  TextLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPixelOffset:
+      d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
+    getPosition: getPositionFromLatLonColumns,
+  },
+};
+
+
 function buildLayer(layer) {
   const data = dataFrameToArrayOfDicts(layer.get('data'));
   const spec = JSON.parse(layer.get('spec'));
@@ -300,63 +357,6 @@ function parseGetters(type, spec) {
             () => v;              // Make constant function otherwise.
   });
 }
-
-
-/**
- * Defines default getters for columns.
- */
-const Defaults = {
-  ArcLayer: {
-    getSourceColor: getSourceColorFromSourceColorRGBAColumns,
-    getTargetColor: getTargetColorFromTargetColorRGBAColumns,
-    getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getTargetPositionFromLatLonColumn,
-  },
-
-  // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
-
-  GridLayer: {
-    getPosition: getPositionFromLatLonColumns,
-  },
-
-  HexagonLayer: {
-    getPosition: getPositionFromLatLonColumns,
-  },
-
-  LineLayer: {
-    getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getTargetPositionFromLatLonColumn,
-  },
-
-  // IconLayer: TODO
-  // PathLayer: TODO
-
-  PointCloudLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPosition: getPositionFromPositionXYZColumns,
-    getNormal: getNormalFromNormalXYZColumns,
-  },
-
-  // PolygonLayer: TODO
-
-  ScatterplotLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPosition: getPositionFromLatLonColumns,
-    getRadius: d => fallback(d.radius, 100),
-  },
-
-  ScreenGridLayer: {
-    getPosition: getPositionFromLatLonColumns,
-    getWeight: d => d.weight,
-  },
-
-  TextLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPixelOffset:
-        d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
-    getPosition: getPositionFromLatLonColumns,
-  },
-};
 
 
 export default DeckGlChart;

@@ -4,6 +4,8 @@ module.exports = {
     'browser': true,
     'es6': true
   },
+  'parser': '@typescript-eslint/parser',
+  'plugins': ['@typescript-eslint'],
   'parserOptions': {
     'ecmaFeatures': {
       'ecmaVersion': 2018,  // we're using the spread operator
@@ -11,7 +13,10 @@ module.exports = {
     },
     'sourceType': 'module'
   },
-  'extends': ['eslint:recommended', 'fbjs'],
+  'extends': [
+    'plugin:@typescript-eslint/recommended',
+    'fbjs',
+  ],
   'rules': {
     // Enforce spaces inside of blocks after opening
     // block and before closing block
@@ -23,8 +28,23 @@ module.exports = {
     // Use 'const' or 'let' instead of 'var'
     'no-var': 'error',
 
+    // Disable the eslint indent rule, which conflicts with typescript-eslint's same rule
+    'indent': 'off',
+
     // 2-space indent. 'case' inside 'switch' is indented 1 level
-    'indent': ['warn', 2, { 'SwitchCase': 1 }],
+    '@typescript-eslint/indent': ['warn', 2, { 'SwitchCase': 1 }],
+
+    // It's safe to use functions before they're defined
+    '@typescript-eslint/no-use-before-define': ['warn', { 'functions': false }],
+
+    // Don't warn about unused function params
+    '@typescript-eslint/no-unused-vars': ['warn', { 'args': 'none' }],
+
+    // typescript-eslint is catching some of these erroneously
+    '@typescript-eslint/camelcase': 'off',
+
+    // We prefer not using 'any', but don't disallow it
+    '@typescript-eslint/no-explicit-any': 'off',
 
     // max-len is set to 120, to accommodate jsx, but we prefer
     // that non-jsx code stay within an 80-column max width

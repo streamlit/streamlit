@@ -138,14 +138,24 @@ publish-docs: docs
 
 .PHONY: protobuf
 protobuf:
+	@# Python protobuf generation
 	protoc \
-				--proto_path=protobuf protobuf/*.proto \
-				--python_out=lib/streamlit/protobuf
+		--proto_path=protobuf protobuf/*.proto \
+		--python_out=lib/streamlit/protobuf
+
+	@# JS protobuf generation. The --es6 flag generates a proper es6 module.
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module \
+		./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module --es6 \
 	) > ./src/protobuf.js
+
+	@# Typescript type declarations for our generated protobufs
+	cd frontend/ ; ( \
+		echo "/* eslint-disable */" ; \
+		echo ; \
+		./node_modules/protobufjs/bin/pbts ./src/protobuf.js \
+	) > ./src/protobuf.d.ts
 
 .PHONY: react-init
 react-init:
@@ -161,7 +171,7 @@ react-build:
 .PHONY: js-lint
 js-lint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --max-warnings 0 src
+	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .tsx --ext .ts --max-warnings 0 ./src
 
 js-test:
 	cd frontend; npm run test
