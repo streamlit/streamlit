@@ -17,7 +17,7 @@ let trackUsage = true;
  *   gatherUsageStats: a boolean. If true, we'll track usage remotely.
  */
 export function initRemoteTracker({gatherUsageStats}) {
-  if (gatherUsageStats != null) trackUsage = gatherUsageStats;
+  if (gatherUsageStats != null) { trackUsage = gatherUsageStats; }
 
   if (trackUsage) {
     window.mixpanel.opt_in_tracking();
@@ -34,8 +34,8 @@ export function initRemoteTracker({gatherUsageStats}) {
  *   opts: other stuff to track.
  */
 export function trackEventRemotely(eventName, opts = {}) {
-  if (!trackUsage) return;
-  if (!window.mixpanel) return;
+  if (!trackUsage) { return; }
+  if (!window.mixpanel) { return; }
 
   // Print to console, for transparency.
   console.log('Tracking stat datapoint: ', eventName, opts);

@@ -42,7 +42,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
         # This only works for string keys, but kwarg keys are strings anyways.
         spec = dict(spec, **unflatten(kwargs, _ENCODINGS))
 
-    if len(spec) == 0:
+    if spec is None or len(spec) == 0:
         raise ValueError('Vega Lite charts require a non-empty spec dict.')
 
     # Pull data out of spec dict when it's in a 'dataset' key:
@@ -51,6 +51,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
         for k, v in spec['datasets'].items():
             dataset = proto.datasets.add()
             dataset.name = str(k)
+            dataset.has_name = True
             data_frame_proto.marshall_data_frame(v, dataset.data)
         del spec['datasets']
 

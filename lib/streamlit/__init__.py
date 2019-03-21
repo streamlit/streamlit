@@ -132,6 +132,7 @@ def write(*args):
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
         - write(module)     : Displays information about the module.
+        - write(dict)       : Displays dict in an interactive widget.
         - write(obj)        : The default is to print str(obj).
         - write(fig)        : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
@@ -149,7 +150,7 @@ def write(*args):
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
-    numbers, data frames, and assorted objects:
+    numbers, data frames, styled data frames, and assorted objects:
 
     >>> st.write(1234)
     >>> st.write(pd.DataFrame({
@@ -186,7 +187,7 @@ def write(*args):
     >>> st.write(c)
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
        height: 200px
 
     """
@@ -195,6 +196,7 @@ def write(*args):
         'Series',
         'Index',
         'ndarray',
+        'Styler',
     )
 
     HELP_TYPES = (
@@ -226,6 +228,8 @@ def write(*args):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
+            elif type(arg) in dict_types:
+                json(arg)
             else:
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
 

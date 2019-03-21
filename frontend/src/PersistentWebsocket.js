@@ -51,8 +51,8 @@ class PersistentWebsocket extends PureComponent {
     if (this.websocket) {
       this.setState({
         state: ConnectionState.ERROR,
-        errorMsg: 'Cannot reopen an existing websocket.'
-      })
+        errorMsg: 'Cannot reopen an existing websocket.',
+      });
       return;
     }
 
@@ -68,19 +68,21 @@ class PersistentWebsocket extends PureComponent {
 
     // This dictionary stores recieved messages that we haven't sent out yet
     // (because we're still decoding previous messages)
-    this.messageQueue = {}
+    this.messageQueue = {};
 
     if (this.props.onRegister) {
       this.props.onRegister(message => {
         if (!this.websocket) {
-          console.error('unable to send, websocket undefined')
+          console.error('unable to send, websocket undefined');
         } else if (this.websocket.readyState === WebSocket.OPEN) {
-          return this.websocket.send(message)
+          return this.websocket.send(message);
         } else if (this.websocket.readyState === WebSocket.CONNECTING) {
-          console.error('unable to send, websocket connecting')
+          console.error('unable to send, websocket connecting');
         } else {
-          console.error('unable to send, websocket closed')
+          console.error('unable to send, websocket closed');
         }
+
+        return undefined;
       });
     }
 
@@ -96,11 +98,11 @@ class PersistentWebsocket extends PureComponent {
       if (this.props.onMessage) {
         // Assign this message an index.
         const messageIndex = this.nextMessageIndex;
-        this.nextMessageIndex += 1
+        this.nextMessageIndex += 1;
 
         // Read in the message data.
         const reader = new FileReader();
-        reader.readAsArrayBuffer(data)
+        reader.readAsArrayBuffer(data);
         reader.onloadend = () => {
           this.messageQueue[messageIndex] = new Uint8Array(reader.result);
           while ((this.lastSentMessageIndex + 1) in this.messageQueue) {
@@ -109,22 +111,24 @@ class PersistentWebsocket extends PureComponent {
             delete this.messageQueue[sendMessageIndex];
             this.lastSentMessageIndex = sendMessageIndex;
           }
-        }
+        };
       }
     };
 
     this.websocket.onclose = () => {
-      if (this.state.state !== ConnectionState.ERROR)
-        this.setState({state: ConnectionState.DISCONNECTED})
+      if (this.state.state !== ConnectionState.ERROR) {
+        this.setState({state: ConnectionState.DISCONNECTED});
+      }
       this.closeWebsocket();
-      if (this.props.persist)
+      if (this.props.persist) {
         setTimeout(this.openWebsocket, RECONNECT_TIMEOUT);
+      }
     };
 
     this.websocket.onerror = (event) => {
       this.setState({
         state: ConnectionState.ERROR,
-        errorMsg: 'Error Connecting:' + this.props.uri
+        errorMsg: 'Error Connecting:' + this.props.uri,
       });
     };
   }
@@ -147,8 +151,8 @@ class PersistentWebsocket extends PureComponent {
     const {state, errorMsg} = this.state;
     let iconName, tooltipText;
     if (state === ConnectionState.DISCONNECTED) {
-      iconName = 'ban'
-      tooltipText = 'Disconnected.'
+      iconName = 'ban';
+      tooltipText = 'Disconnected.';
     } else if (state === ConnectionState.CONNECTED) {
       iconName = 'bolt';
       tooltipText = `Connected: ${this.props.uri}`;
@@ -163,15 +167,15 @@ class PersistentWebsocket extends PureComponent {
     // Return the visual representation,
     return (
       <span>
-      <svg id="websocket-icon" viewBox="0 0 8 8" width="1em">
-      <use xlinkHref={'/open-iconic.min.svg#' + iconName} />
-      </svg>
-      <UncontrolledTooltip placement="bottom" target="websocket-icon">
-      {tooltipText}
-      </UncontrolledTooltip>
+        <svg id="websocket-icon" viewBox="0 0 8 8" width="1em">
+          <use xlinkHref={'/open-iconic.min.svg#' + iconName} />
+        </svg>
+        <UncontrolledTooltip placement="bottom" target="websocket-icon">
+          {tooltipText}
+        </UncontrolledTooltip>
       </span>
-    )
-  };
-};
+    );
+  }
+}
 
 export default PersistentWebsocket;

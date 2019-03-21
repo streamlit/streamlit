@@ -20,7 +20,7 @@ import {
 } from '../dataFrameProto';
 // import './ExceptionElement.css';
 
- /**
+/**
   * Functional element representing formatted text.
   */
 class Map extends PureComponent {
@@ -40,12 +40,13 @@ class Map extends PureComponent {
       const nPoints = tableGetRowsAndCols(points.get('data'))[0];
       const latCol = indexGetByName(points.get('columns'), 'lat');
       const lonCol = indexGetByName(points.get('columns'), 'lon');
-      if (latCol < 0 || lonCol < 0)
+      if (latCol < 0 || lonCol < 0) {
         throw new Error("Map points must have 'lat' and 'lon' columns.");
-      for (var i = 0 ; i < nPoints ; i++) {
+      }
+      for (let i = 0; i < nPoints; i++) {
         const position = [
           tableGet(points.get('data'), latCol, i),
-          tableGet(points.get('data'), lonCol, i)
+          tableGet(points.get('data'), lonCol, i),
         ];
         circles.push(<Circle
           center={position}
@@ -60,12 +61,12 @@ class Map extends PureComponent {
       // Compute the center of the map;
       let center = this.center;
       if (this.center === undefined) {
-        if (nPoints === 0)
+        if (nPoints === 0) {
           center = [37.7749, -122.4194]; // San Francisco
-        else {
+        } else {
           let sumLat = 0.0;
           let sumLon = 0.0;
-          for (var indx = 0 ; indx < nPoints ; indx++) {
+          for (let indx = 0; indx < nPoints; indx++) {
             sumLat += tableGet(points.get('data'), latCol, indx);
             sumLon += tableGet(points.get('data'), lonCol, indx);
           }
@@ -75,9 +76,11 @@ class Map extends PureComponent {
 
       // Draw the map.
       const zoom = 13;
+
       return (
         <LeafletMap style={{width, height: width}} center={center} zoom={zoom}>
           <TileLayer
+            /* eslint-disable-next-line max-len */
             attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
@@ -85,7 +88,7 @@ class Map extends PureComponent {
             { circles }
           </LayerGroup>
         </LeafletMap>
-      )
+      );
     } catch (e) {
       console.log(e.stack);
       return (

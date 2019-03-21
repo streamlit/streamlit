@@ -49,7 +49,7 @@ class VegaLiteChart extends Component {
       if (datasets) {
         if (!spec.data) {
           throw new Error(
-              'Must specify "data" field when using "dataset"');
+            'Must specify "data" field when using "dataset"');
         }
         spec.datasets = datasets;
       }
@@ -59,13 +59,13 @@ class VegaLiteChart extends Component {
 
       return (
         <VegaLite
-            spec={spec}
-            data={dataObj}
-            renderer="canvas"
-            width={width}
-            height={height}
-            onNewView={this._onNewView.bind(this)}
-            />
+          spec={spec}
+          data={dataObj}
+          renderer="canvas"
+          width={width}
+          height={height}
+          onNewView={this._onNewView.bind(this)}
+        />
       );
 
     } catch (e) {
@@ -86,8 +86,8 @@ class VegaLiteChart extends Component {
     const data0 = this.props.element.get('data');
     const data1 = newProps.element.get('data');
 
-    if (!data0 || !data1) return true;
-    if (!data0.get('data') || !data1.get('data')) return true;
+    if (!data0 || !data1) { return true; }
+    if (!data0.get('data') || !data1.get('data')) { return true; }
 
     const [numRows0, numCols0] = tableGetRowsAndCols(data0.get('data'));
     const [numRows1, numCols1] = tableGetRowsAndCols(data1.get('data'));
@@ -135,7 +135,9 @@ class VegaLiteChart extends Component {
    * See https://vega.github.io/vega/docs/api/view/
    */
   addRows(data, startIndex) {
-    if (!this.vegaView) throw new Error('Chart has not been drawn yet');
+    if (!this.vegaView) {
+      throw new Error('Chart has not been drawn yet');
+    }
     const rows = getDataArray(data, startIndex);
     // TODO: Support adding rows to datasets with different names.
     // "data_0" is what Vega calls the 0th unnamed dataset.
@@ -144,17 +146,23 @@ class VegaLiteChart extends Component {
   }
 
   toCanvas(scaleFactor) {
-    if (!this.vegaView) throw new Error('Chart has not been drawn yet');
+    if (!this.vegaView) {
+      throw new Error('Chart has not been drawn yet');
+    }
     return this.vegaView.toCanvas(scaleFactor);
   }
 
   toSVG(scaleFactor) {
-    if (!this.vegaView) throw new Error('Chart has not been drawn yet');
+    if (!this.vegaView) {
+      throw new Error('Chart has not been drawn yet');
+    }
     return this.vegaView.toSVG(scaleFactor);
   }
 
   toImageUrl(type, scaleFactor) {
-    if (!this.vegaView) throw new Error('Chart has not been drawn yet');
+    if (!this.vegaView) {
+      throw new Error('Chart has not been drawn yet');
+    }
     return this.vegaView.toImageUrl(type, scaleFactor);
   }
 
@@ -185,7 +193,7 @@ function getDataSets(el, spec) {
   const datasets = {};
 
   el.get('datasets').forEach((x, i) => {
-    if (!x) return;
+    if (!x) { return; }
     datasets[x.get('name')] = getDataArray(x.get('data'));
   });
 
@@ -193,10 +201,10 @@ function getDataSets(el, spec) {
 }
 
 
-function getDataArray(dataProto, startIndex=0) {
-  if (!dataProto.get('data')) return [];
-  if (!dataProto.get('index')) return [];
-  if (!dataProto.get('columns')) return [];
+function getDataArray(dataProto, startIndex = 0) {
+  if (!dataProto.get('data')) { return []; }
+  if (!dataProto.get('index')) { return []; }
+  if (!dataProto.get('columns')) { return []; }
 
   const dataArr = [];
   const [rows, cols] = tableGetRowsAndCols(dataProto.get('data'));
@@ -212,12 +220,12 @@ function getDataArray(dataProto, startIndex=0) {
           indexGet(dataProto.get('index'), 0, rowIndex);
     }
 
-    for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
+    for (let colIndex = 0; colIndex < cols; colIndex++) {
       row[indexGet(dataProto.get('columns'), 0, colIndex)] =
           tableGet(dataProto.get('data'), colIndex, rowIndex);
     }
 
-    dataArr.push(row)
+    dataArr.push(row);
   }
 
   return dataArr;
@@ -225,7 +233,7 @@ function getDataArray(dataProto, startIndex=0) {
 
 
 function maybeAddAutosizing(spec) {
-  if (spec.autosize) return;
+  if (spec.autosize) { return; }
   spec.autosize = {
     type: 'fit',
     contains: 'padding',

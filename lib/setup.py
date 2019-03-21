@@ -12,12 +12,12 @@ def readme():
 
 setuptools.setup(
     name='streamlit',
-    version='0.30.0',  # PEP-440
+    version='0.31.0',  # PEP-440
     description='Streaming Data Science',
     long_description=readme(),
-    url='https://github.com/treuille/streamlet-cloud',
-    author='Adrien Treuille',
-    author_email='adrien.g.treuille@gmail.com',
+    url='https://streamlit.io',
+    author='Streamlit Inc',
+    author_email='hello@streamlit.io',
     license='MIT',
 
     packages = setuptools.find_packages(exclude=['tests', 'tests.*']),

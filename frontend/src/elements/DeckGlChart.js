@@ -23,7 +23,8 @@ import { StaticMap } from 'react-map-gl';
 import './DeckGlChart.css';
 import { dataFrameToArrayOfDicts } from '../dataFrameProto';
 
-const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
+const MAPBOX_ACCESS_TOKEN =
+  'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
 
 
 class DeckGlChart extends PureComponent {
@@ -108,6 +109,63 @@ DeckGlChart.propTypes = {
 };
 
 
+/**
+ * Defines default getters for columns.
+ */
+const Defaults = {
+  ArcLayer: {
+    getSourceColor: getSourceColorFromSourceColorRGBAColumns,
+    getTargetColor: getTargetColorFromTargetColorRGBAColumns,
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
+  },
+
+  // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
+
+  GridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  HexagonLayer: {
+    getPosition: getPositionFromLatLonColumns,
+  },
+
+  LineLayer: {
+    getSourcePosition: getPositionFromLatLonColumns,
+    getTargetPosition: getTargetPositionFromLatLonColumn,
+  },
+
+  // IconLayer: TODO
+  // PathLayer: TODO
+
+  PointCloudLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromPositionXYZColumns,
+    getNormal: getNormalFromNormalXYZColumns,
+  },
+
+  // PolygonLayer: TODO
+
+  ScatterplotLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPosition: getPositionFromLatLonColumns,
+    getRadius: d => fallback(d.radius, 100),
+  },
+
+  ScreenGridLayer: {
+    getPosition: getPositionFromLatLonColumns,
+    getWeight: d => d.weight,
+  },
+
+  TextLayer: {
+    getColor: getColorFromColorRGBAColumns,
+    getPixelOffset:
+      d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
+    getPosition: getPositionFromLatLonColumns,
+  },
+};
+
+
 function buildLayer(layer) {
   const data = dataFrameToArrayOfDicts(layer.get('data'));
   const spec = JSON.parse(layer.get('spec'));
@@ -120,42 +178,42 @@ function buildLayer(layer) {
   switch (type) {
     case 'arclayer':
       return new ArcLayer({
-        data, ...Defaults.ArcLayer, ...spec
+        data, ...Defaults.ArcLayer, ...spec,
       });
 
     case 'gridlayer':
       return new GridLayer({
-        data, ...Defaults.GridLayer, ...spec
+        data, ...Defaults.GridLayer, ...spec,
       });
 
     case 'hexagonlayer':
       return new HexagonLayer({
-        data, ...Defaults.HexagonLayer, ...spec
+        data, ...Defaults.HexagonLayer, ...spec,
       });
 
     case 'linelayer':
       return new LineLayer({
-        data, ...Defaults.LineLayer, ...spec
+        data, ...Defaults.LineLayer, ...spec,
       });
 
     case 'pointcloudlayer':
       return new PointCloudLayer({
-        data, ...Defaults.PointCloudLayer, ...spec
+        data, ...Defaults.PointCloudLayer, ...spec,
       });
 
     case 'scatterplotlayer':
       return new ScatterplotLayer({
-        data, ...Defaults.ScatterplotLayer, ...spec
+        data, ...Defaults.ScatterplotLayer, ...spec,
       });
 
     case 'screengridlayer':
       return new ScreenGridLayer({
-        data, ...Defaults.ScreenGridLayer, ...spec
+        data, ...Defaults.ScreenGridLayer, ...spec,
       });
 
     case 'textlayer':
       return new TextLayer({
-        data, ...Defaults.TextLayer, ...spec
+        data, ...Defaults.TextLayer, ...spec,
       });
 
     default:
@@ -214,7 +272,7 @@ function getStyleUrl(styleStr = 'light-v9') {
  */
 function fallback(...args) {
   for (let i = 0; i < args.length; i += 1) {
-    if (args[i] != null) return args[i];
+    if (args[i] != null) { return args[i]; }
   }
   return null;
 }
@@ -289,73 +347,16 @@ function parseGetters(type, spec) {
   }
 
   Object.keys(spec).forEach((key) => {
-    if (!key.startsWith('get')) return;
+    if (!key.startsWith('get')) { return; }
     const v = spec[key];
     spec[key] =
         typeof v === 'function' ?
-            v :                   // Leave functions untouched.
-        typeof v === 'string' ?
+          v :                   // Leave functions untouched.
+          typeof v === 'string' ?
             d => d[v] :           // Make getters from strings.
             () => v;              // Make constant function otherwise.
   });
 }
-
-
-/**
- * Defines default getters for columns.
- */
-const Defaults = {
-  ArcLayer: {
-    getSourceColor: getSourceColorFromSourceColorRGBAColumns,
-    getTargetColor: getTargetColorFromTargetColorRGBAColumns,
-    getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getTargetPositionFromLatLonColumn,
-  },
-
-  // GeoJsonLayer: TODO. Data needs to be sent as JSON, not dataframe.
-
-  GridLayer: {
-    getPosition: getPositionFromLatLonColumns,
-  },
-
-  HexagonLayer: {
-    getPosition: getPositionFromLatLonColumns,
-  },
-
-  LineLayer: {
-    getSourcePosition: getPositionFromLatLonColumns,
-    getTargetPosition: getTargetPositionFromLatLonColumn,
-  },
-
-  // IconLayer: TODO
-  // PathLayer: TODO
-
-  PointCloudLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPosition: getPositionFromPositionXYZColumns,
-    getNormal: getNormalFromNormalXYZColumns,
-  },
-
-  // PolygonLayer: TODO
-
-  ScatterplotLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPosition: getPositionFromLatLonColumns,
-    getRadius: d => fallback(d.radius, 100),
-  },
-
-  ScreenGridLayer: {
-    getPosition: getPositionFromLatLonColumns,
-    getWeight: d => d.weight,
-  },
-
-  TextLayer: {
-    getColor: getColorFromColorRGBAColumns,
-    getPixelOffset:
-        d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
-    getPosition: getPositionFromLatLonColumns,
-  },
-};
 
 
 export default DeckGlChart;

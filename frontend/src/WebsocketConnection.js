@@ -129,7 +129,7 @@ class WebsocketConnection {
    * wire.
    */
   sendMessage(obj) {
-    if (!this.websocket) return;
+    if (!this.websocket) { return; }
     const msg = BackMsg.create(obj);
     const buffer = BackMsg.encode(msg).finish();
     this.websocket.send(buffer);

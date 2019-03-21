@@ -34,10 +34,12 @@ class DataFrameCell extends PureComponent {
 
     // The sort icon is only drawn in the top row
     const sortIcon = rowIndex === 0 ?
-        drawSortIcon(columnSortDirection) :
-        undefined;
+      drawSortIcon(columnSortDirection) :
+      undefined;
 
     return (
+      // (eslint erroneously believes we're not assigning a role to our clickable div)
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
       <div
         className={className}
         style={style}

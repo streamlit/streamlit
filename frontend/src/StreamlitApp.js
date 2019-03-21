@@ -115,10 +115,11 @@ class StreamlitApp extends PureComponent {
     'enter': {
       priority: 1,
       handler: () => {
-        if (this.state.dialog && this.state.dialog.defaultAction)
+        if (this.state.dialog && this.state.dialog.defaultAction) {
           this.state.dialog.defaultAction();
+        }
       },
-    }
+    },
   };
 
   async componentDidMount() {
@@ -229,7 +230,7 @@ class StreamlitApp extends PureComponent {
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
           newElement: newElement => newElement.set('reportId', reportId),
-          addRows: newRows => addRows(element, newRows),
+          addRows: namedDataSet => addRows(element, namedDataSet),
         })),
     }));
   }
@@ -288,8 +289,8 @@ class StreamlitApp extends PureComponent {
     if (this.isProxyConnected()) {
       this.openDialog({
         type: 'rerunScript',
-        getCommandLine: (() => this.state.commandLine),
-        setCommandLine: (commandLine => this.setState({ commandLine })),
+        getCommandLine: () => this.state.commandLine,
+        setCommandLine: commandLine => this.setState({ commandLine }),
         rerunCallback: this.rerunScript,
 
         // This will be called if enter is pressed.
@@ -386,9 +387,9 @@ class StreamlitApp extends PureComponent {
     const outerDivClass =
         isEmbeddedInIFrame() ?
           'streamlit-embedded' :
-        this.state.userSettings.wideMode ?
-          'streamlit-wide' :
-          'streamlit-regular';
+          this.state.userSettings.wideMode ?
+            'streamlit-wide' :
+            'streamlit-regular';
 
     return (
       <div className={outerDivClass}>
@@ -426,13 +427,13 @@ class StreamlitApp extends PureComponent {
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
-                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
+              '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               {this.state.showLoginBox ?
                 <LoginBox
                   onSuccess={this.onLogInSuccess}
                   onFailure={this.onLogInError}
                 />
-              :
+                :
                 <AutoSizer className="main">
                   { ({ width }) => this.renderElements(width) }
                 </AutoSizer>
@@ -455,7 +456,7 @@ class StreamlitApp extends PureComponent {
   renderElements(width) {
     return this.state.elements.map((element) => {
       try {
-        if (!element) throw new Error('Transmission error.');
+        if (!element) { throw new Error('Transmission error.'); }
         return dispatchOneOf(element, 'type', {
           audio: audio => <Audio audio={audio} width={width} />,
           balloons: balloons => <Balloons balloons={balloons} />,

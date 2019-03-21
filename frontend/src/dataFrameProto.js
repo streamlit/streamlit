@@ -42,7 +42,8 @@ export function getSortedDataRowIndices(df, sortColumnIdx, sortAscending) {
   const table = df.get('data');
   const [nRows, nCols] = tableGetRowsAndCols(table);
   if (sortColumnIdx < 0 || sortColumnIdx >= nCols) {
-    throw new Error(`Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
+    throw new Error(
+      `Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
   }
 
   const col = table.getIn(['cols', sortColumnIdx]);
@@ -103,7 +104,7 @@ export function dataFrameGetDimensions(df) {
     dataRows,
     dataCols,
     cols,
-    rows
+    rows,
   };
 }
 
@@ -111,7 +112,7 @@ export function dataFrameGetDimensions(df) {
  * Returns [rows, cls] for this table.
  */
 export function tableGetRowsAndCols(table) {
-  if (!table) {
+  if (!table || !table.get('cols')) {
     return [0, 0];
   }
 
@@ -190,8 +191,8 @@ export function dataFrameGet(df, col, row) {
     } else {
       // If we have a formatted display value for the cell, return that.
       // Else return the data itself.
-      const customDisplayValue =
-        tableStyleGetDisplayValue(df.get('style'), col - headerCols, row - headerRows);
+      const customDisplayValue = tableStyleGetDisplayValue(
+        df.get('style'), col - headerCols, row - headerRows);
 
       const contents = customDisplayValue != null ?
         customDisplayValue :
@@ -199,7 +200,8 @@ export function dataFrameGet(df, col, row) {
 
       return {
         contents: contents,
-        styles: tableStyleGetCSS(df.get('style'), col - headerCols, row - headerRows) || {},
+        styles: tableStyleGetCSS(
+          df.get('style'), col - headerCols, row - headerRows) || {},
         type: 'data',
       };
     }
@@ -215,12 +217,14 @@ export function tableStyleGetDisplayValue(tableStyle, columnIndex, rowIndex) {
     return undefined;
   }
 
-  const cellStyle = tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex], undefined);
+  const cellStyle = tableStyle.getIn(
+    ['cols', columnIndex, 'styles', rowIndex], undefined);
   if (cellStyle == null) {
     return undefined;
   }
 
-  return cellStyle.get('hasDisplayValue') ? cellStyle.get('displayValue') : undefined;
+  return cellStyle.get('hasDisplayValue') ?
+    cellStyle.get('displayValue') : undefined;
 }
 
 /**
@@ -232,7 +236,8 @@ export function tableStyleGetCSS(tableStyle, columnIndex, rowIndex) {
     return undefined;
   }
 
-  const cssStyles = tableStyle.getIn(['cols', columnIndex, 'styles', rowIndex, 'css'], undefined);
+  const cssStyles = tableStyle.getIn(
+    ['cols', columnIndex, 'styles', rowIndex, 'css'], undefined);
   if (cssStyles == null) {
     return undefined;
   }
@@ -303,7 +308,8 @@ export function indexGet(index, level, i) {
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
     float_64Index: (idx) => idx.getIn(['data', 'data', i]),
     datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
-    timedeltaIndex: (idx) => format.nanosToDuration(idx.getIn(['data', 'data', i])),
+    timedeltaIndex: (idx) => format.nanosToDuration(
+      idx.getIn(['data', 'data', i])),
   });
 }
 
@@ -313,7 +319,7 @@ export function indexGet(index, level, i) {
  */
 export function indexGetByName(index, name) {
   const len = indexLen(index);
-  for (var i = 0; i < len; i++) {
+  for (let i = 0; i < len; i++) {
     console.log(`iter: ${i} comparing "${indexGet(index, 0, i)}" to "${name}".`);
     if (indexGet(index, 0, i) === name) {
       return i;
@@ -359,13 +365,17 @@ function anyArrayData(anyArray) {
 }
 
 /**
- * Concatenates delta1 and delta2 together, returning a new Delta.
+ * Concatenates delta1 and delta2 together, returning a new element.
  */
-export function addRows(element, newRows) {
-  const existingDataFrame = getDataFrame(element);
+export function addRows(element, namedDataSet) {
+  const name = namedDataSet.get('hasName') ?
+    namedDataSet.get('name') : null;
+  const newRows = namedDataSet.get('data');
+
+  const existingDataFrame = getDataFrame(element, name);
 
   if (!existingDataFrame) {
-    return setDataFrame(element, newRows);
+    return setDataFrame(element, newRows, name);
   }
 
   const newDataFrame = existingDataFrame
@@ -383,7 +393,7 @@ export function addRows(element, newRows) {
       );
     });
 
-  return setDataFrame(element, newDataFrame);
+  return setDataFrame(element, newDataFrame, name);
 }
 
 /**
@@ -451,27 +461,91 @@ function concatCellStyleArray(array1, array2) {
 }
 
 /**
- * Extracts the dataframe from an element.
+ * Extracts the dataframe from an element. The name is only used if it makes
+ * sense for the given element.
  */
-function getDataFrame(element) {
+function getDataFrame(element, name = null) {
   return dispatchOneOf(element, 'type', {
     chart: (chart) => chart.get('data'),
     dataFrame: (df) => df,
+    table: (df) => df,
     deckGlMap: (el) => el.get('data'),
-    vegaLiteChart: (chart) => chart.get('data'),
+    vegaLiteChart: (chart) => getDataFrameByName(chart, name),
+  });
+}
+
+
+/**
+ * If name is null, gets DataFrame from element.data or element.datasets[0].
+ * If name is non-null, gets DataFrame from element.datasets matching the
+ * provided name.
+ */
+function getDataFrameByName(proto, name) {
+  if (name == null && proto.get('data') != null) {
+    return proto.get('data');
+  }
+
+  const namedDataSetEntry = getNamedDataSet(proto.get('datasets'), name);
+  return namedDataSetEntry[1].get('data');
+}
+
+
+/**
+ * If there is only one NamedDataSet, returns [0, NamedDataSet] with the 0th
+ * NamedDataSet.
+ * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
+ * matching the given name.
+ * If no matches, raises exception.
+ */
+function getNamedDataSet(namedDataSets, name) {
+  if (namedDataSets != null) {
+    if (namedDataSets.size === 1) {
+      const firstNamedDataSet = namedDataSets.first();
+      return [0, firstNamedDataSet];
+    }
+
+    const namedDataSetEntry = namedDataSets.findEntry(
+      ds => ds.get('hasName') && ds.get('name') === name);
+
+    if (namedDataSetEntry) {
+      return namedDataSetEntry;
+    }
+  }
+
+  throw new Error(`Element does not have a dataset named "${name}"`);
+}
+
+
+/**
+ * Sets the dataframe of this element.
+ * Returns a new element -- NOT A DATAFRAME!
+ */
+function setDataFrame(element, df, name = null) {
+  return updateOneOf(element, 'type', {
+    chart: (chart) => chart.set('data', df),
+    dataFrame: () => df,
+    table: () => df,
+    deckGlMap: (el) => el.set('data', df),
+    vegaLiteChart: (chart) => setDataFrameByName(chart, df, name),
   });
 }
 
 /**
- * Sets the dataframe of this element. Returning a new element.
+ * If name is null, puts df into proto.data.
+ * If name is non-null, puts df into proto.datasets using the provided name.
+ * Returns a new subelement -- NOT A DATAFRAME!
  */
-function setDataFrame(element, df) {
-  return updateOneOf(element, 'type', {
-    chart: (chart) => chart.set('data', df),
-    dataFrame: () => df,
-    deckGlMap: (el) => el.set('data', df),
-    vegaLiteChart: (chart) => chart.set('data', df),
-  });
+function setDataFrameByName(proto, df, name = null) {
+  if (name == null) {
+    return proto.set('data', df);
+  }
+
+  const namedDataSets = proto.get('datasets');
+
+  const namedDataSetEntry = getNamedDataSet(namedDataSets, name);
+  const namedDataSet = namedDataSetEntry[1].set('data', df);
+
+  return proto.setIn(['datasets', namedDataSetEntry[0]], namedDataSet);
 }
 
 /**

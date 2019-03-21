@@ -14,10 +14,8 @@ help:
 	@echo " docs         - Generates HTML documentation at /docs/_build."
 	@echo " devel-docs   - Builds docs and starts a local server."
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
-	@echo " site         - Builds the site at /site/public."
-	@echo " devel-site   - Builds site and starts the dev server for the site."
-	@echo " publish-site - Builds site and pushes the site to prod."
-	@echo " pytest       - Runs unittests"
+	@echo " pytest       - Runs python unit tests"
+	@echo " js-lint      - Lints the frontend"
 
 .PHONY: init
 init: setup pipenv react-init protobuf # react-build release
@@ -138,37 +136,26 @@ publish-docs: docs
 				'/secret/docs/tutorial/*' \
 			--profile streamlit
 
-.PHONY: site
-site:
-	cd site; hugo
-
-.PHONY: devel-site
-devel-site:
-	cd site; hugo server -D
-
-.PHONY: publish-site
-publish-site: site
-	cd site; \
-		hugo; \
-		rm public/secret/index.*; \
-		aws s3 sync \
-				--acl public-read public s3://streamlit.io/ \
-				--profile streamlit
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths '/*' \
-			--profile streamlit
-
 .PHONY: protobuf
 protobuf:
+	@# Python protobuf generation
 	protoc \
-				--proto_path=protobuf protobuf/*.proto \
-				--python_out=lib/streamlit/protobuf
+		--proto_path=protobuf protobuf/*.proto \
+		--python_out=lib/streamlit/protobuf
+
+	@# JS protobuf generation. The --es6 flag generates a proper es6 module.
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module \
+		./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module --es6 \
 	) > ./src/protobuf.js
+
+	@# Typescript type declarations for our generated protobufs
+	cd frontend/ ; ( \
+		echo "/* eslint-disable */" ; \
+		echo ; \
+		./node_modules/protobufjs/bin/pbts ./src/protobuf.js \
+	) > ./src/protobuf.d.ts
 
 .PHONY: react-init
 react-init:
@@ -181,8 +168,10 @@ react-build:
 		frontend/build/ lib/streamlit/static/
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
+.PHONY: js-lint
 js-lint:
-	cd frontend; ./node_modules/.bin/eslint src
+	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .tsx --ext .ts --max-warnings 0 ./src
 
 js-test:
 	cd frontend; npm run test
@@ -209,4 +198,4 @@ create-conda-packages:
 	cd conda ; ./create_packages.sh
 
 serve-conda:
-	cd conda ; python -m http.server 8000
+	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000

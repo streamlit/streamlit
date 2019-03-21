@@ -9,7 +9,8 @@ import PropTypes from 'prop-types';
 import { GoogleLogin } from 'react-google-login';
 
 
-//const GOOGLE_CLIENT_ID = '121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com';
+//const GOOGLE_CLIENT_ID =
+// '121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID = '230319206599-p4ol9d1ef0otk7o1eetaornovisu0925.apps.googleusercontent.com';
 
 

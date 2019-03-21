@@ -5,7 +5,12 @@
 
 import React, { PureComponent } from 'react';
 import { Alert }  from 'reactstrap';
-import { tableGetRowsAndCols, indexGet, tableGet, INDEX_COLUMN_DESIGNATOR } from '../dataFrameProto';
+import {
+  tableGetRowsAndCols,
+  indexGet,
+  tableGet,
+  INDEX_COLUMN_DESIGNATOR,
+} from '../dataFrameProto';
 import { format, Duration } from '../format';
 
 import * as recharts from 'recharts';
@@ -79,7 +84,7 @@ const COMPONENTS = {
   // Polygon        <- not implemented
   // Rectangle      <- not implemented
   // Sector         <- not implemented
-}
+};
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
@@ -97,7 +102,7 @@ class Chart extends PureComponent {
       const chartDims = {
         width: (chart.get('width') || width) + chartXOffset,
         height: chart.get('height') || 200,
-      }
+      };
 
       // Convert the data into a format that Recharts understands.
       const dataFrame = chart.get('data');
@@ -108,16 +113,16 @@ class Chart extends PureComponent {
       const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType);
 
       // transform to number, e.g. to support Date
-      let indexTransform = undefined
+      let indexTransform = undefined;
       // transform to human readable tick, e.g. to support Date
-      let tickFormatter = undefined
+      let tickFormatter = undefined;
       switch (indexType) {
         case 'datetimeIndex':
-          indexTransform = date => date.getTime()
+          indexTransform = date => date.getTime();
           tickFormatter = millis => format.dateToString(new Date(millis));
           break;
         case 'timedeltaIndex':
-          indexTransform = date => date.getTime()
+          indexTransform = date => date.getTime();
           tickFormatter = millis => format.durationToString(new Duration(millis));
           break;
         case 'float_64Index':
@@ -127,7 +132,7 @@ class Chart extends PureComponent {
           break;
       }
 
-      for (let rowIndex = 0 ; rowIndex < rows ; rowIndex++ ) {
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
         let rowData = {};
 
         if (hasSupportedIndex) {
@@ -135,15 +140,15 @@ class Chart extends PureComponent {
               indexGet(dataFrame.get('index'), 0, rowIndex);
           if (indexTransform) {
             rowData[INDEX_COLUMN_DESIGNATOR] =
-                indexTransform(rowData[INDEX_COLUMN_DESIGNATOR])
+                indexTransform(rowData[INDEX_COLUMN_DESIGNATOR]);
           }
         }
 
-        for (let colIndex = 0 ; colIndex < cols ; colIndex++) {
+        for (let colIndex = 0; colIndex < cols; colIndex++) {
           rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
               tableGet(dataFrame.get('data'), colIndex, rowIndex);
         }
-        data.push(rowData)
+        data.push(rowData);
       }
 
       // Parse out the chart props into an object.
@@ -157,16 +162,16 @@ class Chart extends PureComponent {
             {
               React.createElement(
                 COMPONENTS[chart.get('type')],
-                  {...chartDims, data, ...chart_props},
-                  ...chart.get('components').map((component) => {
-                    const component_props = extractProps(component);
-                    const isXAxis = component.get('type') === 'XAxis'
-                    if (isXAxis && tickFormatter) {
-                      component_props['tickFormatter'] = tickFormatter;
-                    }
-                    return React.createElement(
-                      COMPONENTS[component.get('type')], component_props);
+                {...chartDims, data, ...chart_props},
+                ...chart.get('components').map((component) => {
+                  const component_props = extractProps(component);
+                  const isXAxis = component.get('type') === 'XAxis';
+                  if (isXAxis && tickFormatter) {
+                    component_props['tickFormatter'] = tickFormatter;
                   }
+                  return React.createElement(
+                    COMPONENTS[component.get('type')], component_props);
+                }
                 )
               )
             }
@@ -186,12 +191,12 @@ class Chart extends PureComponent {
 
 function extractProps(elt) {
   function tryParseFloat(s) {
-    s = s.trim()
-    const f = parseFloat(s)
+    s = s.trim();
+    const f = parseFloat(s);
     return isNaN(f) ? s : f;
   }
 
-  const props = {}
+  const props = {};
   for (const prop of elt.get('props')) {
     let value = prop.get('value');
 
@@ -201,7 +206,7 @@ function extractProps(elt) {
     } else if (value === 'false') {
       value = false;
     } else if (prop.get('key') === 'domain') {
-      value = prop.get('value').split(',').map((x) => tryParseFloat(x))
+      value = prop.get('value').split(',').map((x) => tryParseFloat(x));
     }
     props[prop.get('key')] = value;
   }

@@ -23,7 +23,7 @@ $ streamlit kill_proxy
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.30.0`.
+...and then verify that the version number printed is `0.31.0`.
 
 **Try reproducing the issue now.**
 
