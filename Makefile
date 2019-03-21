@@ -198,4 +198,4 @@ create-conda-packages:
 	cd conda ; ./create_packages.sh
 
 serve-conda:
-	cd conda ; python -m http.server 8000
+	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000

@@ -132,7 +132,7 @@ def write(*args):
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
         - write(module)     : Displays information about the module.
-        - write(dict)       : Displays a dict as a JSON object
+        - write(dict)       : Displays dict in an interactive widget.
         - write(obj)        : The default is to print str(obj).
         - write(fig)        : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
