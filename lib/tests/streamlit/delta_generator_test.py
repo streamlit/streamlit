@@ -75,6 +75,14 @@ class FakeDeltaGenerator(object):
         return delta
 
 
+class MockQueue(object):
+    def __init__(self):
+        self._deltas = []
+
+    def __call__(self, data):
+        self._deltas.append(data)
+
+
 class DeltaGeneratorTest(unittest.TestCase):
     """Test streamlit.DeltaGenerator methods."""
 
@@ -156,6 +164,54 @@ class DeltaGeneratorClassTest(unittest.TestCase):
         self.assertFalse(dg._generate_new_ids)
         self.assertEqual(dg._id, some_id)
         self.assertFalse(hasattr(dg, '_next_id'))
+
+    def test_enqueue_new_element_delta_null(self):
+        # Test "Null" Delta generators
+        dg = DeltaGenerator(None)
+        new_dg = dg._enqueue_new_element_delta(None)
+        self.assertEqual(dg, new_dg)
+
+    def test_enqueue_new_element_delta(self):
+        queue = MockQueue()
+        dg = DeltaGenerator(queue)
+        self.assertEqual(0, dg._next_id)
+
+        test_data = 'some test data'
+        # Use FakeDeltaGenerator.fake_text cause if we use
+        # DeltaGenerator.text, it calls enqueue_new_element_delta
+        # automatically.  Ideally I should unwrap it.
+        fake_dg = FakeDeltaGenerator()
+
+        def marshall_element(element):
+            fake_dg.fake_text(element, test_data)
+
+        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        self.assertNotEqual(dg, new_dg)
+        self.assertEqual(1, dg._next_id)
+
+        delta = queue._deltas.pop()
+        self.assertEqual(delta.new_element.text.body, test_data)
+
+    def test_enqueue_new_element_delta_same_id(self):
+        queue = MockQueue()
+        dg = DeltaGenerator(queue, id=123)
+        self.assertEqual(123, dg._id)
+
+        test_data = 'some test data'
+        # Use FakeDeltaGenerator.fake_text cause if we use
+        # DeltaGenerator.text, it calls enqueue_new_element_delta
+        # automatically.  Ideally I should unwrap it.
+        fake_dg = FakeDeltaGenerator()
+
+        def marshall_element(element):
+            fake_dg.fake_text(element, test_data)
+
+        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        self.assertEqual(dg, new_dg)
+
+        delta = queue._deltas.pop()
+        self.assertEqual(123, delta.id)
+        self.assertEqual(delta.new_element.text.body, test_data)
 
 
 class DeltaGeneratorTextTest(unittest.TestCase):

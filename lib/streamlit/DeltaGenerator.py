@@ -140,6 +140,41 @@ class DeltaGenerator(object):
             self._generate_new_ids = False
             self._id = id
 
+    def _enqueue_new_element_delta(self, marshall_element):
+        """Create NewElement delta, fill it, and enqueue it.
+
+        Parameters
+        ----------
+        marshall_element : callable
+            Function which sets the fields for a protobuf.Delta.
+
+        Returns
+        -------
+        DeltaGenerator
+            A DeltaGenerator that can be used to modify the newly-created
+            element.
+
+        """
+        # "Null" delta generators (those wihtout queues), don't send anything.
+        if self._queue is None:
+            return self
+
+        # Create a delta message.
+        delta = protobuf.Delta()
+        marshall_element(delta.new_element)
+
+        # Figure out if we need to create a new ID for this element.
+        if self._generate_new_ids:
+            delta.id = self._next_id
+            generator = DeltaGenerator(self._queue, delta.id)
+            self._next_id += 1
+        else:
+            delta.id = self._id
+            generator = self
+
+        self._queue(delta)
+        return generator
+
     @_with_element
     def balloons(self, element):
         """Draw celebratory balloons.
@@ -1183,38 +1218,3 @@ class DeltaGenerator(object):
         self._queue(delta)
 
         return self
-
-    def _enqueue_new_element_delta(self, marshall_element):
-        """Create NewElement delta, fill it, and enqueue it.
-
-        Parameters
-        ----------
-        marshall_element : callable
-            Function which sets the fields for a protobuf.Delta.
-
-        Returns
-        -------
-        DeltaGenerator
-            A DeltaGenerator that can be used to modify the newly-created
-            element.
-
-        """
-        # "Null" delta generators (those wihtout queues), don't send anything.
-        if self._queue is None:
-            return self
-
-        # Create a delta message.
-        delta = protobuf.Delta()
-        marshall_element(delta.new_element)
-
-        # Figure out if we need to create a new ID for this element.
-        if self._generate_new_ids:
-            delta.id = self._next_id
-            generator = DeltaGenerator(self._queue, delta.id)
-            self._next_id += 1
-        else:
-            delta.id = self._id
-            generator = self
-
-        self._queue(delta)
-        return generator
