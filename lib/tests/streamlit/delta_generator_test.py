@@ -7,12 +7,129 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import sys
 import unittest
+
 import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
+try:
+    from inspect import signature
+except ImportError:
+    from funcsigs import signature
+
 from streamlit import protobuf
+from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
+    _clean_up_sig, _with_element
+from streamlit.ReportQueue import ReportQueue
+
+
+class FakeDeltaGenerator(object):
+    """Fake DeltaGenerator class.
+
+    The methods in this class are specifically here as to not use the
+    one in the actual delta generator.  This purely exists just to test the
+    DeltaGenerator Decorators without relying on the actual
+    DeltaGenerator methods.
+    """
+
+    def __init__(self):
+        """Constructor."""
+        pass
+
+    def fake_text(self, element, body):
+        """Fake text delta generator."""
+        element.text.body = str(body)
+        element.text.format = protobuf.Text.PLAIN
+
+    def fake_dataframe(self, element, arg0, data=None):
+        """Fake dataframe.
+
+        In the real dataframe, element is set to _ but in reality the
+        decorator passes None in to what would be the element, so I want to
+        verify that None is indeed getting passed in.
+        """
+        return (element, arg0, data)
+
+    def fake_text_raise_exception(self, element, body):
+        """Fake text that raises exception."""
+        raise Exception('Exception in fake_text_raise_exception')
+
+    def exception(self, e):
+        """Create fake exception handler.
+
+        The real DeltaGenerator exception is more complicated.  We use
+        this so _with_element can find the exception method.  The real
+        exception method wil be tested later on.
+        """
+        self._exception_msg = str(e)
+
+    def _enqueue_new_element_delta(self, marshall_element):
+        """Fake enqueue new element delta.
+
+        The real DeltaGenerator method actually enqueues the deltas but
+        to test _with_element we just need this method to exist.  The
+        real enqueue_new_element_delta will be tested later on.
+        """
+        delta = protobuf.Delta()
+        marshall_element(delta.new_element)
+        return delta
+
+
+class DeltaGeneratorTest(unittest.TestCase):
+    """Test streamlit.DeltaGenerator methods."""
+
+    def test_wraps_with_cleaned_sig(self):
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
+        wrapped = wrapped_function.keywords.get('wrapped')
+
+        # Check meta data.
+        self.assertEqual(wrapped.__module__, 'delta_generator_test')
+        self.assertEqual(wrapped.__name__, 'fake_text')
+        self.assertEqual(wrapped.__doc__, 'Fake text delta generator.')
+
+        # Verify original signature
+        sig = signature(FakeDeltaGenerator.fake_text)
+        self.assertEqual(str(sig), '(self, element, body)')
+
+        # Check clean signature
+        sig = signature(wrapped)
+        self.assertEqual(str(sig), '(body)')
+
+    def test_clean_up_sig(self):
+        wrapped = _clean_up_sig(FakeDeltaGenerator.fake_dataframe)
+
+        # Verify original signature
+        sig = signature(FakeDeltaGenerator.fake_dataframe)
+        self.assertEqual(str(sig), '(self, element, arg0, data=None)', str(sig))
+
+        # Check cleaned signature.
+        # On python2 it looks like: '(self, *args, **kwargs)'
+        if sys.version_info >= (3, 0):
+            sig = signature(wrapped)
+            self.assertEqual('(arg0, data=None)', str(sig))
+
+        # Check cleaned output.
+        dg = FakeDeltaGenerator()
+        result = wrapped(dg, 'foo', data='bar')
+        self.assertEqual(result, (None, 'foo', 'bar'))
+
+    def test_with_element(self):
+        wrapped = _with_element(FakeDeltaGenerator.fake_text)
+
+        dg = FakeDeltaGenerator()
+        data = 'some_text'
+        # This would really look like st.text(data) but since we're
+        # testng the wrapper, it looks like this.
+        element = wrapped(dg, data)
+        self.assertEqual(element.new_element.text.body, data)
+
+    def test_with_element_exception(self):
+        wrapped = _with_element(FakeDeltaGenerator.fake_text_raise_exception)
+
+        dg = FakeDeltaGenerator()
+        data = 'some_text'
+        wrapped(dg, data)
+        self.assertEqual(dg._exception_msg, 'Exception in fake_text_raise_exception')
 
 
 class DeltaGeneratorClassTest(unittest.TestCase):

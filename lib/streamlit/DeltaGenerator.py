@@ -33,6 +33,7 @@ def _wraps_with_cleaned_sig(wrapped):
     visible in our user-facing docs and these elements make no sense to the
     user.
     """
+    # By passing (None, None), we're removing (self, element) from *args
     fake_wrapped = functools.partial(wrapped, None, None)
     fake_wrapped.__doc__ = wrapped.__doc__
 
@@ -45,6 +46,30 @@ def _wraps_with_cleaned_sig(wrapped):
 
 
 def _clean_up_sig(method):
+    """Cleanup function signature.
+
+    This passes 'None' into the `element` argument of the wrapped function.
+
+    The reason this function exists is to allow us to use
+    `@_wraps_with_cleaned_sig` in functions like `st.dataframe`, which do not
+    take an element as input.
+
+    Contrast this with the `_with_element()` function, below, which creates an
+    actual Element proto, passes it into the function, and takes care of
+    enqueueing the element later.
+
+    So if you have some function
+        @_clean_up_sig
+        def some_function(self, unused_element_argument, stuff):
+    then the wrapped version of `some_function` can be called like this by
+    the user:
+        dg.some_function(stuff)
+
+    and its signature (introspected in st.help or IPython's `?` magic command)
+    will correctly reflect the above.  Meanwhile, when the user calls the
+    function as above, the wrapped function will be called this way:
+        dg.some_function(None, stuff)
+    """
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
