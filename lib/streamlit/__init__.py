@@ -69,11 +69,18 @@ def _with_dg(method):
         if config.get_option('global.unitTest'):
             from streamlit.ReportQueue import ReportQueue
             delta_generator = DeltaGenerator(ReportQueue())
+        # TODO(armando): Figure out how to get code coverage on this.
+        # Module imports are hard to mock and cover ie
+        # streamlit.__init__.py vs streamlit.some_file.py  We test the
+        # functionality of DeltaConnection in delta_connection_test.py
+        # so right now getting code coverage on this decorator isn't
+        # that critical.
+        #
         # Only output if the config allows us to.
-        elif config.get_option('client.displayEnabled'):
+        elif config.get_option('client.displayEnabled'):  # pragma: no cover
             connection = DeltaConnection.get_connection()
             delta_generator = connection.get_delta_generator()
-        else:
+        else:  # pragma: no cover
             delta_generator = _NULL_DELTA_GENERATOR
 
         return method(delta_generator, *args, **kwargs)
