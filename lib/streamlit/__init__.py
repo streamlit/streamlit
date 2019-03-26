@@ -56,8 +56,13 @@ _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
+        # If we're unit testing, control the queue and don't make a
+        # connection.
+        if config.get_option('global.unitTest'):
+            from streamlit.ReportQueue import ReportQueue
+            delta_generator = DeltaGenerator(ReportQueue())
         # Only output if the config allows us to.
-        if config.get_option('client.displayEnabled'):
+        elif config.get_option('client.displayEnabled'):
             connection = DeltaConnection.get_connection()
             delta_generator = connection.get_delta_generator()
         else:

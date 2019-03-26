@@ -5,6 +5,7 @@ import unittest
 import streamlit as st
 
 from streamlit import __version__
+from streamlit import protobuf
 
 
 def get_version():
@@ -17,6 +18,10 @@ def get_version():
         m = pattern.match(line)
         if m:
             return m.group('version')
+
+
+def get_last_delta_element(dg):
+    return dg._queue.get_deltas()[-1].new_element
 
 
 class StreamlitTest(unittest.TestCase):
@@ -41,3 +46,18 @@ class StreamlitTest(unittest.TestCase):
             'streamlit-public',
             st.get_option('global.sharingMode')
         )
+
+
+class StreamlitAPITest(unittest.TestCase):
+    """Test Public Streamlit Public APIs.
+
+    Unit tests for https://streamlit.io/secret/docs/#api
+    """
+
+    def test_st_title(self):
+        """Test st.title."""
+        dg = st.title('some title')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, '# some title')
+        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)

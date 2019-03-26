@@ -151,6 +151,15 @@ def _global_log_level():
         return 'info'
 
 
+@_create_option('global.unitTest', visibility='hidden')
+def _global_unit_test():
+    """Are we in a unit test?
+
+    This option defaults to False.
+    """
+    return False
+
+
 # Config Section: Client #
 
 _create_section('client', 'Settings for users to connect to Streamlit.')
