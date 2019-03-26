@@ -151,20 +151,21 @@ def proxy_kill():
         # Attention: p.name() sometimes is 'python', sometimes 'Python', and
         # sometimes '/crazycondastuff/python'.
         try:
-          if (('python' in p.name() or 'Python' in p.name())
-                  and 'streamlit.proxy' in p.cmdline()
-                  and getpass.getuser() == p.info['username']):
-              print('Killing proxy with PID %d' % p.pid)
-              p.kill()
-              found_proxy = True
+            if (('python' in p.name() or 'Python' in p.name())
+                    and 'streamlit.proxy' in p.cmdline()
+                    and getpass.getuser() == p.info['username']):
+                print('Killing proxy with PID %d' % p.pid)
+                p.kill()
+                found_proxy = True
         # Ignore zombie process and proceses that have terminated
         # already.  ie you can't call process.name() on a process that
         # has terminated.
-        except (psutil.ZombieProcess, psutil.NoSuchProcess) as e:
+        except (psutil.ZombieProcess, psutil.NoSuchProcess):
             pass
 
     if not found_proxy:
         print('No Streamlit proxies found.')
+
 
 if __name__ == '__main__':
     main()
