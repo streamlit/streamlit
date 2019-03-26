@@ -16,10 +16,10 @@ $ streamlit version
 ```
 Shows the version of Streamlit in your current Python environment.
 
-## help
+## docs
 
 ```bash
-$ streamlit help
+$ streamlit docs
 ```
 Opens Streamlit's documentation (i.e. this website) in a web browser.
 

@@ -60,7 +60,7 @@ continue reading this page or [contact us](mailto:help@streamlit.io).
 
 ## Remote operation: report URL doesn't load
 
-You ran `streamlit help` or `python my_script.py` and it printed out the URL
+You ran `streamlit hello` or `python my_script.py` and it printed out the URL
 where you should find your report --- but it doesn't seem to work when you open
 that link in a browser!
 

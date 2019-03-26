@@ -187,7 +187,7 @@ st.balloons()
 Now you should have a basic idea of how to use Streamlit in your own scripts:
 just `import streamlit as st` and experiment away from there! A good way to
 start is by copy/pasting code snippets straight from the Streamlit
-documentation. Just run `streamlit help` on a terminal to get to the docs, or
+documentation. Just run `streamlit docs` on a terminal to get to the docs, or
 click the *Documentation* item in Streamlit's top-right menu.
 
 **Next up,** we'll run through a more concrete example of how you could use
