@@ -229,8 +229,10 @@ class StreamlitApp extends PureComponent {
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
-          newElement: newElement => newElement.set('reportId', reportId),
-          addRows: namedDataSet => addRows(element, namedDataSet),
+          newElement: newElement =>
+            handleNewElementMessage(newElement, reportId),
+          addRows: namedDataSet =>
+            handleAddRowsMessage(element, namedDataSet),
         })),
     }));
   }
@@ -507,6 +509,20 @@ class StreamlitApp extends PureComponent {
   onLogInError(msg) {
     this.userLoginResolver.reject(`Error signing in. ${msg}`);
   }
+}
+
+
+function handleNewElementMessage(element, reportId) {
+  trackEventRemotely('visualElementUpdated', {
+    elementType: element.get('type'),
+  });
+  return element.set('reportId', reportId);
+}
+
+
+function handleAddRowsMessage(element, namedDataSet) {
+  trackEventRemotely('dataMutated');
+  return addRows(element, namedDataSet);
 }
 
 
