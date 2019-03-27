@@ -1,5 +1,7 @@
+import json
 import os
 import re
+import time
 import unittest
 
 import numpy as np
@@ -58,6 +60,123 @@ class StreamlitAPITest(unittest.TestCase):
     Unit tests for https://streamlit.io/secret/docs/#api
     """
 
+    def test_st_altair_chart(self):
+        """Test st.altair_chart."""
+        import altair as alt
+
+        df = pd.DataFrame(np.random.randn(3, 3), columns=['a', 'b', 'c'])
+
+        c = (alt.Chart(df)
+            .mark_circle()
+            .encode(x='a', y='b', size='c', color='c')
+            .interactive())
+        dg = st.altair_chart(c)
+
+        el = get_last_delta_element(dg)
+        spec = json.loads(el.vega_lite_chart.spec)
+
+        # Checking vega lite is a lot of work so rather than doing that, we
+        # just checked to see if the spec data name matches the dataset.
+        self.assertEqual(
+            spec.get('data').get('name'),
+            el.vega_lite_chart.datasets[0].name)
+
+    def test_st_area_chart(self):
+        """Test st.area_chart."""
+        pass
+
+    def test_st_audio(self):
+        """Test st.audio."""
+        pass
+
+    def test_st_balloons(self):
+        """Test st.balloons."""
+        pass
+
+    def test_st_bar_chart(self):
+        """Test st.bar_chart."""
+        pass
+
+    def test_st_code(self):
+        """Test st.code."""
+        pass
+
+    def test_st_dataframe(self):
+        """Test st.dataframe."""
+        pass
+
+    def test_st_deck_gl_chart(self):
+        """Test st.deck_gl_chart."""
+        pass
+
+    def test_st_empty(self):
+        """Test st.empty."""
+        pass
+
+    def test_st_error(self):
+        """Test st.error."""
+        pass
+
+    def test_st_exception(self):
+        """Test st.exception."""
+        pass
+
+    def test_st_header(self):
+        """Test st.header."""
+        pass
+
+    def test_st_help(self):
+        """Test st.help."""
+        pass
+
+    def test_st_image(self):
+        """Test st.image."""
+        pass
+
+    def test_st_info(self):
+        """Test st.info."""
+        pass
+
+    def test_st_json(self):
+        """Test st.json."""
+        pass
+
+    def test_st_line_chart(self):
+        """Test st.line_chart."""
+        pass
+
+    def test_st_map(self):
+        """Test st.map."""
+        pass
+
+    def test_st_markdown(self):
+        """Test st.markdown."""
+        pass
+
+    def test_st_progress(self):
+        """Test st.progress."""
+        pass
+
+    def test_st_pyplot(self):
+        """Test st.pyplot."""
+        pass
+
+    def test_st_subheader(self):
+        """Test st.subheader."""
+        pass
+
+    def test_st_success(self):
+        """Test st.success."""
+        pass
+
+    def test_st_table(self):
+        """Test st.table."""
+        pass
+
+    def test_st_text(self):
+        """Test st.text."""
+        pass
+
     def test_st_title(self):
         """Test st.title."""
         dg = st.title('some title')
@@ -65,6 +184,27 @@ class StreamlitAPITest(unittest.TestCase):
         el = get_last_delta_element(dg)
         self.assertEqual(el.text.body, '# some title')
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+
+    def test_st_vega_lite_chart(self):
+        """Test st.vega_lite_chart."""
+        pass
+
+    def test_st_video(self):
+        """Test st.video."""
+        pass
+
+    def test_st_warning(self):
+        """Test st.warning."""
+        pass
+
+    def test_st_native_chart(self):
+        """Test st._native_chart."""
+        pass
+
+    def test_st_text_exception(self):
+        """Test st._text_exception."""
+        pass
+
 
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
@@ -179,3 +319,12 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write('some text')
 
             e.assert_called_once()
+
+    def test_spinner(self):
+        """Test st.spinner."""
+        # TODO(armando): Test that the message is actually passed to
+        # message.warning
+        with patch('streamlit.empty') as e:
+            with st.spinner('some message'):
+                time.sleep(0.15)
+            e.assert_called_once_with()
