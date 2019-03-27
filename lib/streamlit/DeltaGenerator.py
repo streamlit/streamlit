@@ -120,19 +120,19 @@ def _with_element(method):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, queue, id=None):
+    def __init__(self, enqueue, id=None):
         """Constructor.
 
         Parameters
         ----------
-        queue : callable
+        enqueue : callable
             Function that enqueues Deltas.
         id : int
             ID for deltas, or None to create a new generator (with new ID) each
             time.
 
         """
-        self._queue = queue
+        self._enqueue = enqueue
         if id is None:
             self._generate_new_ids = True
             self._next_id = 0
@@ -156,23 +156,23 @@ class DeltaGenerator(object):
 
         """
         # "Null" delta generators (those wihtout queues), don't send anything.
-        if self._queue is None:
+        if self._enqueue is None:
             return self
 
         # Create a delta message.
-        delta = protobuf.Delta()
-        marshall_element(delta.new_element)
+        msg = protobuf.ForwardMsg()
+        marshall_element(msg.delta.new_element)
 
         # Figure out if we need to create a new ID for this element.
         if self._generate_new_ids:
-            delta.id = self._next_id
-            generator = DeltaGenerator(self._queue, delta.id)
+            msg.delta.id = self._next_id
+            generator = DeltaGenerator(self._enqueue, msg.delta.id)
             self._next_id += 1
         else:
-            delta.id = self._id
+            msg.delta.id = self._id
             generator = self
 
-        self._queue(delta)
+        self._enqueue(msg)
         return generator
 
     @_with_element
@@ -1206,15 +1206,15 @@ class DeltaGenerator(object):
                 'Wrong number of arguments to add_rows().'
                 'Method requires exactly one dataset')
 
-        delta = protobuf.Delta()
-        delta.id = self._id
+        msg = protobuf.ForwardMsg()
+        msg.delta.id = self._id
 
-        data_frame_proto.marshall_data_frame(data, delta.add_rows.data)
+        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
 
         if name:
-            delta.add_rows.name = name
-            delta.add_rows.has_name = True
+            msg.delta.add_rows.name = name
+            msg.delta.add_rows.has_name = True
 
-        self._queue(delta)
+        self._enqueue(msg)
 
         return self

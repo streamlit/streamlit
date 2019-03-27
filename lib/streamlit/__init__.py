@@ -40,30 +40,42 @@ import threading
 import traceback
 import types
 
-from streamlit.DeltaConnection import DeltaConnection
+from streamlit import util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.caching import cache  # Just for export.
-from streamlit import util
+from streamlit.server import Server as _Server
 
 
 this_module = sys.modules[__name__]
 
-# This delta generator has no queue so it can't send anything out on a
-# connection.
+
+# Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
+
+
+# Root delta generator for this Streamlit report.
+_current_delta_generator = _NULL_DELTA_GENERATOR
+
+
+def _get_current_delta_generator():
+    global _current_delta_generator
+
+    if config.get_option('client.displayEnabled'):
+        if _current_delta_generator is _NULL_DELTA_GENERATOR:
+            server = _Server.get_instance()
+            _current_delta_generator = DeltaGenerator(server.enqueue)
+            # (The server gets started in streamlit.bootstrap.run)
+    else:
+        _current_delta_generator = _NULL_DELTA_GENERATOR
+
+    return _current_delta_generator
 
 
 def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        # Only output if the config allows us to.
-        if config.get_option('client.displayEnabled'):
-            connection = DeltaConnection.get_connection()
-            delta_generator = connection.get_delta_generator()
-        else:
-            delta_generator = _NULL_DELTA_GENERATOR
-
-        return method(delta_generator, *args, **kwargs)
+        dg = _get_current_delta_generator()
+        return method(dg, *args, **kwargs)
     return wrapped_method
 
 

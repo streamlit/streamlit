@@ -69,10 +69,14 @@ def main_hello(args):
 @click.argument('args', nargs=-1)
 def main_run(file, args):
     """Run a Python script, piping stderr to Streamlit."""
-    import streamlit.process_runner as process_runner
+    import streamlit.bootstrap as bootstrap
     import sys
-    cmd = [sys.executable, file] + list(args)
-    process_runner.run_handling_errors_in_this_process(cmd)
+
+    # We don't use args ourselves. We just allow people to pass them so their
+    # script can handle them via sys.argv or whatever.
+    sys.argv = [file] + list(args)
+
+    bootstrap.run(file)
 
 
 # DEPRECATED

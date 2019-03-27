@@ -150,6 +150,7 @@ def memoize(func):
     return wrapped_func
 
 
+# XXX Remove
 def write_proto(ws, msg):
     """Writes a proto to a websocket.
 

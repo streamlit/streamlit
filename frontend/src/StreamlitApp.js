@@ -177,7 +177,7 @@ class StreamlitApp extends PureComponent {
           if (newReportMsg.get('id') === this.state.reportId) {
             this.clearOldElements();
           }
-        }, 3000);
+        }, 0);  // XXX was 3000.
       },
       delta: (delta) => {
         this.applyDelta(delta);
