@@ -52,6 +52,14 @@ this_module = sys.modules[__name__]
 # connection.
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
+_DATAFRAME_LIKE_TYPES = (
+    'DataFrame',  # pandas.core.frame.DataFrame
+    'Series',  # pandas.core.series.Series
+    'Index',  # pandas.core.indexes.base.Index
+    'ndarray',  # numpy.ndarray
+    'Styler',  # pandas.io.formats.style.Styler
+)
+
 
 def _with_dg(method):
     @functools.wraps(method)
@@ -196,14 +204,6 @@ def write(*args):
        height: 200px
 
     """
-    DATAFRAME_LIKE_TYPES = (
-        'DataFrame',
-        'Series',
-        'Index',
-        'ndarray',
-        'Styler',
-    )
-
     HELP_TYPES = (
         types.FunctionType,
         types.ModuleType,
@@ -220,7 +220,7 @@ def write(*args):
         for arg in args:
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in DATAFRAME_LIKE_TYPES:
+            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
                 flush_buffer()
                 dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
