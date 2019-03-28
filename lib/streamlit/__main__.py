@@ -57,7 +57,7 @@ def main_docs():
 
 
 @main.command('hello')
-def main_hello(args):
+def main_hello():
     """Runs the Hello World script."""
     print('Showing Hello World script in browser...')
     import streamlit.hello
@@ -81,7 +81,7 @@ def main_run(file, args):
 
 # DEPRECATED
 
-@main.command('clear_cache', deprecated=True)
+@main.command('clear_cache', deprecated=True, hidden=True)
 @click.pass_context
 def main_clear_cache(ctx):
     """Deprecated."""
@@ -89,7 +89,7 @@ def main_clear_cache(ctx):
     ctx.invoke(cache_clear)
 
 
-@main.command('kill_proxy', deprecated=True)
+@main.command('kill_proxy', deprecated=True, hidden=True)
 @click.pass_context
 def main_kill_proxy(ctx):
     """Deprecated."""
@@ -97,7 +97,7 @@ def main_kill_proxy(ctx):
     ctx.invoke(proxy_kill)
 
 
-@main.command('show_config', deprecated=True)
+@main.command('show_config', deprecated=True, hidden=True)
 @click.pass_context
 def main_show_config(ctx):
     """Deprecated."""

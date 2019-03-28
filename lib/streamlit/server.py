@@ -16,6 +16,7 @@ from streamlit import config
 from streamlit import util
 from streamlit import protobuf
 from streamlit.ReportQueue import ReportQueue
+from streamlit.proxy.ReportObserver import ReportObserver  # XXX Move out of proxy
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -58,6 +59,7 @@ class Server(object):
 
     def __init__(self):
         """Initialize."""
+        LOGGER.debug('Initializing server...')
         Server._singleton = self
 
         _fix_tornado_logging()
@@ -67,6 +69,7 @@ class Server(object):
         # Mapping of WebSocket->ReportQueue.
         self._browser_queues = {}
 
+        self._report_observer = None
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
@@ -80,10 +83,11 @@ class Server(object):
         app = tornado.web.Application(_get_routes())
         app.listen(port)
 
-        LOGGER.debug('Proxy HTTP server for started on port %s', port)
+        LOGGER.debug('Server started on port %s', port)
 
-    def _set_state(self, state):
-        self._state = state
+    def _set_state(self, new_state):
+        LOGGER.debug('Server state: %s -> %s' % (self._state, new_state))
+        self._state = new_state
 
     @tornado.gen.coroutine
     def loop_coroutine(self):
@@ -137,11 +141,60 @@ class Server(object):
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
             self._browser_queues[ws] = self._master_queue.clone()
 
+        self._add_report_observer(ws)
+
     def remove_browser_connection(self, ws):
+        self._remove_report_observer(ws)
+
         if ws in self._browser_queues:
             del self._browser_queues[ws]
         if len(self._browser_queues) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
+
+    def _add_report_observer(self, browser_key):
+        """Start observer and store in self._report_observer.
+
+        Parameters
+        ----------
+        browser_key : str
+            A unique identifier of the browser connection.
+
+        """
+        from streamlit.scriptrunner import ScriptRunner
+        scriptrunner = ScriptRunner.get_instance()
+        file_path = scriptrunner.file_path
+
+        # XXX This will never happen. This was here for the REPL.
+        if file_path is None:
+            LOGGER.debug('Will not observe file; '
+                         'connection\'s file_path is None')
+            return
+
+        if self._report_observer is None:
+            initially_enabled = config.get_option('proxy.watchFileSystem')
+            self._report_observer = ReportObserver(
+                initially_enabled=initially_enabled,
+                file_path=file_path,
+                on_file_changed=_handle_rerun_script_request)
+
+        self._report_observer.register_browser(browser_key)
+
+    def _remove_report_observer(self, browser_key):
+        """Stop observing filesystem.
+
+        Parameters
+        ----------
+        browser_key : str
+            A unique identifier of the browser connection.
+
+        """
+        if self._report_observer is None:
+            return
+
+        self._report_observer.deregister_browser(browser_key)
+        if not self._report_observer.has_registered_browsers:
+            self._report_observer = None
+
 
 
 class _SocketHandler(tornado.websocket.WebSocketHandler):
@@ -165,68 +218,68 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             msg_type = msg.WhichOneof('type')
 
             if msg_type == 'cloud_upload':
-                yield #XXX self._save_cloud(connection, ws)
+                pass #XXX _save_cloud(connection, ws)
             elif msg_type == 'rerun_script':
-                yield self._handle_rerun_script_request(msg)
+                _handle_rerun_script_request()
             elif msg_type == 'clear_cache':
-                yield self._handle_clear_cache_request(msg)
+                _handle_clear_cache_request()
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
         except BaseException as e:
             LOGGER.error('Cannot parse binary message: %s', e)
 
-    @tornado.gen.coroutine
-    def _save_cloud(self, msg):
-        """Save serialized version of report deltas to the cloud."""
-        pass
-        # XXX
 
-        # @tornado.gen.coroutine
-        # def progress(percent):
-        #     progress_msg = protobuf.ForwardMsg()
-        #     progress_msg.upload_report_progress = percent
-        #     yield self.write_message(
-        #         progress_msg.SerializeToString(), binary=True)
+def _save_cloud(msg):
+    """Save serialized version of report deltas to the cloud."""
+    pass
+    # XXX
 
-        # # Indicate that the save is starting.
-        # try:
-        #     yield progress(0)
+    # @tornado.gen.coroutine
+    # def progress(percent):
+    #     progress_msg = protobuf.ForwardMsg()
+    #     progress_msg.upload_report_progress = percent
+    #     yield self.write_message(
+    #         progress_msg.SerializeToString(), binary=True)
 
-        #     files = connection.serialize_final_report_to_files()
-        #     storage = self._proxy.get_storage()
-        #     url = yield storage.save_report_files(
-        #         connection.id, files, progress)
+    # # Indicate that the save is starting.
+    # try:
+    #     yield progress(0)
 
-        #     # Indicate that the save is done.
-        #     progress_msg = protobuf.ForwardMsg()
-        #     progress_msg.report_uploaded = url
-        #     yield self.write_message(
-        #         progress_msg.SerializeToString(), binary=True)
-        # except Exception as e:
-        #     # Horrible hack to show something if something breaks.
-        #     err_msg = '%s: %s' % (
-        #         type(e).__name__, str(e) or "No further details.")
-        #     progress_msg = protobuf.ForwardMsg()
-        #     progress_msg.report_uploaded = err_msg
-        #     yield self.write_message(
-        #         progress_msg.SerializeToString(), binary=True)
-        #     raise e
+    #     files = connection.serialize_final_report_to_files()
+    #     storage = self._proxy.get_storage()
+    #     url = yield storage.save_report_files(
+    #         connection.id, files, progress)
 
-    @tornado.gen.coroutine
-    def _handle_rerun_script_request(self, msg):
-        # XXX TODO change msg.rerun_script
-        from streamlit.scriptrunner import ScriptRunner
-        scriptrunner = ScriptRunner.get_instance()
-        yield scriptrunner.request_rerun()
+    #     # Indicate that the save is done.
+    #     progress_msg = protobuf.ForwardMsg()
+    #     progress_msg.report_uploaded = url
+    #     yield self.write_message(
+    #         progress_msg.SerializeToString(), binary=True)
+    # except Exception as e:
+    #     # Horrible hack to show something if something breaks.
+    #     err_msg = '%s: %s' % (
+    #         type(e).__name__, str(e) or "No further details.")
+    #     progress_msg = protobuf.ForwardMsg()
+    #     progress_msg.report_uploaded = err_msg
+    #     yield self.write_message(
+    #         progress_msg.SerializeToString(), binary=True)
+    #     raise e
 
-    @tornado.gen.coroutine
-    def _handle_clear_cache_request(self, msg):
-        # Setting verbose=True causes clear_cache to print to stdout.
-        # Since this command was initiated from the browser, the user
-        # doesn't need to see the results of the command in their
-        # terminal.
-        yield caching.clear_cache(verbose=False)
+
+def _handle_rerun_script_request():
+    # XXX TODO change msg.rerun_script
+    from streamlit.scriptrunner import ScriptRunner
+    scriptrunner = ScriptRunner.get_instance()
+    scriptrunner.request_rerun()
+
+
+def _handle_clear_cache_request():
+    # Setting verbose=True causes clear_cache to print to stdout.
+    # Since this command was initiated from the browser, the user
+    # doesn't need to see the results of the command in their
+    # terminal.
+    caching.clear_cache(verbose=False)
 
 
 def _fix_tornado_logging():

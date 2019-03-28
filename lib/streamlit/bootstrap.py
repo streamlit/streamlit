@@ -10,6 +10,9 @@ from streamlit import util
 from streamlit.scriptrunner import ScriptRunner
 from streamlit.server import Server
 
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
+
 
 def _set_up_signal_handler():
     # Reimport things we'll need in the closure below, or they get removed.
@@ -17,10 +20,18 @@ def _set_up_signal_handler():
     import signal
     from streamlit.scriptrunner import ScriptRunner
 
+    LOGGER.debug('Setting up signal handler')
+
     def signal_handler(signal_number, stack_frame):
         scriptrunner = ScriptRunner.get_instance()
+        script_was_running = scriptrunner.is_running()
         scriptrunner.request_stop()
-        tornado.ioloop.IOLoop.current().stop()
+
+        # If the script is running, users can use Ctrl-C to stop it, and then
+        # another Ctrl-C to stop the server. If not running, Ctrl-C just stops
+        # the server.
+        if not script_was_running:
+            tornado.ioloop.IOLoop.current().stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -79,7 +90,7 @@ def run(script_path):
     ioloop.spawn_callback(server.loop_coroutine)
 
     scriptrunner = ScriptRunner.get_instance()
-    scriptrunner.set_file_path(script_path)
+    scriptrunner.file_path = script_path
     scriptrunner.spawn_script_thread()
 
     util.open_browser(_get_url(script_path))

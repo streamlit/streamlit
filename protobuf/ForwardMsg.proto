@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "Delta.proto";
 
-// A message across a stream.
+// A message sent from Proxy to the browser
 message ForwardMsg {
   oneof type {
     ////
@@ -37,9 +37,15 @@ message NewConnection {
 
   // Python streamlit version.
   string streamlit_version = 3;
+
+  // If true, streamlit will re-run the report if it detects that the report
+  // has been changed. This value comes from the proxy.watchFileSystem config.
+  // The client can change this option; it's sent here so that the client
+  // show the correct initial value in its Settings dialog.
+  bool run_on_save = 4;
 }
 
-// This is the first message that is sent when the connection is opened.
+// This is the first message that is sent when a new report is run
 message NewReportMessage {
   // The report ID
   string id = 1;

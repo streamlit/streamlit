@@ -173,10 +173,11 @@ function clearCacheDialog({ confirmCallback, onClose }) {
 /**
  * Shows the settings dialog.
  */
-function settingsDialog({settings, isOpen, onSave, onClose}) {
+function settingsDialog({settings, isProxyConnected, isOpen, onSave, onClose}) {
   return (
     <SettingsDialog
       settings={settings}
+      isProxyConnected={isProxyConnected}
       isOpen={isOpen}
       onSave={onSave}
       onClose={onClose}

@@ -8,20 +8,18 @@
 import * as React from 'react';
 import {ChangeEvent, PureComponent, ReactNode} from 'react';
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap';
-
-export interface Settings {
-  wideMode: boolean;
-}
+import {UserSettings} from './UserSettings';
 
 export interface Props {
   isOpen: boolean;
+  isProxyConnected: boolean;
   onClose: () => void;
-  onSave: (settings: Settings) => void;
-  settings: Settings;
+  onSave: (settings: UserSettings) => void;
+  settings: UserSettings;
 }
 
-class SettingsDialog extends PureComponent<Props, Settings> {
-  private _settings: Settings;
+class SettingsDialog extends PureComponent<Props, UserSettings> {
+  private _settings: UserSettings;
 
   public constructor(props: Props) {
     super(props);
@@ -43,6 +41,18 @@ class SettingsDialog extends PureComponent<Props, Settings> {
         <ModalHeader toggle={this.handleCancelButtonClick}>Settings</ModalHeader>
 
         <ModalBody>
+          <label>
+            <input
+              disabled={!this.props.isProxyConnected}
+              type="checkbox"
+              name="runOnSave"
+              checked={this.state.runOnSave && this.props.isProxyConnected}
+              onChange={this.handleCheckboxChange}
+            />
+            {' '}
+            Run on save
+          </label>
+          <br/>
           <label>
             <input
               type="checkbox"
@@ -76,7 +86,10 @@ class SettingsDialog extends PureComponent<Props, Settings> {
   };
 
   private changeSingleSetting = (name: string, value: boolean) => {
-    this.setState({...this._settings, [name]: value});
+    // TypeScript doesn't currently have a good solution for setState with
+    // a dynamic key name:
+    // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
+    this.setState(state => ({...state, [name]: value}));
   };
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {

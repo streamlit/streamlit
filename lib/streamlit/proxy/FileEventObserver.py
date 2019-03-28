@@ -1,6 +1,6 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""Declares the ReportObserver class, that watches the file system.
+"""Declares the FileEventObserver class, that watches the file system.
 
 
 Why this file is so complex
@@ -24,11 +24,11 @@ the ReportObserver class.
 How these classes work together
 -------------------------------
 
-- ReportObserver : each instance of this is able to observe a single
-  files so long as there's a browser interested in it. This uses _FileObserver,
-  to watch files.
+- FileEventObserver : each instance of this is able to observe a single
+  files so long as there's a browser interested in it. This uses
+  _MultiFileObserver to watch files.
 
-- _FileObserver : singleton that observes multiple files. It does this by
+- _MultiFileObserver : singleton that observes multiple files. It does this by
   holding a watchdog.observer.Observer object, and manages several
   _FolderEventHandler instances. This creates _FolderEventHandlers as needed,
   if the required folder is not already being observed. And it also tells
@@ -49,7 +49,6 @@ setup_2_3_shims(globals())
 import os
 
 from streamlit.proxy import proxy_util
-from streamlit.proxy.AbstractObserver import AbstractObserver
 from watchdog import events
 from watchdog.observers import Observer
 
@@ -57,57 +56,42 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-class ReportObserver(AbstractObserver):
-    """Observes single files so long as there's a browser interested in it."""
+class FileEventObserver(object):
+    """Observes a single file on disk using watchdog"""
 
     @staticmethod
-    def close():
+    def close_all():
         """Close the ReportObserver singleton."""
-        file_observer = _FileObserver.get_singleton()
+        file_observer = _MultiFileObserver.get_singleton()
         file_observer.close()
-        AbstractObserver.close()
+        LOGGER.debug('Observer closed')
 
-    def register_browser(self, browser_key):
-        """Tell observer that it's in use by browser identified by key.
+    def __init__(self, file_path, on_file_changed):
+        """Constructor.
 
-        While at least one browser is interested in this observer, it will not
-        be disposed of.
+        Arguments
+        ---------
+        file_path : str
+            Absolute path of the file to observe.
 
-        Parameters
-        ----------
-        browser_key : str
-            A unique identifier of the browser.
-
-        """
-        if len(self._browsers) == 0:
-            file_observer = _FileObserver.get_singleton()
-            file_observer.observe_file(self._file_path, self._callback)
-
-        super(ReportObserver, self).register_browser(browser_key)
-
-    # No need to override:
-    # def register_browser(self, browser_key):
-
-    def is_observing_file(self):
-        """Return whether this observer is "closed" (i.e. no longer observing).
-
-        Returns
-        -------
-        boolean
-            True if observing a file.
+        on_file_changed : callable
+            Function to call when the file changes.
 
         """
-        file_observer = _FileObserver.get_singleton()
-        return file_observer.is_observing_file(self._file_path)
+        file_path = os.path.abspath(file_path)
+        self._file_path = file_path
 
-    def _close(self):
+        file_observer = _MultiFileObserver.get_singleton()
+        file_observer.observe_file(file_path, on_file_changed)
+        LOGGER.debug('Observer created for %s', file_path)
+
+    def close(self):
         """Stop observing the file system."""
-        file_observer = _FileObserver.get_singleton()
+        file_observer = _MultiFileObserver.get_singleton()
         file_observer.stop_observing_file(self._file_path)
-        super(ReportObserver, self)._close()
 
 
-class _FileObserver(object):
+class _MultiFileObserver(object):
     """Observes multiple files."""
 
     _singleton = None
@@ -120,20 +104,20 @@ class _FileObserver(object):
         """
         if cls._singleton is None:
             LOGGER.debug('No singleton. Registering one.')
-            _FileObserver()
+            _MultiFileObserver()
 
-        return _FileObserver._singleton
+        return _MultiFileObserver._singleton
 
     # Don't allow constructor to be called more than once.
     def __new__(cls):
         """Constructor."""
-        if _FileObserver._singleton is not None:
+        if _MultiFileObserver._singleton is not None:
             raise RuntimeError('Use .get_singleton() instead')
-        return super(_FileObserver, cls).__new__(cls)
+        return super(_MultiFileObserver, cls).__new__(cls)
 
     def __init__(self):
         """Constructor."""
-        _FileObserver._singleton = self
+        _MultiFileObserver._singleton = self
 
         # Map of folder_to_observe -> _FolderEventHandler.
         self._folder_handlers = {}
@@ -304,14 +288,19 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_CREATED:
             file_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
+            LOGGER.debug(
+                'Move event: src %s; dest %s', event.src_path, event.dest_path)
             file_path = event.dest_path
         else:
+            LOGGER.debug("Don't care about event type %s", event.event_type),
             return
 
-        file_name = os.path.basename(file_path)
+        file_path = os.path.abspath(file_path)
 
         if file_path not in self._observed_files:
-            LOGGER.debug('Ignoring file %s', file_path)
+            LOGGER.debug(
+                'Ignoring file %s.\nObserved_files: %s',
+                file_path, self._observed_files)
             return
 
         file_info = self._observed_files[file_path]
@@ -338,6 +327,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         self.handle_file_change_event(event)
 
     def on_modified(self, event):
+        if event.is_directory:
+            return
+        self.handle_file_change_event(event)
+
+    def on_moved(self, event):
         if event.is_directory:
             return
         self.handle_file_change_event(event)

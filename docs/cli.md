@@ -4,15 +4,21 @@
 
 # Command-line tool
 
-When you install Streamlit, the Streamlit CLI tool gets installed as
-well. The main purpose of this tool is to help you diagnose and fix issues.
+When you install Streamlit, the Streamlit command-line CLI tool gets installed
+as well. The main purpose of this tool is to help you diagnose and fix issues.
 
-Below are the commands accepted by Streamlit CLI:
-
-## version
+You can find docs for our CLI tool as usual:
 
 ```bash
-$ streamlit version
+$ streamlit --help
+```
+
+Below are a few of the most useful commands accepted by Streamlit CLI:
+
+## \-\-version
+
+```bash
+$ streamlit --version
 ```
 Shows the version of Streamlit in your current Python environment.
 
@@ -31,18 +37,25 @@ $ streamlit hello
 Opens Streamlit's Hello World report in a web browser. This is useful for
 testing Streamlit.
 
-## kill_proxy
+## proxy kill
 
 ```bash
-$ streamlit kill_proxy
+$ streamlit proxy kill
 ```
 Kills the Streamlit proxy server, if any. This is useful when making config
 changes, for example, since the config file is read when the server
 initializes.
 
-## show_config
+## config show
 
 ```bash
-$ streamlit show_config
+$ streamlit config show
 ```
 Shows all config options for Streamlit, as well as their current values.
+
+## cache clear
+
+```bash
+$ streamlit cache clear
+```
+Clears the [Streamlit cache](/api/optimization).

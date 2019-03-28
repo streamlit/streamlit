@@ -63,12 +63,20 @@ def marshall(proto, obj):
 
 
 def _get_signature(f):
-    is_delta_gen = f.__module__ == 'streamlit.DeltaGenerator'
+    is_delta_gen = False
+    try:
+        is_delta_gen = f.__module__ == 'streamlit.DeltaGenerator'
 
-    if is_delta_gen:
-        # DeltaGenerator functions are doubly wrapped, and their function
-        # signatures are useless unless we unwrap them.
-        f = _unwrap_decorated_func(f)
+        if is_delta_gen:
+            # DeltaGenerator functions are doubly wrapped, and their function
+            # signatures are useless unless we unwrap them.
+            f = _unwrap_decorated_func(f)
+
+    # Functions such as numpy.minimum don't have a __module__ attribute,
+    # since we're only using it to check if its a DeltaGenerator, its ok
+    # to continue
+    except AttributeError:
+        pass
 
     sig = ''
 

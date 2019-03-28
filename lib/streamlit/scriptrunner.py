@@ -52,19 +52,30 @@ class ScriptRunner(object):
         """Initialize."""
         ScriptRunner._singleton = self
 
-        self._path = None
+        self._file_path = None
         self._state = None
         self._set_state(State.INITIAL)
         self._state_change_requested = threading.Event()
         self._paused = threading.Event()
 
-    def _set_state(self, state):
-        self._state = state
+    def _set_state(self, new_state):
+        LOGGER.debug('ScriptRunner state: %s -> %s' % (self._state, new_state))
+        self._state = new_state
 
-    def set_file_path(self, script_path):
-        self._path = script_path
+    @property
+    def file_path(self):
+        return self._file_path
+
+    @file_path.setter
+    def file_path(self, file_path):
+        if self._file_path is None:
+            self._file_path = file_path
+        else:
+            raise RuntimeError('File path can only be set once.')
 
     def spawn_script_thread(self):
+        LOGGER.debug('Spawning script thread...')
+
         script_thread = threading.Thread(
             target=self._run,
             name='Streamlit script runner thread')
@@ -85,7 +96,7 @@ class ScriptRunner(object):
     def _run(self):
         from streamlit.server import Server
 
-        if not self._path:
+        if not self._file_path:
             raise RuntimeError('Must call set_file_path() before calling run()')
 
         # Wait 1s for thread to be ready
@@ -109,13 +120,13 @@ class ScriptRunner(object):
         # Python 3 got rid of the native execfile() command, so we now read the
         # file, compile it, and exec() it. This implementation is compatible
         # with both 2 and 3.
-        with open(self._path) as f:
+        with open(self._file_path) as f:
             filebody = f.read()
 
         code = compile(
             filebody,
             # Pass in the file path so it can show up in exceptions.
-            self._path,
+            self._file_path,
             # We're compiling entire blocks of Python, so we need "exec" mode
             # (as opposed to "eval" or "single").
             'exec',
@@ -141,11 +152,11 @@ class ScriptRunner(object):
             # like __name__.
             ns = dict(
                 __name__='__main__',
-                __file__=str(self._path),  # str() so it's not unicode in py2.
+                __file__=str(self._file_path),  # Convert from unicode for py2.
             )
             exec(code, ns, ns)
 
-        except ScriptRunner.ScriptControlException as e:
+        except ScriptControlException as e:
             # Stop ScriptControlExceptions from appearing in the console.
             pass
 
@@ -203,27 +214,34 @@ class ScriptRunner(object):
         if self._state_change_requested.is_set():
 
             if self._state == State.STOP_REQUESTED:
-                raise ScriptRunner.StopException()
+                raise StopException()
             elif self._state == State.RERUN_REQUESTED:
                 self.spawn_script_thread()
-                raise ScriptRunner.RerunException()
+                raise RerunException()
             elif self._state == State.PAUSE_REQUESTED:
                 self.pause()
                 return
 
+    def is_running(self):
+        return self._state == State.RUNNING
+
     def is_fully_stopped(self):
         return self._state in (State.INITIAL, State.STOPPED)
 
-    class ScriptControlException(BaseException):
-        pass
 
-    class StopException(ScriptControlException):
-        """Silently stop the execution of the user's script."""
-        pass
+class ScriptControlException(BaseException):
+    """Base exception for ScriptRunner."""
+    pass
 
-    class RerunException(ScriptControlException):
-        """Silently stop and rerun the user's script."""
-        pass
+
+class StopException(ScriptControlException):
+    """Silently stop the execution of the user's script."""
+    pass
+
+
+class RerunException(ScriptControlException):
+    """Silently stop and rerun the user's script."""
+    pass
 
 
 def _enqueue_new_report_message(server):
