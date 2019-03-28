@@ -38,12 +38,8 @@ from streamlit import util
 from streamlit import process_runner
 from streamlit.proxy import proxy_util
 from streamlit.proxy.storage.S3Storage import S3Storage as Storage
+from streamlit.proxy.ReportObserver import ReportObserver
 from streamlit.streamlit_msg_proto import new_report_msg
-
-try:
-    from streamlit.proxy.fs_observer import ReportObserver
-except ImportError:
-    from streamlit.proxy.polling_fs_observer import ReportObserver
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -66,7 +62,7 @@ class Proxy(object):
         # then the proxy shuts down.
         self._connections = dict()
 
-        # Map of file_path->ReportObserver
+        # Map of file_path->DisableableReportObserver
         self._report_observers = dict()
 
         # This object represents a connection to an S3 bucket or other cloud
@@ -162,7 +158,11 @@ class Proxy(object):
         LOGGER.debug('Stopping proxy')
         if not self._stopped:
             IOLoop.current().stop()
-        ReportObserver.close()
+
+        # Close all our ReportObservers
+        for observer in self._report_observers.values():
+            observer.close()
+        self._report_observers.clear()
         self._stopped = True
 
     def register_proxy_connection(self, connection):
@@ -295,7 +295,7 @@ class Proxy(object):
 
         """
         connection, queue = yield self._register_browser(report_name, ws)
-        self._maybe_add_report_observer(connection, browser_key)
+        self._add_report_observer(connection, browser_key)
         raise gen.Return((connection, queue))
 
     def on_browser_connection_closed(self, browser_key, connection, queue):  # noqa: D401
@@ -452,10 +452,59 @@ class Proxy(object):
 
         return file_path
 
-    def _maybe_add_report_observer(self, connection, browser_key):
-        """Start observer and store observer in self._report_observers.
+    def get_run_on_save(self, connection):
+        """True if run-on-save is enabled for a report. If the report
+        doesn't exist, the value of _report_observers_are_initially_enabled
+        will be returned instead.
 
-        Obeys config option proxy.watchFileSystem. If False, does not observe.
+        Parameters
+        ----------
+        connection : ProxyConnection
+            Connection object containing information about the folder to
+            observe.
+        """
+        file_path = self._get_file_path(connection)
+        if file_path is not None:
+            observer = self._report_observers.get(file_path)
+            if observer is not None:
+                return observer.get_enabled()
+        return self._report_observers_are_initially_enabled
+
+    def set_run_on_save(self, connection, run_on_save):
+        """Sets the run-on-save value for a given report. If no such
+        report is active, this is a no-op.
+
+        Parameters
+        ----------
+        connection : ProxyConnection
+            Connection object containing information about the folder to
+            observe.
+
+        run_on_save : bool
+            Whether run-on-save should be enabled for the report
+        """
+        observer = None
+        file_path = self._get_file_path(connection)
+        if file_path is not None:
+            observer = self._report_observers.get(file_path)
+
+        if observer is None:
+            LOGGER.debug('Cannot set run_on_save for non-existent report')
+        else:
+            observer.set_enabled(run_on_save)
+
+    @property
+    def _report_observers_are_initially_enabled(self):
+        """True if DisableableReportObservers should be created
+        in an enabled state.
+        """
+        return (config.get_option('proxy.watchFileSystem') and
+                not self._keep_alive)
+
+    def _add_report_observer(self, connection, browser_key):
+        """Start observer and store observer in self._report_observers.
+        A newly-created observer will be enabled only if
+        _report_observers_are_initially_enabled is True
 
         Parameters
         ----------
@@ -466,25 +515,20 @@ class Proxy(object):
             A unique identifier of the browser connection.
 
         """
-        if not config.get_option('proxy.watchFileSystem'):
-            return
-
-        if self._keep_alive:
-            LOGGER.debug(
-                'Will not observe file system since keepAlive is True')
-            return
-
         file_path = self._get_file_path(connection)
 
-        if file_path == None:
-            LOGGER.debug('Will not observe file')
+        if file_path is None:
+            LOGGER.debug('Will not observe file; '
+                         'connection\'s file_path is None')
             return
 
         observer = self._report_observers.get(file_path)
 
         if observer is None:
-            callback = _build_fsobserver_callback(connection)
-            observer = ReportObserver(file_path, callback)
+            observer = ReportObserver(
+                initially_enabled=self._report_observers_are_initially_enabled,
+                file_path=file_path,
+                on_file_changed=_build_rerun_report_callback(connection))
             self._report_observers[file_path] = observer
 
         observer.register_browser(browser_key)
@@ -506,7 +550,7 @@ class Proxy(object):
 
         if observer is not None:
             observer.deregister_browser(browser_key)
-            if not observer.is_observing_file():
+            if not observer.has_registered_browsers:
                 del self._report_observers[file_path]
 
 
@@ -605,8 +649,11 @@ def _print_urls(connection, waitSecs):
         '''), {'external_url': external_url, 'internal_url': internal_url})
 
 
-def _build_fsobserver_callback(connection):
-    """Builds a callback for the FSObserver."""
+def _build_rerun_report_callback(connection):
+    """Returns a file changed callback to be passed to a ReportListener.
+    It will cause the report to be re-run when the report's source file
+    is modified on disk.
+    """
 
     def callback():
         # IMPORTANT: This method runs in a thread owned by the watchdog module

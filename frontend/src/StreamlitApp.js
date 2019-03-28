@@ -64,6 +64,7 @@ class StreamlitApp extends PureComponent {
       }]),
       userSettings: {
         wideMode: false,
+        runOnSave: true,
       },
       showLoginBox: false,
       streamlitVersion: null,
@@ -156,17 +157,7 @@ class StreamlitApp extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
 
     dispatchOneOf(msg, 'type', {
-      newConnection: (connectionProperties) => {
-        initRemoteTracker({
-          gatherUsageStats: connectionProperties.get('gatherUsageStats'),
-        });
-        trackEventRemotely('createReport');
-        this.setState({
-          sharingEnabled: connectionProperties.get('sharingEnabled'),
-          streamlitVersion: connectionProperties.get('streamlitVersion'),
-        });
-        console.log('Streamlit version: ', this.state.streamlitVersion);
-      },
+      newConnection: newConnectionMsg => this.handleNewConnection(newConnectionMsg),
       newReport: (newReportMsg) => {
         trackEventRemotely('updateReport');
         this.setState({
@@ -195,6 +186,29 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
+   * Handler for 'newConnection' server messages
+   * @param newConnectionMsg a NewConnection protobuf object
+   */
+  handleNewConnection(newConnectionMsg) {
+    initRemoteTracker({
+      gatherUsageStats: newConnectionMsg.get('gatherUsageStats'),
+    });
+
+    trackEventRemotely('createReport');
+
+    this.setState(prevState => ({
+      sharingEnabled: newConnectionMsg.get('sharingEnabled'),
+      streamlitVersion: newConnectionMsg.get('streamlitVersion'),
+      userSettings: {
+        ...prevState.userSettings,
+        runOnSave: newConnectionMsg.get('runOnSave'),
+      },
+    }));
+
+    console.log('Streamlit version: ', this.state.streamlitVersion);
+  }
+
+  /**
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
@@ -209,16 +223,17 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
-   * Saves a settings object.
+   * Saves a UserSettings object.
    */
-  saveSettings(settings) {
-    this.setState({
-      userSettings: {
-        ...this.state.userSettings,
-        wideMode: settings.wideMode,
-        clearCache: settings.clearCache,
-      },
-    });
+  saveSettings(newSettings) {
+    const prevRunOnSave = this.state.userSettings.runOnSave;
+    const runOnSave = newSettings.runOnSave;
+
+    this.setState({userSettings: newSettings});
+
+    if (prevRunOnSave !== runOnSave && this.isProxyConnected()) {
+      this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave});
+    }
   }
 
   /**
@@ -415,6 +430,7 @@ class StreamlitApp extends PureComponent {
             settingsCallback={() => this.openDialog({
               type: 'settings',
               isOpen: true,
+              isProxyConnected: this.isProxyConnected(),
               settings: this.state.userSettings,
               onSave: this.saveSettings,
             })}
