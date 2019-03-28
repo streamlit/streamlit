@@ -293,8 +293,8 @@ class DeltaGenerator(object):
 
         """
         element.text.body = (
-                body if isinstance(body, string_types)  # noqa: F821
-                else json.dumps(body))
+            body if isinstance(body, string_types)  # noqa: F821
+            else json.dumps(body, default=lambda o: '<not serializable>'))
         element.text.format = protobuf.Text.JSON
 
     @_with_element
@@ -478,8 +478,8 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        import streamlit.exception as exception_module
-        exception_module.marshall(element, exception, exception_traceback)
+        from streamlit.elements import exception as exception_element
+        exception_element.marshall(element, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):

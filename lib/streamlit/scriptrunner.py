@@ -12,7 +12,6 @@ import tornado.ioloop
 from streamlit import __version__
 from streamlit import config
 from streamlit import protobuf
-from streamlit import streamlit_msg_proto
 from streamlit import util
 
 from streamlit.logger import get_logger
@@ -115,23 +114,22 @@ class ScriptRunner(object):
 
         code = compile(
             filebody,
-            # File path, just so it can pretty print in exceptions.
+            # Pass in the file path so it can show up in exceptions.
             self._path,
-            # We're compiling entire blocks of Python, so we need "exec" mode.
-            # (As opposed to "eval" or "single")
+            # We're compiling entire blocks of Python, so we need "exec" mode
+            # (as opposed to "eval" or "single").
             'exec',
-            # Don't inherit "future" statements.
+            # Don't inherit any flags or "future" statements.
             flags=0,
             dont_inherit=1,
-            # -1 = use default optimization level specified by the -O parameter.
+            # -1 = default optimization level (specified by the -O parameter)
             # 0 = no optimization & __debug__ is true
             # 1 = asserts are removed & __debug__ is false
             # 2 = docstrings are removed too.
             optimize=-1)
 
         try:
-            # XXX One of these should only be sent once. Don't remember which.
-            _enqueue_new_connection_message(server)
+            _maybe_enqueue_new_connection_message(server)
             _enqueue_new_report_message(server)
 
             # IMPORTANT: must pass a brand new dict into the globals and locals,
@@ -146,14 +144,19 @@ class ScriptRunner(object):
                 __file__=str(self._path),  # str() so it's not unicode in py2.
             )
             exec(code, ns, ns)
+
         except ScriptRunner.ScriptControlException as e:
             # Stop ScriptControlExceptions from appearing in the console.
             pass
+
         except BaseException as e:
             # Show exceptions in the Streamlit report.
-            #server.enqueue()
+            _enqueue_exception(server, e)
             raise # Don't pass "e" here, to preserve e's original stack trace.
-            # TODO: Use "raise TheExceptionType, e, clean_traceback" instead.
+            # TODO: Use "raise TheExceptionType, e, traceback" instead, so we
+            # can try and clean up the traceback a little (remove Streamlit
+            # from it, to make it easier for users to debug).
+
         finally:
             _enqueue_report_finished_message(server)
             self._set_state(State.STOPPED)
@@ -224,16 +227,21 @@ class ScriptRunner(object):
 
 
 def _enqueue_new_report_message(server):
-    msg = streamlit_msg_proto.new_report_msg(
-        report_id=util.build_report_id(),
-        cwd=os.getcwd(),
-        command_line=sys.argv,
-        source_file_path='')  # XXX Remove.
+    msg = protobuf.ForwardMsg()
+    msg.new_report.id = str(util.build_report_id())
+    msg.new_report.cwd = os.getcwd()
+    msg.new_report.command_line.extend(sys.argv)
+    msg.new_report.source_file_path = ''  # XXX remove
 
     server.enqueue(msg)
 
 
-def _enqueue_new_connection_message(server):
+def _maybe_enqueue_new_connection_message(server):
+    if server.sent_new_connection_message:
+        return
+
+    server.sent_new_connection_message = True
+
     msg = protobuf.ForwardMsg()
 
     v = config.get_option('global.sharingMode') != 'off'
@@ -256,5 +264,9 @@ def _enqueue_new_connection_message(server):
 def _enqueue_report_finished_message(server):
     msg = protobuf.ForwardMsg()
     msg.report_finished = True
-
     server.enqueue(msg)
+
+
+def _enqueue_exception(server, e):
+    import streamlit as st
+    st.exception(e)

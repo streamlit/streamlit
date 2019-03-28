@@ -180,7 +180,8 @@ def _get_imagelist_and_type(input, clamp):
     if isinstance(input, str):
         # Input is a single URL - wrap it in a list.
         return [input], IMAGE_TYPE_URL
-    elif isinstance(input, list) and len(input) > 0 and isinstance(input[0], str):
+    elif (isinstance(input, list) and len(input) > 0
+            and isinstance(input[0], str)):
         # Input is a list of URLs
         return input, IMAGE_TYPE_URL
     else:

@@ -29,3 +29,5 @@ def new_report_msg(report_id, cwd, command_line, source_file_path):
     msg.new_report.command_line.extend(command_line)
     msg.new_report.source_file_path = source_file_path
     return msg
+
+# XXX remove file

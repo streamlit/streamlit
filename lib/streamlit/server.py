@@ -15,9 +15,16 @@ from streamlit import caching
 from streamlit import config
 from streamlit import util
 from streamlit import protobuf
+from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+
+# Largest message that can be sent via the WebSocket connection.
+# (Limit was picked by trial and error)
+# TODO: Break message in several chunks if too large.
+MESSAGE_SIZE_LIMIT = 10466493
 
 
 class State(object):
@@ -55,12 +62,19 @@ class Server(object):
 
         _fix_tornado_logging()
 
-        self._master_queue = collections.deque()
-        self._browser_queues = {}
-        self._must_stop = threading.Event()
+        self._master_queue = ReportQueue()
 
+        # Mapping of WebSocket->ReportQueue.
+        self._browser_queues = {}
+
+        self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
+
+        # This gets set externally and is only used outside of this class,
+        # but should logically live here since each server must only send a
+        # single "new connection" message ever.
+        self.sent_new_connection_message = False
 
         port = config.get_option('proxy.port')
         app = tornado.web.Application(_get_routes())
@@ -81,14 +95,13 @@ class Server(object):
 
             elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
 
-                # Grab this before the "for" loop, so it doesn't change while
-                # we loop through its elements.
-                browser_queues = list(self._browser_queues.items())
-
-                for ws, browser_queue in browser_queues:
-                    while len(browser_queue):
-                        msg = browser_queue.popleft()
-                        ws.write_message(msg.SerializeToString(), binary=True)
+                for ws, browser_queue in self._browser_queues.items():
+                    msg_list = browser_queue.flush()
+                    for msg in msg_list:
+                        msg_str = _serialize(msg)
+                        if ws is None:
+                            break
+                        ws.write_message(msg_str, binary=True)
                         yield
                     yield
 
@@ -113,17 +126,16 @@ class Server(object):
             browser_queue.clear()
 
     def enqueue(self, msg):
-        # TODO: Do compose operation here, etc. XXX
-        # XXX Should just use ReportQueue here instead XXX THIS
-        # Maybe only append to the master queue here?
-        self._master_queue.append(msg)
+        """Enqueue message in a thread-safe manner."""
+        self._master_queue.enqueue(msg)
+
         for browser_queue in self._browser_queues.values():
-            browser_queue.append(msg)
+            browser_queue.enqueue(msg)
 
     def add_browser_connection(self, ws):
         if ws not in self._browser_queues:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
-            self._browser_queues[ws] = collections.deque(self._master_queue)
+            self._browser_queues[ws] = self._master_queue.clone()
 
     def remove_browser_connection(self, ws):
         if ws in self._browser_queues:
@@ -246,3 +258,23 @@ def _get_routes():
             'useNode == True, not serving static content from python.')
 
     return routes
+
+
+def _serialize(msg):
+    msg_str = msg.SerializeToString()
+
+    if len(msg_str) > MESSAGE_SIZE_LIMIT:
+        _convert_msg_to_exception_msg(msg, RuntimeError('Data too large'))
+        msg_str = msg.SerializeToString()
+
+    return msg_str
+
+
+def _convert_msg_to_exception_msg(msg, e):
+    import streamlit.elements.exception as exception_module
+
+    delta_id = msg.delta.id
+    msg.Clear()
+    msg.delta.id = delta_id
+
+    exception_module.marshall(msg.delta.new_element, e)
