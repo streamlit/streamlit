@@ -362,6 +362,11 @@ $ aws s3 sync \
     s3://repo.streamlit.io/streamlit-forge/ \
     --acl public-read \
     --profile streamlit
+
+$ aws cloudfront create-invalidation \
+      --distribution-id=E3V3HGGB52ZUA0 \
+      --paths '/*' \
+      --profile streamlit
 ```
 
 #### Distribute the Wheel
@@ -388,11 +393,12 @@ git push remote <version number>
 git checkout master
 git pull remote master
 git merge release
+git push remote master
 
 # Update develop
-git checkout develop
-git pull remote develop
-git merge release
+git checkout release
+git push origin release-<version number>
+# Then make a PR and get it merged as usual!
 ```
 
 #### Go Back to Develop Mode
