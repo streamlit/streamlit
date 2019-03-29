@@ -11,7 +11,6 @@ import os
 
 from tornado.ioloop import IOLoop
 from streamlit.proxy import proxy_util
-from streamlit.proxy.AbstractObserver import AbstractObserver
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -20,18 +19,35 @@ LOGGER = get_logger(__name__)
 _POLLING_PERIOD_SECS = 0.2
 
 
-class ReportObserver(AbstractObserver):
-    """Observes single files so long as there's a browser interested in it."""
+class PollingFileObserver(object):
+    """Observes a single file on disk via a polling loop"""
 
-    def __init__(self, file_path, callback):
+    @staticmethod
+    def close_all():
+        """Close top-level observer object.
+        This is a no-op, and exists for interface parity with fs_observer.
+        """
+        LOGGER.debug('Observer closed')
+
+    def __init__(self, file_path, on_file_changed):
         """Constructor.
 
-        See super for docs.
+        Arguments
+        ---------
+        file_path : str
+            Absolute path of the file to observe.
+
+        on_file_changed : callable
+            Function to call when the file changes.
+
         """
-        super(ReportObserver, self).__init__(file_path, callback)
-        self._active = False
+        self._file_path = file_path
+        self._on_file_changed = on_file_changed
+
+        self._active = True
         self._modification_time = os.stat(self._file_path).st_mtime
         self._md5 = proxy_util.calc_md5_with_blocking_retries(self._file_path)
+        self._schedule()
 
     def _schedule(self):
         loop = IOLoop.current()
@@ -59,44 +75,10 @@ class ReportObserver(AbstractObserver):
         LOGGER.debug('Change detected: %s', self._file_path)
 
         loop = IOLoop.current()
-        loop.call_later(0, self._callback)
+        loop.call_later(0, self._on_file_changed)
 
         self._schedule()
 
-    def register_browser(self, browser_key):
-        """Tell observer that it's in use by browser identified by key.
-
-        While at least one browser is interested in this observer, it will not
-        be disposed of.
-
-        Parameters
-        ----------
-        browser_key : str
-            A unique identifier of the browser.
-
-        """
-        self._active = True
-
-        if len(self._browsers) == 0:
-            self._schedule()
-
-        super(ReportObserver, self).register_browser(browser_key)
-
-    # No need to override:
-    # def register_browser(self, browser_key):
-
-    def is_observing_file(self):
-        """Return whether this observer is "closed" (i.e. no longer observing).
-
-        Returns
-        -------
-        boolean
-            True if closed.
-
-        """
-        return self._active
-
-    def _close(self):
+    def close(self):
         """Stop observing the file system."""
         self._active = False
-        super(ReportObserver, self)._close()

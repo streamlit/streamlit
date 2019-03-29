@@ -33,6 +33,7 @@ def _wraps_with_cleaned_sig(wrapped):
     visible in our user-facing docs and these elements make no sense to the
     user.
     """
+    # By passing (None, None), we're removing (self, element) from *args
     fake_wrapped = functools.partial(wrapped, None, None)
     fake_wrapped.__doc__ = wrapped.__doc__
 
@@ -45,6 +46,30 @@ def _wraps_with_cleaned_sig(wrapped):
 
 
 def _clean_up_sig(method):
+    """Cleanup function signature.
+
+    This passes 'None' into the `element` argument of the wrapped function.
+
+    The reason this function exists is to allow us to use
+    `@_wraps_with_cleaned_sig` in functions like `st.dataframe`, which do not
+    take an element as input.
+
+    Contrast this with the `_with_element()` function, below, which creates an
+    actual Element proto, passes it into the function, and takes care of
+    enqueueing the element later.
+
+    So if you have some function
+        @_clean_up_sig
+        def some_function(self, unused_element_argument, stuff):
+    then the wrapped version of `some_function` can be called like this by
+    the user:
+        dg.some_function(stuff)
+
+    and its signature (introspected in st.help or IPython's `?` magic command)
+    will correctly reflect the above.  Meanwhile, when the user calls the
+    function as above, the wrapped function will be called this way:
+        dg.some_function(None, stuff)
+    """
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
@@ -114,6 +139,41 @@ class DeltaGenerator(object):
         else:
             self._generate_new_ids = False
             self._id = id
+
+    def _enqueue_new_element_delta(self, marshall_element):
+        """Create NewElement delta, fill it, and enqueue it.
+
+        Parameters
+        ----------
+        marshall_element : callable
+            Function which sets the fields for a protobuf.Delta.
+
+        Returns
+        -------
+        DeltaGenerator
+            A DeltaGenerator that can be used to modify the newly-created
+            element.
+
+        """
+        # "Null" delta generators (those wihtout queues), don't send anything.
+        if self._queue is None:
+            return self
+
+        # Create a delta message.
+        delta = protobuf.Delta()
+        marshall_element(delta.new_element)
+
+        # Figure out if we need to create a new ID for this element.
+        if self._generate_new_ids:
+            delta.id = self._next_id
+            generator = DeltaGenerator(self._queue, delta.id)
+            self._next_id += 1
+        else:
+            delta.id = self._id
+            generator = self
+
+        self._queue(delta)
+        return generator
 
     @_with_element
     def balloons(self, element):
@@ -1158,38 +1218,3 @@ class DeltaGenerator(object):
         self._queue(delta)
 
         return self
-
-    def _enqueue_new_element_delta(self, marshall_element):
-        """Create NewElement delta, fill it, and enqueue it.
-
-        Parameters
-        ----------
-        marshall_element : callable
-            Function which sets the fields for a protobuf.Delta.
-
-        Returns
-        -------
-        DeltaGenerator
-            A DeltaGenerator that can be used to modify the newly-created
-            element.
-
-        """
-        # "Null" delta generators (those wihtout queues), don't send anything.
-        if self._queue is None:
-            return self
-
-        # Create a delta message.
-        delta = protobuf.Delta()
-        marshall_element(delta.new_element)
-
-        # Figure out if we need to create a new ID for this element.
-        if self._generate_new_ids:
-            delta.id = self._next_id
-            generator = DeltaGenerator(self._queue, delta.id)
-            self._next_id += 1
-        else:
-            delta.id = self._id
-            generator = self
-
-        self._queue(delta)
-        return generator

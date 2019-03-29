@@ -19,7 +19,7 @@ st.header('Tables')
 table_el = st.table(df1)
 dataframe_el = st.dataframe(df1)
 
-st.header('num_rowsative charts')
+st.header('1 chart')
 chart_el = st.line_chart(df1)
 
 st.header('4 identical charts')

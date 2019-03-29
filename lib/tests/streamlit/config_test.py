@@ -247,6 +247,7 @@ class ConfigTest(unittest.TestCase):
             u'global.developmentMode',
             u'global.logLevel',
             u'global.sharingMode',
+            u'global.unitTest',
             u'proxy.autoCloseDelaySecs',
             u'proxy.enableCORS',
             u'proxy.isRemote',

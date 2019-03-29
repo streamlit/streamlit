@@ -1,4 +1,5 @@
 #!/bin/bash -e
+source /home/tvst/.miniconda2/etc/profile.d/conda.sh
 
 CONDA_DIR=$(dirname $0)
 CONDA_BASE=$(conda info -e | egrep '^base' | awk '{print $3}')

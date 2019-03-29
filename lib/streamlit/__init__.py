@@ -52,15 +52,35 @@ this_module = sys.modules[__name__]
 # connection.
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
+_DATAFRAME_LIKE_TYPES = (
+    'DataFrame',  # pandas.core.frame.DataFrame
+    'Series',  # pandas.core.series.Series
+    'Index',  # pandas.core.indexes.base.Index
+    'ndarray',  # numpy.ndarray
+    'Styler',  # pandas.io.formats.style.Styler
+)
+
 
 def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
+        # If we're unit testing, control the queue and don't make a
+        # connection.
+        if config.get_option('global.unitTest'):
+            from streamlit.ReportQueue import ReportQueue
+            delta_generator = DeltaGenerator(ReportQueue())
+        # TODO(armando): Figure out how to get code coverage on this.
+        # Module imports are hard to mock and cover ie
+        # streamlit.__init__.py vs streamlit.some_file.py  We test the
+        # functionality of DeltaConnection in delta_connection_test.py
+        # so right now getting code coverage on this decorator isn't
+        # that critical.
+        #
         # Only output if the config allows us to.
-        if config.get_option('client.displayEnabled'):
+        elif config.get_option('client.displayEnabled'):  # pragma: no cover
             connection = DeltaConnection.get_connection()
             delta_generator = connection.get_delta_generator()
-        else:
+        else:  # pragma: no cover
             delta_generator = _NULL_DELTA_GENERATOR
 
         return method(delta_generator, *args, **kwargs)
@@ -191,14 +211,6 @@ def write(*args):
        height: 200px
 
     """
-    DATAFRAME_LIKE_TYPES = (
-        'DataFrame',
-        'Series',
-        'Index',
-        'ndarray',
-        'Styler',
-    )
-
     HELP_TYPES = (
         types.FunctionType,
         types.ModuleType,
@@ -215,7 +227,7 @@ def write(*args):
         for arg in args:
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in DATAFRAME_LIKE_TYPES:
+            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
                 flush_buffer()
                 dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):

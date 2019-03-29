@@ -54,10 +54,8 @@ class BrowserWebSocket(WebSocketHandler):
         LOGGER.debug('The Report name is "%s"', self._report_name)
 
         try:
-            # Send the opening message
             LOGGER.debug(
                 'Browser websocket opened for "%s"', self._report_name)
-            self._send_new_connection_msg()
 
             # Get a ProxyConnection object to coordinate sending deltas over
             # this report name.
@@ -69,6 +67,10 @@ class BrowserWebSocket(WebSocketHandler):
             LOGGER.debug('Got a new command line ("%s") : %s',
                          self._connection.name, self._connection.command_line)
             LOGGER.debug('Got a new queue : "%s"', self._queue)
+
+            # Send the opening message. self._connection must be
+            # set before this is called.
+            self._send_new_connection_msg()
 
             LOGGER.debug('Starting loop for "%s"', self._connection.name)
             loop = IOLoop.current()
@@ -139,17 +141,23 @@ class BrowserWebSocket(WebSocketHandler):
 
         msg.new_connection.sharing_enabled = (
             config.get_option('global.sharingMode') != 'off')
-        LOGGER.debug(
-            'New browser connection: sharing_enabled=%s',
-            msg.new_connection.sharing_enabled)
 
         msg.new_connection.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
-        LOGGER.debug(
-            'New browser connection: gather_usage_stats=%s',
-            msg.new_connection.gather_usage_stats)
+
+        msg.new_connection.run_on_save = (
+            self._proxy.get_run_on_save(self._connection))
 
         msg.new_connection.streamlit_version = __version__
+
+        LOGGER.debug(
+            'New browser connection:\n'
+            '\tsharing_enabled=%s\n'
+            '\tgather_usage_stats=%s\n'
+            '\trun_on_save=%s',
+            msg.new_connection.sharing_enabled,
+            msg.new_connection.gather_usage_stats,
+            msg.new_connection.run_on_save)
 
         yield self.write_message(msg.SerializeToString(), binary=True)
 
@@ -171,6 +179,9 @@ class BrowserWebSocket(WebSocketHandler):
                 # doesn't need to see the results of the command in their
                 # terminal.
                 caching.clear_cache(verbose=False)
+            elif msg_type == 'set_run_on_save':
+                self._proxy.set_run_on_save(
+                    self._connection, backend_msg.set_run_on_save)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:

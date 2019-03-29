@@ -25,6 +25,7 @@ def set_fake_home():
 DEFAULT_CONFIG = textwrap.dedent('''
     [global]
     sharingMode = "off"
+    unitTest = true
 
     [browser]
     gatherUsageStats = false
