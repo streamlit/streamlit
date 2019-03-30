@@ -25,11 +25,11 @@ import pkg_resources
 __version__ = pkg_resources.get_distribution('streamlit').version
 
 # Must be at the top, to avoid circular dependency.
-from streamlit import logger
+from streamlit import logger as _logger
 from streamlit import config
-logger.set_log_level(config.get_option('global.logLevel').upper())
-logger.init_tornado_logs()
-LOGGER = logger.get_logger('root')
+_logger.set_log_level(config.get_option('global.logLevel').upper())
+_logger.init_tornado_logs()
+_LOGGER = _logger.get_logger('root')
 
 import contextlib
 import functools
@@ -43,7 +43,6 @@ import types
 from streamlit import util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.caching import cache  # Just for export.
-from streamlit.server import Server as _Server
 
 
 this_module = sys.modules[__name__]
@@ -62,34 +61,34 @@ _DATAFRAME_LIKE_TYPES = (
 
 
 # Root delta generator for this Streamlit report.
-_current_delta_generator = _NULL_DELTA_GENERATOR
+_delta_generator = None
+
+
+def _get_new_delta_generator():
+    enqueue = None
+
+    if config.get_option('global.unitTest'):
+        from streamlit.ReportQueue import ReportQueue
+        enqueue = ReportQueue().enqueue
+    else:
+        from streamlit.server import Server as _Server
+        server = _Server.get_instance()
+        enqueue = server.enqueue
+
+    return DeltaGenerator(enqueue)
 
 
 def _get_current_delta_generator():
-    global _current_delta_generator
+    if config.get_option('client.displayEnabled'):
+        global _delta_generator
 
-    # If we're unit testing, control the queue and don't make a
-    # connection.
-    if config.get_option('global.unitTest'):
-        from streamlit.ReportQueue import ReportQueue
-        _current_delta_generator = DeltaGenerator(ReportQueue())
-    # TODO(armando): Figure out how to get code coverage on this.
-    # Module imports are hard to mock and cover ie
-    # streamlit.__init__.py vs streamlit.some_file.py  We test the
-    # functionality of DeltaConnection in delta_connection_test.py
-    # so right now getting code coverage on this decorator isn't
-    # that critical.
-    #
-    # Only output if the config allows us to.
-    elif config.get_option('client.displayEnabled'):
-        if _current_delta_generator is _NULL_DELTA_GENERATOR:
-            server = _Server.get_instance()
-            _current_delta_generator = DeltaGenerator(server.enqueue)
-            # (The server gets started in streamlit.bootstrap.run)
+        if _delta_generator is None:
+            _delta_generator = _get_new_delta_generator()
+
+        return _delta_generator
+
     else:
-        _current_delta_generator = _NULL_DELTA_GENERATOR
-
-    return _current_delta_generator
+        return _NULL_DELTA_GENERATOR
 
 
 def _with_dg(method):

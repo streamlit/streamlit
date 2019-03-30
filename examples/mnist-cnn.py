@@ -20,6 +20,10 @@ import numpy as np
 import pandas as pd
 import sys
 
+
+keras.backend.clear_session() # Required!
+
+
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test):
         self._x_test = x_test

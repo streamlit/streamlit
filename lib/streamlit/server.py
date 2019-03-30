@@ -324,7 +324,7 @@ def _serialize(msg):
 
 
 def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception as exception_module
+    import streamlit.exception as exception_module
 
     delta_id = msg.delta.id
     msg.Clear()

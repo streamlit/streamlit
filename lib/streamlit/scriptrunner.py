@@ -123,25 +123,27 @@ class ScriptRunner(object):
         with open(self._file_path) as f:
             filebody = f.read()
 
-        code = compile(
-            filebody,
-            # Pass in the file path so it can show up in exceptions.
-            self._file_path,
-            # We're compiling entire blocks of Python, so we need "exec" mode
-            # (as opposed to "eval" or "single").
-            'exec',
-            # Don't inherit any flags or "future" statements.
-            flags=0,
-            dont_inherit=1,
-            # -1 = default optimization level (specified by the -O parameter)
-            # 0 = no optimization & __debug__ is true
-            # 1 = asserts are removed & __debug__ is false
-            # 2 = docstrings are removed too.
-            optimize=-1)
-
         try:
             _maybe_enqueue_new_connection_message(server)
             _enqueue_new_report_message(server)
+
+            # Compiling must happen in the "try" block, so we can catch things
+            # like SyntaxErrors.
+            code = compile(
+                filebody,
+                # Pass in the file path so it can show up in exceptions.
+                self._file_path,
+                # We're compiling entire blocks of Python, so we need "exec" mode
+                # (as opposed to "eval" or "single").
+                'exec',
+                # Don't inherit any flags or "future" statements.
+                flags=0,
+                dont_inherit=1,
+                # -1 = default optimization level (specified by the -O parameter)
+                # 0 = no optimization & __debug__ is true
+                # 1 = asserts are removed & __debug__ is false
+                # 2 = docstrings are removed too.
+                optimize=-1)
 
             # IMPORTANT: must pass a brand new dict into the globals and locals,
             # below, so we don't leak any variables in between runs, and don't

@@ -175,66 +175,71 @@ _create_option(
         Streamlit report.''',
     default_val=True)
 
-_create_option(
-    'client.waitForProxySecs',
-    description='How long to wait for the proxy server to start up.',
-    default_val=3.0)
+# XXX
+# _create_option(
+#     'client.waitForProxySecs',
+#     description='How long to wait for the proxy server to start up.',
+#     default_val=3.0)
 
 _create_option(
     'client.throttleSecs',
     description='How long to wait between draining the client queue.',
     default_val=0.01)
 
-_create_option(
-    'client.tryToOutliveProxy',
-    description='''
-        If true, waits for the proxy to close before exiting the client script.
-        And if the proxy takes too long (10s), just exits the script. This is
-        useful when running a Streamlit script in a container, to allow the
-        proxy to shut itself down cleanly.
-        ''',
-    default_val=False)
+# XXX remove
+# _create_option(
+#     'client.tryToOutliveProxy',
+#     description='''
+#         If true, waits for the proxy to close before exiting the client script.
+#         And if the proxy takes too long (10s), just exits the script. This is
+#         useful when running a Streamlit script in a container, to allow the
+#         proxy to shut itself down cleanly.
+#         ''',
+#     default_val=False)
 
-_create_option(
-    'client.proxyAddress',
-    description='''
-        Internet address of the proxy server that the client should connect
-        to. Can be IP address or DNS name.''',
-    default_val='localhost')
+# XXX
+# _create_option(
+#     'client.proxyAddress',
+#     description='''
+#         Internet address of the proxy server that the client should connect
+#         to. Can be IP address or DNS name.''',
+#     default_val='localhost')
 
+# XXX
+# @_create_option('client.proxyPort')
+# def _client_proxy_port():
+#     """Port that the client should use to connect to the proxy.
 
-@_create_option('client.proxyPort')
-def _client_proxy_port():
-    """Port that the client should use to connect to the proxy.
-
-    Default: whatever value is set in proxy.port.
-    """
-    return get_option('proxy.port')
+#     Default: whatever value is set in proxy.port.
+#     """
+#     return get_option('proxy.port')
 
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-_create_option(
-    'proxy.autoCloseDelaySecs',
-    description='''
-        How long the proxy should stay open when there are no connections.
+# XXX remove
+# _create_option(
+#     'proxy.autoCloseDelaySecs',
+#     description='''
+#         How long the proxy should stay open when there are no connections.
 
-        Can be set to inf for "infinity".
+#         Can be set to inf for "infinity".
 
-        Note: this delay only starts counting after the reportExpirationSecs
-        delay transpires.
-        ''',
-    default_val=0)
+#         Note: this delay only starts counting after the reportExpirationSecs
+#         delay transpires.
+#         ''',
+#     default_val=0)
 
-_create_option(
-    'proxy.reportExpirationSecs',
-    description=(
-        'How long reports should be stored in memory for when the '
-        'script is done and there are no viewers. '
-        'For best results make sure this is >= 3.'),
-    default_val=60)
+# XXX remove
+# _create_option(
+#     'proxy.reportExpirationSecs',
+#     description=(
+#         'How long reports should be stored in memory for when the '
+#         'script is done and there are no viewers. '
+#         'For best results make sure this is >= 3.'),
+#     default_val=60)
 
 
 @_create_option('proxy.useNode', visibility='hidden')
@@ -728,13 +733,14 @@ def _parse_config_file():
 
 
 def _check_conflicts():
-    if (get_option('client.tryToOutliveProxy')
-            and not get_option('proxy.isRemote')):
-        LOGGER.warning(
-            'The following combination of settings...\n'
-            '  client.tryToOutliveProxy = true\n'
-            '  proxy.isRemote = false\n'
-            '...will cause scripts to block until the proxy is closed.')
+    # XXX
+    # if (get_option('client.tryToOutliveProxy')
+    #         and not get_option('proxy.isRemote')):
+    #     LOGGER.warning(
+    #         'The following combination of settings...\n'
+    #         '  client.tryToOutliveProxy = true\n'
+    #         '  proxy.isRemote = false\n'
+    #         '...will cause scripts to block until the proxy is closed.')
 
     # Node-related conflicts
 
@@ -752,8 +758,9 @@ def _check_conflicts():
         assert _is_unset('browser.proxyPort'), (
             'browser.proxyPort does not work when proxy.useNode is true. ')
 
-        assert _is_unset('client.proxyPort'), (
-            'client.proxyPort does not work when proxy.useNode is true. ')
+        # XXX
+        # assert _is_unset('client.proxyPort'), (
+        #     'client.proxyPort does not work when proxy.useNode is true. ')
 
     # Sharing-related conflicts
 
