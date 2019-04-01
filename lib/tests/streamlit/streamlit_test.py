@@ -13,6 +13,7 @@ from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
+from streamlit.Chart import Chart
 
 from google.protobuf import json_format
 
@@ -86,7 +87,20 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_area_chart(self):
         """Test st.area_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.area_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'AreaChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_audio(self):
         """Test st.audio."""
@@ -114,7 +128,20 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.bar_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'BarChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_code(self):
         """Test st.code."""
@@ -234,7 +261,20 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.line_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'LineChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_map(self):
         """Test st.map."""
@@ -323,7 +363,21 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_native_chart(self):
         """Test st._native_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        chart = Chart(df, 'line_chart', width=640, height=480)
+        dg = st._native_chart(chart)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'LineChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_text_exception(self):
         """Test st._text_exception."""
