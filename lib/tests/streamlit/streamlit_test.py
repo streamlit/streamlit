@@ -14,6 +14,8 @@ from mock import call, patch
 from streamlit import __version__
 from streamlit import protobuf
 
+from google.protobuf import json_format
+
 
 def get_version():
     """Get version by parsing out setup.py."""
@@ -134,7 +136,42 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_deck_gl_chart(self):
         """Test st.deck_gl_chart."""
-        pass
+        df = pd.DataFrame({
+            'lat': [1, 2, 3, 4],
+            'lon': [11, 22, 33, 44],
+        })
+        dg = st.deck_gl_chart(df)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.deck_gl_chart.HasField('data'), False)
+        self.assertEqual(json.loads(el.deck_gl_chart.spec), {})
+
+        data = el.deck_gl_chart.layers[0].data
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.data.cols[0].int64s)),
+            {
+                'data': ['1', '2', '3', '4']
+            }
+        )
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.data.cols[1].int64s)),
+            {
+                'data': ['11', '22', '33', '44']
+            }
+        )
+
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.columns.plain_index.data.strings)),
+            {
+                'data': ['lat', 'lon']
+            }
+        )
+
+        # Default layer
+        self.assertEqual(
+            json.loads(el.deck_gl_chart.layers[0].spec),
+            {'type': 'ScatterplotLayer'}
+        )
 
     def test_st_empty(self):
         """Test st.empty."""
