@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import textwrap
 import time
 import unittest
 
@@ -99,7 +100,17 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_code(self):
         """Test st.code."""
-        pass
+        dg = st.code('print(\'My string = %d\' % my_value)',
+                     language='python')
+        expected = textwrap.dedent('''
+            ```python
+            print('My string = %d' % my_value)
+            ```
+        ''')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, expected.strip())
+        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
     def test_st_dataframe(self):
         """Test st.dataframe."""
@@ -115,7 +126,11 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_error(self):
         """Test st.error."""
-        pass
+        dg = st.error('some error')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some error')
+        self.assertEqual(el.text.format, protobuf.Text.ERROR)
 
     def test_st_exception(self):
         """Test st.exception."""
@@ -123,7 +138,11 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_header(self):
         """Test st.header."""
-        pass
+        dg = st.header('some header')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, '## some header')
+        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
     def test_st_help(self):
         """Test st.help."""
@@ -135,11 +154,19 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_info(self):
         """Test st.info."""
-        pass
+        dg = st.info('some info')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some info')
+        self.assertEqual(el.text.format, protobuf.Text.INFO)
 
     def test_st_json(self):
         """Test st.json."""
-        pass
+        dg = st.json('{"some": "json"}')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, '{"some": "json"}')
+        self.assertEqual(el.text.format, protobuf.Text.JSON)
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
@@ -151,7 +178,11 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_markdown(self):
         """Test st.markdown."""
-        pass
+        dg = st.markdown('    some markdown  ')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some markdown')
+        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
     def test_st_progress(self):
         """Test st.progress."""
@@ -163,11 +194,19 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_subheader(self):
         """Test st.subheader."""
-        pass
+        dg = st.subheader('some subheader')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, '### some subheader')
+        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
     def test_st_success(self):
         """Test st.success."""
-        pass
+        dg = st.success('some success')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some success')
+        self.assertEqual(el.text.format, protobuf.Text.SUCCESS)
 
     def test_st_table(self):
         """Test st.table."""
@@ -175,7 +214,11 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_text(self):
         """Test st.text."""
-        pass
+        dg = st.text('some text')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some text')
+        self.assertEqual(el.text.format, protobuf.Text.PLAIN)
 
     def test_st_title(self):
         """Test st.title."""
@@ -195,7 +238,11 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_warning(self):
         """Test st.warning."""
-        pass
+        dg = st.warning('some warning')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.text.body, 'some warning')
+        self.assertEqual(el.text.format, protobuf.Text.WARNING)
 
     def test_st_native_chart(self):
         """Test st._native_chart."""
