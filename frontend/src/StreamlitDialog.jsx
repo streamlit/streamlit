@@ -21,6 +21,7 @@ import {
 
 import SettingsDialog from './SettingsDialog';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
+import {STREAMLIT_VERSION} from './baseconsts';
 
 import './StreamlitDialog.css';
 
@@ -198,16 +199,15 @@ function typeNotRecognizedDialog({type, onClose}) {
 
 /**
  * About Dialog
- * streamlitVersion - proxy streamlit version
  * onClose          - callback to close the dialog
  */
-function aboutDialog({streamlitVersion, onClose}) {
+function aboutDialog({onClose}) {
   return (
     <BasicDialog onClose={onClose}>
       <ModalHeader toggle={onClose}>About</ModalHeader>
       <ModalBody>
         <div>
-            Streamlit v{streamlitVersion}<br/>
+            Streamlit v{STREAMLIT_VERSION}<br/>
           <a href="https://streamlit.io">https://streamlit.io</a><br/>
             Copyright 2019 Streamlit Inc. All rights reserved.
         </div>
