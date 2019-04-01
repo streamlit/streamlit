@@ -92,7 +92,13 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_balloons(self):
         """Test st.balloons."""
-        pass
+        with patch('random.randrange') as p:
+            p.return_value = 0xDEADBEEF
+            dg = st.balloons()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.balloons.type, protobuf.Balloons.DEFAULT)
+        self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
 
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
@@ -122,7 +128,10 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_empty(self):
         """Test st.empty."""
-        pass
+        dg = st.empty()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.empty.unused, True)
 
     def test_st_error(self):
         """Test st.error."""
@@ -146,7 +155,15 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_help(self):
         """Test st.help."""
-        pass
+        dg = st.help(st.header)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.doc_string.name, 'header')
+        self.assertEqual(el.doc_string.module, 'streamlit')
+        self.assertTrue(
+            el.doc_string.doc_string.startswith('Display text in header formatting.'))
+        self.assertEqual(el.doc_string.type, '<class \'function\'>')
+        self.assertEqual(el.doc_string.signature, '(body)')
 
     def test_st_image(self):
         """Test st.image."""
@@ -186,7 +203,10 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_progress(self):
         """Test st.progress."""
-        pass
+        dg = st.progress(51)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
         """Test st.pyplot."""
@@ -250,7 +270,27 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_text_exception(self):
         """Test st._text_exception."""
-        pass
+        data ={
+            'type': 'ModuleNotFoundError',
+            'message': 'No module named \'numpy\'',
+            'stack_trace': [
+                'Traceback (most recent call last):',
+                '  File "<stdin>", line 1, in <module>',
+                'ModuleNotFoundError: No module named \'numpy\'',
+            ]
+        }
+
+        dg = st._text_exception(
+            data.get('type'),
+            data.get('message'),
+            data.get('stack_trace'),
+        )
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, data.get('type'))
+        self.assertEqual(el.exception.message, data.get('message'))
+        self.assertEqual(el.exception.stack_trace, data.get('stack_trace'))
+
 
 
 class StreamlitWriteTest(unittest.TestCase):
