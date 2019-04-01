@@ -88,7 +88,17 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_audio(self):
         """Test st.audio."""
-        pass
+        # TODO(armando): generate real audio data
+        # For now it doesnt matter cause browser is the one that uses it.
+        fake_audio_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
+
+        dg = st.audio(fake_audio_data)
+
+        el = get_last_delta_element(dg)
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.audio.data, 'ESIzRFVm')
+        self.assertEqual(el.audio.format, 'audio/wav')
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -254,7 +264,17 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_video(self):
         """Test st.video."""
-        pass
+        # TODO(armando): generate real video data
+        # For now it doesnt matter cause browser is the one that uses it.
+        fake_video_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
+
+        dg = st.video(fake_video_data)
+
+        el = get_last_delta_element(dg)
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.video.data, 'ESIzRFVm')
+        self.assertEqual(el.video.format, 'video/mp4')
 
     def test_st_warning(self):
         """Test st.warning."""
