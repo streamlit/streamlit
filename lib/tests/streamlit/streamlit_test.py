@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 import textwrap
 import time
 import unittest
@@ -223,7 +224,14 @@ class StreamlitAPITest(unittest.TestCase):
         el = get_last_delta_element(dg)
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(el.exception.message, 'Test Exception')
-        self.assertEqual(el.exception.stack_trace, [])
+        # We will test stack_trace when testing streamlit.exception_module
+        if sys.version_info >= (3, 0):
+            self.assertEqual(el.exception.stack_trace, [])
+        else:
+            self.assertEqual(
+                el.exception.stack_trace,
+                [u'Cannot extract the stack trace for this exception. Try '
+                 u'calling exception() within the `catch` block.'])
 
     def test_st_header(self):
         """Test st.header."""
@@ -242,7 +250,10 @@ class StreamlitAPITest(unittest.TestCase):
         self.assertEqual(el.doc_string.module, 'streamlit')
         self.assertTrue(
             el.doc_string.doc_string.startswith('Display text in header formatting.'))
-        self.assertEqual(el.doc_string.type, '<class \'function\'>')
+        if sys.version_info >= (3, 0):
+            self.assertEqual(el.doc_string.type, '<class \'function\'>')
+        else:
+            self.assertEqual(el.doc_string.type, u'<type \'function\'>')
         self.assertEqual(el.doc_string.signature, '(body)')
 
     def test_st_image(self):
