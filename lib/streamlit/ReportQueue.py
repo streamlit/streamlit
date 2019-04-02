@@ -79,7 +79,7 @@ class ReportQueue(object):
 
         except Exception as e:
             if catch_exceptions:
-                import streamlit.exception as exception_module
+                import streamlit.exception_module as exception_module
                 from streamlit import protobuf
                 delta = protobuf.Delta()
                 delta.id = max(self._id_map)
