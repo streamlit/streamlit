@@ -10,13 +10,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from google.protobuf import json_format
 from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
 from streamlit.Chart import Chart
-
-from google.protobuf import json_format
+from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
 
 
 def get_version():
@@ -34,6 +35,29 @@ def get_version():
 def get_last_delta_element(dg):
     return dg._queue.get_deltas()[-1].new_element
 
+
+def unwrap(f):
+    """unwrap st.* function and rewrap with known delta generator.
+
+    This returns the rewrapped method AND the delta generator.  This is
+    useful when testing st.* functions that raise Exceptions.  Because
+    they raise Exceptions you normally wouldnt be able to peek inside the
+    delta generator.
+
+    This should only be used to test DeltaGenerator methods that raise
+    Exceptions.
+    """
+    dg = DeltaGenerator(ReportQueue())
+    if sys.version_info >= (3, 0):
+        unwrapped = getattr(f, '__wrapped__')
+    else:
+        unwrapped = f.func_closure[0].cell_contents
+
+    def rewrapped(*args, **kwargs):
+        # Pass in known delta generator
+        unwrapped(dg, *args, **kwargs)
+
+    return (rewrapped, dg)
 
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
@@ -295,7 +319,49 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_map(self):
         """Test st.map."""
-        pass
+        df = pd.DataFrame({'lat': [1.0, 2.0, 3.0], 'lon': [11.0, 12.0, 13.0]})
+        dg = st.map(df)
+
+        el = get_last_delta_element(dg)
+        data = json.loads(json_format.MessageToJson(el.map.points.data))
+        self.assertEqual(
+            data['cols'][0]['doubles']['data'],
+            [1.0, 2.0, 3.0])
+        self.assertEqual(
+            data['cols'][1]['doubles']['data'],
+            [11.0, 12.0, 13.0])
+
+    def test_st_map_missing_column(self):
+        """Test st.map with wrong column label."""
+        # Needed to unwrap in order to grab exception
+        (st_map, dg) = unwrap(st.map)
+
+        df = pd.DataFrame({'notlat': [1, 2, 3], 'lon': [11, 12, 13]})
+        st_map(df)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'Exception')
+        self.assertEqual(
+            el.exception.message,
+            'Map data must contain "lat" and "lon" columns.')
+        self.assertTrue(
+            'Exception(\'Map data must contain "lat" and "lon" columns.\')'
+                in ''.join(el.exception.stack_trace))
+
+    def test_st_map_nan_exception(self):
+        """Test st.map with NaN in data."""
+        # Needed to unwrap in order to grab exception
+        (st_map, dg) = unwrap(st.map)
+
+        df = pd.DataFrame({'lat': [1, 2, np.nan], 'lon': [11, 12, 13]})
+        st_map(df)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'Exception')
+        self.assertEqual(el.exception.message, 'Map data must be numeric.')
+        self.assertTrue(
+            'raise Exception(\'Map data must be numeric.\')'
+                in ''.join(el.exception.stack_trace))
 
     def test_st_markdown(self):
         """Test st.markdown."""
