@@ -186,8 +186,8 @@ def _get_custom_display_values(df, translated_style):
 
     default_formatter = df.style._display_funcs[(0, 0)]
     def has_custom_display_value(cell):
-        value = cell['value']
-        display_value = cell['display_value']
+        value = str(cell['value'])
+        display_value = str(cell['display_value'])
         if value == display_value:
             return False
 

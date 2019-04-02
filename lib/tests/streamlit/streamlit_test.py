@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 import textwrap
 import time
 import unittest
@@ -13,6 +14,9 @@ from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
+from streamlit.Chart import Chart
+
+from google.protobuf import json_format
 
 
 def get_version():
@@ -84,19 +88,61 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_area_chart(self):
         """Test st.area_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.area_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'AreaChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_audio(self):
         """Test st.audio."""
-        pass
+        # TODO(armando): generate real audio data
+        # For now it doesnt matter cause browser is the one that uses it.
+        fake_audio_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
+
+        dg = st.audio(fake_audio_data)
+
+        el = get_last_delta_element(dg)
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.audio.data, 'ESIzRFVm')
+        self.assertEqual(el.audio.format, 'audio/wav')
 
     def test_st_balloons(self):
         """Test st.balloons."""
-        pass
+        with patch('random.randrange') as p:
+            p.return_value = 0xDEADBEEF
+            dg = st.balloons()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.balloons.type, protobuf.Balloons.DEFAULT)
+        self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
 
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.bar_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'BarChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_code(self):
         """Test st.code."""
@@ -118,11 +164,49 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_deck_gl_chart(self):
         """Test st.deck_gl_chart."""
-        pass
+        df = pd.DataFrame({
+            'lat': [1, 2, 3, 4],
+            'lon': [11, 22, 33, 44],
+        })
+        dg = st.deck_gl_chart(df)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.deck_gl_chart.HasField('data'), False)
+        self.assertEqual(json.loads(el.deck_gl_chart.spec), {})
+
+        data = el.deck_gl_chart.layers[0].data
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.data.cols[0].int64s)),
+            {
+                'data': ['1', '2', '3', '4']
+            }
+        )
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.data.cols[1].int64s)),
+            {
+                'data': ['11', '22', '33', '44']
+            }
+        )
+
+        self.assertEqual(
+            json.loads(json_format.MessageToJson(data.columns.plain_index.data.strings)),
+            {
+                'data': ['lat', 'lon']
+            }
+        )
+
+        # Default layer
+        self.assertEqual(
+            json.loads(el.deck_gl_chart.layers[0].spec),
+            {'type': 'ScatterplotLayer'}
+        )
 
     def test_st_empty(self):
         """Test st.empty."""
-        pass
+        dg = st.empty()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.empty.unused, True)
 
     def test_st_error(self):
         """Test st.error."""
@@ -134,7 +218,20 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_exception(self):
         """Test st.exception."""
-        pass
+        e = RuntimeError('Test Exception')
+        dg = st.exception(e)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'RuntimeError')
+        self.assertEqual(el.exception.message, 'Test Exception')
+        # We will test stack_trace when testing streamlit.exception_module
+        if sys.version_info >= (3, 0):
+            self.assertEqual(el.exception.stack_trace, [])
+        else:
+            self.assertEqual(
+                el.exception.stack_trace,
+                [u'Cannot extract the stack trace for this exception. Try '
+                 u'calling exception() within the `catch` block.'])
 
     def test_st_header(self):
         """Test st.header."""
@@ -146,7 +243,18 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_help(self):
         """Test st.help."""
-        pass
+        dg = st.help(st.header)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.doc_string.name, 'header')
+        self.assertEqual(el.doc_string.module, 'streamlit')
+        self.assertTrue(
+            el.doc_string.doc_string.startswith('Display text in header formatting.'))
+        if sys.version_info >= (3, 0):
+            self.assertEqual(el.doc_string.type, '<class \'function\'>')
+        else:
+            self.assertEqual(el.doc_string.type, u'<type \'function\'>')
+        self.assertEqual(el.doc_string.signature, '(body)')
 
     def test_st_image(self):
         """Test st.image."""
@@ -170,7 +278,20 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        dg = st.line_chart(df, width=640, height=480)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'LineChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_map(self):
         """Test st.map."""
@@ -186,7 +307,10 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_progress(self):
         """Test st.progress."""
-        pass
+        dg = st.progress(51)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
         """Test st.pyplot."""
@@ -234,7 +358,17 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_video(self):
         """Test st.video."""
-        pass
+        # TODO(armando): generate real video data
+        # For now it doesnt matter cause browser is the one that uses it.
+        fake_video_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
+
+        dg = st.video(fake_video_data)
+
+        el = get_last_delta_element(dg)
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.video.data, 'ESIzRFVm')
+        self.assertEqual(el.video.format, 'video/mp4')
 
     def test_st_warning(self):
         """Test st.warning."""
@@ -246,11 +380,45 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_native_chart(self):
         """Test st._native_chart."""
-        pass
+        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
+        chart = Chart(df, 'line_chart', width=640, height=480)
+        dg = st._native_chart(chart)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.chart.type, 'LineChart')
+        self.assertEqual(el.chart.width, 640)
+        self.assertEqual(el.chart.height, 480)
+        self.assertEqual(
+            el.chart.data.columns.plain_index.data.strings.data,
+            ['a', 'b', 'c']
+        )
+        data = json.loads(json_format.MessageToJson(el.chart.data.data))
+        result = [x['int64s']['data'][0] for x in data['cols']]
+        self.assertEqual(result, ['10', '20', '30'])
 
     def test_st_text_exception(self):
         """Test st._text_exception."""
-        pass
+        data ={
+            'type': 'ModuleNotFoundError',
+            'message': 'No module named \'numpy\'',
+            'stack_trace': [
+                'Traceback (most recent call last):',
+                '  File "<stdin>", line 1, in <module>',
+                'ModuleNotFoundError: No module named \'numpy\'',
+            ]
+        }
+
+        dg = st._text_exception(
+            data.get('type'),
+            data.get('message'),
+            data.get('stack_trace'),
+        )
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, data.get('type'))
+        self.assertEqual(el.exception.message, data.get('message'))
+        self.assertEqual(el.exception.stack_trace, data.get('stack_trace'))
+
 
 
 class StreamlitWriteTest(unittest.TestCase):
