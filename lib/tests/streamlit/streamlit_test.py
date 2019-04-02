@@ -217,7 +217,13 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_exception(self):
         """Test st.exception."""
-        pass
+        e = RuntimeError('Test Exception')
+        dg = st.exception(e)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'RuntimeError')
+        self.assertEqual(el.exception.message, 'Test Exception')
+        self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""
