@@ -19,7 +19,7 @@ to the latest version of Streamlit:
 
 ```bash
 $ pip install --upgrade streamlit
-$ streamlit kill_proxy
+$ streamlit proxy kill
 $ streamlit version
 ```
 
@@ -82,7 +82,7 @@ frozen. A quick way to fix that is shutting down that Proxy before running
 your script:
 
 ```bash
-$ streamlit kill_proxy
+$ streamlit proxy kill
 ```
 
 ## Using Streamlit with Pex
@@ -113,5 +113,5 @@ $ pex streamlit foo bar -o mypexbinary.pex
 - Running the Streamlit CLI tool:
   ```bash
   $ ./mypexbinary.pex -m streamlit hello
-  $ ./mypexbinary.pex -m streamlit kill_proxy
+  $ ./mypexbinary.pex -m streamlit proxy kill
   ```

@@ -27,7 +27,7 @@ LOGGER = get_logger(__name__)
 
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
-# file be the same order as the sections appear with `streamlit show_config`)
+# file be the same order as the sections appear with `streamlit config show`)
 _section_descriptions = collections.OrderedDict(
     _test='Special test section just used for unit tests.',
 )
@@ -454,7 +454,7 @@ def set_option(key, value):
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit show_config` on a terminal.
+        available options, run `streamlit config show` on a terminal.
 
     value
         The new value to assign to this config option.
@@ -470,7 +470,7 @@ def get_option(key):
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit show_config` on a terminal.
+        available options, run `streamlit config show` on a terminal.
 
     """
     if key not in _config_options:
