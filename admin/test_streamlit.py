@@ -100,7 +100,7 @@ def main():
 
     run_commands(
         'Caching',
-        ['streamlit clear_cache',
+        ['streamlit cache clear',
          'streamlit run %s/caching.py' % EXAMPLE_DIR])
 
     run_commands(

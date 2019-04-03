@@ -44,4 +44,8 @@ os.system(cmd)
 
 status.text('Touched %s' % __file__)
 
+<<<<<<< HEAD
 # MODIFIED AT: 1553887865.5356503
+=======
+# MODIFIED AT: 1553814287.65
+>>>>>>> develop

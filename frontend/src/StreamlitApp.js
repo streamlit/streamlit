@@ -40,6 +40,7 @@ import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
 import ConnectionManager from './ConnectionManager';
 
+import { setStreamlitVersion } from './baseconsts';
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
@@ -67,7 +68,6 @@ class StreamlitApp extends PureComponent {
         runOnSave: true,
       },
       showLoginBox: false,
-      streamlitVersion: null,
     };
 
     this.connectionManager = null;
@@ -190,6 +190,8 @@ class StreamlitApp extends PureComponent {
    * @param newConnectionMsg a NewConnection protobuf object
    */
   handleNewConnection(newConnectionMsg) {
+    setStreamlitVersion(newConnectionMsg.get('streamlitVersion'));
+
     initRemoteTracker({
       gatherUsageStats: newConnectionMsg.get('gatherUsageStats'),
     });
@@ -198,14 +200,11 @@ class StreamlitApp extends PureComponent {
 
     this.setState(prevState => ({
       sharingEnabled: newConnectionMsg.get('sharingEnabled'),
-      streamlitVersion: newConnectionMsg.get('streamlitVersion'),
       userSettings: {
         ...prevState.userSettings,
         runOnSave: newConnectionMsg.get('runOnSave'),
       },
     }));
-
-    console.log('Streamlit version: ', this.state.streamlitVersion);
   }
 
   /**
@@ -436,7 +435,6 @@ class StreamlitApp extends PureComponent {
             })}
             aboutCallback={() => this.openDialog({
               type: 'about',
-              streamlitVersion: this.state.streamlitVersion,
               onClose: this.closeDialog,
             })}
           />

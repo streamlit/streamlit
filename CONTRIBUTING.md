@@ -126,7 +126,7 @@ running. In that case you should kill the old proxy before you try out the new
 code:
 
 ```bash
-$ streamlit kill_proxy
+$ streamlit proxy kill
 ```
 
 ### When you update protobufs...
@@ -228,14 +228,14 @@ git checkout -b release
 Run:
 
 ```
-streamlit kill_proxy
+streamlit proxy kill
 ps -ef | grep -i python
 ```
 and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.31.0`.
+**Note:** The current version is `0.32.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -261,7 +261,7 @@ Test that it works:
 ```
 make install
 make pytest
-streamlit kill_proxy
+streamlit proxy kill
 python admin/test_streamlit.py
 ```
 Check that all elements and figures work properly and the browser connection
@@ -281,15 +281,15 @@ Test in in a **fresh 2.7 install**:
 ```
 cd ../streamlit-staging
 pip install ../streamlit/lib/dist/streamlit-0.20.0-py3-none-any.whl
-streamlit kill_proxy  # Just in case.
+streamlit proxy kill  # Just in case.
 streamlit version  # Make sure it's the right version.
 streamlit hello
 python ../streamlit/examples/reference.py
-python -m streamlit clear_cache
-python -m streamlit clear_cache
+python -m streamlit cache clear
+python -m streamlit cache clear
 python ../streamlit/examples/reference.py
 python ../streamlit/examples/reference.py
-python -m streamlit clear_cache
+python -m streamlit cache clear
 python ../streamlit/examples/mnist-cnn.py
 python -c 'import streamlit as st; st.write("testing")'
 ```
@@ -362,6 +362,11 @@ $ aws s3 sync \
     s3://repo.streamlit.io/streamlit-forge/ \
     --acl public-read \
     --profile streamlit
+
+$ aws cloudfront create-invalidation \
+      --distribution-id=E3V3HGGB52ZUA0 \
+      --paths '/*' \
+      --profile streamlit
 ```
 
 #### Distribute the Wheel
@@ -388,11 +393,12 @@ git push remote <version number>
 git checkout master
 git pull remote master
 git merge release
+git push remote master
 
 # Update develop
-git checkout develop
-git pull remote develop
-git merge release
+git checkout release
+git push origin release-<version number>
+# Then make a PR and get it merged as usual!
 ```
 
 #### Go Back to Develop Mode
