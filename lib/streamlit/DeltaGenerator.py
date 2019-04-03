@@ -478,7 +478,7 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        import streamlit.exception as exception_module
+        import streamlit.exception_module as exception_module
         exception_module.marshall(element, exception, exception_traceback)
 
     @_with_element
@@ -987,8 +987,10 @@ class DeltaGenerator(object):
         """
         from streamlit import data_frame_proto
         LAT_LON = ['lat', 'lon']
-        assert set(data.columns) >= set(LAT_LON), \
-            'Map data must contain "lat" and "lon" columns.'
+        if not set(data.columns) >= set(LAT_LON):
+            raise Exception('Map data must contain "lat" and "lon" columns.')
+        if data['lon'].isnull().values.any() or data['lat'].isnull().values.any():
+            raise Exception('Map data must be numeric.')
         data_frame_proto.marshall_data_frame(
             data[LAT_LON], element.map.points)
 
