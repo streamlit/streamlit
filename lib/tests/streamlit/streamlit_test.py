@@ -469,7 +469,13 @@ class StreamlitAPITest(unittest.TestCase):
         self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
-        """Test st.pyplot."""
+        """Test st.pyplot.
+
+        Need to test:
+        * Failed import of matplotlib.
+        * Passing in a figure.
+        * Not passing in a figure.
+        """
         pass
 
     def test_st_subheader(self):
