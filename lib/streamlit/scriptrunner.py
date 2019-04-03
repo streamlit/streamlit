@@ -57,6 +57,7 @@ class ScriptRunner(object):
         self._set_state(State.INITIAL)
         self._state_change_requested = threading.Event()
         self._paused = threading.Event()
+        self._debug_mode = False  # XXX TODO Grab this from flag or option.
 
     def _set_state(self, new_state):
         LOGGER.debug('ScriptRunner state: %s -> %s' % (self._state, new_state))
@@ -112,7 +113,8 @@ class ScriptRunner(object):
         server = Server.get_instance()
         server.clear_queue()
 
-        self._install_tracer()
+        if self._debug_mode:
+            self._install_tracer()
 
         self._state_change_requested.clear()
         self._set_state(State.RUNNING)
