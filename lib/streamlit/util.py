@@ -150,24 +150,6 @@ def memoize(func):
     return wrapped_func
 
 
-# XXX Remove
-def write_proto(ws, msg):
-    """Writes a proto to a websocket.
-
-    Parameters
-    ----------
-    ws : WebSocket
-    msg : Proto
-
-    Returns
-    -------
-    Future
-        See tornado.websocket.websocket_connect. This returns a Future whose
-        result is a WebSocketClientConnection.
-    """
-    return ws.write_message(msg.SerializeToString(), binary=True)
-
-
 def build_report_id():
     """Randomly generate a report ID."""
     return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")

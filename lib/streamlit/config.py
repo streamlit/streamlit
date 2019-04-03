@@ -281,7 +281,7 @@ _create_option(
     default_val=True)
 
 _create_option(
-    'proxy.enableCORS',
+    'proxy.enableCORS',  # XXX TODO implement CORS support.
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
         ''',
@@ -705,6 +705,7 @@ def _parse_config_file():
         raise RuntimeError('No home directory.')
     config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
+    # XXX remove
     # DEPRECATION WARNING: Remove this code after 2019-04-01
     old_config_file_exists = os.path.exists(
         os.path.join(home, '.streamlit', 'config.yaml'))

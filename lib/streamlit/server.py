@@ -268,7 +268,8 @@ def _save_cloud(msg):
 
 
 def _handle_rerun_script_request():
-    # XXX TODO change msg.rerun_script
+    # XXX TODO change msg.rerun_script to remove file
+    # TODO handle command-line arguments
     from streamlit.scriptrunner import ScriptRunner
     scriptrunner = ScriptRunner.get_instance()
     scriptrunner.request_rerun()

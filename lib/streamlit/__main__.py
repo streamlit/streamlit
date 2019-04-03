@@ -89,14 +89,6 @@ def main_clear_cache(ctx):
     ctx.invoke(cache_clear)
 
 
-@main.command('kill_proxy', deprecated=True, hidden=True)
-@click.pass_context
-def main_kill_proxy(ctx):
-    """Deprecated."""
-    click.echo(click.style('Use "proxy kill" instead.', fg='red'))
-    ctx.invoke(proxy_kill)
-
-
 @main.command('show_config', deprecated=True, hidden=True)
 @click.pass_context
 def main_show_config(ctx):
@@ -133,42 +125,6 @@ def config_show():
     """Show all of Streamlit's config settings."""
     from streamlit import config
     config.show_config()
-
-
-# SUBCOMMAND: proxy
-
-@main.group('proxy')
-def proxy():
-    """Manage the Streamlit proxy."""
-    pass
-
-
-@proxy.command('kill')
-def proxy_kill():
-    """Kill the Streamlit proxy."""
-    import psutil
-    import getpass
-
-    found_proxy = False
-
-    for p in psutil.process_iter(attrs=['name', 'username']):
-        # Attention: p.name() sometimes is 'python', sometimes 'Python', and
-        # sometimes '/crazycondastuff/python'.
-        try:
-            if (('python' in p.name() or 'Python' in p.name())
-                    and 'streamlit.proxy' in p.cmdline()
-                    and getpass.getuser() == p.info['username']):
-                print('Killing proxy with PID %d' % p.pid)
-                p.kill()
-                found_proxy = True
-        # Ignore zombie process and proceses that have terminated
-        # already.  ie you can't call process.name() on a process that
-        # has terminated.
-        except (psutil.ZombieProcess, psutil.NoSuchProcess):
-            pass
-
-    if not found_proxy:
-        print('No Streamlit proxies found.')
 
 
 if __name__ == '__main__':
