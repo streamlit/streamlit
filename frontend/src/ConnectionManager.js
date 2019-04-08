@@ -124,6 +124,10 @@ export default class ConnectionManager extends PureComponent {
     }
   }
 
+  isStaticConnection() {
+    return this.state.connectionState === ConnectionState.STATIC;
+  }
+
   connectBasedOnWindowUrl(reportName) {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
