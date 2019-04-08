@@ -474,9 +474,34 @@ class StreamlitAPITest(unittest.TestCase):
         Need to test:
         * Failed import of matplotlib.
         * Passing in a figure.
-        * Not passing in a figure.
         """
-        pass
+        # Matplotlib backend AGG only seems to work with python3
+        # TODO(armando): Make this test work with python2.7
+        if sys.version_info <= (3, 0):
+            return
+
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+        # Make this deterministic
+        np.random.seed(19680801)
+        data = np.random.randn(2, 20)
+
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        checksum = 'DTuIkOADCFAAEAmPL/AFE92BKdqa2FAAAAAElFTkSuQmCC'
+
+        # Generate a 2 inch x 2 inch figure
+        plt.figure(figsize=(2, 2))
+        # Add 20 random points to scatter plot.
+        plt.scatter(data[0], data[1])
+        dg = st.pyplot()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, -2)
+        self.assertEqual(el.imgs.imgs[0].caption, '')
+        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
 
     def test_st_subheader(self):
         """Test st.subheader."""
