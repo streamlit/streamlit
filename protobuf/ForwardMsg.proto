@@ -6,16 +6,16 @@ import "Delta.proto";
 message ForwardMsg {
   oneof type {
     ////
-    // Report Deltas
+    // Report Lifetime
     ////
 
-    NewConnection new_connection = 1;
-    NewReportMessage new_report = 2;
+    Initialize initialize = 1;
+    NewReport new_report = 2;
     Delta delta = 3;
     bool report_finished = 4;
 
     ////
-    // Upload Progresst
+    // Upload Progress
     ////
 
     // Indicates the % progres of a report upload.
@@ -23,11 +23,18 @@ message ForwardMsg {
 
     // Indicates that the upload is complete and gives the URL.
     string report_uploaded = 6;
+
+    ///
+    // State changes and events
+    ///
+    SessionState session_state_changed = 7;
   }
 }
 
 // This is the first message that is sent when the connection is opened.
-message NewConnection {
+// It contains streamlit configuration data, and the session state
+// that existed at the time of connection.
+message Initialize {
   // True if saving is properly configured.
   bool sharing_enabled = 1;
 
@@ -38,15 +45,13 @@ message NewConnection {
   // Python streamlit version.
   string streamlit_version = 3;
 
-  // If true, streamlit will re-run the report if it detects that the report
-  // has been changed. This value comes from the proxy.watchFileSystem config.
-  // The client can change this option; it's sent here so that the client
-  // show the correct initial value in its Settings dialog.
-  bool run_on_save = 4;
+  // The session state at the time the connection
+  // was established
+  SessionState session_state = 5;
 }
 
 // This is the first message that is sent when a new report is run
-message NewReportMessage {
+message NewReport {
   // The report ID
   string id = 1;
 
@@ -59,4 +64,14 @@ message NewReportMessage {
   // Full path of the file that initiated the new report. When report is created
   // from the REPL, this will be an empty string.
   string source_file_path = 4;
+}
+
+// State for a session. Sent as part of the Initialize message, and also
+// on ReportSession state change events.
+message SessionState {
+  // If true, streamlit will re-run the report if it detects that the report
+  // has been changed. This value comes from the proxy.watchFileSystem config.
+  // The client can change this option; it's sent here so that the client
+  // show the correct initial value in its Settings dialog.
+  bool run_on_save = 1;
 }

@@ -157,54 +157,71 @@ class StreamlitApp extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
 
     dispatchOneOf(msg, 'type', {
-      newConnection: newConnectionMsg => this.handleNewConnection(newConnectionMsg),
-      newReport: (newReportMsg) => {
-        trackEventRemotely('updateReport');
-        this.setState({
-          reportId: newReportMsg.get('id'),
-          commandLine: newReportMsg.get('commandLine').toJS().join(' '),
-        });
-        setTimeout(() => {
-          if (newReportMsg.get('id') === this.state.reportId) {
-            this.clearOldElements();
-          }
-        }, 3000);
-      },
-      delta: (delta) => {
-        this.applyDelta(delta);
-      },
-      reportFinished: () => {
-        this.clearOldElements();
-      },
-      uploadReportProgress: (progress) => {
-        this.openDialog({ progress, type: 'uploadProgress' });
-      },
-      reportUploaded: (url) => {
-        this.openDialog({ url, type: 'uploaded' });
-      },
+      initialize: initializeMsg => this.handleInitialize(initializeMsg),
+      sessionStateChanged: msg => this.handleSessionStateChanged(msg),
+      newReport: newReportMsg => this.handleNewReport(newReportMsg),
+      delta: delta => this.applyDelta(delta),
+      reportFinished: () => this.clearOldElements(),
+      uploadReportProgress: progress =>
+        this.openDialog({ progress, type: 'uploadProgress' }),
+      reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
     });
   }
 
   /**
-   * Handler for 'newConnection' server messages
-   * @param newConnectionMsg a NewConnection protobuf object
+   * Handler for ForwardMsg.initialize messages
+   * @param initializeMsg an Initialize protobuf
    */
-  handleNewConnection(newConnectionMsg) {
-    setStreamlitVersion(newConnectionMsg.get('streamlitVersion'));
+  handleInitialize(initializeMsg) {
+    setStreamlitVersion(initializeMsg.get('streamlitVersion'));
 
     initRemoteTracker({
-      gatherUsageStats: newConnectionMsg.get('gatherUsageStats'),
+      gatherUsageStats: initializeMsg.get('gatherUsageStats'),
     });
 
     trackEventRemotely('createReport');
 
+    const initialState = initializeMsg.get('sessionState');
+
     this.setState(prevState => ({
-      sharingEnabled: newConnectionMsg.get('sharingEnabled'),
+      sharingEnabled: initializeMsg.get('sharingEnabled'),
       userSettings: {
         ...prevState.userSettings,
-        runOnSave: newConnectionMsg.get('runOnSave'),
+        runOnSave: initialState.get('runOnSave'),
       },
     }));
+  }
+
+  /**
+   * Handler for ForwardMsg.sessionStateChanged messages
+   * @param msg a SessionState protobuf
+   */
+  handleSessionStateChanged(msg) {
+    this.setState(prevState => ({
+      userSettings: {
+        ...prevState.userSettings,
+        runOnSave: msg.get('runOnSave'),
+      },
+    }));
+  }
+
+  /**
+   * Handler for ForwardMsg.newReport messages
+   * @param newReportMsg a NewReport protobuf
+   */
+  handleNewReport(newReportMsg) {
+    trackEventRemotely('updateReport');
+
+    this.setState({
+      reportId: newReportMsg.get('id'),
+      commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+    });
+
+    setTimeout(() => {
+      if (newReportMsg.get('id') === this.state.reportId) {
+        this.clearOldElements();
+      }
+    }, 3000);
   }
 
   /**
