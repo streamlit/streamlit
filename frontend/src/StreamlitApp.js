@@ -127,7 +127,16 @@ class StreamlitApp extends PureComponent {
     if (isEmbeddedInIFrame()) {
       document.body.classList.add('embedded');
     }
+
     trackEventRemotely('viewReport');
+
+    // When a user is viewing a shared report we will actually receive no
+    // 'newReport' message, so we initialize the tracker here instead.
+    if (this.connectionManager.isStaticConnection()) {
+      initRemoteTracker({
+        gatherUsageStats: true,
+      });
+    }
   }
 
   /**
