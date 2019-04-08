@@ -72,7 +72,9 @@ def convert_anything_to_df(df):
     if _is_pandas_styler(df):
         return df.data
 
-    import pandas as pd
+    import pandas
+    global pd
+    pd = pandas
 
     if util.is_type(df, 'numpy.ndarray') and len(df.shape) == 0:
         return pd.DataFrame([])
@@ -233,6 +235,9 @@ def _marshall_index(pandas_index, proto_index):
     pandas_index - Panda.Index or related (input)
     proto_index  - Protobuf.Index (output)
     """
+    import pandas
+    global pd
+    pd = pandas
     if type(pandas_index) == pd.Index:
         _marshall_any_array(
             np.array(pandas_index), proto_index.plain_index.data)
@@ -251,8 +256,8 @@ def _marshall_index(pandas_index, proto_index):
         if hasattr(pandas_index, 'codes'):
             index_codes = pandas_index.codes
         else:
-            # Deprecated in Pandas 0.24
-            index_codes = pandas_index.labels
+            # Deprecated in Pandas 0.24, do don't bother covering.
+            index_codes = pandas_index.labels  # pragma: no cover
         for label in index_codes:
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
@@ -288,6 +293,9 @@ def _marshall_any_array(pandas_array, proto_array):
     pandas_array - 1D arrays which is AnyArray compatible (input).
     proto_array  - Protobuf.AnyArray (output)
     """
+    import numpy
+    global np
+    np = numpy
     # Convert to np.array as necessary.
     if not hasattr(pandas_array, 'dtype'):
         pandas_array = np.array(pandas_array)
@@ -307,7 +315,12 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(map(str, pandas_array))
-    elif issubclass(pandas_array.dtype.type, np.datetime64):
+    # Setting a timezone changes (dtype, dtype.type) from 
+    #   'datetime64[ns]', <class 'numpy.datetime64'>
+    # to
+    #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
+    elif pandas_array.dtype.name.startswith('datetime64'):
+        # TODO(armando): Convert eveything to UTC not local timezone.
         if pandas_array.dt.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_array = pandas_array.dt.tz_localize(current_zone)
@@ -336,12 +349,19 @@ def add_rows(delta1, delta2, name=None):
         df1.CopyFrom(df2)
         return
 
+    # Copy Data
     if len(df1.data.cols) != len(df2.data.cols):
         raise ValueError('Dataframes have incompatible shapes')
-
-    _concat_index(df1.index, df2.index)
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         _concat_any_array(col1, col2)
+
+    # Copy index
+    _concat_index(df1.index, df2.index)
+
+    # Copy columns
+    _concat_index(df1.columns, df2.columns)
+
+    # Copy styles
     for (style_col1, style_col2) in zip(df1.style.cols, df2.style.cols):
         _concat_cell_style_array(style_col1, style_col2)
 
@@ -357,7 +377,8 @@ def _concat_index(index1, index2):
     # Otherwise, dispatch based on type.
     type1 = index1.WhichOneof('type')
     type2 = index2.WhichOneof('type')
-    if type1 != type2:
+    # This branch is covered with tests but pytest doesnt seem to realize it.
+    if type1 != type2:  # pragma: no cover
         raise ValueError(
             'Cannot concatenate %(type1)s with %(type2)s.' % \
             {'type1': type1, 'type2': type2})
@@ -377,7 +398,7 @@ def _concat_index(index1, index2):
         index1.timedelta_index.data.data.extend(
             index2.timedelta_index.data.data)
     else:
-        raise NotImplementedError('Cannot concatenate "%s" indices.' % type)
+        raise NotImplementedError('Cannot concatenate "%s" indices.' % type1)
 
 
 def _concat_any_array(any_array_1, any_array_2):
@@ -466,9 +487,11 @@ def _index_len(index):
         if len(index.multi_index.labels) == 0:
             return 0
         else:
-            return len(index.multi_index.labels[0])
+            return len(index.multi_index.labels[0].data)
     elif index_type == 'int_64_index':
         return len(index.int_64_index.data.data)
+    elif index_type == 'float_64_index':
+        return len(index.float_64_index.data.data)
     elif index_type == 'datetime_index':
         return len(index.datetime_index.data.data)
     elif index_type == 'timedelta_index':
