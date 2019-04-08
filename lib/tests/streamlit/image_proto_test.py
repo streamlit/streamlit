@@ -5,7 +5,7 @@ Copyright 2018 Streamlit Inc. All rights reserved.
 import io
 import unittest
 
-import streamlit.image_proto as image_proto
+import streamlit.elements.image_proto as image_proto
 import PIL.Image
 
 
