@@ -27,6 +27,15 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
+          name: Fix apt sources due to https://discuss.circleci.com/t/apt-get-update-return-404/29237
+          command: |
+            sudo rm /etc/apt/sources.list
+            echo "deb http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
+            echo "deb-src http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
+            echo "Acquire::Check-Valid-Until false;" | sudo tee -a /etc/apt/apt.conf.d/10-nocheckvalid
+            echo 'Package: *\nPin: origin "archive.debian.org"\nPin-Priority: 500' | sudo tee -a /etc/apt/preferences.d/10-archive-pin
+
+      - run:
           name: set environment variables if in conda.
           command: |
             if conda info; then
@@ -191,6 +200,14 @@ jobs:
               ${SUDO} apt-get install -y protobuf-compiler
               make protobuf
             fi
+
+      #################################################################
+      # Run linters
+      #################################################################
+      - run:
+          name: Run linters.
+          command: |
+            make js-lint
 
       #################################################################
       # Run make pycoverage

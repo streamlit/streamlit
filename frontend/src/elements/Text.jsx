@@ -43,11 +43,11 @@ class Text extends PureComponent {
       case TextProto.Format.JSON:
         let bodyObject = undefined;
         try {
-          bodyObject = JSON.parse(body)
+          bodyObject = JSON.parse(body);
         } catch (e) {
           const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10);
           const split = body.substr(0, pos).split('\n');
-          const line = `${split.length}:${split[split.length - 1].length + 1}`
+          const line = `${split.length}:${split[split.length - 1].length + 1}`;
           return (
             <div className="json-text-container" style={{width}}>
               <Alert color="danger" style={{width}}>
@@ -70,7 +70,7 @@ class Text extends PureComponent {
               displayDataTypes={false}
               displayObjectSize={false}
               name={false}
-              style={{font: ""}}  // Unset so we can style via a CSS file.
+              style={{font: ''}}  // Unset so we can style via a CSS file.
             />
           </div>
         );

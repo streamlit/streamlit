@@ -25,9 +25,9 @@ export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV;
  * Parameters for our fetch() requests.
  */
 export const FETCH_PARAMS = {
-    redirect: 'follow',
-    credentials: 'same-origin',
-    mode: 'cors',
+  redirect: 'follow',
+  credentials: 'same-origin',
+  mode: 'cors',
 };
 
 /**

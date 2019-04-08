@@ -16,7 +16,7 @@ import './ImageList.css';
 function getImageSrcString(imgProto) {
   const type = imgProto.get('type');
   if (type === 'base_64Png') {
-    return `data:image/png;base64,${imgProto.get('base_64Png')}`
+    return `data:image/png;base64,${imgProto.get('base_64Png')}`;
   } else if (type === 'url') {
     return imgProto.get('url');
   }

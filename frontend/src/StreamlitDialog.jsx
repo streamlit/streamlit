@@ -47,10 +47,10 @@ function BasicDialog({children, onClose}) {
   const isOpen = children !== undefined;
   return (
     <Modal
-        isOpen={isOpen}
-        toggle={onClose}
-        className="streamlit-dialog"
-        >
+      isOpen={isOpen}
+      toggle={onClose}
+      className="streamlit-dialog"
+    >
       { children }
     </Modal>
   );
@@ -100,7 +100,7 @@ function uploadedDialog({url, onClose}) {
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
 function noDialog({onClose}) {
-  return <BasicDialog onClose={onClose}></BasicDialog>
+  return <BasicDialog onClose={onClose}></BasicDialog>;
 }
 
 /**
@@ -126,7 +126,7 @@ function warningDialog({msg, onClose}) {
  * onClose        - callback to close the dialog
  */
 function rerunScriptDialog(
-    {getCommandLine, setCommandLine, rerunCallback, onClose}) {
+  {getCommandLine, setCommandLine, rerunCallback, onClose}) {
   return (
     <BasicDialog onClose={onClose}>
       <ModalBody>
@@ -173,10 +173,11 @@ function clearCacheDialog({ confirmCallback, onClose }) {
 /**
  * Shows the settings dialog.
  */
-function settingsDialog({settings, isOpen, onSave, onClose}) {
+function settingsDialog({settings, isProxyConnected, isOpen, onSave, onClose}) {
   return (
     <SettingsDialog
       settings={settings}
+      isProxyConnected={isProxyConnected}
       isOpen={isOpen}
       onSave={onSave}
       onClose={onClose}
@@ -207,7 +208,7 @@ function aboutDialog({streamlitVersion, onClose}) {
       <ModalBody>
         <div>
             Streamlit v{streamlitVersion}<br/>
-            <a href='https://streamlit.io'>https://streamlit.io</a><br/>
+          <a href="https://streamlit.io">https://streamlit.io</a><br/>
             Copyright 2019 Streamlit Inc. All rights reserved.
         </div>
       </ModalBody>

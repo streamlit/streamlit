@@ -54,3 +54,23 @@ This means you should always have logs, warnings, errors, and notices end up in
 ## JavaScript
 
 We use the [AirBNB style](https://github.com/airbnb/javascript).
+
+We've begun moving some of our JavaScript code to TypeScript. In TypeScript files, we're using arrow-functions for class functions:
+
+```typescript
+class MyClass {
+  // Do this:
+  public sayHello = (name: string) => {
+    console.log(`Hello, ${name}!`);
+  };
+
+  // Not this:
+  public dontSayItLikeThis(name: string) {
+    console.log(`Hello, ${name}!`);
+  }
+}
+```
+
+This saves the programmer from having to remember to `bind(this)` within a class's constructor on all the class's member functions that are invoked by React elements.
+
+(This pattern works in JavaScript as well, but we're only enforcing it in TypeScript.)

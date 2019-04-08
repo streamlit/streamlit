@@ -117,7 +117,7 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
         print(stderr_str, file=sys.stderr)
 
     if process.returncode != 0 and len(stderr_str) > 0:
-	# Catch errors that are output by Python when parsing the script. In
+        # Catch errors that are output by Python when parsing the script. In
         # particular, here we look for errors that have a traceback.
         if (_TRACE_FILE_LINE_RE.search(stderr_str)
                 # Only parse errors that were not handled by Streamlit already.
@@ -130,6 +130,8 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
 
             if parsed_err:
                 import streamlit as st
+                exc_type, exc_message, exc_tb = parsed_err
+                st._text_exception(exc_type, exc_message, exc_tb)
             else:
                 # If we couldn't find the exception type, then maybe the script
                 # just returns an error code and prints something to stderr. So
@@ -137,15 +139,16 @@ def run_handling_errors_in_this_process(cmd, cwd=None):
                 # because that would be annoying.
                 pass
 
-	# Catch errors that are output by the Python interpreter when it
+        # Catch errors that are output by the Python interpreter when it
         # encounters OS-level issues when it tries to open the script itself.
         # These always look like:
         # "python: some message: [Errno some-number] some message".
         else:
             m = _ERRNO_RE.match(stderr_str)
-            import streamlit as st
-            st._text_exception(
-                m.group('errno'), m.group('errmsg'), [m.group('msg')])
+            if m:
+                import streamlit as st
+                st._text_exception(
+                    m.group('errno'), m.group('errmsg'), [m.group('msg')])
 
 
 def run_python_module(module, *args):

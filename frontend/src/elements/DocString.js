@@ -8,7 +8,7 @@
 import React, { PureComponent} from 'react';
 import './DocString.css';
 
- /**
+/**
   * Functional element representing formatted text.
   */
 class DocString extends PureComponent {
@@ -36,7 +36,7 @@ class DocString extends PureComponent {
               nameHtml,
               signature ? signatureHtml : '',
             ] : [
-              typeHtml
+              typeHtml,
             ]
           }
         </div>

@@ -10,7 +10,7 @@ import { Alert } from 'reactstrap';
 import { MultiGrid } from 'react-virtualized';
 import { toFormattedString } from '../format';
 import DataFrameCell from './DataFrameCell';
-import { dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices, } from '../dataFrameProto';
+import { dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices } from '../dataFrameProto';
 import './DataFrame.css';
 import { SortDirection } from '../SortDirection';
 
@@ -51,7 +51,7 @@ class DataFrame extends PureComponent {
       const { classes, styles: additionalStyles, contents } = cellContentsGetter(columnIndex, rowIndex);
       const headerClickedCallback = rowIndex === 0 ? this.toggleSortOrder : null;
       const sortDirection = columnIndex === this.state.sortColumn ?
-          this.state.sortDirection : null;
+        this.state.sortDirection : null;
 
       // Merge our base styles with any additional cell-specific
       // styles returned by the cellContentsGetter
@@ -141,7 +141,7 @@ class DataFrame extends PureComponent {
       elementWidth = 60;
       headerWidth = 60;
       if (columnWidth * cols < 60) {
-        columnWidth = 60/cols;
+        columnWidth = 60 / cols;
       }
     }
 
@@ -194,38 +194,38 @@ class DataFrame extends PureComponent {
       // Put it all together.
       return (
         <div style={{width: elementWidth}} className="dataframe-container">
-            <MultiGrid
-              className="dataFrame"
-              cellRenderer={cellRenderer}
-              fixedColumnCount={headerCols}
-              fixedRowCount={headerRows}
-              columnWidth={columnWidth}
-              columnCount={cols}
-              enableFixedColumnScroll
-              enableFixedRowScroll
-              height={height - border}
-              rowHeight={rowHeight}
-              rowCount={rows}
-              width={elementWidth}
-              classNameBottomLeftGrid='table-bottom-left'
-              classNameTopRightGrid='table-top-right'
-              ref={this.multGridRef}
-            />
-            <div className="fixup fixup-top-right" style={{
-              width: border,
-              height: headerHeight,
-            }}/>
-            <div className="fixup fixup-bottom-left" style={{
-              width: headerWidth,
-              height: border,
-            }}/>
-            {
-              dataRows === 0 ?
-                <div className="empty-dataframe">
+          <MultiGrid
+            className="dataFrame"
+            cellRenderer={cellRenderer}
+            fixedColumnCount={headerCols}
+            fixedRowCount={headerRows}
+            columnWidth={columnWidth}
+            columnCount={cols}
+            enableFixedColumnScroll
+            enableFixedRowScroll
+            height={height - border}
+            rowHeight={rowHeight}
+            rowCount={rows}
+            width={elementWidth}
+            classNameBottomLeftGrid="table-bottom-left"
+            classNameTopRightGrid="table-top-right"
+            ref={this.multGridRef}
+          />
+          <div className="fixup fixup-top-right" style={{
+            width: border,
+            height: headerHeight,
+          }}/>
+          <div className="fixup fixup-bottom-left" style={{
+            width: headerWidth,
+            height: border,
+          }}/>
+          {
+            dataRows === 0 ?
+              <div className="empty-dataframe">
                   empty
-                </div>
-                : null
-            }
+              </div>
+              : null
+          }
         </div>
       );
     } catch (e) {
@@ -341,7 +341,7 @@ function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
 
   let elementWidth = Math.min(tableWidth, width);
 
-  if (tableWidth > width * 2/3 && tableWidth < width) {
+  if (tableWidth > width * (2 / 3) && tableWidth < width) {
     const widthArray = Array.from({length: cols}, (_, colIndex) => (
       columnWidth({index: colIndex}) + (width - tableWidth) / cols
     ));

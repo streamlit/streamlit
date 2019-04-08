@@ -52,15 +52,35 @@ this_module = sys.modules[__name__]
 # connection.
 _NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
+_DATAFRAME_LIKE_TYPES = (
+    'DataFrame',  # pandas.core.frame.DataFrame
+    'Series',  # pandas.core.series.Series
+    'Index',  # pandas.core.indexes.base.Index
+    'ndarray',  # numpy.ndarray
+    'Styler',  # pandas.io.formats.style.Styler
+)
+
 
 def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
+        # If we're unit testing, control the queue and don't make a
+        # connection.
+        if config.get_option('global.unitTest'):
+            from streamlit.ReportQueue import ReportQueue
+            delta_generator = DeltaGenerator(ReportQueue())
+        # TODO(armando): Figure out how to get code coverage on this.
+        # Module imports are hard to mock and cover ie
+        # streamlit.__init__.py vs streamlit.some_file.py  We test the
+        # functionality of DeltaConnection in delta_connection_test.py
+        # so right now getting code coverage on this decorator isn't
+        # that critical.
+        #
         # Only output if the config allows us to.
-        if config.get_option('client.displayEnabled'):
+        elif config.get_option('client.displayEnabled'):  # pragma: no cover
             connection = DeltaConnection.get_connection()
             delta_generator = connection.get_delta_generator()
-        else:
+        else:  # pragma: no cover
             delta_generator = _NULL_DELTA_GENERATOR
 
         return method(delta_generator, *args, **kwargs)
@@ -132,6 +152,7 @@ def write(*args):
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
         - write(module)     : Displays information about the module.
+        - write(dict)       : Displays dict in an interactive widget.
         - write(obj)        : The default is to print str(obj).
         - write(fig)        : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
@@ -149,7 +170,7 @@ def write(*args):
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
-    numbers, data frames, and assorted objects:
+    numbers, data frames, styled data frames, and assorted objects:
 
     >>> st.write(1234)
     >>> st.write(pd.DataFrame({
@@ -186,17 +207,10 @@ def write(*args):
     >>> st.write(c)
 
     .. output::
-       http://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
        height: 200px
 
     """
-    DATAFRAME_LIKE_TYPES = (
-        'DataFrame',
-        'Series',
-        'Index',
-        'ndarray',
-    )
-
     HELP_TYPES = (
         types.FunctionType,
         types.ModuleType,
@@ -213,7 +227,7 @@ def write(*args):
         for arg in args:
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in DATAFRAME_LIKE_TYPES:
+            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
                 flush_buffer()
                 dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
@@ -226,6 +240,8 @@ def write(*args):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
+            elif type(arg) in dict_types:
+                json(arg)
             else:
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
 

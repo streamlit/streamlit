@@ -28,6 +28,11 @@ class StOutput(Directive):
 
         src = self.arguments[0]
 
+        if not src.startswith('https://'):
+            raise ValueError(
+                'Iframed URLs in docs should be HTTPS!\n'
+                '--> Culprit: %s' % src)
+
         if len(self.arguments) > 1:
             additional_styles = self.arguments[1]
         else:

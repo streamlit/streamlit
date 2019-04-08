@@ -96,11 +96,6 @@ h6, .h6 {
 }
 
 header {
-  border-top: 2px solid #FFFD80;
-  border-image: linear-gradient(90deg, #F63366, #FFFD80) 1;
-  border-bottom: 0;
-  border-left: 0;
-  border-right: 0;
   position: fixed;
   top: 0;
   left: 0;
@@ -113,8 +108,17 @@ header {
   align-items: center;
 }
 
-.wide header {
+.streamlit-wide header {
   background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
+}
+
+header .decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background-image: linear-gradient(90deg, #F63366, #FFFD80);
 }
 
 #brand {
@@ -229,7 +233,7 @@ button:focus {
 
 @media (max-width: 768px) {
   header,
-  .wide header {
+  .streamlit-wide header {
     position: absolute;
     background: unset;
   }

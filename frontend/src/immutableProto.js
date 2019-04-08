@@ -26,10 +26,11 @@ export function toImmutableProto(messageType, message) {
  */
 export function dispatchOneOf(obj, name, funcs) {
   const whichOne = obj.get(name);
-  if (whichOne in funcs)
+  if (whichOne in funcs) {
     return funcs[whichOne](obj.get(whichOne));
-  else
+  } else {
     throw new Error(`Cannot handle ${name} "${whichOne}".`);
+  }
 }
 
 /**
@@ -41,10 +42,11 @@ export function dispatchOneOf(obj, name, funcs) {
  */
 export function updateOneOf(obj, name, funcs) {
   const whichOne = obj.get(name);
-  if (whichOne in funcs)
+  if (whichOne in funcs) {
     return obj.update(whichOne, funcs[whichOne]);
-  else
+  } else {
     throw new Error(`Cannot handle ${name} "${whichOne}".`);
+  }
 }
 
 /**

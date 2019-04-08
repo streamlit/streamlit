@@ -33,6 +33,7 @@ def _wraps_with_cleaned_sig(wrapped):
     visible in our user-facing docs and these elements make no sense to the
     user.
     """
+    # By passing (None, None), we're removing (self, element) from *args
     fake_wrapped = functools.partial(wrapped, None, None)
     fake_wrapped.__doc__ = wrapped.__doc__
 
@@ -45,6 +46,30 @@ def _wraps_with_cleaned_sig(wrapped):
 
 
 def _clean_up_sig(method):
+    """Cleanup function signature.
+
+    This passes 'None' into the `element` argument of the wrapped function.
+
+    The reason this function exists is to allow us to use
+    `@_wraps_with_cleaned_sig` in functions like `st.dataframe`, which do not
+    take an element as input.
+
+    Contrast this with the `_with_element()` function, below, which creates an
+    actual Element proto, passes it into the function, and takes care of
+    enqueueing the element later.
+
+    So if you have some function
+        @_clean_up_sig
+        def some_function(self, unused_element_argument, stuff):
+    then the wrapped version of `some_function` can be called like this by
+    the user:
+        dg.some_function(stuff)
+
+    and its signature (introspected in st.help or IPython's `?` magic command)
+    will correctly reflect the above.  Meanwhile, when the user calls the
+    function as above, the wrapped function will be called this way:
+        dg.some_function(None, stuff)
+    """
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
@@ -67,7 +92,7 @@ def _with_element(method):
 
     Returns
     -------
-    DeltaGenerator
+    callable
         A new DeltaGenerator method with arguments (self, ...)
 
     """
@@ -114,6 +139,41 @@ class DeltaGenerator(object):
         else:
             self._generate_new_ids = False
             self._id = id
+
+    def _enqueue_new_element_delta(self, marshall_element):
+        """Create NewElement delta, fill it, and enqueue it.
+
+        Parameters
+        ----------
+        marshall_element : callable
+            Function which sets the fields for a protobuf.Delta.
+
+        Returns
+        -------
+        DeltaGenerator
+            A DeltaGenerator that can be used to modify the newly-created
+            element.
+
+        """
+        # "Null" delta generators (those wihtout queues), don't send anything.
+        if self._queue is None:
+            return self
+
+        # Create a delta message.
+        delta = protobuf.Delta()
+        marshall_element(delta.new_element)
+
+        # Figure out if we need to create a new ID for this element.
+        if self._generate_new_ids:
+            delta.id = self._next_id
+            generator = DeltaGenerator(self._queue, delta.id)
+            self._next_id += 1
+        else:
+            delta.id = self._id
+            generator = self
+
+        self._queue(delta)
+        return generator
 
     @_with_element
     def balloons(self, element):
@@ -418,33 +478,8 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        element.exception.type = type(exception).__name__
-        element.exception.message = str(exception)
-
-        # Get and extract the traceback for the exception.
-        if exception_traceback is not None:
-            extracted_traceback = traceback.extract_tb(exception_traceback)
-        elif hasattr(exception, '__traceback__'):
-            # This is the Python 3 way to get the traceback.
-            extracted_traceback = traceback.extract_tb(exception.__traceback__)
-        else:
-            # Hack for Python 2 which will extract the traceback as long as this
-            # method was called on the exception as it was caught, which is
-            # likely what the user would do.
-            _, live_exception, live_traceback = sys.exc_info()
-            if exception == live_exception:
-                extracted_traceback = traceback.extract_tb(live_traceback)
-            else:
-                extracted_traceback = None
-
-        # Format the extracted traceback and add it to the protobuf element.
-        if extracted_traceback is None:
-            stack_trace = [
-                'Cannot extract the stack trace for this exception. '
-                'Try calling exception() within the `catch` block.']
-        else:
-            stack_trace = traceback.format_list(extracted_traceback)
-        element.exception.stack_trace.extend(stack_trace)
+        import streamlit.exception as exception_module
+        exception_module.marshall(element, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -476,8 +511,8 @@ class DeltaGenerator(object):
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
 
-        Example
-        -------
+        Examples
+        --------
         >>> df = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -487,6 +522,19 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
+
+        You can also pass a Pandas Styler object to change the style of
+        the rendered DataFrame:
+
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.dataframe(df.style.highlight_max(axis=0))
+
+        .. output::
+           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
+           height: 285px
 
         """
         from streamlit import data_frame_proto
@@ -601,12 +649,14 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
-            Data to be plotted. May also be passed inside the spec dict, to
-            more closely follow the Vega Lite API.
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            Either the data to be plotted or a Vega Lite spec containing the
+            data (which more closely follows the Vega Lite API).
 
         spec : dict or None
-            The Vega Lite spec for the chart. See
+            The Vega Lite spec for the chart. If the spec was already passed in
+            the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
         **kwargs : any
@@ -1087,13 +1137,18 @@ class DeltaGenerator(object):
         from streamlit import data_frame_proto
         data_frame_proto.marshall_data_frame(data, element.table)
 
-    def add_rows(self, data=None):
+    def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
-            The table to concat.
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+        or None
+            Table to concat. Optional.
+
+        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+            The named dataset to concat. Optional. You can only pass in 1
+            dataset (including the one in the data parameter).
 
         Example
         -------
@@ -1111,7 +1166,7 @@ class DeltaGenerator(object):
         >>> # Now the table shown in the Streamlit report contains the data for
         >>> # df1 followed by the data for df2.
 
-        And you can do the same with plots. For example, if you want to add
+        You can do the same thing with plots. For example, if you want to add
         more data to a line chart:
 
         >>> # Assuming df1 and df2 from the example above still exist...
@@ -1120,50 +1175,46 @@ class DeltaGenerator(object):
         >>> # Now the chart shown in the Streamlit report contains the data for
         >>> # df1 followed by the data for df2.
 
+        And for plots whose datasets are named, you can pass the data with a
+        keyword argument where the key is the name:
+
+        >>> my_chart = st.vega_lite_chart({
+        ...     'mark': 'line',
+        ...     'encoding': {'x': 'a', 'y': 'b'},
+        ...     'datasets': {
+        ...       'some_fancy_name': df1,  # <-- named dataset
+        ...      },
+        ...     'data': {'name': 'some_fancy_name'},
+        ... }),
+        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
         """
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
 
         from streamlit import data_frame_proto
 
+        # Accept syntax st.add_rows(df).
+        if data is not None and len(kwargs) == 0:
+            name = ''
+        # Accept syntax st.add_rows(foo=df).
+        elif len(kwargs) == 1:
+            name, data = kwargs.popitem()
+        # Raise error otherwise.
+        else:
+            raise RuntimeError(
+                'Wrong number of arguments to add_rows().'
+                'Method requires exactly one dataset')
+
         delta = protobuf.Delta()
         delta.id = self._id
-        data_frame_proto.marshall_data_frame(data, delta.add_rows)
+
+        data_frame_proto.marshall_data_frame(data, delta.add_rows.data)
+
+        if name:
+            delta.add_rows.name = name
+            delta.add_rows.has_name = True
+
         self._queue(delta)
 
         return self
-
-    def _enqueue_new_element_delta(self, marshall_element):
-        """Create NewElement delta, fill it, and enqueue it.
-
-        Parameters
-        ----------
-        marshall_element : callable
-            Function which sets the fields for a protobuf.Delta.
-
-        Returns
-        -------
-        DeltaGenerator
-            A DeltaGenerator that can be used to modify the newly-created
-            element.
-
-        """
-        # "Null" delta generators (those wihtout queues), don't send anything.
-        if self._queue is None:
-            return self
-
-        # Create a delta message.
-        delta = protobuf.Delta()
-        marshall_element(delta.new_element)
-
-        # Figure out if we need to create a new ID for this element.
-        if self._generate_new_ids:
-            delta.id = self._next_id
-            generator = DeltaGenerator(self._queue, delta.id)
-            self._next_id += 1
-        else:
-            delta.id = self._id
-            generator = self
-
-        self._queue(delta)
-        return generator

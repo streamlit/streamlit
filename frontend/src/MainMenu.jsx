@@ -40,10 +40,10 @@ class MainMenu extends Component {
   render() {
     return (
       <Dropdown
-          id="MainMenu"
-          isOpen={this.state.dropdownOpen}
-          toggle={() => this.toggle()}
-          >
+        id="MainMenu"
+        isOpen={this.state.dropdownOpen}
+        toggle={() => this.toggle()}
+      >
         <DropdownToggle id="MainMenuButton">
           <svg className="icon" viewBox="0 0 8 8">
             <use xlinkHref="./open-iconic.min.svg#menu" />
@@ -52,15 +52,15 @@ class MainMenu extends Component {
 
         <DropdownMenu right>
           <DropdownItem
-              disabled={!this.props.isProxyConnected()}
-              onClick={this.props.quickRerunCallback}>
+            disabled={!this.props.isProxyConnected()}
+            onClick={this.props.quickRerunCallback}>
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
-              disabled={!this.props.isProxyConnected()}
-              onClick={this.props.rerunCallback}>
+            disabled={!this.props.isProxyConnected()}
+            onClick={this.props.rerunCallback}>
             <span>Edit command</span>
             <span className="shortcut">&#x21e7;R</span>
           </DropdownItem>
@@ -75,26 +75,26 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
-              disabled={!this.props.isProxyConnected()}
-              onClick={this.props.saveCallback}>
+            disabled={!this.props.isProxyConnected()}
+            onClick={this.props.saveCallback}>
             Share report
-          </DropdownItem>
-
-          <DropdownItem
-              onClick={() => this.props.settingsCallback()}>
-            Settings
           </DropdownItem>
 
           <DropdownItem divider/>
 
           <DropdownItem
-              onClick={() => this.props.aboutCallback()}>
-            About
+            onClick={() => this.props.settingsCallback()}>
+            Settings
           </DropdownItem>
 
           <DropdownItem
-              onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
+            onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
             Documentation
+          </DropdownItem>
+
+          <DropdownItem
+            onClick={() => this.props.aboutCallback()}>
+            About
           </DropdownItem>
 
         </DropdownMenu>

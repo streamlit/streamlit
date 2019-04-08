@@ -64,6 +64,7 @@ class StreamlitApp extends PureComponent {
       }]),
       userSettings: {
         wideMode: false,
+        runOnSave: true,
       },
       showLoginBox: false,
       streamlitVersion: null,
@@ -115,10 +116,11 @@ class StreamlitApp extends PureComponent {
     'enter': {
       priority: 1,
       handler: () => {
-        if (this.state.dialog && this.state.dialog.defaultAction)
+        if (this.state.dialog && this.state.dialog.defaultAction) {
           this.state.dialog.defaultAction();
+        }
       },
-    }
+    },
   };
 
   async componentDidMount() {
@@ -155,17 +157,7 @@ class StreamlitApp extends PureComponent {
     const msg = toImmutableProto(ForwardMsg, msgProto);
 
     dispatchOneOf(msg, 'type', {
-      newConnection: (connectionProperties) => {
-        initRemoteTracker({
-          gatherUsageStats: connectionProperties.get('gatherUsageStats'),
-        });
-        trackEventRemotely('createReport');
-        this.setState({
-          sharingEnabled: connectionProperties.get('sharingEnabled'),
-          streamlitVersion: connectionProperties.get('streamlitVersion'),
-        });
-        console.log('Streamlit version: ', this.state.streamlitVersion);
-      },
+      newConnection: newConnectionMsg => this.handleNewConnection(newConnectionMsg),
       newReport: (newReportMsg) => {
         trackEventRemotely('updateReport');
         this.setState({
@@ -194,6 +186,29 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
+   * Handler for 'newConnection' server messages
+   * @param newConnectionMsg a NewConnection protobuf object
+   */
+  handleNewConnection(newConnectionMsg) {
+    initRemoteTracker({
+      gatherUsageStats: newConnectionMsg.get('gatherUsageStats'),
+    });
+
+    trackEventRemotely('createReport');
+
+    this.setState(prevState => ({
+      sharingEnabled: newConnectionMsg.get('sharingEnabled'),
+      streamlitVersion: newConnectionMsg.get('streamlitVersion'),
+      userSettings: {
+        ...prevState.userSettings,
+        runOnSave: newConnectionMsg.get('runOnSave'),
+      },
+    }));
+
+    console.log('Streamlit version: ', this.state.streamlitVersion);
+  }
+
+  /**
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
@@ -208,16 +223,17 @@ class StreamlitApp extends PureComponent {
   }
 
   /**
-   * Saves a settings object.
+   * Saves a UserSettings object.
    */
-  saveSettings(settings) {
-    this.setState({
-      userSettings: {
-        ...this.state.userSettings,
-        wideMode: settings.wideMode,
-        clearCache: settings.clearCache,
-      },
-    });
+  saveSettings(newSettings) {
+    const prevRunOnSave = this.state.userSettings.runOnSave;
+    const runOnSave = newSettings.runOnSave;
+
+    this.setState({userSettings: newSettings});
+
+    if (prevRunOnSave !== runOnSave && this.isProxyConnected()) {
+      this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave});
+    }
   }
 
   /**
@@ -228,8 +244,10 @@ class StreamlitApp extends PureComponent {
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
-          newElement: newElement => newElement.set('reportId', reportId),
-          addRows: newRows => addRows(element, newRows),
+          newElement: newElement =>
+            handleNewElementMessage(newElement, reportId),
+          addRows: namedDataSet =>
+            handleAddRowsMessage(element, namedDataSet),
         })),
     }));
   }
@@ -288,8 +306,8 @@ class StreamlitApp extends PureComponent {
     if (this.isProxyConnected()) {
       this.openDialog({
         type: 'rerunScript',
-        getCommandLine: (() => this.state.commandLine),
-        setCommandLine: (commandLine => this.setState({ commandLine })),
+        getCommandLine: () => this.state.commandLine,
+        setCommandLine: commandLine => this.setState({ commandLine }),
         rerunCallback: this.rerunScript,
 
         // This will be called if enter is pressed.
@@ -386,13 +404,14 @@ class StreamlitApp extends PureComponent {
     const outerDivClass =
         isEmbeddedInIFrame() ?
           'streamlit-embedded' :
-        this.state.userSettings.wideMode ?
-          'streamlit-wide' :
-          'streamlit-regular';
+          this.state.userSettings.wideMode ?
+            'streamlit-wide' :
+            'streamlit-regular';
 
     return (
       <div className={outerDivClass}>
         <header>
+          <div className="decoration"></div>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
           </div>
@@ -411,6 +430,7 @@ class StreamlitApp extends PureComponent {
             settingsCallback={() => this.openDialog({
               type: 'settings',
               isOpen: true,
+              isProxyConnected: this.isProxyConnected(),
               settings: this.state.userSettings,
               onSave: this.saveSettings,
             })}
@@ -425,13 +445,13 @@ class StreamlitApp extends PureComponent {
         <Container className="streamlit-container">
           <Row className="justify-content-center">
             <Col className={this.state.userSettings.wideMode ?
-                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
+              '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
               {this.state.showLoginBox ?
                 <LoginBox
                   onSuccess={this.onLogInSuccess}
                   onFailure={this.onLogInError}
                 />
-              :
+                :
                 <AutoSizer className="main">
                   { ({ width }) => this.renderElements(width) }
                 </AutoSizer>
@@ -454,7 +474,7 @@ class StreamlitApp extends PureComponent {
   renderElements(width) {
     return this.state.elements.map((element) => {
       try {
-        if (!element) throw new Error('Transmission error.');
+        if (!element) { throw new Error('Transmission error.'); }
         return dispatchOneOf(element, 'type', {
           audio: audio => <Audio audio={audio} width={width} />,
           balloons: balloons => <Balloons balloons={balloons} />,
@@ -505,6 +525,20 @@ class StreamlitApp extends PureComponent {
   onLogInError(msg) {
     this.userLoginResolver.reject(`Error signing in. ${msg}`);
   }
+}
+
+
+function handleNewElementMessage(element, reportId) {
+  trackEventRemotely('visualElementUpdated', {
+    elementType: element.get('type'),
+  });
+  return element.set('reportId', reportId);
+}
+
+
+function handleAddRowsMessage(element, namedDataSet) {
+  trackEventRemotely('dataMutated');
+  return addRows(element, namedDataSet);
 }
 
 
