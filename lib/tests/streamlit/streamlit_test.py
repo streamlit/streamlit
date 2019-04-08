@@ -185,7 +185,14 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_dataframe(self):
         """Test st.dataframe."""
-        pass
+        df = pd.DataFrame({
+            'one': [1, 2],
+            'two': [11, 22],
+        })
+        dg = st.dataframe(df)
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
+        self.assertEqual(el.data_frame.columns.plain_index.data.strings.data, ['one', 'two'])
 
     def test_st_deck_gl_chart(self):
         """Test st.deck_gl_chart."""
@@ -522,7 +529,16 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_table(self):
         """Test st.table."""
-        pass
+        df = pd.DataFrame(
+            [[1, 2], [3, 4]],
+            columns=['col1', 'col2'])
+        dg = st.table(df)
+        print(df)
+        el = get_last_delta_element(dg)
+        print(el)
+        self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
+        self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
+        self.assertEqual(el.table.columns.plain_index.data.strings.data, ['col1', 'col2'])
 
     def test_st_text(self):
         """Test st.text."""
