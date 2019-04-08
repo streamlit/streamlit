@@ -19,6 +19,7 @@ sphinx-rtd-theme = "*"
 recommonmark = "*"
 # Packages used in unit tests:
 altair = "*"
+matplotlib = {version="*", markers="python_version > '3.0'"}
 
 # TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
 # When you update the packages here, you have to update
