@@ -16,8 +16,8 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import websocket_connect
 
 from streamlit import config
-from streamlit import util
 from streamlit import process_runner
+from streamlit import util
 from streamlit.ReportQueue import ReportQueue, MESSAGE_SIZE_LIMIT
 
 from streamlit.logger import get_logger

@@ -6,6 +6,7 @@ import textwrap
 import time
 import unittest
 
+import PIL.Image as Image
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -15,7 +16,7 @@ from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
-from streamlit.Chart import Chart
+from streamlit.elements.Chart import Chart
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 
@@ -248,7 +249,8 @@ class StreamlitAPITest(unittest.TestCase):
         el = get_last_delta_element(dg)
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(el.exception.message, 'Test Exception')
-        # We will test stack_trace when testing streamlit.exception_module
+        # We will test stack_trace when testing
+        # streamlit.elements.exception_element
         if sys.version_info >= (3, 0):
             self.assertEqual(el.exception.stack_trace, [])
         else:
@@ -280,9 +282,98 @@ class StreamlitAPITest(unittest.TestCase):
             self.assertEqual(el.doc_string.type, u'<type \'function\'>')
         self.assertEqual(el.doc_string.signature, '(body)')
 
-    def test_st_image(self):
-        """Test st.image."""
-        pass
+    def test_st_image_PIL_image(self):
+        """Test st.image with PIL image."""
+        img = Image.new('RGB', (64, 64), color = 'red')
+
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        checksum = 'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII='
+
+        dg = st.image(
+            img,
+            caption='some caption',
+            width=100)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 100)
+        self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
+        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
+
+    def test_st_image_PIL_array(self):
+        """Test st.image with a PIL array."""
+        imgs = [
+            Image.new('RGB', (64, 64), color = 'red'),
+            Image.new('RGB', (64, 64), color = 'blue'),
+            Image.new('RGB', (64, 64), color = 'green'),
+        ]
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        imgs_b64 = [
+            'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII=',
+            'rQE6QGuADtAeUTcCfodYSBYAAAAASUVORK5CYII=',
+            'aA3QAVoDdID2AHGUAf+h+mWcAAAAAElFTkSuQmCC',
+        ]
+        dg = st.image(
+            imgs,
+            caption='some caption',
+            width=200,
+            use_column_width=True,
+            clamp=True)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, -2)
+        for idx, checksum in enumerate(imgs_b64):
+            self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
+            self.assertTrue(el.imgs.imgs[idx].base_64_png.endswith(checksum))
+
+    def test_st_image_with_single_url(self):
+        """Test st.image with single url."""
+        url = 'http://server/fake0.jpg'
+
+        dg = st.image(
+            url,
+            caption='some caption',
+            width=300)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 300)
+        self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
+        self.assertEqual(el.imgs.imgs[0].url, url)
+
+    def test_st_image_with_list_of_urls(self):
+        """Test st.image with list of urls."""
+        urls = [
+            'http://server/fake0.jpg',
+            'http://server/fake1.jpg',
+            'http://server/fake2.jpg',
+        ]
+        dg = st.image(
+            urls,
+            caption='some caption',
+            width=300)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 300)
+        for idx, url in enumerate(urls):
+            self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
+            self.assertEqual(el.imgs.imgs[idx].url, url)
+
+    def test_st_image_bad_width(self):
+        """Test st.image with bad width."""
+        # Needed to unwrap in order to grab exception
+        (st_image, dg) = unwrap(st.image)
+
+        st_image('does/not/exist', width=-1234)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'RuntimeError')
+        self.assertEqual(
+            el.exception.message,
+            'Image width must be positive.')
+        self.assertTrue(
+            'RuntimeError(\'Image width must be positive.\')'
+                in ''.join(el.exception.stack_trace))
 
     def test_st_info(self):
         """Test st.info."""
@@ -379,8 +470,39 @@ class StreamlitAPITest(unittest.TestCase):
         self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
-        """Test st.pyplot."""
-        pass
+        """Test st.pyplot.
+
+        Need to test:
+        * Failed import of matplotlib.
+        * Passing in a figure.
+        """
+        # Matplotlib backend AGG only seems to work with python3
+        # TODO(armando): Make this test work with python2.7
+        if sys.version_info <= (3, 0):
+            return
+
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+        # Make this deterministic
+        np.random.seed(19680801)
+        data = np.random.randn(2, 20)
+
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        checksum = 'DTuIkOADCFAAEAmPL/AFE92BKdqa2FAAAAAElFTkSuQmCC'
+
+        # Generate a 2 inch x 2 inch figure
+        plt.figure(figsize=(2, 2))
+        # Add 20 random points to scatter plot.
+        plt.scatter(data[0], data[1])
+        dg = st.pyplot()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, -2)
+        self.assertEqual(el.imgs.imgs[0].caption, '')
+        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
 
     def test_st_subheader(self):
         """Test st.subheader."""

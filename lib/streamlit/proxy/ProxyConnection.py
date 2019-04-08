@@ -8,6 +8,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
+import os
 import urllib
 
 from streamlit import config
@@ -16,6 +17,36 @@ from streamlit.ReportQueue import ReportQueue
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+
+def _get_source_file_path(file_path, command_line):
+    """The path of the file on disk that should be observed for changes.
+    This is sometimes equal to the input file_path, but there are
+    instances when it's not (e.g. when the report is run from the REPL,
+    or launched as a python module).
+
+    This value can be None.
+
+    Parameters
+    ----------
+    file_path : str
+        The file_path that the report was launched with
+
+    command_line : [str]
+        The command line that the report was launched with
+    """
+    # If running as a module, ie python -m foo.bar, then the file_path
+    # is actually /path/to/runpy.py  Instead we should use the
+    # command_line which would be /path/to/foo/bar.py
+    if os.path.basename(file_path) == 'runpy.py':
+        file_path = command_line[0]
+
+    if len(file_path) == 0:
+        # DeltaConnection.py sets source_file_path to '' when running from
+        # the REPL.
+        return None
+
+    return file_path
 
 
 class ProxyConnection(object):
@@ -46,9 +77,12 @@ class ProxyConnection(object):
         # connection.
         self.command_line = list(new_report_msg.command_line)
 
-        # Full path of the file that caused this connection to be initiated,
-        # or empty string if in REPL.
-        self.source_file_path = new_report_msg.source_file_path
+        # The source file path of the report. A FileObserver can watch this
+        # path and trigger a re-run of the report if it changes.
+        # This value can be None.
+        self.source_file_path = _get_source_file_path(
+            new_report_msg.source_file_path,
+            self.command_line)
 
         # The name for this report.
         self.name = name

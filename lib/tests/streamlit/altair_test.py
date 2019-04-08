@@ -12,7 +12,6 @@ import json
 import pandas as pd
 import unittest
 
-from streamlit import vega_lite
 from streamlit.DeltaGenerator import DeltaGenerator
 
 
