@@ -26,6 +26,7 @@ requirements:
     # This is just a copy of the python3 dependencies from lib/Pipfile
     # with the exception of purposely not including watchdog.
     - base58
+    - blinker
     - botocore
     - boto3
     - click

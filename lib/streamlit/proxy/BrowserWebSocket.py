@@ -14,8 +14,8 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketClosedError
 from tornado.websocket import WebSocketHandler
 
-from streamlit import __version__
 from streamlit import caching
+from streamlit import forward_msg_proto
 from streamlit import config
 from streamlit import protobuf
 from streamlit import process_runner
@@ -31,6 +31,16 @@ class BrowserWebSocket(WebSocketHandler):
 
     executor = futures.ThreadPoolExecutor(5)
 
+    @property
+    def report_name(self):
+        """The report name the browser is interested in"""
+        return self._report_name
+
+    @property
+    def key(self):
+        """A key that uniquely identifies this WebSocket connection."""
+        return str(self)
+
     def initialize(self, proxy):
         """Initialize self._connections."""
         self._proxy = proxy
@@ -41,6 +51,27 @@ class BrowserWebSocket(WebSocketHandler):
     def check_origin(self, origin):
         """Set up CORS."""
         return proxy_util.url_is_from_allowed_origins(origin)
+
+    def write_proto(self, msg):
+        """Writes a protobuf to the WebSocket
+
+        Parameters
+        ----------
+        msg : Protobuf message
+
+        Returns
+        -------
+        Future
+            See tornado.websocket.websocket_connect. This returns a Future
+            whose result is a WebSocketClientConnection.
+        """
+        return self.write_message(msg.SerializeToString(), binary=True)
+
+    def on_session_state_changed(self, _, **kwargs):
+        """Signal handler for ReportSession.state_changed"""
+        session_state = kwargs.get('state')
+        self.write_proto(
+            forward_msg_proto.session_state_changed_msg(session_state))
 
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
@@ -60,17 +91,12 @@ class BrowserWebSocket(WebSocketHandler):
             # Get a ProxyConnection object to coordinate sending deltas over
             # this report name.
             self._connection, self._queue = (
-                yield self._proxy.on_browser_connection_opened(
-                    self._get_key(), self._report_name, self))
+                yield self._proxy.on_browser_connection_opened(self))
             LOGGER.debug('Got a new connection ("%s") : %s',
                          self._connection.name, self._connection)
             LOGGER.debug('Got a new command line ("%s") : %s',
                          self._connection.name, self._connection.command_line)
             LOGGER.debug('Got a new queue : "%s"', self._queue)
-
-            # Send the opening message. self._connection must be
-            # set before this is called.
-            self._send_new_connection_msg()
 
             LOGGER.debug('Starting loop for "%s"', self._connection.name)
             loop = IOLoop.current()
@@ -78,7 +104,7 @@ class BrowserWebSocket(WebSocketHandler):
 
         except KeyError as e:
             LOGGER.debug(
-                'Browser attempting to access non-existant report "%s"', e)
+                'Browser attempting to access non-existent report "%s"', e)
         except WebSocketClosedError:
             pass
 
@@ -109,17 +135,13 @@ class BrowserWebSocket(WebSocketHandler):
             LOGGER.debug('Closing loop for "%s"', self._connection.name)
         except KeyError as e:
             LOGGER.debug(
-                'Browser attempting to access non-existant report "%s"', e)
+                'Browser attempting to access non-existent report "%s"', e)
         except WebSocketClosedError:
             pass
 
         if self._connection is not None:
             self._proxy.on_browser_connection_closed(
-                self._get_key(), self._connection, self._queue)
-
-    def _get_key(self):
-        """Return a key that uniquely identifies this WebSocket connection."""
-        return str(self)
+                self, self._connection, self._queue)
 
     @Proxy.stop_proxy_on_exception()
     def on_close(self):
@@ -132,37 +154,10 @@ class BrowserWebSocket(WebSocketHandler):
     def on_message(self, msg):
         """Run callback for websocket messages."""
         LOGGER.debug(repr(msg))
-        yield self._handle_backend_msg(msg, self._connection, self)
+        yield self._handle_backend_msg(msg, self._connection)
 
     @gen.coroutine
-    def _send_new_connection_msg(self):
-        """Send message to browser with client configuration settings."""
-        msg = protobuf.ForwardMsg()
-
-        msg.new_connection.sharing_enabled = (
-            config.get_option('global.sharingMode') != 'off')
-
-        msg.new_connection.gather_usage_stats = (
-            config.get_option('browser.gatherUsageStats'))
-
-        msg.new_connection.run_on_save = (
-            self._proxy.get_run_on_save(self._connection))
-
-        msg.new_connection.streamlit_version = __version__
-
-        LOGGER.debug(
-            'New browser connection:\n'
-            '\tsharing_enabled=%s\n'
-            '\tgather_usage_stats=%s\n'
-            '\trun_on_save=%s',
-            msg.new_connection.sharing_enabled,
-            msg.new_connection.gather_usage_stats,
-            msg.new_connection.run_on_save)
-
-        yield self.write_message(msg.SerializeToString(), binary=True)
-
-    @gen.coroutine
-    def _handle_backend_msg(self, payload, connection, ws):
+    def _handle_backend_msg(self, payload, connection):
         backend_msg = protobuf.BackMsg()
         try:
             backend_msg.ParseFromString(payload)
@@ -170,7 +165,7 @@ class BrowserWebSocket(WebSocketHandler):
             LOGGER.debug(backend_msg)
             msg_type = backend_msg.WhichOneof('type')
             if msg_type == 'cloud_upload':
-                yield self._save_cloud(connection, ws)
+                yield self._save_cloud(connection)
             elif msg_type == 'rerun_script':
                 yield self._run(backend_msg.rerun_script)
             elif msg_type == 'clear_cache':
@@ -181,7 +176,7 @@ class BrowserWebSocket(WebSocketHandler):
                 caching.clear_cache(verbose=False)
             elif msg_type == 'set_run_on_save':
                 self._proxy.set_run_on_save(
-                    self._connection, backend_msg.set_run_on_save)
+                    self._report_name, backend_msg.set_run_on_save)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:
@@ -193,14 +188,13 @@ class BrowserWebSocket(WebSocketHandler):
             cmd, self._connection.cwd)
 
     @gen.coroutine
-    def _save_cloud(self, connection, ws):
+    def _save_cloud(self, connection):
         """Save serialized version of report deltas to the cloud."""
         @gen.coroutine
         def progress(percent):
             progress_msg = protobuf.ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield self.write_proto(progress_msg)
 
         # Indicate that the save is starting.
         try:
@@ -214,14 +208,12 @@ class BrowserWebSocket(WebSocketHandler):
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield self.write_proto(progress_msg)
         except Exception as e:
             # Horrible hack to show something if something breaks.
             err_msg = '%s: %s' % (
                 type(e).__name__, str(e) or "No further details.")
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield self.write_proto(progress_msg)
             raise e
