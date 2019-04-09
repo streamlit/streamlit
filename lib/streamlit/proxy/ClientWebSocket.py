@@ -8,7 +8,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import urllib
-import sys
 
 from tornado import gen
 from tornado.ioloop import IOLoop

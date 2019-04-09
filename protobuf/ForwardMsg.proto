@@ -27,7 +27,12 @@ message ForwardMsg {
     ///
     // State changes and events
     ///
+
+    // ReportSession state changed. This is the new state.
     SessionState session_state_changed = 7;
+
+    // A SessionEvent was emitted.
+    SessionEvent session_event = 8;
   }
 }
 
@@ -71,7 +76,23 @@ message NewReport {
 message SessionState {
   // If true, streamlit will re-run the report if it detects that the report
   // has been changed. This value comes from the proxy.watchFileSystem config.
-  // The client can change this option; it's sent here so that the client
-  // show the correct initial value in its Settings dialog.
+  // The browser can change this option; it's sent here so that the browser
+  // shows the correct initial value in its Settings dialog.
   bool run_on_save = 1;
+
+  // True if the report is being run by a client right now.
+  bool report_is_running = 2;
+}
+
+// A transient event sent to all browsers connected to an associated report.
+message SessionEvent {
+  oneof type {
+    // The report changed on disk, but is *not* being re-run automatically.
+    // The browser should prompt the user to re-run.
+    bool report_changed_on_disk = 1;
+
+    // The report was running, but it was manually stopped before
+    // completion.
+    bool report_was_manually_stopped = 2;
+  }
 }

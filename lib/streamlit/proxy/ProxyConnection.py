@@ -7,6 +7,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+from blinker import Signal
 import json
 import os
 import urllib
@@ -50,10 +51,15 @@ def _get_source_file_path(file_path, command_line):
 
 
 class ProxyConnection(object):
-    """Represents a connection.
+    """Represents a connection between the client and proxy.
 
-    The lifetime of a ProxyConnection is tied to the lifetime of client and
-    browser connections.
+    A new ProxyConnection is created when a client connects to the Proxy via
+    ClientWebSocket. The lifetime of the ProxyConnection is tied to the
+    lifetime of the client and all browser connections observing the client's
+    report.
+
+    When a report is re-run, a new ProxyConnection is created, replacing
+    the existing ProxyConnection for that report.
     """
 
     def __init__(self, new_report_msg, name):
@@ -90,7 +96,7 @@ class ProxyConnection(object):
         # When the client connection ends, this flag becomes false.
         self._has_client_connection = True
 
-        # Before recieving connection and the the timeout hits, the connection
+        # Before receiving connection and the timeout hits, the connection
         # is in a "grace period" in which it can't be deregistered.
         self._in_grace_period = True
 
@@ -100,12 +106,24 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._browser_queues = []
 
+        # Signal that's emitted when the client disconnects
+        self.on_client_connection_closed = Signal(
+            doc="""Emitted when self.has_client_connection becomes False""")
+
+    @property
+    def has_client_connection(self):
+        """True while the client is running its report, and is therefore
+        connected to the proxy. Becomes False when the report finishes running
+        and the client disconnects."""
+        return self._has_client_connection
+
     def close_client_connection(self):
         """Close the client connection."""
         self._has_client_connection = False
         self._master_queue.close()
         for queue in self._browser_queues:
             queue.close()
+        self.on_client_connection_closed.send(self)
 
     def end_grace_period(self):
         """End the grace period, during which we don't close the connection.
