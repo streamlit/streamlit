@@ -104,7 +104,7 @@ class BrowserWebSocket(WebSocketHandler):
             LOGGER.debug(
                 'Browser websocket opened for "%s"', self._report_name)
 
-            # Get a ProxyConnection object to coordinate sending deltas over
+            # Get a ClientConnection object to coordinate sending deltas over
             # this report name.
             self._connection, self._queue = (
                 yield self._proxy.on_browser_connection_opened(self))

@@ -30,19 +30,19 @@ class ReportSession(object):
     connected any longer.
     """
 
-    def __init__(self, initial_proxy_connection):
+    def __init__(self, initial_client_connection):
         """Creates a new ReportSession
 
         Parameters
         ----------
-        initial_proxy_connection : ProxyConnection
-            The current ProxyConnection for this ReportSession's report
+        initial_client_connection : ClientConnection
+            The current ClientConnection for this ReportSession's report
         """
-        self._proxy_connection = None
-        self._report_name = initial_proxy_connection.name
-        self._source_file_path = initial_proxy_connection.source_file_path
-        self._command_line = initial_proxy_connection.command_line
-        self._cwd = initial_proxy_connection.cwd
+        self._client_connection = None
+        self._report_name = initial_client_connection.name
+        self._source_file_path = initial_client_connection.source_file_path
+        self._command_line = initial_client_connection.command_line
+        self._cwd = initial_client_connection.cwd
         self._browser_keys = set()
         self._file_observer = None
         self._state = ReportState(run_on_save=False, report_is_running=False)
@@ -68,7 +68,7 @@ class ReportSession(object):
             doc="""Emitted when our running report is manually stopped."""
         )
 
-        self.set_proxy_connection(initial_proxy_connection)
+        self.set_client_connection(initial_client_connection)
 
     @property
     def state(self):
@@ -81,41 +81,41 @@ class ReportSession(object):
         return self._state
 
     @property
-    def proxy_connection(self):
+    def client_connection(self):
         """
         Returns
         -------
-        ProxyConnection
-            The report's current ProxyConnection. Can be None.
+        ClientConnection
+            The report's current ClientConnection. Can be None.
         """
-        return self._proxy_connection
+        return self._client_connection
 
-    def set_proxy_connection(self, proxy_connection):
-        """Sets the current ProxyConnection for this ReportSession's report.
-        The ReportSession registers a listener with its current ProxyConnection
-        to be notified when the ProxyConnection's report has finished
+    def set_client_connection(self, client_connection):
+        """Sets the current ClientConnection for this ReportSession's report.
+        The ReportSession registers a listener with its current ClientConnection
+        to be notified when the ClientConnection's report has finished
         running.
 
         Parameters
         ----------
-        proxy_connection : ProxyConnection
-            The new ProxyConnection that the ReportSession should listen to.
+        client_connection : ClientConnection
+            The new ClientConnection that the ReportSession should listen to.
         """
-        if self._proxy_connection == proxy_connection:
+        if self._client_connection == client_connection:
             return
 
-        assert (proxy_connection is None or proxy_connection.name == self._report_name), \
-            'ProxyConnection must refer to the same report as the ReportSession'
+        assert (client_connection is None or client_connection.name == self._report_name), \
+            'ClientConnection must refer to the same report as the ReportSession'
 
-        # Stop listening to our previous proxy_connection...
-        if self._proxy_connection:
-            self._proxy_connection.on_client_connection_closed.disconnect(
+        # Stop listening to our previous client_connection...
+        if self._client_connection:
+            self._client_connection.on_closed.disconnect(
                 self._update_report_is_running)
 
         # ...and start listening to our new one.
-        self._proxy_connection = proxy_connection
-        if self._proxy_connection:
-            self._proxy_connection.on_client_connection_closed.connect(
+        self._client_connection = client_connection
+        if self._client_connection:
+            self._client_connection.on_closed.connect(
                 self._update_report_is_running)
 
         self._update_report_is_running()
@@ -123,8 +123,8 @@ class ReportSession(object):
     def _update_report_is_running(self, _=None):
         """Updates state.report_is_running."""
         is_running = (
-            self._proxy_connection and
-            self._proxy_connection.has_client_connection)
+            self._client_connection and
+            self._client_connection.is_connected)
         self._set_state(self._state._replace(report_is_running=is_running))
 
     def register_browser(self, browser_key):
@@ -142,10 +142,10 @@ class ReportSession(object):
         the ReportSession goes out of scope."""
         self._browser_keys.clear()
         self._update_file_observer()
-        if self._proxy_connection:
-            self._proxy_connection.on_client_connection_closed.disconnect(
+        if self._client_connection:
+            self._client_connection.on_closed.disconnect(
                 self._update_report_is_running)
-            self._proxy_connection = None
+            self._client_connection = None
 
     @property
     def has_registered_browsers(self):

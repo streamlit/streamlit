@@ -50,16 +50,16 @@ def _get_source_file_path(file_path, command_line):
     return file_path
 
 
-class ProxyConnection(object):
+class ClientConnection(object):
     """Represents a connection between the client and proxy.
 
-    A new ProxyConnection is created when a client connects to the Proxy via
-    ClientWebSocket. The lifetime of the ProxyConnection is tied to the
+    A new ClientConnection is created when a client connects to the Proxy via
+    ClientWebSocket. The lifetime of the ClientConnection is tied to the
     lifetime of the client and all browser connections observing the client's
     report.
 
-    When a report is re-run, a new ProxyConnection is created, replacing
-    the existing ProxyConnection for that report.
+    When a report is re-run, a new ClientConnection is created, replacing
+    the existing ClientConnection for that report.
     """
 
     def __init__(self, new_report_msg, name):
@@ -94,7 +94,7 @@ class ProxyConnection(object):
         self.name = name
 
         # When the client connection ends, this flag becomes false.
-        self._has_client_connection = True
+        self._is_connected = True
 
         # Before receiving connection and the timeout hits, the connection
         # is in a "grace period" in which it can't be deregistered.
@@ -107,23 +107,23 @@ class ProxyConnection(object):
         self._browser_queues = []
 
         # Signal that's emitted when the client disconnects
-        self.on_client_connection_closed = Signal(
-            doc="""Emitted when self.has_client_connection becomes False""")
+        self.on_closed = Signal(
+            doc="""Emitted when self.is_connected becomes False""")
 
     @property
-    def has_client_connection(self):
+    def is_connected(self):
         """True while the client is running its report, and is therefore
         connected to the proxy. Becomes False when the report finishes running
         and the client disconnects."""
-        return self._has_client_connection
+        return self._is_connected
 
-    def close_client_connection(self):
+    def close_connection(self):
         """Close the client connection."""
-        self._has_client_connection = False
+        self._is_connected = False
         self._master_queue.close()
         for queue in self._browser_queues:
             queue.close()
-        self.on_client_connection_closed.send(self)
+        self.on_closed.send(self)
 
     def end_grace_period(self):
         """End the grace period, during which we don't close the connection.
@@ -134,7 +134,7 @@ class ProxyConnection(object):
         self._in_grace_period = False
 
     def has_browser_connections(self):
-        """Check whether any browsers are connected to this ProxyConnection.
+        """Check whether any browsers are connected to this ClientConnection.
 
         Returns
         -------
@@ -150,13 +150,13 @@ class ProxyConnection(object):
         Returns
         -------
         boolean
-            All conditions are met to remove this ProxyConnection from the
+            All conditions are met to remove this ClientConnection from the
             Proxy's _connections table.
 
         """
         return not (
             self._in_grace_period or
-            self._has_client_connection or
+            self._is_connected or
             self.has_browser_connections())
 
     def enqueue(self, delta):

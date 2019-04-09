@@ -11,7 +11,7 @@ import unittest
 import mock
 
 from streamlit.proxy.ReportSession import ReportSession
-from streamlit.proxy import ProxyConnection
+from streamlit.proxy import ClientConnection
 from streamlit import forward_msg_proto
 
 # An arbitrary UUID constant
@@ -25,8 +25,8 @@ def _mock_listener():
     return mock.MagicMock(spec={})
 
 
-def _create_proxy_connection(report_name='mock_report'):
-    """Returns a ProxyConnection for testing against"""
+def _create_client_connection(report_name='mock_report'):
+    """Returns a ClientConnection for testing against"""
     file_name = '%s.py' % report_name
     new_report_msg = forward_msg_proto.new_report_msg(
         report_id=REPORT_ID,
@@ -34,12 +34,12 @@ def _create_proxy_connection(report_name='mock_report'):
         command_line='python %s' % file_name,
         source_file_path=file_name,
     )
-    return ProxyConnection(new_report_msg.new_report, report_name)
+    return ClientConnection(new_report_msg.new_report, report_name)
 
 
 def _create_report_session():
     """Return a ReportSession for testing against"""
-    return ReportSession(_create_proxy_connection())
+    return ReportSession(_create_client_connection())
 
 
 class ReportSessionTest(unittest.TestCase):
@@ -55,17 +55,16 @@ class ReportSessionTest(unittest.TestCase):
 
     def test_close(self):
         session = _create_report_session()
-        proxy_conn = session._proxy_connection
+        client_conn = session._client_connection
         session.register_browser('one')
         session.register_browser('two')
         session.register_browser('three')
         session.close()
         self.assertFalse(session.has_registered_browsers)
 
-        # Old ProxyConnection should not have a listener
-        self.assertIsNone(session._proxy_connection)
-        self.assertFalse(
-            proxy_conn.on_client_connection_closed.has_receivers_for(proxy_conn))
+        # Old ClientConnection should not have a listener
+        self.assertIsNone(session._client_connection)
+        self.assertFalse(client_conn.on_closed.has_receivers_for(client_conn))
 
     def test_run_on_save_state_changed(self):
         """Test that a signal is emitted when a report's state changes"""
@@ -87,36 +86,32 @@ class ReportSessionTest(unittest.TestCase):
         session.state_changed.connect(listener)
 
         # Should not emit a state-changed event
-        session.set_proxy_connection(session._proxy_connection)
+        session.set_client_connection(session._client_connection)
         listener.assert_not_called()
 
         # Should also not emit a state-changed event
-        session.set_proxy_connection(_create_proxy_connection())
+        session.set_client_connection(_create_client_connection())
         listener.assert_not_called()
 
         # Should emit when our connection is closed
-        session._proxy_connection.close_client_connection()
+        session._client_connection.close_connection()
         listener.assert_called_once_with(
             session, state=session.state._replace(report_is_running=False))
 
         # Should emit when a new connection is added
         listener.reset_mock()
-        session.set_proxy_connection(_create_proxy_connection())
+        session.set_client_connection(_create_client_connection())
         listener.assert_called_once_with(
             session, state=session.state._replace(report_is_running=True))
 
-        # When setting a new proxy_connection, the ReportSession
+        # When setting a new client_connection, the ReportSession
         # should stop listening to the previous connection's
         # client_connection_closed signal, and should start listening to
         # the new one.
-        prev_conn = session._proxy_connection
-        new_conn = _create_proxy_connection()
-        self.assertTrue(
-            prev_conn.on_client_connection_closed.has_receivers_for(prev_conn))
-        self.assertFalse(
-            new_conn.on_client_connection_closed.has_receivers_for(new_conn))
-        session.set_proxy_connection(new_conn)
-        self.assertFalse(
-            prev_conn.on_client_connection_closed.has_receivers_for(prev_conn))
-        self.assertTrue(
-            new_conn.on_client_connection_closed.has_receivers_for(new_conn))
+        prev_conn = session._client_connection
+        new_conn = _create_client_connection()
+        self.assertTrue(prev_conn.on_closed.has_receivers_for(prev_conn))
+        self.assertFalse(new_conn.on_closed.has_receivers_for(new_conn))
+        session.set_client_connection(new_conn)
+        self.assertFalse(prev_conn.on_closed.has_receivers_for(prev_conn))
+        self.assertTrue(new_conn.on_closed.has_receivers_for(new_conn))
