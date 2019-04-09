@@ -16,7 +16,7 @@ from tornado.websocket import WebSocketHandler
 from streamlit import config
 from streamlit import protobuf
 from streamlit.logger import get_logger
-from streamlit.proxy import Proxy, ProxyConnection
+from streamlit.proxy import Proxy, ClientConnection
 from streamlit.proxy import proxy_util
 
 LOGGER = get_logger(__name__)
@@ -79,16 +79,16 @@ class ClientWebSocket(WebSocketHandler):
             if config.get_option('proxy.liveSave'):
                 yield self._save_final_report()
 
-            self._connection.close_client_connection()
+            self._connection.close_connection()
             self._proxy.schedule_potential_deregister_and_stop(
                 self._connection)
         else:
             self._proxy.schedule_potential_stop()
 
     def _init_connection(self, new_report_proto):
-        self._connection = ProxyConnection(
+        self._connection = ClientConnection(
             new_report_proto, self._report_name)
-        self._proxy.register_proxy_connection(self._connection)
+        self._proxy.register_client_connection(self._connection)
 
         if config.get_option('proxy.liveSave'):
             IOLoop.current().spawn_callback(self._save_running_report)
