@@ -181,6 +181,9 @@ class Proxy(object):
             not self._has_browser_connections(proxy_connection.name))
 
         self._proxy_connections[proxy_connection.name] = proxy_connection
+        report_session = self._get_report_session(proxy_connection.name)
+        if report_session:
+            report_session.set_proxy_connection(proxy_connection)
 
         if open_new_browser_connection:
             if config.get_option('proxy.isRemote'):
@@ -249,6 +252,10 @@ class Proxy(object):
 
         """
         del self._proxy_connections[proxy_connection.name]
+        report_session = self._get_report_session(proxy_connection.name)
+        if report_session:
+            report_session.set_proxy_connection(None)
+
         LOGGER.debug('Got rid of connection %s', proxy_connection.name)
         LOGGER.debug('Total connections left: %s', len(self._proxy_connections))
 
@@ -299,8 +306,10 @@ class Proxy(object):
         if existing_session:
             report_state = existing_session.state
         else:
+            proxy_connection = self._proxy_connections[ws.report_name]
             report_state = ReportState(
-                run_on_save=self._run_on_save_default_value)
+                run_on_save=self._run_on_save_default_value,
+                report_is_running=proxy_connection is not None and proxy_connection.has_client_connection)
 
         # Send the Initialize message
         msg = initialize_msg(report_state)
@@ -327,6 +336,9 @@ class Proxy(object):
                                            create_if_missing=True)
         session.register_browser(ws.key)
         session.state_changed.connect(ws.on_session_state_changed)
+        session.on_report_changed.connect(ws.on_report_changed)
+        session.on_report_was_manually_stopped.connect(
+            ws.on_report_was_manually_stopped)
 
         raise gen.Return((connection, queue))
 
@@ -519,11 +531,7 @@ class Proxy(object):
                 raise RuntimeError(
                     'No proxy connection for report "%s"' % report_name)
 
-            session = ReportSession(
-                report_name=report_name,
-                source_file_path=proxy_connection.source_file_path,
-                command_line=proxy_connection.command_line,
-                cwd=proxy_connection.cwd)
+            session = ReportSession(proxy_connection)
             session.set_run_on_save(self._run_on_save_default_value)
 
             self._report_sessions[report_name] = session

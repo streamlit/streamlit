@@ -68,10 +68,26 @@ class BrowserWebSocket(WebSocketHandler):
         return self.write_message(msg.SerializeToString(), binary=True)
 
     def on_session_state_changed(self, _, **kwargs):
-        """Signal handler for ReportSession.state_changed"""
+        """Signal handler for ReportSession.state_changed.
+        Sends a SessionStateChanged message to the browser.
+        """
         session_state = kwargs.get('state')
         self.write_proto(
             forward_msg_proto.session_state_changed_msg(session_state))
+
+    def on_report_changed(self, _):
+        """Signal handler for ReportSession.report_changed_on_disk.
+        Sends a SessionEvent message to the browser.
+        """
+        self.write_proto(
+            forward_msg_proto.report_changed_on_disk_msg())
+
+    def on_report_was_manually_stopped(self, _):
+        """Signal handler for ReportSession.on_report_was_manually_stopped.
+        Sends a SessionEvent message to the browser.
+        """
+        self.write_proto(
+            forward_msg_proto.report_was_manually_stopped_msg())
 
     @Proxy.stop_proxy_on_exception(is_coroutine=True)
     @gen.coroutine
