@@ -2,45 +2,54 @@
  * @license
  * Copyright 2018 Streamlit Inc. All rights reserved.
  *
- * @fileoverview Implements a persistent websocket connection.
- * Displays itself as an icon indicating the connection type.
+ * @fileoverview Displays the status of a WebSocket connection.
  */
 
-import React, {PureComponent} from 'react';
-import {ConnectionState} from './ConnectionState';
+import React, {PureComponent, ReactNode} from 'react';
 import {UncontrolledTooltip} from 'reactstrap';
+import {ConnectionState} from './ConnectionState';
 import './ConnectionStatus.css';
 
-class ConnectionStatus extends PureComponent {
-  constructor(props) {
+interface Props {
+  connectionState: ConnectionState;
+}
+
+interface State {
+  minimized: boolean;
+}
+
+class ConnectionStatus extends PureComponent<Props, State> {
+  public static defaultProps = {
+    connectionState: ConnectionState.INITIAL,
+  };
+
+  public constructor(props: Props) {
     super(props);
 
     this.state = {
-      minimized: this.shouldMinimize(),
+      minimized: ConnectionStatus.shouldMinimize(),
     };
-
-    this.handleScroll_bound = this.handleScroll.bind(this);
   }
 
-  componentDidMount() {
-    window.addEventListener('scroll', this.handleScroll_bound);
+  public componentDidMount(): void {
+    window.addEventListener('scroll', this.handleScroll);
   }
 
-  componentWillUnmount() {
-    window.removeEventListener('scroll', this.handleScroll_bound);
+  public componentWillUnmount(): void {
+    window.removeEventListener('scroll', this.handleScroll);
   }
 
-  shouldMinimize() {
+  private static shouldMinimize(): boolean {
     return window.scrollY > 32;
   }
 
-  handleScroll() {
+  private handleScroll = (): void => {
     this.setState({
-      minimized: this.shouldMinimize(),
+      minimized: ConnectionStatus.shouldMinimize(),
     });
-  }
+  };
 
-  render() {
+  public render(): ReactNode {
     if (this.props.connectionState === ConnectionState.STATIC) {
       return null;
     }
@@ -54,7 +63,7 @@ class ConnectionStatus extends PureComponent {
             {this.drawIcon()}
           </svg>
           <label>
-            {this.drawLabel()}
+            {this.getLabel()}
           </label>
         </div>
         <UncontrolledTooltip placement="bottom" target="ConnectionStatus">
@@ -64,9 +73,9 @@ class ConnectionStatus extends PureComponent {
     );
   }
 
-  drawIcon() {
+  private drawIcon(): ReactNode {
     switch (this.props.connectionState) {
-      case undefined:
+      case ConnectionState.INITIAL:
         return <use xlinkHref="./open-iconic.min.svg#ellipses" />;
 
       case ConnectionState.CONNECTED:
@@ -84,9 +93,9 @@ class ConnectionStatus extends PureComponent {
     }
   }
 
-  drawLabel() {
+  private getLabel(): string {
     switch (this.props.connectionState) {
-      case undefined:
+      case ConnectionState.INITIAL:
         return 'Waiting';
 
       case ConnectionState.CONNECTED:
@@ -104,9 +113,9 @@ class ConnectionStatus extends PureComponent {
     }
   }
 
-  drawTooltip() {
+  private drawTooltip(): string {
     switch (this.props.connectionState) {
-      case undefined:
+      case ConnectionState.INITIAL:
         return 'Waiting for connection';
 
       case ConnectionState.CONNECTED:
