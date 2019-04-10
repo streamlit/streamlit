@@ -14,8 +14,8 @@ import streamlit.elements.data_frame_proto as data_frame_proto
 from google.protobuf import json_format
 from mock import patch
 from streamlit import protobuf
-from streamlit.protobuf.DataFrame_pb2 import DoubleArray, Int32Array, \
-    Int64Array, CellStyleArray, CellStyle
+from streamlit.protobuf.DataFrame_pb2 import Int32Array, CellStyleArray, \
+    CellStyle
 from streamlit.protobuf.VegaLiteChart_pb2 import VegaLiteChart
 from streamlit.protobuf.NamedDataSet_pb2 import NamedDataSet
 
@@ -115,16 +115,19 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(0, proto.range_index.stop)
 
         # multi index
-        df_multi = pd.MultiIndex.from_arrays([[1,2],[3,4]], names=['one', 'two'])
-        #df_multi = pd.MultiIndex.from_arrays([[1,2],[3,4]])
+        df_multi = pd.MultiIndex.from_arrays([[1, 2], [3, 4]],
+                                             names=['one', 'two'])
         proto = protobuf.Index()
         data_frame_proto._marshall_index(df_multi, proto)
-        self.assertEqual([1, 2], proto.multi_index.levels[0].int_64_index.data.data)
+        self.assertEqual([1, 2],
+                         proto.multi_index.levels[0].int_64_index.data.data)
         self.assertEqual([0, 1], proto.multi_index.labels[0].data)
 
         # datetimeindex
-        truth = [int(x * 1e9) for x in (1554138000, 1554141600 , 1554145200)]
-        df_dt = pd.date_range(start='2019/04/01 10:00', end='2019/04/01 12:00', freq='H')
+        truth = [int(x * 1e9) for x in (1554138000, 1554141600, 1554145200)]
+        df_dt = pd.date_range(start='2019/04/01 10:00',
+                              end='2019/04/01 12:00',
+                              freq='H')
         proto = protobuf.Index()
         with patch('streamlit.elements.data_frame_proto.tzlocal.get_localzone') as p:
             p.return_value = 'America/Los_Angeles'
@@ -132,7 +135,7 @@ class DataFrameProtoTest(unittest.TestCase):
             self.assertEqual(truth, proto.datetime_index.data.data)
 
         # timedeltaindex
-        df_td = pd.to_timedelta(np.arange(1,5), unit='ns')
+        df_td = pd.to_timedelta(np.arange(1, 5), unit='ns')
         proto = protobuf.Index()
         data_frame_proto._marshall_index(df_td, proto)
         self.assertEqual([1, 2, 3, 4], proto.timedelta_index.data.data)
@@ -150,7 +153,9 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual([1, 2, 3, 4], proto.float_64_index.data.data)
 
         # Period index
-        df_period = pd.period_range(start='2005-12-21 08:45 ', end='2005-12-21 11:55', freq='H')
+        df_period = pd.period_range(start='2005-12-21 08:45 ',
+                                    end='2005-12-21 11:55',
+                                    freq='H')
         proto = protobuf.Index()
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_index(df_period, proto)
@@ -163,7 +168,7 @@ class DataFrameProtoTest(unittest.TestCase):
         data_frame_proto._marshall_table([[1, 2], [3, 4]], proto)
         ret = json.loads(json_format.MessageToJson(proto))
         ret = [x['int64s']['data'] for x in ret['cols']]
-        truth = [['1' ,'2'], ['3', '4']]
+        truth = [['1', '2'], ['3', '4']]
         self.assertEqual(ret, truth)
 
     def test_marshall_any_array(self):
@@ -177,9 +182,8 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # wrong shape
         with pytest.raises(ValueError) as e:
-            data_frame_proto._marshall_any_array(
-                [[1, 2], [3, 4]],
-                protobuf.AnyArray())
+            data_frame_proto._marshall_any_array([[1, 2], [3, 4]],
+                                                 protobuf.AnyArray())
         err_msg = 'Array must be 1D.'
         self.assertEqual(err_msg, str(e.value))
 
@@ -226,7 +230,8 @@ class DataFrameProtoTest(unittest.TestCase):
         with patch('streamlit.elements.data_frame_proto.tzlocal.get_localzone') as p:
             p.return_value = 'America/Los_Angeles'
             data_frame_proto._marshall_any_array(dt_data, dt_proto)
-            self.assertEqual(1554838496.0, dt_proto.datetimes.data[0] / 1000000000)
+            self.assertEqual(1554838496.0,
+                             dt_proto.datetimes.data[0] / 1000000000)
 
         # With timezone
         dt_data = pd.Series([np.datetime64('2019-04-09T12:34:56')])
@@ -261,14 +266,18 @@ class DataFrameProtoTest(unittest.TestCase):
         # Delta DataFrame
         dt1 = protobuf.Delta()
         dt1.new_element.data_frame.data.cols.extend([aa])
-        dt1.new_element.data_frame.index.plain_index.data.int64s.data.extend([3, 4])
-        dt1.new_element.data_frame.columns.plain_index.data.int64s.data.extend([5, 6])
+        dt1.new_element.data_frame.index.plain_index.data.int64s.data.extend(
+            [3, 4])
+        dt1.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
+            [5, 6])
         dt1.new_element.data_frame.style.cols.extend([style])
 
         dt2 = protobuf.Delta()
         dt2.new_element.data_frame.data.cols.extend([aa])
-        dt2.new_element.data_frame.index.plain_index.data.int64s.data.extend([3, 4])
-        dt2.new_element.data_frame.columns.plain_index.data.int64s.data.extend([5, 6])
+        dt2.new_element.data_frame.index.plain_index.data.int64s.data.extend(
+            [3, 4])
+        dt2.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
+            [5, 6])
         dt2.new_element.data_frame.style.cols.extend([style])
 
         combined = protobuf.Delta()
@@ -279,8 +288,10 @@ class DataFrameProtoTest(unittest.TestCase):
         style_combined.styles.extend([cell_style, cell_style])
 
         combined.new_element.data_frame.data.cols.extend([aa_combined])
-        combined.new_element.data_frame.index.plain_index.data.int64s.data.extend([3, 4, 3, 4])
-        combined.new_element.data_frame.columns.plain_index.data.int64s.data.extend([5, 6, 5, 6])
+        combined.new_element.data_frame.index.plain_index.data.int64s.data.extend(
+            [3, 4, 3, 4])
+        combined.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
+            [5, 6, 5, 6])
         combined.new_element.data_frame.style.cols.extend([style_combined])
 
         # Test both not empty
@@ -462,7 +473,7 @@ class DataFrameProtoTest(unittest.TestCase):
         with pytest.raises(ValueError) as e:
             data_frame_proto._concat_any_array(aa2, aa3)
 
-        err_msg ='Cannot concatenate int64s with doubles.'
+        err_msg = 'Cannot concatenate int64s with doubles.'
         self.assertEqual(err_msg, str(e.value))
 
     def test_concat_cell_style_array(self):
@@ -498,9 +509,9 @@ class DataFrameProtoTest(unittest.TestCase):
         # Test delta not new_element or add_rows
         with pytest.raises(ValueError) as e:
             delta = protobuf.Delta()
-            ret = data_frame_proto._get_data_frame(delta)
+            data_frame_proto._get_data_frame(delta)
 
-        err_msg ='Cannot extract DataFrame from None.'
+        err_msg = 'Cannot extract DataFrame from None.'
         self.assertEqual(err_msg, str(e.value))
 
         # Test delta = new_element, a name is used and type is chart, df, table
@@ -508,7 +519,7 @@ class DataFrameProtoTest(unittest.TestCase):
             delta = protobuf.Delta()
             # TODO(armando): test df and table
             delta.new_element.chart.type = 'some chart'
-            ret = data_frame_proto._get_data_frame(delta, name='some name')
+            data_frame_proto._get_data_frame(delta, name='some name')
 
         err_msg = 'Dataset names not supported for st.chart'
         self.assertEqual(err_msg, str(e.value))
@@ -552,7 +563,9 @@ class DataFrameProtoTest(unittest.TestCase):
         delta_vega_dataset.new_element.vega_lite_chart.datasets.extend([ds1])
 
         df = data_frame_proto._get_data_frame(delta_vega_dataset, 'dataset 1')
-        self.assertEqual(df, delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data)
+        self.assertEqual(
+            df,
+            delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data)
 
         # Vega Lite Chart w/ unnamed dataset
         delta_vega_unnamed_dataset = protobuf.Delta()
@@ -561,10 +574,13 @@ class DataFrameProtoTest(unittest.TestCase):
         ds2.has_name = False
         ds2.data.data.cols.extend([aa])
 
-        delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets.extend([ds2])
+        delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets.extend(
+            [ds2])
 
         df = data_frame_proto._get_data_frame(delta_vega_unnamed_dataset)
-        self.assertEqual(df, delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets[0].data)
+        self.assertEqual(
+            df, delta_vega_unnamed_dataset.new_element.vega_lite_chart.
+            datasets[0].data)
 
         # add_rows w/ name
         delta_add_rows = protobuf.Delta()
@@ -608,7 +624,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(ValueError) as e:
             data_frame_proto._get_dataset(chart.datasets, 'dataset 3')
-        err_msg ='ValueError: No dataset found with name "dataset 3"'
+        err_msg = 'ValueError: No dataset found with name "dataset 3"'
         self.assertTrue(err_msg in str(e))
 
     def test_index_len(self):
@@ -616,55 +632,55 @@ class DataFrameProtoTest(unittest.TestCase):
         # Plain
         plain_idx = protobuf.Index()
         plain_idx.plain_index.data.int64s.data.extend([1, 2, 3])
-        self.assertEqual(3,  data_frame_proto._index_len(plain_idx))
+        self.assertEqual(3, data_frame_proto._index_len(plain_idx))
 
         # Range
         range_idx = protobuf.Index()
         range_idx.range_index.start = 2
         range_idx.range_index.stop = 10
-        self.assertEqual(8,  data_frame_proto._index_len(range_idx))
+        self.assertEqual(8, data_frame_proto._index_len(range_idx))
 
         # Multi with no labels
         multi_idx = protobuf.Index()
         multi_idx.multi_index.levels.extend([plain_idx, range_idx])
-        self.assertEqual(0,  data_frame_proto._index_len(multi_idx))
+        self.assertEqual(0, data_frame_proto._index_len(multi_idx))
 
         # Multi with labels
         int32_array = Int32Array()
         int32_array.data.extend([4, 5])
         multi_idx.multi_index.labels.extend([int32_array])
-        self.assertEqual(2,  data_frame_proto._index_len(multi_idx))
+        self.assertEqual(2, data_frame_proto._index_len(multi_idx))
 
         # Datetime
         dt_idx = protobuf.Index()
         dt_idx.datetime_index.data.data.extend([1, 2, 3])
-        self.assertEqual(3,  data_frame_proto._index_len(dt_idx))
+        self.assertEqual(3, data_frame_proto._index_len(dt_idx))
 
         # TimeDelta
         td_idx = protobuf.Index()
         td_idx.timedelta_index.data.data.extend([1, 2, 3, 4])
-        self.assertEqual(4,  data_frame_proto._index_len(td_idx))
+        self.assertEqual(4, data_frame_proto._index_len(td_idx))
 
         # Ine64
         i64_idx = protobuf.Index()
         i64_idx.int_64_index.data.data.extend([1, 2, 3, 4, 5])
-        self.assertEqual(5,  data_frame_proto._index_len(i64_idx))
+        self.assertEqual(5, data_frame_proto._index_len(i64_idx))
 
         # Float64
         f64_idx = protobuf.Index()
         f64_idx.float_64_index.data.data.extend([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-        self.assertEqual(6,  data_frame_proto._index_len(f64_idx))
+        self.assertEqual(6, data_frame_proto._index_len(f64_idx))
 
     def test_any_array_len(self):
         """Test streamlit.data_frame_proto._any_array_len."""
         data = [
-           ('strings', 2, ['a', 'b']),
-           ('int64s', 3, [1, 2, 3]),
-           ('doubles', 4, [1.0, 2.0, 3.0, 4.0]),
-           # datetimes and timedeltas are just stored as ints and aren't
-           # python data types.
-           ('datetimes', 5, [1, 2, 3, 4, 5]),
-           ('timedeltas', 6, [1, 2, 3, 4, 5, 6]),
+            ('strings', 2, ['a', 'b']),
+            ('int64s', 3, [1, 2, 3]),
+            ('doubles', 4, [1.0, 2.0, 3.0, 4.0]),
+            # datetimes and timedeltas are just stored as ints and aren't
+            # python data types.
+            ('datetimes', 5, [1, 2, 3, 4, 5]),
+            ('timedeltas', 6, [1, 2, 3, 4, 5, 6]),
         ]
 
         for kind, length, array in data:
