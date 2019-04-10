@@ -1,19 +1,15 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
+"""Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe.
 
-"""Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe."""
-
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
-
-from collections import namedtuple
+Copyright 2019 Streamlit Inc. All rights reserved.
+"""
 import re
 import tzlocal
 
-from streamlit import util
+from collections import namedtuple
 
+from streamlit import util
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 np = None
@@ -36,9 +32,7 @@ def marshall_data_frame(data, proto_df):
     df = convert_anything_to_df(data)
 
     # Convert df into an iterable of columns (each of type Series).
-    df_data = (
-        df.iloc[:, col]
-        for col in range(len(df.columns)))
+    df_data = (df.iloc[:, col] for col in range(len(df.columns)))
 
     import numpy
     import pandas
@@ -147,10 +141,12 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style['cellstyle']:
-        cell_selector = cell_style['selector']  # a string of the form 'row0_col0'
+        cell_selector = cell_style[
+            'selector']  # a string of the form 'row0_col0'
         match = cell_selector_regex.match(cell_selector)
         if not match:
-            raise RuntimeError('Failed to parse cellstyle selector "%s"' % cell_selector)
+            raise RuntimeError('Failed to parse cellstyle selector "%s"' %
+                               cell_selector)
         row = int(match.group(1))
         col = int(match.group(2))
         css_declarations = []
@@ -187,6 +183,7 @@ def _get_custom_display_values(df, translated_style):
     # ]
 
     default_formatter = df.style._display_funcs[(0, 0)]
+
     def has_custom_display_value(cell):
         value = str(cell['value'])
         display_value = str(cell['display_value'])
@@ -215,10 +212,12 @@ def _get_custom_display_values(df, translated_style):
                     found_row_header = True
                     continue
                 else:
-                    raise RuntimeError('Found unexpected row header "%s"' % cell)
+                    raise RuntimeError('Found unexpected row header "%s"' %
+                                       cell)
             match = cell_selector_regex.match(cell_id)
             if not match:
-                raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
+                raise RuntimeError('Failed to parse cell selector "%s"' %
+                                   cell_id)
 
             # Only store display values that differ from the cell's default
             if has_custom_display_value(cell):
@@ -239,8 +238,8 @@ def _marshall_index(pandas_index, proto_index):
     global pd
     pd = pandas
     if type(pandas_index) == pd.Index:
-        _marshall_any_array(
-            np.array(pandas_index), proto_index.plain_index.data)
+        _marshall_any_array(np.array(pandas_index),
+                            proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         min = pandas_index.min()
         max = pandas_index.max()
@@ -315,7 +314,7 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(map(str, pandas_array))
-    # Setting a timezone changes (dtype, dtype.type) from 
+    # Setting a timezone changes (dtype, dtype.type) from
     #   'datetime64[ns]', <class 'numpy.datetime64'>
     # to
     #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
@@ -326,8 +325,8 @@ def _marshall_any_array(pandas_array, proto_array):
             pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
-        raise NotImplementedError(
-            'Dtype %s not understood.' % pandas_array.dtype)
+        raise NotImplementedError('Dtype %s not understood.' %
+                                  pandas_array.dtype)
 
 
 def add_rows(delta1, delta2, name=None):
@@ -379,9 +378,10 @@ def _concat_index(index1, index2):
     type2 = index2.WhichOneof('type')
     # This branch is covered with tests but pytest doesnt seem to realize it.
     if type1 != type2:  # pragma: no cover
-        raise ValueError(
-            'Cannot concatenate %(type1)s with %(type2)s.' % \
-            {'type1': type1, 'type2': type2})
+        raise ValueError('Cannot concatenate %(type1)s with %(type2)s.' % {
+            'type1': type1,
+            'type2': type2
+        })
 
     if type1 == 'plain_index':
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
@@ -411,9 +411,10 @@ def _concat_any_array(any_array_1, any_array_2):
     type1 = any_array_1.WhichOneof('type')
     type2 = any_array_2.WhichOneof('type')
     if type1 != type2:
-        raise ValueError(
-            'Cannot concatenate %(type1)s with %(type2)s.' % \
-            {'type1': type1, 'type2': type2})
+        raise ValueError('Cannot concatenate %(type1)s with %(type2)s.' % {
+            'type1': type1,
+            'type2': type2
+        })
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 
@@ -436,8 +437,8 @@ def _get_data_frame(delta, name=None):
 
         # Some element types don't support named datasets.
         if name and element_type in ('data_frame', 'table', 'chart'):
-            raise ValueError(
-                'Dataset names not supported for st.%s' % element_type)
+            raise ValueError('Dataset names not supported for st.%s' %
+                             element_type)
 
         if element_type in 'data_frame':
             return delta.new_element.data_frame
@@ -465,7 +466,6 @@ def _get_data_frame(delta, name=None):
         return delta.add_rows.data
     else:
         raise ValueError('Cannot extract DataFrame from %s.' % delta_type)
-
 
 
 def _get_dataset(datasets_proto, name):
