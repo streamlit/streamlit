@@ -11,6 +11,11 @@ import unittest
 import mock
 
 from streamlit.proxy.ReportSession import ReportSession
+from streamlit.proxy import ClientConnection
+from streamlit import forward_msg_proto
+
+# An arbitrary UUID constant
+REPORT_ID = '16fd2706-8baf-433b-82eb-8c7fada847da'
 
 
 def _mock_listener():
@@ -20,13 +25,21 @@ def _mock_listener():
     return mock.MagicMock(spec={})
 
 
+def _create_client_connection(report_name='mock_report'):
+    """Returns a ClientConnection for testing against"""
+    file_name = '%s.py' % report_name
+    new_report_msg = forward_msg_proto.new_report_msg(
+        report_id=REPORT_ID,
+        cwd='',
+        command_line='python %s' % file_name,
+        source_file_path=file_name,
+    )
+    return ClientConnection(new_report_msg.new_report, report_name)
+
+
 def _create_report_session():
     """Return a ReportSession for testing against"""
-    return ReportSession(
-        report_name='mock_report',
-        source_file_path='mock_report.py',
-        command_line='python mock_report.py',
-        cwd='')
+    return ReportSession(_create_client_connection())
 
 
 class ReportSessionTest(unittest.TestCase):
@@ -40,34 +53,20 @@ class ReportSessionTest(unittest.TestCase):
     def tearDown(self):
         self.file_observer_class_patcher.stop()
 
-    def test_create_wrapped_observer(self):
-        # The wrapped observer shouldn't be created as long as
-        # enabled is False or there are no active browsers
-        session = _create_report_session()
-        session._create_file_observer = mock.MagicMock()
-
-        session.register_browser('one')
-        session.deregister_browser('one')
-        session.set_run_on_save(True)
-        session.set_run_on_save(False)
-        session._create_file_observer.assert_not_called()
-
-        # Registering a browser and then enabling will create
-        # the wrapped observer
-        session.register_browser('two')
-        session.register_browser('three')
-        session.set_run_on_save(True)
-        session._create_file_observer.assert_called_once()
-
     def test_close(self):
         session = _create_report_session()
+        client_conn = session._client_connection
         session.register_browser('one')
         session.register_browser('two')
         session.register_browser('three')
         session.close()
         self.assertFalse(session.has_registered_browsers)
 
-    def test_state_changed_signal(self):
+        # Old ClientConnection should not have a listener
+        self.assertIsNone(session._client_connection)
+        self.assertFalse(client_conn.on_closed.has_receivers_for(client_conn))
+
+    def test_run_on_save_state_changed(self):
         """Test that a signal is emitted when a report's state changes"""
         session = _create_report_session()
         listener = _mock_listener()
@@ -79,3 +78,40 @@ class ReportSessionTest(unittest.TestCase):
         session.set_run_on_save(not session.state.run_on_save)
         listener.assert_called_once_with(session, state=session.state)
 
+    def test_report_is_running_signal(self):
+        """Tests that the report_is_running state changed signal is
+        emitted"""
+        session = _create_report_session()
+        listener = _mock_listener()
+        session.state_changed.connect(listener)
+
+        # Should not emit a state-changed event
+        session.set_client_connection(session._client_connection)
+        listener.assert_not_called()
+
+        # Should also not emit a state-changed event
+        session.set_client_connection(_create_client_connection())
+        listener.assert_not_called()
+
+        # Should emit when our connection is closed
+        session._client_connection.close_connection()
+        listener.assert_called_once_with(
+            session, state=session.state._replace(report_is_running=False))
+
+        # Should emit when a new connection is added
+        listener.reset_mock()
+        session.set_client_connection(_create_client_connection())
+        listener.assert_called_once_with(
+            session, state=session.state._replace(report_is_running=True))
+
+        # When setting a new client_connection, the ReportSession
+        # should stop listening to the previous connection's
+        # client_connection_closed signal, and should start listening to
+        # the new one.
+        prev_conn = session._client_connection
+        new_conn = _create_client_connection()
+        self.assertTrue(prev_conn.on_closed.has_receivers_for(prev_conn))
+        self.assertFalse(new_conn.on_closed.has_receivers_for(new_conn))
+        session.set_client_connection(new_conn)
+        self.assertFalse(prev_conn.on_closed.has_receivers_for(prev_conn))
+        self.assertTrue(new_conn.on_closed.has_receivers_for(new_conn))

@@ -3,14 +3,14 @@
 
 """A proxy server between the Streamlit client and web browser.
 
-Internally, the Proxy basically does bookkeeping for a set of ProxyConnection
-objects. A ProxyConnection always has:
+Internally, the Proxy basically does bookkeeping for a set of ClientConnection
+objects. A ClientConnection always has:
 
     - One ClientWebSocket connection to the client Python libs.
     - Zero or more BrowserWebSocket connections to a web browser.
 
-Essentially, the ProxyConnection stays open so long as any of those connections
-do. When the final ProxyConnection closes, then the whole proxy does too.
+Essentially, the ClientConnection stays open so long as any of those connections
+do. When the final ClientConnection closes, then the whole proxy does too.
 (...unless any of autoCloseDelaySecs or reportExpirationSecs are infinity, in
 which case the proxy stays open no matter what.)
 
@@ -55,10 +55,10 @@ class Proxy(object):
 
     def __init__(self):
         """Proxy constructor."""
-        # This table from report_name to ProxyConnections stores all the
+        # This table from report_name to ClientConnections stores all the
         # information about our connections. When the number of connections
         # drops to zero then the proxy shuts down.
-        self._proxy_connections = dict()
+        self._client_connections = dict()
 
         # Map of report_name->ReportSession.
         # The lifetime of a ReportSession object is the time during
@@ -88,7 +88,7 @@ class Proxy(object):
 
         LOGGER.debug(
             'Creating proxy with self._connections: %s',
-            id(self._proxy_connections))
+            id(self._client_connections))
 
         self._set_up_server()
 
@@ -165,30 +165,33 @@ class Proxy(object):
         self._report_sessions.clear()
         self._stopped = True
 
-    def register_proxy_connection(self, proxy_connection):
-        """Register a ProxyConnection's report name
+    def register_client_connection(self, client_connection):
+        """Register a ClientConnection's report name
         so that browser connections can connect to the report.
         """
         LOGGER.debug('Registering proxy connection for "%s"',
-                     proxy_connection.name)
+                     client_connection.name)
         LOGGER.debug(
             'About to start registration: %s (%s)',
-            list(self._proxy_connections.keys()), id(self._proxy_connections))
+            list(self._client_connections.keys()), id(self._client_connections))
 
         # Open the browser and connect it to this report_name
         # (i.e. connection.name) if we don't have one open already.
         open_new_browser_connection = (
-            not self._has_browser_connections(proxy_connection.name))
+            not self._has_browser_connections(client_connection.name))
 
-        self._proxy_connections[proxy_connection.name] = proxy_connection
+        self._client_connections[client_connection.name] = client_connection
+        report_session = self._get_report_session(client_connection.name)
+        if report_session:
+            report_session.set_client_connection(client_connection)
 
         if open_new_browser_connection:
             if config.get_option('proxy.isRemote'):
                 _print_urls(
-                    proxy_connection,
+                    client_connection,
                     self._auto_close_delay_secs + self._report_expiration_secs)
             else:
-                url = proxy_connection.get_url(
+                url = client_connection.get_url(
                     config.get_option('browser.proxyAddress'))
                 util.open_browser(url)
 
@@ -197,38 +200,38 @@ class Proxy(object):
         # Clean up the connection we don't get an incoming connection.
         def connection_timeout():
             LOGGER.debug('In connection timeout for "%s".',
-                         proxy_connection.name)
-            proxy_connection.end_grace_period()
-            self.schedule_potential_deregister_and_stop(proxy_connection)
+                         client_connection.name)
+            client_connection.end_grace_period()
+            self.schedule_potential_deregister_and_stop(client_connection)
 
         if not self._keep_alive:
             connection_timeout()
 
         LOGGER.debug(
             'Finished registering connection: %s (%s)',
-            list(self._proxy_connections.keys()), id(self._proxy_connections))
+            list(self._client_connections.keys()), id(self._client_connections))
 
-    def schedule_potential_deregister_and_stop(self, proxy_connection):
+    def schedule_potential_deregister_and_stop(self, client_connection):
         """Try to deregister proxy connection.
 
-        Deregister ProxyConnection so long as there aren't any open connection
+        Deregister ClientConnection so long as there aren't any open connection
         (client or browser), and the connection is no longer in its grace
         period.
 
         Parameters
         ----------
-        proxy_connection : ProxyConnection
+        client_connection : ClientConnection
 
         """
         def potentially_unregister():
-            if not self._proxy_connection_is_registered(proxy_connection):
+            if not self._client_connection_is_registered(client_connection):
                 return
 
-            if not proxy_connection.can_be_deregistered():
+            if not client_connection.can_be_deregistered():
                 return
 
             LOGGER.debug('Deregistering connection')
-            self._deregister_proxy_connection(proxy_connection)
+            self._deregister_client_connection(client_connection)
             self.schedule_potential_stop()
 
         LOGGER.debug(
@@ -238,24 +241,28 @@ class Proxy(object):
         loop = IOLoop.current()
         loop.call_later(self._report_expiration_secs, potentially_unregister)
 
-    def _deregister_proxy_connection(self, proxy_connection):
+    def _deregister_client_connection(self, client_connection):
         """Deregister proxy connection irrespective of whether it's in use.
 
         Parameters
         ----------
-        proxy_connection : ProxyConnection
+        client_connection : ClientConnection
             The connection to deregister. It will be properly shutdown before
             deregistering.
 
         """
-        del self._proxy_connections[proxy_connection.name]
-        LOGGER.debug('Got rid of connection %s', proxy_connection.name)
-        LOGGER.debug('Total connections left: %s', len(self._proxy_connections))
+        del self._client_connections[client_connection.name]
+        report_session = self._get_report_session(client_connection.name)
+        if report_session:
+            report_session.set_client_connection(None)
 
-    def _proxy_connection_is_registered(self, proxy_connection):
+        LOGGER.debug('Got rid of connection %s', client_connection.name)
+        LOGGER.debug('Total connections left: %s', len(self._client_connections))
+
+    def _client_connection_is_registered(self, client_connection):
         """Return true if this connection is registered to its name."""
-        return self._proxy_connections.get(proxy_connection.name, None) \
-               is proxy_connection
+        return self._client_connections.get(client_connection.name, None) \
+               is client_connection
 
     def schedule_potential_stop(self):
         """Stop proxy if no open connections and not in keepAlive mode."""
@@ -265,9 +272,9 @@ class Proxy(object):
         def potentially_stop():
             LOGGER.debug(
                 'Stopping if there are no more connections: ' +
-                str(list(self._proxy_connections.keys())))
+                str(list(self._client_connections.keys())))
 
-            if not self._proxy_connections:
+            if not self._client_connections:
                 self.stop()
 
         LOGGER.debug(
@@ -289,8 +296,8 @@ class Proxy(object):
 
         Returns
         -------
-        (ProxyConnection, ReportQueue)
-            The new ProxyConnection object which manages this connection to the
+        (ClientConnection, ReportQueue)
+            The new ClientConnection object which manages this connection to the
             proxy, as well as the queue this connection should write into.
 
         """
@@ -299,8 +306,10 @@ class Proxy(object):
         if existing_session:
             report_state = existing_session.state
         else:
+            client_connection = self._client_connections[ws.report_name]
             report_state = ReportState(
-                run_on_save=self._run_on_save_default_value)
+                run_on_save=self._run_on_save_default_value,
+                report_is_running=client_connection is not None and client_connection.is_connected)
 
         # Send the Initialize message
         msg = initialize_msg(report_state)
@@ -327,24 +336,27 @@ class Proxy(object):
                                            create_if_missing=True)
         session.register_browser(ws.key)
         session.state_changed.connect(ws.on_session_state_changed)
+        session.on_report_changed.connect(ws.on_report_changed)
+        session.on_report_was_manually_stopped.connect(
+            ws.on_report_was_manually_stopped)
 
         raise gen.Return((connection, queue))
 
-    def on_browser_connection_closed(self, ws, proxy_connection, queue):  # noqa: D401
+    def on_browser_connection_closed(self, ws, client_connection, queue):  # noqa: D401
         """Called when a browser connection is closed.
 
         Parameters
         ----------
         ws : BrowserWebSocket
             The BrowserWebSocket instance that was closed.
-        proxy_connection : ProxyConnection
-            The ProxyConnection for the browser connection that just closed.
+        client_connection : ClientConnection
+            The ClientConnection for the browser connection that just closed.
         queue : ReportQueue
             The queue for the closed browser connection.
 
         """
         # Deregister from ReportSession
-        report_name = proxy_connection.name
+        report_name = client_connection.name
         session = self._get_report_session(report_name)
         if session is not None:
             session.state_changed.disconnect(ws.on_session_state_changed)
@@ -352,11 +364,11 @@ class Proxy(object):
             self._maybe_close_report_session(report_name)
 
         # Deregister from ReportQueue
-        self._deregister_browser_from_report_queue(proxy_connection, queue)
+        self._deregister_browser_from_report_queue(client_connection, queue)
 
     @gen.coroutine
     def get_latest_connection_and_queue(  # noqa: D401
-            self, report_name, ws, proxy_connection, queue):
+            self, report_name, ws, client_connection, queue):
         """Get the most recent proxy connection and queue for this report_name.
 
         BrowserWebSocket continuously calls this method in case a new client
@@ -369,14 +381,14 @@ class Proxy(object):
             The name of the report the browser connection is for.
         ws : BrowserWebSocket
             The BrowserWebSocket instance that just got opened.
-        proxy_connection : ProxyConnection
-            The BrowserWebSocket's current ProxyConnection
+        client_connection : ClientConnection
+            The BrowserWebSocket's current ClientConnection
         queue : ReportQueue
             The BrowserWebSocket's current ReportQueue
 
         Returns
         -------
-        ProxyConnection
+        ClientConnection
             The newly registered proxy connection.
         ReportQueue
             The corresponding newly registered queue.
@@ -384,13 +396,13 @@ class Proxy(object):
         """
         # No need to change the connection or queue if the current one is still
         # registered.
-        if self._proxy_connection_is_registered(proxy_connection):
-            raise gen.Return((proxy_connection, queue))
+        if self._client_connection_is_registered(client_connection):
+            raise gen.Return((client_connection, queue))
 
         LOGGER.debug('The proxy connection for "%s" is not registered.',
                      report_name)
 
-        self._deregister_browser_from_report_queue(proxy_connection, queue)
+        self._deregister_browser_from_report_queue(client_connection, queue)
         new_connection, new_queue = (
             yield self._register_browser_with_report_queue(report_name, ws))
         raise gen.Return((new_connection, new_queue))
@@ -425,8 +437,8 @@ class Proxy(object):
             True if any browsers maintain connections to this report_name.
 
         """
-        if report_name in self._proxy_connections:
-            return self._proxy_connections[report_name].has_browser_connections()
+        if report_name in self._client_connections:
+            return self._client_connections[report_name].has_browser_connections()
         else:
             return False
 
@@ -447,32 +459,32 @@ class Proxy(object):
 
         Returns
         -------
-        (ProxyConnection, ReportQueue)
+        (ClientConnection, ReportQueue)
 
         """
         self._received_browser_connection = True
-        proxy_connection = self._proxy_connections[report_name]
-        queue = proxy_connection.add_browser_queue()
+        client_connection = self._client_connections[report_name]
+        queue = client_connection.add_browser_queue()
 
         # Send the NewReport message
         yield ws.write_proto(new_report_msg(
-            proxy_connection.id, proxy_connection.cwd,
-            proxy_connection.command_line, proxy_connection.source_file_path))
+            client_connection.id, client_connection.cwd,
+            client_connection.command_line, client_connection.source_file_path))
 
         LOGGER.debug(
             'Added new browser connection. '
             'Id: %s, '
             'Command line: %s',
-            proxy_connection.id, proxy_connection.command_line)
+            client_connection.id, client_connection.command_line)
 
-        raise gen.Return((proxy_connection, queue))
+        raise gen.Return((client_connection, queue))
 
-    def _deregister_browser_from_report_queue(self, proxy_connection, queue):
+    def _deregister_browser_from_report_queue(self, client_connection, queue):
         """Remove queue from connection and close connection if necessary."""
-        proxy_connection.remove_browser_queue(queue)
+        client_connection.remove_browser_queue(queue)
         LOGGER.debug('Removed the browser connection for "%s"',
-                     proxy_connection.name)
-        self.schedule_potential_deregister_and_stop(proxy_connection)
+                     client_connection.name)
+        self.schedule_potential_deregister_and_stop(client_connection)
 
     def set_run_on_save(self, report_name, run_on_save):
         """Sets the run-on-save value for a given report. If no such
@@ -514,16 +526,12 @@ class Proxy(object):
         """
         session = self._report_sessions.get(report_name)
         if session is None and create_if_missing:
-            proxy_connection = self._proxy_connections.get(report_name)
-            if proxy_connection is None:
+            client_connection = self._client_connections.get(report_name)
+            if client_connection is None:
                 raise RuntimeError(
                     'No proxy connection for report "%s"' % report_name)
 
-            session = ReportSession(
-                report_name=report_name,
-                source_file_path=proxy_connection.source_file_path,
-                command_line=proxy_connection.command_line,
-                cwd=proxy_connection.cwd)
+            session = ReportSession(client_connection)
             session.set_run_on_save(self._run_on_save_default_value)
 
             self._report_sessions[report_name] = session

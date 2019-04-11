@@ -31,7 +31,7 @@ backports-abc = {version="*", markers="python_version < '3.0'"}
 blinker = "*"
 botocore = "*"
 boto3 = "*"
-click = "*"
+click = ">=7.0"
 docutils = "*"
 enum-compat = "*"
 # python3 code backported to python2

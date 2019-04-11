@@ -20,6 +20,7 @@ def _marshall_session_state(proto_session_state, report_state):
     report_state : ReportState (from ReportSession)
     """
     proto_session_state.run_on_save = report_state.run_on_save
+    proto_session_state.report_is_running = report_state.report_is_running
 
 
 def initialize_msg(report_state):
@@ -48,34 +49,54 @@ def new_report_msg(report_id, cwd, command_line, source_file_path):
 
     Parameters
     ----------
-    report_id : uuid
-        ID of the new report
+    report_id : str
+        String representation of the report's UUID.
     cwd : str
         The current working directory from which this report was launched.
     command_line : list of strings
         The command line arguments used to launch the report.
-    source_file_path: string
-        Full path of the file that initiated the new report.
+    source_file_path: string or None
+        Full path of the file that initiated the new report. This will be
+        None if the report was started from a REPL.
 
     """
     msg = protobuf.ForwardMsg()
     msg.new_report.id = str(report_id)
     msg.new_report.cwd = cwd
     msg.new_report.command_line.extend(command_line)
-    msg.new_report.source_file_path = source_file_path
+    # NB: If source_file_path is None, msg.new_report.source_file_path
+    # will default to "" (protobuf values cannot be null).
+    if source_file_path is not None:
+        msg.new_report.source_file_path = source_file_path
     return msg
 
 
 def session_state_changed_msg(state):
-    """Builds ForwardMessage.session_state_changed message. This is
+    """Builds a ForwardMsg.session_state_changed message. This is
     sent to a connected web browser when any session-related state
     is changed.
 
     Parameters
     ----------
     state : ReportState
-        a ReportState (from ReportSession)
+        A ReportState (from ReportSession)
     """
     msg = protobuf.ForwardMsg()
     _marshall_session_state(msg.session_state_changed, state)
+    return msg
+
+
+def report_changed_on_disk_msg():
+    """Builds a ForwardMsg.session_event.report_changed_on_disk message"""
+    msg = protobuf.ForwardMsg()
+    msg.session_event.report_changed_on_disk = True
+    return msg
+
+
+def report_was_manually_stopped_msg():
+    """Builds a ForwardMsg.session_event.report_was_manually_stopped
+    message
+    """
+    msg = protobuf.ForwardMsg()
+    msg.session_event.report_was_manually_stopped = True
     return msg

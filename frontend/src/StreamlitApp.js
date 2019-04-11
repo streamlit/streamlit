@@ -68,6 +68,7 @@ class StreamlitApp extends PureComponent {
         runOnSave: true,
       },
       showLoginBox: false,
+      reportIsRunning: false,
     };
 
     this.connectionManager = null;
@@ -168,6 +169,7 @@ class StreamlitApp extends PureComponent {
     dispatchOneOf(msg, 'type', {
       initialize: initializeMsg => this.handleInitialize(initializeMsg),
       sessionStateChanged: msg => this.handleSessionStateChanged(msg),
+      sessionEvent: msg => this.handleSessionEvent(msg),
       newReport: newReportMsg => this.handleNewReport(newReportMsg),
       delta: delta => this.applyDelta(delta),
       reportFinished: () => this.clearOldElements(),
@@ -190,15 +192,12 @@ class StreamlitApp extends PureComponent {
 
     trackEventRemotely('createReport');
 
-    const initialState = initializeMsg.get('sessionState');
-
-    this.setState(prevState => ({
+    this.setState({
       sharingEnabled: initializeMsg.get('sharingEnabled'),
-      userSettings: {
-        ...prevState.userSettings,
-        runOnSave: initialState.get('runOnSave'),
-      },
-    }));
+    });
+
+    const initialState = initializeMsg.get('sessionState');
+    this.handleSessionStateChanged(initialState);
   }
 
   /**
@@ -206,12 +205,29 @@ class StreamlitApp extends PureComponent {
    * @param msg a SessionState protobuf
    */
   handleSessionStateChanged(msg) {
+    const runOnSave = msg.get('runOnSave');
+    const reportIsRunning = msg.get('reportIsRunning');
+
     this.setState(prevState => ({
       userSettings: {
         ...prevState.userSettings,
-        runOnSave: msg.get('runOnSave'),
+        runOnSave,
       },
+      reportIsRunning,
     }));
+  }
+
+  /**
+   * Handler for ForwardMsg.sessionEvent messages
+   * @param msg a SessionEvent protobuf
+   */
+  handleSessionEvent(msg) {
+    // 2019-04-09 - Tim - This is a stub that will be filled out in an upcoming
+    // PR, as part of https://github.com/streamlit/streamlit/issues/483
+    dispatchOneOf(msg, 'type', {
+      reportChangedOnDisk: () => console.log('reportChangedOnDisk'),
+      reportWasManuallyStopped: () => console.log('reportWasManuallyStopped'),
+    });
   }
 
   /**
