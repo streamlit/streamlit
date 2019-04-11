@@ -55,15 +55,19 @@ def new_report_msg(report_id, cwd, command_line, source_file_path):
         The current working directory from which this report was launched.
     command_line : list of strings
         The command line arguments used to launch the report.
-    source_file_path: string
-        Full path of the file that initiated the new report.
+    source_file_path: string or None
+        Full path of the file that initiated the new report. This will be
+        None if the report was started from a REPL.
 
     """
     msg = protobuf.ForwardMsg()
     msg.new_report.id = str(report_id)
     msg.new_report.cwd = cwd
     msg.new_report.command_line.extend(command_line)
-    msg.new_report.source_file_path = source_file_path
+    # NB: If source_file_path is None, msg.new_report.source_file_path
+    # will default to "" (protobuf values cannot be null).
+    if source_file_path is not None:
+        msg.new_report.source_file_path = source_file_path
     return msg
 
 
