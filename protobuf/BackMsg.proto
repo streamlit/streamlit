@@ -18,7 +18,11 @@ message BackMsg {
     // Requests that the report's @st_cache be cleared
     bool clear_cache = 5;
 
-    // Requests that the Proxy's runOnSave behavior be set to the given value
+    // Requests that the runOnSave behavior for this report be set
+    // to the given value
     bool set_run_on_save = 6;
+
+    // Requests that the report's execution be stopped
+    bool stop_report = 7;
   }
 }

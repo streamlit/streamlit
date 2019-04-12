@@ -12,6 +12,7 @@
     "mapbox-gl": "^0.50.0",
     "moment": "^2.22.2",
     "moment-duration-format": "^2.2.2",
+    "node-sass": "^4.11.0",
     "numeral": "^2.0.6",
     "prismjs": "^1.15.0",
     "prop-types": "^15.7.2",
@@ -30,6 +31,7 @@
     "react-virtualized": "^9.21.0",
     "reactstrap": "^7.1.0",
     "recharts": "^1.5.0",
+    "typed-signals": "^1.0.5",
     "vega": "^3.0.0",
     "vega-lite": "^3.0.0-rc6",
     "vega-tooltip": "^0.12.0"
