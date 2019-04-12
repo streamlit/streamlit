@@ -183,6 +183,12 @@ class BrowserWebSocket(WebSocketHandler):
             if msg_type == 'cloud_upload':
                 yield self._save_cloud(connection)
             elif msg_type == 'rerun_script':
+                # 2019-04-10 - TSC - yielding here (and in cloud_upload above)
+                # means this coroutine will not complete until the script
+                # finishes re-running, which means the socket will not
+                # process any further messages until the re-run is complete.
+                # We'll need to fix this in order to have 'stop_report'
+                # messages work.
                 yield self._run(backend_msg.rerun_script)
             elif msg_type == 'clear_cache':
                 # Setting verbose=True causes clear_cache to print to stdout.
@@ -193,6 +199,8 @@ class BrowserWebSocket(WebSocketHandler):
             elif msg_type == 'set_run_on_save':
                 self._proxy.set_run_on_save(
                     self._report_name, backend_msg.set_run_on_save)
+            elif msg_type == 'stop_report':
+                self._proxy.stop_report(self._report_name)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
         except Exception as e:

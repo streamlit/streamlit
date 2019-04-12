@@ -1,0 +1,52 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+// Overwrite some basic colors.
+$white:      #FFFFFF;
+$gray-100:   #F0F3F9;
+$gray-200:   #E6E9EF;
+$gray-300:   $gray-200;  // We don't need a million grays!
+$gray-400:   $gray-200;
+$gray-500:   #C2C7D0;
+$gray-600:   $gray-500;
+$gray-700:   #768096;
+$gray-800:   #313742;
+$gray-900:   #101620;
+$black:      $gray-900;
+$red:        #F63366;
+$yellow:     #FFB40A;
+$blue:       #2979E9;
+$green:      #199939;
+
+// Custom color for our own use.
+$gray-lightest: $gray-100;
+$gray-lighter:  $gray-200;
+$gray-light:    $gray-500;
+$gray:          $gray-700;
+$gray-dark:     $gray-800;
+$yellow-light:  #FFFD80;
+
+// Overwrite some theme colors.
+$primary:    $red;
+$secondary:  $gray;
+$light:      $gray-100;
+$dark:       $gray;
+
+// Overwrite some theme fonts settings.
+$font-family-sans-serif: 'IBM Plex Sans', sans-serif;
+$font-family-monospace:  'IBM Plex Mono', monospace;
+
+// This should equal 17px since 1rem == 16px.
+// (Can't set actual pixels here because it breaks bootstrap)
+$font-size-base:    1.0625rem;
+
+$font-size-sm:      0.8rem;
+$line-height-base:  1.6;
+
+// Overwrite other theme settings.
+$border-radius: 0.25rem;
+$border-radius-sm: 0.25rem;
+$border-radius-large: 0.75rem;
+$btn-border-radius: $border-radius-large;
