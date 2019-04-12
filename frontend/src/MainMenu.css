@@ -8,6 +8,10 @@
   width: 2.5rem;
 }
 
+#MainMenuButton > svg {
+  margin-top: -0.25rem;
+}
+
 /* The menu itself. */
 #MainMenu div.dropdown-menu {
   width: 12rem;

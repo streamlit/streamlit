@@ -13,7 +13,6 @@ setup_2_3_shims(globals())
 import copy
 import enum
 
-from streamlit import data_frame_proto
 from streamlit import protobuf
 from tornado import gen
 
@@ -79,11 +78,12 @@ class ReportQueue(object):
 
         except Exception as e:
             if catch_exceptions:
-                import streamlit.exception as exception_module
+                import streamlit.elements.exception_element as \
+                    exception_element
                 from streamlit import protobuf
                 delta = protobuf.Delta()
                 delta.id = max(self._id_map)
-                exception_module.marshall(delta.new_element, e)
+                exception_element.marshall(delta.new_element, e)
                 self(delta, catch_exceptions=False)
             else:
                 raise e
@@ -165,6 +165,7 @@ class ReportQueue(object):
         elif delta2.WhichOneof('type') == 'new_element':
             return delta2
         elif delta2.WhichOneof('type') == 'add_rows':
+            import streamlit.elements.data_frame_proto as data_frame_proto
             data_frame_proto.add_rows(
                 delta1, delta2, name=delta2.add_rows.name)
             return delta1

@@ -12,7 +12,7 @@ import sys
 
 import streamlit as st
 from streamlit import protobuf
-from streamlit import doc_string
+import streamlit.elements.doc_string as doc_string
 
 is_python_2 = sys.version_info[0] == 2
 
