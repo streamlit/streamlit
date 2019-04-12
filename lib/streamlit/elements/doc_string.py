@@ -40,12 +40,14 @@ def marshall(proto, obj):
     except AttributeError:
         pass
 
-    try:
-        if obj.__module__ in CONFUSING_STREAMLIT_MODULES:
-            proto.doc_string.module = 'streamlit'
-        else:
-            proto.doc_string.module = obj.__module__
-    except AttributeError:
+    module_name = getattr(obj, '__module__', None)
+
+    if module_name in CONFUSING_STREAMLIT_MODULES:
+        proto.doc_string.module = 'streamlit'
+    elif module_name is not None:
+        proto.doc_string.module = module_name
+    else:
+        # Leave proto.doc_string.module as an empty string (default value).
         pass
 
     obj_type = type(obj)
