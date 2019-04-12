@@ -505,6 +505,22 @@ class Proxy(object):
         else:
             session.set_run_on_save(run_on_save)
 
+    def stop_report(self, report_name):
+        """Stops the current execution of the given report. If no such
+        report is active, or if the report isn't currently running,
+        this is a no-op.
+
+        Parameters
+        ----------
+        report_name : str
+            Name of the report
+        """
+        session = self._get_report_session(report_name)
+        if session is None:
+            LOGGER.debug('Cannot stop non-existent report "%s"', report_name)
+        else:
+            session.stop_report()
+
     @property
     def _run_on_save_default_value(self):
         """True if ReportSessions have run-on-save enabled by default"""
