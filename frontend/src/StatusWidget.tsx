@@ -211,6 +211,14 @@ export class StatusWidget extends PureComponent<Props, State> {
             Running...
           </label>
           {stopButton}
+
+          {
+            this.state.minimized ?
+            <UncontrolledTooltip placement="bottom" target="ReportStatus">
+              This script is currently running
+            </UncontrolledTooltip> :
+            ''
+          }
         </div>
       </div>
     );
