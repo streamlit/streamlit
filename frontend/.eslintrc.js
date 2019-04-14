@@ -46,6 +46,9 @@ module.exports = {
     // We prefer not using 'any', but don't disallow it
     '@typescript-eslint/no-explicit-any': 'off',
 
+    // Functions must have return types, but we allow inline function expressions to omit them
+    '@typescript-eslint/explicit-function-return-type': ['warn', { 'allowExpressions': true }],
+
     // max-len is set to 120, to accommodate jsx, but we prefer
     // that non-jsx code stay within an 80-column max width
     'max-len': ['warn', {

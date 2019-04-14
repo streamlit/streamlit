@@ -7,7 +7,9 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+from blinker import Signal
 import json
+import os
 import urllib
 
 from streamlit import config
@@ -18,11 +20,46 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-class ProxyConnection(object):
-    """Represents a connection.
+def _get_source_file_path(file_path, command_line):
+    """The path of the file on disk that should be observed for changes.
+    This is sometimes equal to the input file_path, but there are
+    instances when it's not (e.g. when the report is run from the REPL,
+    or launched as a python module).
 
-    The lifetime of a ProxyConnection is tied to the lifetime of client and
-    browser connections.
+    This value can be None.
+
+    Parameters
+    ----------
+    file_path : str
+        The file_path that the report was launched with
+
+    command_line : [str]
+        The command line that the report was launched with
+    """
+    # If running as a module, ie python -m foo.bar, then the file_path
+    # is actually /path/to/runpy.py  Instead we should use the
+    # command_line which would be /path/to/foo/bar.py
+    if os.path.basename(file_path) == 'runpy.py':
+        file_path = command_line[0]
+
+    if len(file_path) == 0:
+        # DeltaConnection.py sets source_file_path to '' when running from
+        # the REPL.
+        return None
+
+    return file_path
+
+
+class ClientConnection(object):
+    """Represents a connection between the client and proxy.
+
+    A new ClientConnection is created when a client connects to the Proxy via
+    ClientWebSocket. The lifetime of the ClientConnection is tied to the
+    lifetime of the client and all browser connections observing the client's
+    report.
+
+    When a report is re-run, a new ClientConnection is created, replacing
+    the existing ClientConnection for that report.
     """
 
     def __init__(self, new_report_msg, name):
@@ -46,17 +83,20 @@ class ProxyConnection(object):
         # connection.
         self.command_line = list(new_report_msg.command_line)
 
-        # Full path of the file that caused this connection to be initiated,
-        # or empty string if in REPL.
-        self.source_file_path = new_report_msg.source_file_path
+        # The source file path of the report. A FileObserver can watch this
+        # path and trigger a re-run of the report if it changes.
+        # This value can be None.
+        self.source_file_path = _get_source_file_path(
+            new_report_msg.source_file_path,
+            self.command_line)
 
         # The name for this report.
         self.name = name
 
         # When the client connection ends, this flag becomes false.
-        self._has_client_connection = True
+        self._is_connected = True
 
-        # Before recieving connection and the the timeout hits, the connection
+        # Before receiving connection and the timeout hits, the connection
         # is in a "grace period" in which it can't be deregistered.
         self._in_grace_period = True
 
@@ -66,12 +106,24 @@ class ProxyConnection(object):
         # Each connection additionally gets its own queue.
         self._browser_queues = []
 
-    def close_client_connection(self):
+        # Signal that's emitted when the client disconnects
+        self.on_closed = Signal(
+            doc="""Emitted when self.is_connected becomes False""")
+
+    @property
+    def is_connected(self):
+        """True while the client is running its report, and is therefore
+        connected to the proxy. Becomes False when the report finishes running
+        and the client disconnects."""
+        return self._is_connected
+
+    def close_connection(self):
         """Close the client connection."""
-        self._has_client_connection = False
+        self._is_connected = False
         self._master_queue.close()
         for queue in self._browser_queues:
             queue.close()
+        self.on_closed.send(self)
 
     def end_grace_period(self):
         """End the grace period, during which we don't close the connection.
@@ -82,7 +134,7 @@ class ProxyConnection(object):
         self._in_grace_period = False
 
     def has_browser_connections(self):
-        """Check whether any browsers are connected to this ProxyConnection.
+        """Check whether any browsers are connected to this ClientConnection.
 
         Returns
         -------
@@ -98,13 +150,13 @@ class ProxyConnection(object):
         Returns
         -------
         boolean
-            All conditions are met to remove this ProxyConnection from the
+            All conditions are met to remove this ClientConnection from the
             Proxy's _connections table.
 
         """
         return not (
             self._in_grace_period or
-            self._has_client_connection or
+            self._is_connected or
             self.has_browser_connections())
 
     def enqueue(self, delta):

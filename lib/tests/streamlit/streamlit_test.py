@@ -16,7 +16,7 @@ from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
-from streamlit.Chart import Chart
+from streamlit.elements.Chart import Chart
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 
@@ -249,7 +249,8 @@ class StreamlitAPITest(unittest.TestCase):
         el = get_last_delta_element(dg)
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(el.exception.message, 'Test Exception')
-        # We will test stack_trace when testing streamlit.exception_module
+        # We will test stack_trace when testing
+        # streamlit.elements.exception_element
         if sys.version_info >= (3, 0):
             self.assertEqual(el.exception.stack_trace, [])
         else:

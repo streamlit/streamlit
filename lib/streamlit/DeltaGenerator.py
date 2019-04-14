@@ -16,7 +16,6 @@ import textwrap
 import traceback
 
 from streamlit import protobuf
-from streamlit.Chart import Chart
 
 # setup logging
 from streamlit.logger import get_logger
@@ -294,7 +293,7 @@ class DeltaGenerator(object):
         """
         element.text.body = (
                 body if isinstance(body, string_types)  # noqa: F821
-                else json.dumps(body))
+                else json.dumps(body, default=str))
         element.text.format = protobuf.Text.JSON
 
     @_with_element
@@ -425,7 +424,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> st.warning('This is a success message!')
+        >>> st.success('This is a success message!')
 
         """
         element.text.body = str(body)
@@ -456,7 +455,7 @@ class DeltaGenerator(object):
         >>> st.help(x)
 
         """
-        from streamlit import doc_string
+        import streamlit.elements.doc_string as doc_string
         doc_string.marshall(element, obj)
 
     @_with_element
@@ -478,8 +477,8 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        import streamlit.exception_module as exception_module
-        exception_module.marshall(element, exception, exception_traceback)
+        import streamlit.elements.exception_element as exception_element
+        exception_element.marshall(element, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -537,7 +536,7 @@ class DeltaGenerator(object):
            height: 285px
 
         """
-        from streamlit import data_frame_proto
+        import streamlit.elements.data_frame_proto as data_frame_proto
 
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
@@ -578,6 +577,7 @@ class DeltaGenerator(object):
             height: 200px
 
         """
+        from streamlit.elements.Chart import Chart
         chart = Chart(data, type='line_chart', width=width, height=height)
         chart.marshall(element.chart)
 
@@ -609,6 +609,7 @@ class DeltaGenerator(object):
             height: 200px
 
         """
+        from streamlit.elements.Chart import Chart
         chart = Chart(data, type='area_chart', width=width, height=height)
         chart.marshall(element.chart)
 
@@ -640,6 +641,7 @@ class DeltaGenerator(object):
             height: 200px
 
         """
+        from streamlit.elements.Chart import Chart
         chart = Chart(data, type='bar_chart', width=width, height=height)
         chart.marshall(element.chart)
 
@@ -691,7 +693,7 @@ class DeltaGenerator(object):
         translated to the syntax shown above.
 
         """
-        from streamlit import vega_lite
+        import streamlit.elements.vega_lite as vega_lite
         vega_lite.marshall(
             element.vega_lite_chart, data, spec, **kwargs)
 
@@ -728,7 +730,7 @@ class DeltaGenerator(object):
         https://altair-viz.github.io/gallery/.
 
         """
-        from streamlit import vega_lite
+        import streamlit.elements.vega_lite as vega_lite
         vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
 
     @_with_element
@@ -769,7 +771,7 @@ class DeltaGenerator(object):
         For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
-        from streamlit import image_proto
+        import streamlit.elements.image_proto as image_proto
         try:
             import matplotlib  # noqa: F401
             import matplotlib.pyplot as plt
@@ -842,7 +844,7 @@ class DeltaGenerator(object):
            height: 630px
 
         """
-        from streamlit import image_proto
+        import streamlit.elements.image_proto as image_proto
         if use_column_width:
             width = -2
         elif width is None:
@@ -880,7 +882,7 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
-        from streamlit import generic_binary_proto
+        import streamlit.elements.generic_binary_proto as generic_binary_proto
         generic_binary_proto.marshall(element.audio, data)
         element.audio.format = format
 
@@ -912,7 +914,7 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
-        from streamlit import generic_binary_proto
+        import streamlit.elements.generic_binary_proto as generic_binary_proto
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
@@ -985,7 +987,7 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        from streamlit import data_frame_proto
+        import streamlit.elements.data_frame_proto as data_frame_proto
         LAT_LON = ['lat', 'lon']
         if not set(data.columns) >= set(LAT_LON):
             raise Exception('Map data must contain "lat" and "lon" columns.')
@@ -1108,7 +1110,7 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        from streamlit import deck_gl
+        import streamlit.elements.deck_gl as deck_gl
         deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
 
     @_with_element
@@ -1136,7 +1138,7 @@ class DeltaGenerator(object):
            height: 480px
 
         """
-        from streamlit import data_frame_proto
+        import streamlit.elements.data_frame_proto as data_frame_proto
         data_frame_proto.marshall_data_frame(data, element.table)
 
     def add_rows(self, data=None, **kwargs):
@@ -1194,7 +1196,7 @@ class DeltaGenerator(object):
         assert not self._generate_new_ids, \
             'Only existing elements can add_rows.'
 
-        from streamlit import data_frame_proto
+        import streamlit.elements.data_frame_proto as data_frame_proto
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
