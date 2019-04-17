@@ -29,7 +29,7 @@ import ImageList from './elements/ImageList';
 import Map from './elements/Map';
 import DeckGlChart from './elements/DeckGlChart';
 import Table from './elements/Table';
-import Text from './elements/Text';
+import { Text } from './elements/Text';
 import VegaLiteChart from './elements/VegaLiteChart';
 import Video from './elements/Video';
 
