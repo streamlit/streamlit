@@ -273,7 +273,10 @@ _create_option(
 _create_option(
     'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
-    default_val=True)
+    default_val=True,
+    deprecated=True,
+    deprecation_text='Use proxy.runOnSave instead.',
+    expiration_date='2019-10-16')
 
 _create_option(
     'proxy.enableCORS',
@@ -289,6 +292,16 @@ _create_option(
         connections.
         ''',
     default_val=8501)
+
+
+@_create_option('proxy.runOnSave', default_val=False)
+def _run_on_save():
+    """Whether to automatically re-run a report when it changes on disk."""
+    if is_manually_set('proxy.runOnSave'):
+        return get_option('proxy.runOnSave')
+    elif is_manually_set('proxy.watchFileSystem'):
+        return get_option('proxy.watchFileSystem')
+    return False
 
 
 # Config Section: Browser #
