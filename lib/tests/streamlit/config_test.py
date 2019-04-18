@@ -254,6 +254,7 @@ class ConfigTest(unittest.TestCase):
             u'proxy.liveSave',
             u'proxy.port',
             u'proxy.reportExpirationSecs',
+            u'proxy.runOnSave',
             u'proxy.useNode',
             u'proxy.watchFileSystem',
             u's3.accessKeyId',

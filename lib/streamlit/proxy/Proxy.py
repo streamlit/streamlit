@@ -524,8 +524,7 @@ class Proxy(object):
     @property
     def _run_on_save_default_value(self):
         """True if ReportSessions have run-on-save enabled by default"""
-        return (config.get_option('proxy.watchFileSystem') and
-                not self._keep_alive)
+        return config.get_option('proxy.runOnSave')
 
     def _get_report_session(self, report_name, create_if_missing=False):
         """Returns the ReportSession for the given report name if it
