@@ -16,6 +16,7 @@ import {SignalConnection} from 'typed-signals';
 
 import {ConnectionState} from './ConnectionState';
 import {ReportEvent, ReportEventDispatcher} from './ReportEvent';
+import {ReportRunState} from './ReportRunState';
 import './StatusWidget.scss';
 
 /** Component props */
@@ -26,8 +27,8 @@ interface Props {
   /** Dispatches transient ReportEvents received from the proxy. */
   reportEventDispatcher: ReportEventDispatcher;
 
-  /** True if the report is currently running. */
-  reportIsRunning: boolean;
+  /** Report's current runstate */
+  reportRunState: ReportRunState;
 
   /**
    * Function called when the user chooses to re-run the report
@@ -45,13 +46,6 @@ interface State {
   minimized: boolean;
 
   /**
-   * If true, the user requested that the running report be stopped.
-   * This is reverted to false in getDerivedStateFromProps when the report
-   * is stopped.
-   */
-  stopRequested: boolean;
-
-  /**
    * If true, the server has told us that the report has changed and is
    * not being automatically re-run; we'll prompt the user to manually
    * re-run when this happens.
@@ -60,9 +54,6 @@ interface State {
    * begins running again.
    */
   reportChangedOnDisk: boolean;
-
-  /** True when the user requested that the report be re-run. */
-  rerunRequested: boolean;
 }
 
 interface ConnectionStateUI {
@@ -77,14 +68,14 @@ export class StatusWidget extends PureComponent<Props, State> {
   /** onReportEvent signal connection */
   private reportEventConn?: SignalConnection;
 
+  private clearEventsTimeoutHandle?: number;
+
   public constructor(props: Props) {
     super(props);
 
     this.state = {
       minimized: StatusWidget.shouldMinimize(),
-      stopRequested: false,
       reportChangedOnDisk: false,
-      rerunRequested: false,
     };
   }
 
@@ -92,14 +83,11 @@ export class StatusWidget extends PureComponent<Props, State> {
   public static getDerivedStateFromProps(props: Props): Partial<State> | null {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
-    if (!props.reportIsRunning) {
-      return {stopRequested: false};
-    } else {
-      return {
-        reportChangedOnDisk: false,
-        rerunRequested: false,
-      };
+    if (props.reportRunState === ReportRunState.RUNNING) {
+      return {reportChangedOnDisk: false};
     }
+
+    return null;
   }
 
   public componentDidMount(): void {
@@ -114,7 +102,24 @@ export class StatusWidget extends PureComponent<Props, State> {
       this.reportEventConn = undefined;
     }
 
+    this.cancelPendingClearEventsTimeout();
+
     window.removeEventListener('scroll', this.handleScroll);
+  }
+
+  /**
+   * Called by StreamlitApp when the 'a' hotkey is pressed.
+   * This simulates a click on the "Always Rerun" button, if that
+   * button is showing.
+   */
+  public handleAlwaysRerunHotkeyPressed = (): void => {
+    if (this.state.reportChangedOnDisk) {
+      this.handleAlwaysRerunClick();
+    }
+  };
+
+  private isConnected(): boolean {
+    return this.props.connectionState === ConnectionState.CONNECTED;
   }
 
   private handleReportEvent(event: ReportEvent): void {
@@ -131,13 +136,20 @@ export class StatusWidget extends PureComponent<Props, State> {
   }
 
   private clearEventsAfterTimeout(): void {
-    window.setTimeout(() => {
-      this.setState({
-        stopRequested: false,
-        reportChangedOnDisk: false,
-        rerunRequested: false,
-      });
+    // Cancel any existing timeout so that any new prompt we
+    // just threw up doesn't disappear prematurely.
+    this.cancelPendingClearEventsTimeout();
+
+    this.clearEventsTimeoutHandle = window.setTimeout(() => {
+      this.setState({reportChangedOnDisk: false});
     }, EVENT_DISPLAY_TIMEOUT_MS);
+  }
+
+  private cancelPendingClearEventsTimeout(): void {
+    if (this.clearEventsTimeoutHandle !== undefined) {
+      window.clearTimeout(this.clearEventsTimeoutHandle);
+      this.clearEventsTimeoutHandle = undefined;
+    }
   }
 
   private static shouldMinimize(): boolean {
@@ -151,18 +163,22 @@ export class StatusWidget extends PureComponent<Props, State> {
   };
 
   public render(): ReactNode {
-    if (this.props.reportIsRunning || this.state.rerunRequested) {
-      // Show reportIsRunning when the report is actually running,
-      // but also when the user has just requested a re-run.
-      // In the latter case, the server should get around to actually
-      // re-running the report in a second or two, but we can appear
-      // more responsive by claiming it's started immemdiately.
-      return this.renderReportIsRunning();
-    } else if (this.state.reportChangedOnDisk) {
-      return this.renderRerunReportPrompt();
-    } else {
-      return this.renderConnectionStatus();
+    if (this.isConnected()) {
+      if (this.props.reportRunState === ReportRunState.RUNNING ||
+        this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
+
+        // Show reportIsRunning when the report is actually running,
+        // but also when the user has just requested a re-run.
+        // In the latter case, the server should get around to actually
+        // re-running the report in a second or two, but we can appear
+        // more responsive by claiming it's started immemdiately.
+        return this.renderReportIsRunning();
+      } else if (this.state.reportChangedOnDisk) {
+        return this.renderRerunReportPrompt();
+      }
     }
+
+    return this.renderConnectionStatus();
   }
 
   /** E.g. "Disconnected [Icon]" */
@@ -195,9 +211,10 @@ export class StatusWidget extends PureComponent<Props, State> {
   private renderReportIsRunning(): ReactNode {
     let stopButton: ReactNode = null;
     if (SHOW_STOP_BUTTON) {
+      const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED;
       stopButton = StatusWidget.promptButton(
-        this.state.stopRequested ? 'Stopping...' : 'Stop',
-        this.state.stopRequested,
+        stopRequested ? 'Stopping...' : 'Stop',
+        stopRequested,
         this.handleStopReportClick);
     }
 
@@ -206,7 +223,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         <div
           id="ReportStatus"
           className={this.state.minimized ? 'minimized' : ''}>
-          <img className="ReportRunningIcon" src="./icon_running.gif" alt="" />
+          <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
           <label>
             Running...
           </label>
@@ -226,6 +243,8 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   /** "Source file changed. [Rerun] [Always Rerun]" */
   private renderRerunReportPrompt(): ReactNode {
+    const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED;
+
     return (
       <div>
         <div id="ReportStatus">
@@ -234,14 +253,14 @@ export class StatusWidget extends PureComponent<Props, State> {
           </label>
 
           {StatusWidget.promptButton(
-            'Rerun',
-            this.state.rerunRequested,
+            <div className="UnderlineFirstLetter">Rerun</div>,
+            rerunRequested,
             this.handleRerunClick
           )}
 
           {StatusWidget.promptButton(
-            'Always rerun',
-            this.state.rerunRequested,
+            <div className="UnderlineFirstLetter">Always rerun</div>,
+            rerunRequested,
             this.handleAlwaysRerunClick
           )}
         </div>
@@ -250,21 +269,18 @@ export class StatusWidget extends PureComponent<Props, State> {
   }
 
   private handleStopReportClick = (): void => {
-    this.setState({stopRequested: true});
     this.props.stopReport();
   };
 
   private handleRerunClick = (): void => {
-    this.setState({rerunRequested: true});
     this.props.rerunReport(false);
   };
 
   private handleAlwaysRerunClick = (): void => {
-    this.setState({rerunRequested: true});
     this.props.rerunReport(true);
   };
 
-  private static promptButton(title: string, disabled: boolean, onClick: () => void): ReactNode {
+  private static promptButton(title: ReactNode, disabled: boolean, onClick: () => void): ReactNode {
     return (
       <Button outline size="sm" color="info" disabled={disabled} onClick={onClick}>
         <div>{title}</div>
@@ -276,7 +292,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     switch (state) {
       case ConnectionState.INITIAL:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#ellipses" />,
+          icon: <use xlinkHref="./open-iconic.min.svg#ellipses"/>,
           label: 'Waiting',
           tooltip: 'Waiting for connection',
         };
@@ -286,7 +302,7 @@ export class StatusWidget extends PureComponent<Props, State> {
 
       case ConnectionState.DISCONNECTED:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#circle-x" />,
+          icon: <use xlinkHref="./open-iconic.min.svg#circle-x"/>,
           label: 'Disconnected',
           tooltip: 'Disconnected from live data feed',
         };
@@ -297,7 +313,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.ERROR:
       default:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#warning" />,
+          icon: <use xlinkHref="./open-iconic.min.svg#warning"/>,
           label: 'Error',
           tooltip: 'Something went wrong!',
         };

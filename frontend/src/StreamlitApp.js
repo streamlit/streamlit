@@ -40,6 +40,7 @@ import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
 import { ConnectionManager } from './ConnectionManager';
 import { ConnectionState } from './ConnectionState';
+import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
 import { ReportEventDispatcher } from './ReportEvent';
 import { setStreamlitVersion } from './baseconsts';
@@ -70,7 +71,7 @@ class StreamlitApp extends PureComponent {
         runOnSave: true,
       },
       showLoginBox: false,
-      reportIsRunning: false,
+      reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
     };
 
@@ -93,6 +94,7 @@ class StreamlitApp extends PureComponent {
 
     this.userLoginResolver = new Resolver();
     this.reportEventDispatcher = new ReportEventDispatcher();
+    this.statusWidgetRef = React.createRef();
 
     this.connectionManager = new ConnectionManager({
       getUserLogin: this.getUserLogin,
@@ -113,6 +115,18 @@ class StreamlitApp extends PureComponent {
     'r': {
       priority: 1,
       handler: () => this.rerunScript(),
+    },
+
+    // 'a' reruns the script, and sets "always rerun" to true,
+    // but only if the StatusWidget is currently prompting the
+    // user to rerun
+    'a': {
+      priority: 1,
+      handler: () => {
+        if (this.statusWidgetRef.current != null) {
+          this.statusWidgetRef.current.handleAlwaysRerunHotkeyPressed();
+        }
+      },
     },
 
     // The shift+r key opens the rerun script dialog.
@@ -222,13 +236,28 @@ class StreamlitApp extends PureComponent {
     const runOnSave = msg.get('runOnSave');
     const reportIsRunning = msg.get('reportIsRunning');
 
-    this.setState(prevState => ({
-      userSettings: {
-        ...prevState.userSettings,
-        runOnSave,
-      },
-      reportIsRunning,
-    }));
+    this.setState(prevState => {
+      // If we have a pending run-state request, only change our reportRunState
+      // if our request has been processed.
+      let reportRunState;
+      if (reportIsRunning) {
+        reportRunState =
+          prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
+            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING;
+      } else {
+        reportRunState =
+          prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
+            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING;
+      }
+
+      return ({
+        userSettings: {
+          ...prevState.userSettings,
+          runOnSave,
+        },
+        reportRunState,
+      });
+    });
   }
 
   /**
@@ -377,28 +406,50 @@ class StreamlitApp extends PureComponent {
    */
   rerunScript(alwaysRunOnSave = false) {
     this.closeDialog();
-    if (this.isProxyConnected()) {
-      trackEventRemotely('rerunScript');
-      this.sendBackMsg({
-        type: 'rerunScript',
-        rerunScript: this.state.commandLine,
-      });
 
-      if (alwaysRunOnSave) {
-        this.saveSettings({...this.state.userSettings, runOnSave: true});
-      }
-    } else {
+    if (!this.isProxyConnected()) {
       console.warn('Cannot rerun script when proxy is disconnected.');
+      return;
     }
+
+    if (this.state.reportRunState === ReportRunState.RUNNING ||
+      this.state.reportRunState === ReportRunState.RERUN_REQUESTED) {
+      // Don't queue up multiple rerunScript requests
+      return;
+    }
+
+    trackEventRemotely('rerunScript');
+
+    this.setState({reportRunState: ReportRunState.RERUN_REQUESTED});
+
+    if (alwaysRunOnSave) {
+      // Update our run-on-save setting *before* calling rerunScript.
+      // The rerunScript message currently blocks all BackMsgs from
+      // being processed until the script has completed executing.
+      this.saveSettings({...this.state.userSettings, runOnSave: true});
+    }
+
+    this.sendBackMsg({
+      type: 'rerunScript',
+      rerunScript: this.state.commandLine,
+    });
   }
 
   /** Requests that the server stop running the report */
   stopReport() {
-    if (this.isProxyConnected()) {
-      this.sendBackMsg({type: 'stopReport', stopReport: true});
-    } else {
+    if (!this.isProxyConnected()) {
       console.warn('Cannot stop report when proxy is disconnected.');
+      return;
     }
+
+    if (this.state.reportRunState === ReportRunState.NOT_RUNNING ||
+      this.state.reportRunState === ReportRunState.STOP_REQUESTED) {
+      // Don't queue up multiple stopReport requests
+      return;
+    }
+
+    this.sendBackMsg({type: 'stopReport', stopReport: true});
+    this.setState({reportRunState: ReportRunState.STOP_REQUESTED});
   }
 
   /**
@@ -483,9 +534,10 @@ class StreamlitApp extends PureComponent {
             <a href="//streamlit.io">Streamlit</a>
           </div>
           <StatusWidget
+            ref={this.statusWidgetRef}
             connectionState={this.state.connectionState}
             reportEventDispatcher={this.reportEventDispatcher}
-            reportIsRunning={this.state.reportIsRunning}
+            reportRunState={this.state.reportRunState}
             rerunReport={this.rerunScript}
             stopReport={this.stopReport}
           />
