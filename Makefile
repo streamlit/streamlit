@@ -1,6 +1,14 @@
 # Black magic to get module directories
 modules := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
+PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
+ANACONDA_VERSION := $(shell ./scripts/anaconda_version.sh only)
+ifdef ANACONDA_VERSION
+PY_VERSION := $(ANACONDA_VERSION)
+else
+PY_VERSION := python-$(PY_VERSION)
+endif
+
 help:
 	@echo "Streamlit Make Commands:"
 	@echo " init         - Run once to install python and js dependencies."
@@ -25,14 +33,6 @@ build: react-build
 
 setup:
 	pip install pip-tools pipenv
-
-PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
-ANACONDA_VERSION := $(shell ./scripts/anaconda_version.sh only)
-ifdef ANACONDA_VERSION
-PY_VERSION := $(ANACONDA_VERSION)
-else
-PY_VERSION := python-$(PY_VERSION)
-endif
 
 pipenv: lib/Pipfile
 # In CircleCI, dont generate Pipfile.lock This is only used for development.

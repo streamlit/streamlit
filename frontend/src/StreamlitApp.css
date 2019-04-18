@@ -114,6 +114,12 @@ header .decoration {
   color: #F63366;
 }
 
+iframe {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
 .streamlit-regular .streamlit-container {
   margin-top: 80px;
 }
