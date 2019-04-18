@@ -13,6 +13,7 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.pyplot
 .. autofunction:: streamlit.altair_chart
 .. autofunction:: streamlit.vega_lite_chart
+.. autofunction:: streamlit.plotly_chart
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.line_chart
 .. autofunction:: streamlit.area_chart

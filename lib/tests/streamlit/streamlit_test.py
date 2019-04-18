@@ -511,6 +511,87 @@ class StreamlitAPITest(unittest.TestCase):
         self.assertEqual(el.imgs.imgs[0].caption, '')
         self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
 
+    def test_st_plotly_chart_simple(self):
+        """Test st.plotly_chart."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+        dg = st.plotly_chart(data)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
+
+    def test_st_plotly_chart_dimensions(self):
+        """Test st.plotly_chart."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+        dg = st.plotly_chart(data, width=100, height=200)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 100)
+        self.assertEqual(el.plotly_chart.height, 200)
+
+    def test_st_plotly_chart_mpl(self):
+        """Test st.plotly_chart can handle Matplotlib figures."""
+        # Matplotlib backend AGG only seems to work with python3
+        # TODO(armando): Make this test work with python2.7
+        if sys.version_info <= (3, 0):
+            return
+
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        plt.plot([10, 20, 30])
+        dg = st.plotly_chart(fig)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
+
+    def test_st_plotly_chart_sharing(self):
+        """Test st.plotly_chart when sending data to Plotly's service."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+
+        with patch('plotly.plotly.plot') as plot_patch:
+            plot_patch.return_value = 'the_url'
+            dg = st.plotly_chart(data, sharing='public')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('figure'), False)
+        self.assertNotEqual(el.plotly_chart.url, 'the_url')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
+
     def test_st_subheader(self):
         """Test st.subheader."""
         dg = st.subheader('some subheader')
@@ -710,6 +791,15 @@ class StreamlitWriteTest(unittest.TestCase):
 
         with patch('streamlit.pyplot') as p:
             st.write(FakePyplot())
+
+            p.assert_called_once()
+
+    def test_plotly(self):
+        import plotly.graph_objs as go
+
+        """Test st.write with plotly object."""
+        with patch('streamlit.plotly_chart') as p:
+            st.write([go.Scatter(x=[1, 2], y=[10, 20])])
 
             p.assert_called_once()
 

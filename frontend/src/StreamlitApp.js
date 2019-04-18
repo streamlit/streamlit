@@ -18,21 +18,6 @@ import {
 import { fromJS } from 'immutable';
 import url from 'url';
 
-// Display Elements
-import Audio from './elements/Audio';
-import Balloons from './elements/Balloons';
-import Chart from './elements/Chart';
-import DataFrame from './elements/DataFrame';
-import DocString from './elements/DocString';
-import ExceptionElement from './elements/ExceptionElement';
-import ImageList from './elements/ImageList';
-import Map from './elements/Map';
-import DeckGlChart from './elements/DeckGlChart';
-import Table from './elements/Table';
-import { Text } from './elements/Text';
-import VegaLiteChart from './elements/VegaLiteChart';
-import Video from './elements/Video';
-
 // Other local imports.
 import LoginBox from './LoginBox';
 import MainMenu from './MainMenu';
@@ -43,6 +28,14 @@ import { ConnectionState } from './ConnectionState';
 import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
 import { ReportEventDispatcher } from './ReportEvent';
+
+// Load (non-lazy) core elements.
+import Chart from './elements/Chart';
+import DocString from './elements/DocString';
+import ExceptionElement from './elements/ExceptionElement';
+import Table from './elements/Table';
+import { Text } from './elements/Text';
+
 import { setStreamlitVersion } from './baseconsts';
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -50,6 +43,17 @@ import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
+
+// Lazy-load display elements.
+const Audio = React.lazy(() => import('./elements/Audio'));
+const Balloons = React.lazy(() => import('./elements/Balloons'));
+const DataFrame = React.lazy(() => import('./elements/DataFrame'));
+const ImageList = React.lazy(() => import('./elements/ImageList'));
+const Map = React.lazy(() => import('./elements/Map'));
+const DeckGlChart = React.lazy(() => import('./elements/DeckGlChart'));
+const PlotlyChart = React.lazy(() => import('./elements/PlotlyChart'));
+const VegaLiteChart = React.lazy(() => import('./elements/VegaLiteChart'));
+const Video = React.lazy(() => import('./elements/Video'));
 
 
 class StreamlitApp extends PureComponent {
@@ -59,13 +63,7 @@ class StreamlitApp extends PureComponent {
     this.state = {
       reportId: '<null>',
       reportName: null,
-      elements: fromJS([{
-        type: 'text',
-        text: {
-          format: TextProto.Format.INFO,
-          body: 'Connecting...',
-        },
-      }]),
+      elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
         runOnSave: true,
@@ -605,6 +603,7 @@ class StreamlitApp extends PureComponent {
           exception: exc => <ExceptionElement element={exc} width={width} />,
           imgs: imgs => <ImageList imgs={imgs} width={width} />,
           map: map => <Map map={map} width={width} />,
+          plotlyChart: el => <PlotlyChart element={el} width={width} />,
           progress: p => <Progress value={p.get('value')} style={{width}} />,
           table: df => <Table df={df} width={width} />,
           text: text => <Text element={text} width={width} />,
@@ -618,7 +617,18 @@ class StreamlitApp extends PureComponent {
       <div style={{ width }} className="footer" />
     ).flatMap((element, indx) => {
       if (element) {
-        return [<div className="element-container" key={indx}>{element}</div>];
+        return [
+          <React.Suspense
+            fallback={<Text
+              element={makeElementWithInfoText('Loading...').get('text')}
+              width={width}
+            />}
+            className="element-container"
+            key={indx}
+          >
+            {element}
+          </React.Suspense>,
+        ];
       } else {
         return [];
       }
@@ -667,6 +677,17 @@ function handleAddRowsMessage(element, namedDataSet) {
  */
 function isEmbeddedInIFrame() {
   return url.parse(window.location.href, true).query.embed === 'true';
+}
+
+
+function makeElementWithInfoText(text) {
+  return fromJS({
+    type: 'text',
+    text: {
+      format: TextProto.Format.INFO,
+      body: text,
+    },
+  });
 }
 
 

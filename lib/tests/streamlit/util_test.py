@@ -13,10 +13,12 @@ import unittest
 
 import pytest
 
-from mock import patch, mock_open
+from mock import patch, mock_open, mock
 
 from streamlit import util
 from streamlit.compatibility import running_py3
+
+import plotly.graph_objs as go
 
 
 class UtilTest(unittest.TestCase):
@@ -84,3 +86,77 @@ class UtilTest(unittest.TestCase):
                 'See https://bugs.python.org/issue24658'
             )
             self.assertEqual(str(e.value), error_msg)
+
+    def test_list_is_plotly_chart(self):
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+        trace1 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[16, 5, 11, 9]
+        )
+        data = [trace0, trace1]
+
+        res = util.is_plotly_chart(data)
+        self.assertTrue(res)
+
+    def test_data_dict_is_plotly_chart(self):
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+        trace1 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[16, 5, 11, 9]
+        )
+        d = {
+            'data': [trace0, trace1],
+        }
+
+        res = util.is_plotly_chart(d)
+        self.assertTrue(res)
+
+    def test_dirty_data_dict_is_not_plotly_chart(self):
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+        trace1 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[16, 5, 11, 9]
+        )
+        d = {
+            'data': [trace0, trace1],
+            'foo': 'bar',  # Illegal property!
+        }
+
+        res = util.is_plotly_chart(d)
+        self.assertFalse(res)
+
+    def test_layout_dict_is_not_plotly_chart(self):
+        d = {
+            # Missing a component with a graph object!
+
+            'layout': {
+                'width': 1000,
+            },
+        }
+
+        res = util.is_plotly_chart(d)
+        self.assertFalse(res)
+
+    def test_fig_is_plotly_chart(self):
+        trace1 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[16, 5, 11, 9]
+        )
+
+        # Plotly 3.7 needs to read the config file at /home/.plotly when
+        # creating an image. So let's mock that part of the Figure creation:
+        with patch('plotly.offline.offline._get_jconfig') as mock:
+            mock.return_value = {}
+            fig = go.Figure(data=[trace1])
+
+        res = util.is_plotly_chart(fig)
+        self.assertTrue(res)
