@@ -618,16 +618,19 @@ class StreamlitApp extends PureComponent {
     ).flatMap((element, indx) => {
       if (element) {
         return [
-          <React.Suspense
-            fallback={<Text
-              element={makeElementWithInfoText('Loading...').get('text')}
-              width={width}
-            />}
+          <div
             className="element-container"
             key={indx}
-          >
-            {element}
-          </React.Suspense>,
+            >
+            <React.Suspense
+              fallback={<Text
+                element={makeElementWithInfoText('Loading...').get('text')}
+                width={width}
+              />}
+            >
+              {element}
+            </React.Suspense>
+          </div>,
         ];
       } else {
         return [];
