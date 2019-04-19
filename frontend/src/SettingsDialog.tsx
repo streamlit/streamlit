@@ -67,11 +67,13 @@ class SettingsDialog extends PureComponent<Props, UserSettings> {
 
         <ModalFooter>
           <Button
+            outline
             color="secondary"
             onClick={this.handleCancelButtonClick}>
             Cancel
           </Button>
           <Button
+            outline
             color="primary"
             onClick={this.handleSaveButtonClick}>
             Save

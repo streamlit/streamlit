@@ -27,7 +27,7 @@ LOGGER = get_logger(__name__)
 
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
-# file be the same order as the sections appear with `streamlit show_config`)
+# file be the same order as the sections appear with `streamlit config show`)
 _section_descriptions = collections.OrderedDict(
     _test='Special test section just used for unit tests.',
 )
@@ -273,7 +273,10 @@ _create_option(
 _create_option(
     'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
-    default_val=True)
+    default_val=True,
+    deprecated=True,
+    deprecation_text='Use proxy.runOnSave instead.',
+    expiration_date='2019-10-16')
 
 _create_option(
     'proxy.enableCORS',
@@ -289,6 +292,16 @@ _create_option(
         connections.
         ''',
     default_val=8501)
+
+
+@_create_option('proxy.runOnSave', default_val=False)
+def _run_on_save():
+    """Whether to automatically re-run a report when it changes on disk."""
+    if is_manually_set('proxy.runOnSave'):
+        return get_option('proxy.runOnSave')
+    elif is_manually_set('proxy.watchFileSystem'):
+        return get_option('proxy.watchFileSystem')
+    return False
 
 
 # Config Section: Browser #
@@ -454,7 +467,7 @@ def set_option(key, value):
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit show_config` on a terminal.
+        available options, run `streamlit config show` on a terminal.
 
     value
         The new value to assign to this config option.
@@ -470,7 +483,7 @@ def get_option(key):
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit show_config` on a terminal.
+        available options, run `streamlit config show` on a terminal.
 
     """
     if key not in _config_options:

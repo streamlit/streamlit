@@ -7,8 +7,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import dict_builder
 from streamlit import case_converters
+import streamlit.elements.lib.dict_builder as dict_builder
 
 # Set of ReChart chart types accepted by Streamlit.
 CHART_TYPES = set([

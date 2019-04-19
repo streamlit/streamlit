@@ -8,7 +8,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from .ProxyConnection import ProxyConnection
+from .ClientConnection import ClientConnection
 from .BrowserWebSocket import BrowserWebSocket
 from .ClientWebSocket import ClientWebSocket
 from .Proxy import Proxy

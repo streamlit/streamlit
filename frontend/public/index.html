@@ -30,6 +30,20 @@
       integrity="sha512-/Nsx9X4HebavoBvEBuyp3I7od5tA0UzAxs+j83KgC8PU0kgB4XiK4Lfe4y4cgBtaRJQEIFCW+oC506aPT2L1zw=="
       crossorigin=""
     ></script>
+
+    <!-- Ipify code to set IP address -->
+    <script type="application/javascript">
+      var BROWSER_IP_ADDRESS;
+      function setBrowserIP(json) {
+        if (BROWSER_IP_ADDRESS != null) {
+          throw new Error('Browser IP address is already set');
+        }
+
+        BROWSER_IP_ADDRESS = json.ip;
+      }
+    </script>
+    <script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=setBrowserIP"></script>
+
   </head>
   <body>
     <noscript>
