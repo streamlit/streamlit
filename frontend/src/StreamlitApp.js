@@ -621,7 +621,7 @@ class StreamlitApp extends PureComponent {
           <div
             className="element-container"
             key={indx}
-            >
+          >
             <React.Suspense
               fallback={<Text
                 element={makeElementWithInfoText('Loading...').get('text')}
