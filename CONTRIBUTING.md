@@ -375,7 +375,7 @@ https://streamlit.io.
   Now clean up:
 
   ```bash
-  (streamlit-dev) $ streamlit kill proxy
+  (streamlit-dev) $ streamlit proxy kill
   (streamlit-dev) $ conda deactivate
   $ conda env remove -n streamlit-dev
   ```
