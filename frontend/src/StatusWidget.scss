@@ -102,3 +102,7 @@
   height: $line-height-base * 1rem;
   margin-right: -0.5rem;
 }
+
+.UnderlineFirstLetter::first-letter {
+  text-decoration: underline;
+}

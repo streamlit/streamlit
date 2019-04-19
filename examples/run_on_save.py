@@ -5,15 +5,15 @@ import streamlit as st
 import time
 
 st.title('Test of run-on-save')
-
 secs_to_wait = 5
 
 st.write('''
 How to test this:
 
-1. Make sure this page changes every few seconds
-2. Turn off run-on-save, and try using the "Rerun"/"Always rerun" buttons
-   in the status area.
+1. If run-on-save is on, make sure the page changes every few seconds. Then
+   turn run-on-save off in the settigns menu and check (2).
+2. If run-on-save is off, make sure "Rerun"/"Always rerun" buttons appear in
+   the status area. Click "Always rerun" and check (1).
 ''')
 
 st.write('This should change every ', secs_to_wait, ' seconds: ', random())
@@ -53,4 +53,4 @@ os.system(cmd)
 
 status.text('Touched %s' % __file__)
 
-# MODIFIED AT: 1555101434.5799108
+# MODIFIED AT: 1555712286.7003388

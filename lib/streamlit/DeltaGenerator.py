@@ -206,7 +206,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.PLAIN
 
     @_with_element
@@ -376,7 +376,7 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.ERROR
 
     @_with_element
@@ -393,7 +393,7 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.WARNING
 
     @_with_element
@@ -410,7 +410,7 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.INFO
 
     @_with_element
@@ -427,7 +427,7 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.SUCCESS
 
     @_with_element
@@ -734,8 +734,91 @@ class DeltaGenerator(object):
         vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
 
     @_with_element
+    def plotly_chart(
+            self, element, figure_or_data, width=0, height=0,
+            sharing='streamlit', **kwargs):
+        """Display an interactive Plotly chart.
+
+        Plotly is a charting library for Python. The arguments to this function
+        closely follow the ones for Plotly's `plot()` function. You can find
+        more about Plotly at https://plot.ly/python.
+
+        Parameters
+        ----------
+        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
+            dict/list of plotly.graph_objs.Figure/Data, or
+            matplotlib.figure.Figure
+
+            See https://plot.ly/python/ for examples of graph descriptions.
+
+            If a Matplotlib Figure, converts it to a Plotly figure and displays
+            it.
+
+        width : int
+            The chart width in pixels, or 0 for full width.
+
+        height : int
+            The chart width in pixels, or 0 for default height.
+
+        sharing : {'streamlit', 'private', 'secret', 'public'}
+            Use 'streamlit' to insert the plot and all its dependencies
+            directly in the Streamlit report, which means it works offline too.
+            This is the default.
+            Use any other sharing mode to send the report to Plotly's servers,
+            and embed the result into the Streamlit report. See
+            https://plot.ly/python/privacy/ for more. Note that these sharing
+            modes require a Plotly account.
+
+        **kwargs
+            Any argument accepted by Plotly's `plot()` function.
+
+        To show Plotly charts in Streamlit, just call `st.plotly_chart`
+        wherever you would call Plotly's `py.plot` or `py.iplot`.
+
+        Example
+        -------
+
+        The example below comes straight from the examples at
+        https://plot.ly/python:
+
+        >>> import streamlit as st
+        >>> import plotly.plotly as py
+        >>> import plotly.figure_factory as ff
+        >>> import numpy as np
+        >>>
+        >>> # Add histogram data
+        >>> x1 = np.random.randn(200) - 2
+        >>> x2 = np.random.randn(200)
+        >>> x3 = np.random.randn(200) + 2
+        >>>
+        >>> # Group data together
+        >>> hist_data = [x1, x2, x3]
+        >>>
+        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
+        >>>
+        >>> # Create distplot with custom bin_size
+        >>> fig = ff.create_distplot(
+        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
+        >>>
+        >>> # Plot!
+        >>> st.plotly_chart(fig)
+
+        .. output::
+           https://share.streamlit.io/0.32.0-2KznC/index.html?id=NbyKJnNQ2XcrpWTno643uD
+           height: 400px
+
+        """
+        # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
+        # for their main parameter. I don't like the name, but its best to keep
+        # it in sync with what Plotly calls it.
+        import streamlit.elements.plotly_chart as plotly_chart
+        plotly_chart.marshall(
+            element.plotly_chart, figure_or_data, width, height, sharing,
+            **kwargs)
+
+    @_with_element
     def pyplot(self, element, fig=None, **kwargs):
-        """Display a matplotlib.pyplot image.
+        """Display a matplotlib.pyplot figure.
 
         Parameters
         ----------

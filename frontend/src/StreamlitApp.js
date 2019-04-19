@@ -18,21 +18,6 @@ import {
 import { fromJS } from 'immutable';
 import url from 'url';
 
-// Display Elements
-import Audio from './elements/Audio';
-import Balloons from './elements/Balloons';
-import Chart from './elements/Chart';
-import DataFrame from './elements/DataFrame';
-import DocString from './elements/DocString';
-import ExceptionElement from './elements/ExceptionElement';
-import ImageList from './elements/ImageList';
-import Map from './elements/Map';
-import DeckGlChart from './elements/DeckGlChart';
-import Table from './elements/Table';
-import Text from './elements/Text';
-import VegaLiteChart from './elements/VegaLiteChart';
-import Video from './elements/Video';
-
 // Other local imports.
 import LoginBox from './LoginBox';
 import MainMenu from './MainMenu';
@@ -40,8 +25,17 @@ import Resolver from './Resolver';
 import StreamlitDialog from './StreamlitDialog';
 import { ConnectionManager } from './ConnectionManager';
 import { ConnectionState } from './ConnectionState';
+import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
 import { ReportEventDispatcher } from './ReportEvent';
+
+// Load (non-lazy) core elements.
+import Chart from './elements/Chart';
+import DocString from './elements/DocString';
+import ExceptionElement from './elements/ExceptionElement';
+import Table from './elements/Table';
+import { Text } from './elements/Text';
+
 import { setStreamlitVersion } from './baseconsts';
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
@@ -49,6 +43,17 @@ import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
+
+// Lazy-load display elements.
+const Audio = React.lazy(() => import('./elements/Audio'));
+const Balloons = React.lazy(() => import('./elements/Balloons'));
+const DataFrame = React.lazy(() => import('./elements/DataFrame'));
+const ImageList = React.lazy(() => import('./elements/ImageList'));
+const Map = React.lazy(() => import('./elements/Map'));
+const DeckGlChart = React.lazy(() => import('./elements/DeckGlChart'));
+const PlotlyChart = React.lazy(() => import('./elements/PlotlyChart'));
+const VegaLiteChart = React.lazy(() => import('./elements/VegaLiteChart'));
+const Video = React.lazy(() => import('./elements/Video'));
 
 
 class StreamlitApp extends PureComponent {
@@ -58,19 +63,13 @@ class StreamlitApp extends PureComponent {
     this.state = {
       reportId: '<null>',
       reportName: null,
-      elements: fromJS([{
-        type: 'text',
-        text: {
-          format: TextProto.Format.INFO,
-          body: 'Connecting...',
-        },
-      }]),
+      elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
         runOnSave: true,
       },
       showLoginBox: false,
-      reportIsRunning: false,
+      reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
     };
 
@@ -93,6 +92,7 @@ class StreamlitApp extends PureComponent {
 
     this.userLoginResolver = new Resolver();
     this.reportEventDispatcher = new ReportEventDispatcher();
+    this.statusWidgetRef = React.createRef();
 
     this.connectionManager = new ConnectionManager({
       getUserLogin: this.getUserLogin,
@@ -113,6 +113,18 @@ class StreamlitApp extends PureComponent {
     'r': {
       priority: 1,
       handler: () => this.rerunScript(),
+    },
+
+    // 'a' reruns the script, and sets "always rerun" to true,
+    // but only if the StatusWidget is currently prompting the
+    // user to rerun
+    'a': {
+      priority: 1,
+      handler: () => {
+        if (this.statusWidgetRef.current != null) {
+          this.statusWidgetRef.current.handleAlwaysRerunHotkeyPressed();
+        }
+      },
     },
 
     // The shift+r key opens the rerun script dialog.
@@ -222,13 +234,28 @@ class StreamlitApp extends PureComponent {
     const runOnSave = msg.get('runOnSave');
     const reportIsRunning = msg.get('reportIsRunning');
 
-    this.setState(prevState => ({
-      userSettings: {
-        ...prevState.userSettings,
-        runOnSave,
-      },
-      reportIsRunning,
-    }));
+    this.setState(prevState => {
+      // If we have a pending run-state request, only change our reportRunState
+      // if our request has been processed.
+      let reportRunState;
+      if (reportIsRunning) {
+        reportRunState =
+          prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
+            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING;
+      } else {
+        reportRunState =
+          prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
+            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING;
+      }
+
+      return ({
+        userSettings: {
+          ...prevState.userSettings,
+          runOnSave,
+        },
+        reportRunState,
+      });
+    });
   }
 
   /**
@@ -377,28 +404,50 @@ class StreamlitApp extends PureComponent {
    */
   rerunScript(alwaysRunOnSave = false) {
     this.closeDialog();
-    if (this.isProxyConnected()) {
-      trackEventRemotely('rerunScript');
-      this.sendBackMsg({
-        type: 'rerunScript',
-        rerunScript: this.state.commandLine,
-      });
 
-      if (alwaysRunOnSave) {
-        this.saveSettings({...this.state.userSettings, runOnSave: true});
-      }
-    } else {
+    if (!this.isProxyConnected()) {
       console.warn('Cannot rerun script when proxy is disconnected.');
+      return;
     }
+
+    if (this.state.reportRunState === ReportRunState.RUNNING ||
+      this.state.reportRunState === ReportRunState.RERUN_REQUESTED) {
+      // Don't queue up multiple rerunScript requests
+      return;
+    }
+
+    trackEventRemotely('rerunScript');
+
+    this.setState({reportRunState: ReportRunState.RERUN_REQUESTED});
+
+    if (alwaysRunOnSave) {
+      // Update our run-on-save setting *before* calling rerunScript.
+      // The rerunScript message currently blocks all BackMsgs from
+      // being processed until the script has completed executing.
+      this.saveSettings({...this.state.userSettings, runOnSave: true});
+    }
+
+    this.sendBackMsg({
+      type: 'rerunScript',
+      rerunScript: this.state.commandLine,
+    });
   }
 
   /** Requests that the server stop running the report */
   stopReport() {
-    if (this.isProxyConnected()) {
-      this.sendBackMsg({type: 'stopReport', stopReport: true});
-    } else {
+    if (!this.isProxyConnected()) {
       console.warn('Cannot stop report when proxy is disconnected.');
+      return;
     }
+
+    if (this.state.reportRunState === ReportRunState.NOT_RUNNING ||
+      this.state.reportRunState === ReportRunState.STOP_REQUESTED) {
+      // Don't queue up multiple stopReport requests
+      return;
+    }
+
+    this.sendBackMsg({type: 'stopReport', stopReport: true});
+    this.setState({reportRunState: ReportRunState.STOP_REQUESTED});
   }
 
   /**
@@ -483,9 +532,10 @@ class StreamlitApp extends PureComponent {
             <a href="//streamlit.io">Streamlit</a>
           </div>
           <StatusWidget
+            ref={this.statusWidgetRef}
             connectionState={this.state.connectionState}
             reportEventDispatcher={this.reportEventDispatcher}
-            reportIsRunning={this.state.reportIsRunning}
+            reportRunState={this.state.reportRunState}
             rerunReport={this.rerunScript}
             stopReport={this.stopReport}
           />
@@ -553,6 +603,7 @@ class StreamlitApp extends PureComponent {
           exception: exc => <ExceptionElement element={exc} width={width} />,
           imgs: imgs => <ImageList imgs={imgs} width={width} />,
           map: map => <Map map={map} width={width} />,
+          plotlyChart: el => <PlotlyChart element={el} width={width} />,
           progress: p => <Progress value={p.get('value')} style={{width}} />,
           table: df => <Table df={df} width={width} />,
           text: text => <Text element={text} width={width} />,
@@ -566,7 +617,21 @@ class StreamlitApp extends PureComponent {
       <div style={{ width }} className="footer" />
     ).flatMap((element, indx) => {
       if (element) {
-        return [<div className="element-container" key={indx}>{element}</div>];
+        return [
+          <div
+            className="element-container"
+            key={indx}
+            >
+            <React.Suspense
+              fallback={<Text
+                element={makeElementWithInfoText('Loading...').get('text')}
+                width={width}
+              />}
+            >
+              {element}
+            </React.Suspense>
+          </div>,
+        ];
       } else {
         return [];
       }
@@ -615,6 +680,17 @@ function handleAddRowsMessage(element, namedDataSet) {
  */
 function isEmbeddedInIFrame() {
   return url.parse(window.location.href, true).query.embed === 'true';
+}
+
+
+function makeElementWithInfoText(text) {
+  return fromJS({
+    type: 'text',
+    text: {
+      format: TextProto.Format.INFO,
+      body: text,
+    },
+  });
 }
 
 

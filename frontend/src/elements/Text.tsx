@@ -5,19 +5,34 @@
  * @fileoverview Represents formatted text.
  */
 
-import React, { PureComponent } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, {PureComponent, ReactNode} from 'react';
 import ReactJson from 'react-json-view';
-import { Alert } from 'reactstrap';
-import { Text as TextProto } from '../protobuf';
+import ReactMarkdown from 'react-markdown';
+import {Alert} from 'reactstrap';
+import {Text as TextProto} from '../protobuf';
 import CodeBlock from './CodeBlock';
 import './Text.css';
+
+function getAlertCSSClass(format: TextProto.Format): string | undefined {
+  switch (format) {
+    case TextProto.Format.ERROR:    return 'alert-danger';
+    case TextProto.Format.WARNING:  return 'alert-warning';
+    case TextProto.Format.INFO:     return 'alert-info';
+    case TextProto.Format.SUCCESS:  return 'alert-success';
+  }
+  return undefined;
+}
+
+interface Props {
+  element: any; // An ElementProto that's been immutablejs-ified
+  width: number;
+}
 
 /**
  * Functional element representing formatted text.
  */
-class Text extends PureComponent {
-  render() {
+export class Text extends PureComponent<Props> {
+  public render(): ReactNode {
     const {element, width} = this.props;
     const body = element.get('body');
     const format = element.get('format');
@@ -79,15 +94,11 @@ class Text extends PureComponent {
       case TextProto.Format.WARNING:
       case TextProto.Format.INFO:
       case TextProto.Format.SUCCESS:
-        const alertType = {
-          [TextProto.Format.ERROR]: 'alert-danger',
-          [TextProto.Format.WARNING]: 'alert-warning',
-          [TextProto.Format.INFO]: 'alert-info',
-          [TextProto.Format.SUCCESS]: 'alert-success',
-        }[format];
         return (
-          <div className={`alert ${alertType}`} style={{width}}>
-            {body}
+          <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
+            <div className="markdown-text-container">
+              <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
+            </div>
           </div>
         );
       // Default
@@ -100,4 +111,3 @@ class Text extends PureComponent {
     }
   }
 }
-export default Text;

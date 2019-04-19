@@ -236,7 +236,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.33.0`.
+**Note:** The current version is `0.34.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -375,7 +375,7 @@ https://streamlit.io.
   Now clean up:
 
   ```bash
-  (streamlit-dev) $ streamlit kill proxy
+  (streamlit-dev) $ streamlit proxy kill
   (streamlit-dev) $ conda deactivate
   $ conda env remove -n streamlit-dev
   ```
@@ -424,7 +424,7 @@ $ git push remote master
 
 # Update develop
 $ git checkout release
-$ git push origin release-<version number>
+$ git push origin release:release-<version number>
 # Then make a PR and get it merged as usual!
 ```
 
