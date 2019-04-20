@@ -30,6 +30,8 @@ export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV;
  */
 export let STREAMLIT_VERSION = null;
 
+export let INSTALLATION_ID = null;
+
 /**
  * The WAN-facing IP address of the machine this browser is in.
  */
@@ -63,4 +65,13 @@ export function setStreamlitVersion(version) {
 
   STREAMLIT_VERSION = version;
   logMessage('Streamlit version: ', STREAMLIT_VERSION);
+}
+
+export function setInstallationId(installationId) {
+  if (INSTALLATION_ID != null) {
+    throw new Error('Streamlit installationId is already set');
+  }
+
+  INSTALLATION_ID = installationId;
+  console.log('Streamlit installationId: ', INSTALLATION_ID);
 }
