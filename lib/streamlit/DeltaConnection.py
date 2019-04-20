@@ -13,7 +13,7 @@ import sys
 import urllib
 
 from streamlit import config
-from streamlit import streamlit_msg_proto
+from streamlit import forward_msg_proto
 from streamlit import util
 from streamlit.Connection import Connection
 from streamlit.DeltaGenerator import DeltaGenerator
@@ -151,7 +151,7 @@ def _build_new_report_msg(report_id):
     if filename not in ('<stdin>', '<string>'):
         source_file_path = os.path.realpath(filename)
 
-    return streamlit_msg_proto.new_report_msg(
+    return forward_msg_proto.new_report_msg(
         report_id=report_id,
         cwd=os.getcwd(),
         command_line=sys.argv,

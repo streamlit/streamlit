@@ -7,7 +7,7 @@ setup_2_3_shims(globals())
 
 import streamlit as st
 from streamlit import config
-from streamlit.Chart import Chart
+from streamlit.elements.Chart import Chart
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten

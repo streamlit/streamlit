@@ -217,53 +217,59 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 It's a good idea to start a new local branch before doing a release so you can
 cherrypick fixes into it if needed, without impacting develop.
 
-```
-git checkout develop
-git pull remote develop
-git checkout -b release
+```bash
+$ git checkout develop
+$ git pull remote develop
+$ git checkout -b release
 ```
 
 #### Make Sure You Don't Have the Proxy Running
 
 Run:
 
+```bash
+$ streamlit proxy kill
+$ ps -ef | grep -i python
 ```
-streamlit proxy kill
-ps -ef | grep -i python
-```
+
 and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.32.0`.
+**Note:** The current version is `0.34.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
 [script](scripts/update_version.py) for more details but its usage is
 very simple.
+
 ```
 $ python scripts/update_version.py 1.2.3
 ```
 
 #### Test that Static Loading works
 
-```
+```bash
 open http://localhost:3000/?id=example
 ```
 
 #### Build Streamlit and Test It Without Node
 
 Build Streamlit so that it can run without the Node development server:
-```
+
+```bash
 make build
 ```
+
 Test that it works:
-```
+
+```bash
 make install
 make pytest
 streamlit proxy kill
 python admin/test_streamlit.py
 ```
+
 Check that all elements and figures work properly and the browser connection
 should run over port `8501`.
 
@@ -273,12 +279,14 @@ should run over port `8501`.
 
 Make the wheel:
 
-```
+```bash
 make install   # must be in 'install' mode before making wheel
 make wheel
 ```
+
 Test in in a **fresh 2.7 install**:
-```
+
+```bash
 cd ../streamlit-staging
 pip install ../streamlit/lib/dist/streamlit-0.20.0-py3-none-any.whl
 streamlit proxy kill  # Just in case.
@@ -293,6 +301,7 @@ python -m streamlit cache clear
 python ../streamlit/examples/mnist-cnn.py
 python -c 'import streamlit as st; st.write("testing")'
 ```
+
 Also, if possible, test the wheel in:
 - A fresh 3.6 install.
 - On Linux
@@ -306,8 +315,8 @@ always up to date.
 
 First, you should see whether the docs look right on your local machine:
 
-```
-make devel-docs
+```bash
+$ make devel-docs
 ```
 
 ...now check out http://localhost:8000 and browse around to see if there are
@@ -315,8 +324,8 @@ any obvious issues.
 
 If everything is good, let's push it to S3!
 
-```
-make publish-docs
+```bash
+$ make publish-docs
 ```
 
 NOTE: You may have to clear your browser's cache to see changes in
@@ -326,54 +335,72 @@ https://streamlit.io.
 
 * First sync from s3 the existing repo.  This is needed because we have
   to rebuild the index with the old contents.
-```
-$ aws s3 sync \
-    s3://repo.streamlit.io/streamlit-forge/ \
-    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
-    --profile streamlit
-```
+
+  ```bash
+  $ aws s3 sync \
+      s3://repo.streamlit.io/streamlit-forge/ \
+      $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+      --profile streamlit
+  ```
 
 * You should not be in a pyenv or virtualenv.  You should have anaconda3
-installed so that conda is in your path before running the next command
-which will build the conda packages.  The packages will be in
-streamlit/conda/streamlit-forge
-```
-$ make create-conda-packages
-```
+  installed so that conda is in your path before running the next command
+  which will build the conda packages.  The packages will be in
+  streamlit/conda/streamlit-forge
+
+  ```bash
+  $ make create-conda-packages
+  ```
 
 * Now you should test that these packages actually work by temporarily
   serving the packages locally.
-```
-$ make serve-conda
-```
+
+  ```bash
+  $ make serve-conda
+  ```
 
 * There's a file called [conda/streamlit-dev.yml](conda/streamlit-dev.yml)
-that can be used to create a conda virtual environment.
-```
-$ conda env create -f conda/streamlit-dev.yml
-$ conda activate streamlit-dev
-(streamlit-dev) $ streamlit hello
-```
+  that can be used to create a conda virtual environment.
+
+  ```bash
+  $ streamlit version
+
+    Command not found
+
+  $ conda env create -f conda/streamlit-dev.yml
+  $ conda activate streamlit-dev
+  (streamlit-dev) $ streamlit hello
+  ```
+
+  Now clean up:
+
+  ```bash
+  (streamlit-dev) $ streamlit proxy kill
+  (streamlit-dev) $ conda deactivate
+  $ conda env remove -n streamlit-dev
+  ```
 
 * Sync back to s3
-```
-$ aws s3 sync \
-    $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
-    s3://repo.streamlit.io/streamlit-forge/ \
-    --acl public-read \
-    --profile streamlit
 
-$ aws cloudfront create-invalidation \
-      --distribution-id=E3V3HGGB52ZUA0 \
-      --paths '/*' \
+  ```bash
+  $ aws s3 sync \
+      $(git rev-parse --show-toplevel)/conda/streamlit-forge/ \
+      s3://repo.streamlit.io/streamlit-forge/ \
+      --acl public-read \
       --profile streamlit
-```
+
+  $ aws cloudfront create-invalidation \
+        --distribution-id=E3V3HGGB52ZUA0 \
+        --paths '/*' \
+        --profile streamlit
+  ```
 
 #### Distribute the Wheel
 
+```bash
+$ make distribute
 ```
-make distribute
-```
+
 Then test it on Mac and Linux.
 
 #### Post the Release Notes to Slack
@@ -382,22 +409,22 @@ Post the release notes and declare victory!
 
 #### Create a New Tag for this Version
 
-```
-git commit -am "version <version number>"
+```bash
+$ git commit -am "version <version number>"
 
 # Create new tag
-git tag <version number>
-git push remote <version number>
+$ git tag <version number>
+$ git push remote <version number>
 
 # Update master
-git checkout master
-git pull remote master
-git merge release
-git push remote master
+$ git checkout master
+$ git pull remote master
+$ git merge release
+$ git push remote master
 
 # Update develop
-git checkout release
-git push origin release-<version number>
+$ git checkout release
+$ git push origin release:release-<version number>
 # Then make a PR and get it merged as usual!
 ```
 
@@ -405,14 +432,16 @@ git push origin release-<version number>
 
 If everything works and you want to go back to coding, then revert to
 development mode by typing:
-```
-make develop
+
+```bash
+$ make develop
 ```
 
 ## Troubleshooting
 
 * On Mac OS Mojave, pyenv fails to install python versions with "zlib not available"
-  ```
+
+  ```bash
   $ xcode-select --install
   $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
   ```
@@ -420,9 +449,9 @@ make develop
 
 * Unable to run unittests (pytest not installed)
 
-Ensure the Pipfile's dev packages are installed
+  Ensure the Pipfile's dev packages are installed
 
-```
-$ cd lib
-$ pipenv install --dev
-```
+  ```bash
+  $ cd lib
+  $ pipenv install --dev
+  ```

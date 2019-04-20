@@ -1,89 +1,81 @@
 /**
  * @license
  * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @fileoverview Manages our connection to the Proxy.
  */
 
-import PropTypes from 'prop-types';
-import React, { PureComponent } from 'react';
 import url from 'url';
 
-import ConnectionState from './ConnectionState';
-import ConnectionStatus from './ConnectionStatus';
+import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
+import {ConnectionState} from './ConnectionState';
+import {configureCredentials, getObject} from './s3helper';
 import StaticConnection from './StaticConnection';
 import WebsocketConnection from './WebsocketConnection';
-import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from './baseconsts';
-import { getObject, configureCredentials } from './s3helper';
 
+interface Props {
+  /**
+   * Function that shows the user a login box and returns a promise which
+   * gets resolved when the user goes through the login flow.
+   */
+  getUserLogin: () => Promise<string>;
 
-export default class ConnectionManager extends PureComponent {
-  constructor(props) {
-    super(props);
+  /**
+   * Function to be called when we receive a message from the proxy.
+   */
+  onMessage: (message: any) => void;
 
-    this.state = {
-      connectionState: ConnectionState.INITIAL,
-    };
+  /**
+   * Function to be called when the connection errors out.
+   */
+  onConnectionError: (errorMessage: string) => void;
 
-    this.connection = null;
-    this.getUserLogin = props.getUserLogin;
-    this.onMessage = props.onMessage;
-    this.onConnectionError = props.onConnectionError;
-    this.setReportName = props.setReportName;
+  /**
+   * Function that should be called to set the current report's name in the
+   * parent component.
+   */
+  setReportName: (reportName: string) => void;
 
-    this.setConnectionState = this.setConnectionState.bind(this);
+  /**
+   * Called when our ConnectionState is changed.
+   */
+  connectionStateChanged: (connectionState: ConnectionState) => void;
+}
 
-    // The method below returns a promise, but no need to "await" it.
+/**
+ * Params for our setConnectionState function
+ */
+interface SetConnectionStateParams {
+  connectionState: ConnectionState;
+  errMsg?: string;
+}
+
+export class ConnectionManager {
+  private readonly props: Props;
+  private connection?: WebsocketConnection | StaticConnection;
+  private connectionState: ConnectionState = ConnectionState.INITIAL;
+
+  public constructor(props: Props) {
+    this.props = props;
+
+    // This method returns a promise, but we don't care about its result.
     this.connect();
   }
-
-  static get propTypes() {
-    return {
-      /**
-       * Function that shows the user a login box and returns a promise which
-       * gets resolved when the user goes through the login flow.
-       * Arguments: none.
-       */
-      getUserLogin: PropTypes.func.isRequired,
-
-      /**
-       * Function that should be called when we receive a message from the
-       * proxy.
-       * Arguments: the message object.
-       */
-      onMessage: PropTypes.func.isRequired,
-
-      /**
-       * Function that should be called when the connection errors out.
-       * Arguments: the error message as a string.
-       */
-      onConnectionError: PropTypes.func.isRequired,
-
-      /**
-       * Function that should called to set the current report's name in the
-       * parent component.
-       * Arguments: the report name as a string.
-       */
-      setReportName: PropTypes.func.isRequired,
-    };
-  }
-
-  render() {
-    return (
-      <ConnectionStatus connectionState={this.state.connectionState} />
-    );
-  }
-
-  // Public methods.
 
   /**
    * Indicates whether we're connected to the proxy.
    */
-  isConnected() {
-    return this.state.connectionState === ConnectionState.CONNECTED;
+  public isConnected(): boolean {
+    return this.connectionState === ConnectionState.CONNECTED;
   }
 
-  sendMessage(obj) {
+  public isStaticConnection(): boolean {
+    return this.connectionState === ConnectionState.STATIC;
+  }
+
+  public sendMessage(obj: any): void {
     if (this.connection instanceof WebsocketConnection &&
-        this.isConnected()) {
+      this.isConnected()) {
       this.connection.sendMessage(obj);
     } else {
       // Don't need to make a big deal out of this. Just print to console.
@@ -91,16 +83,14 @@ export default class ConnectionManager extends PureComponent {
     }
   }
 
-  // Private methods.
-
-  async connect() {
-    const { query } = url.parse(window.location.href, true);
-    const reportName = query.name;
-    const reportId = query.id;
+  private async connect(): Promise<void> {
+    const {query} = url.parse(window.location.href, true);
+    const reportName = query.name as string;
+    const reportId = query.id as string;
 
     try {
       if (reportName !== undefined) {
-        this.setReportName(reportName);
+        this.props.setReportName(reportName);
         this.connection = await this.connectBasedOnWindowUrl(reportName);
 
       } else if (reportId !== undefined) {
@@ -117,14 +107,18 @@ export default class ConnectionManager extends PureComponent {
     }
   }
 
-  setConnectionState({ connectionState, errMsg }) {
-    this.setState({ connectionState });
-    if (connectionState === ConnectionState.ERROR) {
-      this.onConnectionError(errMsg);
+  private setConnectionState = ({connectionState, errMsg}: SetConnectionStateParams): void => {
+    if (this.connectionState !== connectionState) {
+      this.connectionState = connectionState;
+      this.props.connectionStateChanged(connectionState);
     }
-  }
 
-  connectBasedOnWindowUrl(reportName) {
+    if (connectionState === ConnectionState.ERROR) {
+      this.props.onConnectionError(errMsg || 'unknown');
+    }
+  };
+
+  private connectBasedOnWindowUrl(reportName: string): WebsocketConnection {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
@@ -137,8 +131,8 @@ export default class ConnectionManager extends PureComponent {
         //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
         uri,
       ],
-      onMessage: this.onMessage,
-      setConnectionState: this.setConnectionState.bind(this),
+      onMessage: this.props.onMessage,
+      setConnectionState: this.setConnectionState,
     });
   }
 
@@ -146,17 +140,15 @@ export default class ConnectionManager extends PureComponent {
    * Opens either a static connection or a websocket connection, based on what
    * the manifest says.
    */
-  async connectBasedOnManifest(reportId) {
+  private async connectBasedOnManifest(reportId: string): Promise<WebsocketConnection | StaticConnection> {
     const manifest = await this.fetchManifestWithPossibleLogin(reportId);
 
-    const connection = manifest.proxyStatus === 'running' ?
+    return manifest.proxyStatus === 'running' ?
       this.connectToRunningProxyFromManifest(manifest) :
       this.connectToStaticReportFromManifest(reportId, manifest);
-
-    return connection;
   }
 
-  connectToRunningProxyFromManifest(manifest) {
+  private connectToRunningProxyFromManifest(manifest: any): WebsocketConnection {
     const {
       name, configuredProxyAddress, internalProxyIP, externalProxyIP,
       proxyPort,
@@ -171,22 +163,22 @@ export default class ConnectionManager extends PureComponent {
 
     return new WebsocketConnection({
       uriList,
-      onMessage: this.onMessage,
+      onMessage: this.props.onMessage,
       setConnectionState: this.setConnectionState,
     });
   }
 
-  connectToStaticReportFromManifest(reportId, manifest) {
+  private connectToStaticReportFromManifest(reportId: string, manifest: any): StaticConnection {
     return new StaticConnection({
       manifest,
       reportId,
-      onMessage: this.onMessage,
+      onMessage: this.props.onMessage,
       setConnectionState: this.setConnectionState,
-      setReportName: this.setReportName,
+      setReportName: this.props.setReportName,
     });
   }
 
-  async fetchManifestWithPossibleLogin(reportId) {
+  private async fetchManifestWithPossibleLogin(reportId: string): Promise<any> {
     let manifest;
     let permissionError = false;
 
@@ -202,7 +194,7 @@ export default class ConnectionManager extends PureComponent {
     }
 
     if (permissionError) {
-      const idToken = await this.getUserLogin();
+      const idToken = await this.props.getUserLogin();
       try {
         await configureCredentials(idToken);
         manifest = await fetchManifest(reportId);
@@ -220,18 +212,20 @@ export default class ConnectionManager extends PureComponent {
   }
 }
 
+async function fetchManifest(reportId: string): Promise<any> {
+  const {hostname, pathname} = url.parse(window.location.href, true);
+  if (pathname == null) {
+    throw new Error(`No pathname in URL ${window.location.href}`);
+  }
 
-async function fetchManifest(reportId) {
-  const { hostname, pathname } = url.parse(window.location.href, true);
   // IMPORTANT: The bucket name must match the host name!
   const bucket = hostname;
   const version = pathname.split('/')[1];
   const manifestKey = `${version}/reports/${reportId}/manifest.json`;
-  const data = await getObject({ Bucket: bucket, Key: manifestKey });
+  const data = await getObject({Bucket: bucket, Key: manifestKey});
   return data.json();
 }
 
-
-function getWsUrl(host, port, reportName) {
+function getWsUrl(host: string, port: number, reportName: string): string {
   return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
 }

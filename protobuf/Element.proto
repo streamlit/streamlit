@@ -10,6 +10,7 @@ import "Empty.proto";
 import "Exception.proto";
 import "Image.proto";
 import "Map.proto";
+import "PlotlyChart.proto";
 import "Progress.proto";
 import "Text.proto";
 import "VegaLiteChart.proto";
@@ -31,11 +32,12 @@ message Element {
     Exception exception = 8;
     ImageList imgs = 6;
     Map map = 9;
+    PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Text text = 1;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 16
+    // Next ID: 17
   }
 }
