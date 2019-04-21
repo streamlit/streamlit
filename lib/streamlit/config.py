@@ -278,7 +278,10 @@ _create_option(
 _create_option(
     'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
-    default_val=True)
+    default_val=True,
+    deprecated=True,
+    deprecation_text='Use proxy.runOnSave instead.',
+    expiration_date='2019-10-16')
 
 _create_option(
     'proxy.enableCORS',  # XXX TODO implement CORS support.
@@ -294,6 +297,25 @@ _create_option(
         connections.
         ''',
     default_val=8501)
+
+_create_option(
+    'proxy.installTracer',
+    description='''
+        Install a Python tracer to allow you to stop or pause your script at
+        any point and introspect it. As a side-effect, this slows down your
+        script's execution.
+        ''',
+    default_val=False)
+
+
+@_create_option('proxy.runOnSave', default_val=False)
+def _run_on_save():
+    """Whether to automatically re-run a report when it changes on disk."""
+    if is_manually_set('proxy.runOnSave'):
+        return get_option('proxy.runOnSave')
+    elif is_manually_set('proxy.watchFileSystem'):
+        return get_option('proxy.watchFileSystem')
+    return False
 
 
 # Config Section: Browser #

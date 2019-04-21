@@ -53,11 +53,11 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import data_frame_proto
 from streamlit import case_converters
-from streamlit import chart_config
-from streamlit import dict_builder
-from streamlit.ChartComponent import ChartComponent
+from streamlit.elements.lib.ChartComponent import ChartComponent
+import streamlit.elements.data_frame_proto as data_frame_proto
+import streamlit.elements.lib.chart_config as chart_config
+import streamlit.elements.lib.dict_builder as dict_builder
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)

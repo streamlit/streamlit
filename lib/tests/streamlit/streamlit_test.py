@@ -6,6 +6,7 @@ import textwrap
 import time
 import unittest
 
+import PIL.Image as Image
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -15,7 +16,7 @@ from mock import call, patch
 
 from streamlit import __version__
 from streamlit import protobuf
-from streamlit.Chart import Chart
+from streamlit.elements.Chart import Chart
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 
@@ -184,7 +185,14 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_dataframe(self):
         """Test st.dataframe."""
-        pass
+        df = pd.DataFrame({
+            'one': [1, 2],
+            'two': [11, 22],
+        })
+        dg = st.dataframe(df)
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
+        self.assertEqual(el.data_frame.columns.plain_index.data.strings.data, ['one', 'two'])
 
     def test_st_deck_gl_chart(self):
         """Test st.deck_gl_chart."""
@@ -248,7 +256,8 @@ class StreamlitAPITest(unittest.TestCase):
         el = get_last_delta_element(dg)
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(el.exception.message, 'Test Exception')
-        # We will test stack_trace when testing streamlit.exception_module
+        # We will test stack_trace when testing
+        # streamlit.elements.exception_element
         if sys.version_info >= (3, 0):
             self.assertEqual(el.exception.stack_trace, [])
         else:
@@ -280,9 +289,98 @@ class StreamlitAPITest(unittest.TestCase):
             self.assertEqual(el.doc_string.type, u'<type \'function\'>')
         self.assertEqual(el.doc_string.signature, '(body)')
 
-    def test_st_image(self):
-        """Test st.image."""
-        pass
+    def test_st_image_PIL_image(self):
+        """Test st.image with PIL image."""
+        img = Image.new('RGB', (64, 64), color = 'red')
+
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        checksum = 'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII='
+
+        dg = st.image(
+            img,
+            caption='some caption',
+            width=100)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 100)
+        self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
+        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
+
+    def test_st_image_PIL_array(self):
+        """Test st.image with a PIL array."""
+        imgs = [
+            Image.new('RGB', (64, 64), color = 'red'),
+            Image.new('RGB', (64, 64), color = 'blue'),
+            Image.new('RGB', (64, 64), color = 'green'),
+        ]
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        imgs_b64 = [
+            'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII=',
+            'rQE6QGuADtAeUTcCfodYSBYAAAAASUVORK5CYII=',
+            'aA3QAVoDdID2AHGUAf+h+mWcAAAAAElFTkSuQmCC',
+        ]
+        dg = st.image(
+            imgs,
+            caption='some caption',
+            width=200,
+            use_column_width=True,
+            clamp=True)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, -2)
+        for idx, checksum in enumerate(imgs_b64):
+            self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
+            self.assertTrue(el.imgs.imgs[idx].base_64_png.endswith(checksum))
+
+    def test_st_image_with_single_url(self):
+        """Test st.image with single url."""
+        url = 'http://server/fake0.jpg'
+
+        dg = st.image(
+            url,
+            caption='some caption',
+            width=300)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 300)
+        self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
+        self.assertEqual(el.imgs.imgs[0].url, url)
+
+    def test_st_image_with_list_of_urls(self):
+        """Test st.image with list of urls."""
+        urls = [
+            'http://server/fake0.jpg',
+            'http://server/fake1.jpg',
+            'http://server/fake2.jpg',
+        ]
+        dg = st.image(
+            urls,
+            caption='some caption',
+            width=300)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, 300)
+        for idx, url in enumerate(urls):
+            self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
+            self.assertEqual(el.imgs.imgs[idx].url, url)
+
+    def test_st_image_bad_width(self):
+        """Test st.image with bad width."""
+        # Needed to unwrap in order to grab exception
+        (st_image, dg) = unwrap(st.image)
+
+        st_image('does/not/exist', width=-1234)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.exception.type, 'RuntimeError')
+        self.assertEqual(
+            el.exception.message,
+            'Image width must be positive.')
+        self.assertTrue(
+            'RuntimeError(\'Image width must be positive.\')'
+                in ''.join(el.exception.stack_trace))
 
     def test_st_info(self):
         """Test st.info."""
@@ -379,8 +477,120 @@ class StreamlitAPITest(unittest.TestCase):
         self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
-        """Test st.pyplot."""
-        pass
+        """Test st.pyplot.
+
+        Need to test:
+        * Failed import of matplotlib.
+        * Passing in a figure.
+        """
+        # Matplotlib backend AGG only seems to work with python3
+        # TODO(armando): Make this test work with python2.7
+        if sys.version_info <= (3, 0):
+            return
+
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+        # Make this deterministic
+        np.random.seed(19680801)
+        data = np.random.randn(2, 20)
+
+        # Manually calculated by letting the test fail and copying and
+        # pasting the result.
+        checksum = 'DTuIkOADCFAAEAmPL/AFE92BKdqa2FAAAAAElFTkSuQmCC'
+
+        # Generate a 2 inch x 2 inch figure
+        plt.figure(figsize=(2, 2))
+        # Add 20 random points to scatter plot.
+        plt.scatter(data[0], data[1])
+        dg = st.pyplot()
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.imgs.width, -2)
+        self.assertEqual(el.imgs.imgs[0].caption, '')
+        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
+
+    def test_st_plotly_chart_simple(self):
+        """Test st.plotly_chart."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+        dg = st.plotly_chart(data)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
+
+    def test_st_plotly_chart_dimensions(self):
+        """Test st.plotly_chart."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+        dg = st.plotly_chart(data, width=100, height=200)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 100)
+        self.assertEqual(el.plotly_chart.height, 200)
+
+    def test_st_plotly_chart_mpl(self):
+        """Test st.plotly_chart can handle Matplotlib figures."""
+        # Matplotlib backend AGG only seems to work with python3
+        # TODO(armando): Make this test work with python2.7
+        if sys.version_info <= (3, 0):
+            return
+
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        plt.plot([10, 20, 30])
+        dg = st.plotly_chart(fig)
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('url'), False)
+        self.assertNotEqual(el.plotly_chart.figure.spec, '')
+        self.assertNotEqual(el.plotly_chart.figure.config, '')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
+
+    def test_st_plotly_chart_sharing(self):
+        """Test st.plotly_chart when sending data to Plotly's service."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(
+            x=[1, 2, 3, 4],
+            y=[10, 15, 13, 17]
+        )
+
+        data = [trace0]
+
+        with patch('plotly.plotly.plot') as plot_patch:
+            plot_patch.return_value = 'the_url'
+            dg = st.plotly_chart(data, sharing='public')
+
+        el = get_last_delta_element(dg)
+        self.assertEqual(el.plotly_chart.HasField('figure'), False)
+        self.assertNotEqual(el.plotly_chart.url, 'the_url')
+        self.assertEqual(el.plotly_chart.width, 0)
+        self.assertEqual(el.plotly_chart.height, 0)
 
     def test_st_subheader(self):
         """Test st.subheader."""
@@ -400,7 +610,16 @@ class StreamlitAPITest(unittest.TestCase):
 
     def test_st_table(self):
         """Test st.table."""
-        pass
+        df = pd.DataFrame(
+            [[1, 2], [3, 4]],
+            columns=['col1', 'col2'])
+        dg = st.table(df)
+        print(df)
+        el = get_last_delta_element(dg)
+        print(el)
+        self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
+        self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
+        self.assertEqual(el.table.columns.plain_index.data.strings.data, ['col1', 'col2'])
 
     def test_st_text(self):
         """Test st.text."""
@@ -572,6 +791,15 @@ class StreamlitWriteTest(unittest.TestCase):
 
         with patch('streamlit.pyplot') as p:
             st.write(FakePyplot())
+
+            p.assert_called_once()
+
+    def test_plotly(self):
+        import plotly.graph_objs as go
+
+        """Test st.write with plotly object."""
+        with patch('streamlit.plotly_chart') as p:
+            st.write([go.Scatter(x=[1, 2], y=[10, 20])])
 
             p.assert_called_once()
 

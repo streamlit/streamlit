@@ -89,9 +89,9 @@ function uploadedDialog({url, onClose}) {
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={url} onCopy={onClose}>
-          <Button>Copy to clipboard</Button>
+          <Button outline>Copy to clipboard</Button>
         </CopyToClipboard>{' '}
-        <Button onClick={onClose}>Done</Button>
+        <Button outline onClick={onClose}>Done</Button>
       </ModalFooter>
     </BasicDialog>
   );
@@ -112,7 +112,7 @@ function warningDialog({msg, onClose}) {
     <BasicDialog onClose={onClose}>
       <ModalBody>{msg}</ModalBody>,
       <ModalFooter>
-        <Button onClick={onClose}>Done</Button>
+        <Button outline onClick={onClose}>Done</Button>
       </ModalFooter>
     </BasicDialog>
   );
@@ -131,7 +131,7 @@ function rerunScriptDialog(
   return (
     <BasicDialog onClose={onClose}>
       <ModalBody>
-        <div className="rerun-header">Command Line:</div>
+        <div className="rerun-header">Command line:</div>
         <div>
           <textarea autoFocus
             className="command-line"
@@ -141,8 +141,8 @@ function rerunScriptDialog(
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
-        <Button color="primary" onClick={rerunCallback}>Rerun</Button>
+        <Button outline color="secondary" onClick={onClose}>Cancel</Button>{' '}
+        <Button outline color="primary" onClick={rerunCallback}>Rerun</Button>
       </ModalFooter>
     </BasicDialog>
   );
@@ -163,8 +163,8 @@ function clearCacheDialog({ confirmCallback, onClose }) {
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button color="secondary" onClick={onClose}>Cancel</Button>{' '}
-        <Button color="primary" onClick={confirmCallback}>Clear cache</Button>
+        <Button outline color="secondary" onClick={onClose}>Cancel</Button>{' '}
+        <Button outline color="primary" onClick={confirmCallback}>Clear cache</Button>
       </ModalFooter>
     </BasicDialog>
   );
@@ -213,7 +213,7 @@ function aboutDialog({onClose}) {
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button color="primary" onClick={onClose}>Close</Button>
+        <Button outline color="primary" onClick={onClose}>Close</Button>
       </ModalFooter>
     </BasicDialog>
   );

@@ -11,7 +11,7 @@ import pandas as pd
 
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
-from streamlit import data_frame_proto
+import streamlit.elements.data_frame_proto as data_frame_proto
 
 
 DATAFRAME = pd.DataFrame({'a': [1, 2], 'b': [10, 20]})

@@ -2,25 +2,6 @@
 
 """Declares the FileEventObserver class, that watches the file system.
 
-
-Why this file is so complex
----------------------------
-
-1) The problem it's solving is non-trivial: we want to observe files, but only
-while there's a browser attached to them. So we need to keep track of files
-*and* browsers. But...
-
-2) ...the watchdog module's API is really weird. And on top of it, it only
-allows you to watch *folders*, not *files* (I believe this is due to a
-limitation of the underlying Mac FSEvents system API).
-
-3) We also want to make sure there is only 1 watchdog.observer.Observer, since
-otherwise we end up with several threads running.
-
-4) Finally, we want to abstract away all of the above into a simple API. That's
-the ReportObserver class.
-
-
 How these classes work together
 -------------------------------
 

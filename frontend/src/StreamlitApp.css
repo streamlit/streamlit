@@ -3,27 +3,12 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-/**
- * Palette:
- * - Black: #101620
- * - Gray: #768096
- * - Light gray: #E6E9EF
- * - Ultralight gray: #F0F3F9
- * - Accent red: #F63366
- * - Accent yellow: #FFFD80
- * - Accent blue: #2979E9
- * - Accent deep blue: #193999
- * - Accent green: #199939
- *
- * Text sizes:
- * - Normal: 1rem
- * - Small: 0.8rem;
- */
-body {
-  font-family: 'IBM Plex Sans', sans-serif;
-  color: #101620;
-  font-size: 17px;
-  line-height: 1.6;
+body.embedded {
+  overflow: hidden;
+}
+
+body.embedded:hover {
+  overflow: auto;
 }
 
 .main {
@@ -43,7 +28,6 @@ a:active {
 }
 
 h1, .h1 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 2.5rem;
   margin: 2.5rem 0 1.5rem 0;
@@ -55,7 +39,6 @@ h1:first-child, .h1:first-child {
 }
 
 h2, .h2 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 2.0rem;
   margin: 2.5rem 0 1rem 0;
@@ -63,7 +46,6 @@ h2, .h2 {
 }
 
 h3, .h3 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 500;
   font-size: 1.25rem;
   margin: 1.5rem 0 1rem 0;
@@ -71,7 +53,6 @@ h3, .h3 {
 }
 
 h4, .h4 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 1.0rem;
   margin: 1.5rem 0 1rem 0;
@@ -79,7 +60,6 @@ h4, .h4 {
 }
 
 h5, .h5 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -88,7 +68,6 @@ h5, .h5 {
 }
 
 h6, .h6 {
-  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: 0.8rem;
   margin: 1.5rem 0 0.5rem 0;
@@ -135,50 +114,11 @@ header .decoration {
   color: #F63366;
 }
 
-.btn,
-button {
-  display: flex;
+iframe {
+  border: none;
+  padding: 0;
+  margin: 0;
 }
-
-button:focus {
-  outline: 5px auto #F63366;
-}
-
-.btn {
-  border-radius: 0.75rem;
-}
-
-.btn-primary {
-  background-color: transparent;
-  border-color: #E6E9EF;
-  color: #101620;
-}
-
-.btn:hover {
-  background-color: transparent;
-  color: #F63366;
-  border-color: #F63366;
-}
-
-/* This is how bootstrap sets colors on secondary buttons.
- * Need to find a better way to override colors. Install SASS? */
-.btn-secondary:not([disabled]):not(.disabled):active,
-.btn-secondary:not([disabled]):not(.disabled).active {
-  background-color: #F63366;
-  color: #FFFFFF;
-  border-color: #F63366;
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: #101620;
-  border-color: transparent;
-}
-
-.dropdown-menu button:active {
-  background-color: #F63366;
-}
-
 
 .streamlit-regular .streamlit-container {
   margin-top: 80px;

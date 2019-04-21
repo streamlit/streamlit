@@ -9,9 +9,9 @@ setup_2_3_shims(globals())
 
 import json
 
-from streamlit import data_frame_proto
 from streamlit import case_converters
-from streamlit.dicttools import unflatten
+import streamlit.elements.lib.dicttools as dicttools
+import streamlit.elements.data_frame_proto as data_frame_proto
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -30,7 +30,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     # Merge spec with unflattened kwargs, where kwargs take precedence.
     # This only works for string keys, but kwarg keys are strings anyways.
-    spec = dict(spec, **unflatten(kwargs))
+    spec = dict(spec, **dicttools.unflatten(kwargs))
 
     if 'layers' not in spec:
         spec['layers'] = []

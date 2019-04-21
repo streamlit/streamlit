@@ -1,29 +1,25 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
+# Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
 import signal
+import sys
 import tornado.ioloop
 import urllib
 
 from streamlit import config
 from streamlit import util
-from streamlit.scriptrunner import ScriptRunner
-from streamlit.server import Server
+from streamlit.ScriptRunner import ScriptRunner
+from streamlit.Server import Server
+from streamlit.Report import Report
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def _set_up_signal_handler():
-    # Reimport things we'll need in the closure below, or they get removed.
-    # XXX TODO see if this is still true.
-    import signal
-    from streamlit.scriptrunner import ScriptRunner
-
+def _set_up_signal_handler(scriptrunner):
     LOGGER.debug('Setting up signal handler')
 
     def signal_handler(signal_number, stack_frame):
-        scriptrunner = ScriptRunner.get_instance()
         script_was_running = scriptrunner.is_running()
         scriptrunner.request_stop()
 
@@ -83,16 +79,20 @@ def run(script_path):
     script_path : str
 
     """
-    _set_up_signal_handler()
-
     ioloop = tornado.ioloop.IOLoop.current()
-    server = Server.get_instance()
+    report = Report(script_path, sys.argv)
+    scriptrunner = ScriptRunner(report)
+
+    _set_up_signal_handler(scriptrunner)
+
+    # Schedule the server to start using the IO Loop on the main thread.
+    server = Server(report, scriptrunner)
     ioloop.spawn_callback(server.loop_coroutine)
 
-    scriptrunner = ScriptRunner.get_instance()
-    scriptrunner.file_path = script_path
+    # Start the script in a separate thread.
     scriptrunner.spawn_script_thread()
 
-    util.open_browser(_get_url(script_path))
+    # Schedule the browser to open using the IO Loop on the main thread.
+    ioloop.spawn_callback(lambda: util.open_browser(_get_url(script_path)))
 
     ioloop.start()

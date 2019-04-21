@@ -9,7 +9,6 @@ import collections
 import threading
 
 from streamlit import protobuf
-from streamlit import data_frame_proto
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -36,6 +35,11 @@ class ReportQueue(object):
 
     def is_empty(self):
         return len(self._queue) == 0
+
+    def get_initial_msg(self):
+        if len(self._queue) > 0:
+            return self._queue[0]
+        return None
 
     def enqueue(self, msg):
         """Add message into queue, possibly composing it with another message.
@@ -101,6 +105,7 @@ def compose_deltas(old_delta, new_delta):
         return new_delta
 
     elif new_delta_type == 'add_rows':
+        import streamlit.elements.data_frame_proto as data_frame_proto
         data_frame_proto.add_rows(
             old_delta, new_delta, name=new_delta.add_rows.name)
         return old_delta

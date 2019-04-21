@@ -1,4 +1,4 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
+# Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
 import ctypes
@@ -7,12 +7,16 @@ import signal
 import sys
 import threading
 import time
+
+from blinker import Signal
 import tornado.ioloop
 
-from streamlit import __version__
 from streamlit import config
-from streamlit import protobuf
-from streamlit import util
+
+try:
+    from streamlit.proxy.FileEventObserver import FileEventObserver as FileObserver
+except ImportError:
+    from streamlit.proxy.PollingFileObserver import PollingFileObserver as FileObserver
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -30,49 +34,46 @@ class State(object):
 
 class ScriptRunner(object):
 
-    _singleton = None
+    def __init__(self, report):
+        """Initialize.
 
-    @classmethod
-    def get_instance(cls):
-        """Return the singleton instance."""
-        if cls._singleton is None:
-            ScriptRunner()
+        Parameters
+        ----------
+        report : str
+            Path of the file to run.
 
-        s = ScriptRunner._singleton
-        return s
-
-    # Don't allow constructor to be called more than once.
-    def __new__(cls):
-        """Constructor."""
-        if ScriptRunner._singleton is not None:
-            raise RuntimeError('Use .get_instance() instead')
-        return super(ScriptRunner, cls).__new__(cls)
-
-    def __init__(self):
-        """Initialize."""
-        ScriptRunner._singleton = self
-
-        self._file_path = None
+        """
+        self._report = report
         self._state = None
-        self._set_state(State.INITIAL)
+
         self._state_change_requested = threading.Event()
         self._paused = threading.Event()
-        self._debug_mode = False  # XXX TODO Grab this from flag or option.
+
+        self.run_on_save = config.get_option('proxy.runOnSave')
+
+        self.on_state_changed = Signal(
+            doc="""Emitted when the script's execution state state changes.
+
+            Parameters
+            ----------
+            state : State
+            """)
+
+        self.on_file_change_not_handled = Signal(
+            doc="Emitted when the file is modified and we haven't handled it.")
+
+        self._set_state(State.INITIAL)
+
+        self._file_observer = FileObserver(
+            self._report.script_path, self._maybe_handle_file_changed)
 
     def _set_state(self, new_state):
+        if self._state == new_state:
+            return
+
         LOGGER.debug('ScriptRunner state: %s -> %s' % (self._state, new_state))
         self._state = new_state
-
-    @property
-    def file_path(self):
-        return self._file_path
-
-    @file_path.setter
-    def file_path(self, file_path):
-        if self._file_path is None:
-            self._file_path = file_path
-        else:
-            raise RuntimeError('File path can only be set once.')
+        self.on_state_changed.send(self._state)
 
     def spawn_script_thread(self):
         LOGGER.debug('Spawning script thread...')
@@ -83,25 +84,52 @@ class ScriptRunner(object):
 
         script_thread.start()
 
+    def is_running(self):
+        return self._state == State.RUNNING
+
+    def is_fully_stopped(self):
+        return self._state in (State.INITIAL, State.STOPPED)
+
+    def request_rerun(self, argv):
+        self._report.argv = argv
+
+        if self.is_fully_stopped():
+            self.spawn_script_thread()
+        else:
+            self._set_state(State.RERUN_REQUESTED)
+            self._paused.clear()
+            self._state_change_requested.set()
+
+    def request_stop(self):
+        if self.is_fully_stopped():
+            pass
+        else:
+            self._set_state(State.STOP_REQUESTED)
+            self._paused.clear()
+            self._state_change_requested.set()
+
+    def request_pause_unpause(self):
+        if self._state == State.PAUSED:
+            self._set_state(State.RUNNING)
+            self._paused.clear()
+        else:
+            self._request_pause()
+
     def _install_tracer(self):
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
-            self.maybe_handle_execution_control_request()
+            self._maybe_handle_execution_control_request()
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
         if hasattr(sys, 'settrace'):
             sys.settrace(trace_calls)
 
+    # This runs on the script thread.
     def _run(self):
-        from streamlit.server import Server
-
-        if not self._file_path:
-            raise RuntimeError('Must call set_file_path() before calling run()')
-
         # Wait 1s for thread to be ready
-        # TODO: Use a lock for this.
+        # XXX TODO: Use a lock for this.
         for i in range(100):
             if self.is_fully_stopped():
                 break
@@ -110,11 +138,9 @@ class ScriptRunner(object):
         if not self.is_fully_stopped():
             raise RuntimeError('Script is already running')
 
-        server = Server.get_instance()
-        server.clear_queue()
-
-        if self._debug_mode:
-            self._install_tracer()
+        # Reset delta generator so it starts from index 0.
+        import streamlit as st
+        st._delta_generator = None
 
         self._state_change_requested.clear()
         self._set_state(State.RUNNING)
@@ -122,19 +148,19 @@ class ScriptRunner(object):
         # Python 3 got rid of the native execfile() command, so we now read the
         # file, compile it, and exec() it. This implementation is compatible
         # with both 2 and 3.
-        with open(self._file_path) as f:
+        with open(self._report.script_path) as f:
             filebody = f.read()
 
-        try:
-            _maybe_enqueue_new_connection_message(server)
-            _enqueue_new_report_message(server)
+        if config.get_option('proxy.installTracer'):
+            self._install_tracer()
 
+        try:
             # Compiling must happen in the "try" block, so we can catch things
             # like SyntaxErrors.
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._file_path,
+                self._report.script_path,
                 # We're compiling entire blocks of Python, so we need "exec" mode
                 # (as opposed to "eval" or "single").
                 'exec',
@@ -156,8 +182,11 @@ class ScriptRunner(object):
             # like __name__.
             ns = dict(
                 __name__='__main__',
-                __file__=str(self._file_path),  # Convert from unicode for py2.
+                # Convert from unicode for py2.
+                __file__=str(self._report.script_path),
             )
+
+            sys.argv = self._report.argv
             exec(code, ns, ns)
 
         except ScriptControlException as e:
@@ -166,46 +195,21 @@ class ScriptRunner(object):
 
         except BaseException as e:
             # Show exceptions in the Streamlit report.
-            _enqueue_exception(server, e)
+            st.exception(e)  # This is OK because we're in the script thread.
             raise # Don't pass "e" here, to preserve e's original stack trace.
             # TODO: Use "raise TheExceptionType, e, traceback" instead, so we
             # can try and clean up the traceback a little (remove Streamlit
             # from it, to make it easier for users to debug).
 
         finally:
-            _enqueue_report_finished_message(server)
             self._set_state(State.STOPPED)
 
-    def pause(self):
+    def _pause(self):
         self._paused.set()
         self._set_state(State.PAUSED)
 
         while self._paused.is_set():
             time.sleep(0.1)
-
-    def unpause(self, new_state):
-        self._set_state(new_state)
-        self._paused.clear()
-
-    def request_stop(self):
-        if self.is_fully_stopped():
-            pass
-        else:
-            self.unpause(new_state=State.STOP_REQUESTED)
-            self._state_change_requested.set()
-
-    def request_rerun(self):
-        if self.is_fully_stopped():
-            self.spawn_script_thread()
-        else:
-            self.unpause(new_state=State.RERUN_REQUESTED)
-            self._state_change_requested.set()
-
-    def request_pause_unpause(self):
-        if self._state == State.PAUSED:
-            self.unpause(new_state=State.RUNNING)
-        else:
-            self._request_pause()
 
     def _request_pause(self):
         if self.is_fully_stopped():
@@ -214,7 +218,7 @@ class ScriptRunner(object):
             self._set_state(State.PAUSE_REQUESTED)
             self._state_change_requested.set()
 
-    def maybe_handle_execution_control_request(self):
+    def _maybe_handle_execution_control_request(self):
         if self._state_change_requested.is_set():
 
             if self._state == State.STOP_REQUESTED:
@@ -223,14 +227,14 @@ class ScriptRunner(object):
                 self.spawn_script_thread()
                 raise RerunException()
             elif self._state == State.PAUSE_REQUESTED:
-                self.pause()
+                self._pause()
                 return
 
-    def is_running(self):
-        return self._state == State.RUNNING
-
-    def is_fully_stopped(self):
-        return self._state in (State.INITIAL, State.STOPPED)
+    def _maybe_handle_file_changed(self):
+        if self.run_on_save:
+            self.request_rerun(self._report.argv)
+        else:
+            self.on_file_change_not_handled.send()
 
 
 class ScriptControlException(BaseException):
@@ -246,49 +250,3 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
     pass
-
-
-def _enqueue_new_report_message(server):
-    msg = protobuf.ForwardMsg()
-    msg.new_report.id = str(util.build_report_id())
-    msg.new_report.cwd = os.getcwd()
-    msg.new_report.command_line.extend(sys.argv)
-    msg.new_report.source_file_path = ''  # XXX remove
-
-    server.enqueue(msg)
-
-
-def _maybe_enqueue_new_connection_message(server):
-    if server.sent_new_connection_message:
-        return
-
-    server.sent_new_connection_message = True
-
-    msg = protobuf.ForwardMsg()
-
-    v = config.get_option('global.sharingMode') != 'off'
-    msg.new_connection.sharing_enabled = v
-    LOGGER.debug(
-        'New browser connection: sharing_enabled=%s',
-        msg.new_connection.sharing_enabled)
-
-    v = config.get_option('browser.gatherUsageStats')
-    msg.new_connection.gather_usage_stats = v
-    LOGGER.debug(
-        'New browser connection: gather_usage_stats=%s',
-        msg.new_connection.gather_usage_stats)
-
-    msg.new_connection.streamlit_version = __version__
-
-    server.enqueue(msg)
-
-
-def _enqueue_report_finished_message(server):
-    msg = protobuf.ForwardMsg()
-    msg.report_finished = True
-    server.enqueue(msg)
-
-
-def _enqueue_exception(server, e):
-    import streamlit as st
-    st.exception(e)

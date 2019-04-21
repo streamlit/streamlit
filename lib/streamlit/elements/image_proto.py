@@ -177,11 +177,12 @@ def _get_imagelist_and_type(input, clamp):
     proto), and a constant indicating the images' type - either
     'image_type_url' or 'image_type_bytes'
     """
-    if isinstance(input, str):
+    if isinstance(input, string_types):
         # Input is a single URL - wrap it in a list.
         return [input], IMAGE_TYPE_URL
-    elif (isinstance(input, list) and len(input) > 0
-            and isinstance(input[0], str)):
+    elif (isinstance(input, list)
+          and len(input) > 0
+          and isinstance(input[0], string_types)):
         # Input is a list of URLs
         return input, IMAGE_TYPE_URL
     else:
@@ -190,7 +191,8 @@ def _get_imagelist_and_type(input, clamp):
             pil_img = Image.open(input)
             image_list = [pil_img]
         else:
-            # extra map enables support for arrays of PIL images
+            # np.array([PIL.Image.new()]) fails with TypeError so
+            # using the map function allows for an array of PIL images
             try:
                 numpy_imgs = np.array(input)
             except TypeError:

@@ -71,8 +71,8 @@ def _get_new_delta_generator():
         from streamlit.ReportQueue import ReportQueue
         enqueue = ReportQueue().enqueue
     else:
-        from streamlit.server import Server as _Server
-        server = _Server.get_instance()
+        from streamlit.Server import Server
+        server = Server.get_current()
         enqueue = server.enqueue
 
     return DeltaGenerator(enqueue)
@@ -120,6 +120,7 @@ json            = _with_dg(DeltaGenerator.json)  # noqa: E221
 line_chart      = _with_dg(DeltaGenerator.line_chart)  # noqa: E221
 map             = _with_dg(DeltaGenerator.map)  # noqa: E221
 markdown        = _with_dg(DeltaGenerator.markdown)  # noqa: E221
+plotly_chart    = _with_dg(DeltaGenerator.plotly_chart)  # noqa: E221
 progress        = _with_dg(DeltaGenerator.progress)  # noqa: E221
 pyplot          = _with_dg(DeltaGenerator.pyplot)  # noqa: E221
 subheader       = _with_dg(DeltaGenerator.subheader)  # noqa: E221
@@ -166,8 +167,9 @@ def write(*args):
         - write(module)     : Displays information about the module.
         - write(dict)       : Displays dict in an interactive widget.
         - write(obj)        : The default is to print str(obj).
-        - write(fig)        : Displays a Matplotlib figure.
+        - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
+        - write(plotly_fig) : Displays a Plotly figure.
 
     Example
     -------
@@ -252,6 +254,8 @@ def write(*args):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
+            elif util.is_plotly_chart(arg):
+                plotly_chart(arg)
             elif type(arg) in dict_types:
                 json(arg)
             else:

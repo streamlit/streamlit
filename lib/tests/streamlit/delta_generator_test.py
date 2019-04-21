@@ -266,6 +266,18 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         self.assertEqual(json_string, element.text.body)
         self.assertEqual(protobuf.Text.JSON, element.text.format)
 
+    def test_json_unserializable(self):
+        """Test protobuf.Text.JSON with unserializable object."""
+        obj = json  # Modules aren't serializable.
+
+        # Testing unserializable object.
+        self._dg.json(obj)
+
+        element = get_element(self._dg)
+        self.assertTrue(
+            element.text.body.startswith('"<module \'json\' from '))
+        self.assertEqual(protobuf.Text.JSON, element.text.format)
+
     def test_markdown(self):
         """Test protobuf.Text.MARKDOWN."""
         test_string = '    data         '

@@ -8,7 +8,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
-import base58
 import contextlib
 import errno
 import functools
@@ -20,7 +19,6 @@ import subprocess
 import sys
 import threading
 import urllib
-import uuid
 
 try:
     import urllib.request  # for Python3
@@ -150,11 +148,6 @@ def memoize(func):
     return wrapped_func
 
 
-def build_report_id():
-    """Randomly generate a report ID."""
-    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
-
-
 def make_blocking_http_get(url, timeout=5):
     try:
         return urllib.request.urlopen(url, timeout=timeout).read()
@@ -277,7 +270,7 @@ def is_type(obj, fqn_type_str):
     Example
     -------
 
-    To check whether somthing is a Matplotlib Figure without importing
+    To check whether something is a Matplotlib Figure without importing
     matplotlib, use:
 
     >>> is_type(foo, 'matplotlib.figure.Figure')
@@ -301,4 +294,47 @@ def is_pex():
     """
     if re.match(r'.*pex$', sys.path[0]):
         return True
+    return False
+
+
+def is_plotly_chart(obj):
+    """True if input looks like a Plotly chart."""
+    return (
+        is_type(obj, 'plotly.graph_objs._figure.Figure') or
+        _is_list_of_plotly_objs(obj) or
+        _is_probably_plotly_dict(obj)
+    )
+
+
+def _is_plotly_obj(obj):
+    """True if input if from a type that lives in plotly.plotly_objs."""
+    the_type = type(obj)
+    return the_type.__module__.startswith('plotly.graph_objs')
+
+
+def _is_list_of_plotly_objs(obj):
+    if type(obj) is not list:
+        return False
+    if len(obj) == 0:
+        return False
+    return all(_is_plotly_obj(item) for item in obj)
+
+
+def _is_probably_plotly_dict(obj):
+    if type(obj) not in dict_types:
+        return False
+
+    if len(obj.keys()) == 0:
+        return False
+
+    if any(k not in ['config', 'data', 'frames', 'layout']
+           for k in obj.keys()):
+        return False
+
+    if any(_is_plotly_obj(v) for v in obj.values()):
+        return True
+
+    if any(_is_list_of_plotly_objs(v) for v in obj.values()):
+        return True
+
     return False
