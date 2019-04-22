@@ -7,6 +7,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import copy
 import hashlib
 import inspect
 import os
@@ -24,10 +25,29 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
+
 class CacheError(Exception):
   pass
 
-def read_from_cache(path):
+
+mem_cache = {}
+
+
+def read_from_mem_cache(path):
+    if path in mem_cache:
+        rv = mem_cache[path]
+        LOGGER.debug('Cache HIT: %s', type(rv))
+        return rv
+    else:
+        LOGGER.debug('Cache MISS: %s', path)
+        raise FileNotFoundError('Path not found in mem cache')
+
+
+def write_to_mem_cache(path, rv):
+    mem_cache[path] = copy.deepcopy(rv)
+
+
+def read_from_disk_cache(path):
     try:
         with util.streamlit_read(path, binary=True) as input:
             rv = pickle.load(input)
@@ -37,7 +57,8 @@ def read_from_cache(path):
         raise CacheError('Unable to read from cache: %s' % e)
     return rv
 
-def write_to_cache(path, rv):
+
+def write_to_disk_cache(path, rv):
     try:
         with util.streamlit_write(path, binary=True) as output:
             pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
@@ -54,18 +75,35 @@ def write_to_cache(path, rv):
     LOGGER.debug('Cache MISS: ' + str(type(rv)))
 
 
-def cache(func):
+def read_from_cache(path, use_disk_cache=False):
+    if use_disk_cache:
+        return read_from_disk_cache(path)
+    else:
+        return read_from_mem_cache(path)
+
+
+def write_to_cache(path, rv, use_disk_cache=False):
+    if use_disk_cache:
+        return write_to_disk_cache(path, rv)
+    else:
+        return write_to_mem_cache(path, rv)
+
+
+def cache(func=None, on_disk=False):
     """Function decorator to memoize input function, saving to disk.
 
     Parameters
     ----------
     func : callable
-        The function that cache.
+        The function to cache.
+
+    on_disk : boolean
+        Whether to cache on disk. If false (default) caches on volatile memory.
 
     Example
     -------
     >>> @st.cache
-    >>> def fetch_and_clean_data(url):
+    ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
     ...
@@ -80,8 +118,19 @@ def cache(func):
     >>> d3 = fetch_and_clean_data(DATA_URL_2)
     >>> # This is a different URL, so the function executes.
 
+    To set the `on_disk` parameter, use this command as follows:
+
+    >>> @st.cache(on_disk=True)
+    ... def fetch_and_clean_data(url):
+    ...     # Fetch data from URL here, and then clean it up.
+    ...     return data
+
 
     """
+    # Support setting on_disk parameter via @st.cache(on_disk=True)
+    if func is None:
+        return lambda f: cache(func=f, on_disk=on_disk)
+
     @wraps(func)
     def wrapped_func(*argc, **argv):
         """This function wrapper will only call the underlying function in
@@ -110,10 +159,10 @@ def cache(func):
 
             # Load the file (hit) or compute the function (miss).
             try:
-                rv = read_from_cache(path)
+                rv = read_from_cache(path, on_disk)
             except (FileNotFoundError, IOError, OSError):
                 rv = func(*argc, **argv)
-                write_to_cache(path, rv)
+                write_to_cache(path, rv, on_disk)
         return rv
 
     # Make this a well-behaved decorator by preserving important function

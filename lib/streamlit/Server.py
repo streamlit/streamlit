@@ -129,8 +129,6 @@ class Server(object):
         self._must_stop.set()
 
     def _clear_queue(self):
-        # XXX This stores the initial message before flushing, since new
-        # browsers will need it.
         self._report.clear()
 
         for browser_queue in self._browser_queues.values():
