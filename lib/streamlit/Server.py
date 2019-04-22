@@ -19,6 +19,7 @@ from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.proxy import proxy_util
+from streamlit.proxy.storage.S3Storage import S3Storage as Storage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -74,8 +75,10 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._sent_initialize_message = False
 
+        self._storage = None
+
         port = config.get_option('proxy.port')
-        app = tornado.web.Application(_get_routes())
+        app = tornado.web.Application(self._get_routes())
         app.listen(port)
 
         self._scriptrunner.on_state_changed.connect(
@@ -85,9 +88,41 @@ class Server(object):
 
         LOGGER.debug('Server started on port %s', port)
 
+    def _get_routes(self):
+        routes = [
+            (r'/stream', _SocketHandler),
+            (r'/healthz', _HealthHandler),
+        ]
+
+        if not config.get_option('proxy.useNode'):
+            # If we're not using the node development server, then the proxy
+            # will serve up the development pages.
+            static_path = util.get_static_dir()
+            LOGGER.debug('Serving static content from %s', static_path)
+
+            routes.extend([
+                (r"/()$", _StaticFileHandler,
+                    {'path': '%s/index.html' % static_path}),
+                (r"/(.*)", _StaticFileHandler, {'path': '%s/' % static_path}),
+                # XXX Add debugz
+            ])
+        else:
+            LOGGER.debug(
+                'useNode == True, not serving static content from python.')
+
+        return routes
+
     def _set_state(self, new_state):
         LOGGER.debug('Server state: %s -> %s' % (self._state, new_state))
         self._state = new_state
+
+    @property
+    def is_ready_for_browser_connection(self):
+        return self._state not in (
+            State.INITIAL,
+            State.STOPPING,
+            State.STOPPED,
+        )
 
     @tornado.gen.coroutine
     def loop_coroutine(self):
@@ -219,14 +254,17 @@ class Server(object):
         self.enqueue(msg)
 
     # XXX TODO Also handle livesave! serialize_running_report_to_files
-    def _handle_save_request(self):
+    @tornado.gen.coroutine
+    def _handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""
+        if self._storage is None:
+            self._storage = Storage()
 
         @tornado.gen.coroutine
         def progress(percent):
             progress_msg = protobuf.ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield self.write_message(
+            yield ws.write_message(
                 progress_msg.SerializeToString(), binary=True)
 
         # Indicate that the save is starting.
@@ -234,14 +272,13 @@ class Server(object):
             yield progress(0)
 
             files = self._report.serialize_final_report_to_files()
-            storage = self._proxy.get_storage()  # XXX
-            url = yield storage.save_report_files(
-                connection.id, files, progress)
+            url = yield self._storage.save_report_files(
+                self._report._latest_id, files, progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = url
-            yield self.write_message(
+            yield ws.write_message(
                 progress_msg.SerializeToString(), binary=True)
 
         except Exception as e:
@@ -250,7 +287,8 @@ class Server(object):
                 type(e).__name__, str(e) or 'No further details.')
             progress_msg = protobuf.ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield self.enqueue(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(
+                progress_msg.SerializeToString(), binary=True)
             raise e
 
     def _handle_rerun_script_request(self):
@@ -276,6 +314,20 @@ class _StaticFileHandler(tornado.web.StaticFileHandler):
         return proxy_util.url_is_from_allowed_origins(origin)
 
 
+class _HealthHandler(tornado.web.RequestHandler):
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
+
+    def get(self):
+        if Server.get_current().is_ready_for_browser_connection:
+            self.write('ok')
+        else:
+            # 503 = SERVICE_UNAVAILABLE
+            self.set_status(503)
+            self.write('unavailable')
+
+
 class _SocketHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
         """Set up CORS."""
@@ -299,7 +351,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             msg_type = msg.WhichOneof('type')
 
             if msg_type == 'cloud_upload':
-                yield server._handle_save_request()
+                yield server._handle_save_request(self)
             elif msg_type == 'rerun_script':
                 server._handle_rerun_script_request()
             elif msg_type == 'clear_cache':
@@ -312,7 +364,8 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
                 LOGGER.warning('No handler for "%s"', msg_type)
 
         except BaseException as e:
-            LOGGER.error('Cannot parse binary message: %s', e)
+            LOGGER.error('Error parsing back-message')
+            raise e
 
 
 def _fix_tornado_logging():
@@ -322,28 +375,6 @@ def _fix_tornado_logging():
         logging.getLogger('tornado.access').setLevel(logging.ERROR)
         logging.getLogger('tornado.application').setLevel(logging.ERROR)
         logging.getLogger('tornado.general').setLevel(logging.ERROR)
-
-
-def _get_routes():
-    routes = [(r'/stream', _SocketHandler)]
-
-    if not config.get_option('proxy.useNode'):
-        # If we're not using the node development server, then the proxy
-        # will serve up the development pages.
-        static_path = util.get_static_dir()
-        LOGGER.debug('Serving static content from %s', static_path)
-
-        routes.extend([
-            (r"/()$", _StaticFileHandler,
-                {'path': '%s/index.html' % static_path}),
-            (r"/(.*)", _StaticFileHandler, {'path': '%s/' % static_path}),
-            # XXX Add debugz
-        ])
-    else:
-        LOGGER.debug(
-            'useNode == True, not serving static content from python.')
-
-    return routes
 
 
 def _serialize(msg):

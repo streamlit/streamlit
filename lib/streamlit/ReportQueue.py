@@ -33,6 +33,9 @@ class ReportQueue(object):
     def __str__(self):
         return '%s %s' % (self._queue, self._delta_id_map)
 
+    def __iter__(self):
+        return iter(self._queue)
+
     def is_empty(self):
         return len(self._queue) == 0
 
