@@ -14,7 +14,25 @@ import { dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices } from '.
 import './DataFrame.css';
 import { SortDirection } from '../SortDirection';
 
-const SORT_ICON_WIDTH = 10; // size of the optional sort icon displayed in column headers
+/**
+ * Size of the optional sort icon displayed in column headers
+ */
+const SORT_ICON_WIDTH_PX = 10;
+
+/**
+ * Minimum size of a dataframe cell.
+ */
+const MIN_CELL_WIDTH_PX = 25;
+
+/**
+ * Maximum size of a dataframe cell.
+ */
+const MAX_CELL_WIDTH_PX = 200;
+
+/**
+ * Maximum size of a dataframe cell in a 1-column dataframe.
+ */
+const MAX_LONELY_CELL_WIDTH_PX = 400;
 
 /**
  * Functional element representing a DataFrame.
@@ -294,8 +312,10 @@ function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
     const colIndex = index;
     const fontSize = 10;
     const charWidth = fontSize * 8 / 10;
-    const padding = 14 + SORT_ICON_WIDTH; // 14 for whitespace; an extra 10 for the optional sort arrow icon
-    const [minWidth, maxWidth] = [25, 400];
+    const padding = 14 + SORT_ICON_WIDTH_PX; // 14 for whitespace; an extra 10 for the optional sort arrow icon
+    const minWidth = MIN_CELL_WIDTH_PX;
+    const maxWidth = cols > 2 ?  // 2 because 1 column is the index.
+      MAX_CELL_WIDTH_PX : MAX_LONELY_CELL_WIDTH_PX;
 
     // Set the colWidth to the maximum width of a column.
     const maxRows = 100;
