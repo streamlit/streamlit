@@ -227,7 +227,5 @@ async function fetchManifest(reportId: string): Promise<any> {
 }
 
 function getWsUrl(host: string, port: number, reportName: string): string {
-  //return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
-  //XXX
   return `ws://${host}:${port}/stream`;
 }

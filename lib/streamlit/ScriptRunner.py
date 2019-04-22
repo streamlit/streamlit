@@ -128,14 +128,8 @@ class ScriptRunner(object):
 
     # This runs on the script thread.
     def _run(self):
-        # Wait 1s for thread to be ready
-        # XXX TODO: Use a lock for this.
-        for i in range(100):
-            if self.is_fully_stopped():
-                break
-            time.sleep(0.1)
-
         if not self.is_fully_stopped():
+            # This should never happen!
             raise RuntimeError('Script is already running')
 
         # Reset delta generator so it starts from index 0.
