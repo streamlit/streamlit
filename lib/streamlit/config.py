@@ -284,7 +284,7 @@ _create_option(
     expiration_date='2019-10-16')
 
 _create_option(
-    'proxy.enableCORS',  # XXX TODO implement CORS support.
+    'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
         ''',
@@ -727,24 +727,6 @@ def _parse_config_file():
         raise RuntimeError('No home directory.')
     config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
-    # XXX remove
-    # DEPRECATION WARNING: Remove this code after 2019-04-01
-    old_config_file_exists = os.path.exists(
-        os.path.join(home, '.streamlit', 'config.yaml'))
-    this_may_be_proxy = False
-    if sys.argv[0] in ('-m', '-c'):
-        this_may_be_proxy = True
-    elif os.path.split(sys.argv[0])[1] == 'streamlit':
-        this_may_be_proxy = True
-    if old_config_file_exists and not this_may_be_proxy:
-        LOGGER.warning(
-            '\n'
-            '════════════════════════════════════════════════\n'
-            'Config ~/.streamlit/config.yaml is DEPRECATED.\n'
-            'Support for this file will be removed on or after 2019-04-01.\n'
-            'Please remove it and use ~/.streamlit/config.toml instead.\n'
-            '════════════════════════════════════════════════\n')
-
     # Parse the config file.
     if not os.path.exists(config_filename):
         return
@@ -756,15 +738,6 @@ def _parse_config_file():
 
 
 def _check_conflicts():
-    # XXX
-    # if (get_option('client.tryToOutliveProxy')
-    #         and not get_option('proxy.isRemote')):
-    #     LOGGER.warning(
-    #         'The following combination of settings...\n'
-    #         '  client.tryToOutliveProxy = true\n'
-    #         '  proxy.isRemote = false\n'
-    #         '...will cause scripts to block until the proxy is closed.')
-
     # Node-related conflicts
 
     # When using the Node server, we must always connect to 8501 (this is

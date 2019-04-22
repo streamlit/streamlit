@@ -104,7 +104,6 @@ class Server(object):
                 (r"/()$", _StaticFileHandler,
                     {'path': '%s/index.html' % static_path}),
                 (r"/(.*)", _StaticFileHandler, {'path': '%s/' % static_path}),
-                # XXX Add debugz
             ])
         else:
             LOGGER.debug(
