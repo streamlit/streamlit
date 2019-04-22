@@ -96,7 +96,7 @@ export class Text extends PureComponent<Props> {
       case TextProto.Format.SUCCESS:
         return (
           <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
-            <div className="markdown-text-container" style={{width}}>
+            <div className="markdown-text-container">
               <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
             </div>
           </div>

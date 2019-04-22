@@ -39,6 +39,8 @@
 .streamlit-container .dataframe.col-header,
 .streamlit-container .dataframe.data {
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .streamlit-container .dataframe.row-header,

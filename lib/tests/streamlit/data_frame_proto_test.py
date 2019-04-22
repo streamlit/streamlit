@@ -129,7 +129,9 @@ class DataFrameProtoTest(unittest.TestCase):
                               end='2019/04/01 12:00',
                               freq='H')
         proto = protobuf.Index()
-        with patch('streamlit.elements.data_frame_proto.tzlocal.get_localzone') as p:
+        obj_to_patch = (
+            'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
+        with patch(obj_to_patch) as p:
             p.return_value = 'America/Los_Angeles'
             data_frame_proto._marshall_index(df_dt, proto)
             self.assertEqual(truth, proto.datetime_index.data.data)
@@ -159,7 +161,9 @@ class DataFrameProtoTest(unittest.TestCase):
         proto = protobuf.Index()
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_index(df_period, proto)
-        err_msg = 'Can\'t handle <class \'pandas.core.indexes.period.PeriodIndex\'> yet.'
+        err_msg = (
+            "Can't handle <class 'pandas.core.indexes.period.PeriodIndex'>"
+            ' yet.')
         self.assertEqual(err_msg, str(e.value))
 
     def test_marshall_table(self):
@@ -227,7 +231,9 @@ class DataFrameProtoTest(unittest.TestCase):
         dt_data = pd.Series([np.datetime64('2019-04-09T12:34:56')])
         dt_proto = protobuf.AnyArray()
 
-        with patch('streamlit.elements.data_frame_proto.tzlocal.get_localzone') as p:
+        obj_to_patch = (
+            'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
+        with patch(obj_to_patch) as p:
             p.return_value = 'America/Los_Angeles'
             data_frame_proto._marshall_any_array(dt_data, dt_proto)
             self.assertEqual(1554838496.0,
@@ -288,10 +294,10 @@ class DataFrameProtoTest(unittest.TestCase):
         style_combined.styles.extend([cell_style, cell_style])
 
         combined.new_element.data_frame.data.cols.extend([aa_combined])
-        combined.new_element.data_frame.index.plain_index.data.int64s.data.extend(
-            [3, 4, 3, 4])
-        combined.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
-            [5, 6, 5, 6])
+        row_index = combined.new_element.data_frame.index.plain_index
+        row_index.data.int64s.data.extend([3, 4, 3, 4])
+        col_index = combined.new_element.data_frame.columns.plain_index
+        col_index.data.int64s.data.extend([5, 6])
         combined.new_element.data_frame.style.cols.extend([style_combined])
 
         # Test both not empty

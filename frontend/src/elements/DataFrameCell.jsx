@@ -19,7 +19,7 @@ class DataFrameCell extends PureComponent {
     let onClick;
     let role;
     let tabIndex;
-    let title;
+    let title = contents;
 
     const isDescending = columnSortDirection === SortDirection.DESCENDING;
 

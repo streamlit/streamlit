@@ -206,7 +206,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.PLAIN
 
     @_with_element
@@ -376,7 +376,7 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.ERROR
 
     @_with_element
@@ -393,7 +393,7 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.WARNING
 
     @_with_element
@@ -410,7 +410,7 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.INFO
 
     @_with_element
@@ -427,7 +427,7 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = str(body)
+        element.text.body = textwrap.dedent(body).strip()
         element.text.format = protobuf.Text.SUCCESS
 
     @_with_element

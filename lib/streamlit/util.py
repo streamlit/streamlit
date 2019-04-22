@@ -339,6 +339,8 @@ def _is_plotly_obj(obj):
 def _is_list_of_plotly_objs(obj):
     if type(obj) is not list:
         return False
+    if len(obj) == 0:
+        return False
     return all(_is_plotly_obj(item) for item in obj)
 
 

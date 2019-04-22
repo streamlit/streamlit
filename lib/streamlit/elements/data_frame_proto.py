@@ -12,9 +12,6 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-np = None
-pd = None
-
 CSSStyle = namedtuple('CSSStyle', ['property', 'value'])
 
 
@@ -34,11 +31,8 @@ def marshall_data_frame(data, proto_df):
     # Convert df into an iterable of columns (each of type Series).
     df_data = (df.iloc[:, col] for col in range(len(df.columns)))
 
-    import numpy
-    import pandas
-    global pd, np
-    np = numpy
-    pd = pandas
+    import numpy as np
+    import pandas as pd
 
     _marshall_table(df_data, proto_df.data)
     _marshall_index(df.columns, proto_df.columns)
@@ -234,9 +228,8 @@ def _marshall_index(pandas_index, proto_index):
     pandas_index - Panda.Index or related (input)
     proto_index  - Protobuf.Index (output)
     """
-    import pandas
-    global pd
-    pd = pandas
+    import pandas as pd
+    import numpy as np
     if type(pandas_index) == pd.Index:
         _marshall_any_array(np.array(pandas_index),
                             proto_index.plain_index.data)
@@ -292,9 +285,7 @@ def _marshall_any_array(pandas_array, proto_array):
     pandas_array - 1D arrays which is AnyArray compatible (input).
     proto_array  - Protobuf.AnyArray (output)
     """
-    import numpy
-    global np
-    np = numpy
+    import numpy as np
     # Convert to np.array as necessary.
     if not hasattr(pandas_array, 'dtype'):
         pandas_array = np.array(pandas_array)
@@ -357,8 +348,9 @@ def add_rows(delta1, delta2, name=None):
     # Copy index
     _concat_index(df1.index, df2.index)
 
-    # Copy columns
-    _concat_index(df1.columns, df2.columns)
+    # Don't concat columns! add_rows should leave the dataframe with the same
+    # number of columns as it had before.
+    # DON'T DO: _concat_index(df1.columns, df2.columns)
 
     # Copy styles
     for (style_col1, style_col2) in zip(df1.style.cols, df2.style.cols):
