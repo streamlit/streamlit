@@ -18,6 +18,7 @@ from streamlit import protobuf
 from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRunner import State as ScriptState
+from streamlit.proxy import proxy_util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -78,7 +79,7 @@ class Server(object):
         app.listen(port)
 
         self._scriptrunner.on_state_changed.connect(
-            self._enqueue_script_state_changed_message)
+            self._enqueue_script_state_changed_messages)
         self._scriptrunner.on_file_change_not_handled.connect(
             self._enqueue_file_change_message)
 
@@ -154,7 +155,7 @@ class Server(object):
         if len(self._browser_queues) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
-    def _enqueue_script_state_changed_message(self, new_script_state):
+    def _enqueue_script_state_changed_messages(self, new_script_state):
         if new_script_state == ScriptState.RUNNING:
             self._clear_queue()
             self._maybe_enqueue_initialize_message()
@@ -163,13 +164,15 @@ class Server(object):
         elif new_script_state == ScriptState.STOPPED:
             self._enqueue_report_finished_message()
 
+        self._enqueue_session_state_changed_message()
+
+    def _enqueue_session_state_changed_message(self):
         msg = protobuf.ForwardMsg()
         msg.session_state_changed.run_on_save = self._scriptrunner.run_on_save
         msg.session_state_changed.report_is_running = (
             # Don't use is_running() because we want to indicate "running" to
             # the user event if we're in the process of stopping.
             not self._scriptrunner.is_fully_stopped())
-
         self.enqueue(msg)
 
     def _enqueue_file_change_message(self, _):
@@ -262,10 +265,21 @@ class Server(object):
         # terminal.
         caching.clear_cache(verbose=False)
 
+    def _handle_set_run_on_save_request(self, new_value):
+        self._scriptrunner.run_on_save = new_value
+        self._enqueue_session_state_changed_message()
+
+
+class _StaticFileHandler(tornado.web.StaticFileHandler):
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
+
 
 class _SocketHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
-        return True
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
 
     def open(self):
         Server.get_current()._add_browser_connection(self)
@@ -291,7 +305,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == 'clear_cache':
                 server._handle_clear_cache_request()
             elif msg_type == 'set_run_on_save':
-                server._scriptrunner.run_on_save = msg.set_run_on_save
+                server._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
                 server._scriptrunner.request_stop()
             else:
@@ -320,10 +334,10 @@ def _get_routes():
         LOGGER.debug('Serving static content from %s', static_path)
 
         routes.extend([
-            (r"/()$", tornado.web.StaticFileHandler,
+            (r"/()$", _StaticFileHandler,
                 {'path': '%s/index.html' % static_path}),
-            (r"/(.*)", tornado.web.StaticFileHandler,
-                {'path': '%s/' % static_path}),
+            (r"/(.*)", _StaticFileHandler, {'path': '%s/' % static_path}),
+            # XXX Add debugz
         ])
     else:
         LOGGER.debug(
