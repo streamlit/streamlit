@@ -320,7 +320,6 @@ export function indexGet(index, level, i) {
 export function indexGetByName(index, name) {
   const len = indexLen(index);
   for (let i = 0; i < len; i++) {
-    console.log(`iter: ${i} comparing "${indexGet(index, 0, i)}" to "${name}".`);
     if (indexGet(index, 0, i) === name) {
       return i;
     }

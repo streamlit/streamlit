@@ -69,19 +69,12 @@
   background: #f6f9fa;
 }
 
-/* This is used to point to the specific part of the pre.error that
-   caused an error. */
-.streamlit-container .json-text-container span.error {
-  padding: 0.2em 0.4em;
-  margin: 0;
-  background-color: #df616d60;
-  border-bottom: 1px dashed #df616d;
-}
-
-.streamlit-container .json-text-container pre.error {
+.streamlit-container pre.error {
   padding: 5px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: inherit;
+  font-size: 0.8rem;
 }
 
 .streamlit-container .react-json-view {

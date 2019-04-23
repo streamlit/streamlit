@@ -4,10 +4,11 @@
  *
  * @fileoverview Syntax-highlighted code block.
  */
-import React, { PureComponent } from 'react';
-import PropTypes from 'prop-types';
-import Prism from 'prismjs';
+
 import './CodeBlock.css';
+import Prism from 'prismjs';
+import React from 'react';
+import {PureStreamlitElement} from './util/StreamlitElement';
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -21,11 +22,17 @@ import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-c';
 
+interface Props {
+  language?: string;
+  value: string;
+  width: number;
+}
+
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends PureComponent {
-  render() {
+class CodeBlock extends PureStreamlitElement<Props> {
+  public safeRender(): React.ReactNode {
     if (this.props.language == null) {
       return (
         <pre><code>{this.props.value}</code></pre>
@@ -39,7 +46,7 @@ class CodeBlock extends PureComponent {
       lang = Prism.languages.python;
     }
 
-    const html = Prism.highlight(this.props.value, lang);
+    const html = Prism.highlight(this.props.value, lang, '');
     const cls = `language-${this.props.language}`;
 
     return (
@@ -49,14 +56,5 @@ class CodeBlock extends PureComponent {
     );
   }
 }
-
-CodeBlock.defaultProps = {
-  language: '',
-};
-
-CodeBlock.propTypes = {
-  value: PropTypes.string.isRequired,
-  language: PropTypes.string,
-};
 
 export default CodeBlock;
