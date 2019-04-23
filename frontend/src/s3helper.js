@@ -5,6 +5,7 @@
 
 import AWS from 'aws-sdk';
 import { FETCH_PARAMS, AWS_REGION, COGNITO_IDENTITY_POOL_ID } from './baseconsts';
+import { logError } from './log';
 
 
 let s3 = null;
@@ -17,7 +18,7 @@ let haveCredentials = false;
  */
 export async function configureCredentials(idToken) {
   if (haveCredentials) {
-    console.warn('Grabbing credentials again. This should never happen.');
+    logError('Grabbing credentials again. This should never happen.');
   }
 
   AWS.config.region = AWS_REGION;

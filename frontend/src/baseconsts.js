@@ -3,6 +3,9 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
+import { logMessage } from './log';
+
+
 /**
  * When in dev mode, this is the port used to connect to the web server that is
  * serving the current page (i.e. the actual web page server, not the API
@@ -55,9 +58,9 @@ export const COGNITO_IDENTITY_POOL_ID =
 
 export function setStreamlitVersion(version) {
   if (STREAMLIT_VERSION != null) {
-    throw new Error('Streamlit version is already set');
+    return;
   }
 
   STREAMLIT_VERSION = version;
-  console.log('Streamlit version: ', STREAMLIT_VERSION);
+  logMessage('Streamlit version: ', STREAMLIT_VERSION);
 }

@@ -3,6 +3,9 @@
   "version": "0.34.0",
   "private": true,
   "dependencies": {
+    "@types/prismjs": "^1.16.0",
+    "@types/react-virtualized": "^9.21.1",
+    "@types/recharts": "^1.1.16",
     "aws-sdk": "^2.374.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",

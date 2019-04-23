@@ -5,14 +5,21 @@
  * @fileoverview Displays a Python Exception in the Report.
  */
 
-import React, { PureComponent} from 'react';
+import React from 'react';
+import {Map as ImmutableMap} from 'immutable';
+import {PureStreamlitElement} from './util/StreamlitElement';
 import './ExceptionElement.css';
+
+interface Props {
+  width: number;
+  element: ImmutableMap<string, any>;
+}
 
 /**
   * Functional element representing formatted text.
   */
-class ExceptionElement extends PureComponent {
-  render() {
+class ExceptionElement extends PureStreamlitElement<Props> {
+  public safeRender(): React.ReactNode {
     const {element, width} = this.props;
     const type = element.get('type');
     let message = element.get('message');
@@ -24,7 +31,7 @@ class ExceptionElement extends PureComponent {
       <div className="alert alert-danger exception" style={{width}}>
         <div className="message"><strong>{type}</strong>{message}</div>
         <div className="stack-trace">{
-          stackTrace.map((row, indx) =>
+          stackTrace.map((row: string, indx: string) =>
             <div className="row" key={indx}>{row}</div>
           )
         }</div>
