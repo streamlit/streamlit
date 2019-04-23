@@ -3,8 +3,10 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React, { PureComponent } from 'react';
-import { Balloons as BalloonsProto } from '../protobuf';
+import React from 'react';
+import {Balloons as BalloonsProto} from '../protobuf';
+import {Map as ImmutableMap} from 'immutable';
+import {PureStreamlitElement} from './util/StreamlitElement';
 import './Balloons.css';
 
 const NUM_BALLOONS = 15;
@@ -18,15 +20,24 @@ const MAX_ANIMATION_DURATION_MS = 1000;  // see CSS
 
 const BALLOONS_INDICES = Array.from({length: NUM_BALLOONS});
 
-const BALLOON_IMAGES = [];
+const BALLOON_IMAGES: string[] = [];
 BALLOON_IMAGES[0] = '';  // 0 means random
 BALLOON_IMAGES[BalloonsProto.Type.BALLOON] = 'emoji/emoji_u1f388.png';
 BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = 'emoji/emoji_u1f604.png';
 BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = 'emoji/emoji_u1f929.png';
 BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = 'emoji/emoji_u1f60e.png';
 
-class Balloons extends PureComponent {
-  constructor(props) {
+interface Props {
+  width: number;  // Used in replaceElementOnException
+  element: ImmutableMap<string, any>;
+}
+
+interface State {
+  drawnId: boolean;
+}
+
+class Balloons extends PureStreamlitElement<Props, State> {
+  public constructor(props: Props) {
     super(props);
 
     this.state = {
@@ -34,8 +45,8 @@ class Balloons extends PureComponent {
     };
   }
 
-  render() {
-    if (this.state.drawnId === this.props.balloons.get('executionId')) {
+  public safeRender(): React.ReactNode {
+    if (this.state.drawnId === this.props.element.get('executionId')) {
       return '';
     }
 
@@ -47,7 +58,7 @@ class Balloons extends PureComponent {
           <img
             className="balloon"
             key={i}
-            src={getBalloonUrl(this.props.balloons)}
+            src={getBalloonUrl(this.props.element)}
             alt=""
             style={{
               left: Math.random() * (POS_MAX_VW - POS_MIN_VW)
@@ -60,18 +71,18 @@ class Balloons extends PureComponent {
     );
   }
 
-  setTimer() {
+  private setTimer(): void {
     // Remove DOM elements after animation ends.
     window.setTimeout(
       () => this.setState({
-        drawnId: this.props.balloons.get('executionId'),
+        drawnId: this.props.element.get('executionId'),
       }),
       MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100);
   }
 }
 
 
-function getBalloonUrl(balloonsProto) {
+function getBalloonUrl(balloonsProto: ImmutableMap<string, any>): string {
   const type = balloonsProto.get('type');
 
   if (type === BalloonsProto.Type.DEFAULT) {

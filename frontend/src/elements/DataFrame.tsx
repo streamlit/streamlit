@@ -5,14 +5,15 @@
  * @fileoverview Component display a Pandas Dataframe.
  */
 
-import React, { PureComponent } from 'react';
-import { Alert } from 'reactstrap';
-import { MultiGrid } from 'react-virtualized';
-import { toFormattedString } from '../format';
-import DataFrameCell from './DataFrameCell';
-import { dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices } from '../dataFrameProto';
+import DataFrameCell from './util/DataFrameCell';
+import React from 'react';
+import {Map as ImmutableMap} from 'immutable';
+import {MultiGrid} from 'react-virtualized';
+import {PureStreamlitElement} from './util/StreamlitElement';
+import {SortDirection} from './util/SortDirection';
+import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../dataFrameProto';
+import {toFormattedString} from '../format';
 import './DataFrame.css';
-import { SortDirection } from '../SortDirection';
 
 /**
  * Size of the optional sort icon displayed in column headers
@@ -34,13 +35,73 @@ const MAX_CELL_WIDTH_PX = 200;
  */
 const MAX_LONELY_CELL_WIDTH_PX = 400;
 
+interface Props {
+  width: number;
+  element: ImmutableMap<string, any>;
+}
+
+interface State {
+  /**
+   * If true, then the user manually clicked on a column header to sort the
+   * table.
+   */
+  sortedByUser: boolean;
+
+  /**
+   * Index of the column on which the table is sorted.
+   * (Column 0 = row indices).
+   */
+  sortColumn: number;
+
+  /** Sort direction for table sorting. */
+  sortDirection: SortDirection;
+}
+
+interface Dimensions {
+  rowHeight: number;
+  headerHeight: number;
+  border: number;
+  height: number;
+  elementWidth: number;
+  columnWidth: ({index}: {index: number}) => number;
+  headerWidth: number;
+}
+
+interface CellContents {
+  classes: string;
+  styles: object;
+  contents: string;
+}
+
+interface CellContentsGetter {
+  (columnIndex: number, rowIndex: number): CellContents;
+}
+
+interface ComputedWidths {
+  elementWidth: number;
+  columnWidth: ({index}: {index: number}) => number;
+  headerWidth: number;
+}
+
+interface CellRendererInput {
+  columnIndex: number;
+  key: string;
+  rowIndex: number;
+  style: object;
+}
+
+interface CellRenderer {
+  (input: CellRendererInput): React.ReactNode;
+}
+
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends PureComponent {
-  constructor(props) {
+class DataFrame extends PureStreamlitElement<Props, State> {
+  private multiGridRef = React.createRef<MultiGrid>();
+
+  public constructor(props: Props) {
     super(props);
-    this.multGridRef = React.createRef();
     this.state = {
       /**
        * If true, then the user manually clicked on a column header to sort the
@@ -64,12 +125,18 @@ class DataFrame extends PureComponent {
   /**
    * Returns a function that creates a DataFrameCell component for the given cell.
    */
-  getCellRenderer(cellContentsGetter) {
-    return ({ columnIndex, key, rowIndex, style: baseStyle }) => {
-      const { classes, styles: additionalStyles, contents } = cellContentsGetter(columnIndex, rowIndex);
-      const headerClickedCallback = rowIndex === 0 ? this.toggleSortOrder : null;
+  private getCellRenderer(
+    cellContentsGetter: CellContentsGetter): CellRenderer {
+
+    return (
+      {columnIndex, key, rowIndex, style: baseStyle}: CellRendererInput
+    ): React.ReactNode => {
+      const {classes, styles: additionalStyles, contents} =
+        cellContentsGetter(columnIndex, rowIndex);
+      const headerClickedCallback = rowIndex === 0 ?
+        this.toggleSortOrder : undefined;
       const sortDirection = columnIndex === this.state.sortColumn ?
-        this.state.sortDirection : null;
+        this.state.sortDirection : undefined;
 
       // Merge our base styles with any additional cell-specific
       // styles returned by the cellContentsGetter
@@ -95,7 +162,7 @@ class DataFrame extends PureComponent {
    * Called when one of our column headers is clicked.
    * Changes the sort order of the table.
    */
-  toggleSortOrder(columnIndex) {
+  private toggleSortOrder(columnIndex: number): void {
     let sortDirection = SortDirection.ASCENDING;
     if (this.state.sortColumn === columnIndex) {
       // Clicking the same header toggles between ascending and descending
@@ -115,10 +182,10 @@ class DataFrame extends PureComponent {
    * Returns the row indices, in display order, for this DataFrame,
    * given its sortColumn and sortDirection.
    */
-  getDataRowIndices() {
-    const {df} = this.props;
+  private getDataRowIndices(): number[] {
+    const {element} = this.props;
     const {sortColumn, sortDirection} = this.state;
-    const {headerCols, dataRows} = dataFrameGetDimensions(df);
+    const {headerCols, dataRows} = dataFrameGetDimensions(element);
 
     const sortAscending = sortDirection !== SortDirection.DESCENDING;
 
@@ -133,17 +200,17 @@ class DataFrame extends PureComponent {
       return rowIndices;
     }
 
-    return getSortedDataRowIndices(df, sortColumn - headerCols, sortAscending);
+    return getSortedDataRowIndices(element, sortColumn - headerCols, sortAscending);
   }
 
   /**
    * Returns rendering dimensions for this DataFrame
    */
-  getDimensions(cellContentsGetter) {
-    const {df, width} = this.props;
+  private getDimensions(cellContentsGetter: CellContentsGetter): Dimensions {
+    const {element, width} = this.props;
 
     const { headerRows, headerCols, dataRows, cols, rows } =
-      dataFrameGetDimensions(df);
+      dataFrameGetDimensions(element);
 
     // Rendering constants.
     const rowHeight = 25;
@@ -154,106 +221,110 @@ class DataFrame extends PureComponent {
     let {elementWidth, columnWidth, headerWidth} = getWidths(
       cols, rows, headerCols, headerRows, width - border, cellContentsGetter);
 
-    // Add space for the "empty" text.
-    if (dataRows === 0 && elementWidth < 60) {
-      elementWidth = 60;
-      headerWidth = 60;
-      if (columnWidth * cols < 60) {
-        columnWidth = 60 / cols;
+    // Add space for the "empty" text when the table is empty.
+    const EMPTY_WIDTH = 60;  // px
+    if (dataRows === 0 && elementWidth < EMPTY_WIDTH) {
+      elementWidth = EMPTY_WIDTH;
+      headerWidth = EMPTY_WIDTH;
+      let totalWidth = 0;
+      for (let i = 0; i < cols; i++) {
+        totalWidth += columnWidth({index: i});
+      }
+      if (totalWidth < EMPTY_WIDTH) {
+        columnWidth = () => EMPTY_WIDTH / cols;
       }
     }
 
-    return {rowHeight, headerHeight, border, height, elementWidth, columnWidth, headerWidth};
+    return {
+      rowHeight,
+      headerHeight,
+      border,
+      height,
+      elementWidth,
+      columnWidth,
+      headerWidth,
+    };
   }
 
   /**
    * Schedule a gridSize recompute if we have a multigrid attached.
    * This should be called whenever our data may have changed (i.e., from the render() method).
    */
-  recomputeSizeIfNeeded() {
+  private recomputeSizeIfNeeded(): void {
     setTimeout(() => {
-      if (this.multGridRef.current != null) {
-        this.multGridRef.current.recomputeGridSize();
+      if (this.multiGridRef.current != null) {
+        this.multiGridRef.current.recomputeGridSize();
       }
     }, 0);
   }
 
-  render() {
+  public safeRender(): React.ReactNode {
     // Get the properties.
-    const {df, width} = this.props;
+    const {element} = this.props;
 
-    try {
-      // Calculate the dimensions of this array.
-      const { headerRows, headerCols, dataRows, cols, rows } =
-          dataFrameGetDimensions(df);
+    // Calculate the dimensions of this array.
+    const { headerRows, headerCols, dataRows, cols, rows } =
+        dataFrameGetDimensions(element);
 
-      const sortedDataRowIndices = this.getDataRowIndices();
+    const sortedDataRowIndices = this.getDataRowIndices();
 
-      // Get the cell renderer.
-      const cellContentsGetter = getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices);
-      const cellRenderer = this.getCellRenderer(cellContentsGetter);
+    // Get the cell renderer.
+    const cellContentsGetter = getCellContentsGetter(element, headerRows, headerCols, sortedDataRowIndices);
+    const cellRenderer = this.getCellRenderer(cellContentsGetter);
 
-      // Determine our rendering dimensions
-      const {
-        rowHeight,
-        headerHeight,
-        border,
-        height,
-        elementWidth,
-        columnWidth,
-        headerWidth,
-      } = this.getDimensions(cellContentsGetter);
+    // Determine our rendering dimensions
+    const {
+      rowHeight,
+      headerHeight,
+      border,
+      height,
+      elementWidth,
+      columnWidth,
+      headerWidth,
+    } = this.getDimensions(cellContentsGetter);
 
-      // Since this is a PureComponent, finding ourselves in this method
-      // means that the props have changed, so we should force a rerender of the
-      // widths.
-      this.recomputeSizeIfNeeded();
+    // Since this is a PureComponent, finding ourselves in this method
+    // means that the props have changed, so we should force a rerender of the
+    // widths.
+    this.recomputeSizeIfNeeded();
 
-      // Put it all together.
-      return (
-        <div style={{width: elementWidth}} className="dataframe-container">
-          <MultiGrid
-            className="dataFrame"
-            cellRenderer={cellRenderer}
-            fixedColumnCount={headerCols}
-            fixedRowCount={headerRows}
-            columnWidth={columnWidth}
-            columnCount={cols}
-            enableFixedColumnScroll
-            enableFixedRowScroll
-            height={height - border}
-            rowHeight={rowHeight}
-            rowCount={rows}
-            width={elementWidth}
-            classNameBottomLeftGrid="table-bottom-left"
-            classNameTopRightGrid="table-top-right"
-            ref={this.multGridRef}
-          />
-          <div className="fixup fixup-top-right" style={{
-            width: border,
-            height: headerHeight,
-          }}/>
-          <div className="fixup fixup-bottom-left" style={{
-            width: headerWidth,
-            height: border,
-          }}/>
-          {
-            dataRows === 0 ?
-              <div className="empty-dataframe">
-                  empty
-              </div>
-              : null
-          }
-        </div>
-      );
-    } catch (e) {
-      console.log(e.stack);
-      return (
-        <Alert style={{width}} color="danger">
-          <strong>{e.name}</strong>: {e.message}
-        </Alert>
-      );
-    }
+    // Put it all together.
+    return (
+      <div style={{width: elementWidth}} className="dataframe-container">
+        <MultiGrid
+          className="dataFrame"
+          cellRenderer={cellRenderer}
+          fixedColumnCount={headerCols}
+          fixedRowCount={headerRows}
+          columnWidth={columnWidth}
+          columnCount={cols}
+          enableFixedColumnScroll
+          enableFixedRowScroll
+          height={height - border}
+          rowHeight={rowHeight}
+          rowCount={rows}
+          width={elementWidth}
+          classNameBottomLeftGrid="table-bottom-left"
+          classNameTopRightGrid="table-top-right"
+          ref={this.multiGridRef}
+        />
+        <div className="fixup fixup-top-right" style={{
+          width: border,
+          height: headerHeight,
+        }}/>
+        <div className="fixup fixup-bottom-left" style={{
+          width: headerWidth,
+          height: border,
+        }}/>
+        {
+          dataRows === 0 ?
+            <div className="empty-dataframe">
+                empty
+            </div>
+            : null
+        }
+      </div>
+    );
   }
 }
 
@@ -268,13 +339,19 @@ class DataFrame extends PureComponent {
  *    contents: str - the cell's formatted display string
  * }
  *
- * df                   - a DataFrame
+ * element              - a DataFrame
  * headerRows           - the number of frozen rows
  * headerCols           - the number of frozen columns
  * sortedDataRowIndices - (optional) an array containing an ordering for row indices
  */
-function getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices = null) {
-  return (columnIndex, rowIndex) => {
+function getCellContentsGetter(
+  element: ImmutableMap<string, any>,
+  headerRows: number,
+  headerCols: number,
+  sortedDataRowIndices?: number[],
+): CellContentsGetter {
+
+  return (columnIndex: number, rowIndex: number): CellContents => {
     if (sortedDataRowIndices != null && rowIndex >= headerRows) {
       // If we have a sortedDataRowIndices Array, it contains a mapping of row indices for
       // all *data* (non-header) rows.
@@ -290,7 +367,7 @@ function getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices 
       }
     }
 
-    let { contents, styles, type } = dataFrameGet(df, columnIndex, rowIndex);
+    let { contents, styles, type } = dataFrameGet(element, columnIndex, rowIndex);
 
     // All table elements have class 'dataframe'.
     let classes = `dataframe ${type}`;
@@ -306,9 +383,16 @@ function getCellContentsGetter(df, headerRows, headerCols, sortedDataRowIndices 
 /**
  * Computes various dimensions for the table.
  */
-function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
+function getWidths(
+  cols: number,
+  rows: number,
+  headerCols: number,
+  headerRows: number,
+  width: number,
+  cellContentsGetter: CellContentsGetter,
+): ComputedWidths {
   // Calculate column width based on character count alone.
-  let columnWidth = ({index}) => {
+  let columnWidth = ({index}: {index: number}): number => {
     const colIndex = index;
     const fontSize = 10;
     const charWidth = fontSize * 8 / 10;
@@ -332,7 +416,8 @@ function getWidths(cols, rows, headerCols, headerRows, width, cellContents) {
         // Otherwise, just measure every row.
         rowIndex = i;
       }
-      const nChars = cellContents(colIndex, rowIndex).contents.length;
+      const contents = cellContentsGetter(colIndex, rowIndex).contents;
+      const nChars = contents ? contents.length : 0;
       const cellWidth = nChars * charWidth + padding;
       if (cellWidth > maxWidth) {
         return maxWidth;
