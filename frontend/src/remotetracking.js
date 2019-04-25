@@ -4,7 +4,12 @@
  *
  */
 
-import { IS_DEV_ENV, STREAMLIT_VERSION, BROWSER_IP_ADDRESS } from './baseconsts';
+import {
+  INSTALLATION_ID,
+  IS_DEV_ENV,
+  STREAMLIT_VERSION,
+  BROWSER_IP_ADDRESS,
+} from './baseconsts';
 import { logAlways } from './log';
 
 /**
@@ -28,6 +33,7 @@ export function initRemoteTracker({gatherUsageStats, streamlitVersion}) {
   if (gatherUsageStats != null) { trackUsage = gatherUsageStats; }
 
   if (trackUsage) {
+    window.mixpanel.identify(INSTALLATION_ID);
     window.mixpanel.opt_in_tracking();
   } else {
     window.mixpanel.opt_out_tracking();
