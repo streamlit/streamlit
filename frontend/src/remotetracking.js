@@ -5,6 +5,7 @@
  */
 
 import { IS_DEV_ENV, STREAMLIT_VERSION, BROWSER_IP_ADDRESS } from './baseconsts';
+import { logAlways } from './log';
 
 /**
  * Whether we should track usage remotely, for stats.
@@ -32,7 +33,7 @@ export function initRemoteTracker({gatherUsageStats, streamlitVersion}) {
     window.mixpanel.opt_out_tracking();
   }
 
-  console.log('Track stats remotely: ', trackUsage);
+  logAlways('Track stats remotely: ', trackUsage);
 
   preInitializationEventQueue.forEach(([eventName, opts]) => {
     trackEventRemotely(eventName, opts);
@@ -59,7 +60,7 @@ export function trackEventRemotely(eventName, opts = {}) {
   };
 
   if (IS_DEV_ENV) {
-    console.log(
+    logAlways(
       `${trackUsage ? '' : 'NOT '}Tracking stat datapoint: `,
       eventName, data);
   }

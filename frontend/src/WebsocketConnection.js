@@ -5,6 +5,7 @@
 
 import { ForwardMsg, BackMsg } from './protobuf';
 import { ConnectionState } from './ConnectionState';
+import { logError } from './log';
 
 
 /**
@@ -90,7 +91,7 @@ class WebsocketConnection {
 
     const timeoutId = setTimeout(() => {
       if (this.websocket.readyState === 0) {
-        console.warn(
+        logError(
           `Websocket connection to ${uriList[uriIndex]} timed out`);
         this.websocket.close();
         tryNext();
@@ -145,7 +146,7 @@ class WebsocketConnection {
     reader.readAsArrayBuffer(data);
     reader.onloadend = () => {
       if (this.messageQueue === undefined) {
-        console.error('No message queue.');
+        logError('No message queue.');
         return;
       }
 

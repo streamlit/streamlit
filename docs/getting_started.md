@@ -32,6 +32,9 @@ $ pip install streamlit
 $ conda config --add channels conda-forge
 $ conda config --add channels https://repo.streamlit.io/streamlit-forge
 
+# Update conda (always a good idea)
+$ conda update conda
+
 # Install Streamlit!
 $ conda install streamlit
 ```

@@ -5,14 +5,21 @@
  * @fileoverview Represents formatted text.
  */
 
-import React, { PureComponent} from 'react';
+import React from 'react';
+import {Map as ImmutableMap} from 'immutable';
+import {PureStreamlitElement} from './util/StreamlitElement';
 import './DocString.css';
+
+interface Props {
+  width: number;
+  element: ImmutableMap<string, any>;
+}
 
 /**
   * Functional element representing formatted text.
   */
-class DocString extends PureComponent {
-  render() {
+class DocString extends PureStreamlitElement<Props> {
+  public safeRender(): React.ReactNode {
     const {element, width} = this.props;
 
     const name = element.get('name');

@@ -3,8 +3,7 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React, { PureComponent } from 'react';
-import { Alert }  from 'reactstrap';
+import React from 'react';
 import {
   tableGetRowsAndCols,
   indexGet,
@@ -12,6 +11,7 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from '../dataFrameProto';
 import { format, Duration } from '../format';
+import { PureStreamlitElement } from './util/StreamlitElement';
 
 import * as recharts from 'recharts';
 
@@ -93,99 +93,90 @@ const SUPPORTED_INDEX_TYPES = new Set([
   // TODO(tvst): Support other index types
 ]);
 
-class Chart extends PureComponent {
-  render() {
-    try {
-      const {chart, width} = this.props;
-      // Default height is 200 if not specified.
-      const chartXOffset = 0; // 35;
-      const chartDims = {
-        width: (chart.get('width') || width) + chartXOffset,
-        height: chart.get('height') || 200,
-      };
+class Chart extends PureStreamlitElement {
+  safeRender() {
+    const {element, width} = this.props;
+    // Default height is 200 if not specified.
+    const chartXOffset = 0; // 35;
+    const chartDims = {
+      width: (element.get('width') || width) + chartXOffset,
+      height: element.get('height') || 200,
+    };
 
-      // Convert the data into a format that Recharts understands.
-      const dataFrame = chart.get('data');
-      const data = [];
-      const [rows, cols] = tableGetRowsAndCols(dataFrame.get('data'));
+    // Convert the data into a format that Recharts understands.
+    const dataFrame = element.get('data');
+    const data = [];
+    const [rows, cols] = tableGetRowsAndCols(dataFrame.get('data'));
 
-      const indexType = dataFrame.get('index').get('type');
-      const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType);
+    const indexType = dataFrame.get('index').get('type');
+    const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType);
 
-      // transform to number, e.g. to support Date
-      let indexTransform = undefined;
-      // transform to human readable tick, e.g. to support Date
-      let tickFormatter = undefined;
-      switch (indexType) {
-        case 'datetimeIndex':
-          indexTransform = date => date.getTime();
-          tickFormatter = millis => format.dateToString(new Date(millis));
-          break;
-        case 'timedeltaIndex':
-          indexTransform = date => date.getTime();
-          tickFormatter = millis => format.durationToString(new Duration(millis));
-          break;
-        case 'float_64Index':
-          tickFormatter = float => float.toFixed(2);
-          break;
-        default:
-          break;
-      }
-
-      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-        let rowData = {};
-
-        if (hasSupportedIndex) {
-          rowData[INDEX_COLUMN_DESIGNATOR] =
-              indexGet(dataFrame.get('index'), 0, rowIndex);
-          if (indexTransform) {
-            rowData[INDEX_COLUMN_DESIGNATOR] =
-                indexTransform(rowData[INDEX_COLUMN_DESIGNATOR]);
-          }
-        }
-
-        for (let colIndex = 0; colIndex < cols; colIndex++) {
-          rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
-              tableGet(dataFrame.get('data'), colIndex, rowIndex);
-        }
-        data.push(rowData);
-      }
-
-      // Parse out the chart props into an object.
-      const chart_props = extractProps(chart);
-      // for (const chartProperty of chart.get('props'))
-      //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
-
-      return (
-        <div style={chartDims}>
-          <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
-            {
-              React.createElement(
-                COMPONENTS[chart.get('type')],
-                {...chartDims, data, ...chart_props},
-                ...chart.get('components').map((component) => {
-                  const component_props = extractProps(component);
-                  const isXAxis = component.get('type') === 'XAxis';
-                  if (isXAxis && tickFormatter) {
-                    component_props['tickFormatter'] = tickFormatter;
-                  }
-                  return React.createElement(
-                    COMPONENTS[component.get('type')], component_props);
-                }
-                )
-              )
-            }
-          </div>
-        </div>
-      );
-    } catch (e) {
-      console.log(e.stack);
-      return (
-        <Alert color="danger">
-          <strong>{e.name}</strong>: {e.message}
-        </Alert>
-      );
+    // transform to number, e.g. to support Date
+    let indexTransform = undefined;
+    // transform to human readable tick, e.g. to support Date
+    let tickFormatter = undefined;
+    switch (indexType) {
+      case 'datetimeIndex':
+        indexTransform = date => date.getTime();
+        tickFormatter = millis => format.dateToString(new Date(millis));
+        break;
+      case 'timedeltaIndex':
+        indexTransform = date => date.getTime();
+        tickFormatter = millis => format.durationToString(new Duration(millis));
+        break;
+      case 'float_64Index':
+        tickFormatter = float => float.toFixed(2);
+        break;
+      default:
+        break;
     }
+
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      let rowData = {};
+
+      if (hasSupportedIndex) {
+        rowData[INDEX_COLUMN_DESIGNATOR] =
+            indexGet(dataFrame.get('index'), 0, rowIndex);
+        if (indexTransform) {
+          rowData[INDEX_COLUMN_DESIGNATOR] =
+              indexTransform(rowData[INDEX_COLUMN_DESIGNATOR]);
+        }
+      }
+
+      for (let colIndex = 0; colIndex < cols; colIndex++) {
+        rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
+            tableGet(dataFrame.get('data'), colIndex, rowIndex);
+      }
+      data.push(rowData);
+    }
+
+    // Parse out the chart props into an object.
+    const chart_props = extractProps(element);
+    // for (const chartProperty of element.get('props'))
+    //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
+
+    return (
+      <div style={chartDims}>
+        <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
+          {
+            React.createElement(
+              COMPONENTS[element.get('type')],
+              {...chartDims, data, ...chart_props},
+              ...element.get('components').map((component) => {
+                const component_props = extractProps(component);
+                const isXAxis = component.get('type') === 'XAxis';
+                if (isXAxis && tickFormatter) {
+                  component_props['tickFormatter'] = tickFormatter;
+                }
+                return React.createElement(
+                  COMPONENTS[component.get('type')], component_props);
+              }
+              )
+            )
+          }
+        </div>
+      </div>
+    );
   }
 }
 
