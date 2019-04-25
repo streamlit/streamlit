@@ -146,6 +146,50 @@ Text is great, but Streamlit's true power comes from the ability to quickly mani
    This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for [data](https://streamlit.io/secret/docs/api/data.html) and [charts](https://streamlit.io/secret/docs/api/charts.html).
 ```
 
+### Display data frames and tables
+
+There are a few ways to display data frames in Streamlit reports. In the previous section, you were introduced to `streamlit.write()`, which can be used to write anything from text to tables. Now let's take a look at methods designed specifically for visualizing data. You might be asking yourself, "why wouldn't I always you `streamlit.write()`?" The main reason is that you can't reuse the slot in the report created by `streamlit.write()`. Put simply, you can't update any elements created with `streamlit.write()`.
+
+Let's create a data frame. You'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](https://streamlit.io/secret/docs/api/data.html#streamlit.dataframe) method to draw the interactive table.
+
+```Python
+import numpy
+dataframe = numpy.random.randn(10, 20)
+streamlit.dataframe(dataframe)
+```
+
+Let's expand on the first example using the Pandas `Styler` object to highlight some elements in the interactive table.
+
+```eval_rst
+.. note::
+   If you used PIP to install Streamlit, you'll need to install Jinja2 to use the Styler object. To install Jinja2, run: `pip install jinja2`.
+```
+
+```Python
+import numpy
+import pandas
+dataframe = pandas.DataFrame(
+    numpy.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+
+streamlit.dataframe(dataframe.style.highlight_max(axis=0))
+```
+
+Streamlit also has a method for static table generation: [`streamlit.table()`](https://streamlit.io/secret/docs/api/data.html#streamlit.table).
+
+```Python
+import numpy
+import pandas
+dataframe = pandas.DataFrame(
+    numpy.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+streamlit.table(dataframe)
+```
+
+### Draw charts, histograms, and maps
+
+<< Three quick samples ... >>
+
 ## Update text, charts, and tables
 
 << Explain that any element can be updated... >>
