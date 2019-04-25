@@ -54,13 +54,17 @@ Now that everything's installed, you'll need to create a file for your report an
 
    ```Python
    import streamlit
+   # To make things easier later, we're also importing numpy
+   # and pandas for working with sample data.
+   import numpy
+   import pandas
 
    # Don't worry, we'll explain this method in
    # the next section.
    streamlit.title("My first report")
    ```
 
-3. Run your report. This will open a new tab in your default browser. You won't see much -- just a title -- but in the next few sections we'll populate the report with text, charts, and histograms.
+3. Run your report. This will open a new tab in your default browser. You won't see much -- just a title -- but in the next few sections we'll populate the report with text, tables, and charts.
 
    ```bash
    python first_report.py
@@ -127,9 +131,6 @@ Let's take a look at how you can use `streamlit.write()` to display text and a P
 ```
 
 ```python
-import streamlit
-import pandas
-
 streamlit.write("Here's our first attempt at using data to create a table:")
 streamlit.write(pandas.DataFrame({
   'first column': [1, 2, 3, 4],
@@ -139,7 +140,7 @@ streamlit.write(pandas.DataFrame({
 
 ## Visualize data
 
-Text is great, but Streamlit's true power comes from the ability to quickly manipulate data, display it, and share it. In this section, you'll learn how to use Streamlit commands that are used with data frames, charts, histograms, and more.
+Text is great, but Streamlit's strenght is the ability to quickly manipulate data, display it, and share it. In this section, you'll learn how to use Streamlit methods to create interactive tables, charts, histograms, and more.
 
 ```eval_rst
 .. tip::
@@ -153,7 +154,6 @@ There are a few ways to display data frames in Streamlit reports. In the previou
 Let's create a data frame. You'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](https://streamlit.io/secret/docs/api/data.html#streamlit.dataframe) method to draw the interactive table.
 
 ```Python
-import numpy
 dataframe = numpy.random.randn(10, 20)
 streamlit.dataframe(dataframe)
 ```
@@ -166,8 +166,6 @@ Let's expand on the first example using the Pandas `Styler` object to highlight 
 ```
 
 ```Python
-import numpy
-import pandas
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
@@ -178,17 +176,47 @@ streamlit.dataframe(dataframe.style.highlight_max(axis=0))
 Streamlit also has a method for static table generation: [`streamlit.table()`](https://streamlit.io/secret/docs/api/data.html#streamlit.table).
 
 ```Python
-import numpy
-import pandas
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
 streamlit.table(dataframe)
 ```
 
-### Draw charts, histograms, and maps
+### Bar charts, line charts, and maps
 
-<< Three quick samples ... >>
+Streamlit support sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like PyPlot, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
+
+<< Possibly add note that there are examples that use real data in the tutorials... TBD >>
+
+The [`streamlit.barchart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
+
+```Python
+chart_data = pandas.DataFrame(
+    [[20, 30, 50]],
+    columns=['a', 'b', 'c'])
+
+streamlit.bar_chart(chart_data)
+```
+
+Drawing a line chart is just as easy as drawing a bar chart with [`streamlit.line_chart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.line_chart). The only difference is that we're going to generate a random sample using Numpy.
+
+```Python
+chart_data = pandas.DataFrame(
+     numpy.random.randn(20, 3),
+     columns=['a', 'b', 'c'])
+
+streamlit.line_chart(chart_data)
+```
+
+With [`streamlit.map()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.map) you can display data points on a map. Let's use Numpy to generate some sample data and plot it on San Francisco.
+
+```Python
+map_data = pandas.DataFrame(
+    numpy.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+    columns=['lat', 'lon'])
+
+streamlit.map(map_data)
+```
 
 ## Update text, charts, and tables
 
