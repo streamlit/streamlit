@@ -4,9 +4,9 @@
 
 # Get started
 
-If you've made it this far, you probably have an idea of what you can do with Streamlit (if you don't, watch [this video](replace-with-link-to-demo)). In this guide, we'll introduce you to the core features and how they are used to create a report.
+If you've made it this far, you probably have an idea of what you can do with Streamlit (if you don't, watch [this video](replace-with-link-to-demo)). In this guide, we'll introduce you to Streamlit's core features and how they are used to create a report.
 
-The easiest way to learn to use Streamlit is to try things out. As you read through this guide, test each method. As long as your report is running, every time you save, the changes are displayed in the browser almost instantly.
+The easiest way to learn to use Streamlit is to try things out. As you read through this guide, test each method. As long as your report is running, every time you add an element and save, the changes are displayed in the browser almost instantly. What's drawn in the report is completely up to you.
 
 ## Prerequisites
 
@@ -182,7 +182,7 @@ dataframe = pandas.DataFrame(
 streamlit.table(dataframe)
 ```
 
-### Bar charts, line charts, and maps
+### Draw bar charts, line charts, and maps
 
 Streamlit support sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like PyPlot, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
 
@@ -218,20 +218,70 @@ map_data = pandas.DataFrame(
 streamlit.map(map_data)
 ```
 
-## Update text, charts, and tables
+## Update existing elements
 
-<< Explain that any element can be updated... >>
+Every time you save a script, Streamlit re-executes the entire Python script normally, from top to bottom. Then Streamlit, does a bunch of computer-sciencey magic to make sure your report is updated efficiently.
+
+This allows you to work in a fast interactive loop: you write some code, save it, review the output, write some more, and so on, until you’re happy with the results. The goal is to use Streamlit to review your code, debug it, perfect it, and share it.
+
+In this section, you'll learn how to update existing elements in a report.
 
 ### Replace text with text
 
-<< Not sure this needs a heading, but there should be a representative example... >>
+Whenever you use a Streamlit method to write text or draw a chart, an element is created, which is called a "slot". With the exception of elements created by `streamlit.write()`, slot can be updated with like content, or completely different data. 
+
+Let's start with an easy example. Here you're going to create a text element, then update (or overwrite) that element.
+
+```Python
+my_element = streamlit.text('Hello sun.')
+# Draws "Hello sun" in the Streamlit report,
+# and saves that "slot". This slot can be reused.
+
+my_element.text('Goodnight moon.')
+# Replaces "Hello sun" with "Goodnight moon" in the report.
+```
 
 ### Replace text with a data frame/chart
 
-<< Not sure this needs a heading, but there should be a representative example... >>
+Now, let's replace the text element with a dataframe.
+
+```Python
+# You'll use time to simulate loading data
+import time
+
+# Draws "Loading data..." in the Streamlit report.
+my_second_element = streamlit.text('Loading data...')
+
+update_dataframe = pandas.DataFrame(
+    numpy.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+
+# Simulates loading a large data set.
+time.sleep(5)
+
+# Replaces "Loading data..." with a table containing sample data.
+my_second_element.dataframe(update_dataframe)
+```
 
 ### Append data to a table
 
-<< Not sure this needs a heading, but there should be a representative example... >>
+With Streamlit, you can do more than just replace elements. You can also add to and modify existing elements. This sample illustrates how you can add additional data to a line chart.
+
+```Python
+# Get some data.
+data = numpy.random.randn(10, 2)
+
+# Show the data as a chart.
+chart = streamlit.line_chart(data)
+
+# Wait 1 second, so the change is clearer.
+time.sleep(1)
+
+# Grab some more data.
+data2 = numpy.random.randn(10, 2)
+
+# Append the new data to the existing chart.
+chart.add_rows(data2)
+```
 
 ## Order report elements
