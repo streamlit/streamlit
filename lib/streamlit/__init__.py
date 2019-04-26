@@ -19,10 +19,18 @@ setup_2_3_shims(globals())
 
 # Give the package a version.
 import pkg_resources
+import uuid
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = pkg_resources.get_distribution('streamlit').version
+
+# Deterministic Unique Streamlit User ID
+# The try/except is needed for python 2/3 compatibility
+try:
+    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode())))
+except UnicodeDecodeError:
+    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode()).encode('utf-8')))
 
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger

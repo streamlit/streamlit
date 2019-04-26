@@ -39,7 +39,7 @@ import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { logError } from './log';
-import { setStreamlitVersion } from './baseconsts';
+import { setInstallationId, setStreamlitVersion } from './baseconsts';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
@@ -222,6 +222,7 @@ class StreamlitApp extends PureComponent {
    */
   handleInitialize(initializeMsg) {
     setStreamlitVersion(initializeMsg.get('streamlitVersion'));
+    setInstallationId(initializeMsg.get('userInfo').get('installationId'));
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.get('gatherUsageStats'),
