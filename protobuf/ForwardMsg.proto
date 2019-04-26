@@ -53,6 +53,8 @@ message Initialize {
   // The session state at the time the connection
   // was established
   SessionState session_state = 5;
+
+  UserInfo user_info = 6;
 }
 
 // This is the first message that is sent when a new report is run
@@ -95,4 +97,8 @@ message SessionEvent {
     // completion.
     bool report_was_manually_stopped = 2;
   }
+}
+
+message UserInfo {
+  string installation_id = 1;
 }

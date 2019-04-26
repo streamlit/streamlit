@@ -5,7 +5,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-from streamlit import __version__
+from streamlit import __installation_id__, __version__
 from streamlit import config
 from streamlit import protobuf
 
@@ -38,6 +38,7 @@ def initialize_msg(report_state):
     msg.initialize.gather_usage_stats = (
         config.get_option('browser.gatherUsageStats'))
     msg.initialize.streamlit_version = __version__
+    msg.initialize.user_info.installation_id = __installation_id__
 
     _marshall_session_state(msg.initialize.session_state, report_state)
     return msg
