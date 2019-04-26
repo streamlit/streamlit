@@ -94,15 +94,7 @@ class StreamlitApp extends PureComponent {
     this.reportEventDispatcher = new ReportEventDispatcher();
     this.statusWidgetRef = React.createRef();
 
-    this.connectionManager = new ConnectionManager({
-      getUserLogin: this.getUserLogin,
-      onMessage: this.handleMessage,
-      onConnectionError: this.handleConnectionError,
-      setReportName: this.setReportName,
-      connectionStateChanged: newState => {
-        this.setState({connectionState: newState});
-      },
-    });
+    this.connectionManager = null;
   }
 
   /**
@@ -151,6 +143,18 @@ class StreamlitApp extends PureComponent {
   };
 
   componentDidMount() {
+    // Initialize connection manager here, to avoid
+    // "Can't call setState on a component that is not yet mounted." error.
+    this.connectionManager = new ConnectionManager({
+      getUserLogin: this.getUserLogin,
+      onMessage: this.handleMessage,
+      onConnectionError: this.handleConnectionError,
+      setReportName: this.setReportName,
+      connectionStateChanged: newState => {
+        this.setState({ connectionState: newState });
+      },
+    });
+
     if (isEmbeddedInIFrame()) {
       document.body.classList.add('embedded');
     }
