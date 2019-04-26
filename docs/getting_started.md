@@ -168,7 +168,7 @@ Let's expand on the first example using the Pandas `Styler` object to highlight 
 ```Python
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=('col %d' % i for i in range(20)))
+    columns=("col %d' % i for i in range(20)))
 
 streamlit.dataframe(dataframe.style.highlight_max(axis=0))
 ```
@@ -178,7 +178,7 @@ Streamlit also has a method for static table generation: [`streamlit.table()`](h
 ```Python
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=('col %d' % i for i in range(20)))
+    columns=("col %d' % i for i in range(20)))
 streamlit.table(dataframe)
 ```
 
@@ -193,7 +193,7 @@ The [`streamlit.barchart()`](https://streamlit.io/secret/docs/api/charts.html#st
 ```Python
 chart_data = pandas.DataFrame(
     [[20, 30, 50]],
-    columns=['a', 'b', 'c'])
+    columns=['a','b', 'c'])
 
 streamlit.bar_chart(chart_data)
 ```
@@ -228,16 +228,16 @@ In this section, you'll learn how to update existing elements in a report.
 
 ### Replace text with text
 
-Whenever you use a Streamlit method to write text or draw a chart, an element is created, which is called a "slot". With the exception of elements created by `streamlit.write()`, slot can be updated with like content, or completely different data. 
+Whenever you use a Streamlit method to write text or draw a chart, an element is created, which is called a "slot". With the exception of elements created by `streamlit.write()`, slot can be updated with like content, or completely different data.
 
 Let's start with an easy example. Here you're going to create a text element, then update (or overwrite) that element.
 
 ```Python
-my_element = streamlit.text('Hello sun.')
+my_element = streamlit.text("Hello sun.")
 # Draws "Hello sun" in the Streamlit report,
 # and saves that "slot". This slot can be reused.
 
-my_element.text('Goodnight moon.')
+my_element.text("Goodnight moon.")
 # Replaces "Hello sun" with "Goodnight moon" in the report.
 ```
 
@@ -250,11 +250,11 @@ Now, let's replace the text element with a dataframe.
 import time
 
 # Draws "Loading data..." in the Streamlit report.
-my_second_element = streamlit.text('Loading data...')
+my_second_element = streamlit.text("Loading data...")
 
 update_dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=('col %d' % i for i in range(20)))
+    columns=("col %d' % i for i in range(20)))
 
 # Simulates loading a large data set.
 time.sleep(5)
@@ -263,9 +263,9 @@ time.sleep(5)
 my_second_element.dataframe(update_dataframe)
 ```
 
-### Append data to a table
+### Append data to a chart
 
-With Streamlit, you can do more than just replace elements. You can also add to and modify existing elements. This sample illustrates how you can add additional data to a line chart.
+You can do more than just replace elements. You can also add to and modify existing elements, like charts and tables. Let's take a look at how you'd add a row to a line chart.
 
 ```Python
 # Get some data.
@@ -284,4 +284,35 @@ data2 = numpy.random.randn(10, 2)
 chart.add_rows(data2)
 ```
 
-## Order report elements
+## Order the elements of a report
+
+So far you've learned how to use the methods exposed by Streamlit to add new elements to a report. These have all been additive, with the assumption that you already know what you want to add to the report. What if you're unsure of the structure, or need to add a place holder for content that isn't quite ready? That's where [`streamlit.empty()`](https://streamlit.io/secret/docs/api/other.html#streamlit.empty) comes in handy. It allows you to add an empty slot to your report that you can update at any time.
+
+Let's take a look at how you can use `streamlit.empty` to add structure to a report.
+
+```Python
+## Appends a title to the report.
+streamlit.title("Report with placeholders")
+
+# Appends some text to the report.
+streamlit.text("Some interesting text about your interesting project.")
+
+# Appends an empty slot to the report.
+my_slot1 = streamlit.empty()
+
+# Appends another empty slot to the report.
+my_slot2 = streamlit.empty()
+
+# Appends some more text to the report.
+streamlit.text("This is where you provide a killer conclusion.")
+
+# Replaces the first empty slot with a text string.
+my_slot1.text("You can use a slot whenever you have something to say, draw, or represent.")
+
+# Replaces the second empty slot with a chart.
+my_slot2.line_chart(np.random.randn(20, 2))
+```
+
+## What's next?
+
+* [Learn how to speed up your reports with caching](link-to-caching-article-here)
