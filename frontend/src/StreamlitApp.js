@@ -51,6 +51,7 @@ const DataFrame = React.lazy(() => import('./elements/DataFrame'));
 const ImageList = React.lazy(() => import('./elements/ImageList'));
 const Map = React.lazy(() => import('./elements/Map'));
 const DeckGlChart = React.lazy(() => import('./elements/DeckGlChart'));
+const BokehChart = React.lazy(() => import('./elements/BokehChart'));
 const PlotlyChart = React.lazy(() => import('./elements/PlotlyChart'));
 const VegaLiteChart = React.lazy(() => import('./elements/VegaLiteChart'));
 const Video = React.lazy(() => import('./elements/Video'));
@@ -605,7 +606,7 @@ class StreamlitApp extends PureComponent {
 
   renderElements(width) {
     return this.state.elements
-      .map(element => this.renderElement(element, width))
+      .map((element, index) => this.renderElement(element, index, width))
       .push(<div style={{ width }} className="footer" />)
       .flatMap((component, indx) => {
         if (!component) {
@@ -627,12 +628,13 @@ class StreamlitApp extends PureComponent {
       });
   }
 
-  renderElement(element, width) {
+  renderElement(element, index, width) {
     if (!element) { throw new Error('Transmission error.'); }
 
     return dispatchOneOf(element, 'type', {
       audio: el => <Audio element={el} width={width} />,
       balloons: el => <Balloons element={el} width={width} />,
+      bokehChart: el => <BokehChart element={el} id={index} width={width} />,
       chart: el => <Chart element={el} width={width} />,
       dataFrame: df => <DataFrame element={df} width={width} />,
       deckGlChart: el => <DeckGlChart element={el} width={width} />,

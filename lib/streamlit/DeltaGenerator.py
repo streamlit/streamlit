@@ -772,6 +772,7 @@ class DeltaGenerator(object):
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
 
+
         To show Plotly charts in Streamlit, just call `st.plotly_chart`
         wherever you would call Plotly's `py.plot` or `py.iplot`.
 
@@ -884,6 +885,45 @@ class DeltaGenerator(object):
         fig.savefig(image, **kwargs)
         image_proto.marshall_images(
             image, None, -2, element.imgs, False)
+
+    @_with_element
+    def bokeh_chart(self, element, figure):
+        """Display an interactive Bokeh chart.
+
+        Bokeh is a charting library for Python. The arguments to this function
+        closely follow the ones for Bokeh's `show` function. You can find
+        more about Bokeh at https://bokeh.pydata.org.
+
+        Parameters
+        ----------
+        figure : bokeh.plotting.figure.Figure
+            A Bokeh figure to plot.
+
+
+        To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
+        wherever you would call Bokeh's `show`.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> from bokeh.plotting import figure
+        >>>
+        >>> x = [1, 2, 3, 4, 5]
+        >>> y = [6, 7, 2, 4, 5]
+        >>>
+        >>> p = figure(title='simple line example', x_axis_label='x', y_axis_label='y')
+        >>>
+        >>> p.line(x, y, legend='Trend', line_width=2)
+        >>>
+        >>> st.bokeh_chart(p)
+
+        .. output::
+           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           height: 600px
+
+        """
+        import streamlit.elements.bokeh as bokeh
+        bokeh.marshall(element.bokeh_chart, figure)
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
