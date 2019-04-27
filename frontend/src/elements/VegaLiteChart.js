@@ -3,8 +3,8 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React, { Component } from 'react';
-import { Alert }  from 'reactstrap';
+import React from 'react';
+import { StreamlitElement } from './util/StreamlitElement';
 import { tableGetRowsAndCols, indexGet, tableGet } from '../dataFrameProto';
 
 import VegaLite from 'react-vega-lite';
@@ -29,7 +29,7 @@ const SUPPORTED_INDEX_TYPES = new Set([
 ]);
 
 
-class VegaLiteChart extends Component {
+class VegaLiteChart extends StreamlitElement {
   constructor(props) {
     super(props);
 
@@ -37,44 +37,35 @@ class VegaLiteChart extends Component {
     this.vegaView = null;
   }
 
-  render() {
-    try {
-      const el = this.props.element;
+  safeRender() {
+    const el = this.props.element;
 
-      const spec = JSON.parse(el.get('spec'));
-      maybeAddAutosizing(spec);
+    const spec = JSON.parse(el.get('spec'));
+    maybeAddAutosizing(spec);
 
-      const dataObj = getInlineData(el);
-      const datasets = getDataSets(el, spec);
-      if (datasets) {
-        if (!spec.data) {
-          throw new Error(
-            'Must specify "data" field when using "dataset"');
-        }
-        spec.datasets = datasets;
+    const dataObj = getInlineData(el);
+    const datasets = getDataSets(el, spec);
+    if (datasets) {
+      if (!spec.data) {
+        throw new Error(
+          'Must specify "data" field when using "dataset"');
       }
-
-      const height = spec.height == null ? 200 : spec.height;
-      const width = spec.width == null ? this.props.width : spec.width;
-
-      return (
-        <VegaLite
-          spec={spec}
-          data={dataObj}
-          renderer="canvas"
-          width={width}
-          height={height}
-          onNewView={this._onNewView.bind(this)}
-        />
-      );
-
-    } catch (e) {
-      return (
-        <Alert color="danger">
-          <strong>{e.name}</strong>: {e.message}
-        </Alert>
-      );
+      spec.datasets = datasets;
     }
+
+    const height = spec.height == null ? 200 : spec.height;
+    const width = spec.width == null ? this.props.width : spec.width;
+
+    return (
+      <VegaLite
+        spec={spec}
+        data={dataObj}
+        renderer="canvas"
+        width={width}
+        height={height}
+        onNewView={this._onNewView.bind(this)}
+      />
+    );
   }
 
   /**

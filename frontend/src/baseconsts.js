@@ -3,6 +3,9 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
+import { logMessage } from './log';
+
+
 /**
  * When in dev mode, this is the port used to connect to the web server that is
  * serving the current page (i.e. the actual web page server, not the API
@@ -26,6 +29,8 @@ export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV;
  * Not really a "constant", but once intiailized it never changes.
  */
 export let STREAMLIT_VERSION = null;
+
+export let INSTALLATION_ID = null;
 
 /**
  * The WAN-facing IP address of the machine this browser is in.
@@ -55,9 +60,18 @@ export const COGNITO_IDENTITY_POOL_ID =
 
 export function setStreamlitVersion(version) {
   if (STREAMLIT_VERSION != null) {
-    throw new Error('Streamlit version is already set');
+    return;
   }
 
   STREAMLIT_VERSION = version;
-  console.log('Streamlit version: ', STREAMLIT_VERSION);
+  logMessage('Streamlit version: ', STREAMLIT_VERSION);
+}
+
+export function setInstallationId(installationId) {
+  if (INSTALLATION_ID != null) {
+    throw new Error('Streamlit installationId is already set');
+  }
+
+  INSTALLATION_ID = installationId;
+  console.log('Streamlit installationId: ', INSTALLATION_ID);
 }

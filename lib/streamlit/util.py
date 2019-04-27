@@ -321,6 +321,13 @@ def is_pex():
     return False
 
 
+def is_altair_chart(obj):
+    """True if input looks like an Altair chart."""
+    return (
+        is_type(obj, 'altair.vegalite.v2.api.Chart') or
+        is_type(obj, 'altair.vegalite.v3.api.Chart'))
+
+
 def is_plotly_chart(obj):
     """True if input looks like a Plotly chart."""
     return (

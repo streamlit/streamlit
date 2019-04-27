@@ -262,16 +262,25 @@ class ClientConnection(object):
 
         # Get the deltas. Need to clone() becuase get_deltas() clears the queue.
         deltas = self._master_queue.clone().get_deltas()
+
+        # Strip out empty deltas.
+        deltas = [d for d in deltas if d.new_element.WhichOneof('type') != 'empty']
+
         manifest = self._build_manifest(
             status=_Status.DONE,
             n_deltas=len(deltas)
         )
         manifest_json = json.dumps(manifest).encode('utf-8')
 
-        delta_tuples = [(
-            'reports/%(id)s/%(idx)s.delta' % {'id': self.id, 'idx': idx},
-            delta.SerializeToString()
-        ) for idx, delta in enumerate(deltas)]
+        delta_tuples = []
+        for idx, delta in enumerate(deltas):
+            # Since we deleted the empty elements, there's gaps in the
+            # sequence IDs.  Here we make them sequential again.
+            delta.id = idx
+            delta_tuples.append((
+                'reports/%(id)s/%(idx)s.delta' % {'id': self.id, 'idx': idx},
+                delta.SerializeToString()
+            ))
 
         manifest_tuples = [(
             'reports/%(id)s/manifest.json' % {'id': self.id}, manifest_json)]
