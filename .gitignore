@@ -60,6 +60,7 @@ frontend/src/protobuf.d.ts
 ########################################################################
 .streamlit/
 lib/streamlit/static
+frontend/public/vendor
 streamlit-storage
 docs/_build
 
@@ -67,3 +68,8 @@ docs/_build
 **/uber-raw-data-sep14.csv
 
 lib/Pipfile.lock
+
+########################################################################
+# JetBrains
+########################################################################
+.idea

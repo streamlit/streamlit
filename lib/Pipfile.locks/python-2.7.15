@@ -391,6 +391,13 @@
             ],
             "version": "==3.1.0"
         },
+        "bokeh": {
+            "hashes": [
+                "sha256:70c944ccb99faea9c1bc2b77caba4dbcd884e083fc32511efbd6f895d7cb6832"
+            ],
+            "index": "pypi",
+            "version": "==1.1.0"
+        },
         "certifi": {
             "hashes": [
                 "sha256:59b7658e26ca9c7339e00f8f4636cdfe59d34fa37b9b04f6f9e9926b3cece1a5",

@@ -5,7 +5,6 @@ import streamlit as st
 import time
 
 st.title('Test of run-on-save')
-
 secs_to_wait = 5
 
 st.write('''

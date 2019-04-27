@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "Audio.proto";
 import "Balloons.proto";
+import "BokehChart.proto";
 import "Chart.proto";
 import "DataFrame.proto";
 import "DeckGlChart.proto";
@@ -23,6 +24,7 @@ message Element {
   oneof type {
     Audio audio = 13;
     Balloons balloons = 12;
+    BokehChart bokeh_chart = 17;
     Chart chart = 4;
     DataFrame data_frame = 3;
     DataFrame table = 11;
@@ -38,6 +40,6 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 17
+    // Next ID: 18
   }
 }
