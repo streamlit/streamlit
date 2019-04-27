@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "private": true,
   "dependencies": {
     "@types/prismjs": "^1.16.0",
@@ -43,7 +43,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "./scripts/preload.sh && react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
@@ -66,7 +66,7 @@
     "eslint-plugin-relay": "^1.0.0",
     "typescript": "^3.4.2"
   },
-  "homepage": "./",
+  "homepage": ".",
   "browserslist": [
     ">0.2%",
     "not dead",

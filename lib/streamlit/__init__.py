@@ -102,6 +102,7 @@ area_chart      = _with_dg(DeltaGenerator.area_chart)  # noqa: E221
 audio           = _with_dg(DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(DeltaGenerator.bar_chart)  # noqa: E221
+bokeh_chart     = _with_dg(DeltaGenerator.bokeh_chart)  # noqa: E221
 code            = _with_dg(DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(DeltaGenerator.dataframe)  # noqa: E221
 deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
@@ -166,6 +167,7 @@ def write(*args):
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
         - write(plotly_fig) : Displays a Plotly figure.
+        - write(bokeh_fig)  : Displays a Bokeh figure.
 
     Example
     -------
@@ -246,12 +248,14 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif util.is_type(arg, 'altair.vegalite.v2.api.Chart'):
+            elif util.is_altair_chart(arg):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
             elif util.is_plotly_chart(arg):
                 plotly_chart(arg)
+            elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
+                bokeh_chart(arg)
             elif type(arg) in dict_types:
                 json(arg)
             else:
