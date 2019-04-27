@@ -922,8 +922,8 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        import streamlit.elements.bokeh as bokeh
-        bokeh.marshall(element.bokeh_chart, figure)
+        import streamlit.elements.bokeh_chart as bokeh_chart
+        bokeh_chart.marshall(element.bokeh_chart, figure)
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
