@@ -248,7 +248,7 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif util.is_type(arg, 'altair.vegalite.v2.api.Chart'):
+            elif util.is_altair_chart(arg):
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
                 pyplot(arg)
