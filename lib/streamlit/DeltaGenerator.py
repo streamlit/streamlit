@@ -501,7 +501,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -555,7 +556,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
+            or None
             Data to be plotted.
 
         width : int
@@ -911,8 +913,11 @@ class DeltaGenerator(object):
         >>> x = [1, 2, 3, 4, 5]
         >>> y = [6, 7, 2, 4, 5]
         >>>
-        >>> p = figure(title='simple line example', x_axis_label='x', y_axis_label='y')
-        >>>
+        >>> p = figure(
+        ...     title='simple line example',
+        ...     x_axis_label='x',
+        ...     y_axis_label='y')
+        ...
         >>> p.line(x, y, legend='Trend', line_width=2)
         >>>
         >>> st.bokeh_chart(p)
@@ -922,8 +927,8 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        import streamlit.elements.bokeh as bokeh
-        bokeh.marshall(element.bokeh_chart, figure)
+        import streamlit.elements.bokeh_chart as bokeh_chart
+        bokeh_chart.marshall(element.bokeh_chart, figure)
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
@@ -1091,7 +1096,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The data to be plotted. Must have 'lat' and 'lon' columns.
 
         Example
@@ -1130,7 +1136,8 @@ class DeltaGenerator(object):
         Parameters
         ----------
 
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             Data to be plotted, if no layer specified.
 
         spec : dict
@@ -1245,7 +1252,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The table data.
 
         Example

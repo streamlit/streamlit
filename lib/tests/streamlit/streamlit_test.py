@@ -784,7 +784,7 @@ class StreamlitWriteTest(unittest.TestCase):
     @patch('streamlit.util.is_type')
     def test_pyplot(self, is_type):
         """Test st.write with matplotlib."""
-        is_type.side_effect = [False, True]
+        is_type.side_effect = [False, False, True]
 
         class FakePyplot(object):
             pass
