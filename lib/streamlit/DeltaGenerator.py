@@ -293,7 +293,7 @@ class DeltaGenerator(object):
         """
         element.text.body = (
             body if isinstance(body, string_types)  # noqa: F821
-            else json.dumps(body, default=lambda o: '<not serializable>'))
+            else json.dumps(body, default=lambda o: str(type(o))))
         element.text.format = protobuf.Text.JSON
 
     @_with_element
