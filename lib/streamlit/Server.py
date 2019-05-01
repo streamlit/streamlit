@@ -123,6 +123,10 @@ class Server(object):
             State.STOPPED,
         )
 
+    @property
+    def browser_is_connected(self):
+        return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
+
     @tornado.gen.coroutine
     def loop_coroutine(self):
         self._set_state(State.WAITING_FOR_FIRST_BROWSER)

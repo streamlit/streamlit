@@ -16,6 +16,12 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
+# Wait for 1 second before opening a browser. This gives old tabs a chance to
+# reconnect. This number should be greater than or equal to twice the value of
+# WebSocketConnection.ts#LOCAL_CONNECTION_TIMEOUT_MS.
+BROWSER_WAIT_TIMEOUT_SEC = 0.6
+
+
 def _set_up_signal_handler(scriptrunner):
     LOGGER.debug('Setting up signal handler')
 
@@ -89,10 +95,25 @@ def run(script_path):
     server = Server(report, scriptrunner)
     ioloop.spawn_callback(server.loop_coroutine)
 
-    # Start the script in a separate thread.
-    scriptrunner.spawn_script_thread()
+    # Start the script in a separate thread, but do it from the ioloop so it
+    # happens after the server starts.
+    ioloop.spawn_callback(scriptrunner.spawn_script_thread)
 
-    # Schedule the browser to open using the IO Loop on the main thread.
-    ioloop.spawn_callback(lambda: util.open_browser(_get_url(script_path)))
+    def maybe_open_browser():
+        if config.get_option('proxy.isRemote'):
+            # Don't open browser when in remote (headless) mode.
+            return
+
+        if server.browser_is_connected:
+            # Don't auto-open browser if there's already a browser connected.
+            # This can happen if there's an old tab repeatedly trying to
+            # connect, and it happens to success before we launch the browser.
+            return
+
+        util.open_browser(_get_url(script_path))
+
+    # Schedule the browser to open using the IO Loop on the main thread, but
+    # only if no other browser connects within 1s.
+    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
     ioloop.start()

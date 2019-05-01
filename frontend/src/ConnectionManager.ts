@@ -8,7 +8,7 @@
 import url from 'url';
 
 import StaticConnection from './StaticConnection';
-import WebsocketConnection from './WebsocketConnection';
+import {WebsocketConnection, ConnectionStateParams} from './WebsocketConnection';
 import {ConnectionState} from './ConnectionState';
 import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
 import {configureCredentials, getObject} from './s3helper';
@@ -41,14 +41,6 @@ interface Props {
    * Called when our ConnectionState is changed.
    */
   connectionStateChanged: (connectionState: ConnectionState) => void;
-}
-
-/**
- * Params for our setConnectionState function
- */
-interface SetConnectionStateParams {
-  connectionState: ConnectionState;
-  errMsg?: string;
 }
 
 export class ConnectionManager {
@@ -108,7 +100,7 @@ export class ConnectionManager {
     }
   }
 
-  private setConnectionState = ({connectionState, errMsg}: SetConnectionStateParams): void => {
+  private setConnectionState = ({connectionState, errMsg}: ConnectionStateParams): void => {
     if (this.connectionState !== connectionState) {
       this.connectionState = connectionState;
       this.props.connectionStateChanged(connectionState);
@@ -123,8 +115,9 @@ export class ConnectionManager {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
+    const hostname = window.location.hostname;
     const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
-    const uri = getWsUrl(window.location.hostname, port, reportName);
+    const uri = getWsUrl(hostname, port, reportName);
 
     return new WebsocketConnection({
       uriList: [
@@ -133,7 +126,8 @@ export class ConnectionManager {
         uri,
       ],
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
+      onConnectionStateChange: this.setConnectionState,
+      isLocal: hostname === 'localhost',
     });
   }
 
@@ -165,7 +159,8 @@ export class ConnectionManager {
     return new WebsocketConnection({
       uriList,
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
+      onConnectionStateChange: this.setConnectionState,
+      isLocal: false,
     });
   }
 
@@ -174,7 +169,7 @@ export class ConnectionManager {
       manifest,
       reportId,
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
+      onConnectionStateChange: this.setConnectionState,
       setReportName: this.props.setReportName,
     });
   }

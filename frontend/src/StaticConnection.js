@@ -27,12 +27,12 @@ import { getObject } from './s3helper';
 */
 class StaticConnection {
   constructor({
-    reportId, manifest, onMessage, setConnectionState, setReportName,
+    reportId, manifest, onMessage, onConnectionStateChange, setReportName,
   }) {
     this.state = ConnectionState.STATIC;
 
     const { name, nDeltas } = manifest;
-    setConnectionState({ connectionState: ConnectionState.STATIC });
+    onConnectionStateChange({ connectionState: ConnectionState.STATIC });
     setReportName(name);
 
     // TODO: Unify with StreamlitApp.js

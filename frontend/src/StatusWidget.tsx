@@ -297,16 +297,16 @@ export class StatusWidget extends PureComponent<Props, State> {
           tooltip: 'Waiting for connection',
         };
 
-      case ConnectionState.CONNECTED:
-        return undefined;
-
       case ConnectionState.DISCONNECTED:
+      case ConnectionState.RECONNECTING:
         return {
           icon: <use xlinkHref="./open-iconic.min.svg#circle-x"/>,
           label: 'Disconnected',
           tooltip: 'Disconnected from live data feed',
         };
 
+      case ConnectionState.CONNECTED:
+      case ConnectionState.INITIAL_CONNECTING:
       case ConnectionState.STATIC:
         return undefined;
 
