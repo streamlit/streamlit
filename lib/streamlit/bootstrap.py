@@ -19,7 +19,7 @@ LOGGER = get_logger(__name__)
 # Wait for 1 second before opening a browser. This gives old tabs a chance to
 # reconnect. This number should be greater than or equal to twice the value of
 # WebSocketConnection.ts#LOCAL_CONNECTION_TIMEOUT_MS.
-BROWSER_WAIT_TIMEOUT_SEC = 0.6
+BROWSER_WAIT_TIMEOUT_SEC = 1
 
 
 def _set_up_signal_handler(scriptrunner):

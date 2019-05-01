@@ -19,7 +19,7 @@ const LOG = 'WebsocketConnection';
  * conneting to a local websocket, we retry forever. This should be at most
  * half the value of bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC
  */
-const LOCAL_CONNECTION_TIMEOUT_MS = 200;
+const LOCAL_CONNECTION_TIMEOUT_MS = 100;
 
 
 /**
