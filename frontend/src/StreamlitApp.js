@@ -260,9 +260,7 @@ class StreamlitApp extends PureComponent {
           prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
             ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING;
       } else {
-        reportRunState =
-          prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
-            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING;
+        reportRunState = ReportRunState.NOT_RUNNING;
       }
 
       return ({

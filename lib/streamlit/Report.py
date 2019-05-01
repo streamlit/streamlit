@@ -29,7 +29,7 @@ class Report(object):
         """
         basename = os.path.basename(script_path)
 
-        self.script_path = script_path
+        self.script_path = os.path.abspath(script_path)
         self.argv = argv
         self.name = os.path.splitext(basename)[0]
 
@@ -41,6 +41,19 @@ class Report(object):
         self._latest_id = None
 
         self.generate_new_id()
+
+    def set_argv(self, cmd_line_str):
+        import shlex
+
+        cmd_line_list = shlex.split(cmd_line_str)
+        new_script_path = os.path.abspath(cmd_line_list[0])
+
+        if new_script_path != self.script_path:
+            raise ValueError(
+                'Cannot change script from %s to %s' %
+                (self.script_path, cmd_line_list[0]))
+
+        self.argv = cmd_line_list
 
     def enqueue(self, msg):
         self._master_queue.enqueue(msg)

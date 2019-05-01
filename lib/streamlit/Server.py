@@ -82,7 +82,7 @@ class Server(object):
         app.listen(port)
 
         self._scriptrunner.on_state_changed.connect(
-            self._enqueue_script_state_changed_messages)
+            self._enqueue_script_state_changed_message)
         self._scriptrunner.on_file_change_not_handled.connect(
             self._enqueue_file_change_message)
 
@@ -193,16 +193,34 @@ class Server(object):
         if len(self._browser_queues) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
-    def _enqueue_script_state_changed_messages(self, new_script_state):
+    def _enqueue_exception(self, e):
+        import streamlit.elements.exception_element as exception_element
+
+        # This does a few things:
+        # 1) Clears the current report in the browser.
+        # 2) Marks teh current report as "stopped" in the browser.
+        # 3) HACK: Resets any script params that may have been broken (e.g. the
+        # command-line when rerunning with wrong argv[0])
+        self._enqueue_script_state_changed_message(ScriptState.STOPPED)
+        self._enqueue_script_state_changed_message(ScriptState.RUNNING)
+        self._enqueue_script_state_changed_message(ScriptState.STOPPED)
+
+        msg = protobuf.ForwardMsg()
+        msg.delta.id = 0
+        exception_element.marshall(msg.delta.new_element, e)
+
+        self.enqueue(msg)
+
+    def _enqueue_script_state_changed_message(self, new_script_state):
         if new_script_state == ScriptState.RUNNING:
             self._clear_queue()
             self._maybe_enqueue_initialize_message()
             self._enqueue_new_report_message()
 
-        elif new_script_state == ScriptState.STOPPED:
-            self._enqueue_report_finished_message()
-
         self._enqueue_session_state_changed_message()
+
+        if new_script_state == ScriptState.STOPPED:
+            self._enqueue_report_finished_message()
 
     def _enqueue_session_state_changed_message(self):
         msg = protobuf.ForwardMsg()
@@ -294,9 +312,8 @@ class Server(object):
                 progress_msg.SerializeToString(), binary=True)
             raise e
 
-    def _handle_rerun_script_request(self):
-        # XXX TODO remove file field from msg.rerun_script proto schema
-        # XXX TODO handle command-line arguments
+    def _handle_rerun_script_request(self, cmd_line_str):
+        self._report.set_argv(cmd_line_str)
         self._scriptrunner.request_rerun(self._report.argv)
 
     def _handle_clear_cache_request(self):
@@ -356,7 +373,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             if msg_type == 'cloud_upload':
                 yield server._handle_save_request(self)
             elif msg_type == 'rerun_script':
-                server._handle_rerun_script_request()
+                server._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == 'clear_cache':
                 server._handle_clear_cache_request()
             elif msg_type == 'set_run_on_save':
@@ -367,8 +384,8 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
                 LOGGER.warning('No handler for "%s"', msg_type)
 
         except BaseException as e:
-            LOGGER.error('Error parsing back-message')
-            raise e
+            LOGGER.error(e)
+            server._enqueue_exception(e)
 
 
 def _fix_tornado_logging():
@@ -391,10 +408,10 @@ def _serialize(msg):
 
 
 def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.exception as exception_module
+    import streamlit.elements.exception_element as exception_element
 
     delta_id = msg.delta.id
     msg.Clear()
     msg.delta.id = delta_id
 
-    exception_module.marshall(msg.delta.new_element, e)
+    exception_element.marshall(msg.delta.new_element, e)
