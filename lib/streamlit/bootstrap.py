@@ -8,9 +8,10 @@ import urllib
 
 from streamlit import config
 from streamlit import util
+from streamlit.Report import Report
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.Server import Server
-from streamlit.Report import Report
+import streamlit
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -94,6 +95,8 @@ def run(script_path):
     # Schedule the server to start using the IO Loop on the main thread.
     server = Server(report, scriptrunner)
     ioloop.spawn_callback(server.loop_coroutine)
+
+    streamlit._is_running_with_run_command = True
 
     # Start the script in a separate thread, but do it from the ioloop so it
     # happens after the server starts.

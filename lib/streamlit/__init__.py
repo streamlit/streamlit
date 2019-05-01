@@ -71,6 +71,10 @@ _DATAFRAME_LIKE_TYPES = (
 # Root delta generator for this Streamlit report.
 _delta_generator = None
 
+# This gets set to True (in bootstrap.py) to mark a script as having been
+# executed with 'streamlit run foo.py' rather than 'python foo.py'.
+_is_running_with_run_command = False
+
 
 def _get_new_delta_generator():
     enqueue = None
@@ -87,7 +91,9 @@ def _get_new_delta_generator():
 
 
 def _get_current_delta_generator():
-    if config.get_option('client.displayEnabled'):
+    display_enabled = config.get_option('client.displayEnabled')
+
+    if display_enabled and _is_running_with_run_command:
         global _delta_generator
 
         if _delta_generator is None:
