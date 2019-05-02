@@ -10,6 +10,7 @@ import sys
 from collections import namedtuple
 
 import base58
+import toml
 
 from streamlit.logger import get_logger
 
@@ -20,6 +21,12 @@ Activation = namedtuple('Activation', [
     'email',
     'valid',
 ])
+
+# For python 2.7
+try:
+    FileNotFoundError
+except NameError:  # pragma: nocover
+    FileNotFoundError = IOError
 
 
 class Credentials(object):
@@ -45,6 +52,23 @@ class Credentials(object):
                                        'credentials.toml')
 
         Credentials._singleton = self
+
+    def load(self):
+        """Load from toml file."""
+        if self.activation is not None:
+            LOGGER.error('Credentials already loaded. Not rereading file.')
+        else:
+            try:
+                with open(self._conf_file, 'r') as f:
+                    data = toml.load(f).get('general')
+                self.activation = verify_code(data['email'], data['code'])
+            except FileNotFoundError:
+                raise RuntimeError(
+                    'Credentials file not found. Please run `streamlit activate`'
+                )
+            except Exception as e:
+                raise Exception('Unable to load credentials from %s: %s' %
+                                (self._conf_file, e))
 
 
 def generate_code(secret, email):
