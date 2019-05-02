@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from streamlit.credentials import Credentials
+from streamlit.credentials import Credentials, generate_code, verify_code
 
 
 class CredentialsTest(unittest.TestCase):
@@ -37,3 +37,27 @@ class CredentialsTest(unittest.TestCase):
         self.assertEqual(
             str(e.value),
             'Credentials already initialized. Use .get_current() instead')
+
+
+class CredentialsModulesTest(unittest.TestCase):
+    """Credentials Module Unittest class."""
+
+    def test_generate_code(self):
+        """Test generate_code."""
+        code = generate_code('testing', 'user@domain.com')
+        self.assertEqual('ARzVsqhSB5i', code)
+
+    def test_verify_code(self):
+        """Test generate_code."""
+        ret = verify_code('user@domain.com', 'ARzVsqhSB5i')
+        self.assertTrue(ret.valid)
+
+    def test_verify_code_wrong_code(self):
+        """Test credentials.verify_code with code from another user."""
+        ret = verify_code('user@domain.com', 'ARxJtdP43GU')
+        self.assertFalse(ret.valid)
+
+    def test_verify_code_bad_code(self):
+        """Test credentials.verify_code with invalid base58 code."""
+        ret = verify_code('user@domain.com', '****')
+        self.assertFalse(ret.valid)
