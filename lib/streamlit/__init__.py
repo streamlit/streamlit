@@ -269,7 +269,7 @@ def write(*args):
 
 
 @contextlib.contextmanager
-def spinner(text):
+def spinner(text='In progress...'):
     """Temporarily displays a message while executing a block of code.
 
     Parameters
