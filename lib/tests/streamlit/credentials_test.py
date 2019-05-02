@@ -7,7 +7,7 @@ import unittest
 
 import pytest
 
-from mock import mock_open, patch
+from mock import call, mock_open, patch
 
 from streamlit.credentials import Activation, Credentials, generate_code, verify_code
 
@@ -118,6 +118,36 @@ class CredentialsTest(unittest.TestCase):
                 'Some error')), patch('streamlit.credentials._exit') as p:
             c.check_activated()
             p.assert_called_once_with('Some error')
+
+    def test_Credentials_activate_already_activated(self):
+        """Test Credentials.activate() already activated."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_email', 'some_code', True)
+        with patch('streamlit.credentials.LOGGER') as p:
+            with pytest.raises(SystemExit):
+                c.activate()
+            self.assertEqual(p.error.call_count, 2)
+            self.assertEqual(p.error.call_args_list[1],
+                             call('Already activated'))
+
+    def test_Credentials_activate_already_activated_not_valid(self):
+        """Test Credentials.activate() already activated but not valid."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_email', 'some_code', False)
+        with patch('streamlit.credentials.LOGGER') as p:
+            with pytest.raises(SystemExit):
+                c.activate()
+            self.assertEqual(p.error.call_count, 2)
+            self.assertEqual(
+                str(p.error.call_args_list[1])[0:27],
+                'call(\'Activation not valid.')
+
+    def test_Credentials_activate(self):
+        """Test Credentials.activate()"""
+        c = Credentials.get_current()
+        c.activation = None
+        with patch.object(c, 'load', side_effect=RuntimeError('Some error')):
+            c.activate()
 
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""

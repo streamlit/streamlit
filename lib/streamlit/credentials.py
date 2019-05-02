@@ -88,6 +88,21 @@ class Credentials(object):
         except OSError as e:
             LOGGER.error('Error removing credentials file: %s' % e)
 
+    def activate(self):
+        try:
+            self.load()
+        except RuntimeError:
+            pass
+
+        if self.activation:
+            if self.activation.valid:
+                _exit('Already activated')
+            else:
+                _exit(
+                    'Activation not valid. Please run '
+                    '`streamlit activate reset` then `streamlit activate`'
+                )
+
 
 def generate_code(secret, email):
     secret = secret.encode('utf-8')
