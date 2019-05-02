@@ -79,6 +79,15 @@ class Credentials(object):
         if not self.activation.valid:
             _exit('Activation code/email not valid.')
 
+    @classmethod
+    def reset(cls):
+        Credentials._singleton = None
+        c = Credentials()
+        try:
+            os.remove(c._conf_file)
+        except OSError as e:
+            LOGGER.error('Error removing credentials file: %s' % e)
+
 
 def generate_code(secret, email):
     secret = secret.encode('utf-8')

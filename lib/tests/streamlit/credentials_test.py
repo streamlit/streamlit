@@ -119,6 +119,22 @@ class CredentialsTest(unittest.TestCase):
             c.check_activated()
             p.assert_called_once_with('Some error')
 
+    def test_Credentials_reset(self):
+        """Test Credentials.reset()."""
+        with patch('streamlit.credentials.os.remove') as p:
+            Credentials.reset()
+            p.assert_called_once_with(
+                '/does/not/exist/.streamlit/credentials.toml')
+
+    def test_Credentials_reset_error(self):
+        """Test Credentials.reset() with error."""
+        with patch('streamlit.credentials.os.remove',
+                   side_effect=OSError('some error')), patch(
+                       'streamlit.credentials.LOGGER') as p:
+            Credentials.reset()
+            p.error.assert_called_once_with(
+                'Error removing credentials file: some error')
+
 
 class CredentialsModulesTest(unittest.TestCase):
     """Credentials Module Unittest class."""
