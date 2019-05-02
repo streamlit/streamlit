@@ -4,6 +4,14 @@ Copyright 2019 Streamlit Inc. All rights reserved.
 """
 import os
 
+from collections import namedtuple
+
+Activation = namedtuple('Activation', [
+    'code',
+    'email',
+    'valid',
+])
+
 
 class Credentials(object):
     """Credentials class."""
