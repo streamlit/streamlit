@@ -15,6 +15,10 @@ from streamlit.credentials import Activation, Credentials, generate_code, verify
 class CredentialsTest(unittest.TestCase):
     """Credentials Unittest class."""
 
+    def setUp(self):
+        """Setup."""
+        Credentials._singleton = None
+
     def test_Credentials_constructor(self):
         """Test Credentials constructor."""
         c = Credentials()
@@ -89,6 +93,31 @@ class CredentialsTest(unittest.TestCase):
                 str(e.value).split(':')[0],
                 'Unable to load credentials from /does/not/exist/.streamlit/credentials.toml'
             )
+
+    def test_Credentials_check_activated_already_loaded(self):
+        """Test Credentials.check_activated() already loaded."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_email', 'some_code', True)
+        with patch('streamlit.credentials._exit') as p:
+            c.check_activated()
+            p.assert_not_called()
+
+    def test_Credentials_check_activated_false(self):
+        """Test Credentials.check_activated() not activated."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_email', 'some_code', False)
+        with patch('streamlit.credentials._exit') as p:
+            c.check_activated()
+            p.assert_called_once_with('Activation code/email not valid.')
+
+    def test_Credentials_check_activated_error(self):
+        """Test Credentials.check_activated() has an error."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_email', 'some_code', True)
+        with patch.object(c, 'load', side_effect=Exception(
+                'Some error')), patch('streamlit.credentials._exit') as p:
+            c.check_activated()
+            p.assert_called_once_with('Some error')
 
 
 class CredentialsModulesTest(unittest.TestCase):

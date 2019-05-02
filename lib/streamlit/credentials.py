@@ -70,6 +70,15 @@ class Credentials(object):
                 raise Exception('Unable to load credentials from %s: %s' %
                                 (self._conf_file, e))
 
+    def check_activated(self):
+        try:
+            self.load()
+        except (Exception, RuntimeError) as e:
+            _exit(str(e))
+
+        if not self.activation.valid:
+            _exit('Activation code/email not valid.')
+
 
 def generate_code(secret, email):
     secret = secret.encode('utf-8')
@@ -108,3 +117,8 @@ def verify_code(email, code):
     except Exception as e:
         LOGGER.error('Unable to verify code: %s', e)
         return Activation(None, None, None)
+
+
+def _exit(message):  # pragma: nocover
+    LOGGER.error(message)
+    sys.exit(-1)
