@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import os
 import sys
+import textwrap
 
 from collections import namedtuple
 
@@ -88,6 +89,15 @@ class Credentials(object):
         except OSError as e:
             LOGGER.error('Error removing credentials file: %s' % e)
 
+    def save(self):
+        """Save to toml file."""
+        data = {
+            'email': self.activation.email,
+            'code': self.activation.code,
+        }
+        with open(self._conf_file, 'w') as f:
+            toml.dump({'general': data}, f)
+
     def activate(self):
         try:
             self.load()
@@ -102,6 +112,25 @@ class Credentials(object):
                     'Activation not valid. Please run '
                     '`streamlit activate reset` then `streamlit activate`'
                 )
+        else:
+            activated = False
+            while not activated:
+                code = _get_data('Enter your invite code')
+                email = _get_data('Enter your email')
+
+                self.activation = verify_code(email, code)
+                if self.activation.valid:
+                    self.save()
+                    print(
+                        textwrap.dedent('''
+                        Welcome to Streamlit!
+
+                        Get started by typing:
+                        $ streamlit hello
+                    '''))
+                    activated = True
+                else:  # pragma: nocover
+                    LOGGER.error('Code verification failed.  Try again.')
 
 
 def generate_code(secret, email):
@@ -146,3 +175,14 @@ def verify_code(email, code):
 def _exit(message):  # pragma: nocover
     LOGGER.error(message)
     sys.exit(-1)
+
+
+def _get_data(msg):
+    """Utility to get data from console."""
+    data = None
+    while not data:
+        if sys.version_info >= (3, 0):
+            data = input('%s: ' % msg)
+        else:  # pragma: nocover
+            data = raw_input('%s: ' % msg)  # noqa: F821
+    return data

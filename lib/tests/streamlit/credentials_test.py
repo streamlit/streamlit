@@ -2,6 +2,7 @@
 
 Copyright 2019 Streamlit Inc. All rights reserved.
 """
+import sys
 import textwrap
 import unittest
 
@@ -9,11 +10,16 @@ import pytest
 
 from mock import call, mock_open, patch
 
-from streamlit.credentials import Activation, Credentials, generate_code, verify_code
+from streamlit.credentials import Activation, Credentials, generate_code, verify_code, _get_data
+
+if sys.version_info >= (3, 0):
+    INPUT = 'streamlit.credentials.input'
+else:
+    INPUT = 'streamlit.credentials.raw_input'
 
 
-class CredentialsTest(unittest.TestCase):
-    """Credentials Unittest class."""
+class CredentialsClassTest(unittest.TestCase):
+    """Credentials Class Unittest class."""
 
     def setUp(self):
         """Setup."""
@@ -119,6 +125,21 @@ class CredentialsTest(unittest.TestCase):
             c.check_activated()
             p.assert_called_once_with('Some error')
 
+    def test_Credentials_save(self):
+        """Test Credentials.save()."""
+        c = Credentials.get_current()
+        c.activation = Activation('some_code', 'some_email', True)
+        truth = textwrap.dedent('''
+            [general]
+            email = "some_email"
+            code = "some_code"
+        ''').lstrip()
+
+        m = mock_open()
+        with patch('streamlit.credentials.open', m, create=True) as m:
+            c.save()
+            m.return_value.write.assert_called_once_with(truth)
+
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
@@ -146,8 +167,16 @@ class CredentialsTest(unittest.TestCase):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
         c.activation = None
-        with patch.object(c, 'load', side_effect=RuntimeError('Some error')):
+        with patch.object(
+                c, 'load',
+                side_effect=RuntimeError('Some error')), patch.object(
+                    c, 'save') as s, patch(INPUT) as p:
+            p.side_effect = ['ARzVsqhSB5i', 'user@domain.com']
             c.activate()
+            s.assert_called_once()
+            self.assertEqual(c.activation.code, 'ARzVsqhSB5i')
+            self.assertEqual(c.activation.email, 'user@domain.com')
+            self.assertEqual(c.activation.valid, True)
 
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""
@@ -188,3 +217,13 @@ class CredentialsModulesTest(unittest.TestCase):
         """Test credentials.verify_code with invalid base58 code."""
         ret = verify_code('user@domain.com', '****')
         self.assertFalse(ret.valid)
+
+    def test_get_data(self):
+        """Test get_data."""
+        with patch(INPUT) as p:
+            p.return_value = 'my data'
+            data = _get_data('some message')
+
+            self.assertEqual(1, p.call_count)
+            self.assertEqual('some message: ', p.call_args[0][0])
+            self.assertEqual('my data', data)
