@@ -647,8 +647,8 @@ def _print_urls(connection, wait_secs):
 
         LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
-            Open the URL below in your browser {timeout_msg}
-            REPORT URL: {url}
+            Open the URL below in your browser %(timeout_msg)s
+            REPORT URL: %(url)s
             ════════════════════════════════════════════════════════════
         '''), {'url': url, 'timeout_msg': timeout_msg})
 
@@ -658,8 +658,8 @@ def _print_urls(connection, wait_secs):
 
         LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
-            Open one of the URLs below in your browser {timeout_msg}
-            EXTERNAL REPORT URL: {external_url}
-            INTERNAL REPORT URL: {internal_url}
+            Open one of the URLs below in your browser %(timeout_msg)s
+            EXTERNAL REPORT URL: %(external_url)s
+            INTERNAL REPORT URL: %(internal_url)s
             ════════════════════════════════════════════════════════════
         '''), {'external_url': external_url, 'internal_url': internal_url})
