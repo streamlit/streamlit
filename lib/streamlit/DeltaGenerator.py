@@ -1067,7 +1067,20 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        element.progress.value = value
+        # Needed for python 2/3 compatibility
+        value_type = type(value).__name__
+        if value_type == 'float':
+            if 0.0 <= value <= 1.0:
+                element.progress.value = int(value * 100)
+            else:
+                raise ValueError('Progress Value has invalid value [0.0, 1.0]: %f' % value)
+        elif value_type == 'int':
+            if 0 <= value <= 100:
+                element.progress.value = value
+            else:
+                raise ValueError('Progress Value has invalid value [0, 100]: %d' % value)
+        else:
+            raise TypeError('Progress Value has invalid type: %s' % value_type)
 
     @_with_element
     def empty(self, element):

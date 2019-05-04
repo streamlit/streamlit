@@ -11,6 +11,7 @@ endif
 
 help:
 	@echo "Streamlit Make Commands:"
+	@echo " all-devel    - Run once to start developing Streamlit!"
 	@echo " init         - Run once to install python and js dependencies."
 	@echo " build        - build the static version of Streamlit (without Node)"
 	@echo " protobuf     - Recompile Protobufs for Python and Javascript."
@@ -23,7 +24,10 @@ help:
 	@echo " devel-docs   - Builds docs and starts a local server."
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
 	@echo " pytest       - Runs python unit tests"
-	@echo " js-lint      - Lints the frontend"
+	@echo " jslint       - Lints the frontend"
+
+.PHONY: all-devel
+all-devel: clean init install build develop
 
 .PHONY: init
 init: setup pipenv react-init protobuf # react-build release
@@ -168,15 +172,14 @@ react-build:
 		frontend/build/ lib/streamlit/static/
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
-.PHONY: js-lint
-js-lint:
+.PHONY: jslint
+jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .tsx --ext .ts --max-warnings 0 ./src
 
 js-test:
 	cd frontend; npm run test
 	cd frontend; npm run coverage
-
 
 # Counts the number of lines of code in the project
 loc:

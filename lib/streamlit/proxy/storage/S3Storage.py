@@ -64,7 +64,7 @@ class S3Storage(AbstractStorage):
 
         if not self._url:
             self._web_app_url = os.path.join(
-                'http://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
+                'https://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
                 self._s3_key('index.html'))
         else:
             self._web_app_url = os.path.join(

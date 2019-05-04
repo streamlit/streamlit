@@ -66,15 +66,15 @@ Note that, with pipenv, this process should be done from within the lib/ directo
 Now run:
 
 ```bash
-$ make init && make install && make build && make develop
+$ make all-devel
 ```
 
-Where:
-1. `make init` installs Streamlit's Python and Javascript dependencies,
-   and compiles our Protobufs
-2. `make install` builds and installs Streamlit into your Python environment.
-3. `make build` builds the static assets.
-4. `make develop` makes it so you can edit the Python source files inside
+Where `all-devel` does the following behind the scenes:
+1. `make init` to install Streamlit's Python and Javascript dependencies,
+   and compile our Protobufs
+2. `make install` to build and install Streamlit into your Python environment.
+3. `make build` to build the static assets.
+4. `make develop` to make it so you can edit the Python source files inside
    `lib/streamlit/` and not have to reinstall the Python package with `make
    install` every time.
 
@@ -138,7 +138,7 @@ to the proto into libraries that can be used in Python and JS:
 $ make protobuf
 ```
 
-#### When change Javascript or Python dependencies...
+#### When Javascript or Python dependencies change...
 
 ```bash
 make init
@@ -236,7 +236,7 @@ and make sure that none of the lines say `proxy`.
 
 #### Bump the Version Number
 
-**Note:** The current version is `0.35.0`.
+**Note:** The current version is `0.36.0`.
 
 There's a [script](scripts/update_version.py) that will update all the
 version numbers across different files, including this one.  See the
@@ -247,21 +247,15 @@ very simple.
 $ python scripts/update_version.py 1.2.3
 ```
 
-#### Test that Static Loading works
-
-```bash
-open http://localhost:3000/?id=example
-```
-
 #### Build Streamlit and Test It Without Node
 
-Build Streamlit so that it can run without the Node development server:
+First, let's make sure your build environment is correct by running:
 
 ```bash
-make build
+make all-devel
 ```
 
-Test that it works:
+Test that Streamlit works:
 
 ```bash
 make install
