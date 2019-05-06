@@ -11,6 +11,7 @@
 const SHOW_STOP_BUTTON = false;
 
 import React, {PureComponent, ReactNode} from 'react';
+import {CSSTransition} from 'react-transition-group';
 import {Button, UncontrolledTooltip} from 'reactstrap';
 import {SignalConnection} from 'typed-signals';
 
@@ -86,6 +87,7 @@ const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000;
 export class StatusWidget extends PureComponent<Props, State> {
   /** onReportEvent signal connection */
   private reportEventConn?: SignalConnection;
+  private curView?: ReactNode;
 
   private readonly minimizePromptTimer = new Timer();
 
@@ -178,6 +180,42 @@ export class StatusWidget extends PureComponent<Props, State> {
   };
 
   public render(): ReactNode {
+    // The StatusWidget fades in on appear and fades out on disappear.
+    // We keep track of our most recent result from `renderWidget`,
+    // via `this.curView`, so that we can fade out our previous state
+    // if `renderWidget` returns null after returning a non-null value.
+
+    const prevView = this.curView;
+    this.curView = this.renderWidget();
+    if (prevView == null && this.curView == null) {
+      return null;
+    }
+
+    let animateIn: boolean;
+    let renderView: ReactNode;
+    if (this.curView != null) {
+      animateIn = true;
+      renderView = this.curView;
+    } else {
+      animateIn = false;
+      renderView = prevView;
+    }
+
+    // NB: the `timeout` value here must match the transition
+    // times specified in the StatusWidget-*-active CSS classes
+    return (
+      <CSSTransition
+        appear={true}
+        in={animateIn}
+        timeout={200}
+        unmountOnExit={true}
+        classNames="StatusWidget">
+        <div key="StatusWidget">{renderView}</div>
+      </CSSTransition>
+    );
+  }
+
+  private renderWidget(): ReactNode {
     if (this.isConnected()) {
       if (this.props.reportRunState === ReportRunState.RUNNING ||
         this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
@@ -234,24 +272,22 @@ export class StatusWidget extends PureComponent<Props, State> {
     }
 
     return (
-      <div>
-        <div
-          id="ReportStatus"
-          className={this.state.statusMinimized ? 'minimized' : ''}>
-          <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
-          <label>
-            Running...
-          </label>
-          {stopButton}
+      <div
+        id="ReportStatus"
+        className={this.state.statusMinimized ? 'minimized' : ''}>
+        <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
+        <label>
+          Running...
+        </label>
+        {stopButton}
 
-          {
-            this.state.statusMinimized ?
-              <UncontrolledTooltip placement="bottom" target="ReportStatus">
-                This script is currently running
-              </UncontrolledTooltip> :
-              ''
-          }
-        </div>
+        {
+          this.state.statusMinimized ?
+            <UncontrolledTooltip placement="bottom" target="ReportStatus">
+              This script is currently running
+            </UncontrolledTooltip> :
+            ''
+        }
       </div>
     );
   }

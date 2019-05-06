@@ -102,10 +102,41 @@
 }
 
 //
-// ReportStatus minimize animation
+// Top-level StatusWidget appear/disappear animations
 //
 
-$anim-time: 0.2s;
+.StatusWidget-appear {
+  opacity: 0;
+}
+
+.StatusWidget-appear-active {
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.StatusWidget-enter {
+  opacity: 0;
+}
+
+.StatusWidget-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.StatusWidget-exit {
+  opacity: 1;
+}
+
+.StatusWidget-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+//
+// Report Changed prompt minimize animation
+//
+
+$anim-time: 200ms;
 $anim-easing: ease-out;
 
 // Unminimized -> Minimized
