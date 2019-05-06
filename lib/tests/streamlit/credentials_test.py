@@ -16,6 +16,7 @@ if sys.version_info >= (3, 0):
     INPUT = 'streamlit.credentials.input'
 else:
     INPUT = 'streamlit.credentials.raw_input'
+    FileNotFoundError = IOError
 
 
 class CredentialsClassTest(unittest.TestCase):
@@ -88,9 +89,11 @@ class CredentialsClassTest(unittest.TestCase):
 
     def test_Credentials_load_permission_denied(self):
         """Test Credentials.load() with Perission denied."""
+        if sys.version_info < (3, 0):
+            return
         with patch('streamlit.credentials.open') as m:
             m.side_effect = PermissionError(
-                '[Errno 13] Permission kdenied: ~/.streamlit/credentials.toml')
+                '[Errno 13] Permission denied: ~/.streamlit/credentials.toml')
             c = Credentials.get_current()
             c.activation = None
             with pytest.raises(Exception) as e:
@@ -135,10 +138,19 @@ class CredentialsClassTest(unittest.TestCase):
             code = "some_code"
         ''').lstrip()
 
+        truth2 = textwrap.dedent('''
+            [general]
+            code = "some_code"
+            email = "some_email"
+        ''').lstrip()
+
         m = mock_open()
         with patch('streamlit.credentials.open', m, create=True) as m:
             c.save()
-            m.return_value.write.assert_called_once_with(truth)
+            if sys.version_info >= (3, 0):
+                m.return_value.write.assert_called_once_with(truth)
+            else:
+                m.return_value.write.assert_called_once_with(truth2)
 
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
