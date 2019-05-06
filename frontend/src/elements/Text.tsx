@@ -6,7 +6,7 @@
  */
 
 import CodeBlock from './CodeBlock';
-import React, {ReactNode} from 'react';
+import React, {ReactNode, ReactElement} from 'react';
 import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
 import {Map as ImmutableMap} from 'immutable';
@@ -26,12 +26,12 @@ function getAlertCSSClass(format: TextProto.Format): string | undefined {
 
 interface LinkProps {
   href: string;
-  children: ReactNode;
+  children: ReactElement;
 }
 
-const linkWithTargetBlank = (props: LinkProps) => (
+const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   <a href={props.href} target="_blank">{props.children}</a>
-)
+);
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -48,8 +48,8 @@ class Text extends PureStreamlitElement<Props> {
     const format = element.get('format');
     const renderers = {
       code: CodeBlock,
-      link: linkWithTargetBlank
-    }
+      link: linkWithTargetBlank,
+    };
 
     switch (format) {
       // Plain, fixed width text.
