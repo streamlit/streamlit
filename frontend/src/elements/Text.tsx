@@ -6,7 +6,7 @@
  */
 
 import CodeBlock from './CodeBlock';
-import React from 'react';
+import React, {ReactNode} from 'react';
 import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
 import {Map as ImmutableMap} from 'immutable';
@@ -24,6 +24,15 @@ function getAlertCSSClass(format: TextProto.Format): string | undefined {
   return undefined;
 }
 
+interface LinkProps {
+  href: string;
+  children: ReactNode;
+}
+
+const linkWithTargetBlank = (props: LinkProps) => (
+  <a href={props.href} target="_blank">{props.children}</a>
+)
+
 interface Props {
   element: ImmutableMap<string, any>;
   width: number;
@@ -37,6 +46,10 @@ class Text extends PureStreamlitElement<Props> {
     const {element, width} = this.props;
     const body = element.get('body');
     const format = element.get('format');
+    const renderers = {
+      code: CodeBlock,
+      link: linkWithTargetBlank
+    }
 
     switch (format) {
       // Plain, fixed width text.
@@ -51,7 +64,7 @@ class Text extends PureStreamlitElement<Props> {
       case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
+            <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
           </div>
         );
 
@@ -84,7 +97,7 @@ class Text extends PureStreamlitElement<Props> {
         return (
           <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
             <div className="markdown-text-container">
-              <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
+              <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
             </div>
           </div>
         );
