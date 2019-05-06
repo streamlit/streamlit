@@ -1,0 +1,86 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+
+.streamlit-container {
+  .dataframe {
+    font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+    padding: 0.5rem;
+    line-height: 1;
+  }
+
+  .dataframe-container {
+    border: 1px solid #E6E9EE;
+    box-sizing: content-box;  /* Fix borders going under other elements. */
+  }
+
+  .dataframe.row-header,
+  .dataframe.col-header,
+  .dataframe.corner {
+    background-color: #F0F3F9;
+    color: #768096;
+    z-index: 1;
+  }
+
+  .dataframe.row-header,
+  .dataframe.col-header {
+    /* Row headers are click-to-sort, so we make the text unselectable.
+      Column headers are also unselectable, so that clicking to sort the
+      column's row header doesn't result in the entire column being selected */
+    user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .dataframe.row-header,
+  .dataframe.col-header,
+  .dataframe.data {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    line-height: 0.75;  /** For vertical centering. */
+  }
+
+  .fixup {
+    position: absolute;
+  }
+
+  .fixup-top-right {
+    top: 0px;
+    right: 0px;
+  }
+
+  .fixup-bottom-left {
+    bottom: 0px;
+    left: 0px;
+  }
+
+  .table-top-right {
+    overflow-x: hidden !important;
+    background-color: #F0F3F9;
+  }
+
+  .table-bottom-left {
+    overflow-y: hidden !important;
+    background-color: #F0F3F9;
+  }
+
+  .empty-dataframe {
+    font-family: 'IBM Plex Mono', monospace;
+    color: #768096;
+    font-style: italic;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .sort-arrow-icon {
+    width: 0.7rem;
+    height: 0.7rem;
+    opacity: 0.3;
+  }
+}

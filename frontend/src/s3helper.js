@@ -3,7 +3,8 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import AWS from 'aws-sdk';
+import AWS from 'aws-sdk/global';
+import S3 from 'aws-sdk/clients/s3';
 import { FETCH_PARAMS, AWS_REGION, COGNITO_IDENTITY_POOL_ID } from './baseconsts';
 import { logError } from './log';
 
@@ -80,7 +81,7 @@ async function getObjectViaFetchAPI(args) {
 
 async function getObjectViaS3API(args) {
   if (!s3) {
-    s3 = new AWS.S3();
+    s3 = new S3();
   }
 
   const data = await s3.getObject(args).promise();
