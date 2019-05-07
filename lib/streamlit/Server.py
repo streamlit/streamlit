@@ -12,7 +12,7 @@ import tornado.gen
 import tornado.web
 import tornado.websocket
 
-from streamlit import __version__
+from streamlit import __installation_id__, __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
@@ -264,6 +264,8 @@ class Server(object):
         imsg.streamlit_version = __version__
         imsg.session_state.run_on_save = self._scriptrunner.run_on_save
         imsg.session_state.report_is_running = self._scriptrunner.is_running()
+
+        imsg.user_info.installation_id = __installation_id__
 
         self.enqueue(msg)
 
