@@ -329,6 +329,10 @@ class Server(object):
 
 
 class _StaticFileHandler(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        """Disable cache."""
+        self.set_header('Cache-Control', 'no-cache')
+
     def check_origin(self, origin):
         """Set up CORS."""
         return proxy_util.url_is_from_allowed_origins(origin)
@@ -340,6 +344,7 @@ class _HealthHandler(tornado.web.RequestHandler):
         return proxy_util.url_is_from_allowed_origins(origin)
 
     def get(self):
+        self.add_header('Cache-Control', 'no-cache')
         if Server.get_current().is_ready_for_browser_connection:
             self.write('ok')
         else:
