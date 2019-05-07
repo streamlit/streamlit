@@ -75,6 +75,11 @@ _delta_generator = None
 # executed with 'streamlit run foo.py' rather than 'python foo.py'.
 _is_running_with_run_command = False
 
+# We want to show a warning when the user runs a Streamlit script without
+# 'streamlit run', but we need to make sure the warning appears only once no
+# matter how many times __init__ gets loaded.
+_warning_has_been_displayed = False
+
 
 def _get_new_delta_generator():
     enqueue = None
@@ -93,16 +98,48 @@ def _get_new_delta_generator():
 def _get_current_delta_generator():
     display_enabled = config.get_option('client.displayEnabled')
 
-    if display_enabled and _is_running_with_run_command:
-        global _delta_generator
+    if display_enabled:
+        if _is_running_with_run_command:
+            global _delta_generator
 
-        if _delta_generator is None:
-            _delta_generator = _get_new_delta_generator()
+            if _delta_generator is None:
+                _delta_generator = _get_new_delta_generator()
 
-        return _delta_generator
+            return _delta_generator
 
-    else:
-        return _NULL_DELTA_GENERATOR
+        else:
+            global _warning_has_been_displayed
+
+            if not _warning_has_been_displayed:
+                _warning_has_been_displayed = True
+
+                if util.is_repl():
+                    _LOGGER.warning(textwrap.dedent('''
+                        ════════════════════════════════════════════════
+                        Will not generate Streamlit report
+                        ────────────────────────────────────────────────
+
+                        To generate report, use Streamlit in a file and
+                        run it with:
+                          streamlit run [FILE_NAME] [ARGUMENTS]
+
+                        ════════════════════════════════════════════════
+                        '''))
+                else:
+                    script_name = sys.argv[0]
+
+                    _LOGGER.warning(textwrap.dedent('''
+                        ════════════════════════════════════════════════
+                        Will not generate Streamlit report
+                        ────────────────────────────────────────────────
+
+                        To generate report, run this file with:
+                          streamlit run %s [ARGUMENTS]
+
+                        ════════════════════════════════════════════════
+                        '''), script_name)
+
+    return _NULL_DELTA_GENERATOR
 
 
 def _with_dg(method):
