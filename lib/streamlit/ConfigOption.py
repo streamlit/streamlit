@@ -10,6 +10,7 @@ setup_2_3_shims(globals())
 
 import datetime
 import re
+import textwrap
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -122,7 +123,7 @@ class ConfigOption(object):
             assert deprecation_text, \
                 'deprecation_text is required for deprecated items'
             self.expiration_date = expiration_date
-            self.deprecation_text = deprecation_text
+            self.deprecation_text = textwrap.dedent(deprecation_text)
 
         # Set the value.
         self._get_val_func = None
@@ -182,24 +183,26 @@ class ConfigOption(object):
             }
 
             if self.is_expired():
-                raise DeprecationError(
-                    '\n'
-                    '════════════════════════════════════════════════\n'
-                    '%(key)s IS NO LONGER SUPPORTED.\n'
-                    '%(explanation)s\n'
-                    'Please update %(file)s.\n'
-                    '════════════════════════════════════════════════\n'
-                    % details)
+                raise DeprecationError(textwrap.dedent('''
+                    ════════════════════════════════════════════════
+                    %(key)s IS NO LONGER SUPPORTED.
+
+                    %(explanation)s
+
+                    Please update %(file)s.
+                    ════════════════════════════════════════════════
+                    ''') % details)
             else:
-                LOGGER.warning(
-                    '\n'
-                    '════════════════════════════════════════════════\n'
-                    '%(key)s IS DEPRECATED.\n'
-                    '%(explanation)s\n'
-                    'This option will be removed on or after %(date)s.\n'
-                    'Please update %(file)s.\n'
-                    '════════════════════════════════════════════════\n'
-                    % details)
+                LOGGER.warning(textwrap.dedent('''
+                    ════════════════════════════════════════════════
+                    %(key)s IS DEPRECATED.
+                    %(explanation)s
+
+                    This option will be removed on or after %(date)s.
+
+                    Please update %(file)s.
+                    ════════════════════════════════════════════════
+                    ''') % details)
 
     def is_expired(self):
         """Returns true if expiration_date is in the past."""
