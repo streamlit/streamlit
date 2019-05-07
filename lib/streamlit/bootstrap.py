@@ -18,8 +18,8 @@ LOGGER = get_logger(__name__)
 
 
 # Wait for 1 second before opening a browser. This gives old tabs a chance to
-# reconnect. This number should be greater than or equal to twice the value of
-# WebSocketConnection.ts#LOCAL_CONNECTION_TIMEOUT_MS.
+# reconnect.
+# This must be >= 2 * WebSocketConnection.ts#RECONNECT_WAIT_TIME_MS.
 BROWSER_WAIT_TIMEOUT_SEC = 1
 
 
@@ -39,41 +39,6 @@ def _set_up_signal_handler(scriptrunner):
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGQUIT, signal_handler)
-
-
-def _get_browser_address_bar_port():
-    """Get the report URL that will be shown in the browser's address bar.
-
-    That is, this is the port where static assets will be served from. In dev,
-    this is different from the URL that will be used to connect to the
-    proxy-browser websocket.
-
-    """
-    if config.get_option('proxy.useNode'):
-        return 3000
-    return config.get_option('browser.proxyPort')
-
-
-def _get_url(script_path):
-    """Get the URL for this report, for access from this machine.
-
-    Parameters
-    ----------
-    script_path : str
-
-    Returns
-    -------
-    str
-        The URL.
-
-    """
-    # XXX Why do we need the ?name= param at this point?
-    port = _get_browser_address_bar_port()
-    quoted_path = urllib.parse.quote_plus(script_path)
-    return ('http://localhost:%(port)s/?name=%(quoted_path)s' % {
-        'port': port,
-        'quoted_path': quoted_path,
-    })
 
 
 def run(script_path):
@@ -113,7 +78,7 @@ def run(script_path):
             # connect, and it happens to success before we launch the browser.
             return
 
-        util.open_browser(_get_url(script_path))
+        util.open_browser(report.get_url(host_ip='localhost'))
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.

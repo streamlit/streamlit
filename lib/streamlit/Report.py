@@ -5,6 +5,7 @@ import base58
 import json
 import os
 import uuid
+import urllib
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
@@ -75,6 +76,28 @@ class Report(object):
         id = str(base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
         self._latest_id = id
         return id
+
+    def get_url(self, host_ip):
+        """Get this report's live URL.
+
+        Parameters
+        ----------
+        host_ip : str
+            The IP address of the machine that is running the Streamlit Server.
+
+        Returns
+        -------
+        str
+            The URL.
+        """
+        # XXX Why do we need the ?name= param at this point?
+        port = _get_browser_address_bar_port()
+        quoted_path = urllib.parse.quote_plus(self.script_path)
+        return ('http://%(host_ip)s:%(port)s/?name=%(quoted_path)s' % {
+            'host_ip': host_ip,
+            'port': port,
+            'quoted_path': quoted_path,
+        })
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -191,3 +214,16 @@ class Report(object):
             # prod, but different in dev)
             proxyPort=config.get_option('browser.proxyPort'),
         )
+
+
+def _get_browser_address_bar_port():
+    """Get the report URL that will be shown in the browser's address bar.
+
+    That is, this is the port where static assets will be served from. In dev,
+    this is different from the URL that will be used to connect to the
+    proxy-browser websocket.
+
+    """
+    if config.get_option('proxy.useNode'):
+        return 3000
+    return config.get_option('browser.proxyPort')

@@ -5,6 +5,7 @@ import collections
 import json
 import logging
 import os
+import textwrap
 import threading
 import tornado.concurrent
 import tornado.gen
@@ -130,6 +131,9 @@ class Server(object):
     @tornado.gen.coroutine
     def loop_coroutine(self):
         self._set_state(State.WAITING_FOR_FIRST_BROWSER)
+
+        if config.get_option('proxy.isRemote'):
+            _print_urls(self._report)
 
         while not self._must_stop.is_set():
             if self._state == State.WAITING_FOR_FIRST_BROWSER:
@@ -420,3 +424,32 @@ def _convert_msg_to_exception_msg(msg, e):
     msg.delta.id = delta_id
 
     exception_element.marshall(msg.delta.new_element, e)
+
+
+def _print_urls(report):
+    if config.is_manually_set('browser.proxyAddress'):
+        url = report.get_url(
+            config.get_option('browser.proxyAddress'))
+
+        LOGGER.info(textwrap.dedent('''
+            ════════════════════════════════════════════════════════════
+            You can now view your Streamlit report in your browser.
+
+              URL: %(url)s
+
+            ════════════════════════════════════════════════════════════
+        '''), {'url': url, 'timeout_msg': timeout_msg})
+
+    else:
+        external_url = report.get_url(util.get_external_ip())
+        internal_url = report.get_url(util.get_internal_ip())
+
+        LOGGER.info(textwrap.dedent('''
+            ════════════════════════════════════════════════════════════
+            You can now view your Streamlit report in your browser.
+
+              EXTERNAL URL: %(external_url)s
+              INTERNAL URL: %(internal_url)s
+
+            ════════════════════════════════════════════════════════════
+        '''), {'external_url': external_url, 'internal_url': internal_url})
