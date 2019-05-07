@@ -15,24 +15,22 @@ const LOG = 'WebsocketConnection';
 
 
 /**
- * Timeout when attempting to connect to a local websocket, in millis. When
- * conneting to a local websocket, we retry forever. This should be at most
- * half the value of bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC
- */
-const LOCAL_CONNECTION_TIMEOUT_MS = 100;
-
-
-/**
  * Number of times to try to connect to a remote websocket.
  */
-const REMOTE_CONNECTION_MAX_RETRIES = 3;
+const REMOTE_CONNECTION_MAX_RETRIES = 5;
 
 
 /**
- * Timeout when attempting to connect to a remote websocket, in millis. This
- * grows by N with each Nth retry.
+ * Wait this long before trying to reconnect.
+ * This must be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC / 2.
  */
-const REMOTE_CONNECTION_TIMEOUT_MS = 2000;
+const RECONNECT_WAIT_TIME_MS = 400;
+
+
+/**
+ * Timeout when attempting to connect to a websocket, in millis.
+ */
+const CONNECTION_ATTEMPT_TIMEOUT_MS = 2000;
 
 
 interface Props {
@@ -156,6 +154,22 @@ export class WebsocketConnection {
 
   /**
    * Constructor.
+   *
+   * How this WebsocketConnection handles retries:
+   *
+   * - If isLocal == true: attempt to connect, and retry forever if it fails.
+   *   Before retrying, wait RECONNECT_WAIT_TIME_MS, just so we don't hog the
+   *   CPU (since most times the connection fails immediately). If the
+   *   connection succeeds and then it fails (ctrl-c on the terminal), also
+   *   retry forever just like before.
+   *
+   * - If isLocal == false: attempt to connect, and retry "maxRetries" times
+   *   where during each "try" we attempt to connect to each of the URIs in
+   *   urlList. Wait RECONNECT_WAIT_TIME_MS between retries just as before. The
+   *   difference here is that most times the connection doesn't fail
+   *   immediately (it can take a few hundred millis), so the reason why we
+   *   wait a bit is not to keep the CPU happy but to give the remote server a
+   *   chance to start up. After maxRetries, just error out and stop retrying.
    */
   public constructor(props: Props) {
     this.uriList = props.uriList;
@@ -202,6 +216,9 @@ export class WebsocketConnection {
         if (event === 'CONNECTION_ATTEMPT_STARTED') {
           setState(ConnectionState.RECONNECTING);
           return;
+        } else if (event === 'CONNECTION_CLOSED') {
+          // Do nothing.
+          return;
         }
         break;
 
@@ -225,7 +242,8 @@ export class WebsocketConnection {
         break;
 
       case ConnectionState.CONNECTED:
-        if (event === 'CONNECTION_CLOSED') {
+        if (event === 'CONNECTION_CLOSED' ||
+            event === 'CONNECTION_ERROR') {
           setState(ConnectionState.DISCONNECTED);
           this.startConnectionAttempt();
           return;
@@ -261,7 +279,9 @@ export class WebsocketConnection {
       }
     }
 
-    this.connectToWebSocket();
+    window.setTimeout(
+      () => this.connectToWebSocket(),
+      RECONNECT_WAIT_TIME_MS);
   }
 
   private connectToWebSocket(): void {
@@ -276,6 +296,8 @@ export class WebsocketConnection {
 
     logMessage(LOG, 'creating WebSocket');
     this.websocket = new WebSocket(uri);
+
+    this.setConnectionTimeout();
 
     const localWebsocket = this.websocket;
 
@@ -312,10 +334,6 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(): void {
-    const timeoutMs = this.isLocal ?
-      LOCAL_CONNECTION_TIMEOUT_MS :
-      REMOTE_CONNECTION_TIMEOUT_MS * (this.attemptNumber + 1);
-
     const localWebsocket = this.websocket;
 
     this.connectionTimeoutId = window.setTimeout(() => {
@@ -335,7 +353,7 @@ export class WebsocketConnection {
         logError(LOG, `${this.uriList[this.uriIndex]} timed out`);
         this.stepStateMachine('CONNECTION_TIMED_OUT');
       }
-    }, timeoutMs);
+    }, CONNECTION_ATTEMPT_TIMEOUT_MS);
   }
 
   /**
