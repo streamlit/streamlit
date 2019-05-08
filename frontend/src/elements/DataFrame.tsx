@@ -13,7 +13,7 @@ import {PureStreamlitElement} from './util/StreamlitElement';
 import {SortDirection} from './util/SortDirection';
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../dataFrameProto';
 import {toFormattedString} from '../format';
-import './DataFrame.css';
+import './DataFrame.scss';
 
 /**
  * Size of the optional sort icon displayed in column headers

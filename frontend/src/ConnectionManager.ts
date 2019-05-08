@@ -7,10 +7,10 @@
 
 import url from 'url';
 
-import StaticConnection from './StaticConnection';
-import {WebsocketConnection, ConnectionStateParams} from './WebsocketConnection';
 import {ConnectionState} from './ConnectionState';
 import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
+import {StaticConnection} from './StaticConnection';
+import {WebsocketConnection} from './WebsocketConnection';
 import {configureCredentials, getObject} from './s3helper';
 import {logError} from './log';
 
@@ -93,14 +93,11 @@ export class ConnectionManager {
         throw new Error('URL must contain either a report name or an ID.');
       }
     } catch (err) {
-      this.setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: err.message,
-      });
+      this.setConnectionState(ConnectionState.ERROR, err.message);
     }
   }
 
-  private setConnectionState = ({connectionState, errMsg}: ConnectionStateParams): void => {
+  private setConnectionState = (connectionState: ConnectionState, errMsg?: string): void => {
     if (this.connectionState !== connectionState) {
       this.connectionState = connectionState;
       this.props.connectionStateChanged(connectionState);

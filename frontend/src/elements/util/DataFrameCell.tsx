@@ -70,8 +70,8 @@ class DataFrameCell extends PureComponent<Props> {
       role = 'button';
       tabIndex = 0;
       title = columnSortDirection == null ?
-        'Sort by this column' :
-        `Sorted by this column (${isDescending ? 'descending' : 'ascending'})`;
+        `Sort by column "${contents}"` :
+        `Sorted by column "${contents}" (${isDescending ? 'descending' : 'ascending'})`;
     }
 
     // The sort icon is only drawn in the top row

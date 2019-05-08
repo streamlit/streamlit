@@ -11,12 +11,14 @@
 const SHOW_STOP_BUTTON = false;
 
 import React, {PureComponent, ReactNode} from 'react';
+import {CSSTransition} from 'react-transition-group';
 import {Button, UncontrolledTooltip} from 'reactstrap';
 import {SignalConnection} from 'typed-signals';
 
 import {ConnectionState} from './ConnectionState';
 import {ReportEvent, ReportEventDispatcher} from './ReportEvent';
 import {ReportRunState} from './ReportRunState';
+import {Timer} from './Timer';
 import './StatusWidget.scss';
 
 /** Component props */
@@ -43,7 +45,11 @@ interface Props {
 
 /** Component state */
 interface State {
-  minimized: boolean;
+  /**
+   * True if our ReportStatus or ConnectionStatus should be minimized.
+   * Does not affect ReportStatus prompts.
+   */
+  statusMinimized: boolean;
 
   /**
    * If true, the server has told us that the report has changed and is
@@ -54,6 +60,15 @@ interface State {
    * begins running again.
    */
   reportChangedOnDisk: boolean;
+
+  /** True if our Report Changed prompt should be minimized. */
+  promptMinimized: boolean;
+
+  /**
+   * True if our Report Changed prompt is being hovered. Hovered prompts are always
+   * shown, even if they'd otherwise be minimized.
+   */
+  promptHovered: boolean;
 }
 
 interface ConnectionStateUI {
@@ -62,20 +77,28 @@ interface ConnectionStateUI {
   tooltip: string;
 }
 
-const EVENT_DISPLAY_TIMEOUT_MS = 15000;  // 15sec
+// Amount of time to display the "Report Changed. Rerun?" prompt when it first appears.
+const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000;
+
+// Amount of time to display the Report Changed prompt after the user has hovered
+// and then unhovered on it.
+const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000;
 
 export class StatusWidget extends PureComponent<Props, State> {
   /** onReportEvent signal connection */
   private reportEventConn?: SignalConnection;
+  private curView?: ReactNode;
 
-  private clearEventsTimeoutHandle?: number;
+  private readonly minimizePromptTimer = new Timer();
 
   public constructor(props: Props) {
     super(props);
 
     this.state = {
-      minimized: StatusWidget.shouldMinimize(),
+      statusMinimized: StatusWidget.shouldMinimize(),
+      promptMinimized: false,
       reportChangedOnDisk: false,
+      promptHovered: false,
     };
   }
 
@@ -84,7 +107,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
     if (props.reportRunState === ReportRunState.RUNNING) {
-      return {reportChangedOnDisk: false};
+      return {reportChangedOnDisk: false, promptHovered: false};
     }
 
     return null;
@@ -102,7 +125,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       this.reportEventConn = undefined;
     }
 
-    this.cancelPendingClearEventsTimeout();
+    this.minimizePromptTimer.cancel();
 
     window.removeEventListener('scroll', this.handleScroll);
   }
@@ -125,8 +148,8 @@ export class StatusWidget extends PureComponent<Props, State> {
   private handleReportEvent(event: ReportEvent): void {
     switch (event) {
       case ReportEvent.SOURCE_FILE_CHANGED:
-        this.setState({reportChangedOnDisk: true});
-        this.clearEventsAfterTimeout();
+        this.setState({reportChangedOnDisk: true, promptMinimized: false});
+        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS);
         break;
 
       default:
@@ -135,20 +158,14 @@ export class StatusWidget extends PureComponent<Props, State> {
     }
   }
 
-  private clearEventsAfterTimeout(): void {
-    // Cancel any existing timeout so that any new prompt we
-    // just threw up doesn't disappear prematurely.
-    this.cancelPendingClearEventsTimeout();
-
-    this.clearEventsTimeoutHandle = window.setTimeout(() => {
-      this.setState({reportChangedOnDisk: false});
-    }, EVENT_DISPLAY_TIMEOUT_MS);
-  }
-
-  private cancelPendingClearEventsTimeout(): void {
-    if (this.clearEventsTimeoutHandle !== undefined) {
-      window.clearTimeout(this.clearEventsTimeoutHandle);
-      this.clearEventsTimeoutHandle = undefined;
+  private minimizePromptAfterTimeout(timeout: number): void {
+    // Don't cut an existing timer short. If our timer is already
+    // running, and is due to expire later than the new timeout
+    // value, leave the timer alone.
+    if (timeout > this.minimizePromptTimer.remainingTime) {
+      this.minimizePromptTimer.setTimeout(() => {
+        this.setState({promptMinimized: true});
+      }, timeout);
     }
   }
 
@@ -158,11 +175,47 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   private handleScroll = (): void => {
     this.setState({
-      minimized: StatusWidget.shouldMinimize(),
+      statusMinimized: StatusWidget.shouldMinimize(),
     });
   };
 
   public render(): ReactNode {
+    // The StatusWidget fades in on appear and fades out on disappear.
+    // We keep track of our most recent result from `renderWidget`,
+    // via `this.curView`, so that we can fade out our previous state
+    // if `renderWidget` returns null after returning a non-null value.
+
+    const prevView = this.curView;
+    this.curView = this.renderWidget();
+    if (prevView == null && this.curView == null) {
+      return null;
+    }
+
+    let animateIn: boolean;
+    let renderView: ReactNode;
+    if (this.curView != null) {
+      animateIn = true;
+      renderView = this.curView;
+    } else {
+      animateIn = false;
+      renderView = prevView;
+    }
+
+    // NB: the `timeout` value here must match the transition
+    // times specified in the StatusWidget-*-active CSS classes
+    return (
+      <CSSTransition
+        appear={true}
+        in={animateIn}
+        timeout={200}
+        unmountOnExit={true}
+        classNames="StatusWidget">
+        <div key="StatusWidget">{renderView}</div>
+      </CSSTransition>
+    );
+  }
+
+  private renderWidget(): ReactNode {
     if (this.isConnected()) {
       if (this.props.reportRunState === ReportRunState.RUNNING ||
         this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
@@ -192,7 +245,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       <div>
         <div
           id="ConnectionStatus"
-          className={this.state.minimized ? 'minimized' : ''}>
+          className={this.state.statusMinimized ? 'minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
             {ui.icon}
           </svg>
@@ -219,24 +272,22 @@ export class StatusWidget extends PureComponent<Props, State> {
     }
 
     return (
-      <div>
-        <div
-          id="ReportStatus"
-          className={this.state.minimized ? 'minimized' : ''}>
-          <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
-          <label>
-            Running...
-          </label>
-          {stopButton}
+      <div
+        id="ReportStatus"
+        className={this.state.statusMinimized ? 'minimized' : ''}>
+        <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
+        <label>
+          Running...
+        </label>
+        {stopButton}
 
-          {
-            this.state.minimized ?
-              <UncontrolledTooltip placement="bottom" target="ReportStatus">
-                This script is currently running
-              </UncontrolledTooltip> :
-              ''
-          }
-        </div>
+        {
+          this.state.statusMinimized ?
+            <UncontrolledTooltip placement="bottom" target="ReportStatus">
+              This script is currently running
+            </UncontrolledTooltip> :
+            ''
+        }
       </div>
     );
   }
@@ -244,10 +295,19 @@ export class StatusWidget extends PureComponent<Props, State> {
   /** "Source file changed. [Rerun] [Always Rerun]" */
   private renderRerunReportPrompt(): ReactNode {
     const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED;
+    const minimized = this.state.promptMinimized && !this.state.promptHovered;
 
     return (
-      <div>
-        <div id="ReportStatus">
+      <div
+        onMouseEnter={this.onReportPromptHover}
+        onMouseLeave={this.onReportPromptUnhover}>
+        <div
+          id="ReportStatus"
+          className={minimized ? 'minimized' : ''}>
+          <svg className="icon" viewBox="0 0 8 8">
+            <use xlinkHref="./open-iconic.min.svg#info"/>
+          </svg>
+
           <label className="prompt">
             Source file changed.
           </label>
@@ -267,6 +327,15 @@ export class StatusWidget extends PureComponent<Props, State> {
       </div>
     );
   }
+
+  private onReportPromptHover = (): void => {
+    this.setState({promptHovered: true});
+  };
+
+  private onReportPromptUnhover = (): void => {
+    this.setState({promptHovered: false, promptMinimized: false});
+    this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS);
+  };
 
   private handleStopReportClick = (): void => {
     this.props.stopReport();
