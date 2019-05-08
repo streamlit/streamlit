@@ -214,7 +214,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.PLAIN
 
     @_with_element
@@ -236,7 +236,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -267,7 +267,7 @@ class DeltaGenerator(object):
         """
         markdown = '```%(language)s\n%(body)s\n```' % \
                    {'language': language or '', 'body': body}
-        element.text.body = textwrap.dedent(markdown).strip()
+        element.text.body = _clean_text(markdown)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -325,7 +325,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '# %s' % textwrap.dedent(body).strip()
+        element.text.body = '# %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -346,7 +346,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '## %s' % textwrap.dedent(body).strip()
+        element.text.body = '## %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -367,7 +367,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '### %s' % textwrap.dedent(body).strip()
+        element.text.body = '### %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -384,7 +384,7 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.ERROR
 
     @_with_element
@@ -401,7 +401,7 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.WARNING
 
     @_with_element
@@ -418,7 +418,7 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.INFO
 
     @_with_element
@@ -435,7 +435,7 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.SUCCESS
 
     @_with_element
@@ -1374,3 +1374,7 @@ class DeltaGenerator(object):
         self._enqueue(msg)
 
         return self
+
+
+def _clean_text(text):
+    return textwrap.dedent(str(text)).strip()
