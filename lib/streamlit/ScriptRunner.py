@@ -155,17 +155,15 @@ class ScriptRunner(object):
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
                 self._report.script_path,
-                # We're compiling entire blocks of Python, so we need "exec" mode
-                # (as opposed to "eval" or "single").
+                # We're compiling entire blocks of Python, so we need "exec"
+                # mode (as opposed to "eval" or "single").
                 'exec',
                 # Don't inherit any flags or "future" statements.
                 flags=0,
                 dont_inherit=1,
-                # -1 = default optimization level (specified by the -O parameter)
-                # 0 = no optimization & __debug__ is true
-                # 1 = asserts are removed & __debug__ is false
-                # 2 = docstrings are removed too.
-                optimize=-1)
+                # Parameter not supported in Python2:
+                #optimize=-1,
+            )
 
             # IMPORTANT: must pass a brand new dict into the globals and locals,
             # below, so we don't leak any variables in between runs, and don't
@@ -184,8 +182,8 @@ class ScriptRunner(object):
             exec(code, ns, ns)
 
         except ScriptControlException as e:
-            # Stop ScriptControlExceptions from appearing in the console.
-            pass
+            LOGGER.debug('ScriptControlException received')
+            # Don't show ScriptControlExceptions in the console.
 
         except BaseException as e:
             # Show exceptions in the Streamlit report.
@@ -214,6 +212,7 @@ class ScriptRunner(object):
 
     def _maybe_handle_execution_control_request(self):
         if self._state_change_requested.is_set():
+            LOGGER.debug('Received execution control request: %s', self._state)
 
             if self._state == State.STOP_REQUESTED:
                 raise StopException()
