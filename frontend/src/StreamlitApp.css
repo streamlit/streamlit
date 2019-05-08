@@ -141,15 +141,6 @@ iframe {
   display: none;
 }
 
-.streamlit-container .element-container {
-  display: inline-block;
-  margin-bottom: 1rem;
-}
-
-.streamlit-container .element-container:last-child {
-  margin-bottom: 0;
-}
-
 .streamlit-container hr {
   border-color: #F0F3F9;
 }
