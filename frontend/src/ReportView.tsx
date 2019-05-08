@@ -66,7 +66,7 @@ export class ReportView extends PureComponent<Props> {
 
     // Transform our elements into ReactNodes.
     this.props.elements.forEach((element?: Element, index?: number) => {
-      if (!element || !index) {
+      if (!element || index == null) {
         return;
       }
 
