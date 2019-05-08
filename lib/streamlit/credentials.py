@@ -18,9 +18,9 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 Activation = namedtuple('Activation', [
-    'code',
-    'email',
-    'valid',
+    'code',  # str: the user's activation code, sent via email.
+    'email',  # str : the user's email.
+    'is_valid',  # boolean : whether the code+email combination is valid.
 ])
 
 # For python 2.7
@@ -58,30 +58,40 @@ class Credentials(object):
         """Load from toml file."""
         if self.activation is not None:
             LOGGER.error('Credentials already loaded. Not rereading file.')
-        else:
-            try:
-                with open(self._conf_file, 'r') as f:
-                    data = toml.load(f).get('general')
-                self.activation = verify_code(data['email'], data['code'])
-            except FileNotFoundError:
-                raise RuntimeError(
-                    'Credentials file not found. Please run `streamlit activate`'
-                )
-            except Exception as e:
-                raise Exception('Unable to load credentials from %s: %s' %
-                                (self._conf_file, e))
+            return
+
+        try:
+            with open(self._conf_file, 'r') as f:
+                data = toml.load(f).get('general')
+            self.activation = verify_code(data['email'], data['code'])
+        except FileNotFoundError:
+            raise RuntimeError(
+                'Credentials file not found. Please run `streamlit activate`'
+            )
+        except Exception as e:
+            raise Exception('Unable to load credentials from %s: %s' %
+                            (self._conf_file, e))
 
     def check_activated(self):
+        """Check if streamlit is activated.
+
+        Used by `streamlit run script.py`
+        """
         try:
             self.load()
         except (Exception, RuntimeError) as e:
             _exit(str(e))
 
-        if not self.activation.valid:
+        if not self.activation.is_valid:
             _exit('Activation code/email not valid.')
 
     @classmethod
     def reset(cls):
+        """Reset credentials by removing file.
+
+        This is used by `streamlit activate reset` in case a user wants
+        to start over.
+        """
         Credentials._singleton = None
         c = Credentials()
         try:
@@ -99,13 +109,17 @@ class Credentials(object):
             toml.dump({'general': data}, f)
 
     def activate(self):
+        """Activate Streamlit.
+
+        Used by `streamlit activate`
+        """
         try:
             self.load()
         except RuntimeError:
             pass
 
         if self.activation:
-            if self.activation.valid:
+            if self.activation.is_valid:
                 _exit('Already activated')
             else:
                 _exit(
@@ -119,7 +133,7 @@ class Credentials(object):
                 email = _get_data('Enter your email')
 
                 self.activation = verify_code(email, code)
-                if self.activation.valid:
+                if self.activation.is_valid:
                     self.save()
                     print(
                         textwrap.dedent('''
@@ -134,6 +148,11 @@ class Credentials(object):
 
 
 def generate_code(secret, email):
+    """Generate code for activation.
+
+    This is here so streamlit developers can create activation codes if
+    needed that are not in the spreadsheet.
+    """
     secret = secret.encode('utf-8')
     email = email.encode('utf-8')
 
@@ -146,6 +165,7 @@ def generate_code(secret, email):
 
 
 def verify_code(email, code):
+    """Verify activation code with email."""
     # Python2/3 Madness
     email_encoded = email
     code_encoded = code
@@ -173,6 +193,7 @@ def verify_code(email, code):
 
 
 def _exit(message):  # pragma: nocover
+    """Exit program with error."""
     LOGGER.error(message)
     sys.exit(-1)
 

@@ -188,7 +188,7 @@ class CredentialsClassTest(unittest.TestCase):
             s.assert_called_once()
             self.assertEqual(c.activation.code, 'ARzVsqhSB5i')
             self.assertEqual(c.activation.email, 'user@domain.com')
-            self.assertEqual(c.activation.valid, True)
+            self.assertEqual(c.activation.is_valid, True)
 
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""
@@ -218,17 +218,17 @@ class CredentialsModulesTest(unittest.TestCase):
     def test_verify_code(self):
         """Test generate_code."""
         ret = verify_code('user@domain.com', 'ARzVsqhSB5i')
-        self.assertTrue(ret.valid)
+        self.assertTrue(ret.is_valid)
 
     def test_verify_code_wrong_code(self):
         """Test credentials.verify_code with code from another user."""
         ret = verify_code('user@domain.com', 'ARxJtdP43GU')
-        self.assertFalse(ret.valid)
+        self.assertFalse(ret.is_valid)
 
     def test_verify_code_bad_code(self):
         """Test credentials.verify_code with invalid base58 code."""
         ret = verify_code('user@domain.com', '****')
-        self.assertFalse(ret.valid)
+        self.assertFalse(ret.is_valid)
 
     def test_get_data(self):
         """Test get_data."""
