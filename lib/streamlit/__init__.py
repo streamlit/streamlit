@@ -53,12 +53,6 @@ from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.caching import cache  # Just for export.
 
 
-this_module = sys.modules[__name__]
-
-
-# Delta generator with no queue so it can't send anything out.
-_NULL_DELTA_GENERATOR = DeltaGenerator(None)
-
 _DATAFRAME_LIKE_TYPES = (
     'DataFrame',  # pandas.core.frame.DataFrame
     'Series',  # pandas.core.series.Series
@@ -67,86 +61,21 @@ _DATAFRAME_LIKE_TYPES = (
     'Styler',  # pandas.io.formats.style.Styler
 )
 
+# Delta generator with no queue so it can't send anything out.
+_NULL_DELTA_GENERATOR = DeltaGenerator(None)
 
 # Root delta generator for this Streamlit report.
-_delta_generator = None
-
-# This gets set to True (in bootstrap.py) to mark a script as having been
-# executed with 'streamlit run foo.py' rather than 'python foo.py'.
-_is_running_with_run_command = False
-
-# We want to show a warning when the user runs a Streamlit script without
-# 'streamlit run', but we need to make sure the warning appears only once no
-# matter how many times __init__ gets loaded.
-_warning_has_been_displayed = False
-
-
-def _get_new_delta_generator():
-    enqueue = None
-
-    if config.get_option('global.unitTest'):
-        from streamlit.ReportQueue import ReportQueue
-        enqueue = ReportQueue().enqueue
-    else:
-        from streamlit.Server import Server
-        server = Server.get_current()
-        enqueue = server.enqueue
-
-    return DeltaGenerator(enqueue)
-
-
-def _get_current_delta_generator():
-    display_enabled = config.get_option('client.displayEnabled')
-
-    if display_enabled:
-        if _is_running_with_run_command:
-            global _delta_generator
-
-            if _delta_generator is None:
-                _delta_generator = _get_new_delta_generator()
-
-            return _delta_generator
-
-        else:
-            global _warning_has_been_displayed
-
-            if not _warning_has_been_displayed:
-                _warning_has_been_displayed = True
-
-                if util.is_repl():
-                    _LOGGER.warning(textwrap.dedent('''
-                        ════════════════════════════════════════════════
-                        Will not generate Streamlit report
-                        ────────────────────────────────────────────────
-
-                        To generate report, use Streamlit in a file and
-                        run it with:
-                          streamlit run [FILE_NAME] [ARGUMENTS]
-
-                        ════════════════════════════════════════════════
-                        '''))
-                else:
-                    script_name = sys.argv[0]
-
-                    _LOGGER.warning(textwrap.dedent('''
-                        ════════════════════════════════════════════════
-                        Will not generate Streamlit report
-                        ────────────────────────────────────────────────
-
-                        To generate report, run this file with:
-                          streamlit run %s [ARGUMENTS]
-
-                        ════════════════════════════════════════════════
-                        '''), script_name)
-
-    return _NULL_DELTA_GENERATOR
+# This gets overwritten in bootstrap.py and in tests.
+_delta_generator = _NULL_DELTA_GENERATOR
 
 
 def _with_dg(method):
     @functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        dg = _get_current_delta_generator()
-        return method(dg, *args, **kwargs)
+        if _delta_generator is _NULL_DELTA_GENERATOR:
+            _maybe_print_repl_warning()
+
+        return method(_delta_generator, *args, **kwargs)
     return wrapped_method
 
 
@@ -186,6 +115,7 @@ warning         = _with_dg(DeltaGenerator.warning)  # noqa: E221
 
 _native_chart   = _with_dg(DeltaGenerator._native_chart)  # noqa: E221
 _text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
+_reset          = _with_dg(DeltaGenerator._reset)  # noqa: E221
 
 # Config
 set_option = config.set_option
@@ -292,6 +222,7 @@ def write(*args):
                 string_buffer[:] = []
 
         for arg in args:
+            # Order matters!
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
             elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
@@ -402,3 +333,42 @@ def echo():
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning('Unable to display code. %s' % err)
+
+
+# We want to show a warning when the user runs a Streamlit script without
+# 'streamlit run', but we need to make sure the warning appears only once no
+# matter how many times __init__ gets loaded.
+_repl_warning_has_been_displayed = False
+
+
+def _maybe_print_repl_warning():
+    global _repl_warning_has_been_displayed
+
+    if not _repl_warning_has_been_displayed:
+        _repl_warning_has_been_displayed = True
+
+        if util.is_repl():
+            _LOGGER.warning(textwrap.dedent('''
+                ════════════════════════════════════════════════
+                Will not generate Streamlit report
+                ────────────────────────────────────────────────
+
+                To generate report, use Streamlit in a file and
+                run it with:
+                  streamlit run [FILE_NAME] [ARGUMENTS]
+
+                ════════════════════════════════════════════════
+                '''))
+        else:
+            script_name = sys.argv[0]
+
+            _LOGGER.warning(textwrap.dedent('''
+                ════════════════════════════════════════════════
+                Will not generate Streamlit report
+                ────────────────────────────────────────────────
+
+                To generate report, run this file with:
+                  streamlit run %s [ARGUMENTS]
+
+                ════════════════════════════════════════════════
+                '''), script_name)

@@ -65,7 +65,7 @@ class ScriptRunner(object):
         self._set_state(State.INITIAL)
 
         self._file_observer = FileObserver(
-            self._report.script_path, self._maybe_handle_file_changed)
+            self._report.script_path, self.maybe_handle_file_changed)
 
     def _set_state(self, new_state):
         if self._state == new_state:
@@ -119,7 +119,7 @@ class ScriptRunner(object):
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
-            self._maybe_handle_execution_control_request()
+            self.maybe_handle_execution_control_request()
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
@@ -134,7 +134,7 @@ class ScriptRunner(object):
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st
-        st._delta_generator = None
+        st._reset()
 
         self._state_change_requested.clear()
         self._set_state(State.RUNNING)
@@ -210,7 +210,7 @@ class ScriptRunner(object):
             self._set_state(State.PAUSE_REQUESTED)
             self._state_change_requested.set()
 
-    def _maybe_handle_execution_control_request(self):
+    def maybe_handle_execution_control_request(self):
         if self._state_change_requested.is_set():
             LOGGER.debug('Received execution control request: %s', self._state)
 
@@ -223,7 +223,7 @@ class ScriptRunner(object):
                 self._pause()
                 return
 
-    def _maybe_handle_file_changed(self):
+    def maybe_handle_file_changed(self):
         if self.run_on_save:
             self.request_rerun(self._report.argv)
         else:

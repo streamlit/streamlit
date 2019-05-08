@@ -43,23 +43,8 @@ class State(object):
 
 class Server(object):
 
-    _singleton = None
-
-    @classmethod
-    def get_current(cls):
-        """Return the singleton instance."""
-        if cls._singleton is None:
-            Server()
-
-        s = Server._singleton
-        return s
-
     def __init__(self, report, scriptrunner):
         """Initialize server."""
-        if Server._singleton is not None:
-            raise RuntimeError(
-                'Server already initialized. Use .get_current() instead')
-
         LOGGER.debug('Initializing server...')
         Server._singleton = self
 
@@ -91,8 +76,8 @@ class Server(object):
 
     def _get_routes(self):
         routes = [
-            (r'/stream', _SocketHandler),
-            (r'/healthz', _HealthHandler),
+            (r'/stream', _SocketHandler, dict(server=self)),
+            (r'/healthz', _HealthHandler, dict(server=self)),
         ]
 
         if not config.get_option('proxy.useNode'):
@@ -345,13 +330,16 @@ class _StaticFileHandler(tornado.web.StaticFileHandler):
 
 
 class _HealthHandler(tornado.web.RequestHandler):
+    def initialize(self, server):
+        self._server = server
+
     def check_origin(self, origin):
         """Set up CORS."""
         return proxy_util.url_is_from_allowed_origins(origin)
 
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
-        if Server.get_current().is_ready_for_browser_connection:
+        if self._server.is_ready_for_browser_connection:
             self.write('ok')
         else:
             # 503 = SERVICE_UNAVAILABLE
@@ -360,19 +348,21 @@ class _HealthHandler(tornado.web.RequestHandler):
 
 
 class _SocketHandler(tornado.websocket.WebSocketHandler):
+    def initialize(self, server):
+        self._server = server
+
     def check_origin(self, origin):
         """Set up CORS."""
         return proxy_util.url_is_from_allowed_origins(origin)
 
     def open(self):
-        Server.get_current()._add_browser_connection(self)
+        self._server._add_browser_connection(self)
 
     def on_close(self):
-        Server.get_current()._remove_browser_connection(self)
+        self._server._remove_browser_connection(self)
 
     @tornado.gen.coroutine
     def on_message(self, payload):
-        server = Server.get_current()
         msg = protobuf.BackMsg()
 
         try:
@@ -382,21 +372,21 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             msg_type = msg.WhichOneof('type')
 
             if msg_type == 'cloud_upload':
-                yield server._handle_save_request(self)
+                yield self._server._handle_save_request(self)
             elif msg_type == 'rerun_script':
-                server._handle_rerun_script_request(msg.rerun_script)
+                self._server._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == 'clear_cache':
-                server._handle_clear_cache_request()
+                self._server._handle_clear_cache_request()
             elif msg_type == 'set_run_on_save':
-                server._handle_set_run_on_save_request(msg.set_run_on_save)
+                self._server._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
-                server._scriptrunner.request_stop()
+                self._server._scriptrunner.request_stop()
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
         except BaseException as e:
             LOGGER.error(e)
-            server._enqueue_exception(e)
+            self._server._enqueue_exception(e)
 
 
 def _fix_tornado_logging():

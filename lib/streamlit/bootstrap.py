@@ -8,10 +8,11 @@ import urllib
 
 from streamlit import config
 from streamlit import util
+from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.Server import Server
-import streamlit
+import streamlit as st
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -61,7 +62,16 @@ def run(script_path):
     server = Server(report, scriptrunner)
     ioloop.spawn_callback(server.loop_coroutine)
 
-    streamlit._is_running_with_run_command = True
+    def maybe_enqueue(msg):
+        if not config.get_option('client.displayEnabled'):
+            return False
+        scriptrunner.maybe_handle_execution_control_request()
+        server.enqueue(msg)
+        return True
+
+    # Somewhat hacky: create the root DeltaGenerator, and put it in the
+    # Streamlit module.
+    st._delta_generator = DeltaGenerator(maybe_enqueue)
 
     # Start the script in a separate thread, but do it from the ioloop so it
     # happens after the server starts.
