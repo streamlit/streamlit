@@ -1,0 +1,21 @@
+/**
+ * @license
+ * Copyright 2019 Streamlit Inc. All rights reserved.
+ */
+
+@import 'variables';
+
+
+.streamlit-container .element-container {
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.streamlit-container .stale-element {
+  opacity: 0.33;
+  transition: opacity 1s ease-in 0.5s;
+}
+
+.streamlit-container .element-container:last-child {
+  margin-bottom: 0;
+}

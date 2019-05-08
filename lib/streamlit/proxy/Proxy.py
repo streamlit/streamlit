@@ -119,9 +119,9 @@ class Proxy(object):
             LOGGER.debug('Serving static content from %s', static_path)
 
             routes.extend([
-                (r"/()$", web.StaticFileHandler,
+                (r"/()$", _StaticFileHandler,
                     {'path': '%s/index.html' % static_path}),
-                (r"/(.*)", web.StaticFileHandler,
+                (r"/(.*)", _StaticFileHandler,
                     {'path': '%s/' % static_path}),
             ])
         else:
@@ -618,11 +618,22 @@ def stop_proxy_on_exception(is_coroutine=False):
     return stop_proxy_decorator
 
 
+class _StaticFileHandler(web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        """Disable cache."""
+        self.set_header('Cache-Control', 'no-cache')
+
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return proxy_util.url_is_from_allowed_origins(origin)
+
+
 class _HealthHandler(web.RequestHandler):
     def initialize(self, proxy):
         self._proxy = proxy
 
     def get(self):
+        self.add_header('Cache-Control', 'no-cache')
         if self._proxy.is_ready_for_browser_connection:
             self.write('ok')
         else:
@@ -647,8 +658,8 @@ def _print_urls(connection, wait_secs):
 
         LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
-            Open the URL below in your browser {timeout_msg}
-            REPORT URL: {url}
+            Open the URL below in your browser %(timeout_msg)s
+            REPORT URL: %(url)s
             ════════════════════════════════════════════════════════════
         '''), {'url': url, 'timeout_msg': timeout_msg})
 
@@ -658,8 +669,8 @@ def _print_urls(connection, wait_secs):
 
         LOGGER.info(textwrap.dedent('''
             ════════════════════════════════════════════════════════════
-            Open one of the URLs below in your browser {timeout_msg}
-            EXTERNAL REPORT URL: {external_url}
-            INTERNAL REPORT URL: {internal_url}
+            Open one of the URLs below in your browser %(timeout_msg)s
+            EXTERNAL REPORT URL: %(external_url)s
+            INTERNAL REPORT URL: %(internal_url)s
             ════════════════════════════════════════════════════════════
         '''), {'external_url': external_url, 'internal_url': internal_url})

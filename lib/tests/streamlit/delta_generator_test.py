@@ -312,15 +312,43 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 class DeltaGeneratorProgressTest(unittest.TestCase):
     """Test DeltaGenerator Progress."""
 
-    def test_progress(self):
-        """Test protobuf.Progress."""
+    def test_progress_int(self):
+        """Test protobuf.Progress with int values."""
         dg = DeltaGenerator(ReportQueue())
 
-        some_value = 42
-        dg.progress(some_value)
+        values = [0, 42, 100]
+        for value in values:
+            dg.progress(value)
+
+            element = get_element(dg)
+            self.assertEqual(value, element.progress.value)
+
+    def test_progress_float(self):
+        """Test protobuf.Progress with float values."""
+        dg = DeltaGenerator(ReportQueue())
+
+        values = [0.0, 0.42, 1.0]
+        for value in values:
+            dg.progress(value)
+
+            element = get_element(dg)
+            self.assertEqual(int(value * 100), element.progress.value)
+
+    def test_progress_bad_values(self):
+        """Test protobuf.Progress with bad values."""
+        dg = DeltaGenerator(ReportQueue())
+
+        values = [-1, 101, -0.01, 1.01]
+        for value in values:
+            dg.progress(value)
+
+            element = get_element(dg)
+            self.assertEqual(element.exception.type, 'ValueError')
+
+        dg.progress('some string')
 
         element = get_element(dg)
-        self.assertEqual(some_value, element.progress.value)
+        self.assertEqual(element.exception.type, 'TypeError')
 
 
 class DeltaGeneratorChartTest(unittest.TestCase):
