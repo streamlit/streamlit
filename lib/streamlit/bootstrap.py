@@ -1,6 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
+import os
 import signal
 import sys
 import tornado.ioloop
@@ -42,6 +43,15 @@ def _set_up_signal_handler(scriptrunner):
     signal.signal(signal.SIGQUIT, signal_handler)
 
 
+def _fix_sys_path(script_path):
+    """Add the script's folder to the sys path.
+
+    Python normally does this automatically, but since we exec the script
+    ourselves we need to do it instead.
+    """
+    sys.path.insert(0, os.path.dirname(script_path))
+
+
 def run(script_path):
     """Run a script in a separate thread and start a server for the report.
 
@@ -52,6 +62,8 @@ def run(script_path):
     script_path : str
 
     """
+    _fix_sys_path(script_path)
+
     ioloop = tornado.ioloop.IOLoop.current()
     report = Report(script_path, sys.argv)
     scriptrunner = ScriptRunner(report)
