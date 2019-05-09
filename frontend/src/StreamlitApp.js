@@ -69,7 +69,6 @@ class StreamlitApp extends PureComponent {
     this.clearCache = this.clearCache.bind(this);
     this.saveReport = this.saveReport.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
-    this.setReportName = this.setReportName.bind(this);
 
     this.userLoginResolver = new Resolver();
     this.reportEventDispatcher = new ReportEventDispatcher();
@@ -130,7 +129,6 @@ class StreamlitApp extends PureComponent {
       getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
-      setReportName: this.setReportName,
       connectionStateChanged: newState => {
         this.setState({ connectionState: newState });
       },
@@ -268,9 +266,13 @@ class StreamlitApp extends PureComponent {
   handleNewReport(newReportMsg) {
     trackEventRemotely('updateReport');
 
+    const name = newReportMsg.get('name');
+    document.title = `${name} · Streamlit`;
+
     this.setState({
       reportId: newReportMsg.get('id'),
       commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+      reportName: name,
     });
   }
 
@@ -494,14 +496,6 @@ class StreamlitApp extends PureComponent {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
       false;
-  }
-
-  /**
-   * Sets the reportName in state and upates the title bar.
-   */
-  setReportName(reportName) {
-    document.title = `${reportName} · Streamlit`;
-    this.setState({ reportName });
   }
 
   render() {

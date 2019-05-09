@@ -64,6 +64,9 @@ message NewReport {
 
   // The command line that launched this report.
   repeated string command_line = 2;
+
+  // The basename of the script that launched this report. Example: "foo.py"
+  string name = 3;
 }
 
 // State for a session. Sent as part of the Initialize message, and also

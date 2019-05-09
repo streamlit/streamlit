@@ -2,7 +2,7 @@
  * @license
  * Copyright 2018 Streamlit Inc. All rights reserved.
  *
- * @fileoverview Manages our connection to the Proxy.
+ * @fileoverview Manages our connection to the Server.
  */
 
 import url from 'url';
@@ -30,12 +30,6 @@ interface Props {
    * Function to be called when the connection errors out.
    */
   onConnectionError: (errorMessage: string) => void;
-
-  /**
-   * Function that should be called to set the current report's name in the
-   * parent component.
-   */
-  setReportName: (reportName: string) => void;
 
   /**
    * Called when our ConnectionState is changed.
@@ -78,19 +72,14 @@ export class ConnectionManager {
 
   private async connect(): Promise<void> {
     const {query} = url.parse(window.location.href, true);
-    const reportName = query.name as string;
     const reportId = query.id as string;
 
     try {
-      if (reportName !== undefined) {
-        this.props.setReportName(reportName);
-        this.connection = await this.connectBasedOnWindowUrl(reportName);
-
-      } else if (reportId !== undefined) {
+      if (reportId !== undefined) {
         this.connection = await this.connectBasedOnManifest(reportId);
 
       } else {
-        throw new Error('URL must contain either a report name or an ID.');
+        this.connection = await this.connectToRunningServer();
       }
     } catch (err) {
       this.setConnectionState(ConnectionState.ERROR, err.message);
@@ -108,13 +97,13 @@ export class ConnectionManager {
     }
   };
 
-  private connectBasedOnWindowUrl(reportName: string): WebsocketConnection {
+  private connectToRunningServer(): WebsocketConnection {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
     const hostname = window.location.hostname;
     const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
-    const uri = getWsUrl(hostname, port, reportName);
+    const uri = getWsUrl(hostname, port);
 
     return new WebsocketConnection({
       uriList: [
@@ -136,21 +125,20 @@ export class ConnectionManager {
     const manifest = await this.fetchManifestWithPossibleLogin(reportId);
 
     return manifest.proxyStatus === 'running' ?
-      this.connectToRunningProxyFromManifest(manifest) :
+      this.connectToRunningServerFromManifest(manifest) :
       this.connectToStaticReportFromManifest(reportId, manifest);
   }
 
-  private connectToRunningProxyFromManifest(manifest: any): WebsocketConnection {
+  private connectToRunningServerFromManifest(manifest: any): WebsocketConnection {
     const {
-      name, configuredProxyAddress, internalProxyIP, externalProxyIP,
-      proxyPort,
+      configuredProxyAddress, internalProxyIP, externalProxyIP, proxyPort,
     } = manifest;
 
     const uriList = configuredProxyAddress ?
-      [getWsUrl(configuredProxyAddress, proxyPort, name)] :
+      [getWsUrl(configuredProxyAddress, proxyPort)] :
       [
-        getWsUrl(externalProxyIP, proxyPort, name),
-        getWsUrl(internalProxyIP, proxyPort, name),
+        getWsUrl(externalProxyIP, proxyPort),
+        getWsUrl(internalProxyIP, proxyPort),
       ];
 
     return new WebsocketConnection({
@@ -167,7 +155,6 @@ export class ConnectionManager {
       reportId,
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,
-      setReportName: this.props.setReportName,
     });
   }
 
@@ -219,6 +206,6 @@ async function fetchManifest(reportId: string): Promise<any> {
   return data.json();
 }
 
-function getWsUrl(host: string, port: number, reportName: string): string {
+function getWsUrl(host: string, port: number): string {
   return `ws://${host}:${port}/stream`;
 }

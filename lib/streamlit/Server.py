@@ -119,7 +119,7 @@ class Server(object):
     def loop_coroutine(self):
         self._set_state(State.WAITING_FOR_FIRST_BROWSER)
 
-        self._on_server_start_callback(self._report, self.browser_is_connected)
+        self._on_server_start_callback(self, self._report)
 
         while not self._must_stop.is_set():
             if self._state == State.WAITING_FOR_FIRST_BROWSER:
@@ -259,6 +259,7 @@ class Server(object):
         msg = protobuf.ForwardMsg()
         msg.new_report.id = self._report.generate_new_id()
         msg.new_report.command_line.extend(self._report.argv)
+        msg.new_report.name = self._report.name
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self):

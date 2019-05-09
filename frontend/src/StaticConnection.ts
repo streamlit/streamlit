@@ -26,8 +26,6 @@ interface Props {
    * If the new ConnectionState is ERROR, errMsg will be defined.
    */
   onConnectionStateChange: (connectionState: ConnectionState, errMsg?: string) => void;
-
-  setReportName: (name: string) => void;
 }
 
 /**
@@ -39,7 +37,6 @@ export class StaticConnection {
     const {name, nDeltas} = props.manifest;
 
     props.onConnectionStateChange(ConnectionState.STATIC);
-    props.setReportName(name);
 
     // TODO: Unify with StreamlitApp.js
     const {hostname, pathname} = url.parse(window.location.href, true);

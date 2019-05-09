@@ -90,13 +90,10 @@ class Report(object):
         str
             The URL.
         """
-        # XXX Why do we need the ?name= param at this point?
         port = _get_browser_address_bar_port()
-        quoted_path = urllib.parse.quote_plus(self.script_path)
-        return ('http://%(host_ip)s:%(port)s/?name=%(quoted_path)s' % {
+        return ('http://%(host_ip)s:%(port)s' % {
             'host_ip': host_ip,
             'port': port,
-            'quoted_path': quoted_path,
         })
 
     def serialize_running_report_to_files(self):
@@ -187,7 +184,6 @@ class Report(object):
         -------
         dict
             The actual manifest. Schema:
-            - name: str,
             - localId: str,
             - nDeltas: int or None,
             - proxyStatus: 'running' or 'done',
@@ -203,7 +199,6 @@ class Report(object):
             configured_proxy_address = None
 
         return dict(
-            name=self.name,
             nDeltas=n_deltas,
             proxyStatus=status,
             configuredProxyAddress=configured_proxy_address,

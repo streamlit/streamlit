@@ -54,21 +54,26 @@ def _fix_sys_path(script_path):
     sys.path.insert(0, os.path.dirname(script_path))
 
 
-def _maybe_open_browser(report, browser_is_connected):
-    if config.get_option('proxy.isRemote'):
-        # Don't open browser when in remote (headless) mode.
-        pass
+def _on_server_start(server, report):
+    _print_url(report)
 
-    elif browser_is_connected:
-        # Don't auto-open browser if there's already a browser connected.
-        # This can happen if there's an old tab repeatedly trying to
-        # connect, and it happens to success before we launch the browser.
-        pass
+    def maybe_open_browser():
+        if config.get_option('proxy.isRemote'):
+            # Don't open browser when in remote (headless) mode.
+            return
 
-    else:
+        if server.browser_is_connected:
+            # Don't auto-open browser if there's already a browser connected.
+            # This can happen if there's an old tab repeatedly trying to
+            # connect, and it happens to success before we launch the browser.
+            return
+
         util.open_browser(report.get_url('localhost'))
 
-    _print_url(report)
+    # Schedule the browser to open using the IO Loop on the main thread, but
+    # only if no other browser connects within 1s.
+    ioloop = tornado.ioloop.IOLoop.current()
+    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
 def _print_url(report):
@@ -123,7 +128,7 @@ def run(script_path):
 
     # Schedule the server to start using the IO Loop on the main thread.
     server = Server(
-        report, scriptrunner, on_server_start_callback=_maybe_open_browser)
+        report, scriptrunner, on_server_start_callback=_on_server_start)
     ioloop.spawn_callback(server.loop_coroutine)
 
     def maybe_enqueue(msg):
