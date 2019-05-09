@@ -4,33 +4,47 @@
  *
  */
 
-import { IS_DEV_ENV, STREAMLIT_VERSION, BROWSER_IP_ADDRESS } from './baseconsts';
-import { logAlways } from './log';
+import {
+  INSTALLATION_ID,
+  IS_DEV_ENV,
+  STREAMLIT_VERSION,
+  BROWSER_IP_ADDRESS,
+} from './baseconsts';
+
+import {logAlways} from './log';
+import mixpanel, {Dict} from 'mixpanel-browser';
+
+/** Our Mixpanel Token */
+const TOKEN = '77c8dd3e3266a6133f74207d7924bab4';
+mixpanel.init(TOKEN);
 
 /**
  * Whether we should track usage remotely, for stats.
  * Defaults to true. See also lib/streamlit/config.py.
  */
-let trackUsage = null;
+let trackUsage: boolean | undefined;
 
 /**
  * Queue of tracking events we tried sending before initRemoteTracker was
  * called.
  */
-const preInitializationEventQueue = [];
+type Event = [string, Dict];
+const preInitializationEventQueue: Event[] = [];
 
 /**
  * Params:
  *   gatherUsageStats: a boolean. If true, we'll track usage remotely.
- *   streamlitVersion: string.
  */
-export function initRemoteTracker({gatherUsageStats, streamlitVersion}) {
-  if (gatherUsageStats != null) { trackUsage = gatherUsageStats; }
+export function initRemoteTracker({gatherUsageStats}: {gatherUsageStats?: boolean}): void {
+  if (gatherUsageStats != null) {
+    trackUsage = gatherUsageStats;
+  }
 
   if (trackUsage) {
-    window.mixpanel.opt_in_tracking();
+    mixpanel.identify(INSTALLATION_ID);
+    mixpanel.opt_in_tracking();
   } else {
-    window.mixpanel.opt_out_tracking();
+    mixpanel.opt_out_tracking();
   }
 
   logAlways('Track stats remotely: ', trackUsage);
@@ -45,7 +59,7 @@ export function initRemoteTracker({gatherUsageStats, streamlitVersion}) {
  *   eventName: the event name as a string.
  *   opts: other stuff to track.
  */
-export function trackEventRemotely(eventName, opts = {}) {
+export function trackEventRemotely(eventName: string, opts: Dict = {}): void {
   if (trackUsage == null) {
     preInitializationEventQueue.push([eventName, opts]);
     return;
@@ -65,8 +79,7 @@ export function trackEventRemotely(eventName, opts = {}) {
       eventName, data);
   }
 
-  if (trackUsage === false) { return; }
-  if (!window.mixpanel) { return; }
-
-  window.mixpanel.track(eventName, data);
+  if (trackUsage !== false) {
+    mixpanel.track(eventName, data);
+  }
 }

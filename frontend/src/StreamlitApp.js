@@ -7,11 +7,9 @@
 
 import React, { PureComponent } from 'react';
 import { hotkeys } from 'react-keyboard-shortcuts';
-import { AutoSizer } from 'react-virtualized';
 import {
   Col,
   Container,
-  Progress,
   Row,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
@@ -27,33 +25,16 @@ import { ConnectionState } from './ConnectionState';
 import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
 import { ReportEventDispatcher } from './ReportEvent';
-
-// Load (non-lazy) core elements.
-import Chart from './elements/Chart';
-import DocString from './elements/DocString';
-import ExceptionElement from './elements/ExceptionElement';
-import Table from './elements/Table';
-import Text from './elements/Text';
+import { ReportView } from './ReportView';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { logError } from './log';
-import { setStreamlitVersion } from './baseconsts';
+import { setInstallationId, setStreamlitVersion } from './baseconsts';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
-
-// Lazy-load display elements.
-const Audio = React.lazy(() => import('./elements/Audio'));
-const Balloons = React.lazy(() => import('./elements/Balloons'));
-const DataFrame = React.lazy(() => import('./elements/DataFrame'));
-const ImageList = React.lazy(() => import('./elements/ImageList'));
-const Map = React.lazy(() => import('./elements/Map'));
-const DeckGlChart = React.lazy(() => import('./elements/DeckGlChart'));
-const PlotlyChart = React.lazy(() => import('./elements/PlotlyChart'));
-const VegaLiteChart = React.lazy(() => import('./elements/VegaLiteChart'));
-const Video = React.lazy(() => import('./elements/Video'));
 
 
 class StreamlitApp extends PureComponent {
@@ -94,15 +75,7 @@ class StreamlitApp extends PureComponent {
     this.reportEventDispatcher = new ReportEventDispatcher();
     this.statusWidgetRef = React.createRef();
 
-    this.connectionManager = new ConnectionManager({
-      getUserLogin: this.getUserLogin,
-      onMessage: this.handleMessage,
-      onConnectionError: this.handleConnectionError,
-      setReportName: this.setReportName,
-      connectionStateChanged: newState => {
-        this.setState({connectionState: newState});
-      },
-    });
+    this.connectionManager = null;
   }
 
   /**
@@ -151,6 +124,18 @@ class StreamlitApp extends PureComponent {
   };
 
   componentDidMount() {
+    // Initialize connection manager here, to avoid
+    // "Can't call setState on a component that is not yet mounted." error.
+    this.connectionManager = new ConnectionManager({
+      getUserLogin: this.getUserLogin,
+      onMessage: this.handleMessage,
+      onConnectionError: this.handleConnectionError,
+      setReportName: this.setReportName,
+      connectionStateChanged: newState => {
+        this.setState({ connectionState: newState });
+      },
+    });
+
     if (isEmbeddedInIFrame()) {
       document.body.classList.add('embedded');
     }
@@ -222,6 +207,7 @@ class StreamlitApp extends PureComponent {
    */
   handleInitialize(initializeMsg) {
     setStreamlitVersion(initializeMsg.get('streamlitVersion'));
+    setInstallationId(initializeMsg.get('userInfo').get('installationId'));
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.get('gatherUsageStats'),
@@ -288,12 +274,6 @@ class StreamlitApp extends PureComponent {
       reportId: newReportMsg.get('id'),
       commandLine: newReportMsg.get('commandLine').toJS().join(' '),
     });
-
-    setTimeout(() => {
-      if (newReportMsg.get('id') === this.state.reportId) {
-        this.clearOldElements();
-      }
-    }, 3000);
   }
 
   /**
@@ -579,9 +559,11 @@ class StreamlitApp extends PureComponent {
                   onFailure={this.onLogInError}
                 />
                 :
-                <AutoSizer className="main">
-                  { ({ width }) => this.renderElements(width) }
-                </AutoSizer>
+                <ReportView
+                  elements={this.state.elements}
+                  reportId={this.state.reportId}
+                  reportRunState={this.state.reportRunState}
+                />
               }
             </Col>
           </Row>
@@ -596,53 +578,6 @@ class StreamlitApp extends PureComponent {
         </Container>
       </div>
     );
-  }
-
-  renderElements(width) {
-    return this.state.elements
-      .map(element => this.renderElement(element, width))
-      .push(<div style={{ width }} className="footer" />)
-      .flatMap((component, indx) => {
-        if (!component) {
-          return [];
-        }
-
-        return [
-          <div className="element-container" key={indx}>
-            <React.Suspense
-              fallback={<Text
-                element={makeElementWithInfoText('Loading...').get('text')}
-                width={width}
-              />}
-            >
-              {component}
-            </React.Suspense>
-          </div>,
-        ];
-      });
-  }
-
-  renderElement(element, width) {
-    if (!element) { throw new Error('Transmission error.'); }
-
-    return dispatchOneOf(element, 'type', {
-      audio: el => <Audio element={el} width={width} />,
-      balloons: el => <Balloons element={el} width={width} />,
-      chart: el => <Chart element={el} width={width} />,
-      dataFrame: df => <DataFrame element={df} width={width} />,
-      deckGlChart: el => <DeckGlChart element={el} width={width} />,
-      docString: el => <DocString element={el} width={width} />,
-      empty: empty => undefined,
-      exception: el => <ExceptionElement element={el} width={width} />,
-      imgs: el => <ImageList element={el} width={width} />,
-      map: el => <Map element={el} width={width} />,
-      plotlyChart: el => <PlotlyChart element={el} width={width} />,
-      progress: el => <Progress value={el.get('value')} style={{width}} />,
-      table: el => <Table element={el} width={width} />,
-      text: el => <Text element={el} width={width} />,
-      vegaLiteChart: el => <VegaLiteChart element={el} width={width} />,
-      video: el => <Video element={el} width={width} />,
-    });
   }
 
   async getUserLogin() {

@@ -206,7 +206,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.PLAIN
 
     @_with_element
@@ -228,7 +228,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -259,7 +259,7 @@ class DeltaGenerator(object):
         """
         markdown = '```%(language)s\n%(body)s\n```' % \
                    {'language': language or '', 'body': body}
-        element.text.body = textwrap.dedent(markdown).strip()
+        element.text.body = _clean_text(markdown)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -317,7 +317,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '# %s' % textwrap.dedent(body).strip()
+        element.text.body = '# %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -338,7 +338,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '## %s' % textwrap.dedent(body).strip()
+        element.text.body = '## %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -359,7 +359,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '### %s' % textwrap.dedent(body).strip()
+        element.text.body = '### %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -376,7 +376,7 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.ERROR
 
     @_with_element
@@ -393,7 +393,7 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.WARNING
 
     @_with_element
@@ -410,7 +410,7 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.INFO
 
     @_with_element
@@ -427,7 +427,7 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.SUCCESS
 
     @_with_element
@@ -501,7 +501,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -555,7 +556,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
+            or None
             Data to be plotted.
 
         width : int
@@ -772,6 +774,7 @@ class DeltaGenerator(object):
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
 
+
         To show Plotly charts in Streamlit, just call `st.plotly_chart`
         wherever you would call Plotly's `py.plot` or `py.iplot`.
 
@@ -884,6 +887,48 @@ class DeltaGenerator(object):
         fig.savefig(image, **kwargs)
         image_proto.marshall_images(
             image, None, -2, element.imgs, False)
+
+    @_with_element
+    def bokeh_chart(self, element, figure):
+        """Display an interactive Bokeh chart.
+
+        Bokeh is a charting library for Python. The arguments to this function
+        closely follow the ones for Bokeh's `show` function. You can find
+        more about Bokeh at https://bokeh.pydata.org.
+
+        Parameters
+        ----------
+        figure : bokeh.plotting.figure.Figure
+            A Bokeh figure to plot.
+
+
+        To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
+        wherever you would call Bokeh's `show`.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> from bokeh.plotting import figure
+        >>>
+        >>> x = [1, 2, 3, 4, 5]
+        >>> y = [6, 7, 2, 4, 5]
+        >>>
+        >>> p = figure(
+        ...     title='simple line example',
+        ...     x_axis_label='x',
+        ...     y_axis_label='y')
+        ...
+        >>> p.line(x, y, legend='Trend', line_width=2)
+        >>>
+        >>> st.bokeh_chart(p)
+
+        .. output::
+           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           height: 600px
+
+        """
+        import streamlit.elements.bokeh_chart as bokeh_chart
+        bokeh_chart.marshall(element.bokeh_chart, figure)
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
@@ -1022,7 +1067,20 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        element.progress.value = value
+        # Needed for python 2/3 compatibility
+        value_type = type(value).__name__
+        if value_type == 'float':
+            if 0.0 <= value <= 1.0:
+                element.progress.value = int(value * 100)
+            else:
+                raise ValueError('Progress Value has invalid value [0.0, 1.0]: %f' % value)
+        elif value_type == 'int':
+            if 0 <= value <= 100:
+                element.progress.value = value
+            else:
+                raise ValueError('Progress Value has invalid value [0, 100]: %d' % value)
+        else:
+            raise TypeError('Progress Value has invalid type: %s' % value_type)
 
     @_with_element
     def empty(self, element):
@@ -1051,7 +1109,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The data to be plotted. Must have 'lat' and 'lon' columns.
 
         Example
@@ -1090,7 +1149,8 @@ class DeltaGenerator(object):
         Parameters
         ----------
 
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             Data to be plotted, if no layer specified.
 
         spec : dict
@@ -1205,7 +1265,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
             The table data.
 
         Example
@@ -1305,3 +1366,7 @@ class DeltaGenerator(object):
         self._queue(delta)
 
         return self
+
+
+def _clean_text(text):
+    return textwrap.dedent(str(text)).strip()

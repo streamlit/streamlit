@@ -7,8 +7,8 @@
 
 import url from 'url';
 
-import StaticConnection from './StaticConnection';
-import WebsocketConnection from './WebsocketConnection';
+import {StaticConnection} from './StaticConnection';
+import {WebsocketConnection} from './WebsocketConnection';
 import {ConnectionState} from './ConnectionState';
 import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
 import {configureCredentials, getObject} from './s3helper';
@@ -41,14 +41,6 @@ interface Props {
    * Called when our ConnectionState is changed.
    */
   connectionStateChanged: (connectionState: ConnectionState) => void;
-}
-
-/**
- * Params for our setConnectionState function
- */
-interface SetConnectionStateParams {
-  connectionState: ConnectionState;
-  errMsg?: string;
 }
 
 export class ConnectionManager {
@@ -101,14 +93,11 @@ export class ConnectionManager {
         throw new Error('URL must contain either a report name or an ID.');
       }
     } catch (err) {
-      this.setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: err.message,
-      });
+      this.setConnectionState(ConnectionState.ERROR, err.message);
     }
   }
 
-  private setConnectionState = ({connectionState, errMsg}: SetConnectionStateParams): void => {
+  private setConnectionState = (connectionState: ConnectionState, errMsg?: string): void => {
     if (this.connectionState !== connectionState) {
       this.connectionState = connectionState;
       this.props.connectionStateChanged(connectionState);
