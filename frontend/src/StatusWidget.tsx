@@ -8,7 +8,7 @@
  */
 
 /** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = false;
+const SHOW_STOP_BUTTON = true;  // TODO: Remove on 2019-10-01
 
 import React, {PureComponent, ReactNode} from 'react';
 import {CSSTransition} from 'react-transition-group';

@@ -10,6 +10,8 @@ setup_2_3_shims(globals())
 
 import click
 
+from streamlit.credentials import Credentials
+
 
 LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 
@@ -59,9 +61,10 @@ def main_docs():
 @main.command('hello')
 def main_hello():
     """Runs the Hello World script."""
+    Credentials.get_current().check_activated(auto_resolve=True)
     print('Showing Hello World script in browser...')
     import streamlit.hello
-    streamlit.hello.run()
+    _main_run(streamlit.hello.__file__)
 
 
 @main.command('run')
@@ -69,6 +72,10 @@ def main_hello():
 @click.argument('args', nargs=-1)
 def main_run(file, args):
     """Run a Python script, piping stderr to Streamlit."""
+    _main_run(file, args)
+
+def _main_run(file, args=[]):
+    Credentials.get_current().check_activated(auto_resolve=True)
     import streamlit.bootstrap as bootstrap
     import sys
 
@@ -125,6 +132,22 @@ def config_show():
     """Show all of Streamlit's config settings."""
     from streamlit import config
     config.show_config()
+
+
+# SUBCOMMAND: activate
+
+@main.group('activate', invoke_without_command=True)
+@click.pass_context
+def activate(ctx):
+    """Activate Streamlit by entering your email."""
+    if not ctx.invoked_subcommand:
+        Credentials.get_current().activate()
+
+
+@activate.command('reset')
+def activate_reset():
+    """Reset Activation Credentials."""
+    Credentials.get_current().reset()
 
 
 if __name__ == '__main__':

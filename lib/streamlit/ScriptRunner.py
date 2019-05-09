@@ -172,14 +172,14 @@ class ScriptRunner(object):
             # emulate what it's like to run at the top level of a module/python
             # file. This is also why we're adding a few common variables below
             # like __name__.
-            ns = dict(
+            namespace = dict(
                 __name__='__main__',
                 # Convert from unicode for py2.
                 __file__=str(self._report.script_path),
             )
 
             sys.argv = self._report.argv
-            exec(code, ns, ns)
+            exec(code, namespace, namespace)
 
         except ScriptControlException as e:
             LOGGER.debug('ScriptControlException received')

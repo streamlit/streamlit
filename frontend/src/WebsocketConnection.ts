@@ -3,9 +3,10 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import {BackMsg, ForwardMsg, IBackMsg} from './protobuf';
+import {ForwardMsg, BackMsg, IBackMsg} from './protobuf';
 import {ConnectionState} from './ConnectionState';
-import {logError, logMessage} from './log';
+import {logMessage, logError} from './log';
+
 
 /**
  * Name of the logger.
@@ -14,42 +15,51 @@ const LOG = 'WebsocketConnection';
 
 
 /**
- * Timeout when attempting to connect to a local websocket, in millis. When
- * conneting to a local websocket, we retry forever. This should be at most
- * half the value of bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC
- */
-const LOCAL_CONNECTION_TIMEOUT_MS = 100;
-
-
-/**
  * Number of times to try to connect to a remote websocket.
  */
-const REMOTE_CONNECTION_MAX_RETRIES = 3;
+const REMOTE_CONNECTION_MAX_RETRIES = 5;
 
 
 /**
- * Timeout when attempting to connect to a remote websocket, in millis. This
- * grows by N with each Nth retry.
+ * Wait this long before trying to reconnect.
+ * This must be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC / 2.
  */
-const REMOTE_CONNECTION_TIMEOUT_MS = 2000;
+const RECONNECT_WAIT_TIME_MS = 400;
+
+
+/**
+ * Timeout when attempting to connect to a websocket, in millis.
+ */
+const CONNECTION_ATTEMPT_TIMEOUT_MS = 2000;
+
+
+type OnMessage = (message: any) => void;
+type OnConnectionStateChange = (connectionState: ConnectionState, errMsg?: string) => void;
 
 
 interface Props {
+  /**
+   * List of URLs to connect to. We'll try the first, then the second, etc. If
+   * all fail, we'll retry from the top. The number of retries depends on
+   * whether this is a local connection.
+   */
   uriList: string[];
 
   /**
    * Function called when our ConnectionState changes.
    * If the new ConnectionState is ERROR, errMsg will be defined.
    */
-  onConnectionStateChange: (connectionState: ConnectionState, errMsg?: string) => void;
+  onConnectionStateChange: OnConnectionStateChange;
 
   /** Function called when we receive a new message. */
-  onMessage: (message: any) => void;
+  onMessage: OnMessage;
 
-  /** XXX */
+  /**
+   * True if connecting to localhost. The reconnect behavior is different in
+   * that case.
+   */
   isLocal: boolean;
 }
-
 
 interface MessageQueue {
   [index: number]: any;
@@ -73,7 +83,7 @@ export class WebsocketConnection {
   /**
    * List of URIs to try to connect to in round-robin fashion.
    */
-  private uriList: string[];
+  private readonly uriList: string[];
 
   /**
    * Index to the URI in uriList that we're going to try to connect to.
@@ -84,35 +94,35 @@ export class WebsocketConnection {
    * Function that tells the outside world that the connection state has
    * changed.
    */
-  private onConnectionStateChange: (connectionState: ConnectionState, errMsg?: string) => void;
+  private readonly onConnectionStateChange: OnConnectionStateChange;
 
   /**
    * Function that receives incoming messages, so they can be handled by the
    * app at large.
    */
-  private onMessage: (message: any) => void;
+  private readonly onMessage: OnMessage;
 
   /**
    * True if this Streamlit server that is serving this web app is running from
    * the same computer as this browser.
    */
-  private isLocal: boolean;
+  private readonly isLocal: boolean;
 
   /**
    * How many times to retry connecting. May be Infinity!
    */
-  private maxRetries: number;
+  private readonly maxRetries: number;
 
   /**
    * To guarantee packet transmission order, this is the index of the last
    * dispatched incoming message.
    */
-  private lastDispatchedMessageIndex: number = -1;
+  private lastDispatchedMessageIndex = -1;
 
   /**
    * And this is the index of the next message we recieve.
    */
-  private nextMessageIndex: number = 0;
+  private nextMessageIndex = 0;
 
   /**
    * This dictionary stores recieved messages that we haven't sent out yet
@@ -134,7 +144,7 @@ export class WebsocketConnection {
    * Keep track of how many times we tried to connect. For each "attempt" we
    * try *every* URI in uriList.
    */
-  private attemptNumber: number = 0;
+  private attemptNumber = 0;
 
   /**
    * WebSocket objects don't support retries, so we have to implement them
@@ -142,7 +152,7 @@ export class WebsocketConnection {
    * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
    * needed.
    */
-  private connectionTimeoutId: (number | null) = null;
+  private connectionTimeoutId?: number;
 
   /**
    * Constructor.
@@ -205,6 +215,9 @@ export class WebsocketConnection {
         if (event === 'CONNECTION_ATTEMPT_STARTED') {
           setState(ConnectionState.RECONNECTING);
           return;
+        } else if (event === 'CONNECTION_CLOSED') {
+          // Do nothing.
+          return;
         }
         break;
 
@@ -228,7 +241,8 @@ export class WebsocketConnection {
         break;
 
       case ConnectionState.CONNECTED:
-        if (event === 'CONNECTION_CLOSED') {
+        if (event === 'CONNECTION_CLOSED' ||
+            event === 'CONNECTION_ERROR') {
           setState(ConnectionState.DISCONNECTED);
           this.startConnectionAttempt();
           return;
@@ -264,7 +278,9 @@ export class WebsocketConnection {
       }
     }
 
-    this.connectToWebSocket();
+    window.setTimeout(
+      () => this.connectToWebSocket(),
+      RECONNECT_WAIT_TIME_MS);
   }
 
   private connectToWebSocket(): void {
@@ -279,6 +295,8 @@ export class WebsocketConnection {
 
     logMessage(LOG, 'creating WebSocket');
     this.websocket = new WebSocket(uri);
+
+    this.setConnectionTimeout();
 
     const localWebsocket = this.websocket;
 
@@ -315,10 +333,6 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(): void {
-    const timeoutMs = this.isLocal ?
-      LOCAL_CONNECTION_TIMEOUT_MS :
-      REMOTE_CONNECTION_TIMEOUT_MS * (this.attemptNumber + 1);
-
     const localWebsocket = this.websocket;
 
     this.connectionTimeoutId = window.setTimeout(() => {
@@ -338,7 +352,7 @@ export class WebsocketConnection {
         logError(LOG, `${this.uriList[this.uriIndex]} timed out`);
         this.stepStateMachine('CONNECTION_TIMED_OUT');
       }
-    }, timeoutMs);
+    }, CONNECTION_ATTEMPT_TIMEOUT_MS);
   }
 
   /**
@@ -363,18 +377,17 @@ export class WebsocketConnection {
     const reader = new FileReader();
     reader.readAsArrayBuffer(data);
     reader.onloadend = () => {
-      if (this.messageQueue === undefined) {
-        logError('No message queue.');
+      if (this.messageQueue == null) {
+        logError(LOG, 'No message queue.');
         return;
       }
 
       const result = reader.result;
       if (result == null || typeof result === 'string') {
-        logError(`Unexpected result from FileReader: ${result}.`);
+        logError(LOG, `Unexpected result from FileReader: ${result}.`);
         return;
       }
 
-      //XXX const resultArray = new Uint8Array(reader.result as ArrayBuffer);
       const resultArray = new Uint8Array(result);
       this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray);
       while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
