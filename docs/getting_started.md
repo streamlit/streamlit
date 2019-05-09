@@ -11,6 +11,7 @@ The easiest way to learn to use Streamlit is to try things out. As you read thro
 
 ```eval_rst
 .. contents:: Table of contents
+    :local:
     :depth: 2
 ```
 
