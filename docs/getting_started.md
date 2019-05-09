@@ -6,7 +6,13 @@
 
 If you've made it this far, you probably have an idea of what you can do with Streamlit (if you don't, watch [this video](replace-with-link-to-demo)). In this guide, we'll introduce you to Streamlit's core features and how they are used to create a report.
 
-The easiest way to learn to use Streamlit is to try things out. As you read through this guide, test each method. As long as your report is running, every time you add an element and save, the changes are displayed in the browser almost instantly. What's drawn in the report is completely up to you.
+The easiest way to learn to use Streamlit is to try things out. As you read through this guide, test each method. As long as your report is running, every time you add an element and save, Streamlit regenerates the report and the changes are displayed in the browser almost instantly.  This allows you to work in a fast interactive loop: you write some code, save it, review the output, write some more, and so on, until you’re happy with the results. The goal is to use Streamlit to review your code, debug it, perfect it, and share it. What's drawn in the report is completely up to you.
+
+
+```eval_rst
+.. contents:: Table of contents
+    :depth: 2
+```
 
 ## Prerequisites
 
@@ -50,24 +56,23 @@ conda install streamlit
 Now that everything's installed, you'll need to create a file for your report and import Streamlit.
 
 1. Create a new Python file named `first_report.py`, then open it with your IDE or text editor.
-2. Import Streamlit: <<Consider adding a single line, like title or welcome.>>
+2. Import Streamlit and add a title. At least one call to Streamlit is required to generate a report.
 
    ```Python
    import streamlit
-   # To make things easier later, we're also importing numpy
-   # and pandas for working with sample data.
+   # To make things easier later, we're also importing numpy and pandas for working with sample data.
    import numpy
    import pandas
 
-   # Don't worry, we'll explain this method in
-   # the next section.
+   # Don't worry, we'll explain this method in the next section. We need to make at least one
+   # call to Streamlit in order to generate a report.
    streamlit.title("My first report")
    ```
 
 3. Run your report. This will open a new tab in your default browser. You won't see much -- just a title -- but in the next few sections we'll populate the report with text, tables, and charts.
 
    ```bash
-   python first_report.py
+   $ python first_report.py
    ```
 
    Running a Streamlit report is no different than any other Python script. Whenever you need to view the report, you can use this command.
@@ -78,12 +83,12 @@ A good report isn't just charts and data visualizations, it needs clear and deta
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our [API reference](https://streamlit.io/secret/docs/api/text.html) for a full list of features.
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our `API reference<https://streamlit.io/secret/docs/api/text.html>`_ for a full list of features.
 ```
 
 ### Start with a title
 
-Most reports start with a title. With Streamlit, you'll use [`streamlite.title`](https://streamlit.io/secret/docs/api/text.html#streamlit.title) to add a title to your report.
+Most reports start with a title. With Streamlit, you'll use [`streamlit.title`](https://streamlit.io/secret/docs/api/text.html#streamlit.title) to add a title to your report.
 
 ```eval_rst
 .. tip::
@@ -115,7 +120,7 @@ If you want to add some simple fixed-width text to your report use [`streamlit.t
 streamlit.text("Welcome to Streamlit.")
 ```
 
-There are times when you need more than plain text. With [`streamlit.markdown`](https://streamlit.io/secret/docs/api/text.html#streamlit.text) you can write content for your report in [Github-flavored markdown](https://github.github.com/gfm/). This method is perfect for when you need to empahize text with bold or italics, or add a link to related documentation.
+There are times when you need more than plain text. With [`streamlit.markdown`](https://streamlit.io/secret/docs/api/text.html#streamlit.text) you can write content for your report in [Github-flavored markdown](https://github.github.com/gfm/). This method is perfect for when you need to emphasize text with bold or italics, or add a link to related documentation.
 
 ```python
 streamlit.markdown("**NOTE:** Markdown is perfect for when you want to *empahsize* elements in your report.")
@@ -140,11 +145,11 @@ streamlit.write(pandas.DataFrame({
 
 ## Visualize data
 
-Text is great, but Streamlit's strenght is the ability to quickly manipulate data, display it, and share it. In this section, you'll learn how to use Streamlit methods to create interactive tables, charts, histograms, and more.
+Text is great, but Streamlit's strength is the ability to quickly manipulate data, display it, and share it. In this section, you'll learn how to use Streamlit methods to create interactive tables, charts, histograms, and more.
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for [data](https://streamlit.io/secret/docs/api/data.html) and [charts](https://streamlit.io/secret/docs/api/charts.html).
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for `data<https://streamlit.io/secret/docs/api/data.html>`_ and `charts<https://streamlit.io/secret/docs/api/charts.html>`_.
 ```
 
 ### Display data frames and tables
@@ -184,9 +189,7 @@ streamlit.table(dataframe)
 
 ### Draw bar charts, line charts, and maps
 
-Streamlit support sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like PyPlot, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
-
-<< Possibly add note that there are examples that use real data in the tutorials... TBD >>
+Streamlit supports sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like PyPlot, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
 
 The [`streamlit.barchart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
 
@@ -220,9 +223,7 @@ streamlit.map(map_data)
 
 ## Update existing elements
 
-Every time you save a script, Streamlit re-executes the entire Python script normally, from top to bottom. Then Streamlit, does a bunch of computer-sciencey magic to make sure your report is updated efficiently.
-
-This allows you to work in a fast interactive loop: you write some code, save it, review the output, write some more, and so on, until you’re happy with the results. The goal is to use Streamlit to review your code, debug it, perfect it, and share it.
+Every time you save a report, Streamlit re-executes the entire Python script from top to bottom. Then Streamlit, does a bunch of computer-sciencey magic to make sure your report is updated efficiently and rendered in the browser.
 
 In this section, you'll learn how to update existing elements in a report.
 
@@ -286,7 +287,7 @@ chart.add_rows(data2)
 
 ## Order the elements of a report
 
-So far you've learned how to use the methods exposed by Streamlit to add new elements to a report. These have all been additive, with the assumption that you already know what you want to add to the report. What if you're unsure of the structure, or need to add a place holder for content that isn't quite ready? That's where [`streamlit.empty()`](https://streamlit.io/secret/docs/api/other.html#streamlit.empty) comes in handy. It allows you to add an empty slot to your report that you can update at any time.
+So far you've learned how to use the methods exposed by Streamlit to add new elements to a report. These have all been additive, with the assumption that you already know what you want to add to the report. What if you're unsure of the structure, or need to add a placeholder for content that isn't quite ready? That's where [`streamlit.empty()`](https://streamlit.io/secret/docs/api/other.html#streamlit.empty) comes in handy. It allows you to add an empty slot to your report that you can update at any time.
 
 Let's take a look at how you can use `streamlit.empty` to add structure to a report.
 
