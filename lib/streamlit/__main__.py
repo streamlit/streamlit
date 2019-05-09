@@ -21,7 +21,14 @@ LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 @click.version_option(prog_name='Streamlit')
 @click.pass_context
 def main(ctx, log_level='info'):
-    """Main app entrypoint."""
+    """Try out a demo with:
+
+        $ streamlit hello
+
+    Or use the line below to run your own script:
+
+        $ streamlit run your_script.py
+    """
 
     if log_level:
         import streamlit.logger

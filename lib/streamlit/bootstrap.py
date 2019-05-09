@@ -4,8 +4,10 @@
 import os
 import signal
 import sys
-import tornado.ioloop
 import urllib
+
+import click
+import tornado.ioloop
 
 from streamlit import config
 from streamlit import util
@@ -52,6 +54,55 @@ def _fix_sys_path(script_path):
     sys.path.insert(0, os.path.dirname(script_path))
 
 
+def _maybe_open_browser(report, browser_is_connected):
+    if config.get_option('proxy.isRemote'):
+        # Don't open browser when in remote (headless) mode.
+        pass
+
+    elif browser_is_connected:
+        # Don't auto-open browser if there's already a browser connected.
+        # This can happen if there's an old tab repeatedly trying to
+        # connect, and it happens to success before we launch the browser.
+        pass
+
+    else:
+        util.open_browser(report.get_url('localhost'))
+
+    _print_url(report)
+
+
+def _print_url(report):
+    title_message = 'You can now view your Streamlit report in your browser.'
+    urls = []
+
+    if config.is_manually_set('browser.proxyAddress'):
+        urls = [
+            ('URL', report.get_url(config.get_option('browser.proxyAddress'))),
+        ]
+
+    elif config.get_option('proxy.isRemote'):
+        urls = [
+            ('Network URL', report.get_url(util.get_internal_ip())),
+            ('External URL', report.get_url(util.get_external_ip())),
+        ]
+
+    else:
+        urls = [
+            ('Local URL', report.get_url('localhost')),
+            ('Network URL', report.get_url(util.get_internal_ip())),
+        ]
+
+    click.secho('')
+    click.secho('  %s' % title_message, fg='green')
+    click.secho('')
+
+    for url_name, url in urls:
+        click.secho('  %s: ' % url_name, nl=False)
+        click.secho(url, bold=True)
+
+    click.secho('')
+
+
 def run(script_path):
     """Run a script in a separate thread and start a server for the report.
 
@@ -71,7 +122,8 @@ def run(script_path):
     _set_up_signal_handler(scriptrunner)
 
     # Schedule the server to start using the IO Loop on the main thread.
-    server = Server(report, scriptrunner)
+    server = Server(
+        report, scriptrunner, on_server_start_callback=_maybe_open_browser)
     ioloop.spawn_callback(server.loop_coroutine)
 
     def maybe_enqueue(msg):
@@ -88,22 +140,5 @@ def run(script_path):
     # Start the script in a separate thread, but do it from the ioloop so it
     # happens after the server starts.
     ioloop.spawn_callback(scriptrunner.spawn_script_thread)
-
-    def maybe_open_browser():
-        if config.get_option('proxy.isRemote'):
-            # Don't open browser when in remote (headless) mode.
-            return
-
-        if server.browser_is_connected:
-            # Don't auto-open browser if there's already a browser connected.
-            # This can happen if there's an old tab repeatedly trying to
-            # connect, and it happens to success before we launch the browser.
-            return
-
-        util.open_browser(report.get_url(host_ip='localhost'))
-
-    # Schedule the browser to open using the IO Loop on the main thread, but
-    # only if no other browser connects within 1s.
-    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
     ioloop.start()
