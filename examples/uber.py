@@ -15,7 +15,7 @@ DATA_URL = 'https://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data
 
 st.title('Uber Example')
 
-@st.cache
+@st.cache(on_disk=True)
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
     lowercase = lambda x: str(x).lower()
@@ -25,6 +25,10 @@ def load_data(nrows):
 
 def display_uber_data(hour):
     data = load_data(100000)
+
+    st.subheader('Usage By Hour')
+    st.bar_chart(np.histogram(data[DATE_TIME].dt.hour, bins=24, range=(0,24))[0])
+
     data = data[data[DATE_TIME].dt.hour == hour]
 
     st.subheader('Geo Data at %sh' % hour)
