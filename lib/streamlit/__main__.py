@@ -61,10 +61,10 @@ def main_docs():
 @main.command('hello')
 def main_hello():
     """Runs the Hello World script."""
-    Credentials.get_current().check_activated()
+    Credentials.get_current().check_activated(auto_resolve=True)
     print('Showing Hello World script in browser...')
     import streamlit.hello
-    streamlit.hello.run()
+    _main_run(streamlit.hello.__file__)
 
 
 @main.command('run')
@@ -72,7 +72,10 @@ def main_hello():
 @click.argument('args', nargs=-1)
 def main_run(file, args):
     """Run a Python script, piping stderr to Streamlit."""
-    Credentials.get_current().check_activated()
+    _main_run(file, args)
+
+def _main_run(file, args=[]):
+    Credentials.get_current().check_activated(auto_resolve=True)
     import streamlit.bootstrap as bootstrap
     import sys
 
@@ -136,7 +139,7 @@ def config_show():
 @main.group('activate', invoke_without_command=True)
 @click.pass_context
 def activate(ctx):
-    """Streamlit activate."""
+    """Activate Streamlit by entering your email."""
     if not ctx.invoked_subcommand:
         Credentials.get_current().activate()
 

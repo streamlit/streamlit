@@ -1,15 +1,13 @@
-"""streamlit.credentials module.
-
-Copyright 2019 Streamlit Inc. All rights reserved.
-"""
+# Copyright 2019 Streamlit Inc. All rights reserved.
+"""Manage the user's Streamlit credentials."""
+from collections import namedtuple
 import hashlib
 import hmac
 import os
 import sys
 import textwrap
 
-from collections import namedtuple
-
+import click
 import base58
 import toml
 
@@ -49,12 +47,12 @@ class Credentials(object):
                 'Credentials already initialized. Use .get_current() instead')
 
         self.activation = None
-        self._conf_file = os.path.join(os.path.expanduser('~'), '.streamlit',
-                                       'credentials.toml')
+        self._conf_file = os.path.join(
+            os.path.expanduser('~'), '.streamlit', 'credentials.toml')
 
         Credentials._singleton = self
 
-    def load(self):
+    def load(self, auto_resolve=False):
         """Load from toml file."""
         if self.activation is not None:
             LOGGER.error('Credentials already loaded. Not rereading file.')
@@ -63,22 +61,29 @@ class Credentials(object):
         try:
             with open(self._conf_file, 'r') as f:
                 data = toml.load(f).get('general')
-            self.activation = verify_code(data['email'], data['code'])
+            self.activation = _verify_code(
+                data['email'], getattr(data, 'code', None))
         except FileNotFoundError:
+            if auto_resolve:
+                return self.activate(show_instructions=not auto_resolve)
             raise RuntimeError(
-                'Credentials file not found. Please run `streamlit activate`'
-            )
+                'Credentials not found. Please run "streamlit activate".')
         except Exception as e:
-            raise Exception('Unable to load credentials from %s: %s' %
-                            (self._conf_file, e))
+            if auto_resolve:
+                self.reset()
+                return self.activate(show_instructions=not auto_resolve)
+            raise Exception(textwrap.dedent('''
+                Unable to load credentials from %s.
+                Run "streamlit reset" and try again.
+                ''') % (self._conf_file))
 
-    def check_activated(self):
+    def check_activated(self, auto_resolve=False):
         """Check if streamlit is activated.
 
         Used by `streamlit run script.py`
         """
         try:
-            self.load()
+            self.load(auto_resolve)
         except (Exception, RuntimeError) as e:
             _exit(str(e))
 
@@ -108,10 +113,10 @@ class Credentials(object):
         with open(self._conf_file, 'w') as f:
             toml.dump({'general': data}, f)
 
-    def activate(self):
+    def activate(self, show_instructions=True):
         """Activate Streamlit.
 
-        Used by `streamlit activate`
+        Used by `streamlit activate`.
         """
         try:
             self.load()
@@ -128,26 +133,28 @@ class Credentials(object):
                 )
         else:
             activated = False
-            while not activated:
-                code = _get_data('Enter your invite code')
-                email = _get_data('Enter your email')
 
-                self.activation = verify_code(email, code)
+            while not activated:
+                code = None  #code = _get_data('Enter your invite code')
+                email = _get_data('Enter your email for access to our beta')
+
+                self.activation = _verify_code(email, code)
                 if self.activation.is_valid:
                     self.save()
-                    print(
-                        textwrap.dedent('''
-                        Welcome to Streamlit!
-
-                        Get started by typing:
-                        $ streamlit hello
-                    '''))
+                    click.secho('')
+                    click.secho('  Welcome to Streamlit!', fg='green')
+                    click.secho('')
+                    if show_instructions:
+                        click.secho('  Get started by typing:')
+                        click.secho('  $ ', nl=False)
+                        click.secho('streamlit hello', bold=True)
+                        click.secho('')
                     activated = True
                 else:  # pragma: nocover
-                    LOGGER.error('Code verification failed.  Try again.')
+                    LOGGER.error('Please try again.')
 
 
-def generate_code(secret, email):
+def _generate_code(secret, email):
     """Generate code for activation.
 
     This is here so streamlit developers can create activation codes if
@@ -164,8 +171,16 @@ def generate_code(secret, email):
     return code.decode('utf-8')
 
 
-def verify_code(email, code):
+def _verify_code(email, code):
     """Verify activation code with email."""
+    # Bypass code verification for now.
+    if email.count('@') != 1:
+        LOGGER.error('That doesn\'t look like an email :(')
+        return Activation(None, None, None)
+
+    if code == None:
+        return Activation(None, email, True)
+
     # Python2/3 Madness
     email_encoded = email
     code_encoded = code

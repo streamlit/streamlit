@@ -10,7 +10,7 @@ import pytest
 
 from mock import call, mock_open, patch
 
-from streamlit.credentials import Activation, Credentials, generate_code, verify_code, _get_data
+from streamlit.credentials import Activation, Credentials, _generate_code, _verify_code, _get_data
 
 if sys.version_info >= (3, 0):
     INPUT = 'streamlit.credentials.input'
@@ -210,24 +210,24 @@ class CredentialsClassTest(unittest.TestCase):
 class CredentialsModulesTest(unittest.TestCase):
     """Credentials Module Unittest class."""
 
-    def test_generate_code(self):
-        """Test generate_code."""
-        code = generate_code('testing', 'user@domain.com')
+    def test__generate_code(self):
+        """Test _generate_code."""
+        code = _generate_code('testing', 'user@domain.com')
         self.assertEqual('ARzVsqhSB5i', code)
 
-    def test_verify_code(self):
-        """Test generate_code."""
-        ret = verify_code('user@domain.com', 'ARzVsqhSB5i')
+    def test__verify_code(self):
+        """Test _generate_code."""
+        ret = _verify_code('user@domain.com', 'ARzVsqhSB5i')
         self.assertTrue(ret.is_valid)
 
-    def test_verify_code_wrong_code(self):
-        """Test credentials.verify_code with code from another user."""
-        ret = verify_code('user@domain.com', 'ARxJtdP43GU')
+    def test__verify_code_wrong_code(self):
+        """Test credentials._verify_code with code from another user."""
+        ret = _verify_code('user@domain.com', 'ARxJtdP43GU')
         self.assertFalse(ret.is_valid)
 
-    def test_verify_code_bad_code(self):
-        """Test credentials.verify_code with invalid base58 code."""
-        ret = verify_code('user@domain.com', '****')
+    def test__verify_code_bad_code(self):
+        """Test credentials._verify_code with invalid base58 code."""
+        ret = _verify_code('user@domain.com', '****')
         self.assertFalse(ret.is_valid)
 
     def test_get_data(self):
