@@ -349,26 +349,21 @@ def _maybe_print_repl_warning():
 
         if util.is_repl():
             _LOGGER.warning(textwrap.dedent('''
-                ════════════════════════════════════════════════
+
                 Will not generate Streamlit report
-                ────────────────────────────────────────────────
 
-                To generate report, use Streamlit in a file and
-                run it with:
-                  streamlit run [FILE_NAME] [ARGUMENTS]
+                  To generate report, use Streamlit in a file and run it with:
+                  $ streamlit run [FILE_NAME] [ARGUMENTS]
 
-                ════════════════════════════════════════════════
                 '''))
         else:
             script_name = sys.argv[0]
 
             _LOGGER.warning(textwrap.dedent('''
-                ════════════════════════════════════════════════
+
                 Will not generate Streamlit report
-                ────────────────────────────────────────────────
 
-                To generate report, run this file with:
-                  streamlit run %s [ARGUMENTS]
+                  To generate report, run this file with:
+                  $ streamlit run %s [ARGUMENTS]
 
-                ════════════════════════════════════════════════
                 '''), script_name)
