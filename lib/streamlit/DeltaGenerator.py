@@ -119,7 +119,7 @@ def _with_element(method):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, enqueue, static_id=None):
+    def __init__(self, enqueue, id=0, is_root=True):
         """Constructor.
 
         Parameters
@@ -127,24 +127,20 @@ class DeltaGenerator(object):
         enqueue : callable
             Function that (maybe) enqueues ForwardMsg's and returns True if
             enqueued or False if not.
-        static_id : int
-            ID for deltas, or None to create a generator that returns new
-            generators with incrementing IDs.
+        id : int
+            ID for deltas, or None to create the root DeltaGenerator (which
+            produces DeltaGenerators with incremeting IDs)
 
         """
         self._enqueue = enqueue
-        self._return_new_generator = static_id is None
-        self._id = static_id
-        self._next_id = None
-
-        if static_id is None:
-            self._reset()
+        self._id = id
+        self._is_root = is_root
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
         """Reset delta generator so it starts from index 0."""
-        self._id = None
-        self._next_id = 0  # This will be the index of the first element.
+        assert self._is_root
+        self._id = 0
 
     def _enqueue_new_element_delta(self, marshall_element):
         """Create NewElement delta, fill it, and enqueue it.
@@ -165,22 +161,26 @@ class DeltaGenerator(object):
         if self._enqueue is None:
             return self
 
-        # Create a delta message.
         msg = protobuf.ForwardMsg()
         marshall_element(msg.delta.new_element)
+        msg.delta.id = self._id
 
-        if self._return_new_generator:
-            msg.delta.id = self._next_id
+        # Figure out if we need to create a new ID for this element.
+        if self._is_root:
+            output_dg = DeltaGenerator(
+                self._enqueue, msg.delta.id, is_root=False)
         else:
-            msg.delta.id = self._id
+            output_dg = self
 
         msg_was_enqueued = self._enqueue(msg)
 
-        if msg_was_enqueued and self._return_new_generator:
-            self._next_id += 1
-            return DeltaGenerator(self._enqueue, static_id=msg.delta.id)
+        if not msg_was_enqueued:
+            return self
 
-        return self
+        if self._is_root:
+            self._id += 1
+
+        return output_dg
 
     @_with_element
     def balloons(self, element):
@@ -1345,7 +1345,7 @@ class DeltaGenerator(object):
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        assert not self._return_new_generator, \
+        assert not self._is_root, \
             'Only existing elements can add_rows.'
 
         import streamlit.elements.data_frame_proto as data_frame_proto

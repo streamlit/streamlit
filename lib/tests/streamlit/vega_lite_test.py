@@ -11,6 +11,7 @@ import unittest
 import pandas as pd
 import json
 
+import streamlit as st
 from streamlit.DeltaGenerator import DeltaGenerator
 
 
@@ -28,98 +29,93 @@ df2 = pd.DataFrame(
 class VegaLiteTest(unittest.TestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
+    def setUp(self):
+        self.queue = []
+
+        def enqueue(x):
+            self.queue.append(x)
+            return True
+
+        st._delta_generator = DeltaGenerator(enqueue)
+
+    def get_vega_lite_delta(self, index=-1):
+        return self.queue[index].delta.new_element.vega_lite_chart
+
+    def get_add_rows_msg(self, index=-1):
+        return self.queue[index].delta.add_rows
+
     def test_no_args(self):
         """Test that it can be called with no args."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.vega_lite_chart()
+        st.vega_lite_chart()
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(c.spec, '')
 
     def test_none_args(self):
         """Test that it can be called with args set to None."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.vega_lite_chart(None, None)
+        st.vega_lite_chart(None, None)
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(c.spec, '')
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.vega_lite_chart(None, {'mark': 'rect'})
+        st.vega_lite_chart(None, {'mark': 'rect'})
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
     def test_spec_in_arg1(self):
         """Test that it can be called spec as the 1st arg."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.vega_lite_chart({'mark': 'rect'})
+        st.vega_lite_chart({'mark': 'rect'})
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
     def test_data_in_spec(self):
         """Test passing data=df inside the spec."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-
-        dg.vega_lite_chart({
+        st.vega_lite_chart({
             'mark': 'rect',
             'data': df1,
         })
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), True)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
     def test_data_value_in_spec(self):
         """Test passing data={value: df} inside the spec."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-
-        dg.vega_lite_chart({
+        st.vega_lite_chart({
             'mark': 'rect',
             'data': {
                 'value': df1,
             },
         })
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), True)
         self.assertDictEqual(json.loads(c.spec), {'data': {}, 'mark': 'rect'})
 
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-
-        dg.vega_lite_chart({
+        st.vega_lite_chart({
             'mark': 'rect',
             'datasets': {
                 'foo': df1,
             },
         })
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
     def test_datasets_correctly_in_spec(self):
         """Test passing datasets={foo: df}, data={name: 'foo'} in the spec."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-
-        dg.vega_lite_chart({
+        st.vega_lite_chart({
             'mark': 'rect',
             'datasets': {
                 'foo': df1,
@@ -129,7 +125,7 @@ class VegaLiteTest(unittest.TestCase):
             },
         })
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), False)
         self.assertDictEqual(json.loads(c.spec), {
             'data': {'name': 'foo'}, 'mark': 'rect'
@@ -137,17 +133,14 @@ class VegaLiteTest(unittest.TestCase):
 
     def test_dict_unflatten(self):
         """Test passing a spec as keywords."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-
-        dg.vega_lite_chart(
+        st.vega_lite_chart(
             df1,
             x='foo',
             boink_boop=100,
             baz={'boz': 'booz'},
         )
 
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta()
         self.assertEqual(c.HasField('data'), True)
         self.assertDictEqual(
             json.loads(c.spec),
@@ -159,26 +152,20 @@ class VegaLiteTest(unittest.TestCase):
 
     def test_add_rows(self):
         """Test that you can call add_rows on a vega_lite_chart(None)."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        x = dg.vega_lite_chart(df1, {'mark': 'rect'})
-
+        x = st.vega_lite_chart(df1, {'mark': 'rect'})
         x.add_rows(df2)
 
-        c = queue[-2].new_element.vega_lite_chart
+        c = self.get_vega_lite_delta(-2)
         self.assertEqual(c.HasField('data'), True)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
-        c = queue[-1].add_rows
+        c = self.get_add_rows_msg(-1)
         self.assertEqual(c.HasField('data'), True)
 
     def test_no_args_add_rows(self):
         """Test that you can call add_rows on a vega_lite_chart(None)."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        x = dg.vega_lite_chart({'mark': 'rect'})
-
+        x = st.vega_lite_chart({'mark': 'rect'})
         x.add_rows(df1)
 
-        c = queue[-1].add_rows
+        c = self.get_add_rows_msg(-1)
         self.assertEqual(c.HasField('data'), True)
