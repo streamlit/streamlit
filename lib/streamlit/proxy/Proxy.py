@@ -673,4 +673,8 @@ def _print_urls(connection, wait_secs):
             EXTERNAL REPORT URL: %(external_url)s
             INTERNAL REPORT URL: %(internal_url)s
             ════════════════════════════════════════════════════════════
-        '''), {'external_url': external_url, 'internal_url': internal_url})
+        '''), {
+            'external_url': external_url,
+            'internal_url': internal_url,
+            'timeout_msg': timeout_msg,
+        })
