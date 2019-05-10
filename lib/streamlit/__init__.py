@@ -249,14 +249,19 @@ def write(*args):
                 flush_buffer()
                 help(arg)
             elif util.is_altair_chart(arg):
+                flush_buffer()
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
+                flush_buffer()
                 pyplot(arg)
             elif util.is_plotly_chart(arg):
+                flush_buffer()
                 plotly_chart(arg)
             elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
+                flush_buffer()
                 bokeh_chart(arg)
             elif type(arg) in dict_types:
+                flush_buffer()
                 json(arg)
             else:
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
