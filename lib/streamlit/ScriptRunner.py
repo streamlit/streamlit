@@ -148,6 +148,8 @@ class ScriptRunner(object):
         if config.get_option('proxy.installTracer'):
             self._install_tracer()
 
+        rerun = False
+
         try:
             # Compiling must happen in the "try" block, so we can catch things
             # like SyntaxErrors.
@@ -181,9 +183,11 @@ class ScriptRunner(object):
             sys.argv = self._report.argv
             exec(code, namespace, namespace)
 
-        except ScriptControlException as e:
-            LOGGER.debug('ScriptControlException received')
-            # Don't show ScriptControlExceptions in the console.
+        except RerunException:
+            rerun = True
+
+        except StopException:
+            pass
 
         except BaseException as e:
             # Show exceptions in the Streamlit report.
@@ -195,6 +199,9 @@ class ScriptRunner(object):
 
         finally:
             self._set_state(State.STOPPED)
+
+        if rerun:
+            self._run()
 
     def _pause(self):
         self._paused.set()
@@ -210,6 +217,7 @@ class ScriptRunner(object):
             self._set_state(State.PAUSE_REQUESTED)
             self._state_change_requested.set()
 
+    # This method gets called from inside the script's execution context.
     def maybe_handle_execution_control_request(self):
         if self._state_change_requested.is_set():
             LOGGER.debug('Received execution control request: %s', self._state)
@@ -217,7 +225,6 @@ class ScriptRunner(object):
             if self._state == State.STOP_REQUESTED:
                 raise StopException()
             elif self._state == State.RERUN_REQUESTED:
-                self.spawn_script_thread()
                 raise RerunException()
             elif self._state == State.PAUSE_REQUESTED:
                 self._pause()
