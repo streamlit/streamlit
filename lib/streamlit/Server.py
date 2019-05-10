@@ -138,7 +138,10 @@ class Server(object):
                         msg_str = _serialize(msg)
                         if ws is None:
                             break
-                        ws.write_message(msg_str, binary=True)
+                        try:
+                            ws.write_message(msg_str, binary=True)
+                        except tornado.websocket.WebSocketClosedError:
+                            self._remove_browser_connection(ws)
                         yield
                     yield
 
