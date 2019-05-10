@@ -360,6 +360,7 @@ export class StatusWidget extends PureComponent<Props, State> {
   private static getConnectionStateUI(state: ConnectionState): ConnectionStateUI | undefined {
     switch (state) {
       case ConnectionState.INITIAL:
+      case ConnectionState.INITIAL_CONNECTING:
         return {
           icon: <use xlinkHref="./open-iconic.min.svg#ellipses"/>,
           label: 'Waiting',
@@ -368,6 +369,7 @@ export class StatusWidget extends PureComponent<Props, State> {
 
       case ConnectionState.DISCONNECTED:
       case ConnectionState.RECONNECTING:
+      case ConnectionState.WAITING:
         return {
           icon: <use xlinkHref="./open-iconic.min.svg#circle-x"/>,
           label: 'Disconnected',
@@ -375,16 +377,15 @@ export class StatusWidget extends PureComponent<Props, State> {
         };
 
       case ConnectionState.CONNECTED:
-      case ConnectionState.INITIAL_CONNECTING:
       case ConnectionState.STATIC:
         return undefined;
 
-      case ConnectionState.ERROR:
+      case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
           icon: <use xlinkHref="./open-iconic.min.svg#warning"/>,
           label: 'Error',
-          tooltip: 'Something went wrong!',
+          tooltip: 'Unable to connect',
         };
     }
   }

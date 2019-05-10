@@ -82,7 +82,8 @@ export class ConnectionManager {
         this.connection = await this.connectToRunningServer();
       }
     } catch (err) {
-      this.setConnectionState(ConnectionState.ERROR, err.message);
+      this.setConnectionState(
+        ConnectionState.DISCONNECTED_FOREVER, err.message);
     }
   }
 
@@ -92,7 +93,7 @@ export class ConnectionManager {
       this.props.connectionStateChanged(connectionState);
     }
 
-    if (connectionState === ConnectionState.ERROR) {
+    if (connectionState === ConnectionState.DISCONNECTED_FOREVER) {
       this.props.onConnectionError(errMsg || 'unknown');
     }
   };

@@ -1,6 +1,31 @@
 /**
  * @license
  * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * WebsocketConnection State Machine:
+ *
+ *   INITIAL
+ *     │
+ *     │:on conn att    on conn succeed
+ *     v                :
+ *   INITIAL_CONNECTING ──────> CONNECTED
+ *     │                          │  ^
+ *     │:on timeout/error/closed  │  │
+ *     v                          │:on error/closed
+ *   DISCONNECTED <───────┬───────┘  │
+ *     │                  │          │
+ *     │:on timer start   │          │:on conn succeed
+ *     v                  │          │
+ *   WAITING              │          │
+ *     │                  │:on timeout/error/closed
+ *     │:on timer fired   │          │
+ *     v                  │          │
+ *   RECONNECTING ════════╛──────────┘
+ *     │
+ *     │:on retries exhausted
+ *     v
+ *   DISCONNECTED_FOREVER
+ *
  */
 
 import {ForwardMsg, BackMsg, IBackMsg} from './protobuf';
@@ -67,12 +92,13 @@ interface MessageQueue {
 
 
 type Event =
-  'CONNECTION_ATTEMPT_STARTED'
-  | 'CONNECTION_CLOSED'
+  'CONNECTION_CLOSED'
   | 'CONNECTION_ERROR'
   | 'CONNECTION_SUCCEEDED'
   | 'CONNECTION_TIMED_OUT'
-  | 'RETRIES_EXHAUSTED';
+  | 'RETRIES_EXHAUSTED'
+  | 'WAIT_TIMER_FIRED'
+  | 'WAIT_TIMER_STARTED';
 
 
 /**
@@ -138,7 +164,7 @@ export class WebsocketConnection {
   /**
    * The WebSocket object we're connecting with.
    */
-  private websocket?: WebSocket;
+  private websocket?: (WebSocket | null);
 
   /**
    * Keep track of how many times we tried to connect. For each "attempt" we
@@ -181,7 +207,42 @@ export class WebsocketConnection {
     this.maxRetries = props.isLocal ?
       Infinity : REMOTE_CONNECTION_MAX_RETRIES;
 
-    this.startConnectionAttempt();
+    // This is the only time setState() should be called outside of
+    // stepStateMachine().
+    this.setState(ConnectionState.INITIAL_CONNECTING);
+  }
+
+  // This should only be called inside the constructor and stepStateMachine().
+  private setState(state: ConnectionState, msg?: string): void {
+    logMessage(LOG, `New state: ${state}`);
+    this.state = state;
+    this.onConnectionStateChange(state, msg);
+
+    // Perform actions when entering certain states.
+    switch (this.state) {
+      case ConnectionState.INITIAL_CONNECTING:
+        this.startConnectionAttempt();
+        break;
+
+      case ConnectionState.DISCONNECTED:
+        this.websocket = null;
+        this.waitBeforeConnectionAttempt();
+        break;
+
+      case ConnectionState.RECONNECTING:
+        this.continueConnectionAttempt();
+        break;
+
+      case ConnectionState.DISCONNECTED_FOREVER:
+      case ConnectionState.STATIC:
+        this.websocket = null;
+        break;
+
+      case ConnectionState.CONNECTED:
+      case ConnectionState.INITIAL:
+      default:
+        break;
+    }
   }
 
   private stepStateMachine(event: Event): void {
@@ -193,49 +254,29 @@ export class WebsocketConnection {
       window.clearTimeout(this.connectionTimeoutId);
     }
 
-    const setState = (state: ConnectionState, msg?: string): void => {
-      logMessage(LOG, `New state: ${state}`);
-      this.state = state;
-      this.onConnectionStateChange(state, msg);
-    };
-
     // Anything combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
 
     switch (this.state) {
       case ConnectionState.INITIAL:
-        if (event === 'CONNECTION_ATTEMPT_STARTED') {
-          setState(ConnectionState.INITIAL_CONNECTING);
-          return;
-        }
-        break;
-
-      case ConnectionState.DISCONNECTED:
-      case ConnectionState.ERROR:
-        if (event === 'CONNECTION_ATTEMPT_STARTED') {
-          setState(ConnectionState.RECONNECTING);
-          return;
-        } else if (event === 'CONNECTION_CLOSED') {
-          // Do nothing.
-          return;
-        }
+        this.setState(ConnectionState.INITIAL_CONNECTING);
         break;
 
       case ConnectionState.INITIAL_CONNECTING:
       case ConnectionState.RECONNECTING:
         if (event === 'CONNECTION_SUCCEEDED') {
-          setState(ConnectionState.CONNECTED);
+          this.setState(ConnectionState.CONNECTED);
           return;
 
         } else if (event === 'CONNECTION_TIMED_OUT' ||
                    event === 'CONNECTION_ERROR' ||
                    event === 'CONNECTION_CLOSED') {
-          setState(ConnectionState.DISCONNECTED);
-          this.continueConnectionAttempt();
+          this.setState(ConnectionState.DISCONNECTED);
           return;
 
         } else if (event == 'RETRIES_EXHAUSTED') {
-          setState(ConnectionState.ERROR, 'Retries exhausted');
+          this.setState(
+              ConnectionState.DISCONNECTED_FOREVER, 'Retries exhausted');
           return;
         }
         break;
@@ -243,13 +284,27 @@ export class WebsocketConnection {
       case ConnectionState.CONNECTED:
         if (event === 'CONNECTION_CLOSED' ||
             event === 'CONNECTION_ERROR') {
-          setState(ConnectionState.DISCONNECTED);
-          this.startConnectionAttempt();
+          this.setState(ConnectionState.DISCONNECTED);
+          return;
+        }
+        break;
+
+      case ConnectionState.DISCONNECTED:
+        if (event === 'WAIT_TIMER_STARTED') {
+          this.setState(ConnectionState.WAITING);
+          return;
+        }
+        break;
+
+      case ConnectionState.WAITING:
+        if (event === 'WAIT_TIMER_FIRED') {
+          this.setState(ConnectionState.RECONNECTING);
           return;
         }
         break;
 
       case ConnectionState.STATIC:
+      case ConnectionState.DISCONNECTED_FOREVER:
       default:
         break;
     }
@@ -265,6 +320,13 @@ export class WebsocketConnection {
     this.connectToWebSocket();
   }
 
+  private waitBeforeConnectionAttempt(): void {
+    window.setTimeout(
+      () => this.stepStateMachine('WAIT_TIMER_FIRED'),
+      RECONNECT_WAIT_TIME_MS);
+    this.stepStateMachine('WAIT_TIMER_STARTED');
+  }
+
   private continueConnectionAttempt(): void {
     this.uriIndex++;
 
@@ -278,14 +340,10 @@ export class WebsocketConnection {
       }
     }
 
-    window.setTimeout(
-      () => this.connectToWebSocket(),
-      RECONNECT_WAIT_TIME_MS);
+    this.connectToWebSocket();
   }
 
   private connectToWebSocket(): void {
-    this.stepStateMachine('CONNECTION_ATTEMPT_STARTED');
-
     const uri = this.uriList[this.uriIndex];
 
     if (this.websocket != null) {
