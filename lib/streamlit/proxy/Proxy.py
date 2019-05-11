@@ -103,8 +103,8 @@ class Proxy(object):
     def _set_up_server(self):
         # We have to import this in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import ClientWebSocket
-        from streamlit.proxy import BrowserWebSocket
+        from streamlit.proxy.ClientWebSocket import ClientWebSocket
+        from streamlit.proxy.BrowserWebSocket import BrowserWebSocket
 
         routes = [
             ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
