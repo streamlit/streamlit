@@ -11,7 +11,7 @@ import unittest
 import mock
 
 from streamlit.proxy.ReportSession import ReportSession
-from streamlit.proxy import ClientConnection
+from streamlit.proxy.ClientConnection import ClientConnection
 from streamlit import forward_msg_proto
 
 # An arbitrary UUID constant

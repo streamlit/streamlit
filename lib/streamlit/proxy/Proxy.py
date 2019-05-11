@@ -103,8 +103,8 @@ class Proxy(object):
     def _set_up_server(self):
         # We have to import this in here to break a circular import reference
         # issue in Python 2.7.
-        from streamlit.proxy import ClientWebSocket
-        from streamlit.proxy import BrowserWebSocket
+        from streamlit.proxy.ClientWebSocket import ClientWebSocket
+        from streamlit.proxy.BrowserWebSocket import BrowserWebSocket
 
         routes = [
             ('/new/(.*)', ClientWebSocket, dict(proxy=self)),
@@ -673,4 +673,8 @@ def _print_urls(connection, wait_secs):
             EXTERNAL REPORT URL: %(external_url)s
             INTERNAL REPORT URL: %(internal_url)s
             ════════════════════════════════════════════════════════════
-        '''), {'external_url': external_url, 'internal_url': internal_url})
+        '''), {
+            'external_url': external_url,
+            'internal_url': internal_url,
+            'timeout_msg': timeout_msg,
+        })

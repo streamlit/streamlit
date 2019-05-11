@@ -16,14 +16,14 @@ What are the steps we should take to reproduce the bug:
 2. Click on '....'
 3. Scroll down to '....'
 
-**Expected behavior:**
+## Expected behavior:
 Explain what you expect to happen when you go through the steps above, assuming there were no bugs.
 
-**Actual behavior:**
+## Actual behavior:
 Explain the buggy behavior you experience when you go through the steps above.
 If applicable, add screenshots to help explain your problem.
 
-**Is this a regression?**
+## Is this a regression?
 That is, did this use to work the way you expected in the past?
 yes / no
 
