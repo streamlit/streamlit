@@ -192,10 +192,6 @@ class ScriptRunner(object):
         except BaseException as e:
             # Show exceptions in the Streamlit report.
             st.exception(e)  # This is OK because we're in the script thread.
-            raise # Don't pass "e" here, to preserve e's original stack trace.
-            # TODO: Use "raise TheExceptionType, e, traceback" instead, so we
-            # can try and clean up the traceback a little (remove Streamlit
-            # from it, to make it easier for users to debug).
 
         finally:
             self._set_state(State.STOPPED)
