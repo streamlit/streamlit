@@ -10,13 +10,20 @@ from streamlit.DeltaGenerator import DeltaGenerator
 class BokehTest(unittest.TestCase):
     """Test ability to marshall bokeh_chart protos."""
 
+    def setUp(self):
+        self.queue = []
+
+        def enqueue(x):
+            self.queue.append(x)
+            return True
+
+        self._dg = DeltaGenerator(enqueue)
+
     def test_figure(self):
         """Test that it can be called with figure."""
         plot = figure()
         plot.line([1], [1])
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.bokeh_chart(plot)
+        self._dg.bokeh_chart(plot)
 
-        c = queue[-1].new_element.bokeh_chart
+        c = self.queue[-1].delta.new_element.bokeh_chart
         self.assertEqual(hasattr(c, 'figure'), True)

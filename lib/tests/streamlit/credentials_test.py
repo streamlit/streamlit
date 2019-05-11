@@ -64,7 +64,7 @@ class CredentialsClassTest(unittest.TestCase):
             c = Credentials.get_current()
             c.load()
             self.assertEqual(c.activation.email, 'user@domain.com')
-            self.assertEqual(c.activation.code, 'ARzVsqhSB5i')
+            self.assertEqual(c.activation.code, None)
 
     def test_Credentials_load_twice(self):
         """Test Credentials.load() called twice."""
@@ -85,7 +85,7 @@ class CredentialsClassTest(unittest.TestCase):
                 c.load()
             self.assertEqual(
                 str(e.value),
-                'Credentials file not found. Please run `streamlit activate`')
+                'Credentials not found. Please run "streamlit activate".')
 
     def test_Credentials_load_permission_denied(self):
         """Test Credentials.load() with Perission denied."""
@@ -100,7 +100,9 @@ class CredentialsClassTest(unittest.TestCase):
                 c.load()
             self.assertEqual(
                 str(e.value).split(':')[0],
-                'Unable to load credentials from /does/not/exist/.streamlit/credentials.toml'
+                '\nUnable to load credentials from '
+                '/does/not/exist/.streamlit/credentials.toml.\n'
+                'Run "streamlit reset" and try again.\n'
             )
 
     def test_Credentials_check_activated_already_loaded(self):
@@ -186,7 +188,7 @@ class CredentialsClassTest(unittest.TestCase):
             p.side_effect = ['ARzVsqhSB5i', 'user@domain.com']
             c.activate()
             s.assert_called_once()
-            self.assertEqual(c.activation.code, 'ARzVsqhSB5i')
+            self.assertEqual(c.activation.code, None)
             self.assertEqual(c.activation.email, 'user@domain.com')
             self.assertEqual(c.activation.is_valid, True)
 

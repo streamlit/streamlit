@@ -181,10 +181,11 @@ _create_option(
 #     description='How long to wait for the proxy server to start up.',
 #     default_val=3.0)
 
-_create_option(
-    'client.throttleSecs',
-    description='How long to wait between draining the client queue.',
-    default_val=0.01)
+# XXX
+# _create_option(
+#     'client.throttleSecs',
+#     description='How long to wait between draining the client queue.',
+#     default_val=0.01)
 
 # XXX remove
 # _create_option(

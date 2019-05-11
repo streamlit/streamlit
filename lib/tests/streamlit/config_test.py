@@ -239,21 +239,15 @@ class ConfigTest(unittest.TestCase):
             u'browser.remotelyTrackUsage',
             u'client.caching',
             u'client.displayEnabled',
-            u'client.proxyAddress',
-            u'client.proxyPort',
-            u'client.throttleSecs',
-            u'client.tryToOutliveProxy',
-            u'client.waitForProxySecs',
             u'global.developmentMode',
             u'global.logLevel',
             u'global.sharingMode',
             u'global.unitTest',
-            u'proxy.autoCloseDelaySecs',
             u'proxy.enableCORS',
+            u'proxy.installTracer',
             u'proxy.isRemote',
             u'proxy.liveSave',
             u'proxy.port',
-            u'proxy.reportExpirationSecs',
             u'proxy.runOnSave',
             u'proxy.useNode',
             u'proxy.watchFileSystem',
@@ -292,13 +286,6 @@ class ConfigTest(unittest.TestCase):
         result = config._clean(' clean    this         text  ')
         self.assertEqual('clean this text', result)
 
-    # TODO(armando): Test logging statements via testfixtures.log_capture
-    # Test conflicts doesnt actually do anything but log warnings.
-    def test_check_conflicts_1(self):
-        config._set_option('client.tryToOutliveProxy', True, 'test')
-        config._set_option('proxy.isRemote', False, 'test')
-        config._check_conflicts()
-
     def test_check_conflicts_2(self):
         config._set_option('proxy.useNode', True, 'test')
         config._set_option('proxy.port', 1234, 'test')
@@ -312,13 +299,6 @@ class ConfigTest(unittest.TestCase):
         with pytest.raises(AssertionError) as e:
             config._check_conflicts()
         self.assertEqual(str(e.value), 'browser.proxyPort does not work when proxy.useNode is true. ')
-
-    def test_check_conflicts_2b(self):
-        config._set_option('proxy.useNode', True, 'test')
-        config._set_option('client.proxyPort', 1234, 'test')
-        with pytest.raises(AssertionError) as e:
-            config._check_conflicts()
-        self.assertEqual(str(e.value), 'client.proxyPort does not work when proxy.useNode is true. ')
 
     def test_check_conflicts_3(self):
         with pytest.raises(AssertionError) as e:
@@ -451,17 +431,6 @@ class ConfigTest(unittest.TestCase):
     def test_proxy_use_node(self):
         config.set_option('global.developmentMode', True)
         self.assertEqual(True, config._proxy_use_node._get_val_func())
-
-    def test_client_proxy_port(self):
-        config.set_option('proxy.port', 1234)
-        self.assertEqual(1234, config._client_proxy_port._get_val_func())
-
-        toml = textwrap.dedent('''
-           [client]
-           proxyPort = 4321
-        ''')
-        config._update_config_with_toml(toml, 'test')
-        self.assertEqual(4321, config.get_option('client.proxyPort'))
 
     def test_global_log_level_debug(self):
         config.set_option('global.developmentMode', True)

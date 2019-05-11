@@ -26,14 +26,21 @@ c1 = alt.Chart(df1).mark_bar().encode(x='a', y='b')
 class AltairTest(unittest.TestCase):
     """Test ability to marshall altair_chart proto."""
 
+    def setUp(self):
+        self.queue = []
+
+        def enqueue(x):
+            self.queue.append(x)
+            return True
+
+        self._dg = DeltaGenerator(enqueue)
+
     def test_altair_chart(self):
         """Test that it can be called with no args."""
         queue = []
-        dg = DeltaGenerator(queue.append)
+        self._dg.altair_chart(c1)
 
-        dg.altair_chart(c1)
-
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.queue[-1].delta.new_element.vega_lite_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(len(c.datasets), 1)
 

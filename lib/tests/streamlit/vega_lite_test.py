@@ -36,7 +36,7 @@ class VegaLiteTest(unittest.TestCase):
             self.queue.append(x)
             return True
 
-        st._dg = DeltaGenerator(enqueue)
+        st._delta_generator = DeltaGenerator(enqueue)
 
     def get_vega_lite_delta(self, index=-1):
         return self.queue[index].delta.new_element.vega_lite_chart

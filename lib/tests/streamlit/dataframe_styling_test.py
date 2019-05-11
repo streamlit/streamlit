@@ -19,7 +19,13 @@ class DataFrameStylingTest(unittest.TestCase):
     """Tests marshalling of pandas.Styler dataframe styling data."""
 
     def setUp(self):
-        self._dg = DeltaGenerator(ReportQueue())
+        self.queue = []
+
+        def enqueue(x):
+            self.queue.append(x)
+            return True
+
+        self._dg = DeltaGenerator(enqueue)
 
     def test_unstyled_has_no_style(self):
         """A DataFrame with an unmodified Styler should result in a protobuf
@@ -122,7 +128,7 @@ class DataFrameStylingTest(unittest.TestCase):
 
     def _get_element(self):
         """Returns the most recent element in the DeltaGenerator queue"""
-        return self._dg._queue.get_deltas()[-1].new_element
+        return self.queue[-1].delta.new_element
 
     def _assert_column_display_values(self, proto_df, col, display_values):
         """Asserts that cells in a column have the given display_values"""
