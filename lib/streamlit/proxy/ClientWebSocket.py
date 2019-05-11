@@ -16,8 +16,9 @@ from tornado.websocket import WebSocketHandler
 from streamlit import config
 from streamlit import protobuf
 from streamlit.logger import get_logger
-from streamlit.proxy import Proxy, ClientConnection
+from streamlit.proxy import Proxy
 from streamlit.proxy import proxy_util
+from streamlit.proxy.ClientConnection import ClientConnection
 
 LOGGER = get_logger(__name__)
 

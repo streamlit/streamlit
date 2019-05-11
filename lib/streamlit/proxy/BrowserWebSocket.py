@@ -15,10 +15,10 @@ from tornado.websocket import WebSocketClosedError
 from tornado.websocket import WebSocketHandler
 
 from streamlit import caching
-from streamlit import forward_msg_proto
 from streamlit import config
-from streamlit import protobuf
+from streamlit import forward_msg_proto
 from streamlit import process_runner
+from streamlit import protobuf
 from streamlit.proxy import Proxy
 from streamlit.proxy import proxy_util
 
