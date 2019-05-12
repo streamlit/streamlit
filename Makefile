@@ -163,11 +163,11 @@ protobuf:
 
 .PHONY: react-init
 react-init:
-	cd frontend/ ; npm install
+	cd frontend/ ; yarn install
 
 .PHONY: react-build
 react-build:
-	cd frontend/ ; npm run build
+	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
@@ -178,8 +178,8 @@ jslint:
 	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .tsx --ext .ts --max-warnings 0 ./src
 
 js-test:
-	cd frontend; npm run test
-	cd frontend; npm run coverage
+	cd frontend; yarn run test
+	cd frontend; yarn run coverage
 
 # Counts the number of lines of code in the project
 loc:

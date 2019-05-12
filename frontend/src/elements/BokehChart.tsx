@@ -26,7 +26,7 @@ class BokehChart extends PureStreamlitElement<Props> {
     const chart = document.getElementById(this.chartId);
     if (Bokeh && chart) {
       this.removeAllChildNodes(chart);
-      // TODO: use npm instead
+      // TODO: use npm package instead
       Bokeh.embed.embed_item(data, this.chartId);
     }
   }

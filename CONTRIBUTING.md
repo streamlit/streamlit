@@ -17,15 +17,15 @@ $ xcode-select --install, developer.apple.com/downloads
 # Install Homebrew
 $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Install NPM and the ProtoBuf compiler
-$ brew install npm protobuf
+# Install Yarn and the ProtoBuf compiler
+$ brew install yarn protobuf
 ```
 
 #### Ubuntu
 
 ```bash
-# Install NPM, PIP, and the ProtoBuf compiler
-$ sudo apt-get install npm python-pip protobuf-compiler
+# Install Yarn, PIP, and the ProtoBuf compiler
+$ sudo apt-get install yarn python-pip protobuf-compiler
 ```
 
 
@@ -84,7 +84,7 @@ From a new shell, run
 
 ```bash
 $ cd frontend
-$ npm start
+$ yarn start
 ```
 
 This starts streamlit's node dev server (see below), which serves static files to your local streamlit reports.
@@ -108,7 +108,7 @@ To start the dev server, open up a new terminal window and run:
 
 ```bash
 $ cd frontend
-$ npm start
+$ yarn start
 ```
 
 Note that this server listens on port 3000 rather than 8501 (i.e. Streamlit's
