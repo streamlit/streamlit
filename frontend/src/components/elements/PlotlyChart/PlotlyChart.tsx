@@ -43,11 +43,13 @@ class PlotlyChart extends React.PureComponent<Props> {
     width: number,
     height: number,
   ): React.ReactNode => {
+    // <iframe> elements must have a unique title property
     return (
       <iframe
+        title="Plotly"
         src={url}
         style={{width, height}}
-      ></iframe>
+      />
     );
   }
 

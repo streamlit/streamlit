@@ -10,6 +10,7 @@ import {Progress} from 'reactstrap';
 import {dispatchOneOf} from '../../../lib/immutableProto';
 import {Text as TextProto} from '../../../protobuf';
 import {ReportRunState} from '../../../lib/ReportRunState';
+import './ReportView.scss';
 
 // Load (non-lazy) core elements.
 import Chart from '../../elements/Chart';
@@ -29,8 +30,6 @@ const BokehChart = React.lazy(() => import('../../elements/BokehChart'));
 const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart'));
 const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart'));
 const Video = React.lazy(() => import('../../elements/Video'));
-
-import './ReportView.scss';
 
 type Element = ImmutableMap<string, any>; // a report Element
 

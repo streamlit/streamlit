@@ -7,9 +7,6 @@
  * report, and transient report-related events.
  */
 
-/** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = false;
-
 import React, {PureComponent, ReactNode} from 'react';
 import {CSSTransition} from 'react-transition-group';
 import {Button, UncontrolledTooltip} from 'reactstrap';
@@ -20,6 +17,9 @@ import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent';
 import {ReportRunState} from '../../../lib/ReportRunState';
 import {Timer} from '../../../lib/Timer';
 import './StatusWidget.scss';
+
+/** Feature flag for showing the "Stop Script" button */
+const SHOW_STOP_BUTTON = false;
 
 /** Component props */
 interface Props {

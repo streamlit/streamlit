@@ -29,8 +29,10 @@ interface LinkProps {
   children: ReactElement;
 }
 
+// Using target="_blank" without rel="noopener noreferrer" is a security risk:
+// see https://mathiasbynens.github.io/rel-noopener
 const linkWithTargetBlank = (props: LinkProps): ReactElement => (
-  <a href={props.href} target="_blank">{props.children}</a>
+  <a href={props.href} target="_blank" rel="noopener noreferrer">{props.children}</a>
 );
 
 interface Props {
