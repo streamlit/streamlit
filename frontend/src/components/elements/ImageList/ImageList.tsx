@@ -5,8 +5,8 @@
 
 import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from './util/StreamlitElement';
-import './ImageList.css';
+import {PureStreamlitElement} from '../util/StreamlitElement';
+import './ImageList.scss';
 
 interface Props {
   width: number;

@@ -16,8 +16,8 @@ import {
   indexGetByName,
   tableGet,
   tableGetRowsAndCols,
-} from '../../lib/dataFrameProto';
-import {PureStreamlitElement} from './util/StreamlitElement';
+} from '../../../lib/dataFrameProto';
+import {PureStreamlitElement} from '../util/StreamlitElement';
 
 /**
   * Functional element representing formatted text.

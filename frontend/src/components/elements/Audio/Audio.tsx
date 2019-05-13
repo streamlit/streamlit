@@ -5,7 +5,7 @@
 
 import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from './util/StreamlitElement';
+import {PureStreamlitElement} from '../util/StreamlitElement';
 
 interface Props {
   width: number;

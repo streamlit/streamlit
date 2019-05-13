@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import {Balloons as BalloonsProto} from '../../protobuf';
+import {Balloons as BalloonsProto} from '../../../protobuf';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from './util/StreamlitElement';
-import './Balloons.css';
+import {PureStreamlitElement} from '../util/StreamlitElement';
+import './Balloons.scss';
 
 const NUM_BALLOONS = 15;
 const POS_MIN_VW = 30;

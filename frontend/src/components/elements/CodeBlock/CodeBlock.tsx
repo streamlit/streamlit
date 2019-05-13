@@ -5,10 +5,9 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
-import './CodeBlock.css';
 import Prism from 'prismjs';
 import React from 'react';
-import {PureStreamlitElement} from './util/StreamlitElement';
+import {PureStreamlitElement} from '../util/StreamlitElement';
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -21,6 +20,8 @@ import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-c';
+
+import './CodeBlock.scss';
 
 interface Props {
   language?: string;

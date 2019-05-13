@@ -5,14 +5,14 @@
  * @fileoverview Represents formatted text.
  */
 
-import CodeBlock from './CodeBlock';
 import React, {ReactNode, ReactElement} from 'react';
 import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from './util/StreamlitElement';
-import {Text as TextProto} from '../../protobuf';
-import './Text.css';
+import CodeBlock from '../CodeBlock';
+import {PureStreamlitElement} from '../util/StreamlitElement';
+import {Text as TextProto} from '../../../protobuf';
+import './Text.scss';
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
   switch (format) {

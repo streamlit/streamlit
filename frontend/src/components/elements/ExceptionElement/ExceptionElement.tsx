@@ -7,8 +7,8 @@
 
 import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from './util/StreamlitElement';
-import './ExceptionElement.css';
+import {PureStreamlitElement} from '../util/StreamlitElement';
+import './ExceptionElement.scss';
 
 interface Props {
   width: number;

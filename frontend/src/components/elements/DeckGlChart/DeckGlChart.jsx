@@ -5,7 +5,7 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import {PureStreamlitElement} from './util/StreamlitElement';
+import {PureStreamlitElement} from '../util/StreamlitElement';
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -19,9 +19,8 @@ import DeckGL, {
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Immutable from 'immutable';
 import { StaticMap } from 'react-map-gl';
-
-import './DeckGlChart.css';
-import { dataFrameToArrayOfDicts } from '../../lib/dataFrameProto';
+import { dataFrameToArrayOfDicts } from '../../../lib/dataFrameProto';
+import './DeckGlChart.scss';
 
 const MAPBOX_ACCESS_TOKEN =
   'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';

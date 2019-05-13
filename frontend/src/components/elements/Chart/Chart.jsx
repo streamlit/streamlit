@@ -9,13 +9,13 @@ import {
   indexGet,
   tableGet,
   INDEX_COLUMN_DESIGNATOR,
-} from '../../lib/dataFrameProto';
-import { format, Duration } from '../../lib/format';
-import { PureStreamlitElement } from './util/StreamlitElement';
+} from '../../../lib/dataFrameProto';
+import { format, Duration } from '../../../lib/format';
+import { PureStreamlitElement } from '../util/StreamlitElement';
 
 import * as recharts from 'recharts';
 
-import './Chart.css';
+import './Chart.scss';
 
 const COMPONENTS = {
   ////////////

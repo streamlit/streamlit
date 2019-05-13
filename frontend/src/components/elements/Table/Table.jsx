@@ -6,16 +6,16 @@
  */
 
 import React from 'react';
-import { PureStreamlitElement } from './util/StreamlitElement';
+import { PureStreamlitElement } from '../util/StreamlitElement';
 import { Table as ReactTable }  from 'reactstrap';
-import { toFormattedString } from '../../lib/format';
+import { toFormattedString } from '../../../lib/format';
 
 import {
   dataFrameGet,
   dataFrameGetDimensions,
-} from '../../lib/dataFrameProto';
+} from '../../../lib/dataFrameProto';
 
-import './Table.css';
+import './Table.scss';
 
 /**
  * Functional element representing a DataFrame.

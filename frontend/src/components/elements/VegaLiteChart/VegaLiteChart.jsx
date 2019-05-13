@@ -4,13 +4,13 @@
  */
 
 import React from 'react';
-import { StreamlitElement } from './util/StreamlitElement';
-import { tableGetRowsAndCols, indexGet, tableGet } from '../../lib/dataFrameProto';
+import { StreamlitElement } from '../util/StreamlitElement';
+import { tableGetRowsAndCols, indexGet, tableGet } from '../../../lib/dataFrameProto';
 
 import VegaLite from 'react-vega-lite';
 import vegaTooltip from 'vega-tooltip';
 
-import './VegaLiteChart.css';
+import './VegaLiteChart.scss';
 
 
 const MagicFields = {
