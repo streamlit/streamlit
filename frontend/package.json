@@ -4,13 +4,14 @@
   "private": true,
   "homepage": ".",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "./scripts/preload.sh && react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+    "start": "craco start",
+    "build": "./scripts/preload.sh && craco build",
+    "test": "craco test --env=jsdom",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@craco/craco": "^5.0.2",
     "aws-sdk": "^2.444.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
