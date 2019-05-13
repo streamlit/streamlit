@@ -110,6 +110,7 @@ deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty           = _with_dg(DeltaGenerator.empty)  # noqa: E221
 error           = _with_dg(DeltaGenerator.error)  # noqa: E221
 exception       = _with_dg(DeltaGenerator.exception)  # noqa: E221
+graphviz_chart  = _with_dg(DeltaGenerator.graphviz_chart)  # noqa: E221
 header          = _with_dg(DeltaGenerator.header)  # noqa: E221
 help            = _with_dg(DeltaGenerator.help)  # noqa: E221
 image           = _with_dg(DeltaGenerator.image)  # noqa: E221
@@ -168,6 +169,7 @@ def write(*args):
         - write(obj)        : The default is to print str(obj).
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
+        - write(graphviz)   : Displays a Graphviz graph.
         - write(plotly_fig) : Displays a Plotly figure.
         - write(bokeh_fig)  : Displays a Bokeh figure.
 
@@ -262,6 +264,9 @@ def write(*args):
             elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
                 flush_buffer()
                 bokeh_chart(arg)
+            elif util.is_graphviz_chart(arg):
+                flush_buffer()
+                graphviz_chart(arg)
             elif type(arg) in dict_types:
                 flush_buffer()
                 json(arg)

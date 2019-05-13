@@ -34,6 +34,7 @@ requirements:
     - entrypoints
     - enum-compat
     - future
+    - graphviz
     - numpy
     - pandas
     - pillow
