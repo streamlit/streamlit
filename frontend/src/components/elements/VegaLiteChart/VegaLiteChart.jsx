@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { StreamlitElement } from '../util/StreamlitElement';
+import { StreamlitElement } from '../../shared/StreamlitElement';
 import { tableGetRowsAndCols, indexGet, tableGet } from '../../../lib/dataFrameProto';
 
 import VegaLite from 'react-vega-lite';

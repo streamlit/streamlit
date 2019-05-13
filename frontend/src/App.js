@@ -16,16 +16,16 @@ import { fromJS } from 'immutable';
 import url from 'url';
 
 // Other local imports.
-import LoginBox from './components/LoginBox/';
-import MainMenu from './components/MainMenu/';
+import LoginBox from './components/core/LoginBox';
+import MainMenu from './components/core/MainMenu';
 import Resolver from './lib/Resolver';
-import Dialog from './components/Dialog/';
+import StreamlitDialog from './components/core/StreamlitDialog';
 import { ConnectionManager } from './lib/ConnectionManager';
 import { ConnectionState } from './lib/ConnectionState';
 import { ReportRunState } from './lib/ReportRunState';
-import { StatusWidget } from './components/StatusWidget/';
+import { StatusWidget } from './components/core/StatusWidget';
 import { ReportEventDispatcher } from './lib/ReportEvent';
-import { ReportView } from './components/ReportView/';
+import { ReportView } from './components/core/ReportView';
 
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './lib/dataFrameProto';
@@ -568,7 +568,7 @@ class App extends PureComponent {
             </Col>
           </Row>
 
-          <Dialog
+          <StreamlitDialog
             dialogProps={{
               ...this.state.dialog,
               onClose: this.closeDialog,

@@ -7,28 +7,28 @@ import React, {PureComponent, ReactNode} from 'react';
 import {AutoSizer} from 'react-virtualized';
 import {fromJS, List, Map as ImmutableMap} from 'immutable';
 import {Progress} from 'reactstrap';
-import {dispatchOneOf} from '../../lib/immutableProto';
-import {Text as TextProto} from '../../protobuf';
-import {ReportRunState} from '../../lib/ReportRunState';
+import {dispatchOneOf} from '../../../lib/immutableProto';
+import {Text as TextProto} from '../../../protobuf';
+import {ReportRunState} from '../../../lib/ReportRunState';
 
 // Load (non-lazy) core elements.
-import Chart from '../elements/Chart/';
-import DocString from '../elements/DocString/';
-import ExceptionElement from '../elements/ExceptionElement/';
-import Table from '../elements/Table/';
-import Text from '../elements/Text/';
+import Chart from '../../elements/Chart';
+import DocString from '../../elements/DocString';
+import ExceptionElement from '../../elements/ExceptionElement';
+import Table from '../../elements/Table';
+import Text from '../../elements/Text';
 
 // Lazy-load display elements.
-const Audio = React.lazy(() => import('../elements/Audio/'));
-const Balloons = React.lazy(() => import('../elements/Balloons/'));
-const DataFrame = React.lazy(() => import('../elements/DataFrame/'));
-const ImageList = React.lazy(() => import('../elements/ImageList/'));
-const Map = React.lazy(() => import('../elements/Map/'));
-const DeckGlChart = React.lazy(() => import('../elements/DeckGlChart/'));
-const BokehChart = React.lazy(() => import('../elements/BokehChart/'));
-const PlotlyChart = React.lazy(() => import('../elements/PlotlyChart/'));
-const VegaLiteChart = React.lazy(() => import('../elements/VegaLiteChart/'));
-const Video = React.lazy(() => import('../elements/Video/'));
+const Audio = React.lazy(() => import('../../elements/Audio'));
+const Balloons = React.lazy(() => import('../../elements/Balloons'));
+const DataFrame = React.lazy(() => import('../../elements/DataFrame'));
+const ImageList = React.lazy(() => import('../../elements/ImageList'));
+const Map = React.lazy(() => import('../../elements/Map'));
+const DeckGlChart = React.lazy(() => import('../../elements/DeckGlChart'));
+const BokehChart = React.lazy(() => import('../../elements/BokehChart'));
+const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart'));
+const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart'));
+const Video = React.lazy(() => import('../../elements/Video'));
 
 import './ReportView.scss';
 

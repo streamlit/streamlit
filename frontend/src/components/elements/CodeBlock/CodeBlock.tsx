@@ -7,7 +7,7 @@
 
 import Prism from 'prismjs';
 import React from 'react';
-import {PureStreamlitElement} from '../util/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement';
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages

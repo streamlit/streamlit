@@ -15,10 +15,10 @@ import {CSSTransition} from 'react-transition-group';
 import {Button, UncontrolledTooltip} from 'reactstrap';
 import {SignalConnection} from 'typed-signals';
 
-import {ConnectionState} from '../../lib/ConnectionState';
-import {ReportEvent, ReportEventDispatcher} from '../../lib/ReportEvent';
-import {ReportRunState} from '../../lib/ReportRunState';
-import {Timer} from '../../lib/Timer';
+import {ConnectionState} from '../../../lib/ConnectionState';
+import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent';
+import {ReportRunState} from '../../../lib/ReportRunState';
+import {Timer} from '../../../lib/Timer';
 import './StatusWidget.scss';
 
 /** Component props */

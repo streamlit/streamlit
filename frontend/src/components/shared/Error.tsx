@@ -8,7 +8,7 @@
  * st.exception / Exception.tsx or st.error / Text.tsx.
  */
 
-import * as React from 'react';
+import React from 'react';
 import {Alert} from 'reactstrap';
 
 export interface Props {

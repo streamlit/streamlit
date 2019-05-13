@@ -3,7 +3,7 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import * as React from 'react';
+import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
 import {dispatchOneOf} from '../../../lib/immutableProto';
 import Plot from 'react-plotly.js';

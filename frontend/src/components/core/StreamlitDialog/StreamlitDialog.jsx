@@ -21,11 +21,11 @@ import {
 
 import SettingsDialog from './SettingsDialog';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
-import {STREAMLIT_VERSION} from '../../lib/baseconsts';
+import {STREAMLIT_VERSION} from '../../../lib/baseconsts';
 
-import './Dialog.scss';
+import './StreamlitDialog.scss';
 
-function Dialog({dialogProps}) {
+function StreamlitDialog({dialogProps}) {
   // This table of functions constructs the dialog based on dialogProps.type
   const populateDialogTable = {
     'about': aboutDialog,
@@ -219,4 +219,4 @@ function aboutDialog({onClose}) {
   );
 }
 
-export default Dialog;
+export default StreamlitDialog;

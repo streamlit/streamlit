@@ -6,9 +6,9 @@
  * asynchronously rendering child components.
  */
 
-import * as React from 'react';
+import React from 'react';
 import ErrorElement from './Error';
-import {logError} from '../../../lib/log';
+import {logError} from '../../lib/log';
 
 export interface Props {
   width?: number;

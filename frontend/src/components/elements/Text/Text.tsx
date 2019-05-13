@@ -10,7 +10,7 @@ import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
 import {Map as ImmutableMap} from 'immutable';
 import CodeBlock from '../CodeBlock';
-import {PureStreamlitElement} from '../util/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement';
 import {Text as TextProto} from '../../../protobuf';
 import './Text.scss';
 

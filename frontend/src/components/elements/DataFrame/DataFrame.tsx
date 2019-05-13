@@ -5,12 +5,12 @@
  * @fileoverview Component display a Pandas Dataframe.
  */
 
-import DataFrameCell from '../util/DataFrameCell';
 import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
 import {MultiGrid} from 'react-virtualized';
-import {PureStreamlitElement} from '../util/StreamlitElement';
-import {SortDirection} from '../util/SortDirection';
+import DataFrameCell from './DataFrameCell';
+import {PureStreamlitElement} from '../../shared/StreamlitElement';
+import {SortDirection} from './SortDirection';
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../../../lib/dataFrameProto';
 import {toFormattedString} from '../../../lib/format';
 import './DataFrame.scss';

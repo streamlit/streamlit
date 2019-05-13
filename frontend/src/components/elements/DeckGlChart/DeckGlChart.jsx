@@ -5,7 +5,7 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import {PureStreamlitElement} from '../util/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement';
 import DeckGL, {
   ArcLayer,
   GridLayer,
