@@ -4,6 +4,7 @@
  */
 
 @import 'variables';
+@import 'fonts';
 @import '~bootstrap/scss/bootstrap';
 
 // Use this file to override specific bootstrap styles.
@@ -48,10 +49,10 @@
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
   background-color: rgba(0, 0, 0, 0);
-  -webkit-border-radius: 100px;
+  border-radius: 100px;
+  height: 6px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar:hover {
@@ -61,11 +62,11 @@
 ::-webkit-scrollbar-thumb:vertical,
 ::-webkit-scrollbar-thumb:horizontal {
   background: rgba(0, 0, 0, 0.5);
-  -webkit-border-radius: 100px;
+  border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb:vertical:active,
 ::-webkit-scrollbar-thumb:horizontal:active {
   background: rgba(0, 0, 0, 0.61);
-  -webkit-border-radius: 100px;
+  border-radius: 100px;
 }

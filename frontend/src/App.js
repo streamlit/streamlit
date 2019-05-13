@@ -34,6 +34,8 @@ import { logError } from './lib/log';
 import { setInstallationId, setStreamlitVersion } from './lib/baseconsts';
 import { toImmutableProto, dispatchOneOf } from './lib/immutableProto';
 
+// NB: order matters
+import './assets/css/theme.scss';
 import './App.scss';
 
 

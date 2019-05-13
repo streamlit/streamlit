@@ -16,10 +16,10 @@ import DeckGL, {
   ScreenGridLayer,
   TextLayer,
 } from 'deck.gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import Immutable from 'immutable';
 import { StaticMap } from 'react-map-gl';
 import { dataFrameToArrayOfDicts } from '../../../lib/dataFrameProto';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import './DeckGlChart.scss';
 
 const MAPBOX_ACCESS_TOKEN =
