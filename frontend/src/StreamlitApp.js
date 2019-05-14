@@ -555,6 +555,7 @@ class StreamlitApp extends PureComponent {
                   elements={this.state.elements}
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
+                  showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
                 />
               }
             </Col>

@@ -9,6 +9,7 @@ import url from 'url';
 
 import {ConnectionState} from './ConnectionState';
 import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
+import {ForwardMsg} from './protobuf';
 import {StaticConnection} from './StaticConnection';
 import {WebsocketConnection} from './WebsocketConnection';
 import {configureCredentials, getObject} from './s3helper';
@@ -24,7 +25,7 @@ interface Props {
   /**
    * Function to be called when we receive a message from the proxy.
    */
-  onMessage: (message: any) => void;
+  onMessage: (message: ForwardMsg) => void;
 
   /**
    * Function to be called when the connection errors out.

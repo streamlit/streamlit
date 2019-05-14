@@ -43,6 +43,14 @@ interface Props {
 
   /** Current ReportRunState. */
   reportRunState: ReportRunState;
+
+  /**
+   * If true, "stale" elements (that is, elements that were created during a previous
+   * run of a currently-running report) will be faded out.
+   *
+   * (When we're viewing a shared report, this is set to false.)
+   */
+  showStaleElementIndicator: boolean;
 }
 
 /**
@@ -75,7 +83,7 @@ export class ReportView extends PureComponent<Props> {
         return;
       }
 
-      const className = this.isStaleElement(element) ?
+      const className = this.props.showStaleElementIndicator && this.isStaleElement(element) ?
         'element-container stale-element' : 'element-container';
 
       out.push(

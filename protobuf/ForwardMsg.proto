@@ -18,7 +18,7 @@ message ForwardMsg {
     // Upload Progress
     ////
 
-    // Indicates the % progres of a report upload.
+    // Indicates the % progress of a report upload.
     uint32 upload_report_progress = 5;
 
     // Indicates that the upload is complete and gives the URL.

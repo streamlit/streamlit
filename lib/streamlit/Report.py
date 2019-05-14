@@ -131,40 +131,51 @@ class Report(object):
         list of tuples
             See `CloudStorage.save_report_files()` for schema. But as to the
             output of this method, it's (1) a simple manifest and (2) a bunch
-            of serialized Deltas.
+            of serialized ForwardMsgs.
 
         """
         LOGGER.debug('Serializing final report')
 
-        deltas = [
-            msg.delta for msg in self._master_queue
-            if msg.HasField('delta')
+        messages = [
+            msg for msg in self._master_queue
+            if _should_save_report_msg(msg)
         ]
+
+        first_delta_index = 0
+        num_deltas = 0
+        for idx in range(len(messages)):
+            if messages[idx].HasField('delta'):
+                if num_deltas == 0:
+                    first_delta_index = idx
+                num_deltas += 1
 
         manifest = self._build_manifest(
             status='done',
-            n_deltas=len(deltas),
+            num_messages=len(messages),
+            first_delta_index=first_delta_index,
+            num_deltas=num_deltas,
         )
 
         manifest_json = json.dumps(manifest).encode('utf-8')
 
-        id = self._latest_id
+        report_id = self._latest_id
 
-        delta_tuples = [(
-            'reports/%(id)s/%(idx)s.delta' % {'id': id, 'idx': idx},
-            delta.SerializeToString()
-        ) for idx, delta in enumerate(deltas)]
+        # Build a list of message tuples: (message_location, serialized_message)
+        message_tuples = [(
+            'reports/%(id)s/%(idx)s.pb' % {'id': report_id, 'idx': msg_idx},
+            msg.SerializeToString()
+        ) for msg_idx, msg in enumerate(messages)]
 
         manifest_tuples = [(
-            'reports/%(id)s/manifest.json' % {'id': id}, manifest_json)]
+            'reports/%(id)s/manifest.json' % {'id': report_id}, manifest_json)]
 
         # Manifest must be at the end, so clients don't connect and read the
         # manifest while the deltas haven't been saved yet.
-        return delta_tuples + manifest_tuples
+        return message_tuples + manifest_tuples
 
     def _build_manifest(
-            self, status, n_deltas=None, external_proxy_ip=None,
-            internal_proxy_ip=None):
+            self, status, num_messages=None, first_delta_index=None,
+            num_deltas=None, external_proxy_ip=None, internal_proxy_ip=None):
         """Build a manifest dict for this report.
 
         Parameters
@@ -172,9 +183,13 @@ class Report(object):
         status : 'done' or 'running'
             The report status. If the script is still executing, then the
             status should be RUNNING. Otherwise, DONE.
-        n_deltas : int or None
-            Only when status is DONE. The number of deltas that this report
+        num_messages : int or None
+            Set only when status is DONE. The number of ForwardMsgs that this report
             is made of.
+        first_delta_index : int or None
+            Set only when status is DONE. The index of our first Delta message
+        num_deltas : int or None
+            Set only when status is DONE. The number of Delta messages in the report
         external_proxy_ip : str or None
             Only when status is RUNNING. The IP of the Proxy's websocket.
         internal_proxy_ip : str or None
@@ -185,7 +200,9 @@ class Report(object):
         dict
             The actual manifest. Schema:
             - localId: str,
-            - nDeltas: int or None,
+            - numMessages: int or None,
+            - firstDeltaIndex: int or None,
+            - numDeltas: int or None,
             - proxyStatus: 'running' or 'done',
             - externalProxyIP: str or None,
             - internalProxyIP: str or None,
@@ -199,7 +216,10 @@ class Report(object):
             configured_proxy_address = None
 
         return dict(
-            nDeltas=n_deltas,
+            name=self.name,
+            numMessages=num_messages,
+            firstDeltaIndex=first_delta_index,
+            numDeltas=num_deltas,
             proxyStatus=status,
             configuredProxyAddress=configured_proxy_address,
             externalProxyIP=external_proxy_ip,
@@ -209,6 +229,34 @@ class Report(object):
             # prod, but different in dev)
             proxyPort=config.get_option('browser.proxyPort'),
         )
+
+
+def _should_save_report_msg(msg):
+    """Returns True if the given ForwardMsg should be serialized into
+    a shared report.
+
+    We serialize report & session metadata and deltas, but not transient
+    events such as upload progress.
+
+    """
+
+    msg_type = msg.WhichOneof('type')
+
+    # Strip out empty delta messages. These don't have any data in them
+    # by definition, so omitting them can save the user from a potentially
+    # long load time with no downside.
+    if (
+        msg_type == 'delta' and
+        msg.delta.WhichOneof('type') == 'new_element' and
+        msg.delta.new_element.WhichOneof('type') == 'empty'
+    ):
+        return False
+
+    return (
+        msg_type == 'initialize' or
+        msg_type == 'new_report' or
+        msg_type == 'delta'
+    )
 
 
 def _get_browser_address_bar_port():

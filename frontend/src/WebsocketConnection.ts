@@ -58,7 +58,7 @@ const RECONNECT_WAIT_TIME_MS = 300;
 const CONNECTION_ATTEMPT_TIMEOUT_MS = 2000;
 
 
-type OnMessage = (message: any) => void;
+type OnMessage = (ForwardMsg: any) => void;
 type OnConnectionStateChange = (connectionState: ConnectionState, errMsg?: string) => void;
 
 
@@ -275,8 +275,7 @@ export class WebsocketConnection {
           return;
 
         } else if (event == 'RETRIES_EXHAUSTED') {
-          this.setState(
-              ConnectionState.DISCONNECTED_FOREVER, 'Retries exhausted');
+          this.setState(ConnectionState.DISCONNECTED_FOREVER, 'Retries exhausted');
           return;
         }
         break;

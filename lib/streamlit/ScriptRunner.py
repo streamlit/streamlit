@@ -39,8 +39,8 @@ class ScriptRunner(object):
 
         Parameters
         ----------
-        report : str
-            Path of the file to run.
+        report : Report
+            The report with the script to run.
 
         """
         self._report = report
