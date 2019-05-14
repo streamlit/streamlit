@@ -1,3 +1,4 @@
+# Copyright 2018 Streamlit Inc. All rights reserved.
 import json
 import os
 import re
@@ -13,12 +14,12 @@ import pandas as pd
 from google.protobuf import json_format
 from mock import call, patch
 
-import streamlit as st
 from streamlit import __version__
 from streamlit import protobuf
-from streamlit.elements.Chart import Chart
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
+from streamlit.elements.Chart import Chart
+import streamlit as st
 
 
 def get_version():
@@ -64,16 +65,16 @@ class StreamlitAPITest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.queue = []
+        self._report_queue = ReportQueue()
 
-        def enqueue(x):
-            self.queue.append(x)
+        def enqueue(msg):
+            self._report_queue.enqueue(msg)
             return True
 
         st._delta_generator = DeltaGenerator(enqueue)
 
     def get_last_delta_element(self):
-        return self.queue[-1].delta.new_element
+        return self._report_queue._queue[-1].delta.new_element
 
     def test_st_altair_chart(self):
         """Test st.altair_chart."""

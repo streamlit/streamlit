@@ -1,3 +1,4 @@
+# Copyright 2019 Streamlit Inc. All rights reserved.
 import unittest
 
 import pytest

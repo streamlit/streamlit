@@ -1,7 +1,5 @@
-"""Unit test for image_proto.
-
-Copyright 2018 Streamlit Inc. All rights reserved.
-"""
+# Copyright 2018 Streamlit Inc. All rights reserved.
+"""Unit test for image_proto."""
 import io
 import unittest
 

@@ -11,8 +11,9 @@ import unittest
 import pandas as pd
 import json
 
-import streamlit as st
 from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
+import streamlit as st
 
 
 df1 = pd.DataFrame(
@@ -30,19 +31,19 @@ class VegaLiteTest(unittest.TestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def setUp(self):
-        self.queue = []
+        self._report_queue = ReportQueue()
 
-        def enqueue(x):
-            self.queue.append(x)
+        def enqueue(msg):
+            self._report_queue.enqueue(msg)
             return True
 
         st._delta_generator = DeltaGenerator(enqueue)
 
     def get_vega_lite_delta(self, index=-1):
-        return self.queue[index].delta.new_element.vega_lite_chart
+        return self._report_queue._queue[index].delta.new_element.vega_lite_chart
 
     def get_add_rows_msg(self, index=-1):
-        return self.queue[index].delta.add_rows
+        return self._report_queue._queue[index].delta.add_rows
 
     def test_no_args(self):
         """Test that it can be called with no args."""

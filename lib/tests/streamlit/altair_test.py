@@ -13,6 +13,7 @@ import pandas as pd
 import unittest
 
 from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
 
 
 df1 = pd.DataFrame(
@@ -27,20 +28,19 @@ class AltairTest(unittest.TestCase):
     """Test ability to marshall altair_chart proto."""
 
     def setUp(self):
-        self.queue = []
+        self._report_queue = ReportQueue()
 
-        def enqueue(x):
-            self.queue.append(x)
+        def enqueue(msg):
+            self._report_queue.enqueue(msg)
             return True
 
         self._dg = DeltaGenerator(enqueue)
 
     def test_altair_chart(self):
         """Test that it can be called with no args."""
-        queue = []
         self._dg.altair_chart(c1)
 
-        c = self.queue[-1].delta.new_element.vega_lite_chart
+        c = self._report_queue._queue[-1].delta.new_element.vega_lite_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(len(c.datasets), 1)
 

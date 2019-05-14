@@ -12,6 +12,7 @@ import pandas as pd
 import json
 
 from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
 
 
 df1 = pd.DataFrame({
@@ -23,10 +24,10 @@ class DeckGLTest(unittest.TestCase):
     """Test ability to marshall deck_gl_chart protos."""
 
     def setUp(self):
-        self.queue = []
+        self._report_queue = ReportQueue()
 
-        def enqueue(x):
-            self.queue.append(x)
+        def enqueue(msg):
+            self._report_queue.enqueue(msg)
             return True
 
         self._dg = DeltaGenerator(enqueue)
@@ -35,7 +36,7 @@ class DeckGLTest(unittest.TestCase):
         """Test that it can be called with no args."""
         self._dg.deck_gl_chart()
 
-        c = self.queue[-1].delta.new_element.deck_gl_chart
+        c = self._report_queue._queue[-1].delta.new_element.deck_gl_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(json.loads(c.spec), {})
 
@@ -43,7 +44,7 @@ class DeckGLTest(unittest.TestCase):
         """Test that deck_gl_chart can be called with lat/lon."""
         self._dg.deck_gl_chart(df1)
 
-        c = self.queue[-1].delta.new_element.deck_gl_chart
+        c = self._report_queue._queue[-1].delta.new_element.deck_gl_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(len(c.layers), 1)
         self.assertEqual(json.loads(c.spec), {})

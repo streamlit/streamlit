@@ -1,3 +1,5 @@
+# Copyright 2019 Streamlit Inc. All rights reserved.
+
 import sys
 import unittest
 from mock import patch
@@ -11,8 +13,10 @@ except ImportError:
 from streamlit import bootstrap
 from streamlit import config
 from streamlit.Report import Report
+from tests.streamlit import util
 
 report = Report('the/path', ['arg0', 'arg1'])
+
 
 class BootstrapPrintTest(unittest.TestCase):
     """Test bootstrap.py's printing functions."""
@@ -26,18 +30,10 @@ class BootstrapPrintTest(unittest.TestCase):
         sys.stdout = self.orig_stdout
 
     def test_print_urls_configured(self):
-        orig_get_option = config.get_option
-        orig_is_manually_set = config.is_manually_set
-
-        def mock_get_option(arg):
-            if arg == 'browser.proxyAddress':
-                return 'the-address'
-            return orig_get_option(arg)
-
-        def mock_is_manually_set(arg):
-            if arg == 'browser.proxyAddress':
-                return True
-            return orig_is_manually_set(arg)
+        mock_is_manually_set = util.build_mock_config_is_manually_set({
+            'browser.proxyAddress': True})
+        mock_get_option = util.build_mock_config_get_option({
+            'browser.proxyAddress': 'the-address'})
 
         with patch.object(config, 'get_option', new=mock_get_option), \
             patch.object(
@@ -50,19 +46,12 @@ class BootstrapPrintTest(unittest.TestCase):
     @patch('streamlit.bootstrap.util.get_external_ip')
     @patch('streamlit.bootstrap.util.get_internal_ip')
     def test_print_urls_remote(
-        self, mock_get_internal_ip, mock_get_external_ip):
-        orig_get_option = config.get_option
-        orig_is_manually_set = config.is_manually_set
+            self, mock_get_internal_ip, mock_get_external_ip):
 
-        def mock_is_manually_set(arg):
-            if arg == 'browser.proxyAddress':
-                return False
-            return orig_is_manually_set(arg)
-
-        def mock_get_option(arg):
-            if arg == 'proxy.isRemote':
-                return True
-            return orig_get_option(arg)
+        mock_is_manually_set = util.build_mock_config_is_manually_set({
+            'browser.proxyAddress': False})
+        mock_get_option = util.build_mock_config_get_option({
+            'proxy.isRemote': True})
 
         mock_get_internal_ip.return_value = 'internal-ip'
         mock_get_external_ip.return_value = 'external-ip'
@@ -78,18 +67,10 @@ class BootstrapPrintTest(unittest.TestCase):
 
     @patch('streamlit.bootstrap.util.get_internal_ip')
     def test_print_urls_local(self, mock_get_internal_ip):
-        orig_get_option = config.get_option
-        orig_is_manually_set = config.is_manually_set
-
-        def mock_is_manually_set(arg):
-            if arg == 'browser.proxyAddress':
-                return False
-            return orig_is_manually_set(arg)
-
-        def mock_get_option(arg):
-            if arg == 'proxy.isRemote':
-                return False
-            return orig_get_option(arg)
+        mock_is_manually_set = util.build_mock_config_is_manually_set({
+            'browser.proxyAddress': False})
+        mock_get_option = util.build_mock_config_get_option({
+            'proxy.isRemote': False})
 
         mock_get_internal_ip.return_value = 'internal-ip'
 
