@@ -8,7 +8,7 @@ import {AutoSizer} from 'react-virtualized';
 import {fromJS, List, Map as ImmutableMap} from 'immutable';
 import {Progress} from 'reactstrap';
 import {dispatchOneOf} from '../../../lib/immutableProto';
-import {Text as TextProto} from '../../../autogen/protobuf';
+import {Text as TextProto} from 'autogen/protobuf';
 import {ReportRunState} from '../../../lib/ReportRunState';
 import './ReportView.scss';
 

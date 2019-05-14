@@ -7,7 +7,7 @@
 
 import React, {PureComponent} from 'react';
 import {SortDirection} from './SortDirection';
-import openIconic from '../../../assets/img/open-iconic.svg';
+import openIconic from 'assets/img/open-iconic.svg';
 
 interface Props {
   /** The cell's column index in the DataFrame */

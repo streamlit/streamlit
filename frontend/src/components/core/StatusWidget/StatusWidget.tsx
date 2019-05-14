@@ -16,8 +16,8 @@ import {ConnectionState} from '../../../lib/ConnectionState';
 import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent';
 import {ReportRunState} from '../../../lib/ReportRunState';
 import {Timer} from '../../../lib/Timer';
-import openIconic from '../../../assets/img/open-iconic.svg';
-import iconRunning from '../../../assets/img/icon_running.gif';
+import openIconic from 'assets/img/open-iconic.svg';
+import iconRunning from 'assets/img/icon_running.gif';
 import './StatusWidget.scss';
 
 /** Feature flag for showing the "Stop Script" button */

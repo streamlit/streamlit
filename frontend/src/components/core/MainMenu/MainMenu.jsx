@@ -13,7 +13,7 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from 'reactstrap';
-import openIconic from '../../../assets/img/open-iconic.svg';
+import openIconic from 'assets/img/open-iconic.svg';
 import './MainMenu.scss';
 
 const ONLINE_DOCS_URL = '//streamlit.io/secret/docs';

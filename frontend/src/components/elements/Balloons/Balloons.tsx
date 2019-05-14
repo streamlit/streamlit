@@ -4,13 +4,13 @@
  */
 
 import React from 'react';
-import {Balloons as BalloonsProto} from '../../../autogen/protobuf';
+import {Balloons as BalloonsProto} from 'autogen/protobuf';
 import {Map as ImmutableMap} from 'immutable';
 import {PureStreamlitElement} from '../../shared/StreamlitElement/';
-import BalloonEmoji from '../../../assets/img/emoji/emoji_u1f388.png';
-import HappyFaceEmoji from '../../../assets/img/emoji/emoji_u1f604.png';
-import StarFaceEmoji from '../../../assets/img/emoji/emoji_u1f929.png';
-import CoolFaceEmoji from '../../../assets/img/emoji/emoji_u1f60e.png';
+import BalloonEmoji from 'assets/img/emoji/emoji_u1f388.png';
+import HappyFaceEmoji from 'assets/img/emoji/emoji_u1f604.png';
+import StarFaceEmoji from 'assets/img/emoji/emoji_u1f929.png';
+import CoolFaceEmoji from 'assets/img/emoji/emoji_u1f60e.png';
 import './Balloons.scss';
 
 const NUM_BALLOONS = 15;
