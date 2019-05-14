@@ -27,7 +27,7 @@ import { StatusWidget } from './components/core/StatusWidget';
 import { ReportEventDispatcher } from './lib/ReportEvent';
 import { ReportView } from './components/core/ReportView';
 
-import { ForwardMsg, Text as TextProto } from './protobuf';
+import { ForwardMsg, Text as TextProto } from './autogen/protobuf';
 import { addRows } from './lib/dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './lib/remotetracking';
 import { logError } from './lib/log';

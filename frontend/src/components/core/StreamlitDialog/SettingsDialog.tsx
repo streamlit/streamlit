@@ -8,7 +8,7 @@
 import React from 'react';
 import {ChangeEvent, PureComponent, ReactNode} from 'react';
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap';
-import {UserSettings} from '../../../lib/UserSettings';
+import {UserSettings} from './UserSettings';
 
 export interface Props {
   isOpen: boolean;

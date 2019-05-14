@@ -5,7 +5,7 @@
 
 import {Signal} from 'typed-signals';
 import {mapOneOf} from './immutableProto';
-import {SessionEvent} from '../protobuf';
+import {SessionEvent} from '../autogen/protobuf';
 
 /** Report-related events delivered by the server */
 export enum ReportEvent {

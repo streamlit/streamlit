@@ -7,6 +7,7 @@
 
 import React, {PureComponent} from 'react';
 import {SortDirection} from './SortDirection';
+import openIconic from '../../../assets/img/open-iconic.svg';
 
 interface Props {
   /** The cell's column index in the DataFrame */
@@ -105,14 +106,14 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
     case SortDirection.ASCENDING:
       return (
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use xlinkHref="./open-iconic.min.svg#chevron-top" />
+          <use href={openIconic + '#chevron-top'} />
         </svg>
       );
 
     case SortDirection.DESCENDING:
       return (
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use xlinkHref="./open-iconic.min.svg#chevron-bottom" />
+          <use href={openIconic + '#chevron-bottom'} />
         </svg>
       );
 

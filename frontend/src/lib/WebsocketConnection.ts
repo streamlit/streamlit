@@ -5,7 +5,7 @@
 
 import {ConnectionState} from './ConnectionState';
 import {logError} from './log';
-import {BackMsg, ForwardMsg, IBackMsg} from '../protobuf';
+import {BackMsg, ForwardMsg, IBackMsg} from '../autogen/protobuf';
 
 /**
  * Number of times to try to connect to websocket.

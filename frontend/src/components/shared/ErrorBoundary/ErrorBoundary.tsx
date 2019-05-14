@@ -7,8 +7,8 @@
  */
 
 import React from 'react';
-import ErrorElement from './Error';
-import {logError} from '../../lib/log';
+import ErrorElement from '../Error';
+import {logError} from '../../../lib/log';
 
 export interface Props {
   width?: number;

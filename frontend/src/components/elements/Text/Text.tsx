@@ -10,8 +10,8 @@ import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
 import {Map as ImmutableMap} from 'immutable';
 import CodeBlock from '../CodeBlock';
-import {PureStreamlitElement} from '../../shared/StreamlitElement';
-import {Text as TextProto} from '../../../protobuf';
+import {PureStreamlitElement} from '../../shared/StreamlitElement/';
+import {Text as TextProto} from '../../../autogen/protobuf';
 import './Text.scss';
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {

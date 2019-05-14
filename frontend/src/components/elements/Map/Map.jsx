@@ -17,7 +17,7 @@ import {
   tableGet,
   tableGetRowsAndCols,
 } from '../../../lib/dataFrameProto';
-import {PureStreamlitElement} from '../../shared/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement/';
 
 /**
   * Functional element representing formatted text.

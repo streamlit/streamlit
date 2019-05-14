@@ -7,7 +7,7 @@
 
 import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from '../../shared/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement/';
 import './ExceptionElement.scss';
 
 interface Props {

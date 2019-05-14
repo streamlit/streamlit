@@ -9,7 +9,7 @@ import React from 'react';
 import {Map as ImmutableMap} from 'immutable';
 import {MultiGrid} from 'react-virtualized';
 import DataFrameCell from './DataFrameCell';
-import {PureStreamlitElement} from '../../shared/StreamlitElement';
+import {PureStreamlitElement} from '../../shared/StreamlitElement/';
 import {SortDirection} from './SortDirection';
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../../../lib/dataFrameProto';
 import {toFormattedString} from '../../../lib/format';

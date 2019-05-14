@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { PureStreamlitElement } from '../../shared/StreamlitElement';
+import { PureStreamlitElement } from '../../shared/StreamlitElement/';
 import { Map as ImmutableMap } from 'immutable';
 
 interface Props {

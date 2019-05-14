@@ -8,8 +8,8 @@
  * method.
  */
 
-import Error from './Error';
-import ErrorBoundary from './ErrorBoundary';
+import Error from '../Error';
+import ErrorBoundary from '../ErrorBoundary';
 import React from 'react';
 
 interface Props {

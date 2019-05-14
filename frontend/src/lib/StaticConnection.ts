@@ -9,7 +9,7 @@
 
 import url from 'url';
 import {ConnectionState} from './ConnectionState';
-import {Text as TextProto, Delta} from '../protobuf';
+import {Text as TextProto, Delta} from '../autogen/protobuf';
 import {getObject} from './s3helper';
 
 interface Props {

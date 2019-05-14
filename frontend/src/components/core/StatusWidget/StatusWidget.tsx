@@ -16,6 +16,8 @@ import {ConnectionState} from '../../../lib/ConnectionState';
 import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent';
 import {ReportRunState} from '../../../lib/ReportRunState';
 import {Timer} from '../../../lib/Timer';
+import openIconic from '../../../assets/img/open-iconic.svg';
+import iconRunning from '../../../assets/img/icon_running.gif';
 import './StatusWidget.scss';
 
 /** Feature flag for showing the "Stop Script" button */
@@ -275,12 +277,9 @@ export class StatusWidget extends PureComponent<Props, State> {
       <div
         id="ReportStatus"
         className={this.state.statusMinimized ? 'minimized' : ''}>
-        <img className="ReportRunningIcon" src="./icon_running.gif" alt=""/>
-        <label>
-          Running...
-        </label>
+        <img className="ReportRunningIcon" src={iconRunning} alt="Running..." />
+        <label>Running...</label>
         {stopButton}
-
         {
           this.state.statusMinimized ?
             <UncontrolledTooltip placement="bottom" target="ReportStatus">
@@ -305,7 +304,7 @@ export class StatusWidget extends PureComponent<Props, State> {
           id="ReportStatus"
           className={minimized ? 'minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
-            <use xlinkHref="./open-iconic.min.svg#info"/>
+            <use href={openIconic + '#info'} />
           </svg>
 
           <label className="prompt">
@@ -361,7 +360,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     switch (state) {
       case ConnectionState.INITIAL:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#ellipses"/>,
+          icon: <use href={openIconic + '#ellipses'} />,
           label: 'Waiting',
           tooltip: 'Waiting for connection',
         };
@@ -371,7 +370,7 @@ export class StatusWidget extends PureComponent<Props, State> {
 
       case ConnectionState.DISCONNECTED:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#circle-x"/>,
+          icon: <use href={openIconic + '#circle-x'} />,
           label: 'Disconnected',
           tooltip: 'Disconnected from live data feed',
         };
@@ -382,7 +381,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.ERROR:
       default:
         return {
-          icon: <use xlinkHref="./open-iconic.min.svg#warning"/>,
+          icon: <use href={openIconic + '#warning'} />,
           label: 'Error',
           tooltip: 'Something went wrong!',
         };

@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from 'reactstrap';
+import openIconic from '../../../assets/img/open-iconic.svg';
 import './MainMenu.scss';
 
 const ONLINE_DOCS_URL = '//streamlit.io/secret/docs';
@@ -46,7 +47,7 @@ class MainMenu extends Component {
       >
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <svg className="icon" viewBox="0 0 8 8">
-            <use xlinkHref="./open-iconic.min.svg#menu" />
+            <use href={openIconic + '#menu'} />
           </svg>
         </DropdownToggle>
 
