@@ -207,7 +207,7 @@ jobs:
       - run:
           name: Run linters.
           command: |
-            make js-lint
+            make jslint
 
       #################################################################
       # Run make pycoverage

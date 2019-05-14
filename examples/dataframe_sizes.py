@@ -5,6 +5,27 @@ from datetime import datetime
 
 st.title('Tables with different sizes')
 
+st.header('Long cells that overflow')
+
+st.write('''
+    Long text should show an ellipsis. All cells should have a tooltip
+    with their entire un-ellipsized contents.
+    ''')
+
+st.dataframe({
+    'foo': ['hello', 'world', 'foo '*30],
+    'bar': ['hello', 'world', 'bar'*30],
+    'baz': [1, 2, 3],
+    'boz': [1, 2, 3],
+    'buz': [1, 2, 3],
+    'biz'*30: [1, 2, 3],
+    'bim': [1, 2, 3],
+})
+
+st.dataframe({
+    'foo': ['hello', 'world', 'foo '*30],
+})
+
 st.header('Using st.write')
 
 for c in [1, 2, 5, 20]:

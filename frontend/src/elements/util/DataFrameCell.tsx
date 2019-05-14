@@ -5,12 +5,54 @@
  * @fileoverview Component that displays a single cell in a Pandas Dataframe.
  */
 
-import React, { PureComponent } from 'react';
-import PropTypes from 'prop-types';
-import { SortDirection } from '../SortDirection';
+import React, {PureComponent} from 'react';
+import {SortDirection} from './SortDirection';
 
-class DataFrameCell extends PureComponent {
-  render() {
+interface Props {
+  /** The cell's column index in the DataFrame */
+  columnIndex: number;
+
+  /** The cell's row index in the DataFrame */
+  rowIndex: number;
+
+  /** The cell's css class name */
+  className: string;
+
+  /** Additional css styling for the cell */
+  style: object;
+
+  /**
+   * The HTML contents of the cell. Added to the DOM as a child of this
+   * DataFrameCel.
+   */
+  contents: string;
+
+  /**
+   * If true, then the table's sorting was manually set by the user, by
+   * clicking on a column header. We only show the sort arrow when this is
+   * true.
+   */
+  sortedByUser: boolean;
+
+  /**
+   * The {@link SortDirection} for this column, or undefined if the column is
+   * unsorted. No sorting is done here - this property is used to determine
+   * which, if any, sort icon to draw in column-header cells.
+   */
+  columnSortDirection?: SortDirection;
+
+  /**
+   * An optional callback that will be called when a column header is clicked.
+   * (The property is ignored for non-header cells). The callback will be passed this
+   * cell's columnIndex.
+   *
+   * {@link DataFrame} uses this to toggle column sorting.
+   */
+  headerClickedCallback?: (columnIndex: number) => void;
+}
+
+class DataFrameCell extends PureComponent<Props> {
+  public render(): React.ReactNode {
     const {
       columnIndex, rowIndex, className, style, contents, columnSortDirection,
       headerClickedCallback, sortedByUser,
@@ -19,7 +61,7 @@ class DataFrameCell extends PureComponent {
     let onClick;
     let role;
     let tabIndex;
-    let title;
+    let title = contents;
 
     const isDescending = columnSortDirection === SortDirection.DESCENDING;
 
@@ -27,9 +69,9 @@ class DataFrameCell extends PureComponent {
       onClick = () => headerClickedCallback(columnIndex);
       role = 'button';
       tabIndex = 0;
-      title = columnSortDirection === null ?
-        'Sort by this column' :
-        `Sorted by this column (${isDescending ? 'descending' : 'ascending'})`;
+      title = columnSortDirection == null ?
+        `Sort by column "${contents}"` :
+        `Sorted by column "${contents}" (${isDescending ? 'descending' : 'ascending'})`;
     }
 
     // The sort icon is only drawn in the top row
@@ -56,7 +98,7 @@ class DataFrameCell extends PureComponent {
 }
 
 
-function drawSortIcon(sortDirection) {
+function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // If these icons are changed, you may also need to update DataFrame.SORT_ICON_WIDTH
   // to ensure proper column width padding
   switch (sortDirection) {
@@ -79,53 +121,5 @@ function drawSortIcon(sortDirection) {
       return null;
   }
 }
-
-DataFrameCell.defaultProps = {
-  columnSortDirection: undefined,
-  headerClickedCallback: undefined,
-};
-
-DataFrameCell.propTypes = {
-  /** The cell's column index in the DataFrame */
-  columnIndex: PropTypes.number.isRequired,
-
-  /** The cell's row index in the DataFrame */
-  rowIndex: PropTypes.number.isRequired,
-
-  /** The cell's css class name */
-  className: PropTypes.string.isRequired,
-
-  /** Additional css styling for the cell */
-  style: PropTypes.object.isRequired,
-
-  /**
-   * The HTML contents of the cell. Added to the DOM as a child of this
-   * DataFrameCel.
-   */
-  contents: PropTypes.node.isRequired,
-
-  /**
-   * If true, then the table's sorting was manually set by the user, by
-   * clicking on a column header. We only show the sort arrow when this is
-   * true.
-   */
-  sortedByUser: PropTypes.bool.isRequired,
-
-  /**
-   * The {@link SortDirection} for this column, or undefined if the column is
-   * unsorted. No sorting is done here - this property is used to determine
-   * which, if any, sort icon to draw in column-header cells.
-   */
-  columnSortDirection: PropTypes.string,
-
-  /**
-   * An optional callback that will be called when a column header is clicked.
-   * (The property is ignored for non-header cells). The callback will be passed this
-   * cell's columnIndex.
-   *
-   * {@link DataFrame} uses this to toggle column sorting.
-   */
-  headerClickedCallback: PropTypes.func,
-};
 
 export default DataFrameCell;

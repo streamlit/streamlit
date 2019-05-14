@@ -36,13 +36,15 @@ class AltairTest(unittest.TestCase):
         c = queue[-1].new_element.vega_lite_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(len(c.datasets), 1)
-        self.assertEqual(json.loads(c.spec), {
-            'encoding': {
-                'y': {'field': 'b', 'type': 'quantitative'},
-                'x': {'field': 'a', 'type': 'nominal'},
-            },
-            'data': {'name': 'data-7cc8c5586364b460a7f3c4622e11a92e'},
-            '$schema': 'https://vega.github.io/schema/vega-lite/v2.6.0.json',
-            'config': {'view': {'width': 400, 'height': 300}},
-            'mark': 'bar',
+
+        spec_dict = json.loads(c.spec)
+        self.assertEqual(spec_dict['encoding'], {
+            'y': {'field': 'b', 'type': 'quantitative'},
+            'x': {'field': 'a', 'type': 'nominal'},
         })
+        self.assertEqual(spec_dict['data'], {
+            'name': 'data-7cc8c5586364b460a7f3c4622e11a92e',
+        })
+        self.assertEqual(spec_dict['mark'], 'bar')
+        self.assertTrue('config' in spec_dict)
+        self.assertTrue('encoding' in spec_dict)

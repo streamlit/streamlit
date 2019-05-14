@@ -5,12 +5,13 @@
  * @fileoverview Represents formatted text.
  */
 
-import React, {PureComponent, ReactNode} from 'react';
+import CodeBlock from './CodeBlock';
+import React, {ReactNode, ReactElement} from 'react';
 import ReactJson from 'react-json-view';
 import ReactMarkdown from 'react-markdown';
-import {Alert} from 'reactstrap';
+import {Map as ImmutableMap} from 'immutable';
+import {PureStreamlitElement} from './util/StreamlitElement';
 import {Text as TextProto} from '../protobuf';
-import CodeBlock from './CodeBlock';
 import './Text.css';
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
@@ -23,19 +24,32 @@ function getAlertCSSClass(format: TextProto.Format): string | undefined {
   return undefined;
 }
 
+interface LinkProps {
+  href: string;
+  children: ReactElement;
+}
+
+const linkWithTargetBlank = (props: LinkProps): ReactElement => (
+  <a href={props.href} target="_blank">{props.children}</a>
+);
+
 interface Props {
-  element: any; // An ElementProto that's been immutablejs-ified
+  element: ImmutableMap<string, any>;
   width: number;
 }
 
 /**
  * Functional element representing formatted text.
  */
-export class Text extends PureComponent<Props> {
-  public render(): ReactNode {
+class Text extends PureStreamlitElement<Props> {
+  public safeRender(): React.ReactNode {
     const {element, width} = this.props;
     const body = element.get('body');
     const format = element.get('format');
+    const renderers = {
+      code: CodeBlock,
+      link: linkWithTargetBlank,
+    };
 
     switch (format) {
       // Plain, fixed width text.
@@ -50,7 +64,7 @@ export class Text extends PureComponent<Props> {
       case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container" style={{width}}>
-            <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
+            <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
           </div>
         );
 
@@ -61,22 +75,8 @@ export class Text extends PureComponent<Props> {
           bodyObject = JSON.parse(body);
         } catch (e) {
           const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10);
-          const split = body.substr(0, pos).split('\n');
-          const line = `${split.length}:${split[split.length - 1].length + 1}`;
-          return (
-            <div className="json-text-container" style={{width}}>
-              <Alert color="danger" style={{width}}>
-                <strong>Invalid JSON format:</strong> {e.message} ({line})
-                <pre className="error">
-                  <code>
-                    {body.substr(0, pos)}
-                    <span className="error">{body[pos]}</span>
-                    {body.substr(pos + 1)}
-                  </code>
-                </pre>
-              </Alert>
-            </div>
-          );
+          e.message += `\n${body.substr(0, pos + 1)} ← here`;
+          throw e;
         }
         return (
           <div className="json-text-container" style={{width}}>
@@ -97,17 +97,15 @@ export class Text extends PureComponent<Props> {
         return (
           <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
             <div className="markdown-text-container">
-              <ReactMarkdown source={body} escapeHtml={false} renderers={{code: CodeBlock}} />
+              <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
             </div>
           </div>
         );
       // Default
       default:
-        return (
-          <Alert color="danger" style={{width}}>
-            <strong>Invalid Text format:</strong> {element.get('format')}
-          </Alert>
-        );
+        throw new Error(`Invalid Text format:${element.get('format')}`);
     }
   }
 }
+
+export default Text;

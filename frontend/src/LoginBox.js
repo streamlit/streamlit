@@ -65,12 +65,10 @@ class LoginBox extends PureComponent {
   }
 
   onRequest() {
-    console.log('onRequest');
     this.setState({ loginInProgress: true });
   }
 
   onSuccess(googleUser) {
-    console.log('onSuccess');
     const authResult = googleUser.getAuthResponse();
     this.props.onSuccess({
       accessToken: authResult['access_token'],
@@ -79,7 +77,6 @@ class LoginBox extends PureComponent {
   }
 
   onFailure(response) {
-    console.log('onFailure', response);
     this.props.onFailure(`Error: ${response.error}. ${response.details}`);
   }
 }

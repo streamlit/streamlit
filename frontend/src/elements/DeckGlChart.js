@@ -3,8 +3,9 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React, { PureComponent } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
+import {PureStreamlitElement} from './util/StreamlitElement';
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -17,7 +18,6 @@ import DeckGL, {
 } from 'deck.gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Immutable from 'immutable';
-import { Alert } from 'reactstrap';
 import { StaticMap } from 'react-map-gl';
 
 import './DeckGlChart.css';
@@ -27,7 +27,7 @@ const MAPBOX_ACCESS_TOKEN =
   'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ';
 
 
-class DeckGlChart extends PureComponent {
+class DeckGlChart extends PureStreamlitElement {
   constructor(props) {
     super(props);
 
@@ -60,40 +60,31 @@ class DeckGlChart extends PureComponent {
     this.setState({ initialized: true });
   }
 
-  render() {
-    try {
-      return (
-        <div
-          className="deckglchart"
-          style={{
-            height: this.initialViewState.height,
-            width: this.initialViewState.width,
-          }}
+  safeRender() {
+    return (
+      <div
+        className="deckglchart"
+        style={{
+          height: this.initialViewState.height,
+          width: this.initialViewState.width,
+        }}
+      >
+        <DeckGL
+          initialViewState={this.initialViewState}
+          height={this.initialViewState.height}
+          width={this.initialViewState.width}
+          controller
+          layers={this.state.initialized ? this.buildLayers() : []}
         >
-          <DeckGL
-            initialViewState={this.initialViewState}
+          <StaticMap
             height={this.initialViewState.height}
             width={this.initialViewState.width}
-            controller
-            layers={this.state.initialized ? this.buildLayers() : []}
-          >
-            <StaticMap
-              height={this.initialViewState.height}
-              width={this.initialViewState.width}
-              mapStyle={this.mapStyle}
-              mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-            />
-          </DeckGL>
-        </div>
-      );
-    } catch (e) {
-      console.error(e.stack);
-      return (
-        <Alert color="danger">
-          <strong>{e.name}</strong>: {e.message}
-        </Alert>
-      );
-    }
+            mapStyle={this.mapStyle}
+            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+          />
+        </DeckGL>
+      </div>
+    );
   }
 
   buildLayers() {

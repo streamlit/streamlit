@@ -5,8 +5,9 @@
  * @fileoverview Component display a Pandas Dataframe.
  */
 
-import React, { PureComponent } from 'react';
-import { Alert, Table as ReactTable }  from 'reactstrap';
+import React from 'react';
+import { PureStreamlitElement } from './util/StreamlitElement';
+import { Table as ReactTable }  from 'reactstrap';
 import { toFormattedString } from '../format';
 
 import {
@@ -20,53 +21,44 @@ import './Table.css';
  * Functional element representing a DataFrame.
  */
 
-class Table extends PureComponent {
-  render() {
-    const { df, width } = this.props;
-    const { headerRows, rows, cols } = dataFrameGetDimensions(df);
+class Table extends PureStreamlitElement {
+  safeRender() {
+    const { element } = this.props;
+    const { headerRows, rows, cols } = dataFrameGetDimensions(element);
 
     const hasNoData = rows === headerRows;
 
     // TODO(tvst): Make tables have a max width with overflow: scroll (when
     // media==screen). But need to fix the autosizer first.
-    try {
-      return (
-        <div className="streamlit-table">
-          <ReactTable className={hasNoData ? 'empty-table' : ''}>
-            <thead>
+    return (
+      <div className="streamlit-table">
+        <ReactTable className={hasNoData ? 'empty-table' : ''}>
+          <thead>
+            <TableRows
+              df={element}
+              header={true}
+              headerRows={headerRows}
+              rows={rows}
+              cols={cols}
+            />
+          </thead>
+          <tbody>
+            { hasNoData ?
+              <tr>
+                <td colSpan={cols || 1}>empty</td>
+              </tr>
+              :
               <TableRows
-                df={df}
-                header={true}
+                df={element}
                 headerRows={headerRows}
                 rows={rows}
                 cols={cols}
               />
-            </thead>
-            <tbody>
-              { hasNoData ?
-                <tr>
-                  <td colSpan={cols || 1}>empty</td>
-                </tr>
-                :
-                <TableRows
-                  df={df}
-                  headerRows={headerRows}
-                  rows={rows}
-                  cols={cols}
-                />
-              }
-            </tbody>
-          </ReactTable>
-        </div>
-      );
-    } catch (e) {
-      console.log(e.stack);
-      return (
-        <Alert style={{width}} color="danger">
-          <strong>{e.name}</strong>: {e.message}
-        </Alert>
-      );
-    }
+            }
+          </tbody>
+        </ReactTable>
+      </div>
+    );
   }
 }
 

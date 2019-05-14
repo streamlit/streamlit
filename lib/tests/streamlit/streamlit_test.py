@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from google.protobuf import json_format
-from mock import call, patch
+from mock import call, patch, Mock
 
 from streamlit import __version__
 from streamlit import protobuf
@@ -784,7 +784,7 @@ class StreamlitWriteTest(unittest.TestCase):
     @patch('streamlit.util.is_type')
     def test_pyplot(self, is_type):
         """Test st.write with matplotlib."""
-        is_type.side_effect = [False, True]
+        is_type.side_effect = [False, False, True]
 
         class FakePyplot(object):
             pass
@@ -809,6 +809,23 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write({'a': 1, 'b': 2})
 
             p.assert_called_once()
+
+    @patch('streamlit.markdown')
+    @patch('streamlit.json')
+    def test_dict_and_string(self, mock_json, mock_markdown):
+        """Test st.write with dict."""
+        manager = Mock()
+        manager.attach_mock(mock_json, 'json')
+        manager.attach_mock(mock_markdown, 'markdown')
+
+        st.write('here is a dict', {'a': 1, 'b': 2}, ' and that is all')
+
+        expected_calls = [
+            call.markdown('here is a dict'),
+            call.json({'a': 1, 'b': 2}),
+            call.markdown(' and that is all'),
+        ]
+        self.assertEqual(manager.mock_calls, expected_calls)
 
     def test_default_object(self):
         """Test st.write with default clause ie some object."""

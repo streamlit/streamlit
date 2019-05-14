@@ -19,10 +19,18 @@ setup_2_3_shims(globals())
 
 # Give the package a version.
 import pkg_resources
+import uuid
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = pkg_resources.get_distribution('streamlit').version
+
+# Deterministic Unique Streamlit User ID
+# The try/except is needed for python 2/3 compatibility
+try:
+    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode())))
+except UnicodeDecodeError:
+    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode()).encode('utf-8')))
 
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger
@@ -94,6 +102,7 @@ area_chart      = _with_dg(DeltaGenerator.area_chart)  # noqa: E221
 audio           = _with_dg(DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(DeltaGenerator.bar_chart)  # noqa: E221
+bokeh_chart     = _with_dg(DeltaGenerator.bokeh_chart)  # noqa: E221
 code            = _with_dg(DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(DeltaGenerator.dataframe)  # noqa: E221
 deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
@@ -158,6 +167,7 @@ def write(*args):
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
         - write(plotly_fig) : Displays a Plotly figure.
+        - write(bokeh_fig)  : Displays a Bokeh figure.
 
     Example
     -------
@@ -238,13 +248,20 @@ def write(*args):
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif util.is_type(arg, 'altair.vegalite.v2.api.Chart'):
+            elif util.is_altair_chart(arg):
+                flush_buffer()
                 altair_chart(arg)
             elif util.is_type(arg, 'matplotlib.figure.Figure'):
+                flush_buffer()
                 pyplot(arg)
             elif util.is_plotly_chart(arg):
+                flush_buffer()
                 plotly_chart(arg)
+            elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
+                flush_buffer()
+                bokeh_chart(arg)
             elif type(arg) in dict_types:
+                flush_buffer()
                 json(arg)
             else:
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
@@ -257,7 +274,7 @@ def write(*args):
 
 
 @contextlib.contextmanager
-def spinner(text):
+def spinner(text='In progress...'):
     """Temporarily displays a message while executing a block of code.
 
     Parameters

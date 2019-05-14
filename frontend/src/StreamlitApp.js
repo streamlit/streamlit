@@ -7,12 +7,9 @@
 
 import React, { PureComponent } from 'react';
 import { hotkeys } from 'react-keyboard-shortcuts';
-import { AutoSizer } from 'react-virtualized';
 import {
-  Alert,
   Col,
   Container,
-  Progress,
   Row,
 } from 'reactstrap';
 import { fromJS } from 'immutable';
@@ -28,32 +25,16 @@ import { ConnectionState } from './ConnectionState';
 import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
 import { ReportEventDispatcher } from './ReportEvent';
+import { ReportView } from './ReportView';
 
-// Load (non-lazy) core elements.
-import Chart from './elements/Chart';
-import DocString from './elements/DocString';
-import ExceptionElement from './elements/ExceptionElement';
-import Table from './elements/Table';
-import { Text } from './elements/Text';
-
-import { setStreamlitVersion } from './baseconsts';
 import { ForwardMsg, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
+import { logError } from './log';
+import { setInstallationId, setStreamlitVersion } from './baseconsts';
 import { toImmutableProto, dispatchOneOf } from './immutableProto';
 
 import './StreamlitApp.css';
-
-// Lazy-load display elements.
-const Audio = React.lazy(() => import('./elements/Audio'));
-const Balloons = React.lazy(() => import('./elements/Balloons'));
-const DataFrame = React.lazy(() => import('./elements/DataFrame'));
-const ImageList = React.lazy(() => import('./elements/ImageList'));
-const Map = React.lazy(() => import('./elements/Map'));
-const DeckGlChart = React.lazy(() => import('./elements/DeckGlChart'));
-const PlotlyChart = React.lazy(() => import('./elements/PlotlyChart'));
-const VegaLiteChart = React.lazy(() => import('./elements/VegaLiteChart'));
-const Video = React.lazy(() => import('./elements/Video'));
 
 
 class StreamlitApp extends PureComponent {
@@ -94,15 +75,7 @@ class StreamlitApp extends PureComponent {
     this.reportEventDispatcher = new ReportEventDispatcher();
     this.statusWidgetRef = React.createRef();
 
-    this.connectionManager = new ConnectionManager({
-      getUserLogin: this.getUserLogin,
-      onMessage: this.handleMessage,
-      onConnectionError: this.handleConnectionError,
-      setReportName: this.setReportName,
-      connectionStateChanged: newState => {
-        this.setState({connectionState: newState});
-      },
-    });
+    this.connectionManager = null;
   }
 
   /**
@@ -150,7 +123,19 @@ class StreamlitApp extends PureComponent {
     },
   };
 
-  async componentDidMount() {
+  componentDidMount() {
+    // Initialize connection manager here, to avoid
+    // "Can't call setState on a component that is not yet mounted." error.
+    this.connectionManager = new ConnectionManager({
+      getUserLogin: this.getUserLogin,
+      onMessage: this.handleMessage,
+      onConnectionError: this.handleConnectionError,
+      setReportName: this.setReportName,
+      connectionStateChanged: newState => {
+        this.setState({ connectionState: newState });
+      },
+    });
+
     if (isEmbeddedInIFrame()) {
       document.body.classList.add('embedded');
     }
@@ -166,22 +151,29 @@ class StreamlitApp extends PureComponent {
     }
   }
 
+  showError(error, info) {
+    logError(error, info);
+
+    const errorStr = info == null ?
+      `${error}` :
+      `${error}.\n${info}`;
+
+    this.showSingleTextElement(errorStr, TextProto.Format.ERROR);
+  }
+
   /**
    * Resets the state of client to an empty report containing a single
    * element which is an alert of the given type.
    *
-   * msg    - The message to display
+   * body   - The message to display
    * format - One of the accepted formats from Text.proto.
    */
-  showSingleTextElement(msg, format) {
+  showSingleTextElement(body, format) {
     this.setState({
       reportId: '<null>',
       elements: fromJS([{
         type: 'text',
-        text: {
-          format,
-          body: msg,
-        },
+        text: { format, body },
       }]),
     });
   }
@@ -190,19 +182,23 @@ class StreamlitApp extends PureComponent {
    * Callback when we get a message from the server.
    */
   handleMessage(msgProto) {
-    const msg = toImmutableProto(ForwardMsg, msgProto);
+    try {
+      const msg = toImmutableProto(ForwardMsg, msgProto);
 
-    dispatchOneOf(msg, 'type', {
-      initialize: initializeMsg => this.handleInitialize(initializeMsg),
-      sessionStateChanged: msg => this.handleSessionStateChanged(msg),
-      sessionEvent: msg => this.handleSessionEvent(msg),
-      newReport: newReportMsg => this.handleNewReport(newReportMsg),
-      delta: delta => this.applyDelta(delta),
-      reportFinished: () => this.clearOldElements(),
-      uploadReportProgress: progress =>
-        this.openDialog({ progress, type: 'uploadProgress' }),
-      reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
-    });
+      dispatchOneOf(msg, 'type', {
+        initialize: initializeMsg => this.handleInitialize(initializeMsg),
+        sessionStateChanged: msg => this.handleSessionStateChanged(msg),
+        sessionEvent: msg => this.handleSessionEvent(msg),
+        newReport: newReportMsg => this.handleNewReport(newReportMsg),
+        delta: delta => this.applyDelta(delta),
+        reportFinished: () => this.clearOldElements(),
+        uploadReportProgress: progress =>
+          this.openDialog({ progress, type: 'uploadProgress' }),
+        reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
+      });
+    } catch (err) {
+      this.showError(err);
+    }
   }
 
   /**
@@ -211,6 +207,7 @@ class StreamlitApp extends PureComponent {
    */
   handleInitialize(initializeMsg) {
     setStreamlitVersion(initializeMsg.get('streamlitVersion'));
+    setInstallationId(initializeMsg.get('userInfo').get('installationId'));
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.get('gatherUsageStats'),
@@ -277,12 +274,6 @@ class StreamlitApp extends PureComponent {
       reportId: newReportMsg.get('id'),
       commandLine: newReportMsg.get('commandLine').toJS().join(' '),
     });
-
-    setTimeout(() => {
-      if (newReportMsg.get('id') === this.state.reportId) {
-        this.clearOldElements();
-      }
-    }, 3000);
   }
 
   /**
@@ -335,7 +326,7 @@ class StreamlitApp extends PureComponent {
   clearOldElements() {
     this.setState(({ elements, reportId }) => ({
       elements: elements.map((elt) => {
-        if (elt.get('reportId') === reportId) {
+        if (elt && elt.get('reportId') === reportId) {
           return elt;
         }
         return fromJS({
@@ -372,7 +363,7 @@ class StreamlitApp extends PureComponent {
         });
       }
     } else {
-      console.warn('Cannot save report when proxy is disconnected');
+      logError('Cannot save report when proxy is disconnected');
     }
   }
 
@@ -391,7 +382,7 @@ class StreamlitApp extends PureComponent {
         defaultAction: this.rerunScript,
       });
     } else {
-      console.warn('Cannot rerun script when proxy is disconnected.');
+      logError('Cannot rerun script when proxy is disconnected.');
     }
   }
 
@@ -406,7 +397,7 @@ class StreamlitApp extends PureComponent {
     this.closeDialog();
 
     if (!this.isProxyConnected()) {
-      console.warn('Cannot rerun script when proxy is disconnected.');
+      logError('Cannot rerun script when proxy is disconnected.');
       return;
     }
 
@@ -436,7 +427,7 @@ class StreamlitApp extends PureComponent {
   /** Requests that the server stop running the report */
   stopReport() {
     if (!this.isProxyConnected()) {
-      console.warn('Cannot stop report when proxy is disconnected.');
+      logError('Cannot stop report when proxy is disconnected.');
       return;
     }
 
@@ -463,7 +454,7 @@ class StreamlitApp extends PureComponent {
         defaultAction: this.clearCache,
       });
     } else {
-      console.warn('Cannot clear cache: proxy is disconnected');
+      logError('Cannot clear cache: proxy is disconnected');
     }
   }
 
@@ -476,7 +467,7 @@ class StreamlitApp extends PureComponent {
       trackEventRemotely('clearCache');
       this.sendBackMsg({type: 'clearCache', clearCache: true});
     } else {
-      console.warn('Cannot clear cache: proxy is disconnected');
+      logError('Cannot clear cache: proxy is disconnected');
     }
   }
 
@@ -487,7 +478,7 @@ class StreamlitApp extends PureComponent {
     if (this.connectionManager) {
       this.connectionManager.sendMessage(msg);
     } else {
-      console.error(`Not connected. Cannot send back message: ${msg}`);
+      logError(`Not connected. Cannot send back message: ${msg}`);
     }
   }
 
@@ -495,8 +486,7 @@ class StreamlitApp extends PureComponent {
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errMsg) {
-    this.showSingleTextElement(
-      `Connection error: ${errMsg}`, TextProto.Format.WARNING);
+    this.showError(`Connection error: ${errMsg}`);
   }
 
   /**
@@ -569,9 +559,11 @@ class StreamlitApp extends PureComponent {
                   onFailure={this.onLogInError}
                 />
                 :
-                <AutoSizer className="main">
-                  { ({ width }) => this.renderElements(width) }
-                </AutoSizer>
+                <ReportView
+                  elements={this.state.elements}
+                  reportId={this.state.reportId}
+                  reportRunState={this.state.reportRunState}
+                />
               }
             </Col>
           </Row>
@@ -586,56 +578,6 @@ class StreamlitApp extends PureComponent {
         </Container>
       </div>
     );
-  }
-
-  renderElements(width) {
-    return this.state.elements.map((element) => {
-      try {
-        if (!element) { throw new Error('Transmission error.'); }
-        return dispatchOneOf(element, 'type', {
-          audio: audio => <Audio audio={audio} width={width} />,
-          balloons: balloons => <Balloons balloons={balloons} />,
-          chart: chart => <Chart chart={chart} width={width} />,
-          dataFrame: df => <DataFrame df={df} width={width} />,
-          deckGlChart: el => <DeckGlChart element={el} width={width} />,
-          docString: doc => <DocString element={doc} width={width} />,
-          empty: empty => undefined,
-          exception: exc => <ExceptionElement element={exc} width={width} />,
-          imgs: imgs => <ImageList imgs={imgs} width={width} />,
-          map: map => <Map map={map} width={width} />,
-          plotlyChart: el => <PlotlyChart element={el} width={width} />,
-          progress: p => <Progress value={p.get('value')} style={{width}} />,
-          table: df => <Table df={df} width={width} />,
-          text: text => <Text element={text} width={width} />,
-          vegaLiteChart: el => <VegaLiteChart element={el} width={width} />,
-          video: video => <Video video={video} width={width} />,
-        });
-      } catch (err) {
-        return <Alert color="warning" style={{ width }}>{err.message}</Alert>;
-      }
-    }).push(
-      <div style={{ width }} className="footer" />
-    ).flatMap((element, indx) => {
-      if (element) {
-        return [
-          <div
-            className="element-container"
-            key={indx}
-            >
-            <React.Suspense
-              fallback={<Text
-                element={makeElementWithInfoText('Loading...').get('text')}
-                width={width}
-              />}
-            >
-              {element}
-            </React.Suspense>
-          </div>,
-        ];
-      } else {
-        return [];
-      }
-    });
   }
 
   async getUserLogin() {
@@ -664,6 +606,8 @@ function handleNewElementMessage(element, reportId) {
   trackEventRemotely('visualElementUpdated', {
     elementType: element.get('type'),
   });
+  // Set reportId on elements so we can clear old elements when the report
+  // script is re-executed.
   return element.set('reportId', reportId);
 }
 

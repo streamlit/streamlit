@@ -7,11 +7,12 @@
 
 import url from 'url';
 
-import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
+import {StaticConnection} from './StaticConnection';
+import {WebsocketConnection} from './WebsocketConnection';
 import {ConnectionState} from './ConnectionState';
+import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
 import {configureCredentials, getObject} from './s3helper';
-import StaticConnection from './StaticConnection';
-import WebsocketConnection from './WebsocketConnection';
+import {logError} from './log';
 
 interface Props {
   /**
@@ -40,14 +41,6 @@ interface Props {
    * Called when our ConnectionState is changed.
    */
   connectionStateChanged: (connectionState: ConnectionState) => void;
-}
-
-/**
- * Params for our setConnectionState function
- */
-interface SetConnectionStateParams {
-  connectionState: ConnectionState;
-  errMsg?: string;
 }
 
 export class ConnectionManager {
@@ -79,7 +72,7 @@ export class ConnectionManager {
       this.connection.sendMessage(obj);
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      console.warn(`Cannot send message when proxy is disconnected: ${obj}`);
+      logError(`Cannot send message when proxy is disconnected: ${obj}`);
     }
   }
 
@@ -100,14 +93,11 @@ export class ConnectionManager {
         throw new Error('URL must contain either a report name or an ID.');
       }
     } catch (err) {
-      this.setConnectionState({
-        connectionState: ConnectionState.ERROR,
-        errMsg: err.message,
-      });
+      this.setConnectionState(ConnectionState.ERROR, err.message);
     }
   }
 
-  private setConnectionState = ({connectionState, errMsg}: SetConnectionStateParams): void => {
+  private setConnectionState = (connectionState: ConnectionState, errMsg?: string): void => {
     if (this.connectionState !== connectionState) {
       this.connectionState = connectionState;
       this.props.connectionStateChanged(connectionState);
@@ -188,7 +178,7 @@ export class ConnectionManager {
       if (err.message === 'PermissionError') {
         permissionError = true;
       } else {
-        console.error(err);
+        logError(err);
         throw new Error('Unable to fetch report.');
       }
     }
@@ -199,7 +189,7 @@ export class ConnectionManager {
         await configureCredentials(idToken);
         manifest = await fetchManifest(reportId);
       } catch (err) {
-        console.error(err);
+        logError(err);
         throw new Error('Unable to log in.');
       }
     }
