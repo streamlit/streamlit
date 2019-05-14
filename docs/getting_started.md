@@ -6,13 +6,14 @@
 
 If you've made it this far, you probably have an idea of what you can do with Streamlit (if you don't, watch [this video](replace-with-link-to-demo)). In this guide, we'll introduce you to Streamlit's core features and how they are used to create a report.
 
-The easiest way to learn to use Streamlit is to try things out. As you read through this guide, test each method. As long as your report is running, every time you add an element and save, Streamlit regenerates the report and the changes are displayed in the browser almost instantly.  This allows you to work in a fast interactive loop: you write some code, save it, review the output, write some more, and so on, until you’re happy with the results. The goal is to use Streamlit to review your code, debug it, perfect it, and share it. What's drawn in the report is completely up to you.
+The easiest way to learn how to use Streamlit is to try things out yourself. As you read through this guide, test each method. As long as your report is running, every time you add a new element to your script and save, Streamlit's UI will ask if you'd like to rerun the report and view the changes. This allows you to work in a fast interactive loop: you write some code, save it, review the output, write some more, and so on, until you’re happy with the results. The goal is to use Streamlit to review your code, debug it, perfect it, and share it. What's drawn in the report is completely up to you.
 
+Use the links below to jump to a specific section:
 
 ```eval_rst
-.. contents:: Table of contents
+.. contents::
     :local:
-    :depth: 2
+    :depth: 1
 ```
 
 ## Prerequisites
@@ -29,6 +30,13 @@ Before you get started, you're going to need a few things:
 
 Regardless of which package management tool you're using, we recommend running these commands in a virtual environment. This ensures that the dependencies pulled in for Streamlit don't impact any other your other Python projects you're working on.
 
+If you're using Conda, you have access to virtual environments by default. If you need help getting a virtual environment setup, see [Managing environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+
+If you're not using Conda, you have a few options:
+* [virtualenv](https://virtualenv.pypa.io/en/latest/)
+* [venv](https://docs.python.org/3/library/venv.html)
+* [pipenv](https://docs.pipenv.org/en/latest/)
+
 ### PIP
 
 If you're using PIP to install Streamlit, don't worry, some of the more popular data science and machine learning libraries like Numpy and Pandas are downloaded during installation.
@@ -36,7 +44,7 @@ If you're using PIP to install Streamlit, don't worry, some of the more popular 
 Run this command to install Streamlit via PIP:
 
 ```bash
-pip install streamlit
+$ pip install streamlit
 ```
 
 ### Conda
@@ -45,16 +53,16 @@ Run this command to install Streamlit with Conda:
 
 ```bash
 # Add required channels.
-conda config --add channels conda-forge
-conda config --add channels https://repo.streamlit.io/streamlit-forge
+$ conda config --add channels conda-forge
+$ conda config --add channels https://repo.streamlit.io/streamlit-forge
 
 # Install Streamlit!
-conda install streamlit
+$ conda install streamlit
 ```
 
 ## Import Streamlit
 
-Now that everything's installed, you'll need to create a file for your report and import Streamlit.
+Now that everything's installed, let's create a new Python script and import Streamlit.
 
 1. Create a new Python file named `first_report.py`, then open it with your IDE or text editor.
 2. Import Streamlit and add a title. At least one call to Streamlit is required to generate a report.
@@ -70,7 +78,7 @@ Now that everything's installed, you'll need to create a file for your report an
    streamlit.title("My first report")
    ```
 
-3. Run your report. This will open a new tab in your default browser. You won't see much -- just a title -- but in the next few sections we'll populate the report with text, tables, and charts.
+3. Run your report. A new tab will open in your default browser, and you should see a title. In the next few sections we'll populate the report with additional text, tables, and charts.
 
    ```bash
    $ python first_report.py
@@ -84,7 +92,7 @@ A good report isn't just charts and data visualizations, it needs clear and deta
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our `API reference<https://streamlit.io/secret/docs/api/text.html>`_ for a full list of features.
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our `API reference <https://streamlit.io/secret/docs/api/text.html>`_ for a full list of features.
 ```
 
 ### Start with a title
@@ -127,7 +135,9 @@ There are times when you need more than plain text. With [`streamlit.markdown`](
 streamlit.markdown("**NOTE:** Markdown is perfect for when you want to *empahsize* elements in your report.")
 ```
 
-There's one more method we're going to cover that allows you to add text to a report. [`streamlit.write()`](https://streamlit.io/secret/docs/api/text.html#streamlit.write) is the only text method that accepts multiple arguments and data types. We consider it the "Swiss Army knife" of Streamlit commands. It's behavior will change depending on the content that's provided. However, it's not without limitations, so we encourage you to review the [API reference](https://streamlit.io/secret/docs/api/text.html#streamlit.write).
+There's one more method we're going to cover that allows you to add text to a report. [`streamlit.write()`](https://streamlit.io/secret/docs/api/text.html#streamlit.write) is the only text method that accepts multiple arguments and data types. We consider it the "Swiss Army knife" of Streamlit commands.
+
+You can pass almost anything to `streamlit.write()`: text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit will figure it our and render it the right way. While powerful, there are limitations, so we encourage you to review the [API reference](https://streamlit.io/secret/docs/api/text.html#streamlit.write).
 
 Let's take a look at how you can use `streamlit.write()` to display text and a Pandas data frame:
 
@@ -150,14 +160,19 @@ Text is great, but Streamlit's strength is the ability to quickly manipulate dat
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for `data<https://streamlit.io/secret/docs/api/data.html>`_ and `charts<https://streamlit.io/secret/docs/api/charts.html>`_.
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for `data <https://streamlit.io/secret/docs/api/data.html>`_ and `charts <https://streamlit.io/secret/docs/api/charts.html>`_.
 ```
 
-### Display data frames and tables
+### Display data and tables
 
 There are a few ways to display data frames in Streamlit reports. In the previous section, you were introduced to `streamlit.write()`, which can be used to write anything from text to tables. Now let's take a look at methods designed specifically for visualizing data. You might be asking yourself, "why wouldn't I always you `streamlit.write()`?" The main reason is that you can't reuse the slot in the report created by `streamlit.write()`. Put simply, you can't update any elements created with `streamlit.write()`.
 
-Let's create a data frame. You'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](https://streamlit.io/secret/docs/api/data.html#streamlit.dataframe) method to draw the interactive table.
+Let's create a data frame. In this sample, you'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](https://streamlit.io/secret/docs/api/data.html#streamlit.dataframe) method to draw the interactive table.
+
+```eval_rst
+.. note::
+   This sample uses Numpy to generate a random sample, but you can use Pandas DataFrames, Numpy arrays, or plain Python arrays.
+```
 
 ```Python
 dataframe = numpy.random.randn(10, 20)
@@ -174,7 +189,7 @@ Let's expand on the first example using the Pandas `Styler` object to highlight 
 ```Python
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=("col %d' % i for i in range(20)))
+    columns=("col %d" % i for i in range(20)))
 
 streamlit.dataframe(dataframe.style.highlight_max(axis=0))
 ```
@@ -184,15 +199,15 @@ Streamlit also has a method for static table generation: [`streamlit.table()`](h
 ```Python
 dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=("col %d' % i for i in range(20)))
+    columns=("col %d" % i for i in range(20)))
 streamlit.table(dataframe)
 ```
 
 ### Draw bar charts, line charts, and maps
 
-Streamlit supports sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like PyPlot, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
+Streamlit supports sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like Matplotlib, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
 
-The [`streamlit.barchart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
+The [`streamlit.bar_chart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
 
 ```Python
 chart_data = pandas.DataFrame(
@@ -224,20 +239,20 @@ streamlit.map(map_data)
 
 ## Update existing elements
 
-Every time you save a report, Streamlit re-executes the entire Python script from top to bottom. Then Streamlit, does a bunch of computer-sciencey magic to make sure your report is updated efficiently and rendered in the browser.
+Every time you update your report and save, Streamlit's UI will ask if you'd like to **rerun** the report. Then Streamlit, does a bunch of computer-sciencey magic to make sure your report is updated efficiently and rendered in the browser.
 
 In this section, you'll learn how to update existing elements in a report.
 
 ### Replace text with text
 
-Whenever you use a Streamlit method to write text or draw a chart, an element is created, which is called a "slot". With the exception of elements created by `streamlit.write()`, slot can be updated with like content, or completely different data.
+Whenever you use a Streamlit method to place text, charts, or data into your Streamlit report, a reference to that element is returned. You can call methods on that reference to update the element with more data, or completely replace it with something else.
 
 Let's start with an easy example. Here you're going to create a text element, then update (or overwrite) that element.
 
 ```Python
 my_element = streamlit.text("Hello sun.")
 # Draws "Hello sun" in the Streamlit report,
-# and saves that "slot". This slot can be reused.
+# and saves that reference. This slot can be reused.
 
 my_element.text("Goodnight moon.")
 # Replaces "Hello sun" with "Goodnight moon" in the report.
@@ -256,7 +271,7 @@ my_second_element = streamlit.text("Loading data...")
 
 update_dataframe = pandas.DataFrame(
     numpy.random.randn(10, 20),
-    columns=("col %d' % i for i in range(20)))
+    columns=("col %d" % i for i in range(20)))
 
 # Simulates loading a large data set.
 time.sleep(5)
@@ -312,7 +327,7 @@ streamlit.text("This is where you provide a killer conclusion.")
 my_slot1.text("You can use a slot whenever you have something to say, draw, or represent.")
 
 # Replaces the second empty slot with a chart.
-my_slot2.line_chart(np.random.randn(20, 2))
+my_slot2.line_chart(numpy.random.randn(20, 2))
 ```
 
 ## What's next?
