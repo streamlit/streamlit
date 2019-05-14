@@ -53,6 +53,7 @@ class App extends PureComponent {
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
+      widgetState: {},
     }
 
     // Bind event handlers.
@@ -122,6 +123,17 @@ class App extends PureComponent {
       },
     },
   }
+
+  getWidgetState = () => {
+    return this.state.widgetState
+  }
+
+  setWidgetState = (key, value) => {
+    let widgetState = this.getWidgetState()
+    widgetState[key] = value
+    this.setState({widgetState})
+  }
+
 
   componentDidMount() {
     // Initialize connection manager here, to avoid
@@ -511,7 +523,7 @@ class App extends PureComponent {
   /**
    * Sends a message back to the server.
    */
-  sendBackMsg(msg) {
+  sendBackMsg = (msg) => {
     if (this.connectionManager) {
       this.connectionManager.sendMessage(msg)
     } else {
@@ -598,6 +610,9 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
+                  sendBackMsg={this.sendBackMsg}
+                  getWidgetState={this.getWidgetState}
+                  setWidgetState={this.setWidgetState}
                 />
               }
             </Col>

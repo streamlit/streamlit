@@ -14,8 +14,10 @@ import random
 import sys
 import textwrap
 import traceback
+import uuid
 
 from streamlit import protobuf
+from streamlit.widgets import Widgets
 
 # setup logging
 from streamlit.logger import get_logger
@@ -99,7 +101,7 @@ def _with_element(method):
     def wrapped_method(self, *args, **kwargs):
         try:
             def marshall_element(element):
-                method(self, element, *args, **kwargs)
+                return method(self, element, *args, **kwargs)
             return self._enqueue_new_element_delta(marshall_element)
         except Exception as e:
             # First, write the delta to stderr.
@@ -114,6 +116,16 @@ def _with_element(method):
                 self.exception(e)
 
     return wrapped_method
+
+def _widget(f):
+    @_wraps_with_cleaned_sig(f)
+    @_with_element
+    def wrapper(dg, element, *args, **kwargs):
+        id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
+        element.widget.id = id
+        ui_value = Widgets.get_current().get(id)
+        return f(dg, element, ui_value, *args, **kwargs)
+    return wrapper
 
 
 class DeltaGenerator(object):
@@ -157,13 +169,13 @@ class DeltaGenerator(object):
             element.
 
         """
+        msg = protobuf.ForwardMsg()
+        rv = marshall_element(msg.delta.new_element)
+        msg.delta.id = self._id
+
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
-            return self
-
-        msg = protobuf.ForwardMsg()
-        marshall_element(msg.delta.new_element)
-        msg.delta.id = self._id
+            return rv if rv is not None else self
 
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
@@ -175,12 +187,12 @@ class DeltaGenerator(object):
         msg_was_enqueued = self._enqueue(msg)
 
         if not msg_was_enqueued:
-            return self
+            return rv if rv is not None else self
 
         if self._is_root:
             self._id += 1
 
-        return output_dg
+        return rv if rv is not None else self
 
     @_with_element
     def balloons(self, element):
@@ -1091,6 +1103,23 @@ class DeltaGenerator(object):
         import streamlit.elements.generic_binary_proto as generic_binary_proto
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
+
+    @_widget
+    def checkbox(self, element, ui_value, label, value):
+        """Checkbox doc string."""
+        element.widget.label = label
+        element.widget.checkbox.value = value
+        return ui_value if ui_value is not None else value
+
+    @_widget
+    def slider(self, element, ui_value, label, value, min, max, step):
+        """Slider doc string."""
+        element.widget.label = label
+        element.widget.slider.min = min
+        element.widget.slider.max = max
+        element.widget.slider.step = step
+        element.widget.slider.value = value
+        return ui_value if ui_value is not None else value
 
     @_with_element
     def progress(self, element, value):

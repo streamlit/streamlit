@@ -31,6 +31,7 @@ const GraphVizChart = React.lazy(() => import('../../elements/GraphVizChart/'))
 const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart/'))
 const Video = React.lazy(() => import('../../elements/Video'))
+const Widget = React.lazy(() => import('../../elements/Widget'))
 
 type Element = ImmutableMap<string, any>; // a report Element
 
@@ -51,6 +52,10 @@ interface Props {
    * (When we're viewing a shared report, this is set to false.)
    */
   showStaleElementIndicator: boolean;
+
+  sendBackMsg: Function;
+  getWidgetState: Function;
+  setWidgetState: Function;
 }
 
 /**
@@ -146,6 +151,10 @@ export class ReportView extends PureComponent<Props> {
       text: (el: Element) => <Text element={el} width={width}/>,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width}/>,
       video: (el: Element) => <Video element={el} width={width}/>,
+      widget: (el: Element) => <Widget element={el} width={width}
+        sendBackMsg={this.props.sendBackMsg}
+        setWidgetState={this.props.setWidgetState}
+        getWidgetState={this.props.getWidgetState}/>,
     })
   }
 }

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+message Widget {
+  string id = 1;
+  string label = 2;
+
+  oneof type {
+    Button button = 3;
+    Checkbox checkbox = 4;
+    Slider slider = 5;
+  }
+}
+
+message Checkbox {
+  bool value = 1;
+}
+
+message Button {
+  bool value = 1;
+}
+
+message Slider {
+  int32 value = 1;
+  int32 min = 2;
+  int32 max = 3;
+  int32 step = 4;
+}

@@ -1,6 +1,6 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
-
+import json
 import logging
 import threading
 import urllib
@@ -18,6 +18,7 @@ from streamlit import util
 from streamlit.credentials import Credentials
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
+from streamlit.widgets import Widgets
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -415,6 +416,11 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
                 self._server._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
                 self._server._scriptrunner.request_stop()
+            elif msg_type == 'widget_json':
+                payload = json.loads(msg.widget_json)
+                Widgets.get_current().set(payload)
+                Widgets.get_current().dump()
+                self._server._handle_rerun_script_request(' '.join(self._server._report.argv))
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
