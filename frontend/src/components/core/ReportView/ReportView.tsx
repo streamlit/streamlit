@@ -20,15 +20,16 @@ import Table from '../../elements/Table';
 import Text from '../../elements/Text';
 
 // Lazy-load display elements.
-const Audio = React.lazy(() => import('../../elements/Audio'));
-const Balloons = React.lazy(() => import('../../elements/Balloons'));
-const DataFrame = React.lazy(() => import('../../elements/DataFrame'));
-const ImageList = React.lazy(() => import('../../elements/ImageList'));
-const Map = React.lazy(() => import('../../elements/Map'));
-const DeckGlChart = React.lazy(() => import('../../elements/DeckGlChart'));
-const BokehChart = React.lazy(() => import('../../elements/BokehChart'));
-const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart'));
-const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart'));
+const Audio = React.lazy(() => import('../../elements/Audio/'));
+const Balloons = React.lazy(() => import('../../elements/Balloons/'));
+const DataFrame = React.lazy(() => import('../../elements/DataFrame/'));
+const ImageList = React.lazy(() => import('../../elements/ImageList/'));
+const Map = React.lazy(() => import('../../elements/Map/'));
+const DeckGlChart = React.lazy(() => import('../../elements/DeckGlChart/'));
+const BokehChart = React.lazy(() => import('../../elements/BokehChart/'));
+const GraphVizChart = React.lazy(() => import('../../elements/GraphVizChart/'));
+const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart/'));
+const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart/'));
 const Video = React.lazy(() => import('../../elements/Video'));
 
 type Element = ImmutableMap<string, any>; // a report Element
@@ -128,6 +129,7 @@ export class ReportView extends PureComponent<Props> {
       docString: (el: Element) => <DocString element={el} width={width}/>,
       empty: () => undefined,
       exception: (el: Element) => <ExceptionElement element={el} width={width}/>,
+      graphvizChart: (el: Element) => <GraphVizChart element={el} id={index} width={width} />,
       imgs: (el: Element) => <ImageList element={el} width={width}/>,
       map: (el: Element) => <Map element={el} width={width}/>,
       plotlyChart: (el: Element) => <PlotlyChart element={el} width={width}/>,

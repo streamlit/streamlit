@@ -41,6 +41,7 @@ LOGGER = logger.get_logger('root')
 
 import contextlib
 import functools
+import inspect
 import re
 import sys
 import textwrap
@@ -51,8 +52,8 @@ import types
 from streamlit.DeltaConnection import DeltaConnection
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.caching import cache  # Just for export.
+from streamlit import code_util
 from streamlit import util
-
 
 this_module = sys.modules[__name__]
 
@@ -109,6 +110,7 @@ deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty           = _with_dg(DeltaGenerator.empty)  # noqa: E221
 error           = _with_dg(DeltaGenerator.error)  # noqa: E221
 exception       = _with_dg(DeltaGenerator.exception)  # noqa: E221
+graphviz_chart  = _with_dg(DeltaGenerator.graphviz_chart)  # noqa: E221
 header          = _with_dg(DeltaGenerator.header)  # noqa: E221
 help            = _with_dg(DeltaGenerator.help)  # noqa: E221
 image           = _with_dg(DeltaGenerator.image)  # noqa: E221
@@ -135,6 +137,7 @@ _text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
 # Config
 set_option = config.set_option
 get_option = config.get_option
+
 
 # Special methods:
 
@@ -166,6 +169,7 @@ def write(*args):
         - write(obj)        : The default is to print str(obj).
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
+        - write(graphviz)   : Displays a Graphviz graph.
         - write(plotly_fig) : Displays a Plotly figure.
         - write(bokeh_fig)  : Displays a Bokeh figure.
 
@@ -260,6 +264,9 @@ def write(*args):
             elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
                 flush_buffer()
                 bokeh_chart(arg)
+            elif util.is_graphviz_chart(arg):
+                flush_buffer()
+                graphviz_chart(arg)
             elif type(arg) in dict_types:
                 flush_buffer()
                 json(arg)
@@ -267,6 +274,66 @@ def write(*args):
                 string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
 
         flush_buffer()
+
+    except Exception:
+        _, exc, exc_tb = sys.exc_info()
+        exception(exc, exc_tb)  # noqa: F821
+
+
+def show(*args):
+    """Write arguments to your report for debugging purposes.
+
+    Show() has similar properties to write():
+
+        1. You can pass in multiple arguments, all of which will be debugged.
+        2. It returns None, so it's "slot" in the report cannot be reused.
+
+    Parameters
+    ----------
+    *args : any
+        One or many objects to debug in the Report.
+
+    Example
+    -------
+
+    >>> dataframe = pd.DataFrame({
+    ...     'first column': [1, 2, 3, 4],
+    ...     'second column': [10, 20, 30, 40],
+    ... }))
+    >>> st.show(dataframe)
+
+    Notes
+    -----
+    This is an experimental feature with usage limitations.
+
+    - The method must be called with the name `show`
+    - Must be called in one line of code, and only once per line
+    - When passing multiple arguments the inclusion of `,` or `)` in a string
+    argument may cause an error.
+
+    """
+    if not args:
+        return
+
+    try:
+        # Get the calling line of code
+        previous_frame = inspect.currentframe().f_back
+        lines = inspect.getframeinfo(previous_frame)[3]
+
+        if not lines:
+            warning('`show` not enabled in the shell')
+            return
+
+        # Parse arguments from the line
+        line = lines[0].split('show', 1)[1]
+        inputs = code_util.get_method_args_from_code(args, line)
+
+        # Escape markdown and add deltas
+        for idx, input in enumerate(inputs):
+            escaped = util.escape_markdown(input)
+
+            markdown('**%s**' % escaped)
+            write(args[idx])
 
     except Exception:
         _, exc, exc_tb = sys.exc_info()

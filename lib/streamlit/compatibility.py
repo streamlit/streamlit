@@ -13,6 +13,7 @@ import os
 
 _dict = dict
 
+
 def setup_2_3_shims(caller_globals):
     """
     Meant to be called as follows:
@@ -66,6 +67,7 @@ def setup_2_3_shims(caller_globals):
         # Do a bunch of dark monkey patching magic.
         from future.standard_library import install_aliases
         install_aliases()
+
 
 def running_py3():
     """Returns True iff we're running 3 or above."""

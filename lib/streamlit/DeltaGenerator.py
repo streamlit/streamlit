@@ -736,6 +736,43 @@ class DeltaGenerator(object):
         vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
 
     @_with_element
+    def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
+        """Display a graph using the dagre-d3 library.
+
+        Parameters
+        ----------
+        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
+            The Graphlib graph object or dot string to display
+        width : type
+            The chart width in pixels, or 0 for full width.
+        height : type
+            The chart height in pixels, or 0 for default height.
+
+        Example
+        -------
+
+        >>> import streamlit as st
+        >>> import graphviz as graphviz
+        >>>
+        >>> # create a graphlib graph object
+        ... graph = graphviz.Graph(comment='The Round Table')
+        >>> graph.node('A', 'King Arthur')
+        >>> graph.node('B', 'Sir Bedevere the Wise')
+        >>> graph.node('L', 'Sir Lancelot the Brave')
+        >>> graph.edges(['AB', 'AL'])
+        >>> graph.edge('B', 'L', constraint='false')
+        >>>
+        >>> st.graphviz_chart(graph)
+        >>>
+        >>> # render from the dot string
+        ... st.graphviz_chart(graph.source)
+
+        """
+        import streamlit.elements.graphviz_chart as graphviz_chart
+        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot,
+                                width=width, height=height)
+
+    @_with_element
     def plotly_chart(
             self, element, figure_or_data, width=0, height=0,
             sharing='streamlit', **kwargs):
@@ -760,7 +797,7 @@ class DeltaGenerator(object):
             The chart width in pixels, or 0 for full width.
 
         height : int
-            The chart width in pixels, or 0 for default height.
+            The chart height in pixels, or 0 for default height.
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
