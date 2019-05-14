@@ -313,6 +313,14 @@ def is_plotly_chart(obj):
     )
 
 
+def is_graphviz_chart(obj):
+    """True if input looks like a GraphViz chart."""
+    return (
+        is_type(obj, 'graphviz.dot.Graph') or
+        is_type(obj, 'graphviz.dot.Digraph')
+    )
+
+
 def _is_plotly_obj(obj):
     """True if input if from a type that lives in plotly.plotly_objs."""
     the_type = type(obj)
