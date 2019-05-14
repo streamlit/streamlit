@@ -1,1 +1,1 @@
-export { default } from './DataFrame';
+export { default } from './DataFrame'

@@ -7,30 +7,30 @@
  * Utilities to get information out of a protobuf.DataFrame.
  */
 
-import camelcase from 'camelcase';
-import { dispatchOneOf, mapOneOf, updateOneOf } from './immutableProto';
-import { format } from './format';
+import camelcase from 'camelcase'
+import { dispatchOneOf, mapOneOf, updateOneOf } from './immutableProto'
+import { format } from './format'
 
-export const INDEX_COLUMN_DESIGNATOR = 'index';
+export const INDEX_COLUMN_DESIGNATOR = 'index'
 
 const STRING_COLLATOR = new Intl.Collator('en', {
   numeric: false,
   sensitivity: 'base',
-});
+})
 
 function compareValues(a, b) {
   if (a < b) {
-    return -1;
+    return -1
   } else if (a > b) {
-    return 1;
+    return 1
   }
-  return 0;
+  return 0
 }
 
 function compareStrings(a, b) {
   // using a Collator is faster than string.localeCompare:
   // https://stackoverflow.com/questions/14677060/400x-sorting-speedup-by-switching-a-localecompareb-to-ab-1ab10/52369951#52369951
-  return STRING_COLLATOR.compare(a, b);
+  return STRING_COLLATOR.compare(a, b)
 }
 
 /**
@@ -39,33 +39,33 @@ function compareStrings(a, b) {
  * similarly, the sorted row indices will not include the header row.)
  */
 export function getSortedDataRowIndices(df, sortColumnIdx, sortAscending) {
-  const table = df.get('data');
-  const [nRows, nCols] = tableGetRowsAndCols(table);
+  const table = df.get('data')
+  const [nRows, nCols] = tableGetRowsAndCols(table)
   if (sortColumnIdx < 0 || sortColumnIdx >= nCols) {
     throw new Error(
-      `Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`);
+      `Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${nCols})`)
   }
 
-  const col = table.getIn(['cols', sortColumnIdx]);
+  const col = table.getIn(['cols', sortColumnIdx])
   const cmp = mapOneOf(col, 'type', {
     strings: compareStrings,
     doubles: compareValues,
     int64s: compareValues,
     datetimes: compareValues,
     timedeltas: compareValues,
-  });
+  })
 
-  const indices = new Array(nRows);
+  const indices = new Array(nRows)
   for (let i = 0; i < nRows; i += 1) {
-    indices[i] = i;
+    indices[i] = i
   }
   indices.sort((aRowIdx, bRowIdx) => {
-    const aValue = tableData(table, sortColumnIdx, aRowIdx);
-    const bValue = tableData(table, sortColumnIdx, bRowIdx);
-    return sortAscending ? cmp(aValue, bValue) : cmp(bValue, aValue);
-  });
+    const aValue = tableData(table, sortColumnIdx, aRowIdx)
+    const bValue = tableData(table, sortColumnIdx, bRowIdx)
+    return sortAscending ? cmp(aValue, bValue) : cmp(bValue, aValue)
+  })
 
-  return indices;
+  return indices
 }
 
 /**
@@ -78,25 +78,25 @@ export function getSortedDataRowIndices(df, sortColumnIdx, sortAscending) {
  * this treats them as empty (so their dimensions are [0, 0]).
  */
 export function dataFrameGetDimensions(df) {
-  const index = df ? df.get('index') : null;
-  const data = df ? df.get('data') : null;
-  const columns = df ? df.get('columns') : null;
+  const index = df ? df.get('index') : null
+  const data = df ? df.get('data') : null
+  const columns = df ? df.get('columns') : null
 
   const [headerCols, dataRowsCheck] = index ?
-    indexGetLevelsAndLength(index) : [0, 0];
+    indexGetLevelsAndLength(index) : [0, 0]
   const [headerRows, dataColsCheck] = columns ?
-    indexGetLevelsAndLength(columns) : [0, 0];
+    indexGetLevelsAndLength(columns) : [0, 0]
   const [dataRows, dataCols] = data ?
-    tableGetRowsAndCols(data) : [0, 0];
+    tableGetRowsAndCols(data) : [0, 0]
 
   if ((dataRows !== dataRowsCheck) || (dataCols !== dataColsCheck)) {
     throw new Error('Dataframe dimensions don\'t align: ' +
       `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-      `cols(${dataCols} != ${dataColsCheck})`);
+      `cols(${dataCols} != ${dataColsCheck})`)
   }
 
-  const cols = headerCols + dataCols;
-  const rows = headerRows + dataRows;
+  const cols = headerCols + dataCols
+  const rows = headerRows + dataRows
 
   return {
     headerRows,
@@ -105,7 +105,7 @@ export function dataFrameGetDimensions(df) {
     dataCols,
     cols,
     rows,
-  };
+  }
 }
 
 /**
@@ -113,15 +113,15 @@ export function dataFrameGetDimensions(df) {
  */
 export function tableGetRowsAndCols(table) {
   if (!table || !table.get('cols')) {
-    return [0, 0];
+    return [0, 0]
   }
 
-  const cols = table.get('cols').size;
+  const cols = table.get('cols').size
   if (cols === 0) {
-    return [0, 0];
+    return [0, 0]
   }
-  const rows = anyArrayLen(table.getIn(['cols', 0]));
-  return [rows, cols];
+  const rows = anyArrayLen(table.getIn(['cols', 0]))
+  return [rows, cols]
 }
 
 /**
@@ -135,25 +135,25 @@ export function tableGetRowsAndCols(table) {
  * ]
  */
 export function dataFrameToArrayOfDicts(df) {
-  const dataArr = [];
-  const [nRows, nCols] = tableGetRowsAndCols(df.get('data'));
+  const dataArr = []
+  const [nRows, nCols] = tableGetRowsAndCols(df.get('data'))
 
-  const dfColumns = df.get('columns');
-  const dfData = df.get('data');
+  const dfColumns = df.get('columns')
+  const dfData = df.get('data')
 
   for (let r = 0; r < nRows; r++) {
-    const rowDict = {};
+    const rowDict = {}
 
     for (let c = 0; c < nCols; c++) {
-      rowDict[indexGet(dfColumns, 0, c)] = tableGet(dfData, c, r);
+      rowDict[indexGet(dfColumns, 0, c)] = tableGet(dfData, c, r)
     }
 
-    dataArr.push(rowDict);
+    dataArr.push(rowDict)
   }
 
   // TODO: Handle indices too.
 
-  return dataArr;
+  return dataArr
 }
 
 /**
@@ -166,20 +166,20 @@ export function dataFrameToArrayOfDicts(df) {
  * }
  */
 export function dataFrameGet(df, col, row) {
-  const { headerRows, headerCols } = dataFrameGetDimensions(df);
+  const { headerRows, headerCols } = dataFrameGetDimensions(df)
   if (col < headerCols) {
     if (row < headerRows) {
       return {
         contents: '',
         styles: {},
         type: 'corner',
-      };
+      }
     } else {
       return {
         contents: indexGet(df.get('index'), col, row - headerRows),
         styles: {},
         type: 'col-header',
-      };
+      }
     }
   } else {
     if (row < headerRows) {
@@ -187,23 +187,23 @@ export function dataFrameGet(df, col, row) {
         contents: indexGet(df.get('columns'), row, col - headerCols),
         styles: {},
         type: 'row-header',
-      };
+      }
     } else {
       // If we have a formatted display value for the cell, return that.
       // Else return the data itself.
       const customDisplayValue = tableStyleGetDisplayValue(
-        df.get('style'), col - headerCols, row - headerRows);
+        df.get('style'), col - headerCols, row - headerRows)
 
       const contents = customDisplayValue != null ?
         customDisplayValue :
-        tableGet(df.get('data'), col - headerCols, row - headerRows);
+        tableGet(df.get('data'), col - headerCols, row - headerRows)
 
       return {
         contents: contents,
         styles: tableStyleGetCSS(
           df.get('style'), col - headerCols, row - headerRows) || {},
         type: 'data',
-      };
+      }
     }
   }
 }
@@ -214,17 +214,17 @@ export function dataFrameGet(df, col, row) {
  */
 export function tableStyleGetDisplayValue(tableStyle, columnIndex, rowIndex) {
   if (tableStyle == null) {
-    return undefined;
+    return undefined
   }
 
   const cellStyle = tableStyle.getIn(
-    ['cols', columnIndex, 'styles', rowIndex], undefined);
+    ['cols', columnIndex, 'styles', rowIndex], undefined)
   if (cellStyle == null) {
-    return undefined;
+    return undefined
   }
 
   return cellStyle.get('hasDisplayValue') ?
-    cellStyle.get('displayValue') : undefined;
+    cellStyle.get('displayValue') : undefined
 }
 
 /**
@@ -233,30 +233,30 @@ export function tableStyleGetDisplayValue(tableStyle, columnIndex, rowIndex) {
  */
 export function tableStyleGetCSS(tableStyle, columnIndex, rowIndex) {
   if (tableStyle == null) {
-    return undefined;
+    return undefined
   }
 
   const cssStyles = tableStyle.getIn(
-    ['cols', columnIndex, 'styles', rowIndex, 'css'], undefined);
+    ['cols', columnIndex, 'styles', rowIndex, 'css'], undefined)
   if (cssStyles == null) {
-    return undefined;
+    return undefined
   }
 
-  const styles = {};
+  const styles = {}
   cssStyles.forEach((item) => {
     // React style property names are camelCased
-    const property = item.get('property');
-    styles[camelcase(property)] = item.get('value');
-  });
+    const property = item.get('property')
+    styles[camelcase(property)] = item.get('value')
+  })
 
-  return styles;
+  return styles
 }
 
 /**
  * Returns the given element from the table, formatted for display.
  */
 export function tableGet(table, columnIndex, rowIndex) {
-  return anyArrayGet(table.getIn(['cols', columnIndex]), rowIndex);
+  return anyArrayGet(table.getIn(['cols', columnIndex]), rowIndex)
 }
 
 /**
@@ -264,7 +264,7 @@ export function tableGet(table, columnIndex, rowIndex) {
  */
 export function tableData(table, columnIndex, rowIndex) {
   return anyArrayData(table.getIn(['cols', columnIndex]))
-    .get(rowIndex);
+    .get(rowIndex)
 }
 
 /**
@@ -281,28 +281,28 @@ export function indexGetLevelsAndLength(index) {
     float_64Index: (idx) => [1, idx.getIn(['data', 'data']).size],
     datetimeIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
     timedeltaIndex: (idx) => [1, idx.getIn(['data', 'data']).size],
-  });
+  })
 }
 
 /**
  * Returns the ith index value of the given level.
  */
 export function indexGet(index, level, i) {
-  const type = index.get('type');
+  const type = index.get('type')
   if ((type !== 'multiIndex') && (level !== 0)) {
-    throw new Error(`Attempting to access level ${level} of a ${type}.`);
+    throw new Error(`Attempting to access level ${level} of a ${type}.`)
   }
   return dispatchOneOf(index, 'type', {
     plainIndex: (idx) => anyArrayGet(idx.get('data'), i),
     rangeIndex: (idx) => idx.get('start') + i,
     multiIndex: (idx) => {
-      const levels = idx.getIn(['levels', level]);
-      const labels = idx.getIn(['labels', level]);
-      const label = labels.getIn(['data', i]);
+      const levels = idx.getIn(['levels', level])
+      const labels = idx.getIn(['labels', level])
+      const label = labels.getIn(['data', i])
       if (label < 0) {
-        return 'NaN';
+        return 'NaN'
       } else {
-        return indexGet(levels, 0, label);
+        return indexGet(levels, 0, label)
       }
     },
     int_64Index: (idx) => idx.getIn(['data', 'data', i]),
@@ -310,7 +310,7 @@ export function indexGet(index, level, i) {
     datetimeIndex: (idx) => format.nanosToDate(idx.getIn(['data', 'data', i])),
     timedeltaIndex: (idx) => format.nanosToDuration(
       idx.getIn(['data', 'data', i])),
-  });
+  })
 }
 
 /**
@@ -318,20 +318,20 @@ export function indexGet(index, level, i) {
  * this table. If no such column exists, returns -1.
  */
 export function indexGetByName(index, name) {
-  const len = indexLen(index);
+  const len = indexLen(index)
   for (let i = 0; i < len; i++) {
     if (indexGet(index, 0, i) === name) {
-      return i;
+      return i
     }
   }
-  return -1;
+  return -1
 }
 
 /**
  * Returns the length of an AnyArray.
  */
 function anyArrayLen(anyArray) {
-  return anyArrayData(anyArray).size;
+  return anyArrayData(anyArray).size
 }
 
 /**
@@ -339,28 +339,28 @@ function anyArrayLen(anyArray) {
  */
 function anyArrayGet(anyArray, i) {
   const getData = (obj) => obj.get('data')
-    .get(i);
+    .get(i)
   return dispatchOneOf(anyArray, 'type', {
     strings: getData,
     doubles: getData,
     int64s: getData,
     datetimes: obj => format.nanosToDate(getData(obj)),
     timedeltas: obj => format.nanosToDuration(getData(obj)),
-  });
+  })
 }
 
 /**
  * Returns the data array of an protobuf.AnyArray.
  */
 function anyArrayData(anyArray) {
-  const getData = (obj) => obj.get('data');
+  const getData = (obj) => obj.get('data')
   return dispatchOneOf(anyArray, 'type', {
     strings: getData,
     doubles: getData,
     int64s: getData,
     datetimes: getData,
     timedeltas: getData,
-  });
+  })
 }
 
 /**
@@ -368,13 +368,13 @@ function anyArrayData(anyArray) {
  */
 export function addRows(element, namedDataSet) {
   const name = namedDataSet.get('hasName') ?
-    namedDataSet.get('name') : null;
-  const newRows = namedDataSet.get('data');
+    namedDataSet.get('name') : null
+  const newRows = namedDataSet.get('data')
 
-  const existingDataFrame = getDataFrame(element, name);
+  const existingDataFrame = getDataFrame(element, name)
 
   if (!existingDataFrame) {
-    return setDataFrame(element, newRows, name);
+    return setDataFrame(element, newRows, name)
   }
 
   const newDataFrame = existingDataFrame
@@ -383,16 +383,16 @@ export function addRows(element, namedDataSet) {
       return cols.zipWith(
         (col1, col2) => concatAnyArray(col1, col2),
         newRows.getIn(['data', 'cols']),
-      );
+      )
     })
     .updateIn(['style', 'cols'], (style_cols) => {
       return style_cols.zipWith(
         (col1, col2) => concatCellStyleArray(col1, col2),
         newRows.getIn(['style', 'cols']),
-      );
-    });
+      )
+    })
 
-  return setDataFrame(element, newDataFrame, name);
+  return setDataFrame(element, newDataFrame, name)
 }
 
 /**
@@ -401,14 +401,14 @@ export function addRows(element, namedDataSet) {
 function concatIndex(index1, index2) {
   // Special case if index1 is empty.
   if (indexLen(index1) === 0) {
-    return index2;
+    return index2
   }
 
   // Otherwise, make sure the types match.
-  const type1 = index1.get('type');
-  const type2 = index2.get('type');
+  const type1 = index1.get('type')
+  const type2 = index2.get('type')
   if (type1 !== type2) {
-    throw new Error(`Cannot concatenate ${type1} with ${type2}.`);
+    throw new Error(`Cannot concatenate ${type1} with ${type2}.`)
   }
 
   // ...and dispatch based on type.
@@ -426,7 +426,7 @@ function concatIndex(index1, index2) {
       data.concat(index2.getIn(['datetimeIndex', 'data', 'data'])))),
     timedeltaIndex: (idx) => idx.updateIn(['data', 'data'], (data) => (
       data.concat(index2.getIn(['timedeltaIndex', 'data', 'data'])))),
-  });
+  })
 }
 
 /**
@@ -435,17 +435,17 @@ function concatIndex(index1, index2) {
 function concatAnyArray(anyArray1, anyArray2) {
   // Special case if the left array is empty.
   if (anyArrayLen(anyArray1) === 0) {
-    return anyArray2;
+    return anyArray2
   }
 
-  const type1 = anyArray1.get('type');
-  const type2 = anyArray2.get('type');
+  const type1 = anyArray1.get('type')
+  const type2 = anyArray2.get('type')
   if (type1 !== type2) {
-    throw new Error(`Cannot concatenate ${type1} and ${type2}.`);
+    throw new Error(`Cannot concatenate ${type1} and ${type2}.`)
   }
 
   return anyArray1.updateIn([type1, 'data'], (array) =>
-    array.concat(anyArray2.getIn([type2, 'data'])));
+    array.concat(anyArray2.getIn([type2, 'data'])))
 }
 
 /**
@@ -454,9 +454,9 @@ function concatAnyArray(anyArray1, anyArray2) {
 function concatCellStyleArray(array1, array2) {
   // Special case if the left array is empty.
   if (array1.get('styles').length === 0) {
-    return array2;
+    return array2
   }
-  return array1.update('styles', styles => styles.concat(array2.get('styles')));
+  return array1.update('styles', styles => styles.concat(array2.get('styles')))
 }
 
 /**
@@ -470,7 +470,7 @@ function getDataFrame(element, name = null) {
     table: (df) => df,
     deckGlMap: (el) => el.get('data'),
     vegaLiteChart: (chart) => getDataFrameByName(chart, name),
-  });
+  })
 }
 
 
@@ -481,11 +481,11 @@ function getDataFrame(element, name = null) {
  */
 function getDataFrameByName(proto, name) {
   if (name == null && proto.get('data') != null) {
-    return proto.get('data');
+    return proto.get('data')
   }
 
-  const namedDataSetEntry = getNamedDataSet(proto.get('datasets'), name);
-  return namedDataSetEntry[1].get('data');
+  const namedDataSetEntry = getNamedDataSet(proto.get('datasets'), name)
+  return namedDataSetEntry[1].get('data')
 }
 
 
@@ -499,19 +499,19 @@ function getDataFrameByName(proto, name) {
 function getNamedDataSet(namedDataSets, name) {
   if (namedDataSets != null) {
     if (namedDataSets.size === 1) {
-      const firstNamedDataSet = namedDataSets.first();
-      return [0, firstNamedDataSet];
+      const firstNamedDataSet = namedDataSets.first()
+      return [0, firstNamedDataSet]
     }
 
     const namedDataSetEntry = namedDataSets.findEntry(
-      ds => ds.get('hasName') && ds.get('name') === name);
+      ds => ds.get('hasName') && ds.get('name') === name)
 
     if (namedDataSetEntry) {
-      return namedDataSetEntry;
+      return namedDataSetEntry
     }
   }
 
-  throw new Error(`Element does not have a dataset named "${name}"`);
+  throw new Error(`Element does not have a dataset named "${name}"`)
 }
 
 
@@ -526,7 +526,7 @@ function setDataFrame(element, df, name = null) {
     table: () => df,
     deckGlMap: (el) => el.set('data', df),
     vegaLiteChart: (chart) => setDataFrameByName(chart, df, name),
-  });
+  })
 }
 
 /**
@@ -536,15 +536,15 @@ function setDataFrame(element, df, name = null) {
  */
 function setDataFrameByName(proto, df, name = null) {
   if (name == null) {
-    return proto.set('data', df);
+    return proto.set('data', df)
   }
 
-  const namedDataSets = proto.get('datasets');
+  const namedDataSets = proto.get('datasets')
 
-  const namedDataSetEntry = getNamedDataSet(namedDataSets, name);
-  const namedDataSet = namedDataSetEntry[1].set('data', df);
+  const namedDataSetEntry = getNamedDataSet(namedDataSets, name)
+  const namedDataSet = namedDataSetEntry[1].set('data', df)
 
-  return proto.setIn(['datasets', namedDataSetEntry[0]], namedDataSet);
+  return proto.setIn(['datasets', namedDataSetEntry[0]], namedDataSet)
 }
 
 /**
@@ -560,5 +560,5 @@ function indexLen(index) {
     float_64Index: (idx) => (idx.getIn(['data', 'data']).size),
     datetimeIndex: (idx) => (idx.getIn(['data', 'data']).size),
     timedeltaIndex: (idx) => (idx.getIn(['data', 'data']).size),
-  });
+  })
 }

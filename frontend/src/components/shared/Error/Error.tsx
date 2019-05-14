@@ -8,8 +8,8 @@
  * st.exception / Exception.tsx or st.error / Text.tsx.
  */
 
-import React from 'react';
-import {Alert} from 'reactstrap';
+import React from 'react'
+import {Alert} from 'reactstrap'
 
 export interface Props {
   error: Error;
@@ -18,15 +18,15 @@ export interface Props {
 
 class ErrorElement extends React.PureComponent<Props> {
   public render(): React.ReactNode {
-    const error = this.props.error;
+    const error = this.props.error
 
     // Remove first line from stack (because it's just the error message) and
     // trim indentation.
-    const stack = error.stack ? error.stack.split('\n') : [];
-    stack.shift();
+    const stack = error.stack ? error.stack.split('\n') : []
+    stack.shift()
     const cleanedStack = stack
       .map(s => s.trim())
-      .join('\n');
+      .join('\n')
 
     return (
       <Alert
@@ -38,8 +38,8 @@ class ErrorElement extends React.PureComponent<Props> {
             : null
         }
       </Alert>
-    );
+    )
   }
 }
 
-export default ErrorElement;
+export default ErrorElement

@@ -9,27 +9,27 @@ import {
   IS_DEV_ENV,
   STREAMLIT_VERSION,
   BROWSER_IP_ADDRESS,
-} from './baseconsts';
+} from './baseconsts'
 
-import {logAlways} from './log';
-import mixpanel, {Dict} from 'mixpanel-browser';
+import {logAlways} from './log'
+import mixpanel, {Dict} from 'mixpanel-browser'
 
 /** Our Mixpanel Token */
-const TOKEN = '77c8dd3e3266a6133f74207d7924bab4';
-mixpanel.init(TOKEN);
+const TOKEN = '77c8dd3e3266a6133f74207d7924bab4'
+mixpanel.init(TOKEN)
 
 /**
  * Whether we should track usage remotely, for stats.
  * Defaults to true. See also lib/streamlit/config.py.
  */
-let trackUsage: boolean | undefined;
+let trackUsage: boolean | undefined
 
 /**
  * Queue of tracking events we tried sending before initRemoteTracker was
  * called.
  */
 type Event = [string, Dict];
-const preInitializationEventQueue: Event[] = [];
+const preInitializationEventQueue: Event[] = []
 
 /**
  * Params:
@@ -37,21 +37,21 @@ const preInitializationEventQueue: Event[] = [];
  */
 export function initRemoteTracker({gatherUsageStats}: {gatherUsageStats?: boolean}): void {
   if (gatherUsageStats != null) {
-    trackUsage = gatherUsageStats;
+    trackUsage = gatherUsageStats
   }
 
   if (trackUsage) {
-    mixpanel.identify(INSTALLATION_ID);
-    mixpanel.opt_in_tracking();
+    mixpanel.identify(INSTALLATION_ID)
+    mixpanel.opt_in_tracking()
   } else {
-    mixpanel.opt_out_tracking();
+    mixpanel.opt_out_tracking()
   }
 
-  logAlways('Track stats remotely: ', trackUsage);
+  logAlways('Track stats remotely: ', trackUsage)
 
   preInitializationEventQueue.forEach(([eventName, opts]) => {
-    trackEventRemotely(eventName, opts);
-  });
+    trackEventRemotely(eventName, opts)
+  })
 }
 
 /**
@@ -61,8 +61,8 @@ export function initRemoteTracker({gatherUsageStats}: {gatherUsageStats?: boolea
  */
 export function trackEventRemotely(eventName: string, opts: Dict = {}): void {
   if (trackUsage == null) {
-    preInitializationEventQueue.push([eventName, opts]);
-    return;
+    preInitializationEventQueue.push([eventName, opts])
+    return
   }
 
   const data = {
@@ -71,15 +71,15 @@ export function trackEventRemotely(eventName: string, opts: Dict = {}): void {
     dev: IS_DEV_ENV,
     source: 'browser',
     streamlitVersion: STREAMLIT_VERSION,
-  };
+  }
 
   if (IS_DEV_ENV) {
     logAlways(
       `${trackUsage ? '' : 'NOT '}Tracking stat datapoint: `,
-      eventName, data);
+      eventName, data)
   }
 
   if (trackUsage !== false) {
-    mixpanel.track(eventName, data);
+    mixpanel.track(eventName, data)
   }
 }

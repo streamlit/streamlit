@@ -5,9 +5,9 @@
  * @fileoverview Component that displays a single cell in a Pandas Dataframe.
  */
 
-import React, {PureComponent} from 'react';
-import {SortDirection} from './SortDirection';
-import openIconic from 'assets/img/open-iconic.svg';
+import React, {PureComponent} from 'react'
+import {SortDirection} from './SortDirection'
+import openIconic from 'assets/img/open-iconic.svg'
 
 interface Props {
   /** The cell's column index in the DataFrame */
@@ -57,28 +57,28 @@ class DataFrameCell extends PureComponent<Props> {
     const {
       columnIndex, rowIndex, className, style, contents, columnSortDirection,
       headerClickedCallback, sortedByUser,
-    } = this.props;
+    } = this.props
 
-    let onClick;
-    let role;
-    let tabIndex;
-    let title = contents;
+    let onClick
+    let role
+    let tabIndex
+    let title = contents
 
-    const isDescending = columnSortDirection === SortDirection.DESCENDING;
+    const isDescending = columnSortDirection === SortDirection.DESCENDING
 
     if (headerClickedCallback != null && rowIndex === 0) {
-      onClick = () => headerClickedCallback(columnIndex);
-      role = 'button';
-      tabIndex = 0;
+      onClick = () => headerClickedCallback(columnIndex)
+      role = 'button'
+      tabIndex = 0
       title = columnSortDirection == null ?
         `Sort by column "${contents}"` :
-        `Sorted by column "${contents}" (${isDescending ? 'descending' : 'ascending'})`;
+        `Sorted by column "${contents}" (${isDescending ? 'descending' : 'ascending'})`
     }
 
     // The sort icon is only drawn in the top row
     const sortIcon = rowIndex === 0 ?
       drawSortIcon(columnSortDirection) :
-      undefined;
+      undefined
 
     return (
       // (eslint erroneously believes we're not assigning a role to our clickable div)
@@ -94,7 +94,7 @@ class DataFrameCell extends PureComponent<Props> {
         {sortedByUser ? sortIcon : ''}
         {contents}
       </div>
-    );
+    )
   }
 }
 
@@ -108,19 +108,19 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
           <use href={openIconic + '#chevron-top'} />
         </svg>
-      );
+      )
 
     case SortDirection.DESCENDING:
       return (
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
           <use href={openIconic + '#chevron-bottom'} />
         </svg>
-      );
+      )
 
     case undefined:
     default:
-      return null;
+      return null
   }
 }
 
-export default DataFrameCell;
+export default DataFrameCell

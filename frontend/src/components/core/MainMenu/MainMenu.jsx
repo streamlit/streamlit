@@ -6,17 +6,17 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, {Component} from 'react';
+import React, {Component} from 'react'
 import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
-} from 'reactstrap';
-import openIconic from 'assets/img/open-iconic.svg';
-import './MainMenu.scss';
+} from 'reactstrap'
+import openIconic from 'assets/img/open-iconic.svg'
+import './MainMenu.scss'
 
-const ONLINE_DOCS_URL = '//streamlit.io/secret/docs';
+const ONLINE_DOCS_URL = '//streamlit.io/secret/docs'
 
 /**
  *
@@ -26,16 +26,16 @@ class MainMenu extends Component {
    * Constructor.
    */
   constructor(props) {
-    super(props);
+    super(props)
     this.state = {
       dropdownOpen: false,
-    };
+    }
   }
 
   toggle() {
     this.setState(({dropdownOpen}) => ({
       dropdownOpen: !dropdownOpen,
-    }));
+    }))
   }
 
   render() {
@@ -100,8 +100,8 @@ class MainMenu extends Component {
 
         </DropdownMenu>
       </Dropdown>
-    );
+    )
   }
 }
 
-export default MainMenu;
+export default MainMenu

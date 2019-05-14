@@ -5,43 +5,43 @@
 
 /*jshint loopfunc:false */
 
-import React, { PureComponent } from 'react';
-import { hotkeys } from 'react-keyboard-shortcuts';
+import React, { PureComponent } from 'react'
+import { hotkeys } from 'react-keyboard-shortcuts'
 import {
   Col,
   Container,
   Row,
-} from 'reactstrap';
-import { fromJS } from 'immutable';
-import url from 'url';
+} from 'reactstrap'
+import { fromJS } from 'immutable'
+import url from 'url'
 
 // Other local imports.
-import LoginBox from './components/core/LoginBox';
-import MainMenu from './components/core/MainMenu';
-import Resolver from './lib/Resolver';
-import StreamlitDialog from './components/core/StreamlitDialog';
-import { ConnectionManager } from './lib/ConnectionManager';
-import { ConnectionState } from './lib/ConnectionState';
-import { ReportRunState } from './lib/ReportRunState';
-import { StatusWidget } from './components/core/StatusWidget';
-import { ReportEventDispatcher } from './lib/ReportEvent';
-import { ReportView } from './components/core/ReportView';
+import LoginBox from './components/core/LoginBox'
+import MainMenu from './components/core/MainMenu'
+import Resolver from './lib/Resolver'
+import StreamlitDialog from './components/core/StreamlitDialog'
+import { ConnectionManager } from './lib/ConnectionManager'
+import { ConnectionState } from './lib/ConnectionState'
+import { ReportRunState } from './lib/ReportRunState'
+import { StatusWidget } from './components/core/StatusWidget'
+import { ReportEventDispatcher } from './lib/ReportEvent'
+import { ReportView } from './components/core/ReportView'
 
-import { ForwardMsg, Text as TextProto } from 'autogen/protobuf';
-import { addRows } from './lib/dataFrameProto';
-import { initRemoteTracker, trackEventRemotely } from './lib/remotetracking';
-import { logError } from './lib/log';
-import { setInstallationId, setStreamlitVersion } from './lib/baseconsts';
-import { toImmutableProto, dispatchOneOf } from './lib/immutableProto';
+import { ForwardMsg, Text as TextProto } from 'autogen/protobuf'
+import { addRows } from './lib/dataFrameProto'
+import { initRemoteTracker, trackEventRemotely } from './lib/remotetracking'
+import { logError } from './lib/log'
+import { setInstallationId, setStreamlitVersion } from './lib/baseconsts'
+import { toImmutableProto, dispatchOneOf } from './lib/immutableProto'
 
 // NB: order matters
-import 'assets/css/theme.scss';
-import './App.scss';
+import 'assets/css/theme.scss'
+import './App.scss'
 
 
 class App extends PureComponent {
   constructor(props) {
-    super(props);
+    super(props)
 
     this.state = {
       reportId: '<null>',
@@ -54,30 +54,30 @@ class App extends PureComponent {
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
-    };
+    }
 
     // Bind event handlers.
-    this.closeDialog = this.closeDialog.bind(this);
-    this.getUserLogin = this.getUserLogin.bind(this);
-    this.handleConnectionError = this.handleConnectionError.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
-    this.isProxyConnected = this.isProxyConnected.bind(this);
-    this.onLogInError = this.onLogInError.bind(this);
-    this.onLogInSuccess = this.onLogInSuccess.bind(this);
-    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
-    this.rerunScript = this.rerunScript.bind(this);
-    this.stopReport = this.stopReport.bind(this);
-    this.openClearCacheDialog = this.openClearCacheDialog.bind(this);
-    this.clearCache = this.clearCache.bind(this);
-    this.saveReport = this.saveReport.bind(this);
-    this.saveSettings = this.saveSettings.bind(this);
-    this.setReportName = this.setReportName.bind(this);
+    this.closeDialog = this.closeDialog.bind(this)
+    this.getUserLogin = this.getUserLogin.bind(this)
+    this.handleConnectionError = this.handleConnectionError.bind(this)
+    this.handleMessage = this.handleMessage.bind(this)
+    this.isProxyConnected = this.isProxyConnected.bind(this)
+    this.onLogInError = this.onLogInError.bind(this)
+    this.onLogInSuccess = this.onLogInSuccess.bind(this)
+    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
+    this.rerunScript = this.rerunScript.bind(this)
+    this.stopReport = this.stopReport.bind(this)
+    this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
+    this.clearCache = this.clearCache.bind(this)
+    this.saveReport = this.saveReport.bind(this)
+    this.saveSettings = this.saveSettings.bind(this)
+    this.setReportName = this.setReportName.bind(this)
 
-    this.userLoginResolver = new Resolver();
-    this.reportEventDispatcher = new ReportEventDispatcher();
-    this.statusWidgetRef = React.createRef();
+    this.userLoginResolver = new Resolver()
+    this.reportEventDispatcher = new ReportEventDispatcher()
+    this.statusWidgetRef = React.createRef()
 
-    this.connectionManager = null;
+    this.connectionManager = null
   }
 
   /**
@@ -97,7 +97,7 @@ class App extends PureComponent {
       priority: 1,
       handler: () => {
         if (this.statusWidgetRef.current != null) {
-          this.statusWidgetRef.current.handleAlwaysRerunHotkeyPressed();
+          this.statusWidgetRef.current.handleAlwaysRerunHotkeyPressed()
         }
       },
     },
@@ -119,7 +119,7 @@ class App extends PureComponent {
       priority: 1,
       handler: () => {
         if (this.state.dialog && this.state.dialog.defaultAction) {
-          this.state.dialog.defaultAction();
+          this.state.dialog.defaultAction()
         }
       },
     },
@@ -134,33 +134,33 @@ class App extends PureComponent {
       onConnectionError: this.handleConnectionError,
       setReportName: this.setReportName,
       connectionStateChanged: newState => {
-        this.setState({ connectionState: newState });
+        this.setState({ connectionState: newState })
       },
-    });
+    })
 
     if (isEmbeddedInIFrame()) {
-      document.body.classList.add('embedded');
+      document.body.classList.add('embedded')
     }
 
-    trackEventRemotely('viewReport');
+    trackEventRemotely('viewReport')
 
     // When a user is viewing a shared report we will actually receive no
     // 'newReport' message, so we initialize the tracker here instead.
     if (this.connectionManager.isStaticConnection()) {
       initRemoteTracker({
         gatherUsageStats: true,
-      });
+      })
     }
   }
 
   showError(error, info) {
-    logError(error, info);
+    logError(error, info)
 
     const errorStr = info == null ?
       `${error}` :
-      `${error}.\n${info}`;
+      `${error}.\n${info}`
 
-    this.showSingleTextElement(errorStr, TextProto.Format.ERROR);
+    this.showSingleTextElement(errorStr, TextProto.Format.ERROR)
   }
 
   /**
@@ -177,7 +177,7 @@ class App extends PureComponent {
         type: 'text',
         text: { format, body },
       }]),
-    });
+    })
   }
 
   /**
@@ -185,7 +185,7 @@ class App extends PureComponent {
    */
   handleMessage(msgProto) {
     try {
-      const msg = toImmutableProto(ForwardMsg, msgProto);
+      const msg = toImmutableProto(ForwardMsg, msgProto)
 
       dispatchOneOf(msg, 'type', {
         initialize: initializeMsg => this.handleInitialize(initializeMsg),
@@ -197,9 +197,9 @@ class App extends PureComponent {
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: 'uploadProgress' }),
         reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
-      });
+      })
     } catch (err) {
-      this.showError(err);
+      this.showError(err)
     }
   }
 
@@ -208,21 +208,21 @@ class App extends PureComponent {
    * @param initializeMsg an Initialize protobuf
    */
   handleInitialize(initializeMsg) {
-    setStreamlitVersion(initializeMsg.get('streamlitVersion'));
-    setInstallationId(initializeMsg.get('userInfo').get('installationId'));
+    setStreamlitVersion(initializeMsg.get('streamlitVersion'))
+    setInstallationId(initializeMsg.get('userInfo').get('installationId'))
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.get('gatherUsageStats'),
-    });
+    })
 
-    trackEventRemotely('createReport');
+    trackEventRemotely('createReport')
 
     this.setState({
       sharingEnabled: initializeMsg.get('sharingEnabled'),
-    });
+    })
 
-    const initialState = initializeMsg.get('sessionState');
-    this.handleSessionStateChanged(initialState);
+    const initialState = initializeMsg.get('sessionState')
+    this.handleSessionStateChanged(initialState)
   }
 
   /**
@@ -230,21 +230,21 @@ class App extends PureComponent {
    * @param msg a SessionState protobuf
    */
   handleSessionStateChanged(msg) {
-    const runOnSave = msg.get('runOnSave');
-    const reportIsRunning = msg.get('reportIsRunning');
+    const runOnSave = msg.get('runOnSave')
+    const reportIsRunning = msg.get('reportIsRunning')
 
     this.setState(prevState => {
       // If we have a pending run-state request, only change our reportRunState
       // if our request has been processed.
-      let reportRunState;
+      let reportRunState
       if (reportIsRunning) {
         reportRunState =
           prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
-            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING;
+            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING
       } else {
         reportRunState =
           prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
-            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING;
+            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING
       }
 
       return ({
@@ -253,8 +253,8 @@ class App extends PureComponent {
           runOnSave,
         },
         reportRunState,
-      });
-    });
+      })
+    })
   }
 
   /**
@@ -262,7 +262,7 @@ class App extends PureComponent {
    * @param msg a SessionEvent protobuf
    */
   handleSessionEvent(msg) {
-    this.reportEventDispatcher.handleSessionEventMsg(msg);
+    this.reportEventDispatcher.handleSessionEventMsg(msg)
   }
 
   /**
@@ -270,39 +270,39 @@ class App extends PureComponent {
    * @param newReportMsg a NewReport protobuf
    */
   handleNewReport(newReportMsg) {
-    trackEventRemotely('updateReport');
+    trackEventRemotely('updateReport')
 
     this.setState({
       reportId: newReportMsg.get('id'),
       commandLine: newReportMsg.get('commandLine').toJS().join(' '),
-    });
+    })
   }
 
   /**
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
-    this.setState({ dialog: dialogProps });
+    this.setState({ dialog: dialogProps })
   }
 
   /**
    * Closes the upload dialog if it's open.
    */
   closeDialog() {
-    this.setState({ dialog: undefined });
+    this.setState({ dialog: undefined })
   }
 
   /**
    * Saves a UserSettings object.
    */
   saveSettings(newSettings) {
-    const prevRunOnSave = this.state.userSettings.runOnSave;
-    const runOnSave = newSettings.runOnSave;
+    const prevRunOnSave = this.state.userSettings.runOnSave
+    const runOnSave = newSettings.runOnSave
 
-    this.setState({userSettings: newSettings});
+    this.setState({userSettings: newSettings})
 
     if (prevRunOnSave !== runOnSave && this.isProxyConnected()) {
-      this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave});
+      this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave})
     }
   }
 
@@ -310,7 +310,7 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
-    const { reportId } = this.state;
+    const { reportId } = this.state
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
@@ -319,7 +319,7 @@ class App extends PureComponent {
           addRows: namedDataSet =>
             handleAddRowsMessage(element, namedDataSet),
         })),
-    }));
+    }))
   }
 
   /**
@@ -329,15 +329,15 @@ class App extends PureComponent {
     this.setState(({ elements, reportId }) => ({
       elements: elements.map((elt) => {
         if (elt && elt.get('reportId') === reportId) {
-          return elt;
+          return elt
         }
         return fromJS({
           reportId,
           empty: { unused: true },
           type: 'empty',
-        });
+        })
       }),
-    }));
+    }))
   }
 
   /**
@@ -346,11 +346,11 @@ class App extends PureComponent {
   saveReport() {
     if (this.isProxyConnected()) {
       if (this.state.sharingEnabled) {
-        trackEventRemotely('shareReport');
+        trackEventRemotely('shareReport')
         this.sendBackMsg({
           type: 'cloudUpload',
           cloudUpload: true,
-        });
+        })
       } else {
         this.openDialog({
           type: 'warning',
@@ -362,10 +362,10 @@ class App extends PureComponent {
               &nbsp;to setup sharing.
             </div>
           ),
-        });
+        })
       }
     } else {
-      logError('Cannot save report when proxy is disconnected');
+      logError('Cannot save report when proxy is disconnected')
     }
   }
 
@@ -382,9 +382,9 @@ class App extends PureComponent {
 
         // This will be called if enter is pressed.
         defaultAction: this.rerunScript,
-      });
+      })
     } else {
-      logError('Cannot rerun script when proxy is disconnected.');
+      logError('Cannot rerun script when proxy is disconnected.')
     }
   }
 
@@ -396,51 +396,51 @@ class App extends PureComponent {
    * to enable runOnSave for this report.
    */
   rerunScript(alwaysRunOnSave = false) {
-    this.closeDialog();
+    this.closeDialog()
 
     if (!this.isProxyConnected()) {
-      logError('Cannot rerun script when proxy is disconnected.');
-      return;
+      logError('Cannot rerun script when proxy is disconnected.')
+      return
     }
 
     if (this.state.reportRunState === ReportRunState.RUNNING ||
       this.state.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // Don't queue up multiple rerunScript requests
-      return;
+      return
     }
 
-    trackEventRemotely('rerunScript');
+    trackEventRemotely('rerunScript')
 
-    this.setState({reportRunState: ReportRunState.RERUN_REQUESTED});
+    this.setState({reportRunState: ReportRunState.RERUN_REQUESTED})
 
     if (alwaysRunOnSave) {
       // Update our run-on-save setting *before* calling rerunScript.
       // The rerunScript message currently blocks all BackMsgs from
       // being processed until the script has completed executing.
-      this.saveSettings({...this.state.userSettings, runOnSave: true});
+      this.saveSettings({...this.state.userSettings, runOnSave: true})
     }
 
     this.sendBackMsg({
       type: 'rerunScript',
       rerunScript: this.state.commandLine,
-    });
+    })
   }
 
   /** Requests that the server stop running the report */
   stopReport() {
     if (!this.isProxyConnected()) {
-      logError('Cannot stop report when proxy is disconnected.');
-      return;
+      logError('Cannot stop report when proxy is disconnected.')
+      return
     }
 
     if (this.state.reportRunState === ReportRunState.NOT_RUNNING ||
       this.state.reportRunState === ReportRunState.STOP_REQUESTED) {
       // Don't queue up multiple stopReport requests
-      return;
+      return
     }
 
-    this.sendBackMsg({type: 'stopReport', stopReport: true});
-    this.setState({reportRunState: ReportRunState.STOP_REQUESTED});
+    this.sendBackMsg({type: 'stopReport', stopReport: true})
+    this.setState({reportRunState: ReportRunState.STOP_REQUESTED})
   }
 
   /**
@@ -454,9 +454,9 @@ class App extends PureComponent {
 
         // This will be called if enter is pressed.
         defaultAction: this.clearCache,
-      });
+      })
     } else {
-      logError('Cannot clear cache: proxy is disconnected');
+      logError('Cannot clear cache: proxy is disconnected')
     }
   }
 
@@ -464,12 +464,12 @@ class App extends PureComponent {
    * Asks the server to clear the st_cache
    */
   clearCache() {
-    this.closeDialog();
+    this.closeDialog()
     if (this.isProxyConnected()) {
-      trackEventRemotely('clearCache');
-      this.sendBackMsg({type: 'clearCache', clearCache: true});
+      trackEventRemotely('clearCache')
+      this.sendBackMsg({type: 'clearCache', clearCache: true})
     } else {
-      logError('Cannot clear cache: proxy is disconnected');
+      logError('Cannot clear cache: proxy is disconnected')
     }
   }
 
@@ -478,9 +478,9 @@ class App extends PureComponent {
    */
   sendBackMsg(msg) {
     if (this.connectionManager) {
-      this.connectionManager.sendMessage(msg);
+      this.connectionManager.sendMessage(msg)
     } else {
-      logError(`Not connected. Cannot send back message: ${msg}`);
+      logError(`Not connected. Cannot send back message: ${msg}`)
     }
   }
 
@@ -488,7 +488,7 @@ class App extends PureComponent {
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errMsg) {
-    this.showError(`Connection error: ${errMsg}`);
+    this.showError(`Connection error: ${errMsg}`)
   }
 
   /**
@@ -497,15 +497,15 @@ class App extends PureComponent {
   isProxyConnected() {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
-      false;
+      false
   }
 
   /**
    * Sets the reportName in state and upates the title bar.
    */
   setReportName(reportName) {
-    document.title = `${reportName} · Streamlit`;
-    this.setState({ reportName });
+    document.title = `${reportName} · Streamlit`
+    this.setState({ reportName })
   }
 
   render() {
@@ -514,7 +514,7 @@ class App extends PureComponent {
           'streamlit-embedded' :
           this.state.userSettings.wideMode ?
             'streamlit-wide' :
-            'streamlit-regular';
+            'streamlit-regular'
 
     return (
       <div className={outerDivClass}>
@@ -579,27 +579,27 @@ class App extends PureComponent {
 
         </Container>
       </div>
-    );
+    )
   }
 
   async getUserLogin() {
-    this.setState({ showLoginBox: true });
-    const idToken = await this.userLoginResolver.promise;
-    this.setState({ showLoginBox: false });
+    this.setState({ showLoginBox: true })
+    const idToken = await this.userLoginResolver.promise
+    this.setState({ showLoginBox: false })
 
-    return idToken;
+    return idToken
   }
 
   onLogInSuccess({ accessToken, idToken }) {
     if (accessToken) {
-      this.userLoginResolver.resolve(idToken);
+      this.userLoginResolver.resolve(idToken)
     } else {
-      this.userLoginResolver.reject('Error signing in.');
+      this.userLoginResolver.reject('Error signing in.')
     }
   }
 
   onLogInError(msg) {
-    this.userLoginResolver.reject(`Error signing in. ${msg}`);
+    this.userLoginResolver.reject(`Error signing in. ${msg}`)
   }
 }
 
@@ -607,16 +607,16 @@ class App extends PureComponent {
 function handleNewElementMessage(element, reportId) {
   trackEventRemotely('visualElementUpdated', {
     elementType: element.get('type'),
-  });
+  })
   // Set reportId on elements so we can clear old elements when the report
   // script is re-executed.
-  return element.set('reportId', reportId);
+  return element.set('reportId', reportId)
 }
 
 
 function handleAddRowsMessage(element, namedDataSet) {
-  trackEventRemotely('dataMutated');
-  return addRows(element, namedDataSet);
+  trackEventRemotely('dataMutated')
+  return addRows(element, namedDataSet)
 }
 
 
@@ -625,7 +625,7 @@ function handleAddRowsMessage(element, namedDataSet) {
  * iframe.
  */
 function isEmbeddedInIFrame() {
-  return url.parse(window.location.href, true).query.embed === 'true';
+  return url.parse(window.location.href, true).query.embed === 'true'
 }
 
 
@@ -636,8 +636,8 @@ function makeElementWithInfoText(text) {
       format: TextProto.Format.INFO,
       body: text,
     },
-  });
+  })
 }
 
 
-export default hotkeys(App);
+export default hotkeys(App)

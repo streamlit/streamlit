@@ -1,1 +1,1 @@
-export * from './StreamlitElement';
+export * from './StreamlitElement'

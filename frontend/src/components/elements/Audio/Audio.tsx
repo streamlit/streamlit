@@ -3,9 +3,9 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React from 'react';
-import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from '../../shared/StreamlitElement/';
+import React from 'react'
+import {Map as ImmutableMap} from 'immutable'
+import {PureStreamlitElement} from '../../shared/StreamlitElement/'
 
 interface Props {
   width: number;
@@ -14,7 +14,7 @@ interface Props {
 
 class Audio extends PureStreamlitElement<Props> {
   public safeRender(): React.ReactNode {
-    const {element, width} = this.props;
+    const {element, width} = this.props
     return (
       <audio
         style={{width}}
@@ -22,8 +22,8 @@ class Audio extends PureStreamlitElement<Props> {
         src={`data:${element.get('format')};base64,${element.get('data')}`}
       >
       </audio>
-    );
+    )
   }
 }
 
-export default Audio;
+export default Audio

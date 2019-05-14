@@ -3,10 +3,10 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React from 'react';
-import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from '../../shared/StreamlitElement/';
-import './ImageList.scss';
+import React from 'react'
+import {Map as ImmutableMap} from 'immutable'
+import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import './ImageList.scss'
 
 interface Props {
   width: number;
@@ -19,14 +19,14 @@ interface Props {
  * An Image protobuf can contain either a URL string or a base64-encoded PNG.
  */
 function getImageSrcString(imgProto: ImmutableMap<string, any>): string {
-  const type = imgProto.get('type');
+  const type = imgProto.get('type')
   if (type === 'base_64Png') {
-    return `data:image/png;base64,${imgProto.get('base_64Png')}`;
+    return `data:image/png;base64,${imgProto.get('base_64Png')}`
   } else if (type === 'url') {
-    return imgProto.get('url');
+    return imgProto.get('url')
   }
 
-  throw new Error(`Unrecognized Image protobuf type ${type}`);
+  throw new Error(`Unrecognized Image protobuf type ${type}`)
 }
 
 /**
@@ -34,22 +34,22 @@ function getImageSrcString(imgProto: ImmutableMap<string, any>): string {
  */
 class ImageList extends PureStreamlitElement<Props> {
   public safeRender(): React.ReactNode {
-    const {element, width} = this.props;
+    const {element, width} = this.props
     // The width field in the proto sets the image width, but has special
     // cases for -1 and -2.
-    let imgWidth: number|undefined;
-    const protoWidth = element.get('width');
+    let imgWidth: number|undefined
+    const protoWidth = element.get('width')
     if (protoWidth === -1) {
       // Use the original image width.
-      imgWidth = undefined;
+      imgWidth = undefined
     } else if (protoWidth === -2) {
       // Use the column width
-      imgWidth = width;
+      imgWidth = width
     } else if (protoWidth > 0) {
       // Set the image width explicitly.
-      imgWidth = element.get('width');
+      imgWidth = element.get('width')
     } else {
-      throw Error(`Invalid image width: ${protoWidth}`);
+      throw Error(`Invalid image width: ${protoWidth}`)
     }
 
     return (
@@ -65,8 +65,8 @@ class ImageList extends PureStreamlitElement<Props> {
           </div>
         ))}
       </div>
-    );
+    )
   }
 }
 
-export default ImageList;
+export default ImageList

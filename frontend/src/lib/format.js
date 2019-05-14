@@ -7,58 +7,58 @@
  * Text formatting utilities
  */
 
-import moment from 'moment';
-import momentDurationFormat from 'moment-duration-format';
-import numeral from 'numeral';
-momentDurationFormat(moment);
+import moment from 'moment'
+import momentDurationFormat from 'moment-duration-format'
+import numeral from 'numeral'
+momentDurationFormat(moment)
 
 class Duration {
   constructor(millis) {
-    this.millis = millis;
+    this.millis = millis
   }
 
   getTime() {
-    return this.millis;
+    return this.millis
   }
 }
 
 class Format {
   nanosToDate(nanos) {
-    return new Date(nanos / 1e6);
+    return new Date(nanos / 1e6)
   }
 
   nanosToDuration(nanos) {
-    return new Duration(nanos / 1e6);
+    return new Duration(nanos / 1e6)
   }
 
   dateToString(date) {
-    const m = moment(date);
-    let format = 'lll';
+    const m = moment(date)
+    let format = 'lll'
     if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
-      format = 'll';
+      format = 'll'
     }
-    return m.format(format);
+    return m.format(format)
   }
 
   durationToString(duration) {
-    return moment.duration(duration.getTime()).format();
+    return moment.duration(duration.getTime()).format()
   }
 }
 
-const format = new Format();
+const format = new Format()
 
 /**
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
 function toFormattedString(x) {
   if (isFloat(x)) {
-    return numeral(x).format('0,0.0000');
+    return numeral(x).format('0,0.0000')
   } else if (x instanceof Date) {
-    return format.dateToString(x);
+    return format.dateToString(x)
   } else if (x instanceof Duration) {
-    return format.durationToString(x);
+    return format.durationToString(x)
   } else {
-    return x.toString();
+    return x.toString()
   }
 }
 
@@ -66,7 +66,7 @@ function toFormattedString(x) {
  * Returns true if this number is a float.
  */
 function isFloat(n) {
-  return Number(n) === n && n % 1 !== 0;
+  return Number(n) === n && n % 1 !== 0
 }
 
-export { Duration, format, toFormattedString };
+export { Duration, format, toFormattedString }

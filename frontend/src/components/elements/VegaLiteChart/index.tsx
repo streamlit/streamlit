@@ -1,1 +1,1 @@
-export { default } from './VegaLiteChart';
+export { default } from './VegaLiteChart'

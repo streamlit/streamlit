@@ -6,9 +6,9 @@
  * asynchronously rendering child components.
  */
 
-import React from 'react';
-import ErrorElement from '../Error';
-import {logError} from '../../../lib/log';
+import React from 'react'
+import ErrorElement from '../Error'
+import {logError} from '../../../lib/log'
 
 export interface Props {
   width?: number;
@@ -20,34 +20,34 @@ export interface State {
 
 class ErrorBoundary extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
-    super(props);
+    super(props)
     this.state = {
       error: null,
-    };
+    }
   }
 
   public static getDerivedStateFromError = (error: Error): State => {
     // Return the state update so the next render will show the fallback UI.
     return {
       error: error,
-    };
+    }
   }
 
   public componentDidCatch = (error: Error, info: React.ErrorInfo): void => {
-    logError(`${error.name}: ${error.message}\n${error.stack}`);
+    logError(`${error.name}: ${error.message}\n${error.stack}`)
   }
 
   public render(): React.ReactNode {
-    const error = this.state.error;
+    const error = this.state.error
 
     if (error) {
       return (
         <ErrorElement error={error} width={this.props.width}/>
-      );
+      )
     } else {
-      return this.props.children;
+      return this.props.children
     }
   }
 }
 
-export default ErrorBoundary;
+export default ErrorBoundary

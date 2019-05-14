@@ -3,7 +3,7 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import { logMessage } from './log';
+import { logMessage } from './log'
 
 
 /**
@@ -11,31 +11,31 @@ import { logMessage } from './log';
  * serving the current page (i.e. the actual web page server, not the API
  * server, which in dev are actually different servers.)
  */
-export const WWW_PORT_DEV = 3000;
+export const WWW_PORT_DEV = 3000
 
 /**
  * This is the port used to connect to the proxy web socket when in dev.
  * IMPORTANT: If changed, also change config.py
  */
-export const WEBSOCKET_PORT_DEV = 8501;
+export const WEBSOCKET_PORT_DEV = 8501
 
 /**
  * True when in development mode.
  */
-export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV;
+export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
 
 /**
  * Streamlit's version. This gets initialized when a report is first created.
  * Not really a "constant", but once initialized it never changes.
  */
-export let STREAMLIT_VERSION = null;
+export let STREAMLIT_VERSION = null
 
-export let INSTALLATION_ID = null;
+export let INSTALLATION_ID = null
 
 /**
  * The WAN-facing IP address of the machine this browser is in.
  */
-export const BROWSER_IP_ADDRESS = window.BROWSER_IP_ADDRESS;
+export const BROWSER_IP_ADDRESS = window.BROWSER_IP_ADDRESS
 
 /**
  * Parameters for our fetch() requests.
@@ -44,34 +44,34 @@ export const FETCH_PARAMS = {
   redirect: 'follow',
   credentials: 'same-origin',
   mode: 'cors',
-};
+}
 
 /**
  * Region of our AWS S3 bucket.
  */
-export const AWS_REGION = 'us-west-2';
+export const AWS_REGION = 'us-west-2'
 
 /**
  * Pool ID for Cognito credentials.
  */
 export const COGNITO_IDENTITY_POOL_ID =
-  'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06';
+  'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06'
 
 
 export function setStreamlitVersion(version) {
   if (STREAMLIT_VERSION != null) {
-    return;
+    return
   }
 
-  STREAMLIT_VERSION = version;
-  logMessage('Streamlit version: ', STREAMLIT_VERSION);
+  STREAMLIT_VERSION = version
+  logMessage('Streamlit version: ', STREAMLIT_VERSION)
 }
 
 export function setInstallationId(installationId) {
   if (INSTALLATION_ID != null) {
-    throw new Error('Streamlit installationId is already set');
+    throw new Error('Streamlit installationId is already set')
   }
 
-  INSTALLATION_ID = installationId;
-  console.log('Streamlit installationId: ', INSTALLATION_ID);
+  INSTALLATION_ID = installationId
+  console.log('Streamlit installationId: ', INSTALLATION_ID)
 }

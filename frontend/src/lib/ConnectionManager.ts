@@ -5,14 +5,14 @@
  * @fileoverview Manages our connection to the Proxy.
  */
 
-import url from 'url';
+import url from 'url'
 
-import {StaticConnection} from './StaticConnection';
-import {WebsocketConnection} from './WebsocketConnection';
-import {ConnectionState} from './ConnectionState';
-import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts';
-import {configureCredentials, getObject} from './s3helper';
-import {logError} from './log';
+import {StaticConnection} from './StaticConnection'
+import {WebsocketConnection} from './WebsocketConnection'
+import {ConnectionState} from './ConnectionState'
+import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
+import {configureCredentials, getObject} from './s3helper'
+import {logError} from './log'
 
 interface Props {
   /**
@@ -49,62 +49,62 @@ export class ConnectionManager {
   private connectionState: ConnectionState = ConnectionState.INITIAL;
 
   public constructor(props: Props) {
-    this.props = props;
+    this.props = props
 
     // This method returns a promise, but we don't care about its result.
-    this.connect();
+    this.connect()
   }
 
   /**
    * Indicates whether we're connected to the proxy.
    */
   public isConnected(): boolean {
-    return this.connectionState === ConnectionState.CONNECTED;
+    return this.connectionState === ConnectionState.CONNECTED
   }
 
   public isStaticConnection(): boolean {
-    return this.connectionState === ConnectionState.STATIC;
+    return this.connectionState === ConnectionState.STATIC
   }
 
   public sendMessage(obj: any): void {
     if (this.connection instanceof WebsocketConnection &&
       this.isConnected()) {
-      this.connection.sendMessage(obj);
+      this.connection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      logError(`Cannot send message when proxy is disconnected: ${obj}`);
+      logError(`Cannot send message when proxy is disconnected: ${obj}`)
     }
   }
 
   private async connect(): Promise<void> {
-    const {query} = url.parse(window.location.href, true);
-    const reportName = query.name as string;
-    const reportId = query.id as string;
+    const {query} = url.parse(window.location.href, true)
+    const reportName = query.name as string
+    const reportId = query.id as string
 
     try {
       if (reportName !== undefined) {
-        this.props.setReportName(reportName);
-        this.connection = await this.connectBasedOnWindowUrl(reportName);
+        this.props.setReportName(reportName)
+        this.connection = await this.connectBasedOnWindowUrl(reportName)
 
       } else if (reportId !== undefined) {
-        this.connection = await this.connectBasedOnManifest(reportId);
+        this.connection = await this.connectBasedOnManifest(reportId)
 
       } else {
-        throw new Error('URL must contain either a report name or an ID.');
+        throw new Error('URL must contain either a report name or an ID.')
       }
     } catch (err) {
-      this.setConnectionState(ConnectionState.ERROR, err.message);
+      this.setConnectionState(ConnectionState.ERROR, err.message)
     }
   }
 
   private setConnectionState = (connectionState: ConnectionState, errMsg?: string): void => {
     if (this.connectionState !== connectionState) {
-      this.connectionState = connectionState;
-      this.props.connectionStateChanged(connectionState);
+      this.connectionState = connectionState
+      this.props.connectionStateChanged(connectionState)
     }
 
     if (connectionState === ConnectionState.ERROR) {
-      this.props.onConnectionError(errMsg || 'unknown');
+      this.props.onConnectionError(errMsg || 'unknown')
     }
   };
 
@@ -112,8 +112,8 @@ export class ConnectionManager {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
-    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port;
-    const uri = getWsUrl(window.location.hostname, port, reportName);
+    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port
+    const uri = getWsUrl(window.location.hostname, port, reportName)
 
     return new WebsocketConnection({
       uriList: [
@@ -123,7 +123,7 @@ export class ConnectionManager {
       ],
       onMessage: this.props.onMessage,
       setConnectionState: this.setConnectionState,
-    });
+    })
   }
 
   /**
@@ -131,31 +131,31 @@ export class ConnectionManager {
    * the manifest says.
    */
   private async connectBasedOnManifest(reportId: string): Promise<WebsocketConnection | StaticConnection> {
-    const manifest = await this.fetchManifestWithPossibleLogin(reportId);
+    const manifest = await this.fetchManifestWithPossibleLogin(reportId)
 
     return manifest.proxyStatus === 'running' ?
       this.connectToRunningProxyFromManifest(manifest) :
-      this.connectToStaticReportFromManifest(reportId, manifest);
+      this.connectToStaticReportFromManifest(reportId, manifest)
   }
 
   private connectToRunningProxyFromManifest(manifest: any): WebsocketConnection {
     const {
       name, configuredProxyAddress, internalProxyIP, externalProxyIP,
       proxyPort,
-    } = manifest;
+    } = manifest
 
     const uriList = configuredProxyAddress ?
       [getWsUrl(configuredProxyAddress, proxyPort, name)] :
       [
         getWsUrl(externalProxyIP, proxyPort, name),
         getWsUrl(internalProxyIP, proxyPort, name),
-      ];
+      ]
 
     return new WebsocketConnection({
       uriList,
       onMessage: this.props.onMessage,
       setConnectionState: this.setConnectionState,
-    });
+    })
   }
 
   private connectToStaticReportFromManifest(reportId: string, manifest: any): StaticConnection {
@@ -165,57 +165,57 @@ export class ConnectionManager {
       onMessage: this.props.onMessage,
       setConnectionState: this.setConnectionState,
       setReportName: this.props.setReportName,
-    });
+    })
   }
 
   private async fetchManifestWithPossibleLogin(reportId: string): Promise<any> {
-    let manifest;
-    let permissionError = false;
+    let manifest
+    let permissionError = false
 
     try {
-      manifest = await fetchManifest(reportId);
+      manifest = await fetchManifest(reportId)
     } catch (err) {
       if (err.message === 'PermissionError') {
-        permissionError = true;
+        permissionError = true
       } else {
-        logError(err);
-        throw new Error('Unable to fetch report.');
+        logError(err)
+        throw new Error('Unable to fetch report.')
       }
     }
 
     if (permissionError) {
-      const idToken = await this.props.getUserLogin();
+      const idToken = await this.props.getUserLogin()
       try {
-        await configureCredentials(idToken);
-        manifest = await fetchManifest(reportId);
+        await configureCredentials(idToken)
+        manifest = await fetchManifest(reportId)
       } catch (err) {
-        logError(err);
-        throw new Error('Unable to log in.');
+        logError(err)
+        throw new Error('Unable to log in.')
       }
     }
 
     if (!manifest) {
-      throw new Error('Unknown error fetching report.');
+      throw new Error('Unknown error fetching report.')
     }
 
-    return manifest;
+    return manifest
   }
 }
 
 async function fetchManifest(reportId: string): Promise<any> {
-  const {hostname, pathname} = url.parse(window.location.href, true);
+  const {hostname, pathname} = url.parse(window.location.href, true)
   if (pathname == null) {
-    throw new Error(`No pathname in URL ${window.location.href}`);
+    throw new Error(`No pathname in URL ${window.location.href}`)
   }
 
   // IMPORTANT: The bucket name must match the host name!
-  const bucket = hostname;
-  const version = pathname.split('/')[1];
-  const manifestKey = `${version}/reports/${reportId}/manifest.json`;
-  const data = await getObject({Bucket: bucket, Key: manifestKey});
-  return data.json();
+  const bucket = hostname
+  const version = pathname.split('/')[1]
+  const manifestKey = `${version}/reports/${reportId}/manifest.json`
+  const data = await getObject({Bucket: bucket, Key: manifestKey})
+  return data.json()
 }
 
 function getWsUrl(host: string, port: number, reportName: string): string {
-  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`;
+  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`
 }

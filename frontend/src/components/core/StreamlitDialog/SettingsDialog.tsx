@@ -5,10 +5,10 @@
  * @fileoverview Implements a dialog that is used to configure user settings.
  */
 
-import React from 'react';
-import {ChangeEvent, PureComponent, ReactNode} from 'react';
-import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap';
-import {UserSettings} from './UserSettings';
+import React from 'react'
+import {ChangeEvent, PureComponent, ReactNode} from 'react'
+import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
+import {UserSettings} from './UserSettings'
 
 export interface Props {
   isOpen: boolean;
@@ -22,13 +22,13 @@ class SettingsDialog extends PureComponent<Props, UserSettings> {
   private _settings: UserSettings;
 
   public constructor(props: Props) {
-    super(props);
+    super(props)
 
     // Holds the settings that will be saved when the "save" button is clicked.
-    this.state = {...this.props.settings};
+    this.state = {...this.props.settings}
 
     // Holds the actual settings that Streamlit is using.
-    this._settings = {...this.props.settings};
+    this._settings = {...this.props.settings}
   }
 
   public render = (): ReactNode => {
@@ -80,35 +80,35 @@ class SettingsDialog extends PureComponent<Props, UserSettings> {
           </Button>
         </ModalFooter>
       </Modal>
-    );
+    )
   };
 
   private handleDialogOpen = () => {
-    this.setState({...this._settings});
+    this.setState({...this._settings})
   };
 
   private changeSingleSetting = (name: string, value: boolean) => {
     // TypeScript doesn't currently have a good solution for setState with
     // a dynamic key name:
     // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
-    this.setState(state => ({...state, [name]: value}));
+    this.setState(state => ({...state, [name]: value}))
   };
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
-    this.changeSingleSetting(e.target.name, e.target.checked);
+    this.changeSingleSetting(e.target.name, e.target.checked)
   };
 
   private handleCancelButtonClick = () => {
     // Discard settings from this.state by not saving them in this.settings.
     // this.settings = {...this.state};
-    this.props.onClose();
+    this.props.onClose()
   };
 
   private handleSaveButtonClick = () => {
-    this._settings = {...this.state};
-    this.props.onSave(this._settings);
-    this.props.onClose();
+    this._settings = {...this.state}
+    this.props.onSave(this._settings)
+    this.props.onClose()
   };
 }
 
-export default SettingsDialog;
+export default SettingsDialog

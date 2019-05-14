@@ -5,23 +5,23 @@
  * @fileoverview Represents formatted text.
  */
 
-import React, {ReactNode, ReactElement} from 'react';
-import ReactJson from 'react-json-view';
-import ReactMarkdown from 'react-markdown';
-import {Map as ImmutableMap} from 'immutable';
-import CodeBlock from '../CodeBlock';
-import {PureStreamlitElement} from '../../shared/StreamlitElement/';
-import {Text as TextProto} from 'autogen/protobuf';
-import './Text.scss';
+import React, {ReactNode, ReactElement} from 'react'
+import ReactJson from 'react-json-view'
+import ReactMarkdown from 'react-markdown'
+import {Map as ImmutableMap} from 'immutable'
+import CodeBlock from '../CodeBlock'
+import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {Text as TextProto} from 'autogen/protobuf'
+import './Text.scss'
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
   switch (format) {
-    case TextProto.Format.ERROR:    return 'alert-danger';
-    case TextProto.Format.WARNING:  return 'alert-warning';
-    case TextProto.Format.INFO:     return 'alert-info';
-    case TextProto.Format.SUCCESS:  return 'alert-success';
+    case TextProto.Format.ERROR:    return 'alert-danger'
+    case TextProto.Format.WARNING:  return 'alert-warning'
+    case TextProto.Format.INFO:     return 'alert-info'
+    case TextProto.Format.SUCCESS:  return 'alert-success'
   }
-  return undefined;
+  return undefined
 }
 
 interface LinkProps {
@@ -33,7 +33,7 @@ interface LinkProps {
 // see https://mathiasbynens.github.io/rel-noopener
 const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   <a href={props.href} target="_blank" rel="noopener noreferrer">{props.children}</a>
-);
+)
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -45,13 +45,13 @@ interface Props {
  */
 class Text extends PureStreamlitElement<Props> {
   public safeRender(): ReactNode {
-    const {element, width} = this.props;
-    const body = element.get('body');
-    const format = element.get('format');
+    const {element, width} = this.props
+    const body = element.get('body')
+    const format = element.get('format')
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
-    };
+    }
 
     switch (format) {
       // Plain, fixed width text.
@@ -60,7 +60,7 @@ class Text extends PureStreamlitElement<Props> {
           <div className="fixed-width" style={{width}}>
             {body}
           </div>
-        );
+        )
 
       // Markdown.
       case TextProto.Format.MARKDOWN:
@@ -68,17 +68,17 @@ class Text extends PureStreamlitElement<Props> {
           <div className="markdown-text-container" style={{width}}>
             <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
           </div>
-        );
+        )
 
       // A JSON object. Stored as a string.
       case TextProto.Format.JSON:
-        let bodyObject = undefined;
+        let bodyObject = undefined
         try {
-          bodyObject = JSON.parse(body);
+          bodyObject = JSON.parse(body)
         } catch (e) {
-          const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10);
-          e.message += `\n${body.substr(0, pos + 1)} ← here`;
-          throw e;
+          const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10)
+          e.message += `\n${body.substr(0, pos + 1)} ← here`
+          throw e
         }
         return (
           <div className="json-text-container" style={{width}}>
@@ -90,7 +90,7 @@ class Text extends PureStreamlitElement<Props> {
               style={{font: ''}}  // Unset so we can style via a CSS file.
             />
           </div>
-        );
+        )
 
       case TextProto.Format.ERROR:
       case TextProto.Format.WARNING:
@@ -102,12 +102,12 @@ class Text extends PureStreamlitElement<Props> {
               <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
             </div>
           </div>
-        );
+        )
       // Default
       default:
-        throw new Error(`Invalid Text format:${element.get('format')}`);
+        throw new Error(`Invalid Text format:${element.get('format')}`)
     }
   }
 }
 
-export default Text;
+export default Text

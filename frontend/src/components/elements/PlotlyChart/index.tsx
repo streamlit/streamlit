@@ -1,1 +1,1 @@
-export { default } from './PlotlyChart';
+export { default } from './PlotlyChart'

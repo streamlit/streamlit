@@ -5,10 +5,10 @@
  * @fileoverview Displays a Python Exception in the Report.
  */
 
-import React from 'react';
-import {Map as ImmutableMap} from 'immutable';
-import {PureStreamlitElement} from '../../shared/StreamlitElement/';
-import './ExceptionElement.scss';
+import React from 'react'
+import {Map as ImmutableMap} from 'immutable'
+import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import './ExceptionElement.scss'
 
 interface Props {
   width: number;
@@ -20,11 +20,11 @@ interface Props {
   */
 class ExceptionElement extends PureStreamlitElement<Props> {
   public safeRender(): React.ReactNode {
-    const {element, width} = this.props;
-    const type = element.get('type');
-    let message = element.get('message');
-    if (message) { message = `: ${message}`; }
-    const stackTrace = element.get('stackTrace');
+    const {element, width} = this.props
+    const type = element.get('type')
+    let message = element.get('message')
+    if (message) { message = `: ${message}` }
+    const stackTrace = element.get('stackTrace')
 
     // Put it all together into a nice little html view.
     return (
@@ -36,8 +36,8 @@ class ExceptionElement extends PureStreamlitElement<Props> {
           )
         }</div>
       </div>
-    );
+    )
   }
 }
 
-export default ExceptionElement;
+export default ExceptionElement

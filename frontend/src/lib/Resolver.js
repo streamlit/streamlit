@@ -9,11 +9,11 @@
  */
 export default class Resolver {
   constructor() {
-    this.resolve = null;
-    this.reject = null;
+    this.resolve = null
+    this.reject = null
     this.promise = new Promise((resFn, rejFn) => {
-      this.resolve = resFn;
-      this.reject = rejFn;
-    });
+      this.resolve = resFn
+      this.reject = rejFn
+    })
   }
 }

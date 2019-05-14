@@ -5,17 +5,17 @@
  * @fileoverview Component display a Pandas Dataframe.
  */
 
-import React from 'react';
-import { PureStreamlitElement } from '../../shared/StreamlitElement/';
-import { Table as ReactTable }  from 'reactstrap';
-import { toFormattedString } from '../../../lib/format';
+import React from 'react'
+import { PureStreamlitElement } from '../../shared/StreamlitElement/'
+import { Table as ReactTable }  from 'reactstrap'
+import { toFormattedString } from '../../../lib/format'
 
 import {
   dataFrameGet,
   dataFrameGetDimensions,
-} from '../../../lib/dataFrameProto';
+} from '../../../lib/dataFrameProto'
 
-import './Table.scss';
+import './Table.scss'
 
 /**
  * Functional element representing a DataFrame.
@@ -23,10 +23,10 @@ import './Table.scss';
 
 class Table extends PureStreamlitElement {
   safeRender() {
-    const { element } = this.props;
-    const { headerRows, rows, cols } = dataFrameGetDimensions(element);
+    const { element } = this.props
+    const { headerRows, rows, cols } = dataFrameGetDimensions(element)
 
-    const hasNoData = rows === headerRows;
+    const hasNoData = rows === headerRows
 
     // TODO(tvst): Make tables have a max width with overflow: scroll (when
     // media==screen). But need to fix the autosizer first.
@@ -58,7 +58,7 @@ class Table extends PureStreamlitElement {
           </tbody>
         </ReactTable>
       </div>
-    );
+    )
   }
 }
 
@@ -73,17 +73,17 @@ class Table extends PureStreamlitElement {
  * cols       - Number of colums in the table.
  */
 function TableRows({df, header, headerRows, rows, cols}) {
-  const startRow = header ? 0 : headerRows;
-  const endRow = header ? headerRows : rows;
-  const rowArray = [];
+  const startRow = header ? 0 : headerRows
+  const endRow = header ? headerRows : rows
+  const rowArray = []
   for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
     rowArray.push(
       <tr key={rowIdx}>
         <TableRow df={df} rowIdx={rowIdx} cols={cols}/>
       </tr>
-    );
+    )
   }
-  return rowArray;
+  return rowArray
 }
 
 /**
@@ -94,23 +94,23 @@ function TableRows({df, header, headerRows, rows, cols}) {
  * cols   - numver of colums in the table.
  */
 function TableRow({df, rowIdx, cols}) {
-  const entries = [];
+  const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
-    const { contents, type } = dataFrameGet(df, colIdx, rowIdx);
-    const formattedContents = toFormattedString(contents);
+    const { contents, type } = dataFrameGet(df, colIdx, rowIdx)
+    const formattedContents = toFormattedString(contents)
     if (type === 'corner') {
-      entries.push(<th key={colIdx}>&nbsp;</th>);
+      entries.push(<th key={colIdx}>&nbsp;</th>)
     } else if (type === 'row-header') {
-      entries.push(<th key={colIdx} scope="row">{ formattedContents }</th>);
+      entries.push(<th key={colIdx} scope="row">{ formattedContents }</th>)
     } else if (type === 'col-header') {
-      entries.push(<th key={colIdx}>{ formattedContents }</th>);
+      entries.push(<th key={colIdx}>{ formattedContents }</th>)
     } else if (type === 'data') {
-      entries.push(<td key={colIdx}>{ formattedContents }</td>);
+      entries.push(<td key={colIdx}>{ formattedContents }</td>)
     } else {
-      throw new Error(`Cannot parse type "${type}".`);
+      throw new Error(`Cannot parse type "${type}".`)
     }
   }
-  return entries;
+  return entries
 }
 
-export default Table;
+export default Table

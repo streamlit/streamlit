@@ -1,2 +1,2 @@
-export { default } from './DeckGlChart';
+export { default } from './DeckGlChart'
 

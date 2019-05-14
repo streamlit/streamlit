@@ -5,9 +5,9 @@
  * @fileoverview Utility functions for dealing with immutable protobuf objects.
  */
 
-import { fromJS } from 'immutable';
-import { IS_DEV_ENV } from './baseconsts';
-import { logMessage } from './log';
+import { fromJS } from 'immutable'
+import { IS_DEV_ENV } from './baseconsts'
+import { logMessage } from './log'
 
 /**
  * Converts a protobuf JS object into its immutable counterpart.
@@ -16,11 +16,11 @@ export function toImmutableProto(messageType, message) {
   const x = messageType.toObject(message, {
     defaults: true,
     oneofs: true,
-  });
+  })
   if (IS_DEV_ENV) {
-    logMessage('Protobuf: ', x);
+    logMessage('Protobuf: ', x)
   }
-  return fromJS(x);
+  return fromJS(x)
 }
 
 /**
@@ -31,11 +31,11 @@ export function toImmutableProto(messageType, message) {
  * funcs - Dictionary of functions, one for each oneof field.
  */
 export function dispatchOneOf(obj, name, funcs) {
-  const whichOne = obj.get(name);
+  const whichOne = obj.get(name)
   if (whichOne in funcs) {
-    return funcs[whichOne](obj.get(whichOne));
+    return funcs[whichOne](obj.get(whichOne))
   } else {
-    throw new Error(`Cannot handle ${name} "${whichOne}".`);
+    throw new Error(`Cannot handle ${name} "${whichOne}".`)
   }
 }
 
@@ -47,11 +47,11 @@ export function dispatchOneOf(obj, name, funcs) {
  * funcs - Dictionary of update functions, one for each oneof field.
  */
 export function updateOneOf(obj, name, funcs) {
-  const whichOne = obj.get(name);
+  const whichOne = obj.get(name)
   if (whichOne in funcs) {
-    return obj.update(whichOne, funcs[whichOne]);
+    return obj.update(whichOne, funcs[whichOne])
   } else {
-    throw new Error(`Cannot handle ${name} "${whichOne}".`);
+    throw new Error(`Cannot handle ${name} "${whichOne}".`)
   }
 }
 
@@ -63,10 +63,10 @@ export function updateOneOf(obj, name, funcs) {
  * funcs - Dictionary of values, one for each oneof field.
  */
 export function mapOneOf(obj, name, values) {
-  const whichOne = obj.get(name);
+  const whichOne = obj.get(name)
   if (whichOne in values) {
-    return values[whichOne];
+    return values[whichOne]
   }
 
-  throw new Error(`Cannot handle ${name} "${whichOne}".`);
+  throw new Error(`Cannot handle ${name} "${whichOne}".`)
 }

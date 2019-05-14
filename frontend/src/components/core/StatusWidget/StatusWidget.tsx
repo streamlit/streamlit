@@ -7,21 +7,21 @@
  * report, and transient report-related events.
  */
 
-import React, {PureComponent, ReactNode} from 'react';
-import {CSSTransition} from 'react-transition-group';
-import {Button, UncontrolledTooltip} from 'reactstrap';
-import {SignalConnection} from 'typed-signals';
+import React, {PureComponent, ReactNode} from 'react'
+import {CSSTransition} from 'react-transition-group'
+import {Button, UncontrolledTooltip} from 'reactstrap'
+import {SignalConnection} from 'typed-signals'
 
-import {ConnectionState} from '../../../lib/ConnectionState';
-import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent';
-import {ReportRunState} from '../../../lib/ReportRunState';
-import {Timer} from '../../../lib/Timer';
-import openIconic from 'assets/img/open-iconic.svg';
-import iconRunning from 'assets/img/icon_running.gif';
-import './StatusWidget.scss';
+import {ConnectionState} from '../../../lib/ConnectionState'
+import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent'
+import {ReportRunState} from '../../../lib/ReportRunState'
+import {Timer} from '../../../lib/Timer'
+import openIconic from 'assets/img/open-iconic.svg'
+import iconRunning from 'assets/img/icon_running.gif'
+import './StatusWidget.scss'
 
 /** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = false;
+const SHOW_STOP_BUTTON = false
 
 /** Component props */
 interface Props {
@@ -80,11 +80,11 @@ interface ConnectionStateUI {
 }
 
 // Amount of time to display the "Report Changed. Rerun?" prompt when it first appears.
-const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000;
+const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
 
 // Amount of time to display the Report Changed prompt after the user has hovered
 // and then unhovered on it.
-const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000;
+const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
 export class StatusWidget extends PureComponent<Props, State> {
   /** onReportEvent signal connection */
@@ -94,14 +94,14 @@ export class StatusWidget extends PureComponent<Props, State> {
   private readonly minimizePromptTimer = new Timer();
 
   public constructor(props: Props) {
-    super(props);
+    super(props)
 
     this.state = {
       statusMinimized: StatusWidget.shouldMinimize(),
       promptMinimized: false,
       reportChangedOnDisk: false,
       promptHovered: false,
-    };
+    }
   }
 
   /** Called by React on prop changes */
@@ -109,27 +109,27 @@ export class StatusWidget extends PureComponent<Props, State> {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
     if (props.reportRunState === ReportRunState.RUNNING) {
-      return {reportChangedOnDisk: false, promptHovered: false};
+      return {reportChangedOnDisk: false, promptHovered: false}
     }
 
-    return null;
+    return null
   }
 
   public componentDidMount(): void {
     this.reportEventConn = this.props.reportEventDispatcher.onReportEvent.connect(
-      evt => this.handleReportEvent(evt));
-    window.addEventListener('scroll', this.handleScroll);
+      evt => this.handleReportEvent(evt))
+    window.addEventListener('scroll', this.handleScroll)
   }
 
   public componentWillUnmount(): void {
     if (this.reportEventConn !== undefined) {
-      this.reportEventConn.disconnect();
-      this.reportEventConn = undefined;
+      this.reportEventConn.disconnect()
+      this.reportEventConn = undefined
     }
 
-    this.minimizePromptTimer.cancel();
+    this.minimizePromptTimer.cancel()
 
-    window.removeEventListener('scroll', this.handleScroll);
+    window.removeEventListener('scroll', this.handleScroll)
   }
 
   /**
@@ -139,24 +139,24 @@ export class StatusWidget extends PureComponent<Props, State> {
    */
   public handleAlwaysRerunHotkeyPressed = (): void => {
     if (this.state.reportChangedOnDisk) {
-      this.handleAlwaysRerunClick();
+      this.handleAlwaysRerunClick()
     }
   };
 
   private isConnected(): boolean {
-    return this.props.connectionState === ConnectionState.CONNECTED;
+    return this.props.connectionState === ConnectionState.CONNECTED
   }
 
   private handleReportEvent(event: ReportEvent): void {
     switch (event) {
       case ReportEvent.SOURCE_FILE_CHANGED:
-        this.setState({reportChangedOnDisk: true, promptMinimized: false});
-        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS);
-        break;
+        this.setState({reportChangedOnDisk: true, promptMinimized: false})
+        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
+        break
 
       default:
-        console.warn(`Unhandled ReportEvent: ${event}`);
-        break;
+        console.warn(`Unhandled ReportEvent: ${event}`)
+        break
     }
   }
 
@@ -166,19 +166,19 @@ export class StatusWidget extends PureComponent<Props, State> {
     // value, leave the timer alone.
     if (timeout > this.minimizePromptTimer.remainingTime) {
       this.minimizePromptTimer.setTimeout(() => {
-        this.setState({promptMinimized: true});
-      }, timeout);
+        this.setState({promptMinimized: true})
+      }, timeout)
     }
   }
 
   private static shouldMinimize(): boolean {
-    return window.scrollY > 32;
+    return window.scrollY > 32
   }
 
   private handleScroll = (): void => {
     this.setState({
       statusMinimized: StatusWidget.shouldMinimize(),
-    });
+    })
   };
 
   public render(): ReactNode {
@@ -187,20 +187,20 @@ export class StatusWidget extends PureComponent<Props, State> {
     // via `this.curView`, so that we can fade out our previous state
     // if `renderWidget` returns null after returning a non-null value.
 
-    const prevView = this.curView;
-    this.curView = this.renderWidget();
+    const prevView = this.curView
+    this.curView = this.renderWidget()
     if (prevView == null && this.curView == null) {
-      return null;
+      return null
     }
 
-    let animateIn: boolean;
-    let renderView: ReactNode;
+    let animateIn: boolean
+    let renderView: ReactNode
     if (this.curView != null) {
-      animateIn = true;
-      renderView = this.curView;
+      animateIn = true
+      renderView = this.curView
     } else {
-      animateIn = false;
-      renderView = prevView;
+      animateIn = false
+      renderView = prevView
     }
 
     // NB: the `timeout` value here must match the transition
@@ -214,7 +214,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         classNames="StatusWidget">
         <div key="StatusWidget">{renderView}</div>
       </CSSTransition>
-    );
+    )
   }
 
   private renderWidget(): ReactNode {
@@ -227,20 +227,20 @@ export class StatusWidget extends PureComponent<Props, State> {
         // In the latter case, the server should get around to actually
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
-        return this.renderReportIsRunning();
+        return this.renderReportIsRunning()
       } else if (this.state.reportChangedOnDisk) {
-        return this.renderRerunReportPrompt();
+        return this.renderRerunReportPrompt()
       }
     }
 
-    return this.renderConnectionStatus();
+    return this.renderConnectionStatus()
   }
 
   /** E.g. "Disconnected [Icon]" */
   private renderConnectionStatus(): ReactNode {
-    const ui = StatusWidget.getConnectionStateUI(this.props.connectionState);
+    const ui = StatusWidget.getConnectionStateUI(this.props.connectionState)
     if (ui === undefined) {
-      return null;
+      return null
     }
 
     return (
@@ -259,18 +259,18 @@ export class StatusWidget extends PureComponent<Props, State> {
           {ui.tooltip}
         </UncontrolledTooltip>
       </div>
-    );
+    )
   }
 
   /** "Running... [Stop]" */
   private renderReportIsRunning(): ReactNode {
-    let stopButton: ReactNode = null;
+    let stopButton: ReactNode = null
     if (SHOW_STOP_BUTTON) {
-      const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED;
+      const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED
       stopButton = StatusWidget.promptButton(
         stopRequested ? 'Stopping...' : 'Stop',
         stopRequested,
-        this.handleStopReportClick);
+        this.handleStopReportClick)
     }
 
     return (
@@ -288,13 +288,13 @@ export class StatusWidget extends PureComponent<Props, State> {
             ''
         }
       </div>
-    );
+    )
   }
 
   /** "Source file changed. [Rerun] [Always Rerun]" */
   private renderRerunReportPrompt(): ReactNode {
-    const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED;
-    const minimized = this.state.promptMinimized && !this.state.promptHovered;
+    const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+    const minimized = this.state.promptMinimized && !this.state.promptHovered
 
     return (
       <div
@@ -324,28 +324,28 @@ export class StatusWidget extends PureComponent<Props, State> {
           )}
         </div>
       </div>
-    );
+    )
   }
 
   private onReportPromptHover = (): void => {
-    this.setState({promptHovered: true});
+    this.setState({promptHovered: true})
   };
 
   private onReportPromptUnhover = (): void => {
-    this.setState({promptHovered: false, promptMinimized: false});
-    this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS);
+    this.setState({promptHovered: false, promptMinimized: false})
+    this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
   };
 
   private handleStopReportClick = (): void => {
-    this.props.stopReport();
+    this.props.stopReport()
   };
 
   private handleRerunClick = (): void => {
-    this.props.rerunReport(false);
+    this.props.rerunReport(false)
   };
 
   private handleAlwaysRerunClick = (): void => {
-    this.props.rerunReport(true);
+    this.props.rerunReport(true)
   };
 
   private static promptButton(title: ReactNode, disabled: boolean, onClick: () => void): ReactNode {
@@ -353,7 +353,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       <Button outline size="sm" color="info" disabled={disabled} onClick={onClick}>
         <div>{title}</div>
       </Button>
-    );
+    )
   }
 
   private static getConnectionStateUI(state: ConnectionState): ConnectionStateUI | undefined {
@@ -363,20 +363,20 @@ export class StatusWidget extends PureComponent<Props, State> {
           icon: <use href={openIconic + '#ellipses'} />,
           label: 'Waiting',
           tooltip: 'Waiting for connection',
-        };
+        }
 
       case ConnectionState.CONNECTED:
-        return undefined;
+        return undefined
 
       case ConnectionState.DISCONNECTED:
         return {
           icon: <use href={openIconic + '#circle-x'} />,
           label: 'Disconnected',
           tooltip: 'Disconnected from live data feed',
-        };
+        }
 
       case ConnectionState.STATIC:
-        return undefined;
+        return undefined
 
       case ConnectionState.ERROR:
       default:
@@ -384,7 +384,7 @@ export class StatusWidget extends PureComponent<Props, State> {
           icon: <use href={openIconic + '#warning'} />,
           label: 'Error',
           tooltip: 'Something went wrong!',
-        };
+        }
     }
   }
 }

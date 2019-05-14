@@ -7,10 +7,10 @@
  * websockets).
  */
 
-import url from 'url';
-import {ConnectionState} from './ConnectionState';
-import {Text as TextProto, Delta} from 'autogen/protobuf';
-import {getObject} from './s3helper';
+import url from 'url'
+import {ConnectionState} from './ConnectionState'
+import {Text as TextProto, Delta} from 'autogen/protobuf'
+import {getObject} from './s3helper'
 
 interface Props {
   reportId: string;
@@ -36,15 +36,15 @@ interface Props {
  */
 export class StaticConnection {
   public constructor(props: Props) {
-    const {name, nDeltas} = props.manifest;
+    const {name, nDeltas} = props.manifest
 
-    props.setConnectionState(ConnectionState.STATIC);
-    props.setReportName(name);
+    props.setConnectionState(ConnectionState.STATIC)
+    props.setReportName(name)
 
     // TODO: Unify with App.js
-    const {hostname, pathname} = url.parse(window.location.href, true);
-    const bucket = hostname;
-    const version = pathname != null ? pathname.split('/')[1] : 'null';
+    const {hostname, pathname} = url.parse(window.location.href, true)
+    const bucket = hostname
+    const version = pathname != null ? pathname.split('/')[1] : 'null'
 
     for (let id = 0; id < nDeltas; id++) {
       // Insert a loading message for this element.
@@ -52,8 +52,8 @@ export class StaticConnection {
         id,
         body: `Loading element ${id}...`,
         format: TextProto.Format.INFO,
-      }));
-      const deltaKey = `${version}/reports/${props.reportId}/${id}.delta`;
+      }))
+      const deltaKey = `${version}/reports/${props.reportId}/${id}.delta`
 
       getObject({Bucket: bucket, Key: deltaKey})
         .then(response => response.arrayBuffer())
@@ -61,14 +61,14 @@ export class StaticConnection {
           props.onMessage({
             type: 'delta',
             delta: Delta.decode(new Uint8Array(arrayBuffer)),
-          });
+          })
         }).catch((error) => {
           props.onMessage(textElement({
             id,
             body: `Error loading element ${id}: ${error}`,
             format: TextProto.Format.ERROR,
-          }));
-        });
+          }))
+        })
     }
   }
 }
@@ -88,5 +88,5 @@ function textElement({id, body, format}: {id: number; body: string; format: Text
         text: {body, format},
       },
     },
-  };
+  }
 }

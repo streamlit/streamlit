@@ -3,7 +3,7 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-import React from 'react';
+import React from 'react'
 
 import {
   // Alert,
@@ -17,13 +17,13 @@ import {
   Progress,
   // Row,
   // UncontrolledTooltip,
-} from 'reactstrap';
+} from 'reactstrap'
 
-import SettingsDialog from './SettingsDialog';
-import {CopyToClipboard} from 'react-copy-to-clipboard';
-import {STREAMLIT_VERSION} from '../../../lib/baseconsts';
+import SettingsDialog from './SettingsDialog'
+import {CopyToClipboard} from 'react-copy-to-clipboard'
+import {STREAMLIT_VERSION} from '../../../lib/baseconsts'
 
-import './StreamlitDialog.scss';
+import './StreamlitDialog.scss'
 
 function StreamlitDialog({dialogProps}) {
   // This table of functions constructs the dialog based on dialogProps.type
@@ -36,16 +36,16 @@ function StreamlitDialog({dialogProps}) {
     'clearCache': clearCacheDialog,
     'settings': settingsDialog,
     [undefined]: noDialog,
-  };
+  }
 
   const populateDialogFunc =
-    populateDialogTable[dialogProps.type] || typeNotRecognizedDialog;
+    populateDialogTable[dialogProps.type] || typeNotRecognizedDialog
 
-  return populateDialogFunc(dialogProps);
+  return populateDialogFunc(dialogProps)
 }
 
 function BasicDialog({children, onClose}) {
-  const isOpen = children !== undefined;
+  const isOpen = children !== undefined
   return (
     <Modal
       isOpen={isOpen}
@@ -54,7 +54,7 @@ function BasicDialog({children, onClose}) {
     >
       { children }
     </Modal>
-  );
+  )
 }
 
 /**
@@ -72,7 +72,7 @@ function uploadProgressDialog({progress, onClose}) {
         </div>
       </ModalBody>
     </BasicDialog>
-  );
+  )
 }
 
 /**
@@ -94,14 +94,14 @@ function uploadedDialog({url, onClose}) {
         <Button outline onClick={onClose}>Done</Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 /**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
 function noDialog({onClose}) {
-  return <BasicDialog onClose={onClose}></BasicDialog>;
+  return <BasicDialog onClose={onClose}></BasicDialog>
 }
 
 /**
@@ -115,7 +115,7 @@ function warningDialog({msg, onClose}) {
         <Button outline onClick={onClose}>Done</Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 /**
@@ -145,7 +145,7 @@ function rerunScriptDialog(
         <Button outline color="primary" onClick={rerunCallback}>Rerun</Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 /**
@@ -167,7 +167,7 @@ function clearCacheDialog({ confirmCallback, onClose }) {
         <Button outline color="primary" onClick={confirmCallback}>Clear cache</Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 
@@ -183,7 +183,7 @@ function settingsDialog({settings, isProxyConnected, isOpen, onSave, onClose}) {
       onSave={onSave}
       onClose={onClose}
     />
-  );
+  )
 }
 
 /**
@@ -194,7 +194,7 @@ function typeNotRecognizedDialog({type, onClose}) {
     <BasicDialog onClose={onClose}>
       <ModalBody>{`Dialog type "${type}" not recognized.`}</ModalBody>
     </BasicDialog>
-  );
+  )
 }
 
 /**
@@ -216,7 +216,7 @@ function aboutDialog({onClose}) {
         <Button outline color="primary" onClick={onClose}>Close</Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
-export default StreamlitDialog;
+export default StreamlitDialog

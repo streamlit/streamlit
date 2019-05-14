@@ -1,1 +1,1 @@
-export { default } from './CodeBlock';
+export { default } from './CodeBlock'

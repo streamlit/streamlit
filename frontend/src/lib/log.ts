@@ -5,7 +5,7 @@
  * @fileoverview Functions used for logging.
  */
 
-import {IS_DEV_ENV} from './baseconsts';
+import {IS_DEV_ENV} from './baseconsts'
 
 
 /**
@@ -13,7 +13,7 @@ import {IS_DEV_ENV} from './baseconsts';
  */
 export function logMessage(...args: any[]): void {
   if (IS_DEV_ENV) {
-    console.log(...args);
+    console.log(...args)
   }
 }
 
@@ -25,7 +25,7 @@ export function logMessage(...args: any[]): void {
  */
 export function logWarning(...args: any[]): void {
   if (IS_DEV_ENV) {
-    console.warn(...args);
+    console.warn(...args)
   }
 }
 
@@ -37,7 +37,7 @@ export function logWarning(...args: any[]): void {
  * experience.
  */
 export function logError(...args: any[]): void {
-  console.error(...args);
+  console.error(...args)
   // TODO: Send error report to our servers when there's an error.
 }
 
@@ -47,5 +47,5 @@ export function logError(...args: any[]): void {
  * USE SPARINGLY!
  */
 export function logAlways(...args: any[]): void {
-  console.log(...args);
+  console.log(...args)
 }

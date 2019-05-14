@@ -1,1 +1,1 @@
-export { default } from './DocString';
+export { default } from './DocString'

@@ -1,1 +1,1 @@
-export { default } from './ExceptionElement';
+export { default } from './ExceptionElement'

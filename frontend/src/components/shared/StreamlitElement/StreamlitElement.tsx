@@ -8,9 +8,9 @@
  * method.
  */
 
-import Error from '../Error';
-import ErrorBoundary from '../ErrorBoundary';
-import React from 'react';
+import Error from '../Error'
+import ErrorBoundary from '../ErrorBoundary'
+import React from 'react'
 
 interface Props {
   width: number;
@@ -20,7 +20,7 @@ export abstract class StreamlitElement<P extends Props, S = {}>
   extends React.Component<P, S> {
 
   public render(): React.ReactNode {
-    return handleErrors(this.props, () => this.safeRender());
+    return handleErrors(this.props, () => this.safeRender())
   }
 
   abstract safeRender(): React.ReactNode;
@@ -30,7 +30,7 @@ export abstract class PureStreamlitElement<P extends Props, S = {}>
   extends React.PureComponent<P, S> {
 
   public render(): React.ReactNode {
-    return handleErrors(this.props, () => this.safeRender());
+    return handleErrors(this.props, () => this.safeRender())
   }
 
   abstract safeRender(): React.ReactNode;
@@ -44,10 +44,10 @@ function handleErrors(
   try {
     return (
       <ErrorBoundary width={props.width}>{fn()}</ErrorBoundary>
-    );
+    )
   } catch (e) {
     return (
       <Error width={props.width} error={e}/>
-    );
+    )
   }
 }
