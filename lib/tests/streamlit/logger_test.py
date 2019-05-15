@@ -1,5 +1,7 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
+
 """Logger Unittest."""
+
 import logging
 import unittest
 

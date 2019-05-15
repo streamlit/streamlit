@@ -1,5 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
+
 """Unit test for data_frame_proto."""
+
 import json
 import sys
 import unittest

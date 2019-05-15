@@ -1,4 +1,5 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
+
 """Tests coercing various objects to DataFrames"""
 
 # Python 2/3 compatibility

@@ -1,17 +1,16 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
-"""DeltaGenerator Unittest."""
+
+"""Unit test of dg.add_rows()."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
-import unittest
 import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
 import streamlit.elements.data_frame_proto as data_frame_proto
+from tests.streamlit import util
 
 
 DATAFRAME = pd.DataFrame({'a': [1, 2], 'b': [10, 20]})
@@ -19,17 +18,12 @@ NEW_ROWS = pd.DataFrame({'a': [3, 4, 5], 'b': [30, 40, 50]})
 NEW_ROWS_WRONG_SHAPE = pd.DataFrame({'a': [3, 4], 'b': [30, 40], 'c': [50, 60]})
 
 
-class DeltaGeneratorAddRowsTest(unittest.TestCase):
+class DeltaGeneratorAddRowsTest(util.DeltaGeneratorTestCase):
     """Test dg.add_rows."""
 
     def setUp(self):
-        self._report_queue = ReportQueue()
-
-        def enqueue(msg):
-            self._report_queue.enqueue(msg)
-            return True
-
-        self._dg = DeltaGenerator(enqueue)
+        super(DeltaGeneratorAddRowsTest, self).setUp(override_root=False)
+        self._dg = self.new_delta_generator()
 
     def _get_unnamed_data_methods(self):
         """DeltaGenerator methods that do not produce named datasets."""
@@ -69,7 +63,7 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure it has 2 rows in it.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -78,13 +72,13 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure there are 5 rows in it now.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()
 
     def test_simple_add_rows_with_clear_queue(self):
         """Test plain old add_rows after clearing the queue."""
@@ -97,22 +91,22 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure it has 2 rows in it.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
             # This is what we're testing:
-            self._report_queue.clear()
+            self.report_queue.clear()
             el.add_rows(NEW_ROWS)
 
             # Make sure there are 3 rows in the delta that got appended.
-            ar = self._report_queue._queue[-1].delta.add_rows
+            ar = self.get_delta_from_queue().add_rows
             num_rows = len(ar.data.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()
 
     def test_named_add_rows(self):
         """Test add_rows with a named dataset."""
@@ -122,7 +116,7 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure it has 2 rows in it.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -131,13 +125,13 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure there are 5 rows in it now.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()
 
     def test_named_add_rows_with_clear_queue(self):
         """Test add_rows with a named dataset, and clearing the queue."""
@@ -147,22 +141,22 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Make sure it has 2 rows in it.
             df_proto = data_frame_proto._get_data_frame(
-                self._report_queue._queue[-1].delta)
+                self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
             # This is what we're testing:
-            self._report_queue.clear()
+            self.report_queue.clear()
             el.add_rows(mydata1=NEW_ROWS)
 
             # Make sure there are 3 rows in the delta that got appended.
-            ar = self._report_queue._queue[-1].delta.add_rows
+            ar = self.get_delta_from_queue().add_rows
             num_rows = len(ar.data.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()
 
     def test_add_rows_fails_when_wrong_name(self):
         """Test add_rows with wrongfully named datasets."""
@@ -179,7 +173,7 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()
 
     def test_add_rows_fails_when_wrong_shape(self):
         """Test that add_rows raises error when input has wrong shape."""
@@ -196,4 +190,4 @@ class DeltaGeneratorAddRowsTest(unittest.TestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()
-            self._report_queue.clear()
+            self.report_queue.clear()

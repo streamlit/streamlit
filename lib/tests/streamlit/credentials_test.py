@@ -1,5 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
+
 """streamlit.credentials unit test."""
+
 import sys
 import textwrap
 import unittest

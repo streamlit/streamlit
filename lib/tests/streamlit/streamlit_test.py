@@ -1,4 +1,6 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
+
+from mock import call, patch
 import json
 import os
 import re
@@ -7,18 +9,15 @@ import textwrap
 import time
 import unittest
 
+from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
 
-from google.protobuf import json_format
-from mock import call, patch
-
 from streamlit import __version__
 from streamlit import protobuf
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
 from streamlit.elements.Chart import Chart
+from tests.streamlit import util
 import streamlit as st
 
 
@@ -58,23 +57,11 @@ class StreamlitTest(unittest.TestCase):
         )
 
 
-class StreamlitAPITest(unittest.TestCase):
+class StreamlitAPITest(util.DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs.
 
     Unit tests for https://streamlit.io/secret/docs/#api
     """
-
-    def setUp(self):
-        self._report_queue = ReportQueue()
-
-        def enqueue(msg):
-            self._report_queue.enqueue(msg)
-            return True
-
-        st._delta_generator = DeltaGenerator(enqueue)
-
-    def get_last_delta_element(self):
-        return self._report_queue._queue[-1].delta.new_element
 
     def test_st_altair_chart(self):
         """Test st.altair_chart."""
@@ -88,7 +75,7 @@ class StreamlitAPITest(unittest.TestCase):
             .interactive())
         st.altair_chart(c)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         spec = json.loads(el.vega_lite_chart.spec)
 
         # Checking vega lite is a lot of work so rather than doing that, we
@@ -102,7 +89,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
         dg = st.area_chart(df, width=640, height=480)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'AreaChart')
         self.assertEqual(el.chart.width, 640)
         self.assertEqual(el.chart.height, 480)
@@ -122,7 +109,7 @@ class StreamlitAPITest(unittest.TestCase):
 
         dg = st.audio(fake_audio_data)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         # Manually base64 encoded payload above via
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.audio.data, 'ESIzRFVm')
@@ -134,7 +121,7 @@ class StreamlitAPITest(unittest.TestCase):
             p.return_value = 0xDEADBEEF
             dg = st.balloons()
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.balloons.type, protobuf.Balloons.DEFAULT)
         self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
 
@@ -143,7 +130,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
         dg = st.bar_chart(df, width=640, height=480)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'BarChart')
         self.assertEqual(el.chart.width, 640)
         self.assertEqual(el.chart.height, 480)
@@ -165,7 +152,7 @@ class StreamlitAPITest(unittest.TestCase):
             ```
         ''')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, expected.strip())
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
@@ -176,7 +163,7 @@ class StreamlitAPITest(unittest.TestCase):
             'two': [11, 22],
         })
         dg = st.dataframe(df)
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
         self.assertEqual(el.data_frame.columns.plain_index.data.strings.data, ['one', 'two'])
 
@@ -188,7 +175,7 @@ class StreamlitAPITest(unittest.TestCase):
         })
         dg = st.deck_gl_chart(df)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.deck_gl_chart.HasField('data'), False)
         self.assertEqual(json.loads(el.deck_gl_chart.spec), {})
 
@@ -223,14 +210,14 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.empty."""
         dg = st.empty()
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.empty.unused, True)
 
     def test_st_error(self):
         """Test st.error."""
         dg = st.error('some error')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some error')
         self.assertEqual(el.text.format, protobuf.Text.ERROR)
 
@@ -239,7 +226,7 @@ class StreamlitAPITest(unittest.TestCase):
         e = RuntimeError('Test Exception')
         dg = st.exception(e)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(el.exception.message, 'Test Exception')
         # We will test stack_trace when testing
@@ -256,7 +243,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.header."""
         dg = st.header('some header')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '## some header')
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
@@ -264,7 +251,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.help."""
         dg = st.help(st.header)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.doc_string.name, 'header')
         self.assertEqual(el.doc_string.module, 'streamlit')
         self.assertTrue(
@@ -288,7 +275,7 @@ class StreamlitAPITest(unittest.TestCase):
             caption='some caption',
             width=100)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
         self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
         self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
@@ -314,7 +301,7 @@ class StreamlitAPITest(unittest.TestCase):
             use_column_width=True,
             clamp=True)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         for idx, checksum in enumerate(imgs_b64):
             self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
@@ -329,7 +316,7 @@ class StreamlitAPITest(unittest.TestCase):
             caption='some caption',
             width=300)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 300)
         self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
         self.assertEqual(el.imgs.imgs[0].url, url)
@@ -346,7 +333,7 @@ class StreamlitAPITest(unittest.TestCase):
             caption='some caption',
             width=300)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 300)
         for idx, url in enumerate(urls):
             self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
@@ -356,7 +343,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.image with bad width."""
         st.image('does/not/exist', width=-1234)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, 'RuntimeError')
         self.assertEqual(
             el.exception.message,
@@ -369,7 +356,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.info."""
         dg = st.info('some info')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some info')
         self.assertEqual(el.text.format, protobuf.Text.INFO)
 
@@ -377,7 +364,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.json."""
         dg = st.json('{"some": "json"}')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '{"some": "json"}')
         self.assertEqual(el.text.format, protobuf.Text.JSON)
 
@@ -386,7 +373,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
         dg = st.line_chart(df, width=640, height=480)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'LineChart')
         self.assertEqual(el.chart.width, 640)
         self.assertEqual(el.chart.height, 480)
@@ -403,7 +390,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame({'lat': [1.0, 2.0, 3.0], 'lon': [11.0, 12.0, 13.0]})
         dg = st.map(df)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         data = json.loads(json_format.MessageToJson(el.map.points.data))
         self.assertEqual(
             data['cols'][0]['doubles']['data'],
@@ -417,7 +404,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame({'notlat': [1, 2, 3], 'lon': [11, 12, 13]})
         st.map(df)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, 'Exception')
         self.assertEqual(
             el.exception.message,
@@ -431,7 +418,7 @@ class StreamlitAPITest(unittest.TestCase):
         df = pd.DataFrame({'lat': [1, 2, np.nan], 'lon': [11, 12, 13]})
         st.map(df)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, 'Exception')
         self.assertEqual(el.exception.message, 'Map data must be numeric.')
         self.assertTrue(
@@ -442,7 +429,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.markdown."""
         dg = st.markdown('    some markdown  ')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some markdown')
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
@@ -450,7 +437,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.progress."""
         dg = st.progress(51)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
 
     def test_st_pyplot(self):
@@ -483,7 +470,7 @@ class StreamlitAPITest(unittest.TestCase):
         plt.scatter(data[0], data[1])
         dg = st.pyplot()
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, '')
         self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
@@ -500,7 +487,7 @@ class StreamlitAPITest(unittest.TestCase):
         data = [trace0]
         dg = st.plotly_chart(data)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, '')
         self.assertNotEqual(el.plotly_chart.figure.config, '')
@@ -519,7 +506,7 @@ class StreamlitAPITest(unittest.TestCase):
         data = [trace0]
         dg = st.plotly_chart(data, width=100, height=200)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, '')
         self.assertNotEqual(el.plotly_chart.figure.config, '')
@@ -541,7 +528,7 @@ class StreamlitAPITest(unittest.TestCase):
         plt.plot([10, 20, 30])
         dg = st.plotly_chart(fig)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, '')
         self.assertNotEqual(el.plotly_chart.figure.config, '')
@@ -563,7 +550,7 @@ class StreamlitAPITest(unittest.TestCase):
             plot_patch.return_value = 'the_url'
             st.plotly_chart(data, sharing='public')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('figure'), False)
         self.assertNotEqual(el.plotly_chart.url, 'the_url')
         self.assertEqual(el.plotly_chart.width, 0)
@@ -573,7 +560,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.subheader."""
         dg = st.subheader('some subheader')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '### some subheader')
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
@@ -581,7 +568,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.success."""
         dg = st.success('some success')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some success')
         self.assertEqual(el.text.format, protobuf.Text.SUCCESS)
 
@@ -591,7 +578,7 @@ class StreamlitAPITest(unittest.TestCase):
             [[1, 2], [3, 4]],
             columns=['col1', 'col2'])
         dg = st.table(df)
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
         self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
         self.assertEqual(el.table.columns.plain_index.data.strings.data, ['col1', 'col2'])
@@ -600,7 +587,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.text."""
         dg = st.text('some text')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some text')
         self.assertEqual(el.text.format, protobuf.Text.PLAIN)
 
@@ -608,7 +595,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.title."""
         dg = st.title('some title')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '# some title')
         self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
 
@@ -624,7 +611,7 @@ class StreamlitAPITest(unittest.TestCase):
 
         dg = st.video(fake_video_data)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         # Manually base64 encoded payload above via
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.video.data, 'ESIzRFVm')
@@ -634,7 +621,7 @@ class StreamlitAPITest(unittest.TestCase):
         """Test st.warning."""
         dg = st.warning('some warning')
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some warning')
         self.assertEqual(el.text.format, protobuf.Text.WARNING)
 
@@ -644,7 +631,7 @@ class StreamlitAPITest(unittest.TestCase):
         chart = Chart(df, 'line_chart', width=640, height=480)
         dg = st._native_chart(chart)
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'LineChart')
         self.assertEqual(el.chart.width, 640)
         self.assertEqual(el.chart.height, 480)
@@ -674,7 +661,7 @@ class StreamlitAPITest(unittest.TestCase):
             data.get('stack_trace'),
         )
 
-        el = self.get_last_delta_element()
+        el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, data.get('type'))
         self.assertEqual(el.exception.message, data.get('message'))
         self.assertEqual(el.exception.stack_trace, data.get('stack_trace'))
