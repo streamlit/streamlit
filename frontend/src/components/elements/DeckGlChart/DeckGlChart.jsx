@@ -341,10 +341,10 @@ function parseGetters(type, spec) {
     const v = spec[key]
     spec[key] =
         typeof v === 'function' ?
-          v :                   // Leave functions untouched.
+          v :                       // Leave functions untouched.
           typeof v === 'string' ?
-            d => d[v] :           // Make getters from strings.
-            () => v              // Make constant function otherwise.
+            d => d[v] :             // Make getters from strings.
+            () => v                 // Make constant function otherwise.
   })
 }
 

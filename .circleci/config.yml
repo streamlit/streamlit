@@ -63,8 +63,8 @@ jobs:
       - run:
           name: Create node_modules cache key.
           command: |
-            md5sum frontend/package-lock.json > ~/package-lock.md5
-            md5sum $(which python) >> ~/package-lock.md5
+            md5sum frontend/yarn.lock > ~/yarn.lock.md5
+            md5sum $(which python) >> ~/yarn.lock.md5
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
@@ -90,7 +90,7 @@ jobs:
       - restore_cache:
           name: Restore nvm and node_modules from cache
           keys:
-          - v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+          - v11-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache:
           name: Restore protobufs from cache
@@ -190,7 +190,7 @@ jobs:
             # the protobuf cache is restored, so checkout from github to
             # make sure.
             git checkout -- lib/streamlit/protobuf/__init__.py
-            if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+            if [ ! -e frontend/src/autogen/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
               # install protobuf v3
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y gnupg
@@ -234,7 +234,7 @@ jobs:
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+          key: v11-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
@@ -243,7 +243,7 @@ jobs:
           name: Save generated protobufs to cache
           key: v11-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
-            - frontend/src/protobuf.js
+            - frontend/src/autogen/protobuf.js
             - lib/streamlit/protobuf
 
   python-3.5.6:
