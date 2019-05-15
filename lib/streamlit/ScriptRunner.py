@@ -145,7 +145,7 @@ class ScriptRunner(object):
         with open(self._report.script_path) as f:
             filebody = f.read()
 
-        if config.get_option('proxy.installTracer'):
+        if config.get_option('runner.installTracer'):
             self._install_tracer()
 
         rerun = False

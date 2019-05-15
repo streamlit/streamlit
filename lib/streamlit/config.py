@@ -299,8 +299,19 @@ _create_option(
         ''',
     default_val=8501)
 
+
+_create_section('runner', 'Settings for how Streamlit executes your script')
+
 _create_option(
-    'proxy.installTracer',
+    'runner.autoWrite',
+    description='''
+        Allows you to type a variable or string by itself in a single line of
+        Python code to call st.write() on it.
+        ''',
+    default_val=True)
+
+_create_option(
+    'runner.installTracer',
     description='''
         Install a Python tracer to allow you to stop or pause your script at
         any point and introspect it. As a side-effect, this slows down your

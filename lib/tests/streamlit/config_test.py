@@ -223,7 +223,15 @@ class ConfigTest(unittest.TestCase):
         config._delete_option('s3.bucket')
 
     def test_sections_order(self):
-        sections = ['_test', u'global', u'client', u'proxy', u'browser', u's3']
+        sections = [
+            '_test',
+            u'global',
+            u'client',
+            u'proxy',
+            u'runner',
+            u'browser',
+            u's3',
+        ]
         keys = list(config._section_descriptions.keys())
         self.assertEqual(sections, keys)
 
@@ -240,13 +248,14 @@ class ConfigTest(unittest.TestCase):
             u'global.sharingMode',
             u'global.unitTest',
             u'proxy.enableCORS',
-            u'proxy.installTracer',
             u'proxy.isRemote',
             u'proxy.liveSave',
             u'proxy.port',
             u'proxy.runOnSave',
             u'proxy.useNode',
             u'proxy.watchFileSystem',
+            u'runner.autoWrite',
+            u'runner.installTracer',
             u's3.accessKeyId',
             u's3.bucket',
             u's3.keyPrefix',
