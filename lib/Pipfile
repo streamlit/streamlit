@@ -7,6 +7,7 @@ verify_ssl = true
 flake8 = "*"
 funcsigs = {version="*", markers="python_version < '3.0'"}
 mock = "*"
+parameterized = "*"
 pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
@@ -14,7 +15,7 @@ testfixtures = "*"
 twine = "*"
 wheel = "*"
 # Doc builder packages:
-Sphinx = "*"
+Sphinx = "==1.8.5"
 sphinx-rtd-theme = "*"
 recommonmark = "*"
 # Packages used in unit tests:
@@ -40,6 +41,7 @@ enum-compat = "*"
 future = "*"
 # specifically concurrent.futures in python2
 futures = {version="*", markers="python_version < '3.0'"}
+graphviz = "*"
 numpy = "*"
 pandas = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068

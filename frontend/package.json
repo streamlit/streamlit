@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "private": true,
   "dependencies": {
     "@types/mixpanel-browser": "^2.23.1",
@@ -10,7 +10,11 @@
     "aws-sdk": "^2.444.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
+    "d3": "^5.9.2",
+    "dagre": "^0.8.4",
+    "dagre-d3": "^0.6.3",
     "deck.gl": "^6.0.5",
+    "graphlib-dot": "github:dagrejs/graphlib-dot#dfdc417277fe2c51a551edbb497713113f715949",
     "immutable": "^3.8.2",
     "leaflet": "^1.3.4",
     "mapbox-gl": "^0.50.0",
@@ -52,6 +56,10 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/d3": "^5.7.2",
+    "@types/dagre": "^0.7.42",
+    "@types/dagre-d3": "^0.4.39",
+    "@types/graphlib-dot": "^0.6.1",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.7",
     "@types/plotly.js": "^1.44.1",

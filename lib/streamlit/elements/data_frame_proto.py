@@ -60,9 +60,7 @@ def convert_anything_to_df(df):
     if _is_pandas_styler(df):
         return df.data
 
-    import pandas
-    global pd
-    pd = pandas
+    import pandas as pd
 
     if util.is_type(df, 'numpy.ndarray') and len(df.shape) == 0:
         return pd.DataFrame([])
@@ -429,8 +427,8 @@ def _get_data_frame(delta, name=None):
 
         # Some element types don't support named datasets.
         if name and element_type in ('data_frame', 'table', 'chart'):
-            raise ValueError('Dataset names not supported for st.%s' %
-                             element_type)
+            raise ValueError(
+                'Dataset names not supported for st.%s' % element_type)
 
         if element_type in 'data_frame':
             return delta.new_element.data_frame

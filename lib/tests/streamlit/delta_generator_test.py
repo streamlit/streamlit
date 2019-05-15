@@ -220,13 +220,26 @@ class DeltaGeneratorTextTest(util.DeltaGeneratorTestCase):
             'success': protobuf.Text.SUCCESS,
         }
 
-        string_data = 'Some string'
+        # Test with string input.
+        input_data = '    Some string  '
+        cleaned_data = 'Some string'
         for name, format in test_data.items():
             method = getattr(st, name)
-            method(string_data)
+            method(input_data)
 
             element = self.get_delta_from_queue().new_element
-            self.assertEqual(string_data, getattr(element, 'text').body)
+            self.assertEqual(cleaned_data, getattr(element, 'text').body)
+            self.assertEqual(format, getattr(element, 'text').format)
+
+        # Test with non-string input.
+        input_data = 123
+        cleaned_data = '123'
+        for name, format in test_data.items():
+            method = getattr(st, name)
+            method(input_data)
+
+            element = self.get_delta_from_queue().new_element
+            self.assertEqual(str(cleaned_data), getattr(element, 'text').body)
             self.assertEqual(format, getattr(element, 'text').format)
 
     def test_json_object(self):

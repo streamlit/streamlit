@@ -9,6 +9,7 @@ import "DeckGlChart.proto";
 import "DocString.proto";
 import "Empty.proto";
 import "Exception.proto";
+import "GraphVizChart.proto";
 import "Image.proto";
 import "Map.proto";
 import "PlotlyChart.proto";
@@ -32,6 +33,7 @@ message Element {
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
+    GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
     Map map = 9;
     PlotlyChart plotly_chart = 16;
@@ -40,6 +42,6 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 18
+    // Next ID: 19
   }
 }

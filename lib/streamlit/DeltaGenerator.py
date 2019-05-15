@@ -214,7 +214,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.PLAIN
 
     @_with_element
@@ -236,7 +236,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -267,7 +267,7 @@ class DeltaGenerator(object):
         """
         markdown = '```%(language)s\n%(body)s\n```' % \
                    {'language': language or '', 'body': body}
-        element.text.body = textwrap.dedent(markdown).strip()
+        element.text.body = _clean_text(markdown)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -325,7 +325,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '# %s' % textwrap.dedent(body).strip()
+        element.text.body = '# %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -346,7 +346,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '## %s' % textwrap.dedent(body).strip()
+        element.text.body = '## %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -367,7 +367,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = '### %s' % textwrap.dedent(body).strip()
+        element.text.body = '### %s' % _clean_text(body)
         element.text.format = protobuf.Text.MARKDOWN
 
     @_with_element
@@ -384,7 +384,7 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.ERROR
 
     @_with_element
@@ -401,7 +401,7 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.WARNING
 
     @_with_element
@@ -418,7 +418,7 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.INFO
 
     @_with_element
@@ -435,7 +435,7 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = textwrap.dedent(body).strip()
+        element.text.body = _clean_text(body)
         element.text.format = protobuf.Text.SUCCESS
 
     @_with_element
@@ -744,6 +744,43 @@ class DeltaGenerator(object):
         vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
 
     @_with_element
+    def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
+        """Display a graph using the dagre-d3 library.
+
+        Parameters
+        ----------
+        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
+            The Graphlib graph object or dot string to display
+        width : type
+            The chart width in pixels, or 0 for full width.
+        height : type
+            The chart height in pixels, or 0 for default height.
+
+        Example
+        -------
+
+        >>> import streamlit as st
+        >>> import graphviz as graphviz
+        >>>
+        >>> # create a graphlib graph object
+        ... graph = graphviz.Graph(comment='The Round Table')
+        >>> graph.node('A', 'King Arthur')
+        >>> graph.node('B', 'Sir Bedevere the Wise')
+        >>> graph.node('L', 'Sir Lancelot the Brave')
+        >>> graph.edges(['AB', 'AL'])
+        >>> graph.edge('B', 'L', constraint='false')
+        >>>
+        >>> st.graphviz_chart(graph)
+        >>>
+        >>> # render from the dot string
+        ... st.graphviz_chart(graph.source)
+
+        """
+        import streamlit.elements.graphviz_chart as graphviz_chart
+        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot,
+                                width=width, height=height)
+
+    @_with_element
     def plotly_chart(
             self, element, figure_or_data, width=0, height=0,
             sharing='streamlit', **kwargs):
@@ -768,7 +805,7 @@ class DeltaGenerator(object):
             The chart width in pixels, or 0 for full width.
 
         height : int
-            The chart width in pixels, or 0 for default height.
+            The chart height in pixels, or 0 for default height.
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
@@ -1345,6 +1382,9 @@ class DeltaGenerator(object):
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
+        if self._enqueue is None:
+            return self
+
         assert not self._is_root, \
             'Only existing elements can add_rows.'
 
@@ -1374,3 +1414,7 @@ class DeltaGenerator(object):
         self._enqueue(msg)
 
         return self
+
+
+def _clean_text(text):
+    return textwrap.dedent(str(text)).strip()
