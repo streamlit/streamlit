@@ -136,9 +136,9 @@ jobs:
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
               source "$HOME/.nvm/nvm.sh"
               nvm install --lts=dubnium
+              # install yarn
+              npm install -g yarn
             fi
-            # install yarn if needed
-            apt-get install --no-upgrade yarn
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
               make react-init
