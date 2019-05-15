@@ -137,6 +137,8 @@ jobs:
               source "$HOME/.nvm/nvm.sh"
               nvm install --lts=dubnium
             fi
+            # install yarn if needed
+            apt-get install --no-upgrade yarn
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
               make react-init
