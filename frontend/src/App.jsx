@@ -16,23 +16,23 @@ import { fromJS } from 'immutable'
 import url from 'url'
 
 // Other local imports.
-import LoginBox from 'components/core/LoginBox/';
-import MainMenu from 'components/core/MainMenu/';
-import Resolver from 'lib/Resolver';
-import StreamlitDialog from 'components/core/StreamlitDialog/';
-import { ConnectionManager } from 'lib/ConnectionManager';
-import { ConnectionState } from 'lib/ConnectionState';
-import { ReportRunState } from 'lib/ReportRunState';
-import { StatusWidget } from 'components/core/StatusWidget/';
-import { SessionEventDispatcher } from 'lib/SessionEventDispatcher';
-import { ReportView } from 'components/core/ReportView/';
+import LoginBox from 'components/core/LoginBox/'
+import MainMenu from 'components/core/MainMenu/'
+import Resolver from 'lib/Resolver'
+import StreamlitDialog from 'components/core/StreamlitDialog/'
+import { ConnectionManager } from 'lib/ConnectionManager'
+import { ConnectionState } from 'lib/ConnectionState'
+import { ReportRunState } from 'lib/ReportRunState'
+import { StatusWidget } from 'components/core/StatusWidget/'
+import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
+import { ReportView } from 'components/core/ReportView/'
 
-import { Delta, Text as TextProto } from 'autogen/protobuf';
-import { addRows } from 'lib/dataFrameProto';
-import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking';
-import { logError } from 'lib/log';
-import { setInstallationId, setStreamlitVersion } from 'lib/baseconsts';
-import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto';
+import { Delta, Text as TextProto } from 'autogen/protobuf'
+import { addRows } from 'lib/dataFrameProto'
+import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
+import { logError } from 'lib/log'
+import { setInstallationId, setStreamlitVersion } from 'lib/baseconsts'
+import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
 import './App.scss'
@@ -56,27 +56,27 @@ class App extends PureComponent {
     }
 
     // Bind event handlers.
-    this.closeDialog = this.closeDialog.bind(this);
-    this.getUserLogin = this.getUserLogin.bind(this);
-    this.handleConnectionError = this.handleConnectionError.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
-    this.isProxyConnected = this.isProxyConnected.bind(this);
-    this.onLogInError = this.onLogInError.bind(this);
-    this.onLogInSuccess = this.onLogInSuccess.bind(this);
-    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this);
-    this.rerunScript = this.rerunScript.bind(this);
-    this.stopReport = this.stopReport.bind(this);
-    this.openClearCacheDialog = this.openClearCacheDialog.bind(this);
-    this.clearCache = this.clearCache.bind(this);
-    this.saveReport = this.saveReport.bind(this);
-    this.saveSettings = this.saveSettings.bind(this);
-    this.setReportName = this.setReportName.bind(this);
+    this.closeDialog = this.closeDialog.bind(this)
+    this.getUserLogin = this.getUserLogin.bind(this)
+    this.handleConnectionError = this.handleConnectionError.bind(this)
+    this.handleMessage = this.handleMessage.bind(this)
+    this.isProxyConnected = this.isProxyConnected.bind(this)
+    this.onLogInError = this.onLogInError.bind(this)
+    this.onLogInSuccess = this.onLogInSuccess.bind(this)
+    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
+    this.rerunScript = this.rerunScript.bind(this)
+    this.stopReport = this.stopReport.bind(this)
+    this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
+    this.clearCache = this.clearCache.bind(this)
+    this.saveReport = this.saveReport.bind(this)
+    this.saveSettings = this.saveSettings.bind(this)
+    this.setReportName = this.setReportName.bind(this)
 
-    this.userLoginResolver = new Resolver();
-    this.sessionEventDispatcher = new SessionEventDispatcher();
-    this.statusWidgetRef = React.createRef();
+    this.userLoginResolver = new Resolver()
+    this.sessionEventDispatcher = new SessionEventDispatcher()
+    this.statusWidgetRef = React.createRef()
 
-    this.connectionManager = null;
+    this.connectionManager = null
   }
 
   /**
@@ -186,13 +186,13 @@ class App extends PureComponent {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj, name, funcs) => {
-      const whichOne = obj[name];
+      const whichOne = obj[name]
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne]);
+        return funcs[whichOne](obj[whichOne])
       } else {
-        throw new Error(`Cannot handle ${name} "${whichOne}".`);
+        throw new Error(`Cannot handle ${name} "${whichOne}".`)
       }
-    };
+    }
 
     try {
       dispatchProto(msgProto, 'type', {
@@ -216,21 +216,21 @@ class App extends PureComponent {
    * @param initializeMsg an Initialize protobuf
    */
   handleInitialize(initializeMsg) {
-    setStreamlitVersion(initializeMsg.streamlitVersion);
-    setInstallationId(initializeMsg.userInfo.installationId);
+    setStreamlitVersion(initializeMsg.streamlitVersion)
+    setInstallationId(initializeMsg.userInfo.installationId)
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.gatherUsageStats,
-    });
+    })
 
     trackEventRemotely('createReport')
 
     this.setState({
       sharingEnabled: initializeMsg.sharingEnabled,
-    });
+    })
 
-    const initialState = initializeMsg.sessionState;
-    this.handleSessionStateChanged(initialState);
+    const initialState = initializeMsg.sessionState
+    this.handleSessionStateChanged(initialState)
   }
 
   /**
@@ -241,7 +241,7 @@ class App extends PureComponent {
     this.setState(prevState => {
       // If we have a pending run-state request, only change our reportRunState
       // if our request has been processed.
-      let reportRunState;
+      let reportRunState
       if (stateChangeProto.reportIsRunning) {
         reportRunState =
           prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
@@ -267,7 +267,7 @@ class App extends PureComponent {
    * @param sessionEvent a SessionEvent protobuf
    */
   handleSessionEvent(sessionEvent) {
-    this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent);
+    this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
   }
 
   /**
@@ -275,12 +275,12 @@ class App extends PureComponent {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto) {
-    trackEventRemotely('updateReport');
+    trackEventRemotely('updateReport')
 
     this.setState({
       reportId: newReportProto.id,
       commandLine: newReportProto.commandLine.join(' '),
-    });
+    })
   }
 
   /**

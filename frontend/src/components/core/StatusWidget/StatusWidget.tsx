@@ -12,17 +12,17 @@ import {CSSTransition} from 'react-transition-group'
 import {Button, UncontrolledTooltip} from 'reactstrap'
 import {SignalConnection} from 'typed-signals'
 
-import {ConnectionState} from 'lib/ConnectionState';
-import {SessionEvent} from 'autogen/protobuf';
-import {SessionEventDispatcher} from 'lib/SessionEventDispatcher';
-import {ReportRunState} from 'lib/ReportRunState';
+import {ConnectionState} from 'lib/ConnectionState'
+import {SessionEvent} from 'autogen/protobuf'
+import {SessionEventDispatcher} from 'lib/SessionEventDispatcher'
+import {ReportRunState} from 'lib/ReportRunState'
 import {Timer} from 'lib/Timer'
 import openIconic from 'assets/img/open-iconic.svg'
 import iconRunning from 'assets/img/icon_running.gif'
 import './StatusWidget.scss'
 
 /** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = false;
+const SHOW_STOP_BUTTON = false
 
 /** Component props */
 interface Props {
@@ -119,13 +119,13 @@ export class StatusWidget extends PureComponent<Props, State> {
   public componentDidMount(): void {
     this.sessionEventConn = this.props
       .sessionEventDispatcher.onSessionEvent.connect(e => this.handleSessionEvent(e))
-    window.addEventListener('scroll', this.handleScroll);
+    window.addEventListener('scroll', this.handleScroll)
   }
 
   public componentWillUnmount(): void {
     if (this.sessionEventConn !== undefined) {
-      this.sessionEventConn.disconnect();
-      this.sessionEventConn = undefined;
+      this.sessionEventConn.disconnect()
+      this.sessionEventConn = undefined
     }
 
     this.minimizePromptTimer.cancel()
@@ -151,13 +151,13 @@ export class StatusWidget extends PureComponent<Props, State> {
   private handleSessionEvent(event: SessionEvent): void {
     switch (event.type) {
       case 'reportChangedOnDisk':
-        this.setState({reportChangedOnDisk: true, promptMinimized: false});
-        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS);
-        break;
+        this.setState({reportChangedOnDisk: true, promptMinimized: false})
+        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
+        break
 
       default:
-        console.warn(`Unhandled SessionEvent: ${event}`);
-        break;
+        console.warn(`Unhandled SessionEvent: ${event}`)
+        break
     }
   }
 
