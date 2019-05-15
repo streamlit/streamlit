@@ -15,13 +15,13 @@ COPY protobuf/. /protobuf/
 WORKDIR /frontend
 
 # Install packages
-RUN npm install
+RUN yarn install
 
 # Create protobuf.js
 RUN ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./src/protobuf.js
 
 # Build static content which puts it into frontend/build
-RUN npm run build
+RUN yarn run build
 
 # Get rid of map files.
 RUN find /frontend -type 'f' -iname '*.map' -exec rm -f {} \;
@@ -31,9 +31,9 @@ RUN find /frontend -type 'f' -iname '*.map' -exec rm -f {} \;
 #######################################################################
 FROM node:carbon-slim
 
-# Install npm package serve to start a web server to literally serve the
+# Install npm package "serve" to start a web server to literally serve the
 # built static contents
-RUN npm install -g serve
+RUN yarn global add serve
 
 # Copy the built static content from the temporary frontend build image
 COPY --from=build /frontend/build/. /frontend

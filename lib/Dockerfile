@@ -12,13 +12,13 @@ COPY protobuf/. /protobuf/
 WORKDIR /frontend
 
 # Install packages
-RUN npm install
+RUN yarn install
 
 # Create protobuf.js
 RUN ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module > ./src/protobuf.js
 
 # Build static content which puts it into frontend/build
-RUN npm run build
+RUN yarn run build
 
 # Get rid of map files.
 RUN find /frontend -type 'f' -iname '*.map' -exec rm -f {} \;
