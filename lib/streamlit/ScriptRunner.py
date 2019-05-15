@@ -1,15 +1,14 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
-import ctypes
-import os
+import ast
 import signal
 import sys
 import threading
 import time
 
 from blinker import Signal
-import tornado.ioloop
+from six import string_types
 
 from streamlit import config
 
@@ -46,8 +45,9 @@ class ScriptRunner(object):
         self._report = report
         self._state = None
 
-        self._state_change_requested = threading.Event()
+        self._main_thread_id = threading.current_thread().ident
         self._paused = threading.Event()
+        self._state_change_requested = threading.Event()
 
         self.run_on_save = config.get_option('proxy.runOnSave')
 
@@ -126,8 +126,11 @@ class ScriptRunner(object):
         if hasattr(sys, 'settrace'):
             sys.settrace(trace_calls)
 
-    # This runs on the script thread.
     def _run(self):
+        # This method should only be called from the script thread.
+        _script_thread_id = threading.current_thread().ident
+        assert _script_thread_id != self._main_thread_id
+
         if not self.is_fully_stopped():
             # This should never happen!
             raise RuntimeError('Script is already running')
@@ -144,6 +147,9 @@ class ScriptRunner(object):
         # with both 2 and 3.
         with open(self._report.script_path) as f:
             filebody = f.read()
+
+        if config.get_option('runner.autoWrite'):
+            filebody = _build_modified_ast(filebody, is_root=True)
 
         if config.get_option('runner.installTracer'):
             self._install_tracer()
@@ -192,6 +198,8 @@ class ScriptRunner(object):
         except BaseException as e:
             # Show exceptions in the Streamlit report.
             st.exception(e)  # This is OK because we're in the script thread.
+            # TODO: Clean up the stack trace, so it doesn't include
+            # ScriptRunner.
 
         finally:
             self._set_state(State.STOPPED)
@@ -246,3 +254,62 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
     pass
+
+
+def _build_modified_ast(tree_or_code, is_root):
+    if type(tree_or_code) in string_types:
+        tree = ast.parse(tree_or_code)
+    else:
+        tree = tree_or_code
+
+    for i, node in enumerate(tree.body):
+        # Parse the contents of functions
+        if type(node) is ast.FunctionDef:
+            node = _build_modified_ast(node, is_root=False)
+
+        # Only convert Expression nodes to st.write
+        if type(node) is not ast.Expr:
+            continue
+
+        # ...but not if they're a function call
+        if type(node.value) is ast.Call:
+            continue
+
+        # ...or if they're a docstring
+        if type(node.value) is ast.Str:
+            if i == 0:
+                continue
+
+        st_write = _build_st_write_call(node.value)
+        node.value = st_write
+
+    if is_root:
+        st_import = _build_st_import_statement()
+        tree.body.insert(0, st_import)
+
+    ast.fix_missing_locations(tree)
+
+    return tree
+
+
+def _build_st_import_statement():
+    return ast.Import(
+        names = [ast.alias(
+            name='streamlit',
+            asname='__streamlit__',
+        )],
+    )
+
+
+def _build_st_write_call(node):
+    return ast.Call(
+        func=ast.Attribute(
+            attr='write',
+            value=ast.Name(id='__streamlit__', ctx=ast.Load()),
+            ctx=ast.Load(),
+        ),
+        args=[node],
+        keywords=[],
+        kwargs=None,
+        starargs=None,
+    )
