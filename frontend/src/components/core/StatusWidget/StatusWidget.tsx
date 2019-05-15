@@ -12,24 +12,25 @@ import {CSSTransition} from 'react-transition-group'
 import {Button, UncontrolledTooltip} from 'reactstrap'
 import {SignalConnection} from 'typed-signals'
 
-import {ConnectionState} from '../../../lib/ConnectionState'
-import {ReportEvent, ReportEventDispatcher} from '../../../lib/ReportEvent'
-import {ReportRunState} from '../../../lib/ReportRunState'
-import {Timer} from '../../../lib/Timer'
+import {ConnectionState} from 'lib/ConnectionState';
+import {SessionEvent} from 'autogen/protobuf';
+import {SessionEventDispatcher} from 'lib/SessionEventDispatcher';
+import {ReportRunState} from 'lib/ReportRunState';
+import {Timer} from 'lib/Timer'
 import openIconic from 'assets/img/open-iconic.svg'
 import iconRunning from 'assets/img/icon_running.gif'
 import './StatusWidget.scss'
 
 /** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = false
+const SHOW_STOP_BUTTON = false;
 
 /** Component props */
 interface Props {
   /** State of our connection to the proxy. */
   connectionState: ConnectionState;
 
-  /** Dispatches transient ReportEvents received from the proxy. */
-  reportEventDispatcher: ReportEventDispatcher;
+  /** Dispatches transient SessionEvents received from the proxy. */
+  sessionEventDispatcher: SessionEventDispatcher;
 
   /** Report's current runstate */
   reportRunState: ReportRunState;
@@ -87,8 +88,8 @@ const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
 const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
 export class StatusWidget extends PureComponent<Props, State> {
-  /** onReportEvent signal connection */
-  private reportEventConn?: SignalConnection;
+  /** onSessionEvent signal connection */
+  private sessionEventConn?: SignalConnection;
   private curView?: ReactNode;
 
   private readonly minimizePromptTimer = new Timer();
@@ -116,15 +117,15 @@ export class StatusWidget extends PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.reportEventConn = this.props.reportEventDispatcher.onReportEvent.connect(
-      evt => this.handleReportEvent(evt))
-    window.addEventListener('scroll', this.handleScroll)
+    this.sessionEventConn = this.props
+      .sessionEventDispatcher.onSessionEvent.connect(e => this.handleSessionEvent(e))
+    window.addEventListener('scroll', this.handleScroll);
   }
 
   public componentWillUnmount(): void {
-    if (this.reportEventConn !== undefined) {
-      this.reportEventConn.disconnect()
-      this.reportEventConn = undefined
+    if (this.sessionEventConn !== undefined) {
+      this.sessionEventConn.disconnect();
+      this.sessionEventConn = undefined;
     }
 
     this.minimizePromptTimer.cancel()
@@ -147,16 +148,16 @@ export class StatusWidget extends PureComponent<Props, State> {
     return this.props.connectionState === ConnectionState.CONNECTED
   }
 
-  private handleReportEvent(event: ReportEvent): void {
-    switch (event) {
-      case ReportEvent.SOURCE_FILE_CHANGED:
-        this.setState({reportChangedOnDisk: true, promptMinimized: false})
-        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
-        break
+  private handleSessionEvent(event: SessionEvent): void {
+    switch (event.type) {
+      case 'reportChangedOnDisk':
+        this.setState({reportChangedOnDisk: true, promptMinimized: false});
+        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS);
+        break;
 
       default:
-        console.warn(`Unhandled ReportEvent: ${event}`)
-        break
+        console.warn(`Unhandled SessionEvent: ${event}`);
+        break;
     }
   }
 

@@ -4,7 +4,7 @@
  */
 
 import {Signal} from 'typed-signals'
-import {mapOneOf} from './immutableProto'
+import {mapOneOf} from 'lib/immutableProto'
 import {SessionEvent} from 'autogen/protobuf'
 
 /** Report-related events delivered by the server */
