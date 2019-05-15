@@ -1,6 +1,6 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
-"""doc_string unit test."""
+"""st.help unit test."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -15,8 +15,8 @@ import streamlit as st
 is_python_2 = sys.version_info[0] == 2
 
 
-class DocStringTest(util.DeltaGeneratorTestCase):
-    """Test ability to marshall docstring protos."""
+class StHelpTest(util.DeltaGeneratorTestCase):
+    """Test st.help."""
 
     def test_basic_func_with_doc(self):
         """Test basic function with docstring."""
@@ -28,7 +28,7 @@ class DocStringTest(util.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(ds.name, 'my_func')
-        self.assertEqual(ds.module, 'doc_string_test')
+        self.assertEqual(ds.module, 'help_test')
         if is_python_2:
             self.assertEqual(ds.type, '<type \'function\'>')
         else:
@@ -45,7 +45,7 @@ class DocStringTest(util.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(ds.name, 'my_func')
-        self.assertEqual(ds.module, 'doc_string_test')
+        self.assertEqual(ds.module, 'help_test')
         if is_python_2:
             self.assertEqual(ds.type, '<type \'function\'>')
         else:

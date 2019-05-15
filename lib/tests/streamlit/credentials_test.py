@@ -31,7 +31,7 @@ class CredentialsClassTest(unittest.TestCase):
         c = Credentials()
 
         self.assertEqual(c._conf_file,
-                         '/does/not/exist/.streamlit/credentials.toml')
+                         '/mock/home/folder/.streamlit/credentials.toml')
         self.assertEqual(c.activation, None)
 
     def test_Credentials_get_current(self):
@@ -101,7 +101,7 @@ class CredentialsClassTest(unittest.TestCase):
             self.assertEqual(
                 str(e.value).split(':')[0],
                 '\nUnable to load credentials from '
-                '/does/not/exist/.streamlit/credentials.toml.\n'
+                '/mock/home/folder/.streamlit/credentials.toml.\n'
                 'Run "streamlit reset" and try again.\n'
             )
 
@@ -197,7 +197,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch('streamlit.credentials.os.remove') as p:
             Credentials.reset()
             p.assert_called_once_with(
-                '/does/not/exist/.streamlit/credentials.toml')
+                '/mock/home/folder/.streamlit/credentials.toml')
 
     def test_Credentials_reset_error(self):
         """Test Credentials.reset() with error."""

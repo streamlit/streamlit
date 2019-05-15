@@ -719,22 +719,31 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def _parse_config_file():
-    """Parse the config file and update config parameters."""
-    # Find the path to the config file.
+def _parse_config_file(file_contents=None):
+    """Parse the config file and update config parameters.
+
+    Parameters
+    ----------
+    file_contents : string or None
+        The contents of the config file (for use in tests) or None to load the
+        config from ~/.streamlit/config.toml.
+    """
     # os.path.expanduser works on OSX, Linux and Windows
     home = os.path.expanduser('~')
     if home is None:
         raise RuntimeError('No home directory.')
+
     config_filename = os.path.join(home, '.streamlit', 'config.toml')
 
-    # Parse the config file.
-    if not os.path.exists(config_filename):
-        return
+    if not file_contents:
+        # Parse the config file.
+        if not os.path.exists(config_filename):
+            return
 
-    with open(config_filename) as input:
-        _update_config_with_toml(input.read(), config_filename)
+        with open(config_filename) as input:
+            file_contents = input.read()
 
+    _update_config_with_toml(file_contents, config_filename)
     _check_conflicts()
 
 
