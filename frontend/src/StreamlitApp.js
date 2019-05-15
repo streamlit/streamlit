@@ -24,10 +24,10 @@ import { ConnectionManager } from './ConnectionManager';
 import { ConnectionState } from './ConnectionState';
 import { ReportRunState } from './ReportRunState';
 import { StatusWidget } from './StatusWidget';
-import { ReportEventDispatcher } from './ReportEvent';
+import { SessionEventDispatcher } from './SessionEventDispatcher';
 import { ReportView } from './ReportView';
 
-import { ForwardMsg, Text as TextProto } from './protobuf';
+import { Delta, Text as TextProto } from './protobuf';
 import { addRows } from './dataFrameProto';
 import { initRemoteTracker, trackEventRemotely } from './remotetracking';
 import { logError } from './log';
@@ -72,7 +72,7 @@ class StreamlitApp extends PureComponent {
     this.setReportName = this.setReportName.bind(this);
 
     this.userLoginResolver = new Resolver();
-    this.reportEventDispatcher = new ReportEventDispatcher();
+    this.sessionEventDispatcher = new SessionEventDispatcher();
     this.statusWidgetRef = React.createRef();
 
     this.connectionManager = null;
@@ -182,15 +182,24 @@ class StreamlitApp extends PureComponent {
    * Callback when we get a message from the server.
    */
   handleMessage(msgProto) {
-    try {
-      const msg = toImmutableProto(ForwardMsg, msgProto);
+    // We don't have an immutableProto here, so we can't use
+    // the dispatchOneOf helper
+    const dispatchProto = (obj, name, funcs) => {
+      const whichOne = obj[name];
+      if (whichOne in funcs) {
+        return funcs[whichOne](obj[whichOne]);
+      } else {
+        throw new Error(`Cannot handle ${name} "${whichOne}".`);
+      }
+    };
 
-      dispatchOneOf(msg, 'type', {
+    try {
+      dispatchProto(msgProto, 'type', {
         initialize: initializeMsg => this.handleInitialize(initializeMsg),
         sessionStateChanged: msg => this.handleSessionStateChanged(msg),
-        sessionEvent: msg => this.handleSessionEvent(msg),
+        sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
-        delta: delta => this.applyDelta(delta),
+        delta: deltaMsg => this.applyDelta(toImmutableProto(Delta, deltaMsg)),
         reportFinished: () => this.clearOldElements(),
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: 'uploadProgress' }),
@@ -206,36 +215,33 @@ class StreamlitApp extends PureComponent {
    * @param initializeMsg an Initialize protobuf
    */
   handleInitialize(initializeMsg) {
-    setStreamlitVersion(initializeMsg.get('streamlitVersion'));
-    setInstallationId(initializeMsg.get('userInfo').get('installationId'));
+    setStreamlitVersion(initializeMsg.streamlitVersion);
+    setInstallationId(initializeMsg.userInfo.installationId);
 
     initRemoteTracker({
-      gatherUsageStats: initializeMsg.get('gatherUsageStats'),
+      gatherUsageStats: initializeMsg.gatherUsageStats,
     });
 
     trackEventRemotely('createReport');
 
     this.setState({
-      sharingEnabled: initializeMsg.get('sharingEnabled'),
+      sharingEnabled: initializeMsg.sharingEnabled,
     });
 
-    const initialState = initializeMsg.get('sessionState');
+    const initialState = initializeMsg.sessionState;
     this.handleSessionStateChanged(initialState);
   }
 
   /**
    * Handler for ForwardMsg.sessionStateChanged messages
-   * @param msg a SessionState protobuf
+   * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged(msg) {
-    const runOnSave = msg.get('runOnSave');
-    const reportIsRunning = msg.get('reportIsRunning');
-
+  handleSessionStateChanged(stateChangeProto) {
     this.setState(prevState => {
       // If we have a pending run-state request, only change our reportRunState
       // if our request has been processed.
       let reportRunState;
-      if (reportIsRunning) {
+      if (stateChangeProto.reportIsRunning) {
         reportRunState =
           prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
             ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING;
@@ -248,7 +254,7 @@ class StreamlitApp extends PureComponent {
       return ({
         userSettings: {
           ...prevState.userSettings,
-          runOnSave,
+          runOnSave: stateChangeProto.runOnSave,
         },
         reportRunState,
       });
@@ -257,22 +263,22 @@ class StreamlitApp extends PureComponent {
 
   /**
    * Handler for ForwardMsg.sessionEvent messages
-   * @param msg a SessionEvent protobuf
+   * @param sessionEvent a SessionEvent protobuf
    */
-  handleSessionEvent(msg) {
-    this.reportEventDispatcher.handleSessionEventMsg(msg);
+  handleSessionEvent(sessionEvent) {
+    this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent);
   }
 
   /**
    * Handler for ForwardMsg.newReport messages
-   * @param newReportMsg a NewReport protobuf
+   * @param newReportProto a NewReport protobuf
    */
-  handleNewReport(newReportMsg) {
+  handleNewReport(newReportProto) {
     trackEventRemotely('updateReport');
 
     this.setState({
-      reportId: newReportMsg.get('id'),
-      commandLine: newReportMsg.get('commandLine').toJS().join(' '),
+      reportId: newReportProto.id,
+      commandLine: newReportProto.commandLine.join(' '),
     });
   }
 
@@ -524,7 +530,7 @@ class StreamlitApp extends PureComponent {
           <StatusWidget
             ref={this.statusWidgetRef}
             connectionState={this.state.connectionState}
-            reportEventDispatcher={this.reportEventDispatcher}
+            sessionEventDispatcher={this.sessionEventDispatcher}
             reportRunState={this.state.reportRunState}
             rerunReport={this.rerunScript}
             stopReport={this.stopReport}
