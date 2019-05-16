@@ -146,7 +146,7 @@ Let's take a look at how you can use `streamlit.write()` to display text and a P
 
 ```eval_rst
 .. note::
-   Streamlit has dedicated methods that can be used to create data frames, charts, histograms and more. We'll cover those in the next section.
+   Streamlit has dedicated methods that can be used to visualize data frames, charts, histograms and more. We'll cover those in the next section.
 ```
 
 ```python
