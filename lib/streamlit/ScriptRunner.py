@@ -270,7 +270,7 @@ def _modify_ast(tree_or_code, is_root):
         if type(node) is ast.FunctionDef:
             node = _modify_ast(node, is_root=False)
 
-        # Convert Expression nodes to st.write
+        # Convert expression nodes to st.write
         if type(node) is ast.Expr:
             st_write = _get_st_write_from_expr(node, i)
 

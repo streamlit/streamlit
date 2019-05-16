@@ -413,6 +413,7 @@ def echo():
 
 
 def _transparent_write(*args):
+    """This is just st.write, but returns the arguments you passed to it."""
     write(*args)
     if len(args) == 1:
         return args[0]
