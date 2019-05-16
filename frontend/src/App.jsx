@@ -19,7 +19,7 @@ import url from 'url'
 import LoginBox from 'components/core/LoginBox/'
 import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
-import StreamlitDialog from 'components/core/StreamlitDialog/'
+import { StreamlitDialog } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
@@ -521,6 +521,11 @@ class App extends PureComponent {
             'streamlit-wide' :
             'streamlit-regular'
 
+    const dialogProps = {
+      ...this.state.dialog,
+      onClose: this.closeDialog,
+    }
+
     return (
       <div className={outerDivClass}>
         <header>
@@ -575,12 +580,7 @@ class App extends PureComponent {
             </Col>
           </Row>
 
-          <StreamlitDialog
-            dialogProps={{
-              ...this.state.dialog,
-              onClose: this.closeDialog,
-            }}
-          />
+          <StreamlitDialog {...dialogProps} />
 
         </Container>
       </div>

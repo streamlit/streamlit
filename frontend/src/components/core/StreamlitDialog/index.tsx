@@ -1,1 +1,1 @@
-export { default } from './StreamlitDialog'
+export * from './StreamlitDialog'
