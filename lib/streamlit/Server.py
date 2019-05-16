@@ -270,7 +270,7 @@ class Server(object):
         msg.report_finished = True
         self.enqueue(msg)
 
-    # XXX TODO Also handle livesave! serialize_running_report_to_files
+    # TODO [0px] Also handle livesave! serialize_running_report_to_files
     @tornado.gen.coroutine
     def _handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""

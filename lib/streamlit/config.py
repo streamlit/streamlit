@@ -175,19 +175,19 @@ _create_option(
         Streamlit report.''',
     default_val=True)
 
-# XXX
+# TODO [0px]
 # _create_option(
 #     'client.waitForProxySecs',
 #     description='How long to wait for the proxy server to start up.',
 #     default_val=3.0)
 
-# XXX
+# TODO [0px]
 # _create_option(
 #     'client.throttleSecs',
 #     description='How long to wait between draining the client queue.',
 #     default_val=0.01)
 
-# XXX remove
+# TODO [0px] remove
 # _create_option(
 #     'client.tryToOutliveProxy',
 #     description='''
@@ -198,7 +198,7 @@ _create_option(
 #         ''',
 #     default_val=False)
 
-# XXX
+# TODO [0px]
 # _create_option(
 #     'client.proxyAddress',
 #     description='''
@@ -206,7 +206,7 @@ _create_option(
 #         to. Can be IP address or DNS name.''',
 #     default_val='localhost')
 
-# XXX
+# TODO [0px]
 # @_create_option('client.proxyPort')
 # def _client_proxy_port():
 #     """Port that the client should use to connect to the proxy.
@@ -220,7 +220,7 @@ _create_option(
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-# XXX remove
+# TODO [0px] remove
 # _create_option(
 #     'proxy.autoCloseDelaySecs',
 #     description='''
@@ -233,7 +233,7 @@ _create_section('proxy', 'Configuration of the proxy server.')
 #         ''',
 #     default_val=0)
 
-# XXX remove
+# TODO [0px] remove
 # _create_option(
 #     'proxy.reportExpirationSecs',
 #     description=(
@@ -775,7 +775,7 @@ def _check_conflicts():
         assert _is_unset('browser.proxyPort'), (
             'browser.proxyPort does not work when proxy.useNode is true. ')
 
-        # XXX
+        # TODO [0px]
         # assert _is_unset('client.proxyPort'), (
         #     'client.proxyPort does not work when proxy.useNode is true. ')
 
