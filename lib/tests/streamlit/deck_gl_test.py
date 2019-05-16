@@ -10,7 +10,7 @@ setup_2_3_shims(globals())
 import pandas as pd
 import json
 
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -19,7 +19,7 @@ df1 = pd.DataFrame({
     'lon': [10, 20, 30, 40],
 })
 
-class DeckGLTest(util.DeltaGeneratorTestCase):
+class DeckGLTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall deck_gl_chart protos."""
 
     def test_no_args(self):

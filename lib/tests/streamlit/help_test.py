@@ -9,13 +9,13 @@ setup_2_3_shims(globals())
 
 import sys
 
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 is_python_2 = sys.version_info[0] == 2
 
 
-class StHelpTest(util.DeltaGeneratorTestCase):
+class StHelpTest(testutil.DeltaGeneratorTestCase):
     """Test st.help."""
 
     def test_basic_func_with_doc(self):

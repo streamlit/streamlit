@@ -11,7 +11,7 @@ import altair as alt
 import json
 import pandas as pd
 
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -23,7 +23,7 @@ df1 = pd.DataFrame(
 c1 = alt.Chart(df1).mark_bar().encode(x='a', y='b')
 
 
-class AltairTest(util.DeltaGeneratorTestCase):
+class AltairTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall altair_chart proto."""
 
     def test_altair_chart(self):

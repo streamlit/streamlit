@@ -10,7 +10,7 @@ setup_2_3_shims(globals())
 import pandas as pd
 
 import streamlit.elements.data_frame_proto as data_frame_proto
-from tests.streamlit import util
+from tests import testutil
 
 
 DATAFRAME = pd.DataFrame({'a': [1, 2], 'b': [10, 20]})
@@ -18,7 +18,7 @@ NEW_ROWS = pd.DataFrame({'a': [3, 4, 5], 'b': [30, 40, 50]})
 NEW_ROWS_WRONG_SHAPE = pd.DataFrame({'a': [3, 4], 'b': [30, 40], 'c': [50, 60]})
 
 
-class DeltaGeneratorAddRowsTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
     """Test dg.add_rows."""
 
     def setUp(self):

@@ -17,7 +17,7 @@ import pandas as pd
 from streamlit import __version__
 from streamlit import protobuf
 from streamlit.elements.Chart import Chart
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -57,7 +57,7 @@ class StreamlitTest(unittest.TestCase):
         )
 
 
-class StreamlitAPITest(util.DeltaGeneratorTestCase):
+class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs.
 
     Unit tests for https://streamlit.io/secret/docs/#api

@@ -6,11 +6,11 @@ from bokeh.plotting import figure
 
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
-class BokehTest(util.DeltaGeneratorTestCase):
+class BokehTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall bokeh_chart protos."""
 
     def test_figure(self):
