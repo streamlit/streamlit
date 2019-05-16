@@ -412,6 +412,13 @@ def echo():
         code.warning('Unable to display code. %s' % err)
 
 
+def _transparent_write(*args):
+    write(*args)
+    if len(args) == 1:
+        return args[0]
+    return args
+
+
 # We want to show a warning when the user runs a Streamlit script without
 # 'streamlit run', but we need to make sure the warning appears only once no
 # matter how many times __init__ gets loaded.

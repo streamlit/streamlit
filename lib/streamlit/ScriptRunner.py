@@ -264,51 +264,22 @@ def _modify_ast(tree_or_code, is_root):
         tree = tree_or_code
 
     for i, node in enumerate(tree.body):
+        st_write = None
+
         # Parse the contents of functions
         if type(node) is ast.FunctionDef:
             node = _modify_ast(node, is_root=False)
 
-        # Only convert Expression nodes to st.write
-        if type(node) is not ast.Expr:
-            continue
+        # Convert Expression nodes to st.write
+        if type(node) is ast.Expr:
+            st_write = _get_st_write_from_expr(node, i)
 
-        # ...but not if they're a function call
-        if type(node.value) is ast.Call:
-            continue
+        # Convert assignments to st.write
+        elif type(node) is ast.Assign:
+            st_write = _get_st_write_from_assign(node, i)
 
-        # ...or if they're a docstring
-        if type(node.value) is ast.Str:
-            if i == 0:
-                continue
-
-        # If 1-element tuple, call st.write on the 0th element (rather than the
-        # whole tuple). This allows us to add a comma at the end of a statement
-        # to turn it into an expression that should be st-written. Ex:
-        # "np.random.randn(1000, 2),"
-        if (type(node.value) is ast.Tuple and
-                len(node.value.elts) == 1):
-            args = node.value.elts
-            st_write = _build_st_write_call(args)
-
-        # st.write all strings.
-        elif type(node.value) is ast.Str:
-            args = [node.value]
-            st_write = _build_st_write_call(args)
-
-        # st.write all variables, and also print the variable's name.
-        elif type(node.value) is ast.Name:
-            args = [
-                ast.Str(s='**%s**' % node.value.id),
-                node.value
-            ]
-            st_write = _build_st_write_call(args)
-
-        # st.write everything else
-        else:
-            args = [node.value]
-            st_write = _build_st_write_call(args)
-
-        node.value = st_write
+        if st_write is not None:
+            node.value = st_write
 
     if is_root:
         # Import Streamlit so we can use it in the st_write's above.
@@ -356,10 +327,10 @@ def _build_st_import_statement():
 
 
 def _build_st_write_call(nodes):
-    """Build AST node for `__streamlit__.write(*nodes)`."""
+    """Build AST node for `__streamlit__._transparent_write(*nodes)`."""
     return ast.Call(
         func=ast.Attribute(
-            attr='write',
+            attr='_transparent_write',
             value=ast.Name(id='__streamlit__', ctx=ast.Load()),
             ctx=ast.Load(),
         ),
@@ -368,3 +339,59 @@ def _build_st_write_call(nodes):
         kwargs=None,
         starargs=None,
     )
+
+
+def _get_st_write_from_expr(node, i):
+    # Don't change function calls
+    if type(node.value) is ast.Call:
+        return None
+
+    # Don't change Docstring nodes
+    if type(node.value) is ast.Str:
+        if i == 0:
+            return None
+
+    # If 1-element tuple, call st.write on the 0th element (rather than the
+    # whole tuple). This allows us to add a comma at the end of a statement
+    # to turn it into an expression that should be st-written. Ex:
+    # "np.random.randn(1000, 2),"
+    if (type(node.value) is ast.Tuple and
+            len(node.value.elts) == 1):
+        args = node.value.elts
+        st_write = _build_st_write_call(args)
+
+    # st.write all strings.
+    elif type(node.value) is ast.Str:
+        args = [node.value]
+        st_write = _build_st_write_call(args)
+
+    # st.write all variables, and also print the variable's name.
+    elif type(node.value) is ast.Name:
+        args = [
+            ast.Str(s='**%s**' % node.value.id),
+            node.value
+        ]
+        st_write = _build_st_write_call(args)
+
+    # st.write everything else
+    else:
+        args = [node.value]
+        st_write = _build_st_write_call(args)
+
+    return st_write
+
+
+def _get_st_write_from_assign(node, i):
+    """Replace "foo = bar()," with "foo = st._transparent_write(bar())"."""
+    # Only convert if assigning to a 1-element tuple
+
+    if type(node.value) is not ast.Tuple:
+        return None
+
+    if len(node.value.elts) != 1:
+        return None
+
+    elt = node.value.elts[0]
+    st_write = _build_st_write_call([elt])
+
+    return st_write
