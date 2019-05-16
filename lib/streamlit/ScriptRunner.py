@@ -280,7 +280,30 @@ def _build_modified_ast(tree_or_code, is_root):
             if i == 0:
                 continue
 
-        st_write = _build_st_write_call(node.value)
+        # Treat 1-element tuples differently: just st.write the 0th element
+        # (rather than the whole tuple). This allows us to add a comma at the
+        # end of a statement to turn it into an expression that should be
+        # st-written. Ex: "np.random.randn(1000, 2),"
+        if (type(node.value) is ast.Tuple and
+                len(node.value.elts) == 1):
+            args = node.value.elts
+            st_write = _build_st_write_call(args)
+
+        elif type(node.value) is ast.Str:
+            args = [node.value]
+            st_write = _build_st_write_call(args)
+
+        elif type(node.value) is ast.Name:
+            args = [
+                ast.Str(s='**%s**' % node.value.id),
+                node.value
+            ]
+            st_write = _build_st_write_call(args)
+
+        else:
+            args = [node.value]
+            st_write = _build_st_write_call(args)
+
         node.value = st_write
 
     if is_root:
@@ -301,14 +324,14 @@ def _build_st_import_statement():
     )
 
 
-def _build_st_write_call(node):
+def _build_st_write_call(nodes):
     return ast.Call(
         func=ast.Attribute(
             attr='write',
             value=ast.Name(id='__streamlit__', ctx=ast.Load()),
             ctx=ast.Load(),
         ),
-        args=[node],
+        args=nodes,
         keywords=[],
         kwargs=None,
         starargs=None,
