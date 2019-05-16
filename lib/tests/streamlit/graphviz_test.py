@@ -4,11 +4,11 @@
 
 import graphviz as graphviz
 
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
-class GraphvizTest(util.DeltaGeneratorTestCase):
+class GraphvizTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall graphviz_chart protos."""
 
     def test_spec(self):

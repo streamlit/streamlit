@@ -21,7 +21,7 @@ from streamlit import protobuf
 from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
         _clean_up_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -85,7 +85,7 @@ class MockQueue(object):
         self._deltas.append(data)
 
 
-class DeltaGeneratorTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
 
     def test_wraps_with_cleaned_sig(self):
@@ -142,7 +142,7 @@ class DeltaGeneratorTest(util.DeltaGeneratorTestCase):
         self.assertEqual(dg._exception_msg, 'Exception in fake_text_raise_exception')
 
 
-class DeltaGeneratorClassTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
 
     def setUp(self):
@@ -207,7 +207,7 @@ class DeltaGeneratorClassTest(util.DeltaGeneratorTestCase):
         self.assertEqual(delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorTextTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text Proto Class."""
 
     def test_generic_text(self):
@@ -276,9 +276,10 @@ class DeltaGeneratorTextTest(util.DeltaGeneratorTestCase):
         st.json(obj)
 
         element = self.get_delta_from_queue().new_element
-        # self.assertTrue(
-        #     element.text.body.startswith('"<module \'json\' from '))
-        self.assertEqual('"<class \'module\'>"', element.text.body)
+        if sys.version_info >= (3, 0):
+            self.assertEqual('"<class \'module\'>"', element.text.body)
+        else:
+            self.assertEqual('"<type \'module\'>"', element.text.body)
         self.assertEqual(protobuf.Text.JSON, element.text.format)
 
     def test_markdown(self):
@@ -312,7 +313,7 @@ class DeltaGeneratorTextTest(util.DeltaGeneratorTestCase):
         self.assertEqual(True, element.empty.unused)
 
 
-class DeltaGeneratorProgressTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Progress."""
 
     def test_progress_int(self):
@@ -348,7 +349,7 @@ class DeltaGeneratorProgressTest(util.DeltaGeneratorTestCase):
         self.assertEqual(element.exception.type, 'TypeError')
 
 
-class DeltaGeneratorChartTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Charts."""
 
     def test_line_chart(self):
@@ -385,7 +386,7 @@ class DeltaGeneratorChartTest(util.DeltaGeneratorTestCase):
         self.assertEqual(len(element.chart.components), 8)
 
 
-class DeltaGeneratorImageTest(util.DeltaGeneratorTestCase):
+class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Images"""
 
     def test_image_from_url(self):
