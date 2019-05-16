@@ -8,7 +8,6 @@ import threading
 import time
 
 from blinker import Signal
-from six import string_types
 
 from streamlit import config
 
@@ -259,7 +258,7 @@ class RerunException(ScriptControlException):
 def _modify_ast(tree_or_code, is_root):
     """Modify AST so you can use Streamlit without Streamlit calls."""
 
-    if type(tree_or_code) in string_types:
+    if type(tree_or_code) is str:
         tree = ast.parse(tree_or_code)
     else:
         tree = tree_or_code
