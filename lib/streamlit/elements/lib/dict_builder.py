@@ -13,6 +13,7 @@ _CURRENT_COLUMN_TYPE = '__current_column_type__'
 INDEX_COLUMN_NAME = '__index_column_name__'
 
 # Column name used to designate the dataframe index in JavaScript.
+# Must match dataFrameProto.js
 INDEX_COLUMN_DESIGNATOR = '(index)'
 
 
@@ -218,7 +219,7 @@ class ColorCycler(ValueCycler):
             '#4daf4a',
             '#984ea3',
             '#ff7f00',
-            '#ffff33',
+            '#bbbb33',
             '#a65628',
             '#f781bf')
 
