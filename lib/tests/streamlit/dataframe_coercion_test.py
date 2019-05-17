@@ -4,7 +4,7 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims, running_py3
+from streamlit.compatibility import setup_2_3_shims
 
 from streamlit.elements.data_frame_proto import convert_anything_to_df
 

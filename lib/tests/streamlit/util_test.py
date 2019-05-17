@@ -16,7 +16,6 @@ import pytest
 from mock import patch, mock_open, mock
 
 from streamlit import util
-from streamlit.compatibility import running_py3
 
 import plotly.graph_objs as go
 

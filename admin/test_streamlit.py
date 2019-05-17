@@ -12,7 +12,7 @@ import streamlit as st
 from streamlit import compatibility
 
 # This is how we get user input
-if not compatibility.running_py3():
+if not compatibility.is_running_py3():
     input = raw_input  # noqa: F821
 
 # True means we run through all tests automatically.
