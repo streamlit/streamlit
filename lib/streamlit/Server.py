@@ -191,7 +191,7 @@ class Server(object):
 
         # This does a few things:
         # 1) Clears the current report in the browser.
-        # 2) Marks teh current report as "stopped" in the browser.
+        # 2) Marks the current report as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
         self._enqueue_script_state_changed_message(ScriptState.STOPPED)
