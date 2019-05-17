@@ -11,7 +11,8 @@ import camelcase from 'camelcase'
 import { dispatchOneOf, mapOneOf, updateOneOf } from './immutableProto'
 import { format } from './format'
 
-export const INDEX_COLUMN_DESIGNATOR = 'index'
+// Must match dict_builder.py
+export const INDEX_COLUMN_DESIGNATOR = '(index)'
 
 const STRING_COLLATOR = new Intl.Collator('en', {
   numeric: false,
