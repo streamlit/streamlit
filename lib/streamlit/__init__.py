@@ -1,12 +1,38 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
 
-"""Exports everything that should be visible to Streamlit users.
+"""Streamlit. Data Science, reimagined.
 
-The functions in this package wrap member functions of DeltaGenerator, as well
-as from any namespace within DeltaGenerator. What they do is get the
-DeltaGenerator from the singleton connection object (in streamlit.connection)
-and then call the corresponding function on that DeltaGenerator.
+How to use Streamlit in 3 seconds:
+
+    1. Write your code
+    >>> import streamlit as st
+    >>> st.write(anything_you_want)
+
+    2. Run your code
+    $ streamlit run my_script.py
+
+    3. Visualize your code
+    A new tab will open on your browser. That's your Streamlit report!
+
+    4. Modify your code, save it, and watch changes live on your browser.
+
+Take a look at the other commands in this module to find out what else
+Streamlit can do:
+
+    >>> dir(streamlit)
+
+Or try running our "Hello World":
+
+    $ streamlit hello
+
+For more detailed info, see https://streamlit.io/secret/docs.
 """
+
+# The functions in this package wrap member functions of DeltaGenerator, as well
+# as from any namespace within DeltaGenerator. What they do is get the
+# DeltaGenerator from the singleton connection object (in streamlit.connection)
+# and then call the corresponding function on that DeltaGenerator.
 
 # NOTE: You'll see lots of "noqa: F821" in this file. That's because we
 # manually mess with the local namespace so the linter can't know that some
