@@ -44,9 +44,24 @@ class State(object):
 
 class Server(object):
 
+    _singleton = None
+
+    @classmethod
+    def get_current(cls):
+        """Return the singleton instance."""
+        if cls._singleton is None:
+            Server()
+
+        return Server._singleton
+
     def __init__(self, report, scriptrunner, on_server_start_callback):
         """Initialize server."""
         LOGGER.debug('Initializing server...')
+
+        if Server._singleton is not None:
+            raise RuntimeError(
+                'Server already initialized. Use .get_current() instead')
+
         Server._singleton = self
 
         _fix_tornado_logging()
