@@ -61,7 +61,6 @@ class LocalSourcesObserver(object):
         self._is_closed = True
 
     def _register_observer(self, filepath, module, name):
-        print('Registering', name, filepath)
         om = ObservedModule(
             observer=FileObserver(filepath, self.on_file_changed),
             module=module,
@@ -75,8 +74,6 @@ class LocalSourcesObserver(object):
 
         if filepath == self._report.script_path:
             return
-
-        print('Deregistering', filepath)
 
         om = self._observed_modules[filepath]
         om.observer.close()
