@@ -31,6 +31,7 @@ class Report(object):
         basename = os.path.basename(script_path)
 
         self.script_path = os.path.abspath(script_path)
+        self.script_folder = os.path.dirname(self.script_path)
         self.argv = argv
         self.name = os.path.splitext(basename)[0]
 

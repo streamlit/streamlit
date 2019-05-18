@@ -56,7 +56,8 @@ class FileEventObserver(object):
             Absolute path of the file to observe.
 
         on_file_changed : callable
-            Function to call when the file changes.
+            Function to call when the file changes. This function should
+            take the changed file's path as a parameter.
 
         """
         file_path = os.path.abspath(file_path)
@@ -181,6 +182,13 @@ class _MultiFileObserver(object):
         self._observer.join(timeout=5)
 
 
+class ObservedFile(object):
+    def __init__(self, md5, modification_time, fn):
+        self.md5 = md5
+        self.modification_time = modification_time
+        self.fn = fn
+
+
 class _FolderEventHandler(events.FileSystemEventHandler):
     """Listen to folder events, see if certain files changed, fire callback.
 
@@ -217,11 +225,8 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         md5 = proxy_util.calc_md5_with_blocking_retries(file_path)
         modification_time = os.stat(file_path).st_mtime
 
-        self._observed_files[file_path] = {
-            'md5': md5,
-            'modification_time': modification_time,
-            'fn': callback,
-        }
+        self._observed_files[file_path] = ObservedFile(
+            md5=md5, modification_time=modification_time, fn=callback)
 
     def remove_file_change_listener(self, file_path):
         """Remove a file from this object's event filter.
@@ -287,20 +292,20 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         file_info = self._observed_files[file_path]
 
         modification_time = os.stat(file_path).st_mtime
-        if modification_time == file_info['modification_time']:
+        if modification_time == file_info.modification_time:
             LOGGER.debug('File timestamp did not change: %s', file_path)
             return
 
-        file_info['modification_time'] = modification_time
+        file_info.modification_time = modification_time
 
         new_md5 = proxy_util.calc_md5_with_blocking_retries(file_path)
-        if new_md5 == file_info['md5']:
+        if new_md5 == file_info.md5:
             LOGGER.debug('File MD5 did not change: %s', file_path)
             return
 
         LOGGER.debug('File MD5 changed: %s', file_path)
-        file_info['md5'] = new_md5
-        file_info['fn']()
+        file_info.md5 = new_md5
+        file_info.fn(file_path)
 
     def on_created(self, event):
         if event.is_directory:

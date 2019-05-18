@@ -37,6 +37,7 @@ def _modify_ast(tree, is_root):
             st_write = _get_st_write_from_expr(node, i)
 
         # Convert assignments to st.write
+        # TODO: Rethink this. And probably remove it.
         elif type(node) is ast.Assign:
             st_write = _get_st_write_from_assign(node, i)
 

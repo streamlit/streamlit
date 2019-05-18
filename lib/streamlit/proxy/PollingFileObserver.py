@@ -38,7 +38,8 @@ class PollingFileObserver(object):
             Absolute path of the file to observe.
 
         on_file_changed : callable
-            Function to call when the file changes.
+            Function to call when the file changes. This function should
+            take the changed file's path as a parameter.
 
         """
         self._file_path = file_path
@@ -75,7 +76,7 @@ class PollingFileObserver(object):
         LOGGER.debug('Change detected: %s', self._file_path)
 
         loop = IOLoop.current()
-        loop.call_later(0, self._on_file_changed)
+        loop.spawn_callback(self._on_file_changed, self._file_path)
 
         self._schedule()
 

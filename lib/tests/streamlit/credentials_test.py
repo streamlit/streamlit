@@ -5,7 +5,6 @@
 import sys
 import textwrap
 import unittest
-
 import pytest
 
 from mock import call, mock_open, patch
