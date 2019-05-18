@@ -9,6 +9,7 @@ from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
+from streamlit import util
 from streamlit.LocalSourcesObserver import LocalSourcesObserver
 
 from streamlit.logger import get_logger
@@ -199,6 +200,7 @@ class ScriptRunner(object):
             self._set_state(State.STOPPED)
 
         self._local_sources_observer.update_watched_modules()
+        _clean_problem_modules()
 
         if rerun:
             self._run()
@@ -250,3 +252,13 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
     pass
+
+
+def _clean_problem_modules():
+    if 'keras' in sys.modules:
+        try:
+            keras = sys.modules['keras']
+            keras.backend.clear_session()
+        except:
+            pass
+
