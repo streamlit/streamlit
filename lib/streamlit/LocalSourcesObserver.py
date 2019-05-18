@@ -24,7 +24,7 @@ LOGGER = get_logger(__name__)
 
 
 ObservedModule = collections.namedtuple(
-    'ObservedModule', ['module', 'observer', 'name'])
+    'ObservedModule', ['observer', 'module_name'])
 
 
 class LocalSourcesObserver(object):
@@ -38,8 +38,7 @@ class LocalSourcesObserver(object):
 
         self._register_observer(
             self._report.script_path,
-            module=None,  # Only the root script has None here.
-            name=None,  # Only the root script has None here.
+            module_name=None,  # Only the root script has None here.
         )
 
     def on_file_changed(self, filepath):
@@ -49,8 +48,8 @@ class LocalSourcesObserver(object):
 
         om = self._observed_modules[filepath]
 
-        if om.module is not None:
-            sys.modules[om.name] = importlib.reload(om.module)
+        if om.module_name is not None and om.module_name in sys.modules:
+            del sys.modules[om.module_name]
 
         self._on_file_changed()
 
@@ -60,11 +59,10 @@ class LocalSourcesObserver(object):
         self._observed_modules = {}
         self._is_closed = True
 
-    def _register_observer(self, filepath, module, name):
+    def _register_observer(self, filepath, module_name):
         om = ObservedModule(
             observer=FileObserver(filepath, self.on_file_changed),
-            module=module,
-            name=name,
+            module_name=module_name,
         )
         self._observed_modules[filepath] = om
 
@@ -111,7 +109,7 @@ class LocalSourcesObserver(object):
             local_filepaths.append(filepath)
 
             if file_is_local and file_is_new:
-                self._register_observer(filepath, module, name)
+                self._register_observer(filepath, name)
 
         # Remove no-longer-depended-on files from self._observed_modules
         # Will this ever happen?
