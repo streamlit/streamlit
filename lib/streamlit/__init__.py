@@ -474,7 +474,8 @@ def _maybe_print_repl_warning():
                   $ streamlit run [FILE_NAME] [ARGUMENTS]
 
                 '''))
-        else:
+
+        elif _config.get_option('global.showWarningOnDirectExecution'):
             script_name = _sys.argv[0]
 
             _LOGGER.warning(_textwrap.dedent('''

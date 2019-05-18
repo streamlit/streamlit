@@ -125,6 +125,15 @@ _create_option(
     default_val='streamlit-public')
 
 
+_create_option(
+    'global.showWarningOnDirectExecution',
+    description='''
+        If True, will show a warning when you run a Streamlit-enabled script
+        via "python my_script.py".
+        ''',
+    default_val=True)
+
+
 @_create_option('global.developmentMode', visibility='hidden')
 def _global_development_mode():
     """Are we in development mode.
