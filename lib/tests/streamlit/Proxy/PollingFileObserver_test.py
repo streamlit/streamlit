@@ -38,7 +38,7 @@ class PollingFileObserverTest(AsyncTestCase):
         """Test that when a file is modified, the callback is called."""
         cb_marker = mock.Mock()
 
-        def cb():
+        def cb(x):
             cb_marker()
             self.stop()
 
@@ -66,7 +66,7 @@ class PollingFileObserverTest(AsyncTestCase):
         """Test that we ignore files with same mtime."""
         cb_marker = mock.Mock()
 
-        def cb():
+        def cb(x):
             cb_marker()
             self.stop()
 
@@ -98,7 +98,7 @@ class PollingFileObserverTest(AsyncTestCase):
         """Test that we ignore files with same md5."""
         cb_marker = mock.Mock()
 
-        def cb():
+        def cb(x):
             cb_marker()
             self.stop()
 
