@@ -27,10 +27,10 @@ const SHOW_STOP_BUTTON = true  // TODO: Remove on 2019-10-01
 
 /** Component props */
 interface Props {
-  /** State of our connection to the proxy. */
+  /** State of our connection to the server. */
   connectionState: ConnectionState;
 
-  /** Dispatches transient SessionEvents received from the proxy. */
+  /** Dispatches transient SessionEvents received from the server. */
   sessionEventDispatcher: SessionEventDispatcher;
 
   /** Report's current runstate */

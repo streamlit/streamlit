@@ -104,7 +104,7 @@ class Report(object):
         -------
         list of tuples
             See `CloudStorage.save_report_files()` for schema. But as to the
-            output of this method, it's just a manifest pointing to the Proxy
+            output of this method, it's just a manifest pointing to the Server
             so browsers who go to the shareable report URL can connect to it
             live.
 
@@ -113,8 +113,8 @@ class Report(object):
 
         manifest = self._build_manifest(
             status='running',
-            external_proxy_ip=util.get_external_ip(),
-            internal_proxy_ip=util.get_internal_ip(),
+            external_server_ip=util.get_external_ip(),
+            internal_server_ip=util.get_internal_ip(),
         )
 
         manifest_json = json.dumps(manifest).encode('utf-8')
@@ -176,7 +176,7 @@ class Report(object):
 
     def _build_manifest(
             self, status, num_messages=None, first_delta_index=None,
-            num_deltas=None, external_proxy_ip=None, internal_proxy_ip=None):
+            num_deltas=None, external_server_ip=None, internal_server_ip=None):
         """Build a manifest dict for this report.
 
         Parameters
@@ -191,10 +191,10 @@ class Report(object):
             Set only when status is DONE. The index of our first Delta message
         num_deltas : int or None
             Set only when status is DONE. The number of Delta messages in the report
-        external_proxy_ip : str or None
-            Only when status is RUNNING. The IP of the Proxy's websocket.
-        internal_proxy_ip : str or None
-            Only when status is RUNNING. The IP of the Proxy's websocket.
+        external_server_ip : str or None
+            Only when status is RUNNING. The IP of the Server's websocket.
+        internal_server_ip : str or None
+            Only when status is RUNNING. The IP of the Server's websocket.
 
         Returns
         -------
@@ -204,31 +204,31 @@ class Report(object):
             - numMessages: int or None,
             - firstDeltaIndex: int or None,
             - numDeltas: int or None,
-            - proxyStatus: 'running' or 'done',
-            - externalProxyIP: str or None,
-            - internalProxyIP: str or None,
-            - proxyPort: int
+            - serverStatus: 'running' or 'done',
+            - externalServerIP: str or None,
+            - internalServerIP: str or None,
+            - serverPort: int
 
         """
         if status == 'running':
-            configured_proxy_address = (
+            configured_server_address = (
                 config.get_option('browser.proxyAddress'))
         else:
-            configured_proxy_address = None
+            configured_server_address = None
 
         return dict(
             name=self.name,
             numMessages=num_messages,
             firstDeltaIndex=first_delta_index,
             numDeltas=num_deltas,
-            proxyStatus=status,
-            configuredProxyAddress=configured_proxy_address,
-            externalProxyIP=external_proxy_ip,
-            internalProxyIP=internal_proxy_ip,
+            serverStatus=status,
+            configuredServerAddress=configured_server_address,
+            externalServerIP=external_server_ip,
+            internalServerIP=internal_server_ip,
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            proxyPort=config.get_option('browser.proxyPort'),
+            serverPort=config.get_option('browser.proxyPort'),
         )
 
 
@@ -265,7 +265,7 @@ def _get_browser_address_bar_port():
 
     That is, this is the port where static assets will be served from. In dev,
     this is different from the URL that will be used to connect to the
-    proxy-browser websocket.
+    server-browser websocket.
 
     """
     if config.get_option('proxy.useNode'):

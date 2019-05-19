@@ -41,8 +41,8 @@ class ServerUtilsTest(unittest.TestCase):
                        'streamlit.Server.config.get_option',
                        side_effect=[
                            True, 'mybucket', 's3.amazon.com',
-                           'browser.proxy.address'
+                           'browser.server.address'
                        ]):
             b.return_value = True
             self.assertTrue(Server._is_url_from_allowed_origins(
-                'browser.proxy.address'))
+                'browser.server.address'))

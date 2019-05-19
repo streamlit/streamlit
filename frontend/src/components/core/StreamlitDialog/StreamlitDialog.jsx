@@ -151,7 +151,7 @@ function rerunScriptDialog(
 /**
  * Dialog shown when the user wants to clear the cache.
  *
- * confirmCallback - callback to send the clear_cache request to the Proxy
+ * confirmCallback - callback to send the clear_cache request to the Server
  * onClose         - callback to close the dialog
  */
 function clearCacheDialog({ confirmCallback, onClose }) {
@@ -174,11 +174,11 @@ function clearCacheDialog({ confirmCallback, onClose }) {
 /**
  * Shows the settings dialog.
  */
-function settingsDialog({settings, isProxyConnected, isOpen, onSave, onClose}) {
+function settingsDialog({settings, isServerConnected, isOpen, onSave, onClose}) {
   return (
     <SettingsDialog
       settings={settings}
-      isProxyConnected={isProxyConnected}
+      isServerConnected={isServerConnected}
       isOpen={isOpen}
       onSave={onSave}
       onClose={onClose}

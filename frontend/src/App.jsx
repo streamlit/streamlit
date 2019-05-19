@@ -60,7 +60,7 @@ class App extends PureComponent {
     this.getUserLogin = this.getUserLogin.bind(this)
     this.handleConnectionError = this.handleConnectionError.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
-    this.isProxyConnected = this.isProxyConnected.bind(this)
+    this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
     this.onLogInSuccess = this.onLogInSuccess.bind(this)
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
@@ -308,7 +308,7 @@ class App extends PureComponent {
 
     this.setState({userSettings: newSettings})
 
-    if (prevRunOnSave !== runOnSave && this.isProxyConnected()) {
+    if (prevRunOnSave !== runOnSave && this.isServerConnected()) {
       this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave})
     }
   }
@@ -351,7 +351,7 @@ class App extends PureComponent {
    * Callback to call when we want to save the report.
    */
   saveReport() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
         trackEventRemotely('shareReport')
         this.sendBackMsg({
@@ -372,7 +372,7 @@ class App extends PureComponent {
         })
       }
     } else {
-      logError('Cannot save report when proxy is disconnected')
+      logError('Cannot save report when disconnected from server')
     }
   }
 
@@ -380,7 +380,7 @@ class App extends PureComponent {
    * Opens the dialog to rerun the script.
    */
   openRerunScriptDialog() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       this.openDialog({
         type: 'rerunScript',
         getCommandLine: () => this.state.commandLine,
@@ -391,7 +391,7 @@ class App extends PureComponent {
         defaultAction: this.rerunScript,
       })
     } else {
-      logError('Cannot rerun script when proxy is disconnected.')
+      logError('Cannot rerun script when disconnected from server.')
     }
   }
 
@@ -399,14 +399,14 @@ class App extends PureComponent {
    * Reruns the script (given by this.state.commandLine).
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
-   * will be set to true, which will result in a request to the Proxy
+   * will be set to true, which will result in a request to the Server
    * to enable runOnSave for this report.
    */
   rerunScript(alwaysRunOnSave = false) {
     this.closeDialog()
 
-    if (!this.isProxyConnected()) {
-      logError('Cannot rerun script when proxy is disconnected.')
+    if (!this.isServerConnected()) {
+      logError('Cannot rerun script when disconnected from server.')
       return
     }
 
@@ -435,8 +435,8 @@ class App extends PureComponent {
 
   /** Requests that the server stop running the report */
   stopReport() {
-    if (!this.isProxyConnected()) {
-      logError('Cannot stop report when proxy is disconnected.')
+    if (!this.isServerConnected()) {
+      logError('Cannot stop report when disconnected from server.')
       return
     }
 
@@ -454,7 +454,7 @@ class App extends PureComponent {
    * Shows a dialog asking the user to confirm they want to clear the cache
    */
   openClearCacheDialog() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       this.openDialog({
         type: 'clearCache',
         confirmCallback: this.clearCache,
@@ -463,7 +463,7 @@ class App extends PureComponent {
         defaultAction: this.clearCache,
       })
     } else {
-      logError('Cannot clear cache: proxy is disconnected')
+      logError('Cannot clear cache: disconnected from server')
     }
   }
 
@@ -472,16 +472,16 @@ class App extends PureComponent {
    */
   clearCache() {
     this.closeDialog()
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       trackEventRemotely('clearCache')
       this.sendBackMsg({type: 'clearCache', clearCache: true})
     } else {
-      logError('Cannot clear cache: proxy is disconnected')
+      logError('Cannot clear cache: disconnected from server')
     }
   }
 
   /**
-   * Sends a message back to the proxy.
+   * Sends a message back to the server.
    */
   sendBackMsg(msg) {
     if (this.connectionManager) {
@@ -499,9 +499,9 @@ class App extends PureComponent {
   }
 
   /**
-   * Indicates whether we're connected to the proxy.
+   * Indicates whether we're connected to the server.
    */
-  isProxyConnected() {
+  isServerConnected() {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
       false
@@ -531,7 +531,7 @@ class App extends PureComponent {
             stopReport={this.stopReport}
           />
           <MainMenu
-            isProxyConnected={this.isProxyConnected}
+            isServerConnected={this.isServerConnected}
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
@@ -539,7 +539,7 @@ class App extends PureComponent {
             settingsCallback={() => this.openDialog({
               type: 'settings',
               isOpen: true,
-              isProxyConnected: this.isProxyConnected(),
+              isServerConnected: this.isServerConnected(),
               settings: this.state.userSettings,
               onSave: this.saveSettings,
             })}

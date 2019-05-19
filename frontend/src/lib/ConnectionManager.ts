@@ -23,7 +23,7 @@ interface Props {
   getUserLogin: () => Promise<string>;
 
   /**
-   * Function to be called when we receive a message from the proxy.
+   * Function to be called when we receive a message from the server.
    */
   onMessage: (message: ForwardMsg) => void;
 
@@ -51,7 +51,7 @@ export class ConnectionManager {
   }
 
   /**
-   * Indicates whether we're connected to the proxy.
+   * Indicates whether we're connected to the server.
    */
   public isConnected(): boolean {
     return this.connectionState === ConnectionState.CONNECTED
@@ -67,7 +67,7 @@ export class ConnectionManager {
       this.connection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      logError(`Cannot send message when proxy is disconnected: ${obj}`)
+      logError(`Cannot send message when server is disconnected: ${obj}`)
     }
   }
 
@@ -126,21 +126,21 @@ export class ConnectionManager {
   private async connectBasedOnManifest(reportId: string): Promise<WebsocketConnection | StaticConnection> {
     const manifest = await this.fetchManifestWithPossibleLogin(reportId)
 
-    return manifest.proxyStatus === 'running' ?
+    return manifest.serverStatus === 'running' ?
       this.connectToRunningServerFromManifest(manifest) :
       this.connectToStaticReportFromManifest(reportId, manifest)
   }
 
   private connectToRunningServerFromManifest(manifest: any): WebsocketConnection {
     const {
-      configuredProxyAddress, internalProxyIP, externalProxyIP, proxyPort,
+      configuredServerAddress, internalServerIP, externalServerIP, serverPort,
     } = manifest
 
-    const uriList = configuredProxyAddress ?
-      [getWsUrl(configuredProxyAddress, proxyPort)] :
+    const uriList = configuredServerAddress ?
+      [getWsUrl(configuredServerAddress, serverPort)] :
       [
-        getWsUrl(externalProxyIP, proxyPort),
-        getWsUrl(internalProxyIP, proxyPort),
+        getWsUrl(externalServerIP, serverPort),
+        getWsUrl(internalServerIP, serverPort),
       ]
 
     return new WebsocketConnection({
