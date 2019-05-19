@@ -1,37 +1,35 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
-"""streamlit.LocalSourcesObserver unit test."""
+"""streamlit.LocalSourcesWatcher unit test."""
 
 import os
-import pytest
 import sys
-import textwrap
 import unittest
 
-from mock import call, mock_open, patch
+from mock import patch
 
-from streamlit import LocalSourcesObserver
+from streamlit.watcher import LocalSourcesWatcher
 from streamlit.Report import Report
 
 
 class FileIsInFolderTest(unittest.TestCase):
 
     def test_file_in_folder(self):
-        ret = LocalSourcesObserver._file_is_in_folder('/a/b/c/foo.py', '/a/b/c/')
+        ret = LocalSourcesWatcher._file_is_in_folder('/a/b/c/foo.py', '/a/b/c/')
         self.assertTrue(ret)
 
     def test_file_not_in_folder(self):
-        ret = LocalSourcesObserver._file_is_in_folder('/a/b/c/foo.py', '/d/e/f/')
+        ret = LocalSourcesWatcher._file_is_in_folder('/a/b/c/foo.py', '/d/e/f/')
         self.assertFalse(ret)
 
     def test_rel_file_not_in_folder(self):
-        ret = LocalSourcesObserver._file_is_in_folder('foo.py', '/d/e/f/')
+        ret = LocalSourcesWatcher._file_is_in_folder('foo.py', '/d/e/f/')
         self.assertFalse(ret)
 
 
 # These can be any module in the same foldr as this file.
-import tests.streamlit.test_data.dummy_module1 as DUMMY_MODULE_1
-import tests.streamlit.test_data.dummy_module2 as DUMMY_MODULE_2
+import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
+import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
 
 REPORT_PATH = os.path.join(
         os.path.dirname(__file__), 'test_data/not_a_real_script.py')
@@ -41,7 +39,7 @@ CALLBACK = lambda x: x
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
-class LocalSourcesObserverTest(unittest.TestCase):
+class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
         try:
             del sys.modules[DUMMY_MODULE_1.__name__]
@@ -63,9 +61,9 @@ class LocalSourcesObserverTest(unittest.TestCase):
         except:
             pass
 
-    @patch('streamlit.LocalSourcesObserver.FileObserver')
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
     def test_just_script(self, fob):
-        lso = LocalSourcesObserver.LocalSourcesObserver(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
         args = fob.call_args.args
@@ -81,9 +79,9 @@ class LocalSourcesObserverTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 0)
 
-    @patch('streamlit.LocalSourcesObserver.FileObserver')
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
     def test_script_and_2_modules_at_once(self, fob):
-        lso = LocalSourcesObserver.LocalSourcesObserver(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 
@@ -108,9 +106,9 @@ class LocalSourcesObserverTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 0)
 
-    @patch('streamlit.LocalSourcesObserver.FileObserver')
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
     def test_script_and_2_modules_in_series(self, fob):
-        lso = LocalSourcesObserver.LocalSourcesObserver(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 

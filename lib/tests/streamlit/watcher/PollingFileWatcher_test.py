@@ -1,7 +1,5 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""polling_fs_observer unit test."""
-
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
@@ -10,27 +8,26 @@ setup_2_3_shims(globals())
 from tornado.testing import AsyncTestCase
 import mock
 
-from streamlit.proxy import PollingFileObserver
+from streamlit.watcher import PollingFileWatcher
 
 
-PollingFileObserver._POLLING_PERIOD_SECS = 0.001
+PollingFileWatcher._POLLING_PERIOD_SECS = 0.001
 
 
-class PollingFileObserverTest(AsyncTestCase):
-    """Test PollingFileObserver."""
+class PollingFileWatcherTest(AsyncTestCase):
+    """Test PollingFileWatcher."""
 
     def setUp(self):
-        super(PollingFileObserverTest, self).setUp()
-        # Mock watchdog.observers.Observer in polling_fs_observer
-        self.proxy_util_patcher = mock.patch(
-            'streamlit.proxy.PollingFileObserver.proxy_util')
-        self.os_patcher = mock.patch('streamlit.proxy.PollingFileObserver.os')
-        self.mock_proxy_util = self.proxy_util_patcher.start()
+        super(PollingFileWatcherTest, self).setUp()
+        self.util_patcher = mock.patch(
+            'streamlit.watcher.PollingFileWatcher.util')
+        self.os_patcher = mock.patch('streamlit.watcher.PollingFileWatcher.os')
+        self.mock_util = self.util_patcher.start()
         self.os = self.os_patcher.start()
 
     def tearDown(self):
-        super(PollingFileObserverTest, self).tearDown()
-        self.proxy_util_patcher.stop()
+        super(PollingFileWatcherTest, self).tearDown()
+        self.util_patcher.stop()
         self.os_patcher.stop()
 
     # Using stop/wait, so don't annotate this with @gen_test.
@@ -43,20 +40,20 @@ class PollingFileObserverTest(AsyncTestCase):
             self.stop()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
 
-        ro = PollingFileObserver.PollingFileObserver('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
 
         try:
-            self.wait(timeout=2 * PollingFileObserver._POLLING_PERIOD_SECS)
+            self.wait(timeout=2 * PollingFileWatcher._POLLING_PERIOD_SECS)
         except AssertionError:
             pass
         cb_marker.assert_not_called()
 
         self.os.stat = lambda x: FakeStat(102)
-        self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
-        self.wait(timeout=4 * PollingFileObserver._POLLING_PERIOD_SECS)
+        self.wait(timeout=4 * PollingFileWatcher._POLLING_PERIOD_SECS)
         cb_marker.assert_called_once()
 
         ro.close()
@@ -71,22 +68,22 @@ class PollingFileObserverTest(AsyncTestCase):
             self.stop()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
 
-        ro = PollingFileObserver.PollingFileObserver('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
 
         try:
-            self.wait(timeout=2 * PollingFileObserver._POLLING_PERIOD_SECS)
+            self.wait(timeout=2 * PollingFileWatcher._POLLING_PERIOD_SECS)
         except AssertionError:
             pass
         cb_marker.assert_not_called()
 
         # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
-        self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
         # This is the test:
         try:
-            self.wait(timeout=2 * PollingFileObserver._POLLING_PERIOD_SECS)
+            self.wait(timeout=2 * PollingFileWatcher._POLLING_PERIOD_SECS)
         except AssertionError:
             pass
         cb_marker.assert_not_called()
@@ -103,23 +100,23 @@ class PollingFileObserverTest(AsyncTestCase):
             self.stop()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
 
-        ro = PollingFileObserver.PollingFileObserver('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
 
         try:
-            self.wait(timeout=2 * PollingFileObserver._POLLING_PERIOD_SECS)
+            self.wait(timeout=2 * PollingFileWatcher._POLLING_PERIOD_SECS)
         except AssertionError:
             pass
         cb_marker.assert_not_called()
 
         self.os.stat = lambda x: FakeStat(102)
         # Same MD5:
-        # self.mock_proxy_util.calc_md5_with_blocking_retries = lambda x: '2'
+        # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
         # This is the test:
         try:
-            self.wait(timeout=2 * PollingFileObserver._POLLING_PERIOD_SECS)
+            self.wait(timeout=2 * PollingFileWatcher._POLLING_PERIOD_SECS)
         except AssertionError:
             pass
         cb_marker.assert_not_called()

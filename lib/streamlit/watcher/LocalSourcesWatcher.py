@@ -14,68 +14,68 @@ except ImportError:
 
 try:
     # If the watchdog module is installed.
-    from streamlit.proxy.FileEventObserver import FileEventObserver as FileObserver
+    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher as FileWatcher
 except ImportError:
     # Fallback that doesn't use watchdog.
-    from streamlit.proxy.PollingFileObserver import PollingFileObserver as FileObserver
+    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-ObservedModule = collections.namedtuple(
-    'ObservedModule', ['observer', 'module_name'])
+WatchedModule = collections.namedtuple(
+    'WatchedModule', ['watcher', 'module_name'])
 
 
-class LocalSourcesObserver(object):
+class LocalSourcesWatcher(object):
     def __init__(self, report, on_file_changed):
         self._report = report
         self._on_file_changed = on_file_changed
         self._is_closed = False
 
-        # A dict of filepath -> ObservedModule.
-        self._observed_modules = {}
+        # A dict of filepath -> WatchedModule.
+        self._watched_modules = {}
 
-        self._register_observer(
+        self._register_watcher(
             self._report.script_path,
             module_name=None,  # Only the root script has None here.
         )
 
     def on_file_changed(self, filepath):
-        if filepath not in self._observed_modules:
-            LOGGER.error('Received event for non-observed file', filepath)
+        if filepath not in self._watched_modules:
+            LOGGER.error('Received event for non-watched file', filepath)
             return
 
-        om = self._observed_modules[filepath]
+        wm = self._watched_modules[filepath]
 
-        if om.module_name is not None and om.module_name in sys.modules:
-            del sys.modules[om.module_name]
+        if wm.module_name is not None and wm.module_name in sys.modules:
+            del sys.modules[wm.module_name]
 
         self._on_file_changed()
 
     def close(self):
-        for om in self._observed_modules.values():
-            om.observer.close()
-        self._observed_modules = {}
+        for wm in self._watched_modules.values():
+            wm.watcher.close()
+        self._watched_modules = {}
         self._is_closed = True
 
-    def _register_observer(self, filepath, module_name):
-        om = ObservedModule(
-            observer=FileObserver(filepath, self.on_file_changed),
+    def _register_watcher(self, filepath, module_name):
+        wm = WatchedModule(
+            watcher=FileWatcher(filepath, self.on_file_changed),
             module_name=module_name,
         )
-        self._observed_modules[filepath] = om
+        self._watched_modules[filepath] = wm
 
-    def _deregister_observer(self, filepath):
-        if filepath not in self._observed_modules:
+    def _deregister_watcher(self, filepath):
+        if filepath not in self._watched_modules:
             return
 
         if filepath == self._report.script_path:
             return
 
-        om = self._observed_modules[filepath]
-        om.observer.close()
-        del self._observed_modules[filepath]
+        wm = self._watched_modules[filepath]
+        wm.watcher.close()
+        del self._watched_modules[filepath]
 
     def update_watched_modules(self):
         if self._is_closed:
@@ -91,7 +91,7 @@ class LocalSourcesObserver(object):
                 if filepath is None:
                     # Some modules have neither a spec nor a file. But we can
                     # ignore those since they're not the user-created modules
-                    # we want to observe anyway.
+                    # we want to watch anyway.
                     continue
             else:
                 filepath = spec.origin
@@ -102,20 +102,20 @@ class LocalSourcesObserver(object):
 
             filepath = os.path.abspath(filepath)
 
-            file_is_new = filepath not in self._observed_modules
+            file_is_new = filepath not in self._watched_modules
             file_is_local = _file_is_in_folder(
                 filepath, self._report.script_folder)
 
             local_filepaths.append(filepath)
 
             if file_is_local and file_is_new:
-                self._register_observer(filepath, name)
+                self._register_watcher(filepath, name)
 
-        # Remove no-longer-depended-on files from self._observed_modules
+        # Remove no-longer-depended-on files from self._watched_modules
         # Will this ever happen?
-        for filepath in self._observed_modules:
+        for filepath in self._watched_modules:
             if filepath not in local_filepaths:
-                self._deregister_observer(filepath)
+                self._deregister_watcher(filepath)
 
 
 def _file_is_in_folder(filepath, folderpath):

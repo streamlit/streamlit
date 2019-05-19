@@ -7,6 +7,7 @@ import logging
 import os
 import textwrap
 import threading
+import urllib
 
 import tornado.concurrent
 import tornado.gen
@@ -20,7 +21,6 @@ from streamlit import protobuf
 from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRunner import State as ScriptState
-from streamlit.proxy import proxy_util
 from streamlit.storage.S3Storage import S3Storage as Storage
 
 from streamlit.logger import get_logger
@@ -346,7 +346,7 @@ class _StaticFileHandler(tornado.web.StaticFileHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
 
 class _HealthHandler(tornado.web.RequestHandler):
@@ -355,7 +355,7 @@ class _HealthHandler(tornado.web.RequestHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
@@ -373,7 +373,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
     def open(self):
         self._server._add_browser_connection(self)
@@ -436,3 +436,55 @@ def _convert_msg_to_exception_msg(msg, e):
     msg.delta.id = delta_id
 
     exception_element.marshall(msg.delta.new_element, e)
+
+
+def _is_url_from_allowed_origins(url):
+    """Return True if URL is from allowed origins (for CORS purpose).
+
+    Allowed origins:
+    1. localhost
+    2. The internal and external IP addresses of the machine where this
+    functions was called from.
+    3. The cloud storage domain configured in `s3.bucket`.
+
+    If `proxy.enableCORS` is False, this allows all origins.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check
+
+    Returns
+    -------
+    bool
+        True if URL is accepted. False otherwise.
+
+    """
+    if not config.get_option('proxy.enableCORS'):
+        # Allow everything when CORS is disabled.
+        return True
+
+    hostname = urllib.parse.urlparse(url).hostname
+
+    # Allow connections from bucket.
+    if hostname == config.get_option('s3.bucket'):
+        return True
+
+    # Allow connections from watcher's machine or localhost.
+    allowed_domains = [
+        'localhost',
+        '127.0.0.1',
+        util.get_internal_ip(),
+        util.get_external_ip(),
+    ]
+
+    s3_url = config.get_option('s3.url')
+
+    if s3_url is not None:
+        parsed = urllib.parse.urlparse(s3_url)
+        allowed_domains.append(parsed.hostname)
+
+    if config.is_manually_set('browser.proxyAddress'):
+        allowed_domains.append(config.get_option('browser.proxyAddress'))
+
+    return any(hostname == d for d in allowed_domains)

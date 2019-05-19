@@ -297,14 +297,18 @@ class ConfigTest(unittest.TestCase):
         config._set_option('proxy.port', 1234, 'test')
         with pytest.raises(AssertionError) as e:
             config._check_conflicts()
-        self.assertEqual(str(e.value), 'proxy.port does not work when proxy.useNode is true. ')
+        self.assertEqual(
+            str(e.value),
+            'proxy.port does not work when proxy.useNode is true. ')
 
     def test_check_conflicts_2a(self):
         config._set_option('proxy.useNode', True, 'test')
         config._set_option('browser.proxyPort', 1234, 'test')
         with pytest.raises(AssertionError) as e:
             config._check_conflicts()
-        self.assertEqual(str(e.value), 'browser.proxyPort does not work when proxy.useNode is true. ')
+        self.assertEqual(
+            str(e.value),
+            'browser.proxyPort does not work when proxy.useNode is true. ')
 
     def test_check_conflicts_3(self):
         with pytest.raises(AssertionError) as e:

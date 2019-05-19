@@ -9,8 +9,7 @@ from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
-from streamlit import util
-from streamlit.LocalSourcesObserver import LocalSourcesObserver
+from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -59,7 +58,7 @@ class ScriptRunner(object):
 
         self._set_state(State.INITIAL)
 
-        self._local_sources_observer = LocalSourcesObserver(
+        self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self.maybe_handle_file_changed)
 
     def _set_state(self, new_state):
@@ -199,7 +198,7 @@ class ScriptRunner(object):
         finally:
             self._set_state(State.STOPPED)
 
-        self._local_sources_observer.update_watched_modules()
+        self._local_sources_watcher.update_watched_modules()
         _clean_problem_modules()
 
         if rerun:
