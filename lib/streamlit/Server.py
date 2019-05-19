@@ -21,7 +21,7 @@ from streamlit import util
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.proxy import proxy_util
-from streamlit.proxy.storage.S3Storage import S3Storage as Storage
+from streamlit.storage.S3Storage import S3Storage as Storage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)

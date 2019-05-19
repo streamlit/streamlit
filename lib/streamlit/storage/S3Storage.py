@@ -19,7 +19,7 @@ from tornado.concurrent import run_on_executor, futures
 
 from streamlit import errors
 from streamlit import config
-from streamlit.proxy.storage.AbstractStorage import AbstractStorage
+from streamlit.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)

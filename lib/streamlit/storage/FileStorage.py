@@ -14,7 +14,7 @@ from tornado import gen, concurrent
 
 from streamlit import config
 from streamlit import errors
-from streamlit.proxy.storage.AbstractStorage import AbstractStorage
+from streamlit.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)

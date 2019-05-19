@@ -7,7 +7,7 @@ import unittest
 
 from mock import patch
 
-from streamlit.proxy.storage.S3Storage import S3Storage
+from streamlit.storage.S3Storage import S3Storage
 from streamlit.config import set_option
 
 
@@ -15,7 +15,7 @@ class S3StorageTest(unittest.TestCase):
     def tearDown(self):
         set_option('global.sharingMode', 'off')
 
-    @patch('streamlit.proxy.storage.AbstractStorage._get_static_files')
+    @patch('streamlit.storage.AbstractStorage._get_static_files')
     @patch('streamlit.config._get_public_credentials')
     def test_public_url(self, creds, static_files):
         creds.return_value = {
@@ -29,7 +29,7 @@ class S3StorageTest(unittest.TestCase):
         s3 = S3Storage()
         self.assertEqual(s3._url, 'https://share.streamlit.io/')
 
-    @patch('streamlit.proxy.storage.AbstractStorage._get_static_files')
+    @patch('streamlit.storage.AbstractStorage._get_static_files')
     def test_private_url(self, static_files):
         static_files.return_value = [('index.html', 'some data')], hashlib.md5()
 
