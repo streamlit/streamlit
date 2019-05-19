@@ -28,7 +28,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(ds.name, 'my_func')
-        self.assertEqual(ds.module, 'tests.streamlit.help_test')
+        self.assertEqual(ds.module, 'help_test')
         if is_python_2:
             self.assertEqual(ds.type, '<type \'function\'>')
         else:
@@ -45,7 +45,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(ds.name, 'my_func')
-        self.assertEqual(ds.module, 'tests.streamlit.help_test')
+        self.assertEqual(ds.module, 'help_test')
         if is_python_2:
             self.assertEqual(ds.type, '<type \'function\'>')
         else:

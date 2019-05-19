@@ -27,9 +27,12 @@ class FileIsInFolderTest(unittest.TestCase):
         self.assertFalse(ret)
 
 
-# These can be any module in the same foldr as this file.
-import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
-import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
+if sys.version_info[0] == 2:
+    import test_data.dummy_module1 as DUMMY_MODULE_1
+    import test_data.dummy_module2 as DUMMY_MODULE_2
+else:
+    import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
+    import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
 
 REPORT_PATH = os.path.join(
         os.path.dirname(__file__), 'test_data/not_a_real_script.py')
@@ -77,7 +80,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 0)
+        self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
     def test_script_and_2_modules_at_once(self, fob):
@@ -91,13 +94,18 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 2)
+        self.assertEqual(fob.call_count, 3)  # dummy modules and __init__.py
 
         method_type = type(self.test_just_script)
-        args = fob.call_args_list[0].args
+
+        call_args_list = sort_args_list(fob.call_args_list)
+
+        args = call_args_list[0].args
+        self.assertTrue('__init__.py' in args[0])
+        args = call_args_list[1].args
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
-        args = fob.call_args_list[1].args
+        args = call_args_list[2].args
         self.assertEqual(args[0], DUMMY_MODULE_2_FILE)
         self.assertEqual(type(args[1]), method_type)
 
@@ -117,11 +125,16 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         lso.update_watched_modules()
 
-        fob.assert_called_once()
+        self.assertEqual(fob.call_count, 2)  # dummy module and __init__.py
 
         method_type = type(self.test_just_script)
 
-        args = fob.call_args.args
+        call_args_list = sort_args_list(fob.call_args_list)
+
+        args = call_args_list[0].args
+        self.assertTrue('__init__.py' in args[0])
+
+        args = call_args_list[1].args
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
 
@@ -134,3 +147,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(type(args[1]), method_type)
 
         fob.assert_called_once()
+
+
+def sort_args_list(args_list):
+    return sorted(args_list, key=lambda args: args[0])
