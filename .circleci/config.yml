@@ -71,27 +71,27 @@ jobs:
       - restore_cache:
           name: Restore /opt/conda from cache
           keys:
-          - v11-opt-conda-{{ checksum "~/python_version.md5" }}
+          - v12-opt-conda-{{ checksum "~/python_version.md5" }}
 
       - restore_cache:
           name: Restore virtualenv from cache
           keys:
-          - v11-python-venv-{{ checksum "~/python_version.md5" }}
+          - v12-python-venv-{{ checksum "~/python_version.md5" }}
 
       - restore_cache:
           name: Restore nvm and node_modules from cache
           keys:
-          - v11-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache:
           name: Restore protobufs from cache
           keys:
-          - v11-protobuf-{{ checksum "~/protobuf.md5" }}
+          - v12-protobuf-{{ checksum "~/protobuf.md5" }}
 
       - restore_cache:
           name: Restore make from cache
           keys:
-          - v11_make.bin-{{ checksum "~/make.md5" }}
+          - v12_make.bin-{{ checksum "~/make.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -111,7 +111,7 @@ jobs:
 
       - save_cache:
           name: Save make to cache
-          key: v11_make.bin-{{ checksum "~/make.md5" }}
+          key: v12_make.bin-{{ checksum "~/make.md5" }}
           paths:
             - make.bin
 
@@ -215,26 +215,26 @@ jobs:
       #################################################################
       - save_cache:
           name: Save /opt/conda to cache
-          key: v11-opt-conda-{{ checksum "~/python_version.md5" }}
+          key: v12-opt-conda-{{ checksum "~/python_version.md5" }}
           paths:
             - /opt/conda
 
       - save_cache:
           name: Save virtualenv to cache
-          key: v11-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v12-python-venv-{{ checksum "~/python_version.md5" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v11-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
 
       - save_cache:
           name: Save generated protobufs to cache
-          key: v11-protobuf-{{ checksum "~/protobuf.md5" }}
+          key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
             - frontend/src/autogen/protobuf.js
             - lib/streamlit/protobuf
