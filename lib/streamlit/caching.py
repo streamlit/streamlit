@@ -11,10 +11,21 @@ import copy
 import hashlib
 import inspect
 import os
-import pickle
 import re
 import shutil
 import struct
+
+try:
+    # cPickle, if available, is much faster than pickle.
+    # Source: https://pymotw.com/2/pickle/
+    #
+    # In many situations it's even faster than deepcopy (used for the in-memory
+    # cache), but deepcopy is more general.
+    # Source: https://stackoverflow.com/a/1411229
+    #
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from functools import wraps
 
@@ -72,7 +83,6 @@ def write_to_disk_cache(path, rv):
         except (FileNotFoundError, IOError, OSError):
             pass
         raise CacheError('Unable to write to cache: %s' % e)
-    LOGGER.debug('Cache MISS: ' + str(type(rv)))
 
 
 def read_from_cache(path, use_disk_cache=False):
