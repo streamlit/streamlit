@@ -1,14 +1,25 @@
 import sys
 import traceback
 
-def marshall(element, exception, exception_traceback=None):
-    """Marshall an element.exception proto message.
 
-    See DeltaGenerator for in-depth docs.
+def marshall(exception_proto, exception, exception_traceback=None):
+    """Marshalls an Exception.proto message.
 
+    Parameters
+    ----------
+    exception_proto : Exception.proto
+        The Exception protobuf to fill out
+
+    exception : Exception
+        The exception whose data we're extracting
+
+    exception_traceback : Exception Traceback or None
+        If None or False, does not show display the trace. If True,
+        tries to capture a trace automatically. If a Traceback object,
+        displays the given traceback.
     """
-    element.exception.type = type(exception).__name__
-    element.exception.message = str(exception)
+    exception_proto.type = type(exception).__name__
+    exception_proto.message = str(exception)
 
     # Get and extract the traceback for the exception.
     if exception_traceback is not None:
@@ -34,5 +45,5 @@ def marshall(element, exception, exception_traceback=None):
     else:
         stack_trace = traceback.format_list(extracted_traceback)
 
-    element.exception.stack_trace.extend(stack_trace)
+    exception_proto.stack_trace.extend(stack_trace)
 

@@ -1,11 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
-import collections
-import json
 import logging
-import os
-import textwrap
 import threading
 import urllib
 
@@ -19,7 +15,6 @@ from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
 from streamlit import util
-from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
 
@@ -88,6 +83,8 @@ class Server(object):
             self._enqueue_script_state_changed_message)
         self._scriptrunner.on_file_change_not_handled.connect(
             self._enqueue_file_change_message)
+        self._scriptrunner.on_script_compile_error.connect(
+            self._on_script_compile_error)
 
         LOGGER.debug('Server started on port %s', port)
 
@@ -202,7 +199,7 @@ class Server(object):
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
     def _enqueue_exception(self, e):
-        import streamlit.elements.exception_element as exception_element
+        import streamlit.elements.exception_proto as exception_proto
 
         # This does a few things:
         # 1) Clears the current report in the browser.
@@ -215,7 +212,7 @@ class Server(object):
 
         msg = protobuf.ForwardMsg()
         msg.delta.id = 0
-        exception_element.marshall(msg.delta.new_element, e)
+        exception_proto.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -242,6 +239,20 @@ class Server(object):
     def _enqueue_file_change_message(self, _):
         msg = protobuf.ForwardMsg()
         msg.session_event.report_changed_on_disk = True
+        self.enqueue(msg)
+
+    def _on_script_compile_error(self, exc):
+        """Handles exceptions caught by ScriptRunner during script compilation.
+
+        We deliver these exceptions to the client via SessionEvent messages.
+        "Normal" exceptions that are thrown during script execution show up as
+        inline elements in the report, but compilation exceptions are handled
+        specially, so that the frontend can leave the previous report up.
+        """
+        from streamlit.elements import exception_proto
+        msg = protobuf.ForwardMsg()
+        exception_proto.marshall(
+            msg.session_event.script_compilation_exception, exc)
         self.enqueue(msg)
 
     def _maybe_enqueue_initialize_message(self):
@@ -429,13 +440,13 @@ def _serialize(msg):
 
 
 def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception_element as exception_element
+    import streamlit.elements.exception_proto as exception_proto
 
     delta_id = msg.delta.id
     msg.Clear()
     msg.delta.id = delta_id
 
-    exception_element.marshall(msg.delta.new_element, e)
+    exception_proto.marshall(msg.delta.new_element, e)
 
 
 def _is_url_from_allowed_origins(url):
@@ -444,7 +455,7 @@ def _is_url_from_allowed_origins(url):
     Allowed origins:
     1. localhost
     2. The internal and external IP addresses of the machine where this
-    functions was called from.
+       function was called from.
     3. The cloud storage domain configured in `s3.bucket`.
 
     If `proxy.enableCORS` is False, this allows all origins.
