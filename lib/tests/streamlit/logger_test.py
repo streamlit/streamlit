@@ -78,7 +78,3 @@ class LoggerTest(unittest.TestCase):
     #     # Test that get_logger with no args, figures out its caller
     #     logger = streamlit.logger.get_logger()  # noqa: F841
     #     self.assertTrue('.logger_test' in streamlit.logger.LOGGERS.keys())
-
-
-if __name__ == '__main__':
-    unittest.main()

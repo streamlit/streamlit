@@ -88,6 +88,7 @@ def _main_run(file, args=[]):
 
     # We don't use args ourselves. We just allow people to pass them so their
     # script can handle them via sys.argv or whatever.
+    # IMPORTANT: This means we should treat argv carefully inside our code!
     sys.argv = [file] + list(args)
 
     bootstrap.run(file)

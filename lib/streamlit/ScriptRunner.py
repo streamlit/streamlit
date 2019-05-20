@@ -167,21 +167,25 @@ class ScriptRunner(object):
                 # optimize=-1,
             )
 
-            # IMPORTANT: must pass a brand new dict into the globals and locals,
-            # below, so we don't leak any variables in between runs, and don't
-            # leak any variables from this file either.
-            # Also: here we set our globals and locals to the same dict to
-            # emulate what it's like to run at the top level of a module/python
-            # file. This is also why we're adding a few common variables below
-            # like __name__.
-            namespace = dict(
-                __name__='__main__',
-                # Convert from unicode for py2.
-                __file__=str(self._report.script_path),
-            )
+            # Create fake module, and install it as __main__. This gives us a
+            # name global namespace to execute the code in
+            module = _new_module('__main__')
 
+            # Install the fake module as the __main__ module. This allows
+            # the pickle module to work inside the user's code, since it now
+            # can know the module where the pickled objects stem from.
+            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+            # our code, as it will point to the wrong module!!!
+            sys.modules['__main__'] = module
+
+            # Make it look like command-line args were set to whatever the user
+            # asked them to be via the GUI.
+            # IMPORTANT: This means we can't count on sys.argv in our code ---
+            # but we already knew it from the argv surgery in cli.py.
             sys.argv = self._report.argv
-            exec(code, namespace, namespace)
+
+            with script_path(self._report):
+                exec(code, module.__dict__)
 
         except RerunException:
             rerun = True
@@ -261,3 +265,38 @@ def _clean_problem_modules():
         except:
             pass
 
+
+def _new_module(name):
+    """Create a new module with the given name."""
+
+    if sys.version_info >= (3, 4):
+        import types
+        return types.ModuleType(name)
+
+    import imp
+    return imp.new_module(name)
+
+
+# Code modified from IPython (BSD license)
+# Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
+class script_path(object):
+    """A context for prepending a directory to sys.path for a second."""
+
+    def __init__(self, report):
+        self._report = report
+        self._added_path = False
+
+    def __enter__(self):
+        if self._report.script_path not in sys.path:
+            sys.path.insert(0, self._report.script_path)
+            self._added_path = True
+
+    def __exit__(self, type, value, traceback):
+        if self._added_path:
+            try:
+                sys.path.remove(self._report.script_path)
+            except ValueError:
+                pass
+
+        # Returning False causes any exceptions to be re-raised.
+        return False
