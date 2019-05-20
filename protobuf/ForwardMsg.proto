@@ -102,4 +102,5 @@ message SessionEvent {
 
 message UserInfo {
   string installation_id = 1;
+  string email = 2;
 }

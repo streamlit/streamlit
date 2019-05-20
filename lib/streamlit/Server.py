@@ -15,6 +15,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
 from streamlit import util
+from streamlit.credentials import Credentials
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
 
@@ -74,6 +75,7 @@ class Server(object):
         self._sent_initialize_message = False
 
         self._storage = None
+        self._credentials = Credentials.get_current()
 
         port = config.get_option('proxy.port')
         app = tornado.web.Application(self._get_routes())
@@ -281,6 +283,7 @@ class Server(object):
         imsg.session_state.report_is_running = self._scriptrunner.is_running()
 
         imsg.user_info.installation_id = __installation_id__
+        imsg.user_info.email = self._credentials.activation.email
 
         self.enqueue(msg)
 
