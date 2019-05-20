@@ -27,15 +27,6 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
-          name: Fix apt sources due to https://discuss.circleci.com/t/apt-get-update-return-404/29237
-          command: |
-            sudo rm /etc/apt/sources.list
-            echo "deb http://archive.debian.org/debian/ stretch-backports main" | sudo tee -a /etc/apt/sources.list
-            echo "deb-src http://archive.debian.org/debian/ stretch-backports main" | sudo tee -a /etc/apt/sources.list
-            echo "Acquire::Check-Valid-Until false;" | sudo tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-            echo 'Package: *\nPin: origin "archive.debian.org"\nPin-Priority: 500' | sudo tee -a /etc/apt/preferences.d/10-archive-pin
-
-      - run:
           name: set environment variables if in conda.
           command: |
             if conda info; then
@@ -248,16 +239,7 @@ jobs:
             - frontend/src/autogen/protobuf.js
             - lib/streamlit/protobuf
 
-  python-3.5.6:
-    <<: *job-template
-    docker:
-      - image: circleci/python:3.5.6-stretch
-
   python-2.7.16:
     <<: *job-template
     docker:
       - image: circleci/python:2.7.16-stretch
-  miniconda3-4.5.12:
-    <<: *job-template
-    docker:
-      - image: continuumio/miniconda3:4.5.12
