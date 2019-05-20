@@ -59,7 +59,6 @@ frontend/src/autogen
 ########################################################################
 .streamlit/
 lib/streamlit/static
-frontend/public/vendor
 streamlit-storage
 docs/_build
 
