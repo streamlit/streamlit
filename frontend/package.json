@@ -11,7 +11,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@craco/craco": "^5.0.2",
     "aws-sdk": "^2.454.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
@@ -42,7 +41,6 @@
     "react-map-gl": "^4.1.2",
     "react-markdown": "^4.0.6",
     "react-plotly.js": "^2.3.0",
-    "react-scripts": "^3.0.1",
     "react-transition-group": "^4.0.0",
     "react-vega-lite": "^6.0.1",
     "react-virtualized": "^9.21.0",
@@ -54,6 +52,7 @@
     "vega-tooltip": "^0.17.0"
   },
   "devDependencies": {
+    "@craco/craco": "^5.1.0",
     "@types/d3": "^5.7.2",
     "@types/dagre": "^0.7.42",
     "@types/dagre-d3": "^0.4.39",
@@ -72,12 +71,14 @@
     "@types/recharts": "^1.1.16",
     "@typescript-eslint/eslint-plugin": "^1.7.0",
     "@typescript-eslint/parser": "^1.7.0",
+    "cypress": "^3.2.0",
     "eslint-config-fbjs": "^3.1.0",
     "eslint-plugin-babel": "^5.3.0",
     "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-jsx-a11y": "^6.2.1",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-relay": "^1.0.0",
+    "react-scripts": "^3.0.1",
     "typescript": "^3.4.5"
   },
   "browserslist": [
