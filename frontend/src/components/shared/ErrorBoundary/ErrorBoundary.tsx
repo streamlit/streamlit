@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import ErrorElement from '../Error'
+import ErrorElement from '../ErrorElement'
 import {logError} from '../../../lib/log'
 
 export interface Props {

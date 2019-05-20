@@ -4,27 +4,26 @@
  */
 
 import React from 'react'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
-import { Map as ImmutableMap } from 'immutable'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
+import {Map as ImmutableMap} from 'immutable'
 
-import { select } from 'd3'
-import { layout } from 'dagre'
-import { render } from 'dagre-d3'
-import { read } from 'graphlib-dot'
+import {select} from 'd3'
+import {layout} from 'dagre'
+import {render} from 'dagre-d3'
+import {read} from 'graphlib-dot'
 
-import { logError } from 'lib/log'
+import {logError} from 'lib/log'
 
 import './GraphVizChart.scss'
 
-interface Props {
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
   id: number;
-  width: number;
 }
 
 const DEFAULT_HEIGHT = 300
 
-class GraphVizChart extends PureStreamlitElement<Props> {
+class GraphVizChart extends PureStreamlitElement<Props, StState> {
   private chartId = 'graphviz-chart-' + this.props.id;
 
   private getChartData = (): string => {
@@ -47,11 +46,11 @@ class GraphVizChart extends PureStreamlitElement<Props> {
     }
   }
 
-  public componentDidMount = () => {
+  public safeComponentDidMount = () => {
     this.updateChart()
   }
 
-  public componentDidUpdate = () => {
+  public safeComponentDidUpdate = () => {
     this.updateChart()
   }
 

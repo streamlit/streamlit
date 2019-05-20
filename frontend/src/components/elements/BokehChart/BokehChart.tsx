@@ -4,16 +4,16 @@
  */
 
 import React from 'react'
-import { PureStreamlitElement } from '../../shared/StreamlitElement/'
-import { Map as ImmutableMap } from 'immutable'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
+import {Map as ImmutableMap} from 'immutable'
 
-interface Props {
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
   id: number;
   width: number;
 }
 
-class BokehChart extends PureStreamlitElement<Props> {
+class BokehChart extends PureStreamlitElement<Props, StState> {
   private chartId = 'bokeh-chart-' + this.props.id;
 
   private getChartData = () => {
@@ -37,12 +37,12 @@ class BokehChart extends PureStreamlitElement<Props> {
     }
   }
 
-  public componentDidMount = () => {
+  public safeComponentDidMount = () => {
     const data = this.getChartData()
     this.updateChart(data)
   }
 
-  public componentDidUpdate = () => {
+  public safeComponentDidUpdate = () => {
     const data = this.getChartData()
     this.updateChart(data)
   }
