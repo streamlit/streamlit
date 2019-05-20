@@ -7,15 +7,15 @@ workflows:
   version: 2
   circleci:
     jobs:
-      - python-2.7.15:
+      - python-2.7.16:
           requires:
-            - python-3.6.6
-      - python-3.6.6
+            - python-3.7.3
+      - python-3.7.3
 
 jobs:
-  python-3.6.6: &job-template
+  python-3.7.3: &job-template
     docker:
-      - image: circleci/python:3.6.6-jessie
+      - image: circleci/python:3.7.3-stretch
 
     working_directory: ~/repo
 
@@ -30,8 +30,8 @@ jobs:
           name: Fix apt sources due to https://discuss.circleci.com/t/apt-get-update-return-404/29237
           command: |
             sudo rm /etc/apt/sources.list
-            echo "deb http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
-            echo "deb-src http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
+            echo "deb http://archive.debian.org/debian/ stretch-backports main" | sudo tee -a /etc/apt/sources.list
+            echo "deb-src http://archive.debian.org/debian/ stretch-backports main" | sudo tee -a /etc/apt/sources.list
             echo "Acquire::Check-Valid-Until false;" | sudo tee -a /etc/apt/apt.conf.d/10-nocheckvalid
             echo 'Package: *\nPin: origin "archive.debian.org"\nPin-Priority: 500' | sudo tee -a /etc/apt/preferences.d/10-archive-pin
 
@@ -164,7 +164,7 @@ jobs:
             else
               echo 'Not in conda, checking for virtualenv'
               if [ ! -d venv ] ; then
-                if [ "${CIRCLE_JOB}" == "python-2.7.15" ] ; then
+                if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
                   pip install virtualenv
                   python -m virtualenv venv
                 else
@@ -251,12 +251,12 @@ jobs:
   python-3.5.6:
     <<: *job-template
     docker:
-      - image: circleci/python:3.5.6-jessie
+      - image: circleci/python:3.5.6-stretch
 
-  python-2.7.15:
+  python-2.7.16:
     <<: *job-template
     docker:
-      - image: circleci/python:2.7.15-jessie
+      - image: circleci/python:2.7.16-stretch
   miniconda3-4.5.12:
     <<: *job-template
     docker:
