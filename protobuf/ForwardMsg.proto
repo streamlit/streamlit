@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "Delta.proto";
+import "Exception.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -85,13 +86,17 @@ message SessionState {
 // A transient event sent to all browsers connected to an associated report.
 message SessionEvent {
   oneof type {
-    // The report changed on disk, but is *not* being re-run automatically.
-    // The browser should prompt the user to re-run.
+    // The report's script changed on disk, but is *not* being re-run
+    // automatically. The browser should prompt the user to re-run.
     bool report_changed_on_disk = 1;
 
-    // The report was running, but it was manually stopped before
+    // The report's script was running, but it was manually stopped before
     // completion.
     bool report_was_manually_stopped = 2;
+
+    // Script compilation failed with an exception.
+    // We can't start running the report.
+    Exception script_compilation_exception = 3;
   }
 }
 

@@ -24,7 +24,6 @@ import './StatusWidget.scss'
 /** Feature flag for showing the "Stop Script" button */
 const SHOW_STOP_BUTTON = true  // TODO: Remove on 2019-10-01
 
-
 /** Component props */
 interface Props {
   /** State of our connection to the server. */
@@ -90,10 +89,10 @@ const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
 export class StatusWidget extends PureComponent<Props, State> {
   /** onSessionEvent signal connection */
-  private sessionEventConn?: SignalConnection;
-  private curView?: ReactNode;
+  private sessionEventConn?: SignalConnection
+  private curView?: ReactNode
 
-  private readonly minimizePromptTimer = new Timer();
+  private readonly minimizePromptTimer = new Timer()
 
   public constructor(props: Props) {
     super(props)
@@ -143,22 +142,16 @@ export class StatusWidget extends PureComponent<Props, State> {
     if (this.state.reportChangedOnDisk) {
       this.handleAlwaysRerunClick()
     }
-  };
+  }
 
   private isConnected(): boolean {
     return this.props.connectionState === ConnectionState.CONNECTED
   }
 
   private handleSessionEvent(event: SessionEvent): void {
-    switch (event.type) {
-      case 'reportChangedOnDisk':
-        this.setState({reportChangedOnDisk: true, promptMinimized: false})
-        this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
-        break
-
-      default:
-        console.warn(`Unhandled SessionEvent: ${event}`)
-        break
+    if (event.type === 'reportChangedOnDisk') {
+      this.setState({reportChangedOnDisk: true, promptMinimized: false})
+      this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
     }
   }
 
@@ -181,7 +174,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     this.setState({
       statusMinimized: StatusWidget.shouldMinimize(),
     })
-  };
+  }
 
   public render(): ReactNode {
     // The StatusWidget fades in on appear and fades out on disappear.
@@ -279,7 +272,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       <div
         id="ReportStatus"
         className={this.state.statusMinimized ? 'minimized' : ''}>
-        <img className="ReportRunningIcon" src={iconRunning} alt="Running..." />
+        <img className="ReportRunningIcon" src={iconRunning} alt="Running..."/>
         <label>Running...</label>
         {stopButton}
         {
@@ -306,7 +299,7 @@ export class StatusWidget extends PureComponent<Props, State> {
           id="ReportStatus"
           className={minimized ? 'minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
-            <use href={openIconic + '#info'} />
+            <use href={openIconic + '#info'}/>
           </svg>
 
           <label className="prompt">
@@ -331,24 +324,24 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   private onReportPromptHover = (): void => {
     this.setState({promptHovered: true})
-  };
+  }
 
   private onReportPromptUnhover = (): void => {
     this.setState({promptHovered: false, promptMinimized: false})
     this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
-  };
+  }
 
   private handleStopReportClick = (): void => {
     this.props.stopReport()
-  };
+  }
 
   private handleRerunClick = (): void => {
     this.props.rerunReport(false)
-  };
+  }
 
   private handleAlwaysRerunClick = (): void => {
     this.props.rerunReport(true)
-  };
+  }
 
   private static promptButton(title: ReactNode, disabled: boolean, onClick: () => void): ReactNode {
     return (
@@ -363,7 +356,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.INITIAL:
       case ConnectionState.INITIAL_CONNECTING:
         return {
-          icon: <use href={openIconic + '#ellipses'} />,
+          icon: <use href={openIconic + '#ellipses'}/>,
           label: 'Waiting',
           tooltip: 'Waiting for connection',
         }
@@ -372,7 +365,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.RECONNECTING:
       case ConnectionState.WAITING:
         return {
-          icon: <use href={openIconic + '#circle-x'} />,
+          icon: <use href={openIconic + '#circle-x'}/>,
           label: 'Disconnected',
           tooltip: 'Disconnected from live data feed',
         }
@@ -384,7 +377,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
-          icon: <use href={openIconic + '#warning'} />,
+          icon: <use href={openIconic + '#warning'}/>,
           label: 'Error',
           tooltip: 'Unable to connect',
         }

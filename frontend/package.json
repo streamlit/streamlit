@@ -65,6 +65,7 @@
     "@types/plotly.js": "^1.44.1",
     "@types/prismjs": "^1.16.0",
     "@types/react": "^16.8.14",
+    "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-plotly.js": "^2.2.2",
     "@types/react-transition-group": "^2.9.0",

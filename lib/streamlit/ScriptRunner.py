@@ -56,6 +56,16 @@ class ScriptRunner(object):
         self.on_file_change_not_handled = Signal(
             doc="Emitted when the file is modified and we haven't handled it.")
 
+        self.on_script_compile_error = Signal(
+            doc="""Emitted if our script fails to compile.  (*Not* emitted 
+            for normal exceptions thrown while a script is running.)
+            
+            Parameters
+            ----------
+            exception : Exception
+                The exception that was thrown
+            """)
+
         self._set_state(State.INITIAL)
 
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -136,23 +146,22 @@ class ScriptRunner(object):
         self._state_change_requested.clear()
         self._set_state(State.RUNNING)
 
-        # Python 3 got rid of the native execfile() command, so we now read the
-        # file, compile it, and exec() it. This implementation is compatible
-        # with both 2 and 3.
-        with open(self._report.script_path) as f:
-            filebody = f.read()
-
-        if config.get_option('runner.autoWrite'):
-            filebody = magic.add_magic(filebody)
-
-        if config.get_option('runner.installTracer'):
-            self._install_tracer()
-
-        rerun = False
-
+        # Compile the script. Any errors thrown here will be surfaced
+        # to the user via a modal dialog, and won't result in their
+        # previous report disappearing.
         try:
-            # Compiling must happen in the "try" block, so we can catch things
-            # like SyntaxErrors.
+            # Python 3 got rid of the native execfile() command, so we now read the
+            # file, compile it, and exec() it. This implementation is compatible
+            # with both 2 and 3.
+            with open(self._report.script_path) as f:
+                filebody = f.read()
+
+            if config.get_option('runner.autoWrite'):
+                filebody = magic.add_magic(filebody)
+
+            if config.get_option('runner.installTracer'):
+                self._install_tracer()
+
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
@@ -166,7 +175,22 @@ class ScriptRunner(object):
                 # Parameter not supported in Python2:
                 # optimize=-1,
             )
+        except BaseException as e:
+            # We got a compile error. Send the exception onto the client
+            # as a SessionEvent and bail immediately.
+            LOGGER.debug('Fatal script error: %s' % e)
+            self.on_script_compile_error.send(e)
+            self._set_state(State.STOPPED)
+            return
 
+        # If we get here, we've successfully compiled our script. The
+        # next step is to run it. Errors thrown during execution will be
+        # shown to the user as ExceptionElements.
+        if config.get_option('runner.installTracer'):
+            self._install_tracer()
+
+        rerun = False
+        try:
             # Create fake module, and install it as __main__. This gives us a
             # name global namespace to execute the code in
             module = _new_module('__main__')
