@@ -11,15 +11,14 @@ import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
 import {UserSettings} from './UserSettings'
 
 export interface Props {
-  isOpen: boolean;
   isServerConnected: boolean;
   onClose: () => void;
   onSave: (settings: UserSettings) => void;
   settings: UserSettings;
 }
 
-class SettingsDialog extends PureComponent<Props, UserSettings> {
-  private _settings: UserSettings;
+export class SettingsDialog extends PureComponent<Props, UserSettings> {
+  private _settings: UserSettings
 
   public constructor(props: Props) {
     super(props)
@@ -34,7 +33,7 @@ class SettingsDialog extends PureComponent<Props, UserSettings> {
   public render = (): ReactNode => {
     return (
       <Modal
-        isOpen={this.props.isOpen}
+        isOpen={true}
         toggle={this.handleCancelButtonClick}
         onOpened={this.handleDialogOpen}
       >
@@ -81,34 +80,32 @@ class SettingsDialog extends PureComponent<Props, UserSettings> {
         </ModalFooter>
       </Modal>
     )
-  };
+  }
 
   private handleDialogOpen = () => {
     this.setState({...this._settings})
-  };
+  }
 
   private changeSingleSetting = (name: string, value: boolean) => {
     // TypeScript doesn't currently have a good solution for setState with
     // a dynamic key name:
     // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
     this.setState(state => ({...state, [name]: value}))
-  };
+  }
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
     this.changeSingleSetting(e.target.name, e.target.checked)
-  };
+  }
 
   private handleCancelButtonClick = () => {
     // Discard settings from this.state by not saving them in this.settings.
     // this.settings = {...this.state};
     this.props.onClose()
-  };
+  }
 
   private handleSaveButtonClick = () => {
     this._settings = {...this.state}
     this.props.onSave(this._settings)
     this.props.onClose()
-  };
+  }
 }
-
-export default SettingsDialog

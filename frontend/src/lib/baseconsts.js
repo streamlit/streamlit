@@ -70,7 +70,7 @@ export function setStreamlitVersion(version) {
 export function setInstallationId(installationId) {
   if (INSTALLATION_ID != null) {
     if (installationId === INSTALLATION_ID) {
-      return;
+      return
     }
     throw new Error('Streamlit installationId is already set')
   }
