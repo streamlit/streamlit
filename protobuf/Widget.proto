@@ -8,6 +8,7 @@ message Widget {
     Button button = 3;
     Checkbox checkbox = 4;
     Slider slider = 5;
+    TextArea text_area = 6;
   }
 }
 
@@ -24,4 +25,8 @@ message Slider {
   int32 min = 2;
   int32 max = 3;
   int32 step = 4;
+}
+
+message TextArea {
+  string value = 1;
 }

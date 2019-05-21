@@ -73,3 +73,6 @@ if True:
     with st.echo():
         st.help(st.checkbox)
         st.help(st.slider)
+
+    text_area = st.text_area('some text area', 'some default message')
+    st.header(text_area)

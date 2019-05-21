@@ -32,6 +32,7 @@ class Widget extends PureStreamlitElement<Props, State> {
     dispatchOneOf(element, 'type', {
       checkbox: (data: ImmutableMap<string, any>) => value = data.get('value'),
       slider: (data: ImmutableMap<string, any>) => value = data.get('value'),
+      textArea: (data: ImmutableMap<string, any>) => value = data.get('value'),
     })
 
     this.state = {
@@ -78,6 +79,18 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
   };
 
+  private handleTextAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let old = this.state.value
+    let current = e.target.value
+    let id = e.target.id
+    console.log(`id = ${id}, old = ${old}, current = ${current}`)
+    this.setState({
+      value: current,
+    })
+    this.setWidgetState(id, current)
+    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
+  };
+
 
   public safeRender(): React.ReactNode {
     const {element} = this.props
@@ -107,6 +120,19 @@ class Widget extends PureStreamlitElement<Props, State> {
             <Label check>
               <Input type="range" style={style} id={id} min={min} max={max} step={step} value={this.state.value}
                 onChange={this.handleSliderChange} /> { label }
+            </Label>
+          </div>
+        )
+      },
+      textArea: () => {
+        const style = {
+          width: '200px',
+        }
+        return (
+          <div>
+            <Label check>
+              <Input type="textarea" style={style} id={id} value={this.state.value}
+                onChange={this.handleTextAreaChange} /> { label }
             </Label>
           </div>
         )

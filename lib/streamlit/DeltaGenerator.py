@@ -1123,6 +1123,13 @@ class DeltaGenerator(object):
         element.widget.slider.value = value
         return ui_value if ui_value is not None else value
 
+    @_widget
+    def text_area(self, element, ui_value, label, value):
+        """Text box doc string."""
+        element.widget.label = label
+        element.widget.text_area.value = value
+        return ui_value if ui_value is not None else value
+
     @_with_element
     def progress(self, element, value):
         """Display a progress bar.
