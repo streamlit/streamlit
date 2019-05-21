@@ -1,0 +1,19 @@
+[data-clipboard-text] {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  transition: 0.15s;
+  z-index: 101;
+}
+
+[data-clipboard-text]:hover {
+  border-color: #f63366;
+}
+
+[data-clipboard-text]:focus {
+  box-shadow: 0 0 0 0.2rem rgba(118, 128, 150, 0.5);
+  outline: none;
+}

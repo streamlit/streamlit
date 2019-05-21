@@ -5,10 +5,8 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
+import React, { Fragment } from 'react'
 import Prism from 'prismjs'
-import React from 'react'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
-
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
 import 'prismjs/components/prism-jsx'
@@ -20,7 +18,8 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
-
+import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
+import CopyButton from './CopyToClipboard'
 import './CodeBlock.scss'
 
 interface Props {
@@ -34,9 +33,11 @@ interface Props {
  */
 class CodeBlock extends PureStreamlitElement<Props> {
   public safeRender(): React.ReactNode {
-    if (this.props.language == null) {
+    if (this.props.language === undefined) {
       return (
-        <pre><code>{this.props.value}</code></pre>
+        <pre>
+          <code>{this.props.value}</code>
+        </pre>
       )
     }
 
@@ -51,9 +52,12 @@ class CodeBlock extends PureStreamlitElement<Props> {
     const cls = `language-${this.props.language}`
 
     return (
-      <pre className={cls}>
-        <code dangerouslySetInnerHTML={{ __html: html }} className={cls} />
-      </pre>
+      <Fragment>
+        <pre>
+          <code className={cls} dangerouslySetInnerHTML={{ __html: html }} />
+        </pre>
+        <CopyButton text={this.props.value} />
+      </Fragment>
     )
   }
 }
