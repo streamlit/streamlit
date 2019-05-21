@@ -169,9 +169,11 @@ class DeltaGenerator(object):
             element.
 
         """
-        msg = protobuf.ForwardMsg()
-        rv = marshall_element(msg.delta.new_element)
-        msg.delta.id = self._id
+        rv = None
+        if marshall_element:
+            msg = protobuf.ForwardMsg()
+            rv = marshall_element(msg.delta.new_element)
+            msg.delta.id = self._id
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -192,7 +194,7 @@ class DeltaGenerator(object):
         if self._is_root:
             self._id += 1
 
-        return rv if rv is not None else self
+        return rv if rv is not None else output_dg
 
     @_with_element
     def balloons(self, element):
