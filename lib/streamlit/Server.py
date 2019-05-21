@@ -332,7 +332,7 @@ class Server(object):
         # Since this command was initiated from the browser, the user
         # doesn't need to see the results of the command in their
         # terminal.
-        caching.clear_cache(verbose=False)
+        caching.clear_cache()
 
     def _handle_set_run_on_save_request(self, new_value):
         self._scriptrunner.run_on_save = new_value
