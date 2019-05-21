@@ -219,6 +219,7 @@ class App extends PureComponent {
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.gatherUsageStats,
+      email: initializeMsg.userInfo.email,
     })
 
     trackEventRemotely('createReport')
