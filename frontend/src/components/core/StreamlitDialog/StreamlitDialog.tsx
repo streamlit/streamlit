@@ -7,8 +7,9 @@ import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
 
+import {Exception} from 'autogen/protobuf'
+import {STREAMLIT_VERSION} from 'lib/baseconsts'
 import {Props as SettingsDialogProps, SettingsDialog} from './SettingsDialog'
-import {STREAMLIT_VERSION} from '../../../lib/baseconsts'
 
 import './StreamlitDialog.scss'
 
@@ -19,6 +20,7 @@ type DialogProps =
   ClearCacheProps |
   RerunScriptProps |
   SettingsProps |
+  ScriptCompileErrorProps |
   UploadProgressProps |
   UploadedProps |
   WarningProps;
@@ -31,6 +33,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return clearCacheDialog(dialogProps)
     case 'rerunScript':
       return rerunScriptDialog(dialogProps)
+    case 'scriptCompileError':
+      return scriptCompileErrorDialog(dialogProps)
     case 'settings':
       return settingsDialog(dialogProps)
     case 'uploadProgress':
@@ -40,7 +44,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
     case 'warning':
       return warningDialog(dialogProps)
     case undefined:
-      return noDialog(dialogProps)
+      return noDialog()
     default:
       return typeNotRecognizedDialog(dialogProps)
   }
@@ -141,6 +145,34 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
   )
 }
 
+interface ScriptCompileErrorProps {
+  type: 'scriptCompileError';
+  exception: Exception;
+  onClose: CloseHandler;
+}
+
+function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
+  let message = props.exception.message
+  if (message) {
+    message = `: ${message}`
+  }
+
+  return (
+    <BasicDialog onClose={props.onClose}>
+      <ModalHeader toggle={props.onClose}>Script Error</ModalHeader>
+      <ModalBody>
+        <div>
+          <strong>{props.exception.type}</strong>{message}
+          <br/>
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button outline color="primary" onClick={props.onClose}>Close</Button>
+      </ModalFooter>
+    </BasicDialog>
+  )
+}
+
 interface SettingsProps extends SettingsDialogProps {
   type: 'settings';
 }
@@ -218,7 +250,7 @@ interface WarningProps {
 function warningDialog(props: WarningProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
-      <ModalBody>{props.msg}</ModalBody>,
+      <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
         <Button outline onClick={props.onClose}>Done</Button>
       </ModalFooter>
@@ -226,7 +258,7 @@ function warningDialog(props: WarningProps): ReactElement {
   )
 }
 
-function BasicDialog({children, onClose}: { children?: ReactNode; onClose: CloseHandler }): ReactElement {
+function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: CloseHandler }): ReactElement {
   const isOpen = children !== undefined
   return (
     <Modal
@@ -240,10 +272,11 @@ function BasicDialog({children, onClose}: { children?: ReactNode; onClose: Close
 }
 
 /**
- * Returns an empty dictionary, indicating that no object is to be displayed.
+ * Returns a dialog whose `isOpen` prop is set to false, indicating that
+ * any open dialog should be closed.
  */
-function noDialog({onClose}: { onClose: CloseHandler }): ReactElement {
-  return <BasicDialog onClose={onClose}/>
+function noDialog(): ReactElement {
+  return <BasicDialog/>
 }
 
 interface NotRecognizedProps {

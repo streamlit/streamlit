@@ -199,7 +199,7 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.applyDelta(toImmutableProto(Delta, deltaMsg)),
-        reportFinished: () => this.clearOldElements(),
+        reportFinished: () => this.handleReportFinished(),
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: 'uploadProgress' }),
         reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
@@ -219,6 +219,7 @@ class App extends PureComponent {
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.gatherUsageStats,
+      email: initializeMsg.userInfo.email,
     })
 
     trackEventRemotely('createReport')
@@ -237,17 +238,25 @@ class App extends PureComponent {
    */
   handleSessionStateChanged(stateChangeProto) {
     this.setState(prevState => {
-      // If we have a pending run-state request, only change our reportRunState
-      // if our request has been processed.
-      let reportRunState
-      if (stateChangeProto.reportIsRunning) {
-        reportRunState =
-          prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
-            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING
-      } else {
-        reportRunState =
-          prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
-            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING
+
+      // Determine our new ReportRunState
+      let reportRunState = prevState.reportRunState
+
+      if (stateChangeProto.reportIsRunning &&
+        prevState.reportRunState !== ReportRunState.STOP_REQUESTED) {
+
+        // If the report is running, we change our ReportRunState only
+        // if we don't have a pending stop request
+        reportRunState = ReportRunState.RUNNING
+
+      } else if (!stateChangeProto.reportIsRunning &&
+        prevState.reportRunState !== ReportRunState.RERUN_REQUESTED &&
+        prevState.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+
+        // If the report is not running, we change our ReportRunState only
+        // if we don't have a pending rerun request, and we don't have
+        // a script compilation failure
+        reportRunState = ReportRunState.NOT_RUNNING
       }
 
       return ({
@@ -266,6 +275,13 @@ class App extends PureComponent {
    */
   handleSessionEvent(sessionEvent) {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
+    if (sessionEvent.type === 'scriptCompilationException') {
+      this.setState({ reportRunState: ReportRunState.COMPILATION_ERROR })
+      this.openDialog({
+        type: 'scriptCompileError',
+        exception: sessionEvent.scriptCompilationException,
+      })
+    }
   }
 
   /**
@@ -283,6 +299,18 @@ class App extends PureComponent {
       commandLine: newReportProto.commandLine.join(' '),
       reportName: name,
     })
+  }
+
+  /**
+   * Handler for ForwardMsg.reportFinished messages
+   */
+  handleReportFinished() {
+    // When a script finishes running, we clear any stale elements left over
+    // from its previous run - unless our script had a fatal error during
+    // execution.
+    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+      this.clearOldElements()
+    }
   }
 
   /**
@@ -509,11 +537,11 @@ class App extends PureComponent {
 
   render() {
     const outerDivClass =
-        isEmbeddedInIFrame() ?
-          'streamlit-embedded' :
-          this.state.userSettings.wideMode ?
-            'streamlit-wide' :
-            'streamlit-regular'
+      isEmbeddedInIFrame() ?
+        'streamlit-embedded' :
+        this.state.userSettings.wideMode ?
+          'streamlit-wide' :
+          'streamlit-regular'
 
     const dialogProps = {
       ...this.state.dialog,
@@ -523,7 +551,7 @@ class App extends PureComponent {
     return (
       <div className={outerDivClass}>
         <header>
-          <div className="decoration" />
+          <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
           </div>

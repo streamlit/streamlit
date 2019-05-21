@@ -5,7 +5,7 @@
   "homepage": ".",
   "scripts": {
     "start": "craco start",
-    "build": "./scripts/preload.sh && craco build",
+    "build": "craco build",
     "test": "craco test --env=jsdom",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
@@ -13,6 +13,7 @@
   "dependencies": {
     "@craco/craco": "^5.0.2",
     "aws-sdk": "^2.454.0",
+    "bokehjs": "^1.1.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
     "d3": "^5.9.2",
