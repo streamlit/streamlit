@@ -97,9 +97,11 @@ clean:
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/protobuf/*_pb2.py
+	rm -rf frontend/public/vendor
 	rm -f frontend/src/autogen/protobuf.js
 	rm -f frontend/src/autogen/protobuf.d.ts
 	rm -rf lib/streamlit/static
+	rm -f lib/Pipfile.lock
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 	rm -rf conda/streamlit-forge
