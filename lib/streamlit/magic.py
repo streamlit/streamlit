@@ -34,18 +34,11 @@ def _modify_ast(tree, is_root):
 
         # Convert expression nodes to st.write
         if type(node) is ast.Expr:
-            st_write = _get_st_write_from_expr(node, i)
-
-        # Convert assignments to st.write
-        # TODO: Rethink this. And probably remove it.
-        elif type(node) is ast.Assign:
-            st_write = _get_st_write_from_assign(node, i)
-
-        if st_write is not None:
-            node.value = st_write
+            node.value = _get_st_write_from_expr(node, i)
 
     if is_root:
         # Import Streamlit so we can use it in the st_write's above.
+        # IMPORTANT: This breaks Python 2 due to line numbering issues.
         _insert_import_statement(tree)
 
     ast.fix_missing_locations(tree)
@@ -139,21 +132,5 @@ def _get_st_write_from_expr(node, i):
     else:
         args = [node.value]
         st_write = _build_st_write_call(args)
-
-    return st_write
-
-
-def _get_st_write_from_assign(node, i):
-    """Replace "foo = bar()," with "foo = st._transparent_write(bar())"."""
-    # Only convert if assigning to a 1-element tuple
-
-    if type(node.value) is not ast.Tuple:
-        return None
-
-    if len(node.value.elts) != 1:
-        return None
-
-    elt = node.value.elts[0]
-    st_write = _build_st_write_call([elt])
 
     return st_write
