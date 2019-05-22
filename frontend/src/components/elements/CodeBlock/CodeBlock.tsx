@@ -18,20 +18,19 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
+import { PureStreamlitElement, StProps, StState } from 'components/shared/StreamlitElement/'
 import CopyButton from './CopyButton'
 import './CodeBlock.scss'
 
-interface Props {
+interface Props extends StProps {
   language?: string;
   value: string;
-  width: number;
 }
 
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends PureStreamlitElement<Props> {
+class CodeBlock extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     if (this.props.language === undefined) {
       return (

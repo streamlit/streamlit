@@ -280,6 +280,7 @@ class App extends PureComponent {
       this.openDialog({
         type: 'scriptCompileError',
         exception: sessionEvent.scriptCompilationException,
+        onRerun: this.rerunScript,
       })
     }
   }

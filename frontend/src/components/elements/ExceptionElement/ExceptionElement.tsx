@@ -7,18 +7,17 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import './ExceptionElement.scss'
 
-interface Props {
-  width: number;
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
 }
 
 /**
   * Functional element representing formatted text.
   */
-class ExceptionElement extends PureStreamlitElement<Props> {
+class ExceptionElement extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     const {element, width} = this.props
     const type = element.get('type')

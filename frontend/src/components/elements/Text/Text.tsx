@@ -10,7 +10,7 @@ import ReactJson from 'react-json-view'
 import ReactMarkdown from 'react-markdown'
 import {Map as ImmutableMap} from 'immutable'
 import CodeBlock from '../CodeBlock'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {Text as TextProto} from 'autogen/protobuf'
 import './Text.scss'
 
@@ -35,15 +35,14 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   <a href={props.href} target="_blank" rel="noopener noreferrer">{props.children}</a>
 )
 
-interface Props {
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
-  width: number;
 }
 
 /**
  * Functional element representing formatted text.
  */
-class Text extends PureStreamlitElement<Props> {
+class Text extends PureStreamlitElement<Props, StState> {
   public safeRender(): ReactNode {
     const {element, width} = this.props
     const body = element.get('body')

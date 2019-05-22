@@ -9,7 +9,7 @@ import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {MultiGrid} from 'react-virtualized'
 import DataFrameCell from './DataFrameCell'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {SortDirection} from './SortDirection'
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../../../lib/dataFrameProto'
 import {toFormattedString} from '../../../lib/format'
@@ -35,12 +35,11 @@ const MAX_CELL_WIDTH_PX = 200
  */
 const MAX_LONELY_CELL_WIDTH_PX = 400
 
-interface Props {
-  width: number;
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
 }
 
-interface State {
+interface State extends StState {
   /**
    * If true, then the user manually clicked on a column header to sort the
    * table.

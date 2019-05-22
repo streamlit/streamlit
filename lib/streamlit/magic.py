@@ -4,13 +4,15 @@
 import ast
 
 
-def add_magic(code):
+def add_magic(code, script_path):
     """Modifies the code to support magic Streamlit commands.
 
     Parameters
     ----------
     code : str
         The Python code.
+    script_path : str
+        The path to the script file.
 
     Returns
     -------
@@ -18,34 +20,32 @@ def add_magic(code):
         The syntax tree for the code.
 
     """
-    tree = ast.parse(code)
-    return _modify_ast(tree, True)
+    # Pass script_path so we get pretty exceptions.
+    tree = ast.parse(code, script_path, 'exec')
+    return _modify_ast_subtree(tree, True)
 
 
-def _modify_ast(tree, is_root):
-    """Modify AST so you can use Streamlit without Streamlit calls."""
+def _modify_ast_subtree(tree, is_root):
+    """Parses magic commands and modifies the given AST (sub)tree."""
 
     for i, node in enumerate(tree.body):
-        st_write = None
+        new_value = None
 
         # Parse the contents of functions
         if type(node) is ast.FunctionDef:
-            node = _modify_ast(node, is_root=False)
+            node = _modify_ast_subtree(node, is_root=False)
+            tree.body[i] = node
 
         # Convert expression nodes to st.write
         if type(node) is ast.Expr:
-            st_write = _get_st_write_from_expr(node, i)
+            new_value = _get_st_write_from_expr(node, i)
 
-        # Convert assignments to st.write
-        # TODO: Rethink this. And probably remove it.
-        elif type(node) is ast.Assign:
-            st_write = _get_st_write_from_assign(node, i)
-
-        if st_write is not None:
-            node.value = st_write
+        if new_value is not None:
+            node.value = new_value
 
     if is_root:
-        # Import Streamlit so we can use it in the st_write's above.
+        # Import Streamlit so we can use it in the new_value above.
+        # IMPORTANT: This breaks Python 2 due to line numbering issues.
         _insert_import_statement(tree)
 
     ast.fix_missing_locations(tree)
@@ -139,21 +139,5 @@ def _get_st_write_from_expr(node, i):
     else:
         args = [node.value]
         st_write = _build_st_write_call(args)
-
-    return st_write
-
-
-def _get_st_write_from_assign(node, i):
-    """Replace "foo = bar()," with "foo = st._transparent_write(bar())"."""
-    # Only convert if assigning to a 1-element tuple
-
-    if type(node.value) is not ast.Tuple:
-        return None
-
-    if len(node.value.elts) != 1:
-        return None
-
-    elt = node.value.elts[0]
-    st_write = _build_st_write_call([elt])
 
     return st_write

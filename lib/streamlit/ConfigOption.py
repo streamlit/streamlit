@@ -19,19 +19,19 @@ LOGGER = get_logger(__name__)
 class ConfigOption(object):
     '''Stores a Streamlit configuration option.
 
-    A configuration option, like 'client.proxyPort', which indicates which port
+    A configuration option, like 'browser.proxyPort', which indicates which port
     to use when connecting to the proxy. There are two ways to create a
     ConfigOption:
 
     Simple ConfigOptions are created as follows:
 
-        ConfigOption('client.proxyPort',
+        ConfigOption('browser.proxyPort',
             description = 'Connect to the proxy at this port.',
             default_val = 8501)
 
     More complex config options resolve thier values at runtime as follows:
 
-        @ConfigOption('client.proxyPort')
+        @ConfigOption('browser.proxyPort')
         def _proxy_port():
             """Connect to the proxy at this port.
 
