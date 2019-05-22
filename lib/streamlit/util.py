@@ -328,6 +328,15 @@ def is_altair_chart(obj):
         is_type(obj, 'altair.vegalite.v3.api.Chart'))
 
 
+def is_keras_model(obj):
+    """True if input looks like a Keras model."""
+    return (
+        is_type(obj, 'keras.engine.sequential.Sequential') or
+        is_type(obj, 'keras.engine.training.Model') or
+        is_type(obj, 'tensorflow.python.keras.engine.sequential.Sequential') or
+        is_type(obj, 'tensorflow.python.keras.engine.training.Model'))
+
+
 def is_plotly_chart(obj):
     """True if input looks like a Plotly chart."""
     return (
