@@ -105,6 +105,12 @@ def _delete_option(key):
         pass
 
 
+PROXY_DEPRECATION_TEXT = '''This configuration option does not do anything
+anymore, since Streamlit no longer has a proxy. Please remove it from your
+config file.'''
+PROXY_DEPRECATION_EXPIRATION = '2019-11-19'
+
+
 # Config Section: Global #
 
 _create_section('global', 'Global options that apply across all of Streamlit.')
@@ -184,72 +190,88 @@ _create_option(
         Streamlit report.''',
     default_val=True)
 
-# TODO [0px]
-# _create_option(
-#     'client.waitForProxySecs',
-#     description='How long to wait for the proxy server to start up.',
-#     default_val=3.0)
+_create_option(
+    'client.waitForProxySecs',
+    description='How long to wait for the proxy server to start up.',
+    default_val=3.0,
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-# TODO [0px]
-# _create_option(
-#     'client.throttleSecs',
-#     description='How long to wait between draining the client queue.',
-#     default_val=0.01)
+_create_option(
+    'client.throttleSecs',
+    description='How long to wait between draining the client queue.',
+    default_val=0.01,
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-# TODO [0px] remove
-# _create_option(
-#     'client.tryToOutliveProxy',
-#     description='''
-#         If true, waits for the proxy to close before exiting the client script.
-#         And if the proxy takes too long (10s), just exits the script. This is
-#         useful when running a Streamlit script in a container, to allow the
-#         proxy to shut itself down cleanly.
-#         ''',
-#     default_val=False)
+_create_option(
+    'client.tryToOutliveProxy',
+    description='''
+        If true, waits for the proxy to close before exiting the client script.
+        And if the proxy takes too long (10s), just exits the script.
 
-# TODO [0px]
-# _create_option(
-#     'client.proxyAddress',
-#     description='''
-#         Internet address of the proxy server that the client should connect
-#         to. Can be IP address or DNS name.''',
-#     default_val='localhost')
+        This is useful when running a Streamlit script in a container, to allow
+        the proxy to shut itself down cleanly.
+        ''',
+    default_val=False,
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-# TODO [0px]
-# @_create_option('client.proxyPort')
-# def _client_proxy_port():
-#     """Port that the client should use to connect to the proxy.
+_create_option(
+    'client.proxyAddress',
+    description='''
+        Internet address of the proxy server that the client should connect
+        to. Can be IP address or DNS name.''',
+    default_val='localhost',
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-#     Default: whatever value is set in proxy.port.
-#     """
-#     return get_option('proxy.port')
+@_create_option(
+    'client.proxyPort',
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+def _client_proxy_port():
+    """Port that the client should use to connect to the proxy.
+
+    Default: whatever value is set in proxy.port.
+    """
+    return get_option('proxy.port')
 
 
 # Config Section: Proxy #
 
 _create_section('proxy', 'Configuration of the proxy server.')
 
-# TODO [0px] remove
-# _create_option(
-#     'proxy.autoCloseDelaySecs',
-#     description='''
-#         How long the proxy should stay open when there are no connections.
+_create_option(
+    'proxy.autoCloseDelaySecs',
+    description='''
+        How long the proxy should stay open when there are no connections.
 
-#         Can be set to inf for "infinity".
+        Can be set to inf for "infinity".
 
-#         Note: this delay only starts counting after the reportExpirationSecs
-#         delay transpires.
-#         ''',
-#     default_val=0)
+        Note: this delay only starts counting after the reportExpirationSecs
+        delay transpires.
+        ''',
+    default_val=0,
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-# TODO [0px] remove
-# _create_option(
-#     'proxy.reportExpirationSecs',
-#     description=(
-#         'How long reports should be stored in memory for when the '
-#         'script is done and there are no viewers. '
-#         'For best results make sure this is >= 3.'),
-#     default_val=60)
+_create_option(
+    'proxy.reportExpirationSecs',
+    description=(
+        'How long reports should be stored in memory for when the '
+        'script is done and there are no viewers. '
+        'For best results make sure this is >= 3.'),
+    default_val=60,
+    deprecated=True,
+    deprecation_text=PROXY_DEPRECATION_TEXT,
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 @_create_option('proxy.useNode', visibility='hidden')
@@ -783,10 +805,6 @@ def _check_conflicts():
 
         assert _is_unset('browser.proxyPort'), (
             'browser.proxyPort does not work when proxy.useNode is true. ')
-
-        # TODO [0px]
-        # assert _is_unset('client.proxyPort'), (
-        #     'client.proxyPort does not work when proxy.useNode is true. ')
 
     # Sharing-related conflicts
 
