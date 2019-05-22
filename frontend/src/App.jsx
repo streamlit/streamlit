@@ -533,6 +533,41 @@ class App extends PureComponent {
   }
 
   /**
+   * A quick hack to throttle widget-related BackMsgs
+   * TODO: remove me post-May 2019 hackathon!
+   */
+  sendThrottledWidgetBackMsg = (msg) => {
+    const THROTTLE_MILLIS = 400
+
+    this.latestWidgetBackMsg = msg
+
+    if (this.widgetThrottleTimer !== undefined) {
+      // A timer is already running. It'll send this BackMsg when
+      // it wakes up
+      return
+    }
+
+    const delta = new Date().getTime() - this.lastBackMsgTime
+    if (delta >= THROTTLE_MILLIS) {
+      // We can send our message immediately
+      this.sendLatestWidgetBackMsg()
+    } else {
+      // Schedule our throttle timer
+      this.widgetThrottleTimer = window.setTimeout(
+        this.sendLatestWidgetBackMsg, THROTTLE_MILLIS - delta)
+    }
+  }
+
+  sendLatestWidgetBackMsg = () => {
+    if (this.latestWidgetBackMsg != null) {
+      this.sendBackMsg(this.latestWidgetBackMsg)
+      this.lastBackMsgTime = new Date().getTime()
+    }
+    this.latestWidgetBackMsg = null
+    this.widgetThrottleTimer = undefined
+  }
+
+  /**
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errMsg) {
@@ -611,7 +646,7 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                  sendBackMsg={this.sendBackMsg}
+                  sendBackMsg={this.sendThrottledWidgetBackMsg}
                   getWidgetState={this.getWidgetState}
                   setWidgetState={this.setWidgetState}
                 />
