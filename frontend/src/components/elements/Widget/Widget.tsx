@@ -6,7 +6,7 @@
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from '../../../lib/immutableProto'
-import {PureStreamlitElement} from '../../shared/StreamlitElement'
+import {PureStreamlitElement, StState} from '../../shared/StreamlitElement'
 
 import {Input, Label} from 'reactstrap'
 
@@ -18,7 +18,7 @@ interface Props {
   setWidgetState: Function;
 }
 
-interface State {
+interface State extends StState {
   value: any;
 }
 
