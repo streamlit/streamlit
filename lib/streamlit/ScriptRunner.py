@@ -157,7 +157,7 @@ class ScriptRunner(object):
                 filebody = f.read()
 
             if config.get_option('runner.autoWrite'):
-                filebody = magic.add_magic(filebody)
+                filebody = magic.add_magic(filebody, self._report.script_path)
 
             code = compile(
                 filebody,
@@ -172,6 +172,7 @@ class ScriptRunner(object):
                 # Parameter not supported in Python2:
                 # optimize=-1,
             )
+
         except BaseException as e:
             # We got a compile error. Send the exception onto the client
             # as a SessionEvent and bail immediately.
