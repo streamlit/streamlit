@@ -1,33 +1,34 @@
 import React, { PureComponent } from 'react'
 import Clipboard from 'clipboard'
 import { Copy as CopyIcon } from 'react-feather'
-import './CopyToClipboard.scss'
+import './CopyButton.scss'
 
 interface Props {
   text: string;
 }
 
-class CopyToClipboard extends PureComponent<Props> {
-  private copyButton = React.createRef<HTMLButtonElement>()
+class CopyButton extends PureComponent<Props> {
+  private button = React.createRef<HTMLButtonElement>()
   private clipboard: (ClipboardJS | null) = null
 
-  componentDidMount = () => {
-    const node = this.copyButton.current
+  public componentDidMount = () => {
+    const node = this.button.current
     if (node !== null) {
       this.clipboard = new Clipboard(node)
     }
   }
 
-  componentWillUnmount = () => {
+  public componentWillUnmount = () => {
     if (this.clipboard !== null) {
       this.clipboard.destroy()
     }
   }
 
-  render = (): React.ReactNode => (
+  public render = (): React.ReactNode => (
     <button
-      ref={this.copyButton}
+      ref={this.button}
       title="Click to copy"
+      className="copy"
       data-clipboard-text={this.props.text}
     >
       <CopyIcon size="16" />
@@ -35,4 +36,4 @@ class CopyToClipboard extends PureComponent<Props> {
   )
 }
 
-export default CopyToClipboard
+export default CopyButton

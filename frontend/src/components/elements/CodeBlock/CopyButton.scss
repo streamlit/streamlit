@@ -1,7 +1,8 @@
-[data-clipboard-text] {
+.copy {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
+  padding: 5px 8px;
   position: absolute;
   right: 10px;
   top: 10px;
@@ -9,11 +10,11 @@
   z-index: 101;
 }
 
-[data-clipboard-text]:hover {
+.copy:hover {
   border-color: #f63366;
 }
 
-[data-clipboard-text]:focus {
+.copy:focus {
   box-shadow: 0 0 0 0.2rem rgba(118, 128, 150, 0.5);
   outline: none;
 }

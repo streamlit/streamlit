@@ -23,7 +23,7 @@ int main(void) {
     Language(name='Javascript',
              example="""
 // Javascript
-say_hello() {
+function sayHello() {
     const name = 'Streamlit';
     console.log(`Hello, ${name}!`);
 }"""),
@@ -46,7 +46,7 @@ SELECT * FROM software WHERE name = 'Streamlit';
 
 {
     "_comment": "This is a JSON file!",
-    name: "Streamlit", 
+    name: "Streamlit",
     version: 0.27
 }"""),
 

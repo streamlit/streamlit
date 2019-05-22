@@ -5,7 +5,7 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
-import React, { Fragment } from 'react'
+import React from 'react'
 import Prism from 'prismjs'
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -19,7 +19,7 @@ import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
 import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
-import CopyButton from './CopyToClipboard'
+import CopyButton from './CopyButton'
 import './CodeBlock.scss'
 
 interface Props {
@@ -37,6 +37,7 @@ class CodeBlock extends PureStreamlitElement<Props> {
       return (
         <pre>
           <code>{this.props.value}</code>
+          <CopyButton text={this.props.value} />
         </pre>
       )
     }
@@ -52,12 +53,10 @@ class CodeBlock extends PureStreamlitElement<Props> {
     const cls = `language-${this.props.language}`
 
     return (
-      <Fragment>
-        <pre>
-          <code className={cls} dangerouslySetInnerHTML={{ __html: html }} />
-        </pre>
+      <pre>
+        <code className={cls} dangerouslySetInnerHTML={{ __html: html }} />
         <CopyButton text={this.props.value} />
-      </Fragment>
+      </pre>
     )
   }
 }
