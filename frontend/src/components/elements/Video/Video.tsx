@@ -5,14 +5,13 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 
-interface Props {
-  width: number;
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
 }
 
-class Video extends PureStreamlitElement<Props> {
+class Video extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     const {element, width} = this.props
     return (

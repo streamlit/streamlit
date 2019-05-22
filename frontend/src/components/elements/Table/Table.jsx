@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import { PureStreamlitElement } from '../../shared/StreamlitElement/'
+import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 import { Table as ReactTable }  from 'reactstrap'
 import { toFormattedString } from '../../../lib/format'
 

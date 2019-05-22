@@ -19,25 +19,29 @@ def add_magic(code):
 
     """
     tree = ast.parse(code)
-    return _modify_ast(tree, True)
+    return _modify_ast_subtree(tree, True)
 
 
-def _modify_ast(tree, is_root):
-    """Modify AST so you can use Streamlit without Streamlit calls."""
+def _modify_ast_subtree(tree, is_root):
+    """Parses magic commands and modifies the given AST (sub)tree."""
 
     for i, node in enumerate(tree.body):
-        st_write = None
+        new_value = None
 
         # Parse the contents of functions
         if type(node) is ast.FunctionDef:
-            node = _modify_ast(node, is_root=False)
+            node = _modify_ast_subtree(node, is_root=False)
+            tree.body[i] = node
 
         # Convert expression nodes to st.write
         if type(node) is ast.Expr:
-            node.value = _get_st_write_from_expr(node, i)
+            new_value = _get_st_write_from_expr(node, i)
+
+        if new_value is not None:
+            node.value = new_value
 
     if is_root:
-        # Import Streamlit so we can use it in the st_write's above.
+        # Import Streamlit so we can use it in the new_value above.
         # IMPORTANT: This breaks Python 2 due to line numbering issues.
         _insert_import_statement(tree)
 

@@ -11,7 +11,7 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from '../../../lib/dataFrameProto'
 import { format, Duration } from '../../../lib/format'
-import { PureStreamlitElement } from '../../shared/StreamlitElement/'
+import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 
 import * as recharts from 'recharts'
 

@@ -57,9 +57,9 @@ class ScriptRunner(object):
             doc="Emitted when the file is modified and we haven't handled it.")
 
         self.on_script_compile_error = Signal(
-            doc="""Emitted if our script fails to compile.  (*Not* emitted 
+            doc="""Emitted if our script fails to compile.  (*Not* emitted
             for normal exceptions thrown while a script is running.)
-            
+
             Parameters
             ----------
             exception : Exception
@@ -150,17 +150,14 @@ class ScriptRunner(object):
         # to the user via a modal dialog, and won't result in their
         # previous report disappearing.
         try:
-            # Python 3 got rid of the native execfile() command, so we now read the
-            # file, compile it, and exec() it. This implementation is compatible
-            # with both 2 and 3.
+            # Python 3 got rid of the native execfile() command, so we now read
+            # the file, compile it, and exec() it. This implementation is
+            # compatible with both 2 and 3.
             with open(self._report.script_path) as f:
                 filebody = f.read()
 
             if config.get_option('runner.autoWrite'):
                 filebody = magic.add_magic(filebody)
-
-            if config.get_option('runner.installTracer'):
-                self._install_tracer()
 
             code = compile(
                 filebody,
@@ -183,16 +180,18 @@ class ScriptRunner(object):
             self._set_state(State.STOPPED)
             return
 
-        # If we get here, we've successfully compiled our script. The
-        # next step is to run it. Errors thrown during execution will be
-        # shown to the user as ExceptionElements.
+        # If we get here, we've successfully compiled our script. The next step
+        # is to run it. Errors thrown during execution will be shown to the
+        # user as ExceptionElements.
+
         if config.get_option('runner.installTracer'):
             self._install_tracer()
 
-        rerun = False
+        rerun_requested = False
+
         try:
-            # Create fake module, and install it as __main__. This gives us a
-            # name global namespace to execute the code in
+            # Create fake module. This gives us a name global namespace to
+            # execute the code in.
             module = _new_module('__main__')
 
             # Install the fake module as the __main__ module. This allows
@@ -206,13 +205,15 @@ class ScriptRunner(object):
             # asked them to be via the GUI.
             # IMPORTANT: This means we can't count on sys.argv in our code ---
             # but we already knew it from the argv surgery in cli.py.
+            # TODO: Remove this feature when we implement interativity! This is
+            # not robust in a multi-user environment.
             sys.argv = self._report.argv
 
             with script_path(self._report):
                 exec(code, module.__dict__)
 
         except RerunException:
-            rerun = True
+            rerun_requested = True
 
         except StopException:
             pass
@@ -229,7 +230,7 @@ class ScriptRunner(object):
         self._local_sources_watcher.update_watched_modules()
         _clean_problem_modules()
 
-        if rerun:
+        if rerun_requested:
             self._run()
 
     def _pause(self):

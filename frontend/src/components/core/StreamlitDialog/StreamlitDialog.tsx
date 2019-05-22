@@ -8,8 +8,8 @@ import CopyToClipboard from 'react-copy-to-clipboard'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
 
 import {Exception} from 'autogen/protobuf'
-import {STREAMLIT_VERSION} from 'lib/baseconsts'
 import {Props as SettingsDialogProps, SettingsDialog} from './SettingsDialog'
+import {STREAMLIT_VERSION} from 'lib/baseconsts'
 
 import './StreamlitDialog.scss'
 
@@ -33,10 +33,10 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return clearCacheDialog(dialogProps)
     case 'rerunScript':
       return rerunScriptDialog(dialogProps)
-    case 'scriptCompileError':
-      return scriptCompileErrorDialog(dialogProps)
     case 'settings':
       return settingsDialog(dialogProps)
+    case 'scriptCompileError':
+      return scriptCompileErrorDialog(dialogProps)
     case 'uploadProgress':
       return uploadProgressDialog(dialogProps)
     case 'uploaded':
@@ -44,7 +44,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
     case 'warning':
       return warningDialog(dialogProps)
     case undefined:
-      return noDialog()
+      return noDialog(dialogProps)
     default:
       return typeNotRecognizedDialog(dialogProps)
   }
@@ -78,7 +78,10 @@ function aboutDialog(props: AboutProps): ReactElement {
 
 interface ClearCacheProps {
   type: 'clearCache';
+  /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void;
+
+  /** callback to close the dialog */
   onClose: CloseHandler;
 }
 
@@ -272,11 +275,10 @@ function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: Clos
 }
 
 /**
- * Returns a dialog whose `isOpen` prop is set to false, indicating that
- * any open dialog should be closed.
+ * Returns an empty dictionary, indicating that no object is to be displayed.
  */
-function noDialog(): ReactElement {
-  return <BasicDialog/>
+function noDialog({onClose}: { onClose: CloseHandler }): ReactElement {
+  return <BasicDialog onClose={onClose}/>
 }
 
 interface NotRecognizedProps {
