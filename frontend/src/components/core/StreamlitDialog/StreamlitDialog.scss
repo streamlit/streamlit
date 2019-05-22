@@ -3,6 +3,8 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
+@import '../../../assets/css/variables';
+
 .streamlit-upload-first-line {
   margin-bottom: 0.5rem;
 }
@@ -13,20 +15,20 @@
 
 .streamlit-dialog .command-line {
   width: 100%;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
+  font-family: $font-family-monospace;
+  font-size: $font-size-sm;
   height: 6rem;
 }
 
 /* We make this an id instead of a class to enable clipboard copy */
 #streamlit-upload-url {
   word-wrap: break-word;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
+  font-family: $font-family-monospace;
+  font-size: $font-size-sm;
 }
 
 h5.modal-title {
-  font-family: IBM Plex Sans,sans-serif;
+  font-family: $font-family-sans-serif;
   font-size: 1.25rem;
   margin: 0;
   font-weight: 300;

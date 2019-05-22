@@ -5,7 +5,7 @@
  * @fileoverview Implements a dialog that is used to configure user settings.
  */
 
-import React from 'react'
+import * as React from 'react'
 import {ChangeEvent, PureComponent, ReactNode} from 'react'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
 import {UserSettings} from './UserSettings'

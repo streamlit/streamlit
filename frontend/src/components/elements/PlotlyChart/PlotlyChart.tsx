@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright 2019 Streamlit Inc. All rights reserved.
@@ -6,23 +7,19 @@
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from '../../../lib/immutableProto'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import Plot from 'react-plotly.js'
 
-interface Props {
-  width: number;
+interface Props extends StProps {
   element: ImmutableMap<string, any>;
 }
 
 const DEFAULT_HEIGHT = 500
 
-class PlotlyChart extends React.PureComponent<Props> {
+class PlotlyChart extends PureStreamlitElement<Props, StState> {
   private chartNode = React.createRef<HTMLDivElement>();
 
-  public constructor(props: Props) {
-    super(props)
-  }
-
-  public render(): React.ReactNode {
+  public safeRender(): React.ReactNode {
     const el = this.props.element
 
     const height: number =

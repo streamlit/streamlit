@@ -96,6 +96,7 @@ def _main_run(file, args=[]):
 
 # DEPRECATED
 
+# TODO: Remove after 2019-09-01
 @main.command('clear_cache', deprecated=True, hidden=True)
 @click.pass_context
 def main_clear_cache(ctx):
@@ -104,6 +105,7 @@ def main_clear_cache(ctx):
     ctx.invoke(cache_clear)
 
 
+# TODO: Remove after 2019-09-01
 @main.command('show_config', deprecated=True, hidden=True)
 @click.pass_context
 def main_show_config(ctx):
@@ -122,9 +124,13 @@ def cache():
 
 @cache.command('clear')
 def cache_clear():
-    """Clear the Streamlit cache."""
+    """Clear the Streamlit on-disk cache."""
     import streamlit.caching
-    streamlit.caching.clear_cache(True)
+    result = streamlit.caching.clear_cache()
+    if result:
+        print('Cleared %s directory.' % cache_path)
+    else:
+        print('No such directory %s so nothing to clear. :)' % cache_path)
 
 
 # SUBCOMMAND: config

@@ -4,8 +4,7 @@ Everything in this file applies to all tests.  This basically makes the
 tests not READ from your local home directory but instead this mock
 config.
 """
-import copy
-import textwrap
+__copyright__ = 'Copyright 2019 Streamlit Inc. All rights reserved.'
 import os
 
 from contextlib import contextmanager
@@ -30,9 +29,8 @@ gatherUsageStats = false
 '''
 
 with set_fake_home(), patch(
-        'streamlit.config.os.path.exists',
-        side_effect=[True]) as p, patch(
-            "streamlit.config.open",
+        'streamlit.config.os.path.exists', side_effect=[True]) as p, patch(
+            'streamlit.config.open',
             mock_open(read_data=CONFIG_FILE_CONTENTS)) as mock_file:
 
     from streamlit import config
