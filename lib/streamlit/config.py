@@ -15,6 +15,8 @@ import toml
 import urllib
 import collections
 
+import click
+
 from streamlit import development
 from streamlit import util
 from streamlit.ConfigOption import ConfigOption
@@ -609,13 +611,28 @@ def show_config():
         that are set for your system.
     '''))
 
+    def append_desc(text):
+        out.append(click.style(text, bold=True))
+
+    def append_comment(text):
+        out.append(click.style(text))
+
+    def append_section(text):
+        out.append(click.style(text, bold=True, fg='green'))
+
+    def append_setting(text):
+        out.append(click.style(text, fg='green'))
+
+    def append_newline():
+        out.append('')
+
     for section, section_description in _section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
 
-        out.append('')
-        out.append('[%s]' % section)
-        out.append('')
+        append_newline()
+        append_section('[%s]' % section)
+        append_newline()
 
         for key, option in _config_options.items():
             if option.section != section:
@@ -630,22 +647,26 @@ def show_config():
             key = option.key.split('.')[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
-            for txt in description_paragraphs:
-                out.append('# %s' % txt)
+            for i, txt in enumerate(description_paragraphs):
+                if i == 0:
+                    append_desc('# %s' % txt)
+                else:
+                    append_comment('# %s' % txt)
 
             if option.deprecated:
-                out.append('#')
-                out.append('# DEPRECATED.')
-                out.append('#     %s' % option.deprecation_text)
-                out.append('#     This option will be removed on or after %s.'
+                append_comment('#')
+                append_comment('# ' + click.style('DEPRECATED.', fg='yellow'))
+                append_comment('# %s' %
+                        '\n'.join(_clean_paragraphs(option.deprecation_text)))
+                append_comment('# This option will be removed on or after %s.'
                            % option.expiration_date)
-                out.append('#')
+                append_comment('#')
 
             toml_default = toml.dumps({'default': option.default_val})
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                out.append('# Default: %s' % toml_default)
+                append_comment('# Default: %s' % toml_default)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -655,20 +676,19 @@ def show_config():
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION)
 
             if option_is_manually_set:
-                out.append(
+                append_comment(
                     '# The value below was set in %s' % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
             if (len(toml_setting) == 0 or
                     option.visibility == 'obfuscated'):
-                out.append('#%s =\n' % key)
+                toml_setting = '#%s =\n' % key
 
             elif option.visibility == 'obfuscated':
-                out.append('%s = (value hidden)\n' % key)
+                toml_setting = '%s = (value hidden)\n' % key
 
-            else:
-                out.append(toml_setting)
+            append_setting(toml_setting)
 
     print('\n'.join(out))
 
