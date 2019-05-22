@@ -13,7 +13,7 @@ import {STREAMLIT_VERSION} from 'lib/baseconsts'
 
 import './StreamlitDialog.scss'
 
-type CloseHandler = () => void;
+type PlainEventHandler = () => void;
 
 type DialogProps =
   AboutProps |
@@ -54,7 +54,7 @@ interface AboutProps {
   type: 'about';
 
   /** Callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /** About Dialog */
@@ -82,7 +82,7 @@ interface ClearCacheProps {
   confirmCallback: () => void;
 
   /** callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -120,7 +120,7 @@ interface RerunScriptProps {
   rerunCallback: () => void;
 
   /** Callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -151,7 +151,8 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
 interface ScriptCompileErrorProps {
   type: 'scriptCompileError';
   exception: Exception;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
+  onRerun: PlainEventHandler;
 }
 
 function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
@@ -162,15 +163,14 @@ function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement 
 
   return (
     <BasicDialog onClose={props.onClose}>
-      <ModalHeader toggle={props.onClose}>Script Error</ModalHeader>
+      <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
       <ModalBody>
         <div>
           <strong>{props.exception.type}</strong>{message}
-          <br/>
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button outline color="primary" onClick={props.onClose}>Close</Button>
+        <Button outline color="primary" onClick={props.onRerun}>Rerun</Button>
       </ModalFooter>
     </BasicDialog>
   )
@@ -192,7 +192,7 @@ function settingsDialog(props: SettingsProps): ReactElement {
 interface UploadProgressProps {
   type: 'uploadProgress';
   progress?: string | number;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -216,7 +216,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
 interface UploadedProps {
   type: 'uploaded';
   url: string;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -244,7 +244,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
 interface WarningProps {
   type: 'warning';
   msg: ReactNode;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -261,7 +261,7 @@ function warningDialog(props: WarningProps): ReactElement {
   )
 }
 
-function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: CloseHandler }): ReactElement {
+function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: PlainEventHandler }): ReactElement {
   const isOpen = children !== undefined
   return (
     <Modal
@@ -277,13 +277,13 @@ function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: Clos
 /**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
-function noDialog({onClose}: { onClose: CloseHandler }): ReactElement {
+function noDialog({onClose}: { onClose: PlainEventHandler }): ReactElement {
   return <BasicDialog onClose={onClose}/>
 }
 
 interface NotRecognizedProps {
   type: string;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
