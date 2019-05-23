@@ -1,5 +1,5 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
-
+"""Streamlit Unittest."""
+__copyright__ = 'Copyright 2019 Streamlit Inc. All rights reserved.'
 from mock import call, patch, Mock
 import json
 import os
@@ -17,7 +17,7 @@ import pandas as pd
 from streamlit import __version__
 from streamlit import protobuf
 from streamlit.elements.Chart import Chart
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -57,7 +57,7 @@ class StreamlitTest(unittest.TestCase):
         )
 
 
-class StreamlitAPITest(util.DeltaGeneratorTestCase):
+class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs.
 
     Unit tests for https://streamlit.io/secret/docs/#api
@@ -268,7 +268,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
 
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
-        checksum = 'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII='
+        checksum = 'gNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII='
 
         dg = st.image(
             img,
@@ -278,7 +278,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
         self.assertEqual(el.imgs.imgs[0].caption, 'some caption')
-        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
+        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
 
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
@@ -290,13 +290,13 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
         imgs_b64 = [
-            'rQE6QGuADtAeUzUCfuDZUUYAAAAASUVORK5CYII=',
-            'rQE6QGuADtAeUTcCfodYSBYAAAAASUVORK5CYII=',
-            'aA3QAVoDdID2AHGUAf+h+mWcAAAAAElFTkSuQmCC',
+            'A1oDWgNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII=',
+            'WgNaA1oDWgPaBVCHAX/y3CvgAAAAAElFTkSuQmCC',
+            'NaA1oDWgNaBdYVwBALVjUB8AAAAASUVORK5CYII=',
         ]
         dg = st.image(
             imgs,
-            caption='some caption',
+            caption=['some caption'] * 3,
             width=200,
             use_column_width=True,
             clamp=True)
@@ -305,7 +305,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
         for idx, checksum in enumerate(imgs_b64):
             self.assertEqual(el.imgs.imgs[idx].caption, 'some caption')
-            self.assertTrue(el.imgs.imgs[idx].base_64_png.endswith(checksum))
+            self.assertTrue(el.imgs.imgs[idx].data.base64.endswith(checksum))
 
     def test_st_image_with_single_url(self):
         """Test st.image with single url."""
@@ -330,7 +330,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
         ]
         dg = st.image(
             urls,
-            caption='some caption',
+            caption=['some caption'] * 3,
             width=300)
 
         el = self.get_delta_from_queue().new_element
@@ -462,7 +462,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
 
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
-        checksum = 'DTuIkOADCFAAEAmPL/AFE92BKdqa2FAAAAAElFTkSuQmCC'
+        checksum = 'DTuIkOADCFAAEAmPL/AFE92BIZHj8WAAAAAElFTkSuQmCC'
 
         # Generate a 2 inch x 2 inch figure
         plt.figure(figsize=(2, 2))
@@ -473,7 +473,7 @@ class StreamlitAPITest(util.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, '')
-        self.assertTrue(el.imgs.imgs[0].base_64_png.endswith(checksum))
+        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""

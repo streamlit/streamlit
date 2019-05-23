@@ -103,7 +103,7 @@ type Event =
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
- * proxy and gets deltas over a websocket connection.
+ * server and gets deltas over a websocket connection.
  */
 export class WebsocketConnection {
   /**

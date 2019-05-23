@@ -100,7 +100,3 @@ class ConfigOptionTest(unittest.TestCase):
         c.set_value(my_value, where_defined)
 
         self.assertFalse(c.is_expired())
-
-
-if __name__ == '__main__':
-    unittest.main()

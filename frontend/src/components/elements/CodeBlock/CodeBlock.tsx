@@ -7,7 +7,7 @@
 
 import Prism from 'prismjs'
 import React from 'react'
-import {PureStreamlitElement} from '../../shared/StreamlitElement/'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -23,16 +23,15 @@ import 'prismjs/components/prism-c'
 
 import './CodeBlock.scss'
 
-interface Props {
+interface Props extends StProps {
   language?: string;
   value: string;
-  width: number;
 }
 
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends PureStreamlitElement<Props> {
+class CodeBlock extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     if (this.props.language == null) {
       return (

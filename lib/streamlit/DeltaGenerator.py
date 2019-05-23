@@ -485,8 +485,9 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        import streamlit.elements.exception_element as exception_element
-        exception_element.marshall(element, exception, exception_traceback)
+        import streamlit.elements.exception_proto as exception_proto
+        exception_proto.marshall(
+            element.exception, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):

@@ -13,7 +13,7 @@ except ImportError:
 from streamlit import bootstrap
 from streamlit import config
 from streamlit.Report import Report
-from tests.streamlit import util
+from tests import testutil
 
 report = Report('the/path', ['arg0', 'arg1'])
 
@@ -30,9 +30,9 @@ class BootstrapPrintTest(unittest.TestCase):
         sys.stdout = self.orig_stdout
 
     def test_print_urls_configured(self):
-        mock_is_manually_set = util.build_mock_config_is_manually_set({
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set({
             'browser.proxyAddress': True})
-        mock_get_option = util.build_mock_config_get_option({
+        mock_get_option = testutil.build_mock_config_get_option({
             'browser.proxyAddress': 'the-address'})
 
         with patch.object(config, 'get_option', new=mock_get_option), \
@@ -48,9 +48,9 @@ class BootstrapPrintTest(unittest.TestCase):
     def test_print_urls_remote(
             self, mock_get_internal_ip, mock_get_external_ip):
 
-        mock_is_manually_set = util.build_mock_config_is_manually_set({
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set({
             'browser.proxyAddress': False})
-        mock_get_option = util.build_mock_config_get_option({
+        mock_get_option = testutil.build_mock_config_get_option({
             'proxy.isRemote': True})
 
         mock_get_internal_ip.return_value = 'internal-ip'
@@ -67,9 +67,9 @@ class BootstrapPrintTest(unittest.TestCase):
 
     @patch('streamlit.bootstrap.util.get_internal_ip')
     def test_print_urls_local(self, mock_get_internal_ip):
-        mock_is_manually_set = util.build_mock_config_is_manually_set({
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set({
             'browser.proxyAddress': False})
-        mock_get_option = util.build_mock_config_get_option({
+        mock_get_option = testutil.build_mock_config_get_option({
             'proxy.isRemote': False})
 
         mock_get_internal_ip.return_value = 'internal-ip'

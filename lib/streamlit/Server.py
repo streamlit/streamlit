@@ -1,12 +1,9 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
-import collections
-import json
 import logging
-import os
-import textwrap
 import threading
+import urllib
 
 import tornado.concurrent
 import tornado.gen
@@ -18,10 +15,9 @@ from streamlit import caching
 from streamlit import config
 from streamlit import protobuf
 from streamlit import util
-from streamlit.ReportQueue import ReportQueue
+from streamlit.credentials import Credentials
 from streamlit.ScriptRunner import State as ScriptState
-from streamlit.proxy import proxy_util
-from streamlit.proxy.storage.S3Storage import S3Storage as Storage
+from streamlit.storage.S3Storage import S3Storage as Storage
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -44,9 +40,24 @@ class State(object):
 
 class Server(object):
 
+    _singleton = None
+
+    @classmethod
+    def get_current(cls):
+        """Return the singleton instance."""
+        if cls._singleton is None:
+            Server()
+
+        return Server._singleton
+
     def __init__(self, report, scriptrunner, on_server_start_callback):
         """Initialize server."""
         LOGGER.debug('Initializing server...')
+
+        if Server._singleton is not None:
+            raise RuntimeError(
+                'Server already initialized. Use .get_current() instead')
+
         Server._singleton = self
 
         _fix_tornado_logging()
@@ -64,6 +75,7 @@ class Server(object):
         self._sent_initialize_message = False
 
         self._storage = None
+        self._credentials = Credentials.get_current()
 
         port = config.get_option('proxy.port')
         app = tornado.web.Application(self._get_routes())
@@ -73,6 +85,8 @@ class Server(object):
             self._enqueue_script_state_changed_message)
         self._scriptrunner.on_file_change_not_handled.connect(
             self._enqueue_file_change_message)
+        self._scriptrunner.on_script_compile_error.connect(
+            self._on_script_compile_error)
 
         LOGGER.debug('Server started on port %s', port)
 
@@ -187,11 +201,11 @@ class Server(object):
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
     def _enqueue_exception(self, e):
-        import streamlit.elements.exception_element as exception_element
+        import streamlit.elements.exception_proto as exception_proto
 
         # This does a few things:
         # 1) Clears the current report in the browser.
-        # 2) Marks teh current report as "stopped" in the browser.
+        # 2) Marks the current report as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
         self._enqueue_script_state_changed_message(ScriptState.STOPPED)
@@ -200,7 +214,7 @@ class Server(object):
 
         msg = protobuf.ForwardMsg()
         msg.delta.id = 0
-        exception_element.marshall(msg.delta.new_element, e)
+        exception_proto.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -229,6 +243,20 @@ class Server(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
+    def _on_script_compile_error(self, exc):
+        """Handles exceptions caught by ScriptRunner during script compilation.
+
+        We deliver these exceptions to the client via SessionEvent messages.
+        "Normal" exceptions that are thrown during script execution show up as
+        inline elements in the report, but compilation exceptions are handled
+        specially, so that the frontend can leave the previous report up.
+        """
+        from streamlit.elements import exception_proto
+        msg = protobuf.ForwardMsg()
+        exception_proto.marshall(
+            msg.session_event.script_compilation_exception, exc)
+        self.enqueue(msg)
+
     def _maybe_enqueue_initialize_message(self):
         if self._sent_initialize_message:
             return
@@ -255,6 +283,7 @@ class Server(object):
         imsg.session_state.report_is_running = self._scriptrunner.is_running()
 
         imsg.user_info.installation_id = __installation_id__
+        imsg.user_info.email = self._credentials.activation.email
 
         self.enqueue(msg)
 
@@ -317,7 +346,7 @@ class Server(object):
         # Since this command was initiated from the browser, the user
         # doesn't need to see the results of the command in their
         # terminal.
-        caching.clear_cache(verbose=False)
+        caching.clear_cache()
 
     def _handle_set_run_on_save_request(self, new_value):
         self._scriptrunner.run_on_save = new_value
@@ -331,7 +360,7 @@ class _StaticFileHandler(tornado.web.StaticFileHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
 
 class _HealthHandler(tornado.web.RequestHandler):
@@ -340,7 +369,7 @@ class _HealthHandler(tornado.web.RequestHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
@@ -358,7 +387,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return proxy_util.url_is_from_allowed_origins(origin)
+        return _is_url_from_allowed_origins(origin)
 
     def open(self):
         self._server._add_browser_connection(self)
@@ -414,10 +443,62 @@ def _serialize(msg):
 
 
 def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception_element as exception_element
+    import streamlit.elements.exception_proto as exception_proto
 
     delta_id = msg.delta.id
     msg.Clear()
     msg.delta.id = delta_id
 
-    exception_element.marshall(msg.delta.new_element, e)
+    exception_proto.marshall(msg.delta.new_element, e)
+
+
+def _is_url_from_allowed_origins(url):
+    """Return True if URL is from allowed origins (for CORS purpose).
+
+    Allowed origins:
+    1. localhost
+    2. The internal and external IP addresses of the machine where this
+       function was called from.
+    3. The cloud storage domain configured in `s3.bucket`.
+
+    If `proxy.enableCORS` is False, this allows all origins.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check
+
+    Returns
+    -------
+    bool
+        True if URL is accepted. False otherwise.
+
+    """
+    if not config.get_option('proxy.enableCORS'):
+        # Allow everything when CORS is disabled.
+        return True
+
+    hostname = urllib.parse.urlparse(url).hostname
+
+    # Allow connections from bucket.
+    if hostname == config.get_option('s3.bucket'):
+        return True
+
+    # Allow connections from watcher's machine or localhost.
+    allowed_domains = [
+        'localhost',
+        '127.0.0.1',
+        util.get_internal_ip(),
+        util.get_external_ip(),
+    ]
+
+    s3_url = config.get_option('s3.url')
+
+    if s3_url is not None:
+        parsed = urllib.parse.urlparse(s3_url)
+        allowed_domains.append(parsed.hostname)
+
+    if config.is_manually_set('browser.proxyAddress'):
+        allowed_domains.append(config.get_option('browser.proxyAddress'))
+
+    return any(hostname == d for d in allowed_domains)

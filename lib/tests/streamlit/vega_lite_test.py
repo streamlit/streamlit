@@ -11,7 +11,7 @@ import unittest
 import pandas as pd
 import json
 
-from tests.streamlit import util
+from tests import testutil
 import streamlit as st
 
 
@@ -26,7 +26,7 @@ df2 = pd.DataFrame(
 ).T
 
 
-class VegaLiteTest(util.DeltaGeneratorTestCase):
+class VegaLiteTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def test_no_args(self):

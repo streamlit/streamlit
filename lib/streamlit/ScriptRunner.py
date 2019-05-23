@@ -1,8 +1,6 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
-import ast
-import signal
 import sys
 import threading
 import time
@@ -10,11 +8,8 @@ import time
 from blinker import Signal
 
 from streamlit import config
-
-try:
-    from streamlit.proxy.FileEventObserver import FileEventObserver as FileObserver
-except ImportError:
-    from streamlit.proxy.PollingFileObserver import PollingFileObserver as FileObserver
+from streamlit import magic
+from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -61,10 +56,20 @@ class ScriptRunner(object):
         self.on_file_change_not_handled = Signal(
             doc="Emitted when the file is modified and we haven't handled it.")
 
+        self.on_script_compile_error = Signal(
+            doc="""Emitted if our script fails to compile.  (*Not* emitted
+            for normal exceptions thrown while a script is running.)
+
+            Parameters
+            ----------
+            exception : Exception
+                The exception that was thrown
+            """)
+
         self._set_state(State.INITIAL)
 
-        self._file_observer = FileObserver(
-            self._report.script_path, self.maybe_handle_file_changed)
+        self._local_sources_watcher = LocalSourcesWatcher(
+            self._report, self.maybe_handle_file_changed)
 
     def _set_state(self, new_state):
         if self._state == new_state:
@@ -141,23 +146,19 @@ class ScriptRunner(object):
         self._state_change_requested.clear()
         self._set_state(State.RUNNING)
 
-        # Python 3 got rid of the native execfile() command, so we now read the
-        # file, compile it, and exec() it. This implementation is compatible
-        # with both 2 and 3.
-        with open(self._report.script_path) as f:
-            filebody = f.read()
-
-        if config.get_option('runner.autoWrite'):
-            filebody = _modify_ast(filebody, is_root=True)
-
-        if config.get_option('runner.installTracer'):
-            self._install_tracer()
-
-        rerun = False
-
+        # Compile the script. Any errors thrown here will be surfaced
+        # to the user via a modal dialog, and won't result in their
+        # previous report disappearing.
         try:
-            # Compiling must happen in the "try" block, so we can catch things
-            # like SyntaxErrors.
+            # Python 3 got rid of the native execfile() command, so we now read
+            # the file, compile it, and exec() it. This implementation is
+            # compatible with both 2 and 3.
+            with open(self._report.script_path) as f:
+                filebody = f.read()
+
+            if config.get_option('runner.autoWrite'):
+                filebody = magic.add_magic(filebody, self._report.script_path)
+
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
@@ -169,27 +170,51 @@ class ScriptRunner(object):
                 flags=0,
                 dont_inherit=1,
                 # Parameter not supported in Python2:
-                #optimize=-1,
+                # optimize=-1,
             )
 
-            # IMPORTANT: must pass a brand new dict into the globals and locals,
-            # below, so we don't leak any variables in between runs, and don't
-            # leak any variables from this file either.
-            # Also: here we set our globals and locals to the same dict to
-            # emulate what it's like to run at the top level of a module/python
-            # file. This is also why we're adding a few common variables below
-            # like __name__.
-            namespace = dict(
-                __name__='__main__',
-                # Convert from unicode for py2.
-                __file__=str(self._report.script_path),
-            )
+        except BaseException as e:
+            # We got a compile error. Send the exception onto the client
+            # as a SessionEvent and bail immediately.
+            LOGGER.debug('Fatal script error: %s' % e)
+            self.on_script_compile_error.send(e)
+            self._set_state(State.STOPPED)
+            return
 
+        # If we get here, we've successfully compiled our script. The next step
+        # is to run it. Errors thrown during execution will be shown to the
+        # user as ExceptionElements.
+
+        if config.get_option('runner.installTracer'):
+            self._install_tracer()
+
+        rerun_requested = False
+
+        try:
+            # Create fake module. This gives us a name global namespace to
+            # execute the code in.
+            module = _new_module('__main__')
+
+            # Install the fake module as the __main__ module. This allows
+            # the pickle module to work inside the user's code, since it now
+            # can know the module where the pickled objects stem from.
+            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+            # our code, as it will point to the wrong module!!!
+            sys.modules['__main__'] = module
+
+            # Make it look like command-line args were set to whatever the user
+            # asked them to be via the GUI.
+            # IMPORTANT: This means we can't count on sys.argv in our code ---
+            # but we already knew it from the argv surgery in cli.py.
+            # TODO: Remove this feature when we implement interativity! This is
+            # not robust in a multi-user environment.
             sys.argv = self._report.argv
-            exec(code, namespace, namespace)
+
+            with script_path(self._report):
+                exec(code, module.__dict__)
 
         except RerunException:
-            rerun = True
+            rerun_requested = True
 
         except StopException:
             pass
@@ -203,7 +228,10 @@ class ScriptRunner(object):
         finally:
             self._set_state(State.STOPPED)
 
-        if rerun:
+        self._local_sources_watcher.update_watched_modules()
+        _clean_problem_modules()
+
+        if rerun_requested:
             self._run()
 
     def _pause(self):
@@ -255,116 +283,46 @@ class RerunException(ScriptControlException):
     pass
 
 
-def _modify_ast(tree_or_code, is_root):
-    """Modify AST so you can use Streamlit without Streamlit calls."""
-
-    if type(tree_or_code) is str:
-        tree = ast.parse(tree_or_code)
-    else:
-        tree = tree_or_code
-
-    for i, node in enumerate(tree.body):
-        # Parse the contents of functions
-        if type(node) is ast.FunctionDef:
-            node = _modify_ast(node, is_root=False)
-
-        # Only convert Expression nodes to st.write
-        if type(node) is not ast.Expr:
-            continue
-
-        # ...but not if they're a function call
-        if type(node.value) is ast.Call:
-            continue
-
-        # ...or if they're a docstring
-        if type(node.value) is ast.Str:
-            if i == 0:
-                continue
-
-        # If 1-element tuple, call st.write on the 0th element (rather than the
-        # whole tuple). This allows us to add a comma at the end of a statement
-        # to turn it into an expression that should be st-written. Ex:
-        # "np.random.randn(1000, 2),"
-        if (type(node.value) is ast.Tuple and
-                len(node.value.elts) == 1):
-            args = node.value.elts
-            st_write = _build_st_write_call(args)
-
-        # st.write all strings.
-        elif type(node.value) is ast.Str:
-            args = [node.value]
-            st_write = _build_st_write_call(args)
-
-        # st.write all variables, and also print the variable's name.
-        elif type(node.value) is ast.Name:
-            args = [
-                ast.Str(s='**%s**' % node.value.id),
-                node.value
-            ]
-            st_write = _build_st_write_call(args)
-
-        # st.write everything else
-        else:
-            args = [node.value]
-            st_write = _build_st_write_call(args)
-
-        node.value = st_write
-
-    if is_root:
-        # Import Streamlit so we can use it in the st_write's above.
-        _insert_import_statement(tree)
-
-    ast.fix_missing_locations(tree)
-
-    return tree
+def _clean_problem_modules():
+    if 'keras' in sys.modules:
+        try:
+            keras = sys.modules['keras']
+            keras.backend.clear_session()
+        except:
+            pass
 
 
-def _insert_import_statement(tree):
-    """Insert Streamlit import statement at the top(ish) of the tree."""
+def _new_module(name):
+    """Create a new module with the given name."""
 
-    st_import = _build_st_import_statement()
+    if sys.version_info >= (3, 4):
+        import types
+        return types.ModuleType(name)
 
-    # If the 0th node is already an import statement, put the Streamlit
-    # import below that, so we don't break "from __future__ import".
-    if tree.body and type(tree.body[0]) in (ast.ImportFrom, ast.Import):
-        tree.body.insert(1, st_import)
-
-    # If the 0th node is a docstring and the 1st is an import statement,
-    # put the Streamlit import below those, so we don't break "from
-    # __future__ import".
-    elif (
-        len(tree.body) > 1
-        and (
-            type(tree.body[0]) is ast.Expr and
-            type(tree.body[0].value) is ast.Str
-        )
-        and type(tree.body[1]) in (ast.ImportFrom, ast.Import)):
-        tree.body.insert(2, st_import)
-
-    else:
-        tree.body.insert(0, st_import)
+    import imp
+    return imp.new_module(name)
 
 
-def _build_st_import_statement():
-    """Build AST node for `import streamlit as __streamlit__`."""
-    return ast.Import(
-        names = [ast.alias(
-            name='streamlit',
-            asname='__streamlit__',
-        )],
-    )
+# Code modified from IPython (BSD license)
+# Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
+class script_path(object):
+    """A context for prepending a directory to sys.path for a second."""
 
+    def __init__(self, report):
+        self._report = report
+        self._added_path = False
 
-def _build_st_write_call(nodes):
-    """Build AST node for `__streamlit__.write(*nodes)`."""
-    return ast.Call(
-        func=ast.Attribute(
-            attr='write',
-            value=ast.Name(id='__streamlit__', ctx=ast.Load()),
-            ctx=ast.Load(),
-        ),
-        args=nodes,
-        keywords=[],
-        kwargs=None,
-        starargs=None,
-    )
+    def __enter__(self):
+        if self._report.script_path not in sys.path:
+            sys.path.insert(0, self._report.script_path)
+            self._added_path = True
+
+    def __exit__(self, type, value, traceback):
+        if self._added_path:
+            try:
+                sys.path.remove(self._report.script_path)
+            except ValueError:
+                pass
+
+        # Returning False causes any exceptions to be re-raised.
+        return False

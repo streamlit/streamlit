@@ -5,13 +5,14 @@
   "homepage": ".",
   "scripts": {
     "start": "craco start",
-    "build": "./scripts/preload.sh && craco build",
+    "build": "craco build",
     "test": "craco test --env=jsdom",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "aws-sdk": "^2.454.0",
+    "bokehjs": "^1.1.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
     "d3": "^5.9.2",
@@ -63,6 +64,7 @@
     "@types/plotly.js": "^1.44.1",
     "@types/prismjs": "^1.16.0",
     "@types/react": "^16.8.14",
+    "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-plotly.js": "^2.2.2",
     "@types/react-transition-group": "^2.9.0",

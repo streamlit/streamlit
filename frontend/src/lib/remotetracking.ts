@@ -11,7 +11,7 @@ import {
   BROWSER_IP_ADDRESS,
 } from './baseconsts'
 
-import {logAlways} from './log'
+import {logAlways, logMessage} from './log'
 import mixpanel, {Dict} from 'mixpanel-browser'
 
 /** Our Mixpanel Token */
@@ -35,13 +35,20 @@ const preInitializationEventQueue: Event[] = []
  * Params:
  *   gatherUsageStats: a boolean. If true, we'll track usage remotely.
  */
-export function initRemoteTracker({gatherUsageStats}: {gatherUsageStats?: boolean}): void {
+export function initRemoteTracker({gatherUsageStats, email}: {gatherUsageStats?: boolean; email?: string}): void {
   if (gatherUsageStats != null) {
     trackUsage = gatherUsageStats
   }
 
   if (trackUsage) {
     mixpanel.identify(INSTALLATION_ID)
+    if (email) {
+      logMessage(`Email: ${email}`)
+      mixpanel.people.set({
+        '$email': email,
+        '$created': new Date().toISOString(),
+      })
+    }
     mixpanel.opt_in_tracking()
   } else {
     mixpanel.opt_out_tracking()

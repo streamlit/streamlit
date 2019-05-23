@@ -11,10 +11,21 @@ import copy
 import hashlib
 import inspect
 import os
-import pickle
 import re
 import shutil
 import struct
+
+try:
+    # cPickle, if available, is much faster than pickle.
+    # Source: https://pymotw.com/2/pickle/
+    #
+    # In many situations it's even faster than deepcopy (used for the in-memory
+    # cache), but deepcopy is more general.
+    # Source: https://stackoverflow.com/a/1411229
+    #
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from functools import wraps
 
@@ -72,7 +83,6 @@ def write_to_disk_cache(path, rv):
         except (FileNotFoundError, IOError, OSError):
             pass
         raise CacheError('Unable to write to cache: %s' % e)
-    LOGGER.debug('Cache MISS: ' + str(type(rv)))
 
 
 def read_from_cache(path, use_disk_cache=False):
@@ -176,12 +186,29 @@ def cache(func=None, on_disk=False):
     return wrapped_func
 
 
-def clear_cache(verbose=False):
-    """Clear the memoization cache."""
+def clear_cache():
+    """Clear the memoization cache.
+
+    Returns
+    -------
+    boolean
+        True if the cache was cleared. False otherwise (e.g. cache file doesn't
+        exist on disk).
+    """
+    return _clear_disk_cache() or _clear_mem_cache()
+
+
+def _clear_disk_cache():
+    # TODO: Only delete disk cache for functions related to the user's current
+    # script.
     cache_path = os.path.join(util.STREAMLIT_ROOT_DIRECTORY, 'cache')
     if os.path.isdir(cache_path):
         shutil.rmtree(cache_path)
-        if verbose:
-            print('Cleared %s directory.' % cache_path)
-    elif verbose:
-        print('No such directory %s so nothing to clear. :)' % cache_path)
+        return True
+    return False
+
+
+def _clear_mem_cache():
+    global mem_cache
+    mem_cache = {}
+    return True
