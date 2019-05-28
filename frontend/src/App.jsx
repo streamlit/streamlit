@@ -77,6 +77,10 @@ class App extends PureComponent {
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
+
+    // Widget-throttle bits. TODO: cleanup or remove!
+    this.latestWidgetBackMsg = null
+    this.widgetThrottleTimer = null
   }
 
   /**
@@ -537,34 +541,34 @@ class App extends PureComponent {
    * TODO: remove me post-May 2019 hackathon!
    */
   sendThrottledWidgetBackMsg = (msg) => {
-    const THROTTLE_MILLIS = 400
+    const THROTTLE_MS = 400
 
     this.latestWidgetBackMsg = msg
 
-    if (this.widgetThrottleTimer !== undefined) {
+    if (this.widgetThrottleTimer != null) {
       // A timer is already running. It'll send this BackMsg when
       // it wakes up
       return
     }
 
-    const delta = new Date().getTime() - this.lastBackMsgTime
-    if (delta >= THROTTLE_MILLIS) {
+    const delta = Date.now() - this.lastBackMsgTime
+    if (delta >= THROTTLE_MS) {
       // We can send our message immediately
       this.sendLatestWidgetBackMsg()
     } else {
       // Schedule our throttle timer
       this.widgetThrottleTimer = window.setTimeout(
-        this.sendLatestWidgetBackMsg, THROTTLE_MILLIS - delta)
+        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
     }
   }
 
   sendLatestWidgetBackMsg = () => {
     if (this.latestWidgetBackMsg != null) {
       this.sendBackMsg(this.latestWidgetBackMsg)
-      this.lastBackMsgTime = new Date().getTime()
+      this.lastBackMsgTime = Date.now()
     }
     this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = undefined
+    this.widgetThrottleTimer = null
   }
 
   /**
