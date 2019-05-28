@@ -85,7 +85,7 @@ def _clip_image(image, clamp):
 
 def marshall_images(image, caption, width, proto_imgs, clamp):
     # Turn single image and caption into one element list.
-    if type(image) == list:
+    if type(image) is list:
         images = image
         captions = caption
     else:
@@ -115,11 +115,11 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
             data = _PIL_to_png_bytes(image)
 
         # BytesIO
-        elif type(image) == io.BytesIO:
+        elif type(image) is io.BytesIO:
             data = _BytesIO_to_bytes(image)
 
         # Numpy Arrays (ie opencv)
-        elif type(image) == np.ndarray:
+        elif type(image) is np.ndarray:
             data = _verify_np_shape(image)
             data = _clip_image(data, clamp)
             data = _np_array_to_png_bytes(data)
