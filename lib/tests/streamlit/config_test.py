@@ -279,7 +279,7 @@ class ConfigTest(unittest.TestCase):
             u'server.headless',
             u'server.liveSave',
             u'server.port',
-            u'server.watchFileSystem',
+            u'server.runOnSave',
         ]
         keys = sorted(config._config_options.keys())
         self.assertEqual(config_options, keys)

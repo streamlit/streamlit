@@ -338,14 +338,14 @@ _create_option(
 _create_option(
     'proxy.runOnSave',
     description='Watch for filesystem changes and rerun reports.',
-    replaced_by='server.watchFileSystem',
+    replaced_by='server.runOnSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 _create_option(
     'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
-    replaced_by='server.watchFileSystem',
+    replaced_by='server.runOnSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 _create_option(
@@ -429,9 +429,9 @@ _create_option(
 
 
 _create_option(
-    'server.watchFileSystem',
-    description='Watch for filesystem changes and let user know.',
-    default_val=True)
+    'server.runOnSave',
+    description='Automatically rerun script when the file is modified on disk.',
+    default_val=False)
 
 
 _create_option(

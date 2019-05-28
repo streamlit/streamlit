@@ -16,13 +16,13 @@ client:
 development: true
 log_level: debug
 
-proxy:
+server:
   # IP address of the machine where the Streamlit Proxy is running.
   externalIP: ${IP}
 
   # Is the proxy running remotely.
   headless: true
-  watchFileSystem: false
+  runOnSave: false
   port: ${PORT}
 EOF
 

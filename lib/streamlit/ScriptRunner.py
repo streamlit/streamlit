@@ -43,7 +43,7 @@ class ScriptRunner(object):
         self._paused = threading.Event()
         self._state_change_requested = threading.Event()
 
-        self.run_on_save = config.get_option('server.watchFileSystem')
+        self.run_on_save = config.get_option('server.runOnSave')
 
         self.on_state_changed = Signal(
             doc="""Emitted when the script's execution state state changes.
@@ -210,7 +210,10 @@ class ScriptRunner(object):
             # not robust in a multi-user environment.
             sys.argv = self._report.argv
 
-            with script_path(self._report):
+            # Add special variables to the module's dict.
+            module.__dict__['__file__'] = self._report.script_path
+
+            with modified_sys_path(self._report):
                 exec(code, module.__dict__)
 
         except RerunException:
@@ -305,7 +308,7 @@ def _new_module(name):
 
 # Code modified from IPython (BSD license)
 # Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
-class script_path(object):
+class modified_sys_path(object):
     """A context for prepending a directory to sys.path for a second."""
 
     def __init__(self, report):
