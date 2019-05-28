@@ -38,6 +38,40 @@ _section_descriptions = collections.OrderedDict(
 _config_options = dict()
 
 
+def set_option(key, value):
+    """Set config option.
+
+    Note that some config parameters depend on others, so changing one parameter
+    may affect others in unexpected ways.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    _set_option(key, value, _USER_DEFINED)
+
+
+def get_option(key):
+    """Return the current value of a given Streamlit config option.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    """
+    if key not in _config_options:
+        raise RuntimeError('Config key "%s" not defined.' % key)
+    return _config_options[key].value
+
+
 def _create_section(section, description):
     """Create a config section and store it globally in this module."""
     assert section not in _section_descriptions, (
@@ -47,7 +81,8 @@ def _create_section(section, description):
 
 def _create_option(
         key, description=None, default_val=None, visibility='visible',
-        deprecated=False, deprecation_text=None, expiration_date=None):
+        deprecated=False, deprecation_text=None, expiration_date=None,
+        replaced_by=None):
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -86,7 +121,8 @@ def _create_option(
     option = ConfigOption(
         key, description=description, default_val=default_val,
         visibility=visibility, deprecated=deprecated,
-        deprecation_text=deprecation_text, expiration_date=expiration_date)
+        deprecation_text=deprecation_text, expiration_date=expiration_date,
+        replaced_by=replaced_by, config_getter=get_option)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -110,7 +146,7 @@ def _delete_option(key):
 PROXY_DEPRECATION_TEXT = '''This configuration option does not do anything
 anymore, since Streamlit no longer has a proxy. Please remove it from your
 config file.'''
-PROXY_DEPRECATION_EXPIRATION = '2019-11-19'
+PROXY_DEPRECATION_EXPIRATION = '2019-06-30'
 
 
 # Config Section: Global #
@@ -127,8 +163,8 @@ _create_option(
         - "off" : turn off sharing.
         - "streamlit-public" : share to Streamlit's public cloud. Shared reports
            will be viewable by anyone with the URL.
-        - "s3" : share to S3, based on the settings under the [s3] section of this
-          config file.
+        - "s3" : share to S3, based on the settings under the [s3] section of
+          this config file.
         ''',
     default_val='streamlit-public')
 
@@ -179,18 +215,20 @@ def _global_unit_test():
 
 # Config Section: Client #
 
-_create_section('client', 'Settings for users to connect to Streamlit.')
+_create_section('client', 'Settings for scripts that use Streamlit.')
 
 _create_option(
     'client.caching',
     description='Whether to enable caching to ./.streamlit/cache.',
     default_val=True)
 
+# TODO DEPRECATION
 _create_option(
     'client.displayEnabled',
     description='''If false, makes your Streamlit script not sent data to a
         Streamlit report.''',
-    default_val=True)
+    replaced_by='runner.displayEnabled',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 _create_option(
     'client.waitForProxySecs',
@@ -231,6 +269,7 @@ _create_option(
     deprecated=True,
     deprecation_text=PROXY_DEPRECATION_TEXT,
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
 
 @_create_option(
     'client.proxyPort',
@@ -276,53 +315,47 @@ _create_option(
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
-@_create_option('proxy.useNode', visibility='hidden')
-def _proxy_use_node():
-    """Whether to use the node server."""
-    return get_option('global.developmentMode')
-
-
-@_create_option('proxy.isRemote')
-@util.memoize
-def _proxy_is_remote():
-    """Is the proxy running remotely.
+_create_option(
+    'proxy.isRemote',
+    description='''Is the proxy running remotely.
 
     Default: false unless we are on a Linux box where DISPLAY is unset.
-    """
-    is_live_save_on = get_option('proxy.liveSave')
-    is_linux = (platform.system() == 'Linux')
-    is_headless = (not os.getenv('DISPLAY'))
-    is_running_in_editor_plugin = (
-        os.getenv('IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN') is not None)
-    return (
-        is_live_save_on or
-        (is_linux and is_headless) or
-        is_running_in_editor_plugin
-    )
+    ''',
+    replaced_by='server.headless',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 _create_option(
     'proxy.liveSave',
     description='''
         Immediately share the report in such a way that enables live
-        monitoring.
+        monitoring, and post-run analysis.
         ''',
-    default_val=False)
+    replaced_by='server.liveSave',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
+
+_create_option(
+    'proxy.runOnSave',
+    description='Watch for filesystem changes and rerun reports.',
+    replaced_by='server.watchFileSystem',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
 
 _create_option(
     'proxy.watchFileSystem',
     description='Watch for filesystem changes and rerun reports.',
-    default_val=True,
-    deprecated=True,
-    deprecation_text='Use proxy.runOnSave instead.',
-    expiration_date='2019-10-16')
+    replaced_by='server.watchFileSystem',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 _create_option(
     'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
         ''',
-    default_val=True)
+    replaced_by='server.enableCORS',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
 
 _create_option(
     'proxy.port',
@@ -330,8 +363,11 @@ _create_option(
         The port where the proxy will listen for client and browser
         connections.
         ''',
-    default_val=8501)
+    replaced_by='server.port',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
+
+# Config Section: Runner #
 
 _create_section('runner', 'Settings for how Streamlit executes your script')
 
@@ -353,14 +389,66 @@ _create_option(
     default_val=False)
 
 
-@_create_option('proxy.runOnSave', default_val=False)
-def _run_on_save():
-    """Whether to automatically re-run a report when it changes on disk."""
-    if is_manually_set('proxy.runOnSave'):
-        return get_option('proxy.runOnSave')
-    elif is_manually_set('proxy.watchFileSystem'):
-        return get_option('proxy.watchFileSystem')
-    return False
+_create_option(
+    'runner.displayEnabled',
+    description='''If false, makes your Streamlit script not sent data to a
+    Streamlit report.''',
+    default_val=True)
+
+
+# Config Section: Server #
+
+_create_section('server', 'Settings for the Streamlit server')
+
+
+@_create_option('server.headless')
+@util.memoize
+def _server_headless():
+    """If false, will attempt to open a browser window on start.
+
+    Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
+    (2) server.liveSave is set.
+    """
+    is_live_save_on = get_option('proxy.liveSave')
+    is_linux = (platform.system() == 'Linux')
+    has_display_env = (not os.getenv('DISPLAY'))
+    is_running_in_editor_plugin = (
+        os.getenv('IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN') is not None)
+    return (
+        is_live_save_on or
+        (is_linux and has_display_env) or
+        is_running_in_editor_plugin
+    )
+
+
+_create_option(
+    'server.liveSave',
+    description='''Immediately share the report in such a way that enables live
+        monitoring, and post-run analysis.''',
+    default_val=False)
+
+
+_create_option(
+    'server.watchFileSystem',
+    description='Watch for filesystem changes and let user know.',
+    default_val=True)
+
+
+_create_option(
+    'server.port',
+    description='''
+        The port where the server will listen for client and browser
+        connections.
+        ''',
+    default_val=8501)
+
+
+_create_option(
+    'server.enableCORS',
+    description='''
+        Enables support for Cross-Origin Request Sharing, for added security.
+        ''',
+    default_val=True)
 
 
 # Config Section: Browser #
@@ -370,17 +458,23 @@ _create_section('browser', 'Configuration of browser front-end.')
 _create_option(
     'browser.remotelyTrackUsage',
     description='Whether to send usage statistics to Streamlit.',
-    default_val=True,
-    deprecated=True,
-    deprecation_text='Use browser.gatherUsageStats instead.',
+    replaced_by='browser.gatherUsageStats',
     expiration_date='2019-06-28')
+
+_create_option(
+    'browser.serverAddress',
+    description='''
+        Internet address of the server server that the browser should connect
+        to. Can be IP address or DNS name.''',
+    default_val='localhost')
 
 _create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
         to. Can be IP address or DNS name.''',
-    default_val='localhost')
+    replaced_by='browser.serverAddress',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 @_create_option('browser.gatherUsageStats')
@@ -391,14 +485,26 @@ def _gather_usage_stats():
     return True
 
 
-@_create_option('browser.proxyPort')
+@_create_option('browser.serverPort')
 @util.memoize
-def _browser_proxy_port():
-    """Port that the browser should use to connect to the proxy.
+def _browser_server_port():
+    """Port that the browser should use to connect to the server.
 
-    Default: whatever value is set in proxy.port.
+    Default: whatever value is set in server.port.
     """
-    return get_option('proxy.port')
+    return get_option('server.port')
+
+
+_create_option(
+    'browser.proxyPort',
+    description='''
+        Port that the browser should use to connect to the server.
+
+        Default: whatever value is set in browser.serverPort.
+    ''',
+    deprecation_text='Use browser.serverPort instead.',
+    replaced_by='browser.serverPort',
+    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 # Config Section: S3 #
@@ -462,7 +568,8 @@ def _s3_secret_access_key():
 _create_option(
     's3.requireLoginToView',
     description='''Make the shared report visible only to users who have been
-        granted view permission.
+        granted view permission. If you are interested in this option, contact
+        us at support@streamlit.io.
         ''',
     default_val=False)
 
@@ -512,42 +619,6 @@ def _get_public_credentials():
             'Error getting Streamlit credentials. Sharing will be '
             'disabled. %s', e)
         return None
-
-
-# Public Interface #
-
-def set_option(key, value):
-    """Set config option.
-
-    Note that some config parameters depend on others, so changing one parameter
-    may affect others in unexpected ways.
-
-    Parameters
-    ----------
-    key : str
-        The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
-
-    value
-        The new value to assign to this config option.
-
-    """
-    _set_option(key, value, _USER_DEFINED)
-
-
-def get_option(key):
-    """Return the current value of a given Streamlit config option.
-
-    Parameters
-    ----------
-    key : str
-        The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
-
-    """
-    if key not in _config_options:
-        raise RuntimeError('Config key "%s" not defined.' % key)
-    return _config_options[key].value
 
 
 def get_where_defined(key):
@@ -656,10 +727,12 @@ def show_config():
             if option.deprecated:
                 append_comment('#')
                 append_comment('# ' + click.style('DEPRECATED.', fg='yellow'))
-                append_comment('# %s' %
-                        '\n'.join(_clean_paragraphs(option.deprecation_text)))
-                append_comment('# This option will be removed on or after %s.'
-                           % option.expiration_date)
+                append_comment(
+                    '# %s' %
+                    '\n'.join(_clean_paragraphs(option.deprecation_text)))
+                append_comment(
+                    '# This option will be removed on or after %s.'
+                    % option.expiration_date)
                 append_comment('#')
 
             toml_default = toml.dumps({'default': option.default_val})
@@ -754,7 +827,8 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith('env:'):  # noqa F821
+    if (isinstance(value, string_types) and
+            value.startswith('env:')):  # noqa F821
         var_name = value[len('env:'):]
         env_var = os.environ.get(var_name)
 
@@ -819,12 +893,17 @@ def _check_conflicts():
     #   2. the proxyPort value in manifest.json, which would work, but only
     #   exists with proxy.liveSave.
 
-    if get_option('proxy.useNode'):
-        assert _is_unset('proxy.port'), (
-            'proxy.port does not work when proxy.useNode is true. ')
+    if get_option('global.developmentMode'):
+        assert (
+            _is_unset('server.port') and
+            _is_unset('proxy.port')), (
+            'server.port does not work when global.developmentMode is true.')
 
-        assert _is_unset('browser.proxyPort'), (
-            'browser.proxyPort does not work when proxy.useNode is true. ')
+        assert (
+            _is_unset('browser.serverPort') and
+            _is_unset('browser.proxyPort')), (
+            'browser.serverPort does not work when global.developmentMode is '
+            'true.')
 
     # Sharing-related conflicts
 

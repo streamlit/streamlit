@@ -268,6 +268,6 @@ def _get_browser_address_bar_port():
     server-browser websocket.
 
     """
-    if config.get_option('proxy.useNode'):
+    if config.get_option('global.developmentMode'):
         return 3000
     return config.get_option('browser.proxyPort')

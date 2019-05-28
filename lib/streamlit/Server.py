@@ -77,7 +77,7 @@ class Server(object):
         self._storage = None
         self._credentials = Credentials.get_current()
 
-        port = config.get_option('proxy.port')
+        port = config.get_option('server.port')
         app = tornado.web.Application(self._get_routes())
         app.listen(port)
 
@@ -96,7 +96,7 @@ class Server(object):
             (r'/healthz', _HealthHandler, dict(server=self)),
         ]
 
-        if not config.get_option('proxy.useNode'):
+        if not config.get_option('global.developmentMode'):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
@@ -109,7 +109,8 @@ class Server(object):
             ])
         else:
             LOGGER.debug(
-                'useNode == True, not serving static content from python.')
+                'developmentMode == True, '
+                'not serving static content from python.')
 
         return routes
 
@@ -474,7 +475,7 @@ def _is_url_from_allowed_origins(url):
         True if URL is accepted. False otherwise.
 
     """
-    if not config.get_option('proxy.enableCORS'):
+    if not config.get_option('server.enableCORS'):
         # Allow everything when CORS is disabled.
         return True
 

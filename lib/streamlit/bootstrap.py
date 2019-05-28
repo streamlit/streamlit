@@ -58,8 +58,8 @@ def _on_server_start(server, report):
     _print_url(report)
 
     def maybe_open_browser():
-        if config.get_option('proxy.isRemote'):
-            # Don't open browser when in remote (headless) mode.
+        if config.get_option('server.headless'):
+            # Don't open browser when in headless mode.
             return
 
         if server.browser_is_connected:
@@ -85,7 +85,7 @@ def _print_url(report):
             ('URL', report.get_url(config.get_option('browser.proxyAddress'))),
         ]
 
-    elif config.get_option('proxy.isRemote'):
+    elif config.get_option('server.headless'):
         urls = [
             ('Network URL', report.get_url(util.get_internal_ip())),
             ('External URL', report.get_url(util.get_external_ip())),
