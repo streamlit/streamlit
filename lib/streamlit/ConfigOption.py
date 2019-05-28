@@ -101,7 +101,7 @@ class ConfigOption(object):
         replaced_by : str or None
             If this is option has been deprecated in favor or another option,
             set this to the path to the new option. Example:
-            'server.watchFileSystem'. If this is set, the 'deprecated' option
+            'server.runOnSave'. If this is set, the 'deprecated' option
             will automatically be set to True, and deprecation_text will have a
             meaningful default (unless you override it).
         config_getter : callable or None
