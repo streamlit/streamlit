@@ -128,7 +128,7 @@ class ConfigOption(object):
         if self.replaced_by:
             self.deprecated = True
             if deprecation_text is None:
-                deprecation_text = 'Replaced by %s' % self.replaced_by
+                deprecation_text = 'Replaced by %s.' % self.replaced_by
 
         if self.deprecated:
             assert expiration_date, \
