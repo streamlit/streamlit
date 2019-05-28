@@ -48,7 +48,7 @@ class App extends PureComponent {
       elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
-        runOnSave: true,
+        runOnSave: false,
       },
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,

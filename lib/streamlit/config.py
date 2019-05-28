@@ -431,7 +431,7 @@ _create_option(
 _create_option(
     'server.runOnSave',
     description='Automatically rerun script when the file is modified on disk.',
-    default_val=True)
+    default_val=False)
 
 
 _create_option(
