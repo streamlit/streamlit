@@ -280,6 +280,7 @@ class App extends PureComponent {
       this.openDialog({
         type: 'scriptCompileError',
         exception: sessionEvent.scriptCompilationException,
+        onRerun: this.rerunScript,
       })
     }
   }
@@ -358,20 +359,11 @@ class App extends PureComponent {
   }
 
   /**
-   * Empties out all elements whose reportIds are no longer current.
+   * Removes all elements whose reportIds are no longer current.
    */
   clearOldElements() {
     this.setState(({ elements, reportId }) => ({
-      elements: elements.map((elt) => {
-        if (elt && elt.get('reportId') === reportId) {
-          return elt
-        }
-        return fromJS({
-          reportId,
-          empty: { unused: true },
-          type: 'empty',
-        })
-      }),
+      elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
     }))
   }
 

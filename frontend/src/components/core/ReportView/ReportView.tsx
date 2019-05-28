@@ -5,11 +5,11 @@
 
 import React, {PureComponent, ReactNode} from 'react'
 import {AutoSizer} from 'react-virtualized'
-import {fromJS, List, Map as ImmutableMap} from 'immutable'
+import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
 import {Progress} from 'reactstrap'
-import {dispatchOneOf} from '../../../lib/immutableProto'
+import {dispatchOneOf} from 'lib/immutableProto'
 import {Text as TextProto} from 'autogen/protobuf'
-import {ReportRunState} from '../../../lib/ReportRunState'
+import {ReportRunState} from 'lib/ReportRunState'
 import './ReportView.scss'
 
 // Load (non-lazy) core elements.
@@ -24,7 +24,7 @@ const Audio = React.lazy(() => import('../../elements/Audio/'))
 const Balloons = React.lazy(() => import('../../elements/Balloons/'))
 const DataFrame = React.lazy(() => import('../../elements/DataFrame/'))
 const ImageList = React.lazy(() => import('../../elements/ImageList/'))
-const Map = React.lazy(() => import('../../elements/Map/'))
+const MapElement = React.lazy(() => import('../../elements/Map/'))
 const DeckGlChart = React.lazy(() => import('../../elements/DeckGlChart/'))
 const BokehChart = React.lazy(() => import('../../elements/BokehChart/'))
 const GraphVizChart = React.lazy(() => import('../../elements/GraphVizChart/'))
@@ -57,9 +57,7 @@ interface Props {
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 export class ReportView extends PureComponent<Props> {
-  public constructor(props: Props) {
-    super(props)
-  }
+  private elementsToRender: Iterable<number, Element | undefined> = List<Element>();
 
   public render(): ReactNode {
     return (
@@ -70,11 +68,26 @@ export class ReportView extends PureComponent<Props> {
   }
 
   private renderElements(width: number): ReactNode[] {
-    const out: ReactNode[] = []
+    if (this.props.reportRunState === ReportRunState.RUNNING) {
+      // When the report is running, use our most recent list of rendered elements as placeholders
+      // for any empty elements we encounter.
+      this.elementsToRender = this.props.elements.map((element?, index?) => {
+        if (element == null || index == null) {
+          return element
+        }
+
+        const isEmpty = element.get('type') === 'empty'
+        return isEmpty ? this.elementsToRender.get(index) : element
+      })
+
+    } else {
+      this.elementsToRender = this.props.elements
+    }
 
     // Transform our elements into ReactNodes.
-    this.props.elements.forEach((element?: Element, index?: number) => {
-      if (!element || index == null) {
+    const out: ReactNode[] = []
+    this.elementsToRender.forEach((element?: Element, index?: number) => {
+      if (element == null || index == null) {
         return
       }
 
@@ -83,8 +96,10 @@ export class ReportView extends PureComponent<Props> {
         return
       }
 
-      const className = this.props.showStaleElementIndicator && this.isStaleElement(element) ?
-        'element-container stale-element' : 'element-container'
+      const showStaleState =
+        this.props.showStaleElementIndicator && this.isStaleElement(element)
+
+      const className = showStaleState ? 'element-container stale-element' : 'element-container'
 
       out.push(
         <div className={className} key={index}>
@@ -139,7 +154,7 @@ export class ReportView extends PureComponent<Props> {
       exception: (el: Element) => <ExceptionElement element={el} width={width}/>,
       graphvizChart: (el: Element) => <GraphVizChart element={el} id={index} width={width} />,
       imgs: (el: Element) => <ImageList element={el} width={width}/>,
-      map: (el: Element) => <Map element={el} width={width}/>,
+      map: (el: Element) => <MapElement element={el} width={width}/>,
       plotlyChart: (el: Element) => <PlotlyChart element={el} width={width}/>,
       progress: (el: Element) => <Progress value={el.get('value')} style={{width}}/>,
       table: (el: Element) => <Table element={el} width={width}/>,
