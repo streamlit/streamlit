@@ -6,7 +6,7 @@ describe('st.title', () => {
   })
 
   it('displays a title', () => {
-    cy.get('.element-container h1')
-      .should('contain', 'Hello, Streamlit!')
+    cy.get('.element-container .stText h1')
+      .should('contain', 'This title is awesome!')
   })
 })

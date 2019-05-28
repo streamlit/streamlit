@@ -56,7 +56,7 @@ class Text extends PureStreamlitElement<Props, StState> {
       // Plain, fixed width text.
       case TextProto.Format.PLAIN:
         return (
-          <div className="fixed-width" style={{width}}>
+          <div className="fixed-width stText" style={{width}}>
             {body}
           </div>
         )
@@ -64,7 +64,7 @@ class Text extends PureStreamlitElement<Props, StState> {
       // Markdown.
       case TextProto.Format.MARKDOWN:
         return (
-          <div className="markdown-text-container" style={{width}}>
+          <div className="markdown-text-container stText" style={{width}}>
             <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
           </div>
         )
@@ -80,7 +80,7 @@ class Text extends PureStreamlitElement<Props, StState> {
           throw e
         }
         return (
-          <div className="json-text-container" style={{width}}>
+          <div className="json-text-container stText" style={{width}}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
@@ -97,7 +97,7 @@ class Text extends PureStreamlitElement<Props, StState> {
       case TextProto.Format.SUCCESS:
         return (
           <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
-            <div className="markdown-text-container">
+            <div className="markdown-text-container stText">
               <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
             </div>
           </div>

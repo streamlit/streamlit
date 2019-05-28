@@ -7,6 +7,8 @@
     "start": "craco start",
     "build": "craco build",
     "test": "craco test --env=jsdom",
+    "cy:open": "unset NODE_OPTIONS && cypress open",
+    "cy:run": "unset NODE_OPTIONS && cypress run",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
   },
