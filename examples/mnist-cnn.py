@@ -126,7 +126,7 @@ model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
 
-show_terminal_output = not config.get_option('proxy.liveSave')
+show_terminal_output = not config.get_option('server.liveSave')
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
     epochs=epochs, verbose=show_terminal_output, callbacks=[MyCallback(x_test)])
 

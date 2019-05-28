@@ -50,26 +50,24 @@ class ConfigOption(object):
         The value for this option. If this is a a complex config option then
         the callback is called EACH TIME value is evaluated.
     section : str
-        The section of this option.
+        The section of this option. Example: 'global'.
     name : str
-        The name of this option.
+        See __init__.
     description : str
-        A "commment" for this option.
+        See __init__.
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
     visibility : {'visible', 'hidden', 'obfuscated'}
-        If 'hidden', will not include this when listing all options to users.
-        If 'obfuscated', will list it, but will not print out its actual value.
+        See __init__.
     deprecated: bool
-        Whether this config option is deprecated.
+        See __init__.
     deprecation_text : str or None
-        If this config option is deprecated, set to a string explaining what to
-        use instead.
+        See __init__.
     expiration_date : str or None
-        If this config option is deprecated, this is the date at which it
-        will no longer be accepted. Format: 'YYYY-MM-DD'.
-
+        See __init__.
+    replaced_by : str or None
+        See __init__.
     '''
 
     # This is a special value for ConfigOption.where_defined which indicates
@@ -79,7 +77,7 @@ class ConfigOption(object):
     def __init__(
             self, key, description=None, default_val=None,
             visibility='visible', deprecated=False, deprecation_text=None,
-            expiration_date=None):
+            expiration_date=None, replaced_by=None, config_getter=None):
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -95,12 +93,20 @@ class ConfigOption(object):
         deprecated: bool
             Whether this config option is deprecated.
         deprecation_text : str or None
-            If this config option is deprecated, set to a string explaining what to
-            use instead.
+            Required if deprecated == True. Set this to a string explaining
+            what to use instead.
         expiration_date : str or None
-            If this config option is deprecated, this is the date at which it
+            Required if deprecated == True. set this to the date at which it
             will no longer be accepted. Format: 'YYYY-MM-DD'.
-
+        replaced_by : str or None
+            If this is option has been deprecated in favor or another option,
+            set this to the path to the new option. Example:
+            'server.watchFileSystem'. If this is set, the 'deprecated' option
+            will automatically be set to True, and deprecation_text will have a
+            meaningful default (unless you override it).
+        config_getter : callable or None
+            Required if replaced_by != None. Should be set to
+            config.get_option.
         """
         # Parse out the section and name.
         self.key = key
@@ -110,12 +116,19 @@ class ConfigOption(object):
         assert match, 'Key "%s" has invalid format.' % self.key
         self.section, self.name = match.group('section'), match.group('name')
 
-        # This string is like a comment. If None, it should be set in __call__.
         self.description = description
 
         self.visibility = visibility
         self.default_val = default_val
         self.deprecated = deprecated
+        self.replaced_by = replaced_by
+        self._get_val_func = None
+        self.where_defined = ConfigOption.DEFAULT_DEFINITION
+
+        if self.replaced_by:
+            self.deprecated = True
+            if deprecation_text is None:
+                deprecation_text = 'Replaced by %s' % self.replaced_by
 
         if self.deprecated:
             assert expiration_date, \
@@ -125,10 +138,10 @@ class ConfigOption(object):
             self.expiration_date = expiration_date
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
-        # Set the value.
-        self._get_val_func = None
-        self.where_defined = None
-        self.set_value(default_val, ConfigOption.DEFAULT_DEFINITION)
+        if self.replaced_by:
+            self._get_val_func = lambda: config_getter(self.replaced_by)
+        else:
+            self.set_value(default_val)
 
     def __call__(self, get_val_func):
         """Assign a function to compute the value for this option.
@@ -158,7 +171,7 @@ class ConfigOption(object):
         """Get the value of this config option."""
         return self._get_val_func()
 
-    def set_value(self, value, where_defined):
+    def set_value(self, value, where_defined=None):
         """Set the value of this option.
 
         Parameters
@@ -170,10 +183,12 @@ class ConfigOption(object):
 
         """
         self._get_val_func = lambda: value
-        self.where_defined = where_defined
+
+        if where_defined is not None:
+            self.where_defined = where_defined
 
         if (self.deprecated and
-                where_defined != ConfigOption.DEFAULT_DEFINITION):
+                self.where_defined != ConfigOption.DEFAULT_DEFINITION):
 
             details = {
                 'key': self.key,

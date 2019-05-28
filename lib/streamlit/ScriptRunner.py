@@ -43,7 +43,7 @@ class ScriptRunner(object):
         self._paused = threading.Event()
         self._state_change_requested = threading.Event()
 
-        self.run_on_save = config.get_option('proxy.runOnSave')
+        self.run_on_save = config.get_option('server.watchFileSystem')
 
         self.on_state_changed = Signal(
             doc="""Emitted when the script's execution state state changes.

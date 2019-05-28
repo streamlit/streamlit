@@ -21,10 +21,9 @@ proxy:
   externalIP: ${IP}
 
   # Is the proxy running remotely.
-  isRemote: true
+  headless: true
   watchFileSystem: false
   port: ${PORT}
-  useNode: false
 EOF
 
 python -m streamlit.proxy

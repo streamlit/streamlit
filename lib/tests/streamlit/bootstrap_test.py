@@ -51,7 +51,7 @@ class BootstrapPrintTest(unittest.TestCase):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set({
             'browser.proxyAddress': False})
         mock_get_option = testutil.build_mock_config_get_option({
-            'proxy.isRemote': True})
+            'server.headless': True})
 
         mock_get_internal_ip.return_value = 'internal-ip'
         mock_get_external_ip.return_value = 'external-ip'
@@ -70,7 +70,7 @@ class BootstrapPrintTest(unittest.TestCase):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set({
             'browser.proxyAddress': False})
         mock_get_option = testutil.build_mock_config_get_option({
-            'proxy.isRemote': False})
+            'server.headless': False})
 
         mock_get_internal_ip.return_value = 'internal-ip'
 

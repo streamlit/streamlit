@@ -120,6 +120,9 @@ export class StatusWidget extends PureComponent<Props, State> {
     this.sessionEventConn = this.props
       .sessionEventDispatcher.onSessionEvent.connect(e => this.handleSessionEvent(e))
     window.addEventListener('scroll', this.handleScroll)
+
+    // Preload the close icon as a fix for it sporadically not appearing
+    new Image().src = openIconic + '#circle-x'
   }
 
   public componentWillUnmount(): void {
