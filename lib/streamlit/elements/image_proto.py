@@ -87,15 +87,23 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
     # Turn single image and caption into one element list.
     if type(image) is list:
         images = image
-        captions = caption
     else:
         images = [image]
-        captions = [caption]
 
-    # If there are no captions then make the captions list the same size
-    # as the images list.
-    if captions == [None] or captions is None:
-        captions = [None] * len(images)
+    if type(caption) is list:
+        captions = caption
+    else:
+        if isinstance(caption, six.string_types):
+            captions = [caption]
+        # You can pass in a 1-D Numpy array as captions.
+        elif type(caption) == np.ndarray and len(caption.shape) == 1:
+            captions = caption.tolist()
+        # If there are no captions then make the captions list the same size
+        # as the images list.
+        elif caption is None:
+            captions = [None] * len(images)
+        else:
+            captions = [str(caption)]
 
     assert type(
         captions) == list, 'If image is a list then caption should be as well'
