@@ -15,7 +15,7 @@ class Audio extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     const { element, width } = this.props
     const dataUrl = 'data:' + element.get('format') + ';base64,' + element.get('data')
-    return <audio className="stAudio" controls src={dataUrl} style={{ width }} />
+    return <audio controls src={dataUrl} className="stVideo" style={{ width }} />
   }
 }
 

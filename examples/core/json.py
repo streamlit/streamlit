@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 data = {
     'foo': 'bar'
 }

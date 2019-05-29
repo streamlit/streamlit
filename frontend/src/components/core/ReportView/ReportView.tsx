@@ -141,7 +141,7 @@ export class ReportView extends PureComponent<Props> {
       imgs: (el: Element) => <ImageList element={el} width={width}/>,
       map: (el: Element) => <Map element={el} width={width}/>,
       plotlyChart: (el: Element) => <PlotlyChart element={el} width={width}/>,
-      progress: (el: Element) => <Progress value={el.get('value')} style={{width}}/>,
+      progress: (el: Element) => <Progress value={el.get('value')} className="stProgress" style={{width}}/>,
       table: (el: Element) => <Table element={el} width={width}/>,
       text: (el: Element) => <Text element={el} width={width}/>,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width}/>,
