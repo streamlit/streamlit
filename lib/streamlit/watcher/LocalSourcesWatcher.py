@@ -100,7 +100,7 @@ class LocalSourcesWatcher(object):
             else:
                 filepath = spec.origin
 
-            if filepath is None:
+            if filepath is None or filepath in ['built-in', 'frozen']:
                 # Built-in modules (and other stuff) don't have origins.
                 continue
 
