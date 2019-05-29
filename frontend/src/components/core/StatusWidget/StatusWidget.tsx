@@ -21,9 +21,6 @@ import openIconic from 'assets/img/open-iconic.svg'
 import iconRunning from 'assets/img/icon_running.gif'
 import './StatusWidget.scss'
 
-/** Feature flag for showing the "Stop Script" button */
-const SHOW_STOP_BUTTON = true  // TODO: Remove on 2019-10-01
-
 /** Component props */
 interface Props {
   /** State of our connection to the server. */
@@ -262,14 +259,11 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   /** "Running... [Stop]" */
   private renderReportIsRunning(): ReactNode {
-    let stopButton: ReactNode = null
-    if (SHOW_STOP_BUTTON) {
-      const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED
-      stopButton = StatusWidget.promptButton(
-        stopRequested ? 'Stopping...' : 'Stop',
-        stopRequested,
-        this.handleStopReportClick)
-    }
+    const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED
+    const stopButton = StatusWidget.promptButton(
+      stopRequested ? 'Stopping...' : 'Stop',
+      stopRequested,
+      this.handleStopReportClick)
 
     return (
       <div
