@@ -318,8 +318,8 @@ _create_option(
     'proxy.isRemote',
     description='''Is the proxy running remotely.
 
-    Default: false unless we are on a Linux box where DISPLAY is unset.
-    ''',
+        Default: false unless we are on a Linux box where DISPLAY is unset.
+        ''',
     replaced_by='server.headless',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
@@ -329,6 +329,8 @@ _create_option(
     description='''
         Immediately share the report in such a way that enables live
         monitoring, and post-run analysis.
+
+        Default: whatever value is set in server.liveSave.
         ''',
     replaced_by='server.liveSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
@@ -336,7 +338,11 @@ _create_option(
 
 _create_option(
     'proxy.runOnSave',
-    description='Watch for filesystem changes and rerun reports.',
+    description='''
+        Watch for filesystem changes and rerun reports.
+
+        Default: whatever value is set in server.runOnSave.
+        ''',
     replaced_by='server.runOnSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
@@ -351,6 +357,8 @@ _create_option(
     'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
+
+        Default: whatever value is set in server.enableCORS.
         ''',
     replaced_by='server.enableCORS',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
@@ -361,6 +369,8 @@ _create_option(
     description='''
         The port where the proxy will listen for client and browser
         connections.
+
+        Default: whatever value is set in server.port.
         ''',
     replaced_by='server.port',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
@@ -392,6 +402,8 @@ _create_option(
 def _runner_display_enabled():
     """If false, makes your Streamlit script not sent data to a Streamlit
     report.
+
+    Default: true
     """
     if is_manually_set('client.displayEnabled'):
         return get_option('client.displayEnabled')
@@ -430,6 +442,8 @@ def _server_headless():
 def _server_live_save():
     """Immediately share the report in such a way that enables live
     monitoring, and post-run analysis.
+
+    Default: false
     """
     if is_manually_set('proxy.liveSave'):
         return get_option('proxy.liveSave')
@@ -438,7 +452,10 @@ def _server_live_save():
 
 @_create_option('server.runOnSave')
 def _server_run_on_save():
-    """Automatically rerun script when the file is modified on disk."""
+    """Automatically rerun script when the file is modified on disk.
+
+    Default: false
+    """
     if is_manually_set('proxy.runOnSave'):
         return get_option('proxy.runOnSave')
     if is_manually_set('proxy.watchFileSystem'):
@@ -450,6 +467,8 @@ def _server_run_on_save():
 def _server_port():
     """The port where the server will listen for client and browser
     connections.
+
+    Default: 8501
     """
     if is_manually_set('proxy.port'):
         return get_option('proxy.port')
@@ -458,7 +477,10 @@ def _server_port():
 
 @_create_option('server.enableCORS')
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security."""
+    """Enables support for Cross-Origin Request Sharing, for added security.
+
+    Default: true
+    """
     if is_manually_set('proxy.enableCORS'):
         return get_option('proxy.enableCORS')
     return True
@@ -470,7 +492,11 @@ _create_section('browser', 'Configuration of browser front-end.')
 
 _create_option(
     'browser.remotelyTrackUsage',
-    description='Whether to send usage statistics to Streamlit.',
+    description='''
+        Whether to send usage statistics to Streamlit.
+
+        Default: whatever is set in browser.gatherUsageStats.
+        ''',
     replaced_by='browser.gatherUsageStats',
     expiration_date='2019-06-28')
 
@@ -478,7 +504,10 @@ _create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
-        to. Can be IP address or DNS name.''',
+        to. Can be IP address or DNS name.
+
+        Default: whatever value is set in browser.serverAddress.
+        ''',
     replaced_by='browser.serverAddress',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
@@ -487,6 +516,8 @@ _create_option(
 def _browser_server_address():
     """Internet address of the server server that the browser should connect
     to. Can be IP address or DNS name.
+
+    Default: 'localhost'
     """
     if is_manually_set('browser.proxyAddress'):
         return get_option('browser.proxyAddress')
@@ -495,7 +526,10 @@ def _browser_server_address():
 
 @_create_option('browser.gatherUsageStats')
 def _gather_usage_stats():
-    """Whether to send usage statistics to Streamlit."""
+    """Whether to send usage statistics to Streamlit.
+
+    Default: true
+    """
     if is_manually_set('browser.remotelyTrackUsage'):
         return get_option('browser.remotelyTrackUsage')
     return True
@@ -605,18 +639,18 @@ _create_option(
     's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
 
-    Default: (unset)
-    ''',
+        Default: (unset)
+        ''',
     default_val=None)
 
 _create_option(
     's3.profile',
     description='''AWS credentials profile to use.
 
-    Leave unset to use your default profile.
+        Leave unset to use your default profile.
 
-    Default: (unset)
-    ''',
+        Default: (unset)
+        ''',
     default_val=None)  # If changing the default, change S3Storage.py too.
 
 
@@ -742,6 +776,16 @@ def show_config():
                 else:
                     append_comment('# %s' % txt)
 
+            toml_default = toml.dumps({'default': option.default_val})
+            toml_default = toml_default[10:].strip()
+
+            if len(toml_default) > 0:
+                append_comment('# Default: %s' % toml_default)
+            else:
+                # Don't say "Default: (unset)" here because this branch applies
+                # to complex config settings too.
+                pass
+
             if option.deprecated:
                 append_comment('#')
                 append_comment('# ' + click.style('DEPRECATED.', fg='yellow'))
@@ -752,16 +796,6 @@ def show_config():
                     '# This option will be removed on or after %s.'
                     % option.expiration_date)
                 append_comment('#')
-
-            toml_default = toml.dumps({'default': option.default_val})
-            toml_default = toml_default[10:].strip()
-
-            if len(toml_default) > 0:
-                append_comment('# Default: %s' % toml_default)
-            else:
-                # Don't say "Default: (unset)" here because this branch applies
-                # to complex config settings too.
-                pass
 
             option_is_manually_set = (
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION)
