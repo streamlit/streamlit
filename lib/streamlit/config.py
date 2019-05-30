@@ -122,7 +122,7 @@ def _create_option(
         key, description=description, default_val=default_val,
         visibility=visibility, deprecated=deprecated,
         deprecation_text=deprecation_text, expiration_date=expiration_date,
-        replaced_by=replaced_by, config_getter=get_option)
+        replaced_by=replaced_by)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -222,7 +222,6 @@ _create_option(
     description='Whether to enable caching to ./.streamlit/cache.',
     default_val=True)
 
-# TODO DEPRECATION
 _create_option(
     'client.displayEnabled',
     description='''If false, makes your Streamlit script not sent data to a
@@ -389,11 +388,14 @@ _create_option(
     default_val=False)
 
 
-_create_option(
-    'runner.displayEnabled',
-    description='''If false, makes your Streamlit script not sent data to a
-    Streamlit report.''',
-    default_val=True)
+@_create_option('runner.displayEnabled')
+def _runner_display_enabled():
+    """If false, makes your Streamlit script not sent data to a Streamlit
+    report.
+    """
+    if is_manually_set('client.displayEnabled'):
+        return get_option('client.displayEnabled')
+    return True
 
 
 # Config Section: Server #
@@ -409,6 +411,9 @@ def _server_headless():
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) server.liveSave is set.
     """
+    if is_manually_set('proxy.isRemote'):
+        return get_option('proxy.isRemote')
+
     is_live_save_on = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
     has_display_env = (not os.getenv('DISPLAY'))
@@ -421,34 +426,42 @@ def _server_headless():
     )
 
 
-_create_option(
-    'server.liveSave',
-    description='''Immediately share the report in such a way that enables live
-        monitoring, and post-run analysis.''',
-    default_val=False)
+@_create_option('server.liveSave')
+def _server_live_save():
+    """Immediately share the report in such a way that enables live
+    monitoring, and post-run analysis.
+    """
+    if is_manually_set('proxy.liveSave'):
+        return get_option('proxy.liveSave')
+    return False
 
 
-_create_option(
-    'server.runOnSave',
-    description='Automatically rerun script when the file is modified on disk.',
-    default_val=False)
+@_create_option('server.runOnSave')
+def _server_run_on_save():
+    """Automatically rerun script when the file is modified on disk."""
+    if is_manually_set('proxy.runOnSave'):
+        return get_option('proxy.runOnSave')
+    if is_manually_set('proxy.watchFileSystem'):
+        return get_option('proxy.watchFileSystem')
+    return False
 
 
-_create_option(
-    'server.port',
-    description='''
-        The port where the server will listen for client and browser
-        connections.
-        ''',
-    default_val=8501)
+@_create_option('server.port')
+def _server_port():
+    """The port where the server will listen for client and browser
+    connections.
+    """
+    if is_manually_set('proxy.port'):
+        return get_option('proxy.port')
+    return 8501
 
 
-_create_option(
-    'server.enableCORS',
-    description='''
-        Enables support for Cross-Origin Request Sharing, for added security.
-        ''',
-    default_val=True)
+@_create_option('server.enableCORS')
+def _server_enable_cors():
+    """Enables support for Cross-Origin Request Sharing, for added security."""
+    if is_manually_set('proxy.enableCORS'):
+        return get_option('proxy.enableCORS')
+    return True
 
 
 # Config Section: Browser #
@@ -462,13 +475,6 @@ _create_option(
     expiration_date='2019-06-28')
 
 _create_option(
-    'browser.serverAddress',
-    description='''
-        Internet address of the server server that the browser should connect
-        to. Can be IP address or DNS name.''',
-    default_val='localhost')
-
-_create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
@@ -477,22 +483,22 @@ _create_option(
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
+@_create_option('browser.serverAddress')
+def _browser_server_address():
+    """Internet address of the server server that the browser should connect
+    to. Can be IP address or DNS name.
+    """
+    if is_manually_set('browser.proxyAddress'):
+        return get_option('browser.proxyAddress')
+    return 'localhost'
+
+
 @_create_option('browser.gatherUsageStats')
 def _gather_usage_stats():
     """Whether to send usage statistics to Streamlit."""
     if is_manually_set('browser.remotelyTrackUsage'):
         return get_option('browser.remotelyTrackUsage')
     return True
-
-
-@_create_option('browser.serverPort')
-@util.memoize
-def _browser_server_port():
-    """Port that the browser should use to connect to the server.
-
-    Default: whatever value is set in server.port.
-    """
-    return get_option('server.port')
 
 
 _create_option(
@@ -505,6 +511,18 @@ _create_option(
     deprecation_text='Use browser.serverPort instead.',
     replaced_by='browser.serverPort',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
+
+@_create_option('browser.serverPort')
+@util.memoize
+def _browser_server_port():
+    """Port that the browser should use to connect to the server.
+
+    Default: whatever value is set in server.port.
+    """
+    if is_manually_set('browser.proxyPort'):
+        return get_option('browser.proxyPort')
+    return get_option('server.port')
 
 
 # Config Section: S3 #

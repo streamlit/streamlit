@@ -113,9 +113,8 @@ class ConfigOptionTest(unittest.TestCase):
                 expiration_date='2100-01-01',
                 config_getter=config_getter)
 
+        self.assertTrue(c.deprecated)
         self.assertFalse(c.is_expired())
-        self.assertEqual(c.value, 'newValue')
-        self.assertEqual(c.description, 'My old description')
 
     def test_replaced_by_expired(self):
         def config_getter(key):
@@ -129,6 +128,5 @@ class ConfigOptionTest(unittest.TestCase):
                 expiration_date='2000-01-01',
                 config_getter=config_getter)
 
+        self.assertTrue(c.deprecated)
         self.assertTrue(c.is_expired())
-        self.assertEqual(c.value, 'newValue')
-        self.assertEqual(c.description, 'My old description')

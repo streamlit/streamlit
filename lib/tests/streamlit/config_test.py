@@ -435,25 +435,25 @@ class ConfigTest(unittest.TestCase):
 
     def test_browser_server_port(self):
         config.set_option('server.port', 1234)
-        self.assertEqual(1234, config.get_option('browser.proxyPort'))
+        self.assertEqual(1234, config.get_option('browser.serverPort'))
 
-    def test_server_is_remote_via_liveSave(self):
+    def test_server_headless_via_liveSave(self):
         config.set_option('server.liveSave', True)
         self.assertEqual(True, config.get_option('server.headless'))
 
-    def test_server_is_remote_via_atom_plugin(self):
+    def test_server_headless_via_atom_plugin(self):
         config.set_option('server.liveSave', False)
         os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN'] = 'True'
         self.assertEqual(True, config.get_option('server.headless'))
 
-    def test_proxy_is_remote_via_server_headless(self):
+    def test_server_headless(self):
         if 'DISPLAY' in os.environ.keys():
             del os.environ['DISPLAY']
         if 'IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN' in os.environ.keys():
             del os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN']
         with patch('streamlit.config.platform.system') as p:
             p.return_value = 'Linux'
-            self.assertEqual(True, config.get_option('proxy.isRemote'))
+            self.assertEqual(True, config.get_option('server.headless'))
 
     def test_global_dev_mode(self):
         config.set_option('global.developmentMode', True)

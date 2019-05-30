@@ -138,10 +138,7 @@ class ConfigOption(object):
             self.expiration_date = expiration_date
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
-        if self.replaced_by:
-            self._get_val_func = lambda: config_getter(self.replaced_by)
-        else:
-            self.set_value(default_val)
+        self.set_value(default_val)
 
     def __call__(self, get_val_func):
         """Assign a function to compute the value for this option.
