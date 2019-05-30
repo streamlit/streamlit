@@ -49,7 +49,7 @@ const REMOTE_CONNECTION_MAX_RETRIES = 5
  * Wait this long before trying to reconnect.
  * This must be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC / 2.
  */
-const RECONNECT_WAIT_TIME_MS = 300
+const RECONNECT_WAIT_TIME_MS = 150
 
 
 /**
