@@ -265,7 +265,6 @@ class ConfigTest(unittest.TestCase):
             u'proxy.runOnSave',
             u'proxy.watchFileSystem',
             u'runner.autoWrite',
-            u'runner.displayEnabled',
             u'runner.installTracer',
             u's3.accessKeyId',
             u's3.bucket',

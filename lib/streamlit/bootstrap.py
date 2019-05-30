@@ -80,9 +80,9 @@ def _print_url(report):
     title_message = 'You can now view your Streamlit report in your browser.'
     urls = []
 
-    if config.is_manually_set('browser.proxyAddress'):
+    if config.is_manually_set('browser.serverAddress'):
         urls = [
-            ('URL', report.get_url(config.get_option('browser.proxyAddress'))),
+            ('URL', report.get_url(config.get_option('browser.serverAddress'))),
         ]
 
     elif config.get_option('server.headless'):

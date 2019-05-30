@@ -31,9 +31,9 @@ class BootstrapPrintTest(unittest.TestCase):
 
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set({
-            'browser.proxyAddress': True})
+            'browser.serverAddress': True})
         mock_get_option = testutil.build_mock_config_get_option({
-            'browser.proxyAddress': 'the-address'})
+            'browser.serverAddress': 'the-address'})
 
         with patch.object(config, 'get_option', new=mock_get_option), \
             patch.object(
@@ -49,7 +49,7 @@ class BootstrapPrintTest(unittest.TestCase):
             self, mock_get_internal_ip, mock_get_external_ip):
 
         mock_is_manually_set = testutil.build_mock_config_is_manually_set({
-            'browser.proxyAddress': False})
+            'browser.serverAddress': False})
         mock_get_option = testutil.build_mock_config_get_option({
             'server.headless': True})
 
@@ -68,7 +68,7 @@ class BootstrapPrintTest(unittest.TestCase):
     @patch('streamlit.bootstrap.util.get_internal_ip')
     def test_print_urls_local(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set({
-            'browser.proxyAddress': False})
+            'browser.serverAddress': False})
         mock_get_option = testutil.build_mock_config_get_option({
             'server.headless': False})
 

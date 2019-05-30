@@ -224,10 +224,9 @@ _create_option(
 
 _create_option(
     'client.displayEnabled',
-    description='''If false, makes your Streamlit script not sent data to a
+    description='''If false, makes your Streamlit script not draw to a
         Streamlit report.''',
-    replaced_by='runner.displayEnabled',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+    default_val=True)
 
 _create_option(
     'client.waitForProxySecs',
@@ -313,7 +312,6 @@ _create_option(
     deprecation_text=PROXY_DEPRECATION_TEXT,
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-
 _create_option(
     'proxy.isRemote',
     description='''Is the proxy running remotely.
@@ -322,7 +320,6 @@ _create_option(
         ''',
     replaced_by='server.headless',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.liveSave',
@@ -335,7 +332,6 @@ _create_option(
     replaced_by='server.liveSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-
 _create_option(
     'proxy.runOnSave',
     description='''
@@ -345,7 +341,6 @@ _create_option(
         ''',
     replaced_by='server.runOnSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.watchFileSystem',
@@ -362,7 +357,6 @@ _create_option(
         ''',
     replaced_by='server.enableCORS',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.port',
@@ -396,18 +390,6 @@ _create_option(
         script's execution.
         ''',
     default_val=False)
-
-
-@_create_option('runner.displayEnabled')
-def _runner_display_enabled():
-    """If false, makes your Streamlit script not sent data to a Streamlit
-    report.
-
-    Default: true
-    """
-    if is_manually_set('client.displayEnabled'):
-        return get_option('client.displayEnabled')
-    return True
 
 
 # Config Section: Server #
