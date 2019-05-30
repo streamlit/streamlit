@@ -156,7 +156,7 @@ class ScriptRunner(object):
             with open(self._report.script_path) as f:
                 filebody = f.read()
 
-            if config.get_option('runner.autoWrite'):
+            if config.get_option('runner.magicEnabled'):
                 filebody = magic.add_magic(filebody, self._report.script_path)
 
             code = compile(

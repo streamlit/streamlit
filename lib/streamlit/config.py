@@ -371,10 +371,10 @@ _create_option(
 _create_section('runner', 'Settings for how Streamlit executes your script')
 
 _create_option(
-    'runner.autoWrite',
+    'runner.magicEnabled',
     description='''
         Allows you to type a variable or string by itself in a single line of
-        Python code to call st.write() on it.
+        Python code to write it to the report.
         ''',
     default_val=True)
 
