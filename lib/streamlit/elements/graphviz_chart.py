@@ -2,12 +2,8 @@
 
 """Streamlit support for GraphViz charts."""
 
-import json
-import urllib.parse
-
 from six import string_types
 
-from streamlit import caching
 from streamlit import util
 from streamlit.logger import get_logger
 

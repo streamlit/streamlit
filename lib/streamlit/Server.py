@@ -301,7 +301,7 @@ class Server(object):
         msg.report_finished = True
         self.enqueue(msg)
 
-    # TODO [0px] Also handle livesave! serialize_running_report_to_files
+    # TODO [0px] Also handle server.livesave! serialize_running_report_to_files
     @tornado.gen.coroutine
     def _handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""
@@ -468,7 +468,7 @@ def _is_url_from_allowed_origins(url):
        function was called from.
     3. The cloud storage domain configured in `s3.bucket`.
 
-    If `proxy.enableCORS` is False, this allows all origins.
+    If `server.enableCORS` is False, this allows all origins.
 
     Parameters
     ----------
@@ -505,7 +505,7 @@ def _is_url_from_allowed_origins(url):
         parsed = urllib.parse.urlparse(s3_url)
         allowed_domains.append(parsed.hostname)
 
-    if config.is_manually_set('browser.proxyAddress'):
-        allowed_domains.append(config.get_option('browser.proxyAddress'))
+    if config.is_manually_set('browser.serverAddress'):
+        allowed_domains.append(config.get_option('browser.serverAddress'))
 
     return any(hostname == d for d in allowed_domains)

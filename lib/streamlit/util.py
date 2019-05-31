@@ -56,7 +56,7 @@ def streamlit_read(path, binary=False):
 
     For example:
 
-    with read('foo.txt') as foo:
+    with streamlit_read('foo.txt') as foo:
         ...
 
     opens the file `%s/foo.txt`
@@ -64,7 +64,7 @@ def streamlit_read(path, binary=False):
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
     """ % STREAMLIT_ROOT_DIRECTORY
-    filename = os.path.abspath(os.path.join(STREAMLIT_ROOT_DIRECTORY, path))
+    filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
        raise Error('Read zero byte file: "%s"' % filename)
 
@@ -81,7 +81,7 @@ def streamlit_write(path, binary=False):
     Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
-        with open_ensuring_path('foo/bar.txt') as bar:
+        with streamlit_write('foo/bar.txt') as bar:
             ...
 
     opens the file %s/foo/bar.txt for writing,
@@ -93,10 +93,7 @@ def streamlit_write(path, binary=False):
     mode = 'w'
     if binary:
         mode += 'b'
-    path = os.path.join(STREAMLIT_ROOT_DIRECTORY, path)
-    directory = os.path.split(path)[0]
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    path = get_streamlit_file_path(path)
     try:
         with open(path, mode) as handle:
             yield handle
@@ -304,6 +301,15 @@ def is_altair_chart(obj):
         is_type(obj, 'altair.vegalite.v3.api.Chart'))
 
 
+def is_keras_model(obj):
+    """True if input looks like a Keras model."""
+    return (
+        is_type(obj, 'keras.engine.sequential.Sequential') or
+        is_type(obj, 'keras.engine.training.Model') or
+        is_type(obj, 'tensorflow.python.keras.engine.sequential.Sequential') or
+        is_type(obj, 'tensorflow.python.keras.engine.training.Model'))
+
+
 def is_plotly_chart(obj):
     """True if input looks like a Plotly chart."""
     return (
@@ -370,3 +376,21 @@ def is_repl():
         return True
 
     return False
+
+
+def get_streamlit_file_path(filename):
+    """Return the full path to a filename in ~/.streamlit.
+
+    Creates ~/.streamlit if needed.
+    """
+    # os.path.expanduser works on OSX, Linux and Windows
+    home = os.path.expanduser('~')
+    if home is None:
+        raise RuntimeError('No home directory.')
+
+    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY)
+
+    if not os.path.isdir(st_path):
+        os.makedirs(st_path)
+
+    return os.path.join(st_path, filename)

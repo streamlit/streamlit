@@ -777,18 +777,48 @@ class DeltaGenerator(object):
         >>> import streamlit as st
         >>> import graphviz as graphviz
         >>>
-        >>> # create a graphlib graph object
-        ... graph = graphviz.Graph(comment='The Round Table')
-        >>> graph.node('A', 'King Arthur')
-        >>> graph.node('B', 'Sir Bedevere the Wise')
-        >>> graph.node('L', 'Sir Lancelot the Brave')
-        >>> graph.edges(['AB', 'AL'])
-        >>> graph.edge('B', 'L', constraint='false')
+        >>> # Create a graphlib graph object
+        >>> graph = graphviz.DiGraph()
+        >>> graph.edge('run', 'intr')
+        >>> graph.edge('intr', 'runbl')
+        >>> graph.edge('runbl', 'run')
+        >>> graph.edge('run', 'kernel')
+        >>> graph.edge('kernel', 'zombie')
+        >>> graph.edge('kernel', 'sleep')
+        >>> graph.edge('kernel', 'runmem')
+        >>> graph.edge('sleep', 'swap')
+        >>> graph.edge('swap', 'runswap')
+        >>> graph.edge('runswap', 'new')
+        >>> graph.edge('runswap', 'runmem')
+        >>> graph.edge('new', 'runmem')
+        >>> graph.edge('sleep', 'runmem')
         >>>
         >>> st.graphviz_chart(graph)
-        >>>
-        >>> # render from the dot string
-        ... st.graphviz_chart(graph.source)
+
+        Or you can render the chart from the graph using GraphViz's Dot
+        language:
+
+        >>> st.graphviz_chart('''
+            digraph {
+                run -> intr
+                intr -> runbl
+                runbl -> run
+                run -> kernel
+                kernel -> zombie
+                kernel -> sleep
+                kernel -> runmem
+                sleep -> swap
+                swap -> runswap
+                runswap -> new
+                runswap -> runmem
+                new -> runmem
+                sleep -> runmem
+            }
+        ''')
+
+        .. output::
+           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           height: 400px
 
         """
         import streamlit.elements.graphviz_chart as graphviz_chart

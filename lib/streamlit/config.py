@@ -37,6 +37,9 @@ _section_descriptions = collections.OrderedDict(
 # Stores the config options as key value pairs in a flat dict.
 _config_options = dict()
 
+# Makes sure we only parse the config file once.
+config_file_has_been_parsed = False
+
 
 def set_option(key, value):
     """Set config option.
@@ -122,7 +125,7 @@ def _create_option(
         key, description=description, default_val=default_val,
         visibility=visibility, deprecated=deprecated,
         deprecation_text=deprecation_text, expiration_date=expiration_date,
-        replaced_by=replaced_by, config_getter=get_option)
+        replaced_by=replaced_by)
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.' %
         (option.section, ', '.join(_section_descriptions.keys())))
@@ -219,16 +222,14 @@ _create_section('client', 'Settings for scripts that use Streamlit.')
 
 _create_option(
     'client.caching',
-    description='Whether to enable caching to ./.streamlit/cache.',
+    description='Whether to enable st.cache.',
     default_val=True)
 
-# TODO DEPRECATION
 _create_option(
     'client.displayEnabled',
-    description='''If false, makes your Streamlit script not sent data to a
+    description='''If false, makes your Streamlit script not draw to a
         Streamlit report.''',
-    replaced_by='runner.displayEnabled',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
+    default_val=True)
 
 _create_option(
     'client.waitForProxySecs',
@@ -314,33 +315,35 @@ _create_option(
     deprecation_text=PROXY_DEPRECATION_TEXT,
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-
 _create_option(
     'proxy.isRemote',
     description='''Is the proxy running remotely.
 
-    Default: false unless we are on a Linux box where DISPLAY is unset.
-    ''',
+        Default: false unless we are on a Linux box where DISPLAY is unset.
+        ''',
     replaced_by='server.headless',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.liveSave',
     description='''
         Immediately share the report in such a way that enables live
         monitoring, and post-run analysis.
+
+        Default: whatever value is set in server.liveSave.
         ''',
     replaced_by='server.liveSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
-
 _create_option(
     'proxy.runOnSave',
-    description='Watch for filesystem changes and rerun reports.',
+    description='''
+        Watch for filesystem changes and rerun reports.
+
+        Default: whatever value is set in server.runOnSave.
+        ''',
     replaced_by='server.runOnSave',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.watchFileSystem',
@@ -352,16 +355,19 @@ _create_option(
     'proxy.enableCORS',
     description='''
         Enables support for Cross-Origin Request Sharing, for added security.
+
+        Default: whatever value is set in server.enableCORS.
         ''',
     replaced_by='server.enableCORS',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 _create_option(
     'proxy.port',
     description='''
         The port where the proxy will listen for client and browser
         connections.
+
+        Default: whatever value is set in server.port.
         ''',
     replaced_by='server.port',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
@@ -372,10 +378,10 @@ _create_option(
 _create_section('runner', 'Settings for how Streamlit executes your script')
 
 _create_option(
-    'runner.autoWrite',
+    'runner.magicEnabled',
     description='''
         Allows you to type a variable or string by itself in a single line of
-        Python code to call st.write() on it.
+        Python code to write it to the report.
         ''',
     default_val=True)
 
@@ -387,13 +393,6 @@ _create_option(
         script's execution.
         ''',
     default_val=False)
-
-
-_create_option(
-    'runner.displayEnabled',
-    description='''If false, makes your Streamlit script not sent data to a
-    Streamlit report.''',
-    default_val=True)
 
 
 # Config Section: Server #
@@ -409,6 +408,9 @@ def _server_headless():
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) server.liveSave is set.
     """
+    if is_manually_set('proxy.isRemote'):
+        return get_option('proxy.isRemote')
+
     is_live_save_on = get_option('proxy.liveSave')
     is_linux = (platform.system() == 'Linux')
     has_display_env = (not os.getenv('DISPLAY'))
@@ -421,34 +423,52 @@ def _server_headless():
     )
 
 
-_create_option(
-    'server.liveSave',
-    description='''Immediately share the report in such a way that enables live
-        monitoring, and post-run analysis.''',
-    default_val=False)
+@_create_option('server.liveSave')
+def _server_live_save():
+    """Immediately share the report in such a way that enables live
+    monitoring, and post-run analysis.
+
+    Default: false
+    """
+    if is_manually_set('proxy.liveSave'):
+        return get_option('proxy.liveSave')
+    return False
 
 
-_create_option(
-    'server.runOnSave',
-    description='Automatically rerun script when the file is modified on disk.',
-    default_val=False)
+@_create_option('server.runOnSave')
+def _server_run_on_save():
+    """Automatically rerun script when the file is modified on disk.
+
+    Default: false
+    """
+    if is_manually_set('proxy.runOnSave'):
+        return get_option('proxy.runOnSave')
+    if is_manually_set('proxy.watchFileSystem'):
+        return get_option('proxy.watchFileSystem')
+    return False
 
 
-_create_option(
-    'server.port',
-    description='''
-        The port where the server will listen for client and browser
-        connections.
-        ''',
-    default_val=8501)
+@_create_option('server.port')
+def _server_port():
+    """The port where the server will listen for client and browser
+    connections.
+
+    Default: 8501
+    """
+    if is_manually_set('proxy.port'):
+        return get_option('proxy.port')
+    return 8501
 
 
-_create_option(
-    'server.enableCORS',
-    description='''
-        Enables support for Cross-Origin Request Sharing, for added security.
-        ''',
-    default_val=True)
+@_create_option('server.enableCORS')
+def _server_enable_cors():
+    """Enables support for Cross-Origin Request Sharing, for added security.
+
+    Default: true
+    """
+    if is_manually_set('proxy.enableCORS'):
+        return get_option('proxy.enableCORS')
+    return True
 
 
 # Config Section: Browser #
@@ -457,42 +477,47 @@ _create_section('browser', 'Configuration of browser front-end.')
 
 _create_option(
     'browser.remotelyTrackUsage',
-    description='Whether to send usage statistics to Streamlit.',
+    description='''
+        Whether to send usage statistics to Streamlit.
+
+        Default: whatever is set in browser.gatherUsageStats.
+        ''',
     replaced_by='browser.gatherUsageStats',
     expiration_date='2019-06-28')
-
-_create_option(
-    'browser.serverAddress',
-    description='''
-        Internet address of the server server that the browser should connect
-        to. Can be IP address or DNS name.''',
-    default_val='localhost')
 
 _create_option(
     'browser.proxyAddress',
     description='''
         Internet address of the proxy server that the browser should connect
-        to. Can be IP address or DNS name.''',
+        to. Can be IP address or DNS name.
+
+        Default: whatever value is set in browser.serverAddress.
+        ''',
     replaced_by='browser.serverAddress',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
+@_create_option('browser.serverAddress')
+def _browser_server_address():
+    """Internet address of the server server that the browser should connect
+    to. Can be IP address or DNS name.
+
+    Default: 'localhost'
+    """
+    if is_manually_set('browser.proxyAddress'):
+        return get_option('browser.proxyAddress')
+    return 'localhost'
+
+
 @_create_option('browser.gatherUsageStats')
 def _gather_usage_stats():
-    """Whether to send usage statistics to Streamlit."""
+    """Whether to send usage statistics to Streamlit.
+
+    Default: true
+    """
     if is_manually_set('browser.remotelyTrackUsage'):
         return get_option('browser.remotelyTrackUsage')
     return True
-
-
-@_create_option('browser.serverPort')
-@util.memoize
-def _browser_server_port():
-    """Port that the browser should use to connect to the server.
-
-    Default: whatever value is set in server.port.
-    """
-    return get_option('server.port')
 
 
 _create_option(
@@ -505,6 +530,18 @@ _create_option(
     deprecation_text='Use browser.serverPort instead.',
     replaced_by='browser.serverPort',
     expiration_date=PROXY_DEPRECATION_EXPIRATION)
+
+
+@_create_option('browser.serverPort')
+@util.memoize
+def _browser_server_port():
+    """Port that the browser should use to connect to the server.
+
+    Default: whatever value is set in server.port.
+    """
+    if is_manually_set('browser.proxyPort'):
+        return get_option('browser.proxyPort')
+    return get_option('server.port')
 
 
 # Config Section: S3 #
@@ -587,18 +624,18 @@ _create_option(
     's3.region',
     description='''AWS region where the bucket is located, e.g. "us-west-2".
 
-    Default: (unset)
-    ''',
+        Default: (unset)
+        ''',
     default_val=None)
 
 _create_option(
     's3.profile',
     description='''AWS credentials profile to use.
 
-    Leave unset to use your default profile.
+        Leave unset to use your default profile.
 
-    Default: (unset)
-    ''',
+        Default: (unset)
+        ''',
     default_val=None)  # If changing the default, change S3Storage.py too.
 
 
@@ -724,6 +761,16 @@ def show_config():
                 else:
                     append_comment('# %s' % txt)
 
+            toml_default = toml.dumps({'default': option.default_val})
+            toml_default = toml_default[10:].strip()
+
+            if len(toml_default) > 0:
+                append_comment('# Default: %s' % toml_default)
+            else:
+                # Don't say "Default: (unset)" here because this branch applies
+                # to complex config settings too.
+                pass
+
             if option.deprecated:
                 append_comment('#')
                 append_comment('# ' + click.style('DEPRECATED.', fg='yellow'))
@@ -734,16 +781,6 @@ def show_config():
                     '# This option will be removed on or after %s.'
                     % option.expiration_date)
                 append_comment('#')
-
-            toml_default = toml.dumps({'default': option.default_val})
-            toml_default = toml_default[10:].strip()
-
-            if len(toml_default) > 0:
-                append_comment('# Default: %s' % toml_default)
-            else:
-                # Don't say "Default: (unset)" here because this branch applies
-                # to complex config settings too.
-                pass
 
             option_is_manually_set = (
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION)
@@ -855,7 +892,7 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def _parse_config_file(file_contents=None):
+def parse_config_file(file_contents=None):
     """Parse the config file and update config parameters.
 
     Parameters
@@ -864,14 +901,16 @@ def _parse_config_file(file_contents=None):
         The contents of the config file (for use in tests) or None to load the
         config from ~/.streamlit/config.toml.
     """
-    # os.path.expanduser works on OSX, Linux and Windows
-    home = os.path.expanduser('~')
-    if home is None:
-        raise RuntimeError('No home directory.')
+    global config_file_has_been_parsed
 
-    config_filename = os.path.join(home, '.streamlit', 'config.toml')
+    if config_file_has_been_parsed:
+        return
 
-    if not file_contents:
+    if file_contents:
+        config_filename = 'mock_config_file'
+    else:
+        config_filename = util.get_streamlit_file_path('config.toml')
+
         # Parse the config file.
         if not os.path.exists(config_filename):
             return
@@ -881,6 +920,8 @@ def _parse_config_file(file_contents=None):
 
     _update_config_with_toml(file_contents, config_filename)
     _check_conflicts()
+
+    config_file_has_been_parsed = True
 
 
 def _check_conflicts():
@@ -945,6 +986,4 @@ def _clean(txt):
     return ' '.join(txt.split()).strip()
 
 
-# Acually parse the config file.
-_parse_config_file()
 development.is_development_mode = get_option('global.developmentMode')

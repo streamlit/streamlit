@@ -19,19 +19,19 @@ LOGGER = get_logger(__name__)
 class ConfigOption(object):
     '''Stores a Streamlit configuration option.
 
-    A configuration option, like 'browser.proxyPort', which indicates which port
+    A configuration option, like 'browser.serverPort', which indicates which port
     to use when connecting to the proxy. There are two ways to create a
     ConfigOption:
 
     Simple ConfigOptions are created as follows:
 
-        ConfigOption('browser.proxyPort',
+        ConfigOption('browser.serverPort',
             description = 'Connect to the proxy at this port.',
             default_val = 8501)
 
     More complex config options resolve thier values at runtime as follows:
 
-        @ConfigOption('browser.proxyPort')
+        @ConfigOption('browser.serverPort')
         def _proxy_port():
             """Connect to the proxy at this port.
 
@@ -138,10 +138,7 @@ class ConfigOption(object):
             self.expiration_date = expiration_date
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
-        if self.replaced_by:
-            self._get_val_func = lambda: config_getter(self.replaced_by)
-        else:
-            self.set_value(default_val)
+        self.set_value(default_val)
 
     def __call__(self, get_val_func):
         """Assign a function to compute the value for this option.
@@ -184,7 +181,9 @@ class ConfigOption(object):
         """
         self._get_val_func = lambda: value
 
-        if where_defined is not None:
+        if where_defined is None:
+            self.where_defined = ConfigOption.DEFAULT_DEFINITION
+        else:
             self.where_defined = where_defined
 
         if (self.deprecated and

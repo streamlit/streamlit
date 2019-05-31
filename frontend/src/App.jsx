@@ -362,6 +362,12 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
+    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+      // Only add messages to report when script is running. Otherwise, we get
+      // bugs like #685.
+      return;
+    }
+
     const { reportId } = this.state
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>

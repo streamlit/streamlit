@@ -212,7 +212,7 @@ class Report(object):
         """
         if status == 'running':
             configured_server_address = (
-                config.get_option('browser.proxyAddress'))
+                config.get_option('browser.serverAddress'))
         else:
             configured_server_address = None
 
@@ -228,7 +228,7 @@ class Report(object):
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            serverPort=config.get_option('browser.proxyPort'),
+            serverPort=config.get_option('browser.serverPort'),
         )
 
 
@@ -270,4 +270,4 @@ def _get_browser_address_bar_port():
     """
     if config.get_option('global.developmentMode'):
         return 3000
-    return config.get_option('browser.proxyPort')
+    return config.get_option('browser.serverPort')

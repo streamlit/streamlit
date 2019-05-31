@@ -198,6 +198,7 @@ def write(*args):
         - write(obj)        : The default is to print str(obj).
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
+        - write(keras)      : Displays a Keras model.
         - write(graphviz)   : Displays a Graphviz graph.
         - write(plotly_fig) : Displays a Plotly figure.
         - write(bokeh_fig)  : Displays a Bokeh figure.
@@ -292,6 +293,11 @@ def write(*args):
             elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
+            elif util.is_keras_model(arg):
+                from tensorflow.python.keras.utils import vis_utils
+                flush_buffer()
+                dot = vis_utils.model_to_dot(arg)
+                graphviz_chart(dot.to_string())
             elif type(arg) in dict_types:  # noqa: F821
                 flush_buffer()
                 json(arg)
