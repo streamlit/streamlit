@@ -106,10 +106,6 @@ class Credentials(object):
 
     def save(self):
         """Save to toml file."""
-        dirname = os.path.dirname(self._conf_file)
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname)
-
         data = {
             'email': self.activation.email,
             'code': self.activation.code,
