@@ -66,6 +66,7 @@ API
   - :func:`streamlit.plotly_chart`
   - :func:`streamlit.bokeh_chart`
   - :func:`streamlit.deck_gl_chart`
+  - :func:`streamlit.graphviz_chart`
   - :func:`streamlit.line_chart`
   - :func:`streamlit.area_chart`
   - :func:`streamlit.bar_chart`
