@@ -37,6 +37,9 @@ _section_descriptions = collections.OrderedDict(
 # Stores the config options as key value pairs in a flat dict.
 _config_options = dict()
 
+# Makes sure we only parse the config file once.
+config_file_has_been_parsed = False
+
 
 def set_option(key, value):
     """Set config option.
@@ -219,7 +222,7 @@ _create_section('client', 'Settings for scripts that use Streamlit.')
 
 _create_option(
     'client.caching',
-    description='Whether to enable caching to ./.streamlit/cache.',
+    description='Whether to enable st.cache.',
     default_val=True)
 
 _create_option(
@@ -889,7 +892,7 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def _parse_config_file(file_contents=None):
+def parse_config_file(file_contents=None):
     """Parse the config file and update config parameters.
 
     Parameters
@@ -898,14 +901,16 @@ def _parse_config_file(file_contents=None):
         The contents of the config file (for use in tests) or None to load the
         config from ~/.streamlit/config.toml.
     """
-    # os.path.expanduser works on OSX, Linux and Windows
-    home = os.path.expanduser('~')
-    if home is None:
-        raise RuntimeError('No home directory.')
+    global config_file_has_been_parsed
 
-    config_filename = os.path.join(home, '.streamlit', 'config.toml')
+    if config_file_has_been_parsed:
+        return
 
-    if not file_contents:
+    if file_contents:
+        config_filename = 'mock_config_file'
+    else:
+        config_filename = util.get_streamlit_file_path('config.toml')
+
         # Parse the config file.
         if not os.path.exists(config_filename):
             return
@@ -915,6 +920,8 @@ def _parse_config_file(file_contents=None):
 
     _update_config_with_toml(file_contents, config_filename)
     _check_conflicts()
+
+    config_file_has_been_parsed = True
 
 
 def _check_conflicts():
@@ -979,6 +986,4 @@ def _clean(txt):
     return ' '.join(txt.split()).strip()
 
 
-# Acually parse the config file.
-_parse_config_file()
 development.is_development_mode = get_option('global.developmentMode')
