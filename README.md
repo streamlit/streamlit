@@ -39,4 +39,4 @@ streamlit docs
 
 ## Contributing to Streamlit
 
-See the [wiki](https://github.com/streamlit/streamlit/wiki/Contributing).
+See the [wiki](https://github.com/streamlit/streamlit/wiki/Contributing-to-Streamlit).
