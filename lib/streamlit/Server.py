@@ -420,7 +420,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == 'widget_json':
                 payload = json.loads(msg.widget_json)
                 Widgets.get_current().set(payload)
-                Widgets.get_current().dump()
+                #Widgets.get_current().dump()  # Removed for Insight Demo.
                 self._server._handle_rerun_script_request(' '.join(self._server._report.argv))
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
