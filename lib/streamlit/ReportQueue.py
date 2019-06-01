@@ -10,6 +10,7 @@ import copy
 import threading
 
 from streamlit import protobuf
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -28,11 +29,11 @@ class ReportQueue(object):
             # Map of msg.delta.id to the msg's index in _queue.
             self._delta_id_map = dict()
 
-    def __repr__(self):
-        return '%s %s' % (self._queue, self._delta_id_map)
-
-    def __str__(self):
-        return '%s %s' % (self._queue, self._delta_id_map)
+    def get_debug(self):
+        return {
+            'queue': [util.forwardmsg_to_debug(m) for m in self._queue],
+            'ids': list(self._delta_id_map.keys()),
+        }
 
     def __iter__(self):
         return iter(self._queue)

@@ -44,6 +44,11 @@ class Report(object):
 
         self.generate_new_id()
 
+    def get_debug(self):
+        return {
+            'master queue': self._master_queue.get_debug(),
+        }
+
     def set_argv(self, cmd_line_str):
         import shlex
 

@@ -394,3 +394,24 @@ def get_streamlit_file_path(filename):
         os.makedirs(st_path)
 
     return os.path.join(st_path, filename)
+
+
+def forwardmsg_to_debug(msg):
+    the_type = msg.WhichOneof('type')
+    if the_type == 'delta':
+        return {'delta': delta_to_debug(msg.delta)}
+    return the_type
+
+
+def delta_to_debug(delta):
+    the_type = delta.WhichOneof('type')
+    out = {
+        'id': delta.id
+    }
+
+    if the_type == 'new_element':
+        out['new_element'] = delta.new_element.WhichOneof('type')
+    elif the_type == 'add_rows':
+        out['add_rows'] = ''
+
+    return out
