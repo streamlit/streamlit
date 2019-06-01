@@ -106,6 +106,12 @@ class LocalSourcesWatcher(object):
 
             filepath = os.path.abspath(filepath)
 
+            if not os.path.isfile(filepath):
+                # There are some weird modules that have a .origin, but don't
+                # point to real files. For example, there's a module where
+                # .origin is 'built-in'.
+                continue
+
             file_is_new = filepath not in self._watched_modules
             file_is_local = _file_is_in_folder(
                 filepath, self._report.script_folder)
