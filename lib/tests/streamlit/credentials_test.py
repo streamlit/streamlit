@@ -161,12 +161,14 @@ class CredentialsClassTest(unittest.TestCase):
         ''').lstrip()
 
         m = mock_open()
-        with patch('streamlit.credentials.open', m, create=True) as m:
+        with patch('streamlit.credentials.open', m, create=True) as m, \
+             patch('streamlit.credentials.os.makedirs') as m2:
             c.save()
             if sys.version_info >= (3, 0):
                 m.return_value.write.assert_called_once_with(truth)
             else:
                 m.return_value.write.assert_called_once_with(truth2)
+            m2.assert_called_once_with('/mock/home/folder/.streamlit')
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_activate_already_activated(self):
