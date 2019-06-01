@@ -6,6 +6,7 @@ Whenever possible, message deltas are combined.
 """
 
 import collections
+import copy
 import threading
 
 from streamlit import protobuf
@@ -49,7 +50,7 @@ class ReportQueue(object):
 
         Parameters
         ----------
-        msg : ForwardMsg
+        msg : protobuf.ForwardMsg
         """
         with self._lock:
             if not msg.HasField('delta'):
@@ -60,7 +61,9 @@ class ReportQueue(object):
                 index = self._delta_id_map[msg.delta.id]
                 old_msg = self._queue[index]
                 composed_delta = compose_deltas(old_msg.delta, msg.delta)
-                old_msg.delta.CopyFrom(composed_delta)
+                new_msg = protobuf.ForwardMsg()
+                new_msg.delta.CopyFrom(composed_delta)
+                self._queue[index] = new_msg
 
             else:
                 self._delta_id_map[msg.delta.id] = len(self._queue)
@@ -99,9 +102,6 @@ def compose_deltas(old_delta, new_delta):
     data. If not, returns new_delta.
 
     """
-    # if old_delta.WhichOneof('type') is None:
-    #     return new_delta
-
     new_delta_type = new_delta.WhichOneof('type')
 
     if new_delta_type == 'new_element':
@@ -109,9 +109,13 @@ def compose_deltas(old_delta, new_delta):
 
     elif new_delta_type == 'add_rows':
         import streamlit.elements.data_frame_proto as data_frame_proto
+        # We should make data_frame_proto.add_rows *not* mutate any of the
+        # inputs. In the meantime, we have to deepcopy the input that will be
+        # mutated.
+        composed_delta = copy.deepcopy(old_delta)
         data_frame_proto.add_rows(
-            old_delta, new_delta, name=new_delta.add_rows.name)
-        return old_delta
+            composed_delta, new_delta, name=new_delta.add_rows.name)
+        return composed_delta
 
     LOGGER.error('Old delta: %s;\nNew delta: %s;', old_delta, new_delta)
 
