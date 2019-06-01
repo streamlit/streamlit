@@ -4,6 +4,7 @@ import json
 import logging
 import threading
 import urllib
+import json
 
 import tornado.concurrent
 import tornado.gen
@@ -91,10 +92,16 @@ class Server(object):
 
         LOGGER.debug('Server started on port %s', port)
 
+    def get_debug(self):
+        return {
+            'report': self._report.get_debug(),
+        }
+
     def _get_routes(self):
         routes = [
             (r'/stream', _SocketHandler, dict(server=self)),
             (r'/healthz', _HealthHandler, dict(server=self)),
+            (r'/debugz', _DebugHandler, dict(server=self)),
         ]
 
         if not config.get_option('global.developmentMode'):
@@ -381,6 +388,23 @@ class _HealthHandler(tornado.web.RequestHandler):
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
             self.write('unavailable')
+
+
+class _DebugHandler(tornado.web.RequestHandler):
+    def initialize(self, server):
+        self._server = server
+
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return _is_url_from_allowed_origins(origin)
+
+    def get(self):
+        self.add_header('Cache-Control', 'no-cache')
+        self.write('<code><pre>%s</pre><code>' %
+            json.dumps(
+                self._server.get_debug(),
+                indent=2,
+            ))
 
 
 class _SocketHandler(tornado.websocket.WebSocketHandler):
