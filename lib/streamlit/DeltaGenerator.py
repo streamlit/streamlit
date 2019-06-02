@@ -1137,15 +1137,16 @@ class DeltaGenerator(object):
         element.video.format = format
 
     @_widget
-    def checkbox(self, element, ui_value, label, value):
+    def checkbox(self, element, ui_value, label, value=False):
         """Checkbox doc string."""
         element.widget.label = label
         element.widget.checkbox.value = value
         return ui_value if ui_value is not None else value
 
     @_widget
-    def slider(self, element, ui_value, label, value, min, max, step):
+    def slider(self, element, ui_value, label, value=0, min=0, max=100, step=1):
         """Slider doc string."""
+        # TODO: Support floats.
         element.widget.label = label
         element.widget.slider.min = min
         element.widget.slider.max = max
@@ -1154,7 +1155,7 @@ class DeltaGenerator(object):
         return ui_value if ui_value is not None else value
 
     @_widget
-    def text_area(self, element, ui_value, label, value):
+    def text_area(self, element, ui_value, label, value=''):
         """Text box doc string."""
         element.widget.label = label
         element.widget.text_area.value = value
