@@ -7,6 +7,7 @@ import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from '../../../lib/immutableProto'
 import {PureStreamlitElement, StState} from '../../shared/StreamlitElement'
+import './Widget.scss'
 
 import {Input, Label} from 'reactstrap'
 
@@ -99,40 +100,50 @@ class Widget extends PureStreamlitElement<Props, State> {
 
     return dispatchOneOf(element, 'type', {
       checkbox: () => {
+        const style = {
+          width: this.props.width,
+        }
+
         return (
-          <div>
-            <Label check>
-              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleChange} /> { label }
+          <div className="Widget row-widget">
+            <Label style={style} check>
+              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleChange} />
+              <span className="label">{ label }</span>
             </Label>
           </div>
         )
       },
+
       slider: (data: ImmutableMap<string, any>) => {
         const min = data.get('min')
         const max = data.get('max')
         const step = data.get('step')
         const style = {
-          width: '200px',
+          width: this.props.width,
         }
 
         return (
-          <div>
-            <Label check>
-              <Input type="range" style={style} id={id} min={min} max={max} step={step} value={this.state.value}
-                onChange={this.handleSliderChange} /> { label }
+          <div className="Widget">
+            <Label style={style} check>
+              <div className="label">{ label }: {this.state.value}</div>
+              <Input type="range" className="col-4" id={id} min={min} max={max} step={step} value={this.state.value}
+                onChange={this.handleSliderChange} />
             </Label>
           </div>
         )
       },
+
       textArea: () => {
         const style = {
-          width: '200px',
+          width: this.props.width,
         }
+
         return (
-          <div>
-            <Label check>
-              <Input type="textarea" style={style} id={id} value={this.state.value}
-                onChange={this.handleTextAreaChange} /> { label }
+          <div className="Widget">
+            <Label style={style} check>
+              <div className="label">{ label }</div>
+              <Input type="textarea" className="col-6" id={id} value={this.state.value}
+                onChange={this.handleTextAreaChange} />
             </Label>
           </div>
         )
