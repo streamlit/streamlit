@@ -33,6 +33,9 @@ def _np_array_to_png_bytes(array):
     return tmp.getvalue()
 
 
+def _4d_to_list_3d(array):
+    return [array[i,:,:,:] for i in range(0, array.shape[0])]
+
 def _verify_np_shape(array):
     if len(array.shape) not in (2, 3):
         raise RuntimeError('Numpy shape has to be of length 2 or 3.')
@@ -88,7 +91,10 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
     if type(image) is list:
         images = image
     else:
-        images = [image]
+        if type(image) == np.ndarray and len(image.shape) == 4:
+            images = _4d_to_list_3d(image)
+        else:
+            images = [image]
 
     if type(caption) is list:
         captions = caption
