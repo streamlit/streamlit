@@ -156,7 +156,7 @@ class Chart extends PureStreamlitElement {
     //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
 
     return (
-      <div style={chartDims}>
+      <div className="stChart" style={chartDims}>
         <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
           {
             React.createElement(
@@ -170,8 +170,7 @@ class Chart extends PureStreamlitElement {
                 }
                 return React.createElement(
                   COMPONENTS[component.get('type')], component_props)
-              }
-              )
+              })
             )
           }
         </div>
