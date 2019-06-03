@@ -473,8 +473,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, '')
-        # TODO(armando): get this working in CircleCI
-        # self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
+        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
