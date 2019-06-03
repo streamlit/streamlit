@@ -83,7 +83,11 @@ class LocalSourcesWatcher(object):
 
         local_filepaths = []
 
-        for name, module in sys.modules.items():
+        # Clone modules dict here because we may alter the original dict inside
+        # the loop.
+        modules = dict(sys.modules)
+
+        for name, module in modules.items():
             spec = getattr(module, '__spec__', None)
 
             if spec is None:
@@ -101,6 +105,12 @@ class LocalSourcesWatcher(object):
                 continue
 
             filepath = os.path.abspath(filepath)
+
+            if not os.path.isfile(filepath):
+                # There are some modules that have a .origin, but don't point
+                # to real files. For example, there's a module where .origin is
+                # 'built-in'.
+                continue
 
             file_is_new = filepath not in self._watched_modules
             file_is_local = _file_is_in_folder(

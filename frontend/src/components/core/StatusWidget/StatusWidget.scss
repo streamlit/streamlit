@@ -140,12 +140,9 @@ $anim-time: 200ms;
 $anim-easing: ease-out;
 
 // Unminimized -> Minimized
-#ReportStatus.minimized label,
-#ReportStatus.minimized button,
-#ReportStatus.minimized button * {
+#ReportStatus.minimized label {
   opacity: 0;
   visibility: hidden;
-  margin: 0;
   padding: 0;
   max-width: 0;
   min-width: 0;
@@ -155,7 +152,6 @@ $anim-easing: ease-out;
     clip $anim-time $anim-easing 0s,
     min-width $anim-time $anim-easing 0s,
     max-width $anim-time $anim-easing 0s,
-    margin $anim-time $anim-easing 0s,
     padding $anim-time $anim-easing 0s,
 
     // Hide at end of the transition

@@ -33,6 +33,9 @@ def _np_array_to_png_bytes(array):
     return tmp.getvalue()
 
 
+def _4d_to_list_3d(array):
+    return [array[i,:,:,:] for i in range(0, array.shape[0])]
+
 def _verify_np_shape(array):
     if len(array.shape) not in (2, 3):
         raise RuntimeError('Numpy shape has to be of length 2 or 3.')
@@ -85,17 +88,28 @@ def _clip_image(image, clamp):
 
 def marshall_images(image, caption, width, proto_imgs, clamp):
     # Turn single image and caption into one element list.
-    if type(image) == list:
+    if type(image) is list:
         images = image
+    else:
+        if type(image) == np.ndarray and len(image.shape) == 4:
+            images = _4d_to_list_3d(image)
+        else:
+            images = [image]
+
+    if type(caption) is list:
         captions = caption
     else:
-        images = [image]
-        captions = [caption]
-
-    # If there are no captions then make the captions list the same size
-    # as the images list.
-    if captions == [None] or captions is None:
-        captions = [None] * len(images)
+        if isinstance(caption, six.string_types):
+            captions = [caption]
+        # You can pass in a 1-D Numpy array as captions.
+        elif type(caption) == np.ndarray and len(caption.shape) == 1:
+            captions = caption.tolist()
+        # If there are no captions then make the captions list the same size
+        # as the images list.
+        elif caption is None:
+            captions = [None] * len(images)
+        else:
+            captions = [str(caption)]
 
     assert type(
         captions) == list, 'If image is a list then caption should be as well'
@@ -115,11 +129,11 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
             data = _PIL_to_png_bytes(image)
 
         # BytesIO
-        elif type(image) == io.BytesIO:
+        elif type(image) is io.BytesIO:
             data = _BytesIO_to_bytes(image)
 
         # Numpy Arrays (ie opencv)
-        elif type(image) == np.ndarray:
+        elif type(image) is np.ndarray:
             data = _verify_np_shape(image)
             data = _clip_image(data, clamp)
             data = _np_array_to_png_bytes(data)

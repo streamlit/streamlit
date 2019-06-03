@@ -35,7 +35,7 @@ class ServerUtilsTest(unittest.TestCase):
             self.assertTrue(
                 Server._is_url_from_allowed_origins('s3.amazon.com'))
 
-    def test_is_url_from_allowed_origins_browser_proxyAddress(self):
+    def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with patch('streamlit.Server.config.is_manually_set'
                    ) as b, patch(
                        'streamlit.Server.config.get_option',

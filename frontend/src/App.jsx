@@ -48,7 +48,7 @@ class App extends PureComponent {
       elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
-        runOnSave: true,
+        runOnSave: false,
       },
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
@@ -346,6 +346,12 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
+    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+      // Only add messages to report when script is running. Otherwise, we get
+      // bugs like #685.
+      return
+    }
+
     const { reportId } = this.state
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
@@ -359,20 +365,11 @@ class App extends PureComponent {
   }
 
   /**
-   * Empties out all elements whose reportIds are no longer current.
+   * Removes all elements whose reportIds are no longer current.
    */
   clearOldElements() {
     this.setState(({ elements, reportId }) => ({
-      elements: elements.map((elt) => {
-        if (elt && elt.get('reportId') === reportId) {
-          return elt
-        }
-        return fromJS({
-          reportId,
-          empty: { unused: true },
-          type: 'empty',
-        })
-      }),
+      elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
     }))
   }
 

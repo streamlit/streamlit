@@ -43,6 +43,19 @@ jobs:
             fi
 
       - run:
+          name: install graphviz ie dot
+          command: |
+            echo 'export SUDO="sudo"' >> $BASH_ENV
+            if [ -f /usr/bin/dot ] ; then
+              cp -f /usr/bin/dot dot.bin
+              md5sum dot.bin > ~/dot.md5
+            else
+              touch dot.bin
+              md5sum dot.bin > ~/dot.md5
+              rm -f dot.bin
+            fi
+
+      - run:
           # We use the python Pipfile.lock as the cache key and also
           # the hash of the current python.
           # If dependencies haven't changed then use the cache.
@@ -93,6 +106,11 @@ jobs:
           keys:
           - v12_make.bin-{{ checksum "~/make.md5" }}
 
+      - restore_cache:
+          name: Restore dot from cache
+          keys:
+          - v12_dot.bin-{{ checksum "~/dot.md5" }}
+
       #################################################################
       # Pre Make commands
       #################################################################
@@ -114,6 +132,25 @@ jobs:
           key: v12_make.bin-{{ checksum "~/make.md5" }}
           paths:
             - make.bin
+
+      - run:
+          name: install dot
+          command: |
+            if [ -s dot.bin ] ; then
+              echo "dot.bin does exists and is non zero"
+            else
+              echo "/usr/bin/dot doesnt exist, installing"
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y graphviz
+              cp -f /usr/bin/dot dot.bin
+            fi
+            ${SUDO} cp -f dot.bin /usr/bin/dot
+
+      - save_cache:
+          name: Save dot to cache
+          key: v12_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
 
 
       #################################################################

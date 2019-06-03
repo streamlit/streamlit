@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import ast
+from streamlit import compatibility
 
 
 def add_magic(code, script_path):
@@ -20,9 +21,11 @@ def add_magic(code, script_path):
         The syntax tree for the code.
 
     """
-    # Pass script_path so we get pretty exceptions.
-    tree = ast.parse(code, script_path, 'exec')
-    return _modify_ast_subtree(tree, True)
+    if compatibility.is_running_py3():
+        # Pass script_path so we get pretty exceptions.
+        tree = ast.parse(code, script_path, 'exec')
+        return _modify_ast_subtree(tree, True)
+    return code
 
 
 def _modify_ast_subtree(tree, is_root):
@@ -113,12 +116,11 @@ def _get_st_write_from_expr(node, i):
         if i == 0:
             return None
 
-    # If 1-element tuple, call st.write on the 0th element (rather than the
+    # If tuple, call st.write on the 0th element (rather than the
     # whole tuple). This allows us to add a comma at the end of a statement
     # to turn it into an expression that should be st-written. Ex:
     # "np.random.randn(1000, 2),"
-    if (type(node.value) is ast.Tuple and
-            len(node.value.elts) == 1):
+    if type(node.value) is ast.Tuple:
         args = node.value.elts
         st_write = _build_st_write_call(args)
 

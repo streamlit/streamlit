@@ -168,7 +168,7 @@ with st.echo():
 
 st.header('Visualizing data as images via Pillow.')
 
-@st.cache
+@st.cache(on_disk=True)
 def read_file_from_url(url):
     try:
         return urllib.request.urlopen(url).read()

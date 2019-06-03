@@ -11,6 +11,10 @@ setup_2_3_shims(globals())
 import click
 
 from streamlit.credentials import Credentials
+from streamlit import config
+
+
+config.parse_config_file()
 
 
 LOG_LEVELS = ['error', 'warning', 'info', 'debug']
