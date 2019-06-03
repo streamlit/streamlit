@@ -8,6 +8,6 @@ describe('st.vega_lite_chart', () => {
   it('displays a vega lite chart', () => {
     cy.get('.element-container .stVegaLiteChart')
       .find('canvas')
-      .should('have.attr', 'height', '400')
+      .should('have.class', 'marks')
   })
 })

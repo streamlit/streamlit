@@ -7,6 +7,6 @@ describe('st.echo', () => {
 
   it('echos a code', () => {
     cy.get('.element-container .stText')
-      .should('contain', 'print("This code is awesome!")')
+      .should('contain', `print('This code is awesome!')`)
   })
 })

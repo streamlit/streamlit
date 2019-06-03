@@ -8,6 +8,6 @@ describe('st.altair_chart', () => {
   it('displays an altair chart', () => {
     cy.get('.element-container .stVegaLiteChart')
       .find('canvas')
-      .should('have.attr', 'height', '400')
+      .should('have.class', 'marks')
   })
 })
