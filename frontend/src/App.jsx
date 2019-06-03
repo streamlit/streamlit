@@ -31,7 +31,7 @@ import { Delta, Text as TextProto } from 'autogen/protobuf'
 import { addRows } from 'lib/dataFrameProto'
 import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
 import { logError } from 'lib/log'
-import { setInstallationId, setStreamlitVersion } from 'lib/baseconsts'
+import {RERUN_PROMPT_MODAL_DIALOG, setInstallationId, setStreamlitVersion} from 'lib/baseconsts'
 import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
@@ -280,6 +280,11 @@ class App extends PureComponent {
       this.openDialog({
         type: 'scriptCompileError',
         exception: sessionEvent.scriptCompilationException,
+        onRerun: this.rerunScript,
+      })
+    } else if (RERUN_PROMPT_MODAL_DIALOG && sessionEvent.type === 'reportChangedOnDisk') {
+      this.openDialog({
+        type: 'scriptChanged',
         onRerun: this.rerunScript,
       })
     }

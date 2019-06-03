@@ -57,6 +57,14 @@ export const AWS_REGION = 'us-west-2'
 export const COGNITO_IDENTITY_POOL_ID =
   'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06'
 
+/**
+ * Feature flag for https://github.com/streamlit/streamlit/issues/678.
+ * If this is true, we show a modal dialog to prompt the user to rerun
+ * when their script changes. If false, we show a less intrusive UI in
+ * StatusWidget.
+ */
+export const RERUN_PROMPT_MODAL_DIALOG = false
+
 
 export function setStreamlitVersion(version) {
   if (STREAMLIT_VERSION != null) {

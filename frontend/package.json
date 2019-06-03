@@ -34,6 +34,7 @@
     "react-copy-to-clipboard": "^5.0.1",
     "react-dom": "^16.8.4",
     "react-google-login": "^5.0.4",
+    "react-hotkeys": "^1.1.4",
     "react-json-view": "^1.19.1",
     "react-keyboard-shortcuts": "^1.1.3",
     "react-leaflet": "^2.3.0",
