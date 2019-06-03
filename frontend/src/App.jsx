@@ -349,7 +349,7 @@ class App extends PureComponent {
     if (this.state.reportRunState !== ReportRunState.RUNNING) {
       // Only add messages to report when script is running. Otherwise, we get
       // bugs like #685.
-      return;
+      return
     }
 
     const { reportId } = this.state
