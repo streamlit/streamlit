@@ -348,7 +348,7 @@ class Server(object):
 
     def _handle_rerun_script_request(self, cmd_line_str):
         self._report.set_argv(cmd_line_str)
-        self._scriptrunner.request_rerun(self._report.argv)
+        self._scriptrunner.request_rerun()
 
     def _handle_clear_cache_request(self):
         # Setting verbose=True causes clear_cache to print to stdout.

@@ -144,6 +144,6 @@ def run(script_path):
 
     # Start the script in a separate thread, but do it from the ioloop so it
     # happens after the server starts.
-    ioloop.spawn_callback(scriptrunner.spawn_script_thread)
+    ioloop.spawn_callback(scriptrunner.request_rerun)
 
     ioloop.start()

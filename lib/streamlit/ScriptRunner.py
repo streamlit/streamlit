@@ -17,6 +17,7 @@ LOGGER = get_logger(__name__)
 
 class State(object):
     INITIAL = 'INITIAL'
+    STARTING_THREAD = 'STARTING_THREAD'
     RUNNING = 'RUNNING'
     STOP_REQUESTED = 'STOP_REQUESTED'
     RERUN_REQUESTED = 'RERUN_REQUESTED'
@@ -40,8 +41,7 @@ class ScriptRunner(object):
         self._state = None
 
         self._main_thread_id = threading.current_thread().ident
-        self._paused = threading.Event()
-        self._state_change_requested = threading.Event()
+        self._state_change_requested = False
 
         self.run_on_save = config.get_option('server.runOnSave')
 
@@ -79,43 +79,43 @@ class ScriptRunner(object):
         self._state = new_state
         self.on_state_changed.send(self._state)
 
-    def spawn_script_thread(self):
-        LOGGER.debug('Spawning script thread...')
-
-        script_thread = threading.Thread(
-            target=self._run,
-            name='Streamlit script runner thread')
-
-        script_thread.start()
-
     def is_running(self):
         return self._state == State.RUNNING
 
     def is_fully_stopped(self):
         return self._state in (State.INITIAL, State.STOPPED)
 
-    def request_rerun(self, argv):
-        self._report.argv = argv
+    def request_rerun(self):
+        """Signal that we're interested in running the script immediately.
+        If the script is not already running, it will be started immediately.
+        Otherwise, a rerun will be requested.
+        """
+        if self._state == State.STARTING_THREAD:
+            # we're already starting up
+            return
+        elif self.is_fully_stopped():
+            LOGGER.debug('Spawning script thread...')
+            self._set_state(State.STARTING_THREAD)
 
-        if self.is_fully_stopped():
-            self.spawn_script_thread()
+            script_thread = threading.Thread(
+                target=self._run,
+                name='Streamlit script runner thread')
+
+            script_thread.start()
         else:
             self._set_state(State.RERUN_REQUESTED)
-            self._paused.clear()
-            self._state_change_requested.set()
+            self._state_change_requested = True
 
     def request_stop(self):
         if self.is_fully_stopped():
             pass
         else:
             self._set_state(State.STOP_REQUESTED)
-            self._paused.clear()
-            self._state_change_requested.set()
+            self._state_change_requested = True
 
     def request_pause_unpause(self):
         if self._state == State.PAUSED:
             self._set_state(State.RUNNING)
-            self._paused.clear()
         else:
             self._request_pause()
 
@@ -135,15 +135,16 @@ class ScriptRunner(object):
         _script_thread_id = threading.current_thread().ident
         assert _script_thread_id != self._main_thread_id
 
-        if not self.is_fully_stopped():
-            # This should never happen!
-            raise RuntimeError('Script is already running')
+        cur_state = self._state
+        if cur_state != State.STARTING_THREAD:
+            # TODO: Fix self._state-related race conditions
+            raise RuntimeError('Bad state (expected=%s, saw=%s)' % (State.STARTING_THREAD, cur_state))
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st
         st._reset()
 
-        self._state_change_requested.clear()
+        self._state_change_requested = False
         self._set_state(State.RUNNING)
 
         # Compile the script. Any errors thrown here will be surfaced
@@ -238,10 +239,9 @@ class ScriptRunner(object):
             self._run()
 
     def _pause(self):
-        self._paused.set()
         self._set_state(State.PAUSED)
 
-        while self._paused.is_set():
+        while self._state == State.PAUSED:
             time.sleep(0.1)
 
     def _request_pause(self):
@@ -249,11 +249,11 @@ class ScriptRunner(object):
             pass
         else:
             self._set_state(State.PAUSE_REQUESTED)
-            self._state_change_requested.set()
+            self._state_change_requested = True
 
     # This method gets called from inside the script's execution context.
     def maybe_handle_execution_control_request(self):
-        if self._state_change_requested.is_set():
+        if self._state_change_requested:
             LOGGER.debug('Received execution control request: %s', self._state)
 
             if self._state == State.STOP_REQUESTED:
@@ -266,7 +266,7 @@ class ScriptRunner(object):
 
     def maybe_handle_file_changed(self):
         if self.run_on_save:
-            self.request_rerun(self._report.argv)
+            self.request_rerun()
         else:
             self.on_file_change_not_handled.send()
 

@@ -7,7 +7,6 @@
     "start": "craco start",
     "build": "craco build",
     "test": "craco test --env=jsdom",
-    "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
