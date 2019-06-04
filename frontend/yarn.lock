@@ -3371,9 +3371,9 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-"canvas2svg@git+https://github.com/bokeh/canvas2svg.git#v1.0.21":
+"canvas2svg@https://github.com/bokeh/canvas2svg#v1.0.21":
   version "1.0.21"
-  resolved "git+https://github.com/bokeh/canvas2svg.git#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
+  resolved "https://github.com/bokeh/canvas2svg#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -7054,9 +7054,9 @@ globule@^1.0.0:
     lodash "~4.17.10"
     minimatch "~3.0.2"
 
-"gloo2@git+https://github.com/bokeh/gloo2.git#b41bd5d":
+"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
   version "0.0.1"
-  resolved "git+https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
+  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
 
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
@@ -9213,6 +9213,16 @@ lodash.flow@^3.3.0:
   resolved "https://registry.yarnpkg.com/lodash.flow/-/lodash.flow-3.5.0.tgz#87bf40292b8cf83e4e8ce1a3ae4209e20071675a"
   integrity sha1-h79AKSuM+D5OjOGjrkIJ4gBxZ1o=
 
+lodash.isboolean@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/lodash.isboolean/-/lodash.isboolean-3.0.3.tgz#6c2e171db2a257cd96802fd43b01b20d5f5870f6"
+  integrity sha1-bC4XHbKiV82WgC/UOwGyDV9YcPY=
+
+lodash.isequal@^4.5.0:
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/lodash.isequal/-/lodash.isequal-4.5.0.tgz#415c4478f2bcc30120c22ce10ed3226f7d3e18e0"
+  integrity sha1-QVxEePK8wwEgwizhDtMib30+GOA=
+
 lodash.isfunction@^3.0.9:
   version "3.0.9"
   resolved "https://registry.yarnpkg.com/lodash.isfunction/-/lodash.isfunction-3.0.9.tgz#06de25df4db327ac931981d1bdb067e5af68d051"
@@ -10349,9 +10359,9 @@ number-is-nan@^1.0.0:
   resolved "https://registry.yarnpkg.com/number-is-nan/-/number-is-nan-1.0.1.tgz#097b602b53422a522c1afb8790318336941a011d"
   integrity sha1-CXtgK1NCKlIsGvuHkDGDNpQaAR0=
 
-"numbro@git+https://github.com/bokeh/numbro.git#e1b6c52":
+"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
   version "1.6.2"
-  resolved "git+https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
+  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeral@^2.0.6:
   version "2.0.6"
@@ -10943,9 +10953,9 @@ pify@^4.0.1:
   resolved "https://registry.yarnpkg.com/pify/-/pify-4.0.1.tgz#4b2cd25c50d598735c50292224fd8c6df41e3231"
   integrity sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==
 
-"pikaday@git+https://github.com/bokeh/pikaday.git#6b7258e":
+"pikaday@https://github.com/bokeh/pikaday.git#6b7258e":
   version "1.8.0"
-  resolved "git+https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
+  resolved "https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
 
 pinkie-promise@^2.0.0:
   version "2.0.1"
@@ -12243,6 +12253,17 @@ react-google-login@^5.0.4:
   integrity sha512-XNgm3pNQMaZiHTeZ4Qa5cWfdj/p5ppwgI/adYQrjD6fj6CK6ut76CGlh2xo+4r3XRSIeaWanFjUxU9kmBCGXZQ==
   dependencies:
     "@types/react" "*"
+    prop-types "^15.6.0"
+
+react-hotkeys@^1.1.4:
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/react-hotkeys/-/react-hotkeys-1.1.4.tgz#a0712aa2e0c03a759fd7885808598497a4dace72"
+  integrity sha1-oHEqouDAOnWf14hYCFmEl6TaznI=
+  dependencies:
+    lodash.isboolean "^3.0.3"
+    lodash.isequal "^4.5.0"
+    lodash.isobject "^3.0.2"
+    mousetrap "^1.5.2"
     prop-types "^15.6.0"
 
 react-is@^16.7.0, react-is@^16.8.1, react-is@^16.8.4:
@@ -13650,9 +13671,9 @@ slice-ansi@^2.1.0:
     astral-regex "^1.0.0"
     is-fullwidth-code-point "^2.0.0"
 
-"slickgrid@git+https://github.com/bokeh/SlickGrid.git#2189476":
+"slickgrid@https://github.com/bokeh/SlickGrid.git#2189476":
   version "2.3.23"
-  resolved "git+https://github.com/bokeh/SlickGrid.git#218947651624d0a85fb279185bba81b65639fe53"
+  resolved "https://github.com/bokeh/SlickGrid.git#218947651624d0a85fb279185bba81b65639fe53"
   dependencies:
     jquery ">=3.4.0"
     jquery-ui ">=1.8.0"

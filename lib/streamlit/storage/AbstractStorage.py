@@ -117,7 +117,7 @@ def _get_static_dir():
     """
     module_dir = os.path.dirname(os.path.normpath(__file__))
     streamlit_dir = os.path.normpath(
-        os.path.join(module_dir, '..', '..'))
+        os.path.join(module_dir, '..'))
 
     return os.path.normpath(
         os.path.join(streamlit_dir, 'static'))

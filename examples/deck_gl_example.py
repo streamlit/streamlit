@@ -74,7 +74,7 @@ st.write("Here's the data for that:")
 
 st.write(random_points)
 
-st.write('...and the same plot using Vega Lite:')
+st.write('...and the same plot using Vega-Lite:')
 
 st.vega_lite_chart(
     random_points,
