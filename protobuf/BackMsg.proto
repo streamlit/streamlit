@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-// A backend message from the browser to the proxy.
+// A backend message from the browser to the server.
 message BackMsg {
   oneof type {
     // Set to true to ask the proxy to display the inline help.
@@ -24,5 +24,7 @@ message BackMsg {
 
     // Requests that the report's execution be stopped
     bool stop_report = 7;
+
+    string widget_json = 8;
   }
 }

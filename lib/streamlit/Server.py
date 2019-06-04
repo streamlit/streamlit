@@ -1,9 +1,10 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
-
+import json
 import logging
 import threading
 import urllib
+import json
 
 import tornado.concurrent
 import tornado.gen
@@ -18,6 +19,7 @@ from streamlit import util
 from streamlit.credentials import Credentials
 from streamlit.ScriptRunner import State as ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
+from streamlit.widgets import Widgets
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -77,7 +79,7 @@ class Server(object):
         self._storage = None
         self._credentials = Credentials.get_current()
 
-        port = config.get_option('proxy.port')
+        port = config.get_option('server.port')
         app = tornado.web.Application(self._get_routes())
         app.listen(port)
 
@@ -90,13 +92,19 @@ class Server(object):
 
         LOGGER.debug('Server started on port %s', port)
 
+    def get_debug(self):
+        return {
+            'report': self._report.get_debug(),
+        }
+
     def _get_routes(self):
         routes = [
             (r'/stream', _SocketHandler, dict(server=self)),
             (r'/healthz', _HealthHandler, dict(server=self)),
+            (r'/debugz', _DebugHandler, dict(server=self)),
         ]
 
-        if not config.get_option('proxy.useNode'):
+        if not config.get_option('global.developmentMode'):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
@@ -109,7 +117,8 @@ class Server(object):
             ])
         else:
             LOGGER.debug(
-                'useNode == True, not serving static content from python.')
+                'developmentMode == True, '
+                'not serving static content from python.')
 
         return routes
 
@@ -299,7 +308,7 @@ class Server(object):
         msg.report_finished = True
         self.enqueue(msg)
 
-    # TODO [0px] Also handle livesave! serialize_running_report_to_files
+    # TODO [0px] Also handle server.livesave! serialize_running_report_to_files
     @tornado.gen.coroutine
     def _handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""
@@ -339,7 +348,7 @@ class Server(object):
 
     def _handle_rerun_script_request(self, cmd_line_str):
         self._report.set_argv(cmd_line_str)
-        self._scriptrunner.request_rerun(self._report.argv)
+        self._scriptrunner.request_rerun()
 
     def _handle_clear_cache_request(self):
         # Setting verbose=True causes clear_cache to print to stdout.
@@ -381,6 +390,23 @@ class _HealthHandler(tornado.web.RequestHandler):
             self.write('unavailable')
 
 
+class _DebugHandler(tornado.web.RequestHandler):
+    def initialize(self, server):
+        self._server = server
+
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return _is_url_from_allowed_origins(origin)
+
+    def get(self):
+        self.add_header('Cache-Control', 'no-cache')
+        self.write('<code><pre>%s</pre><code>' %
+            json.dumps(
+                self._server.get_debug(),
+                indent=2,
+            ))
+
+
 class _SocketHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, server):
         self._server = server
@@ -415,6 +441,11 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
                 self._server._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
                 self._server._scriptrunner.request_stop()
+            elif msg_type == 'widget_json':
+                payload = json.loads(msg.widget_json)
+                Widgets.get_current().set(payload)
+                #Widgets.get_current().dump()  # Removed for Insight Demo.
+                self._server._handle_rerun_script_request(' '.join(self._server._report.argv))
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -461,7 +492,7 @@ def _is_url_from_allowed_origins(url):
        function was called from.
     3. The cloud storage domain configured in `s3.bucket`.
 
-    If `proxy.enableCORS` is False, this allows all origins.
+    If `server.enableCORS` is False, this allows all origins.
 
     Parameters
     ----------
@@ -474,7 +505,7 @@ def _is_url_from_allowed_origins(url):
         True if URL is accepted. False otherwise.
 
     """
-    if not config.get_option('proxy.enableCORS'):
+    if not config.get_option('server.enableCORS'):
         # Allow everything when CORS is disabled.
         return True
 
@@ -498,7 +529,7 @@ def _is_url_from_allowed_origins(url):
         parsed = urllib.parse.urlparse(s3_url)
         allowed_domains.append(parsed.hostname)
 
-    if config.is_manually_set('browser.proxyAddress'):
-        allowed_domains.append(config.get_option('browser.proxyAddress'))
+    if config.is_manually_set('browser.serverAddress'):
+        allowed_domains.append(config.get_option('browser.serverAddress'))
 
     return any(hostname == d for d in allowed_domains)

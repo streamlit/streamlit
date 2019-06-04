@@ -74,7 +74,7 @@ message NewReport {
 // on ReportSession state change events.
 message SessionState {
   // If true, streamlit will re-run the report if it detects that the report
-  // has been changed. This value comes from the proxy.watchFileSystem config.
+  // has been changed. This value comes from the server.runOnSave config.
   // The browser can change this option; it's sent here so that the browser
   // shows the correct initial value in its Settings dialog.
   bool run_on_save = 1;

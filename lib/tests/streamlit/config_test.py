@@ -223,16 +223,17 @@ class ConfigTest(unittest.TestCase):
         config._delete_option('s3.bucket')
 
     def test_sections_order(self):
-        sections = [
+        sections = sorted([
             '_test',
-            u'global',
+            u'browser',
             u'client',
+            u'global',
             u'proxy',
             u'runner',
-            u'browser',
             u's3',
-        ]
-        keys = list(config._section_descriptions.keys())
+            u'server',
+        ])
+        keys = sorted(list(config._section_descriptions.keys()))
         self.assertEqual(sections, keys)
 
     def test_config_option_keys(self):
@@ -241,6 +242,8 @@ class ConfigTest(unittest.TestCase):
             u'browser.proxyAddress',
             u'browser.proxyPort',
             u'browser.remotelyTrackUsage',
+            u'browser.serverAddress',
+            u'browser.serverPort',
             u'client.caching',
             u'client.displayEnabled',
             u'client.proxyAddress',
@@ -260,10 +263,9 @@ class ConfigTest(unittest.TestCase):
             u'proxy.port',
             u'proxy.reportExpirationSecs',
             u'proxy.runOnSave',
-            u'proxy.useNode',
             u'proxy.watchFileSystem',
-            u'runner.autoWrite',
             u'runner.installTracer',
+            u'runner.magicEnabled',
             u's3.accessKeyId',
             u's3.bucket',
             u's3.keyPrefix',
@@ -271,7 +273,13 @@ class ConfigTest(unittest.TestCase):
             u's3.region',
             u's3.requireLoginToView',
             u's3.secretAccessKey',
-            u's3.url']
+            u's3.url',
+            u'server.enableCORS',
+            u'server.headless',
+            u'server.liveSave',
+            u'server.port',
+            u'server.runOnSave',
+        ]
         keys = sorted(config._config_options.keys())
         self.assertEqual(config_options, keys)
 
@@ -300,22 +308,23 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual('clean this text', result)
 
     def test_check_conflicts_2(self):
-        config._set_option('proxy.useNode', True, 'test')
-        config._set_option('proxy.port', 1234, 'test')
+        config._set_option('global.developmentMode', True, 'test')
+        config._set_option('server.port', 1234, 'test')
         with pytest.raises(AssertionError) as e:
             config._check_conflicts()
         self.assertEqual(
             str(e.value),
-            'proxy.port does not work when proxy.useNode is true. ')
+            'server.port does not work when global.developmentMode is true.')
 
     def test_check_conflicts_2a(self):
-        config._set_option('proxy.useNode', True, 'test')
-        config._set_option('browser.proxyPort', 1234, 'test')
+        config._set_option('global.developmentMode', True, 'test')
+        config._set_option('browser.serverPort', 1234, 'test')
         with pytest.raises(AssertionError) as e:
             config._check_conflicts()
         self.assertEqual(
             str(e.value),
-            'browser.proxyPort does not work when proxy.useNode is true. ')
+            'browser.serverPort does not work when global.developmentMode is '
+            'true.')
 
     def test_check_conflicts_3(self):
         with pytest.raises(AssertionError) as e:
@@ -398,17 +407,17 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
     def test_s3(self):
-        self.assertEqual(None, config._s3_secret_access_key._get_val_func())
-        self.assertEqual(None, config._s3_access_key_id._get_val_func())
-        self.assertEqual(None, config._s3_url._get_val_func())
-        self.assertEqual(None, config._s3_bucket._get_val_func())
+        self.assertEqual(None, config.get_option('s3.secretAccessKey'))
+        self.assertEqual(None, config.get_option('s3.accessKeyId'))
+        self.assertEqual(None, config.get_option('s3.url'))
+        self.assertEqual(None, config.get_option('s3.bucket'))
         with patch('streamlit.config._get_public_credentials') as p:
             p.return_value = {}
             config.set_option('global.sharingMode', 'streamlit-public')
-            self.assertEqual(None, config._s3_secret_access_key._get_val_func())
-            self.assertEqual(None, config._s3_access_key_id._get_val_func())
-            self.assertEqual(None, config._s3_url._get_val_func())
-            self.assertEqual(None, config._s3_bucket._get_val_func())
+            self.assertEqual(None, config.get_option('s3.secretAccessKey'))
+            self.assertEqual(None, config.get_option('s3.accessKeyId'))
+            self.assertEqual(None, config.get_option('s3.url'))
+            self.assertEqual(None, config.get_option('s3.bucket'))
 
         with patch('streamlit.config._get_public_credentials') as p:
             p.return_value = {
@@ -418,41 +427,41 @@ class ConfigTest(unittest.TestCase):
                 'bucket': 'some.bucket',
             }
             config.set_option('global.sharingMode', 'streamlit-public')
-            self.assertEqual('sekrit', config._s3_secret_access_key._get_val_func())
-            self.assertEqual('sekrit2', config._s3_access_key_id._get_val_func())
-            self.assertEqual('http://test.url', config._s3_url._get_val_func())
-            self.assertEqual('some.bucket', config._s3_bucket._get_val_func())
+            self.assertEqual('sekrit', config.get_option('s3.secretAccessKey'))
+            self.assertEqual('sekrit2', config.get_option('s3.accessKeyId'))
+            self.assertEqual('http://test.url', config.get_option('s3.url'))
+            self.assertEqual('some.bucket', config.get_option('s3.bucket'))
 
-    def test_browser_proxy_port(self):
-        config.set_option('proxy.port', 1234)
-        self.assertEqual(1234, config._browser_proxy_port._get_val_func())
+    def test_browser_server_port(self):
+        config.set_option('server.port', 1234)
+        self.assertEqual(1234, config.get_option('browser.serverPort'))
 
-    def test_proxy_is_remote_via_liveSave(self):
-        config.set_option('proxy.liveSave', True)
-        self.assertEqual(True, config._proxy_is_remote._get_val_func())
+    def test_server_headless_via_liveSave(self):
+        config.set_option('server.liveSave', True)
+        self.assertEqual(True, config.get_option('server.headless'))
 
-    def test_proxy_is_remote_via_atom_plugin(self):
-        config.set_option('proxy.liveSave', False)
+    def test_server_headless_via_atom_plugin(self):
+        config.set_option('server.liveSave', False)
         os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN'] = 'True'
-        self.assertEqual(True, config._proxy_is_remote._get_val_func())
+        self.assertEqual(True, config.get_option('server.headless'))
 
-    def test_proxy_is_remote_via_headless(self):
+    def test_server_headless(self):
         if 'DISPLAY' in os.environ.keys():
             del os.environ['DISPLAY']
         if 'IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN' in os.environ.keys():
             del os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN']
         with patch('streamlit.config.platform.system') as p:
             p.return_value = 'Linux'
-            self.assertEqual(True, config._proxy_is_remote._get_val_func())
+            self.assertEqual(True, config.get_option('server.headless'))
 
-    def test_proxy_use_node(self):
+    def test_global_dev_mode(self):
         config.set_option('global.developmentMode', True)
-        self.assertEqual(True, config._proxy_use_node._get_val_func())
+        self.assertEqual(True, config.get_option('global.developmentMode'))
 
     def test_global_log_level_debug(self):
         config.set_option('global.developmentMode', True)
-        self.assertEqual(u'debug', config._global_log_level._get_val_func())
+        self.assertEqual(u'debug', config.get_option('global.logLevel'))
 
     def test_global_log_level(self):
         config.set_option('global.developmentMode', False)
-        self.assertEqual(u'info', config._global_log_level._get_val_func())
+        self.assertEqual(u'info', config.get_option('global.logLevel'))

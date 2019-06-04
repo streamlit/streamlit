@@ -14,8 +14,10 @@ import random
 import sys
 import textwrap
 import traceback
+import uuid
 
 from streamlit import protobuf
+from streamlit.widgets import Widgets
 
 # setup logging
 from streamlit.logger import get_logger
@@ -99,7 +101,7 @@ def _with_element(method):
     def wrapped_method(self, *args, **kwargs):
         try:
             def marshall_element(element):
-                method(self, element, *args, **kwargs)
+                return method(self, element, *args, **kwargs)
             return self._enqueue_new_element_delta(marshall_element)
         except Exception as e:
             # First, write the delta to stderr.
@@ -114,6 +116,16 @@ def _with_element(method):
                 self.exception(e)
 
     return wrapped_method
+
+def _widget(f):
+    @_wraps_with_cleaned_sig(f)
+    @_with_element
+    def wrapper(dg, element, *args, **kwargs):
+        id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
+        element.widget.id = id
+        ui_value = Widgets.get_current().get(id)
+        return f(dg, element, ui_value, *args, **kwargs)
+    return wrapper
 
 
 class DeltaGenerator(object):
@@ -157,13 +169,15 @@ class DeltaGenerator(object):
             element.
 
         """
+        rv = None
+        if marshall_element:
+            msg = protobuf.ForwardMsg()
+            rv = marshall_element(msg.delta.new_element)
+            msg.delta.id = self._id
+
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
-            return self
-
-        msg = protobuf.ForwardMsg()
-        marshall_element(msg.delta.new_element)
-        msg.delta.id = self._id
+            return rv if rv is not None else self
 
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
@@ -175,12 +189,12 @@ class DeltaGenerator(object):
         msg_was_enqueued = self._enqueue(msg)
 
         if not msg_was_enqueued:
-            return self
+            return rv if rv is not None else self
 
         if self._is_root:
             self._id += 1
 
-        return output_dg
+        return rv if rv is not None else output_dg
 
     @_with_element
     def balloons(self, element):
@@ -763,18 +777,48 @@ class DeltaGenerator(object):
         >>> import streamlit as st
         >>> import graphviz as graphviz
         >>>
-        >>> # create a graphlib graph object
-        ... graph = graphviz.Graph(comment='The Round Table')
-        >>> graph.node('A', 'King Arthur')
-        >>> graph.node('B', 'Sir Bedevere the Wise')
-        >>> graph.node('L', 'Sir Lancelot the Brave')
-        >>> graph.edges(['AB', 'AL'])
-        >>> graph.edge('B', 'L', constraint='false')
+        >>> # Create a graphlib graph object
+        >>> graph = graphviz.DiGraph()
+        >>> graph.edge('run', 'intr')
+        >>> graph.edge('intr', 'runbl')
+        >>> graph.edge('runbl', 'run')
+        >>> graph.edge('run', 'kernel')
+        >>> graph.edge('kernel', 'zombie')
+        >>> graph.edge('kernel', 'sleep')
+        >>> graph.edge('kernel', 'runmem')
+        >>> graph.edge('sleep', 'swap')
+        >>> graph.edge('swap', 'runswap')
+        >>> graph.edge('runswap', 'new')
+        >>> graph.edge('runswap', 'runmem')
+        >>> graph.edge('new', 'runmem')
+        >>> graph.edge('sleep', 'runmem')
         >>>
         >>> st.graphviz_chart(graph)
-        >>>
-        >>> # render from the dot string
-        ... st.graphviz_chart(graph.source)
+
+        Or you can render the chart from the graph using GraphViz's Dot
+        language:
+
+        >>> st.graphviz_chart('''
+            digraph {
+                run -> intr
+                intr -> runbl
+                runbl -> run
+                run -> kernel
+                kernel -> zombie
+                kernel -> sleep
+                kernel -> runmem
+                sleep -> swap
+                swap -> runswap
+                runswap -> new
+                runswap -> runmem
+                new -> runmem
+                sleep -> runmem
+            }
+        ''')
+
+        .. output::
+           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           height: 400px
 
         """
         import streamlit.elements.graphviz_chart as graphviz_chart
@@ -1091,6 +1135,31 @@ class DeltaGenerator(object):
         import streamlit.elements.generic_binary_proto as generic_binary_proto
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
+
+    @_widget
+    def checkbox(self, element, ui_value, label, value=False):
+        """Checkbox doc string."""
+        element.widget.label = label
+        element.widget.checkbox.value = value
+        return ui_value if ui_value is not None else value
+
+    @_widget
+    def slider(self, element, ui_value, label, value=0, min=0, max=100, step=1):
+        """Slider doc string."""
+        # TODO: Support floats.
+        element.widget.label = label
+        element.widget.slider.min = min
+        element.widget.slider.max = max
+        element.widget.slider.step = step
+        element.widget.slider.value = value
+        return ui_value if ui_value is not None else value
+
+    @_widget
+    def text_area(self, element, ui_value, label, value=''):
+        """Text box doc string."""
+        element.widget.label = label
+        element.widget.text_area.value = value
+        return ui_value if ui_value is not None else value
 
     @_with_element
     def progress(self, element, value):

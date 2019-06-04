@@ -16,15 +16,14 @@ client:
 development: true
 log_level: debug
 
-proxy:
+server:
   # IP address of the machine where the Streamlit Proxy is running.
   externalIP: ${IP}
 
   # Is the proxy running remotely.
-  isRemote: true
-  watchFileSystem: false
+  headless: true
+  runOnSave: false
   port: ${PORT}
-  useNode: false
 EOF
 
 python -m streamlit.proxy

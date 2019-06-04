@@ -48,11 +48,12 @@ class App extends PureComponent {
       elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
-        runOnSave: true,
+        runOnSave: false,
       },
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
+      widgetState: {},
     }
 
     // Bind event handlers.
@@ -76,6 +77,10 @@ class App extends PureComponent {
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
+
+    // Widget-throttle bits. TODO: cleanup or remove!
+    this.latestWidgetBackMsg = null
+    this.widgetThrottleTimer = null
   }
 
   /**
@@ -122,6 +127,17 @@ class App extends PureComponent {
       },
     },
   }
+
+  getWidgetState = () => {
+    return this.state.widgetState
+  }
+
+  setWidgetState = (key, value) => {
+    let widgetState = this.getWidgetState()
+    widgetState[key] = value
+    this.setState({widgetState})
+  }
+
 
   componentDidMount() {
     // Initialize connection manager here, to avoid
@@ -346,6 +362,12 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
+    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+      // Only add messages to report when script is running. Otherwise, we get
+      // bugs like #685.
+      return
+    }
+
     const { reportId } = this.state
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
@@ -359,20 +381,11 @@ class App extends PureComponent {
   }
 
   /**
-   * Empties out all elements whose reportIds are no longer current.
+   * Removes all elements whose reportIds are no longer current.
    */
   clearOldElements() {
     this.setState(({ elements, reportId }) => ({
-      elements: elements.map((elt) => {
-        if (elt && elt.get('reportId') === reportId) {
-          return elt
-        }
-        return fromJS({
-          reportId,
-          empty: { unused: true },
-          type: 'empty',
-        })
-      }),
+      elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
     }))
   }
 
@@ -512,12 +525,47 @@ class App extends PureComponent {
   /**
    * Sends a message back to the server.
    */
-  sendBackMsg(msg) {
+  sendBackMsg = (msg) => {
     if (this.connectionManager) {
       this.connectionManager.sendMessage(msg)
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
+  }
+
+  /**
+   * A quick hack to throttle widget-related BackMsgs
+   * TODO: remove me post-May 2019 hackathon!
+   */
+  sendThrottledWidgetBackMsg = (msg) => {
+    const THROTTLE_MS = 400
+
+    this.latestWidgetBackMsg = msg
+
+    if (this.widgetThrottleTimer != null) {
+      // A timer is already running. It'll send this BackMsg when
+      // it wakes up
+      return
+    }
+
+    const delta = Date.now() - this.lastBackMsgTime
+    if (delta >= THROTTLE_MS) {
+      // We can send our message immediately
+      this.sendLatestWidgetBackMsg()
+    } else {
+      // Schedule our throttle timer
+      this.widgetThrottleTimer = window.setTimeout(
+        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
+    }
+  }
+
+  sendLatestWidgetBackMsg = () => {
+    if (this.latestWidgetBackMsg != null) {
+      this.sendBackMsg(this.latestWidgetBackMsg)
+      this.lastBackMsgTime = Date.now()
+    }
+    this.latestWidgetBackMsg = null
+    this.widgetThrottleTimer = null
   }
 
   /**
@@ -599,6 +647,9 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
+                  sendBackMsg={this.sendThrottledWidgetBackMsg}
+                  getWidgetState={this.getWidgetState}
+                  setWidgetState={this.setWidgetState}
                 />
               }
             </Col>

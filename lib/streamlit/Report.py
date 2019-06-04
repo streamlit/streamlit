@@ -44,6 +44,11 @@ class Report(object):
 
         self.generate_new_id()
 
+    def get_debug(self):
+        return {
+            'master queue': self._master_queue.get_debug(),
+        }
+
     def set_argv(self, cmd_line_str):
         import shlex
 
@@ -212,7 +217,7 @@ class Report(object):
         """
         if status == 'running':
             configured_server_address = (
-                config.get_option('browser.proxyAddress'))
+                config.get_option('browser.serverAddress'))
         else:
             configured_server_address = None
 
@@ -228,7 +233,7 @@ class Report(object):
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            serverPort=config.get_option('browser.proxyPort'),
+            serverPort=config.get_option('browser.serverPort'),
         )
 
 
@@ -268,6 +273,6 @@ def _get_browser_address_bar_port():
     server-browser websocket.
 
     """
-    if config.get_option('proxy.useNode'):
+    if config.get_option('global.developmentMode'):
         return 3000
-    return config.get_option('browser.proxyPort')
+    return config.get_option('browser.serverPort')

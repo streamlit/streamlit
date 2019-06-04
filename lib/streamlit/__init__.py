@@ -105,6 +105,7 @@ audio           = _with_dg(_DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
 bokeh_chart     = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
+checkbox        = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
 code            = _with_dg(_DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
 deck_gl_chart   = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
@@ -123,10 +124,12 @@ markdown        = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
 plotly_chart    = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress        = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot          = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
+slider          = _with_dg(_DeltaGenerator.slider)  # noqa: E221
 subheader       = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
 success         = _with_dg(_DeltaGenerator.success)  # noqa: E221
 table           = _with_dg(_DeltaGenerator.table)  # noqa: E221
 text            = _with_dg(_DeltaGenerator.text)  # noqa: E221
+text_area       = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
 title           = _with_dg(_DeltaGenerator.title)  # noqa: E221
 vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video           = _with_dg(_DeltaGenerator.video)  # noqa: E221
@@ -195,6 +198,7 @@ def write(*args):
         - write(obj)        : The default is to print str(obj).
         - write(mpl_fig)    : Displays a Matplotlib figure.
         - write(altair)     : Displays an Altair chart.
+        - write(keras)      : Displays a Keras model.
         - write(graphviz)   : Displays a Graphviz graph.
         - write(plotly_fig) : Displays a Plotly figure.
         - write(bokeh_fig)  : Displays a Bokeh figure.
@@ -289,6 +293,11 @@ def write(*args):
             elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
+            elif util.is_keras_model(arg):
+                from tensorflow.python.keras.utils import vis_utils
+                flush_buffer()
+                dot = vis_utils.model_to_dot(arg)
+                graphviz_chart(dot.to_string())
             elif type(arg) in dict_types:  # noqa: F821
                 flush_buffer()
                 json(arg)

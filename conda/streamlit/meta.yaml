@@ -39,6 +39,8 @@ requirements:
     - pillow
     - protobuf
     - psutil
+    - pydot
+    - tensorflow
     - toml
     - tornado
     - tzlocal

@@ -2,71 +2,55 @@ import streamlit as st
 
 import graphviz as graphviz
 
-"""examples from https://github.com/dagrejs/dagre-d3/wiki"""
+"""examples from https://graphviz.readthedocs.io/en/stable/examples.html"""
 
-# create a graphlib graph object
-graph = graphviz.Graph(comment='The Round Table')
-graph.node('A', 'King Arthur')
-graph.node('B', 'Sir Bedevere the Wise')
-graph.node('L', 'Sir Lancelot the Brave')
-graph.edges(['AB', 'AL'])
-graph.edge('B', 'L', constraint='false')
+# basic graph
+hello = graphviz.Digraph('Hello World')
+hello.edge('Hello', 'World')
 
-# dot string for a styled graph
-styled = """// Attribute styling
-strict digraph {
-  A [style="fill: #afa"]
-  B [labelStyle="font-weight: bold"]
-  C [labelStyle="font-size: 2em"]
-  D
-  E
-  A -> B [style="stroke: #f66; stroke-width: 3px; stroke-dasharray: 5, 5;",arrowheadStyle="fill: #f66"]
-  C -> B [label="A to C",labelStyle="font-style: italic; text-decoration: underline;"]
-  A -> D [label="line interpolation different",lineInterpolate=basis]
-  E -> D
-  A -> E [label="Arrowhead class",arrowheadClass=arrowhead]
-}"""
+# styled graph
+styled = graphviz.Graph('G', filename='g_c_n.gv')
+styled.attr(bgcolor='purple:pink', label='agraph', fontcolor='white')
 
+with styled.subgraph(name='cluster1') as c:
+    c.attr(fillcolor='blue:cyan', label='acluster', fontcolor='white',
+           style='filled', gradientangle='270')
+    c.attr('node', shape='box', fillcolor='red:yellow',
+           style='filled', gradientangle='90')
+    c.node('anode')
 
-# dot string for a clustered graph
-cluster = """// Clustered graph
-strict digraph {
-  a [label=A,ry=5,rx=5]
-  g [label=G,ry=5,rx=5]
-  subgraph group {
-    label=Group;
-    clusterLabelPos=top;
-    style="fill: #d3d7e8";
-    ry=5;
-    rx=5;
-    subgraph top_group {
-      label="Top Group";
-      clusterLabelPos=bottom;
-      style="fill: #ffd47f";
-      ry=5;
-      rx=5;
-      b [label=B,ry=5,rx=5]
-    }
-    subgraph bottom_group {
-      label="Bottom Group";
-      style="fill: #5f9488";
-      ry=5;
-      rx=5;
-      c [label=C,ry=5,rx=5]
-      d [label=D,ry=5,rx=5]
-      e [label=E,ry=5,rx=5]
-      f [label=F,ry=5,rx=5]
-    }
-  }
-  a -> b
-  b -> c
-  b -> d
-  b -> e
-  b -> f
-  b -> g
-}"""
+# complex graph
+finite = graphviz.Digraph('finite_state_machine', filename='fsm.gv')
+finite.attr(rankdir='LR', size='8,5')
+
+finite.attr('node', shape='doublecircle')
+finite.node('LR_0')
+finite.node('LR_3')
+finite.node('LR_4')
+finite.node('LR_8')
+
+finite.attr('node', shape='circle')
+finite.edge('LR_0', 'LR_2', label='SS(B)')
+finite.edge('LR_0', 'LR_1', label='SS(S)')
+finite.edge('LR_1', 'LR_3', label='S($end)')
+finite.edge('LR_2', 'LR_6', label='SS(b)')
+finite.edge('LR_2', 'LR_5', label='SS(a)')
+finite.edge('LR_2', 'LR_4', label='S(A)')
+finite.edge('LR_5', 'LR_7', label='S(b)')
+finite.edge('LR_5', 'LR_5', label='S(a)')
+finite.edge('LR_6', 'LR_6', label='S(b)')
+finite.edge('LR_6', 'LR_5', label='S(a)')
+finite.edge('LR_7', 'LR_8', label='S(b)')
+finite.edge('LR_7', 'LR_5', label='S(a)')
+finite.edge('LR_8', 'LR_6', label='S(b)')
+finite.edge('LR_8', 'LR_5', label='S(a)')
 
 # draw graphs
-st.graphviz_chart(graph)
+st.write('You should see a graph with two connected nodes.')
+st.graphviz_chart(hello)
+
+st.write('You should see a colorful node within a cluster within a graph.')
 st.graphviz_chart(styled)
-st.graphviz_chart(cluster, height=500)
+
+st.write('You should see a graph representing a finite state machine.')
+st.graphviz_chart(finite)

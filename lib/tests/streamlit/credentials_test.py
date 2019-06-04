@@ -7,7 +7,7 @@ import textwrap
 import unittest
 import pytest
 
-from mock import call, mock_open, patch
+from mock import call, mock_open, patch, MagicMock
 
 from streamlit.credentials import Activation, Credentials, _generate_code, _verify_code, _get_data
 
@@ -18,6 +18,10 @@ else:
     FileNotFoundError = IOError
 
 
+mock_get_path = MagicMock(
+    return_value='/mock/home/folder/.streamlit/credentials.toml')
+
+
 class CredentialsClassTest(unittest.TestCase):
     """Credentials Class Unittest class."""
 
@@ -25,6 +29,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Setup."""
         Credentials._singleton = None
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_constructor(self):
         """Test Credentials constructor."""
         c = Credentials()
@@ -33,6 +38,7 @@ class CredentialsClassTest(unittest.TestCase):
                          '/mock/home/folder/.streamlit/credentials.toml')
         self.assertEqual(c.activation, None)
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_get_current(self):
         """Test Credentials.get_current."""
 
@@ -41,6 +47,7 @@ class CredentialsClassTest(unittest.TestCase):
 
         self.assertEqual(Credentials._singleton, c)
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_constructor_runs_twice(self):
         """Test Credentials constructor runs twice."""
         Credentials._singleton = None
@@ -51,6 +58,7 @@ class CredentialsClassTest(unittest.TestCase):
             str(e.value),
             'Credentials already initialized. Use .get_current() instead')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load(self):
         """Test Credentials.load()."""
         data = textwrap.dedent('''
@@ -65,6 +73,7 @@ class CredentialsClassTest(unittest.TestCase):
             self.assertEqual(c.activation.email, 'user@domain.com')
             self.assertEqual(c.activation.code, None)
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_twice(self):
         """Test Credentials.load() called twice."""
         c = Credentials.get_current()
@@ -74,6 +83,7 @@ class CredentialsClassTest(unittest.TestCase):
             p.error.assert_called_once_with(
                 'Credentials already loaded. Not rereading file.')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_file_not_found(self):
         """Test Credentials.load() with FileNotFoundError."""
         with patch('streamlit.credentials.open') as m:
@@ -86,6 +96,7 @@ class CredentialsClassTest(unittest.TestCase):
                 str(e.value),
                 'Credentials not found. Please run "streamlit activate".')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_permission_denied(self):
         """Test Credentials.load() with Perission denied."""
         if sys.version_info < (3, 0):
@@ -104,6 +115,7 @@ class CredentialsClassTest(unittest.TestCase):
                 'Run "streamlit reset" and try again.\n'
             )
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_check_activated_already_loaded(self):
         """Test Credentials.check_activated() already loaded."""
         c = Credentials.get_current()
@@ -112,6 +124,7 @@ class CredentialsClassTest(unittest.TestCase):
             c.check_activated()
             p.assert_not_called()
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_check_activated_false(self):
         """Test Credentials.check_activated() not activated."""
         c = Credentials.get_current()
@@ -120,6 +133,7 @@ class CredentialsClassTest(unittest.TestCase):
             c.check_activated()
             p.assert_called_once_with('Activation code/email not valid.')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_check_activated_error(self):
         """Test Credentials.check_activated() has an error."""
         c = Credentials.get_current()
@@ -129,6 +143,7 @@ class CredentialsClassTest(unittest.TestCase):
             c.check_activated()
             p.assert_called_once_with('Some error')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_save(self):
         """Test Credentials.save()."""
         c = Credentials.get_current()
@@ -153,6 +168,7 @@ class CredentialsClassTest(unittest.TestCase):
             else:
                 m.return_value.write.assert_called_once_with(truth2)
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
@@ -164,6 +180,7 @@ class CredentialsClassTest(unittest.TestCase):
             self.assertEqual(p.error.call_args_list[1],
                              call('Already activated'))
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_activate_already_activated_not_valid(self):
         """Test Credentials.activate() already activated but not valid."""
         c = Credentials.get_current()
@@ -176,6 +193,7 @@ class CredentialsClassTest(unittest.TestCase):
                 str(p.error.call_args_list[1])[0:27],
                 'call(\'Activation not valid.')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_activate(self):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
@@ -191,6 +209,7 @@ class CredentialsClassTest(unittest.TestCase):
             self.assertEqual(c.activation.email, 'user@domain.com')
             self.assertEqual(c.activation.is_valid, True)
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""
         with patch('streamlit.credentials.os.remove') as p:
@@ -198,6 +217,7 @@ class CredentialsClassTest(unittest.TestCase):
             p.assert_called_once_with(
                 '/mock/home/folder/.streamlit/credentials.toml')
 
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_reset_error(self):
         """Test Credentials.reset() with error."""
         with patch('streamlit.credentials.os.remove',

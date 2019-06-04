@@ -12,6 +12,7 @@ import base58
 import toml
 
 from streamlit.logger import get_logger
+from streamlit import util
 
 LOGGER = get_logger(__name__)
 
@@ -47,8 +48,7 @@ class Credentials(object):
                 'Credentials already initialized. Use .get_current() instead')
 
         self.activation = None
-        self._conf_file = os.path.join(
-            os.path.expanduser('~'), '.streamlit', 'credentials.toml')
+        self._conf_file = util.get_streamlit_file_path('credentials.toml')
 
         Credentials._singleton = self
 

@@ -100,3 +100,33 @@ class ConfigOptionTest(unittest.TestCase):
         c.set_value(my_value, where_defined)
 
         self.assertFalse(c.is_expired())
+
+    def test_replaced_by_unexpired(self):
+        def config_getter(key):
+            self.assertEqual(key, 'mysection.newName')
+            return 'newValue'
+
+        c = ConfigOption(
+                'mysection.oldName',
+                description='My old description',
+                replaced_by='mysection.newName',
+                expiration_date='2100-01-01',
+                config_getter=config_getter)
+
+        self.assertTrue(c.deprecated)
+        self.assertFalse(c.is_expired())
+
+    def test_replaced_by_expired(self):
+        def config_getter(key):
+            self.assertEqual(key, 'mysection.newName')
+            return 'newValue'
+
+        c = ConfigOption(
+                'mysection.oldName',
+                description='My old description',
+                replaced_by='mysection.newName',
+                expiration_date='2000-01-01',
+                config_getter=config_getter)
+
+        self.assertTrue(c.deprecated)
+        self.assertTrue(c.is_expired())

@@ -17,6 +17,7 @@ import "Progress.proto";
 import "Text.proto";
 import "VegaLiteChart.proto";
 import "Video.proto";
+import "Widget.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -41,7 +42,8 @@ message Element {
     Text text = 1;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
+    Widget widget = 19;
 
-    // Next ID: 19
+    // Next ID: 20
   }
 }
