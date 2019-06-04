@@ -104,7 +104,7 @@ class Server(object):
             (r'/debugz', _DebugHandler, dict(server=self)),
         ]
 
-        if not config.get_option('global.developmentMode'):
+        if not config.get_option('global.developmentMode') or not config.get_option('global.useNode'):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()

@@ -672,17 +672,17 @@ class DeltaGenerator(object):
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
-        """Display a chart using the Vega Lite library.
+        """Display a chart using the Vega-Lite library.
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
             or None
-            Either the data to be plotted or a Vega Lite spec containing the
-            data (which more closely follows the Vega Lite API).
+            Either the data to be plotted or a Vega-Lite spec containing the
+            data (which more closely follows the Vega-Lite API).
 
         spec : dict or None
-            The Vega Lite spec for the chart. If the spec was already passed in
+            The Vega-Lite spec for the chart. If the spec was already passed in
             the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
@@ -713,7 +713,7 @@ class DeltaGenerator(object):
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
-        Examples of Vega Lite usage without Streamlit can be found at
+        Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily
         translated to the syntax shown above.
 

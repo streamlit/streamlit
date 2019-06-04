@@ -552,13 +552,13 @@ class DataFrameProtoTest(unittest.TestCase):
         df = data_frame_proto._get_data_frame(delta_chart)
         self.assertEqual(df, delta_chart.new_element.chart.data)
 
-        # Vega Lite Chart
+        # Vega-Lite Chart
         delta_vega = protobuf.Delta()
         delta_vega.new_element.vega_lite_chart.data.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_vega)
         self.assertEqual(df, delta_vega.new_element.vega_lite_chart.data)
 
-        # Vega Lite Chart w/ named dataset
+        # Vega-Lite Chart w/ named dataset
         delta_vega_dataset = protobuf.Delta()
 
         ds1 = NamedDataSet()
@@ -573,7 +573,7 @@ class DataFrameProtoTest(unittest.TestCase):
             df,
             delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data)
 
-        # Vega Lite Chart w/ unnamed dataset
+        # Vega-Lite Chart w/ unnamed dataset
         delta_vega_unnamed_dataset = protobuf.Delta()
 
         ds2 = NamedDataSet()

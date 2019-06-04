@@ -72,12 +72,12 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.HasField('data'), True)
         self.assertDictEqual(json.loads(c.spec), {'mark': 'rect'})
 
-    def test_data_value_in_spec(self):
-        """Test passing data={value: df} inside the spec."""
+    def test_data_values_in_spec(self):
+        """Test passing data={values: df} inside the spec."""
         st.vega_lite_chart({
             'mark': 'rect',
             'data': {
-                'value': df1,
+                'values': df1,
             },
         })
 
