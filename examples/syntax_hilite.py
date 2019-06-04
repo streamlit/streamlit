@@ -20,9 +20,9 @@ int main(void) {
     return 0;
 }"""),
 
-    Language(name='Javascript',
+    Language(name='JavaScript',
              example="""
-// Javascript
+/* JavaScript */
 function sayHello() {
     const name = 'Streamlit';
     console.log(`Hello, ${name}!`);
@@ -74,6 +74,10 @@ software:
     background: hsla(0, 0%, 100%, .5);
 }
 """),
+    Language(name='JavaScript',
+             example="""
+console.log('This is an extremely looooooooooooooooooooooooooooooooooooong string.')
+    """),
 ]
 
 
@@ -93,4 +97,3 @@ This is a _markdown_ block...
 print('...and syntax hiliting works here, too')
 ```
 """)
-

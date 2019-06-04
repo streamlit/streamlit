@@ -13,6 +13,7 @@
 .streamlit-container .markdown-text-container {
   font-family: 'IBM Plex Sans', sans-serif;
   margin-bottom: -1rem;
+  position: relative;
 }
 
 .streamlit-container .markdown-text-container p {
@@ -31,10 +32,18 @@
   border-radius: 3px;
   margin: 0 0 1rem 0;
   padding: 1rem;
-  position: relative;
 }
 
-.streamlit-container .markdown-text-container pre > code {
+.streamlit-container .markdown-text-container .scrollable {
+  margin-right: 40px;
+  overflow: hidden;
+}
+
+.streamlit-container .markdown-text-container .scrollable:hover {
+  overflow: auto;
+}
+
+.streamlit-container .markdown-text-container pre code {
   background: transparent;
   border: 0;
   display: inline;

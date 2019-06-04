@@ -5,7 +5,7 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
-import React from 'react'
+import React, { Fragment } from 'react'
 import Prism from 'prismjs'
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -34,10 +34,14 @@ class CodeBlock extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     if (this.props.language === undefined) {
       return (
-        <pre>
-          <code>{this.props.value}</code>
+        <Fragment>
+          <pre>
+            <div className="scrollable">
+              <code>{this.props.value}</code>
+            </div>
+          </pre>
           <CopyButton text={this.props.value} />
-        </pre>
+        </Fragment>
       )
     }
 
@@ -48,14 +52,20 @@ class CodeBlock extends PureStreamlitElement<Props, StState> {
       lang = Prism.languages.python
     }
 
-    const html = Prism.highlight(this.props.value, lang, '')
-    const cls = `language-${this.props.language}`
-
+    const safeHtml = Prism.highlight(this.props.value, lang, '')
+    const languageClassName = `language-${this.props.language}`
     return (
-      <pre>
-        <code className={cls} dangerouslySetInnerHTML={{ __html: html }} />
+      <Fragment>
+        <pre>
+          <div className="scrollable">
+            <code
+              className={languageClassName}
+              dangerouslySetInnerHTML={{ __html: safeHtml }}
+            />
+          </div>
+        </pre>
         <CopyButton text={this.props.value} />
-      </pre>
+      </Fragment>
     )
   }
 }

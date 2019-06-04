@@ -1,3 +1,10 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ *
+ * @overview Copy to clipboard button.
+ */
+
 import React, { PureComponent } from 'react'
 import Clipboard from 'clipboard'
 import { Copy as CopyIcon } from 'react-feather'
@@ -27,7 +34,7 @@ class CopyButton extends PureComponent<Props> {
   public render = (): React.ReactNode => (
     <button
       ref={this.button}
-      title="Click to copy"
+      title="Copy code to clipboard"
       className="copy"
       data-clipboard-text={this.props.text}
     >
