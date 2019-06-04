@@ -57,15 +57,15 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     # Pull data out of spec dict when it's in a 'data' key:
     #   marshall(proto, {data: df})
-    #   marshall(proto, {data: {value: df, ...}})
+    #   marshall(proto, {data: {values: df, ...}})
     #   marshall(proto, {data: {url: 'url'}})
     if 'data' in spec:
         data_spec = spec['data']
 
         if type(data_spec) in dict_types:
-            if 'value' in data_spec:
-                data = data_spec['value']
-                del data_spec['value']
+            if 'values' in data_spec:
+                data = data_spec['values']
+                del data_spec['values']
         else:
             data = data_spec
             del spec['data']
