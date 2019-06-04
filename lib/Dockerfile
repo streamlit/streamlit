@@ -32,3 +32,5 @@ COPY streamlit/. /streamlit/streamlit/
 
 # Setup development
 RUN python setup.py develop
+
+ENTRYPOINT ["streamlit", "run"]
