@@ -7,6 +7,7 @@
  * report, and transient report-related events.
  */
 
+import {RERUN_PROMPT_MODAL_DIALOG} from 'lib/baseconsts'
 import React, {PureComponent, ReactNode} from 'react'
 import {CSSTransition} from 'react-transition-group'
 import {Button, UncontrolledTooltip} from 'reactstrap'
@@ -223,7 +224,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderReportIsRunning()
-      } else if (this.state.reportChangedOnDisk) {
+      } else if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
         return this.renderRerunReportPrompt()
       }
     }
@@ -268,7 +269,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     return (
       <div
         id="ReportStatus"
-        className={this.state.statusMinimized ? 'minimized' : ''}>
+        className={this.state.statusMinimized ? 'report-is-running-minimized' : ''}>
         <img className="ReportRunningIcon" src={iconRunning} alt="Running..."/>
         <label>Running...</label>
         {stopButton}
@@ -283,7 +284,10 @@ export class StatusWidget extends PureComponent<Props, State> {
     )
   }
 
-  /** "Source file changed. [Rerun] [Always Rerun]" */
+  /**
+   * "Source file changed. [Rerun] [Always Rerun]"
+   * (This is only shown when the RERUN_PROMPT_MODAL_DIALOG feature flag is false)
+   */
   private renderRerunReportPrompt(): ReactNode {
     const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
@@ -294,7 +298,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         onMouseLeave={this.onReportPromptUnhover}>
         <div
           id="ReportStatus"
-          className={minimized ? 'minimized' : ''}>
+          className={minimized ? 'rerun-prompt-minimized' : ''}>
           <svg className="icon" viewBox="0 0 8 8">
             <use href={openIconic + '#info'}/>
           </svg>
@@ -304,13 +308,13 @@ export class StatusWidget extends PureComponent<Props, State> {
           </label>
 
           {StatusWidget.promptButton(
-            <div className="UnderlineFirstLetter">Rerun</div>,
+            <div className="underlineFirstLetter">Rerun</div>,
             rerunRequested,
             this.handleRerunClick
           )}
 
           {StatusWidget.promptButton(
-            <div className="UnderlineFirstLetter">Always rerun</div>,
+            <div className="underlineFirstLetter">Always rerun</div>,
             rerunRequested,
             this.handleAlwaysRerunClick
           )}

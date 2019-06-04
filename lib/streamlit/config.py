@@ -215,6 +215,12 @@ def _global_unit_test():
     """
     return False
 
+_create_option(
+    'global.useNode',
+    description='Whether to serve static content from node.',
+    visibility='hidden',
+    default_val=True)
+
 
 # Config Section: Client #
 

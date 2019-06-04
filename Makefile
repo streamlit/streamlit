@@ -11,7 +11,8 @@ endif
 
 help:
 	@echo "Streamlit Make Commands:"
-	@echo " all-devel    - Run once to start developing Streamlit!"
+	@echo " all          - Cleans and rebuilds lib and frontend."
+	@echo " all-devel    - Cleans and rebuilds lib. Doesn't rebuild the frontend."
 	@echo " init         - Run once to install python and js dependencies."
 	@echo " build        - build the static version of Streamlit (without Node)"
 	@echo " protobuf     - Recompile Protobufs for Python and Javascript."
@@ -23,11 +24,18 @@ help:
 	@echo " docs         - Generates HTML documentation at /docs/_build."
 	@echo " devel-docs   - Builds docs and starts a local server."
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
-	@echo " pytest       - Runs python unit tests"
-	@echo " jslint       - Lints the frontend"
+	@echo " pytest       - Runs python unit tests."
+	@echo " jslint       - Lints the frontend."
+
+.PHONY: all
+all: clean init install build develop
 
 .PHONY: all-devel
-all-devel: clean init install build develop
+all-devel: clean init install develop
+	@echo ""
+	@echo "    The frontend has *not* been rebuilt, so shared reports won't work."
+	@echo "    If you need to test report sharing, run 'make build' first!"
+	@echo ""
 
 .PHONY: init
 init: setup pipenv react-init protobuf # react-build release

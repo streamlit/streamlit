@@ -169,3 +169,8 @@ iframe {
     background: unset;
   }
 }
+
+// Utility class for underlining first letter in a text
+.underlineFirstLetter::first-letter {
+  text-decoration: underline;
+}
