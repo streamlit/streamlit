@@ -24,7 +24,7 @@
     "mapbox-gl": "^1.0.0",
     "mixpanel-browser": "^2.27.1",
     "moment": "^2.22.2",
-    "moment-duration-format": "^2.2.2",
+    "moment-duration-format": "^2.3.1",
     "node-sass": "^4.12.0",
     "numeral": "^2.0.6",
     "plotly.js": "^1.48.1",

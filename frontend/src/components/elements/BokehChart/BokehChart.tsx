@@ -9,7 +9,7 @@ import { Map as ImmutableMap } from 'immutable'
 import {
   PureStreamlitElement,
   StProps,
-  StState
+  StState,
 } from 'components/shared/StreamlitElement/'
 
 interface Props extends StProps {
