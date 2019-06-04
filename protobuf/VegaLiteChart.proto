@@ -15,7 +15,4 @@ message VegaLiteChart {
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any.
   repeated NamedDataSet datasets = 4;
-
-  // Deprecated:
-  //DataTransform data_transform = 3;  // Removed this misguided functionality.
 }
