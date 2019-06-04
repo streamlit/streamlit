@@ -1,0 +1,6 @@
+version: '3.6'
+
+services:
+  streamlit:
+    volumes:
+      - ../../lib:/streamlit
