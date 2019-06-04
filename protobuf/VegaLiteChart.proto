@@ -5,14 +5,14 @@ import "DataTransform.proto";
 import "NamedDataSet.proto";
 
 message VegaLiteChart {
-  // The a JSON-formatted string with the Vega Lite spec.
+  // The a JSON-formatted string with the Vega-Lite spec.
   string spec = 1;
 
   // The dataframe that will be used as the chart's main data source, if
-  // specified using Vega Lite's inline API.
+  // specified using Vega-Lite's inline API.
   DataFrame data = 2;
 
-  // Dataframes associated with this chart using Vega Lite's datasets API, if
+  // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any.
   repeated NamedDataSet datasets = 4;
 
