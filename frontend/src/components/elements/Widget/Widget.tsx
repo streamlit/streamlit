@@ -4,19 +4,19 @@
  */
 
 import React from 'react'
+import {Input, Label} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
-import {dispatchOneOf} from '../../../lib/immutableProto'
-import {PureStreamlitElement, StState} from '../../shared/StreamlitElement'
+import {dispatchOneOf} from 'lib/immutableProto'
+import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
 import './Widget.scss'
 
-import {Input, Label} from 'reactstrap'
 
 interface Props {
-  width: number;
   element: ImmutableMap<string, any>;
-  sendBackMsg: Function;
   getWidgetState: Function;
+  sendBackMsg: Function;
   setWidgetState: Function;
+  width: number;
 }
 
 interface State extends StState {
@@ -36,62 +36,50 @@ class Widget extends PureStreamlitElement<Props, State> {
       textArea: (data: ImmutableMap<string, any>) => value = data.get('value'),
     })
 
-    this.state = {
-      value: value,
-    }
+    this.state = { value }
 
     console.log(`Original value: ${value}, id = ${element.get('id')}`)
-    this.setWidgetState(element.get('id'), value)
+    this.props.setWidgetState(element.get('id'), value)
   }
 
-  private sendBackMsg(obj: any): void {
-    this.props.sendBackMsg(obj)
-  }
-
-  private getWidgetState(): void {
-    return this.props.getWidgetState()
-  }
-
-  private setWidgetState(key: string, value: any): void {
-    this.props.setWidgetState(key, value)
-  }
-
-  private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let old = this.state.value
-    let current = e.target.checked
-    let id = e.target.id
-    console.log(`id = ${id}, old = ${old}, current = ${current}`)
-    this.setState({
-      value: current,
+  private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const oldValue = this.state.value
+    const currentValue = e.target.checked
+    const id = e.target.id
+    console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
+    this.setState({ value: currentValue })
+    this.props.setWidgetState(id, currentValue)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
   };
 
   private handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let old = this.state.value
-    let current = parseInt(e.target.value, 10)
-    let id = e.target.id
-    console.log(`id = ${id}, old = ${old}, current = ${current}`)
-    this.setState({
-      value: current,
+    const oldValue = this.state.value
+    const currentValue = parseInt(e.target.value, 10)
+    const id = e.target.id
+    console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
+    this.setState({ value: currentValue })
+    this.props.setWidgetState(id, currentValue)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
   };
 
   private handleTextAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let old = this.state.value
-    let current = e.target.value
-    let id = e.target.id
-    console.log(`id = ${id}, old = ${old}, current = ${current}`)
-    this.setState({
-      value: current,
+    const oldValue = this.state.value
+    const currentValue = e.target.value
+    const id = e.target.id
+    console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
+    this.setState({ value: currentValue })
+    this.props.setWidgetState(id, currentValue)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
   };
-
 
   public safeRender(): React.ReactNode {
     const {element} = this.props
@@ -107,7 +95,7 @@ class Widget extends PureStreamlitElement<Props, State> {
         return (
           <div className="Widget row-widget">
             <Label style={style} check>
-              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleChange} />
+              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleCheckboxChange} />
               <span className="label">{ label }</span>
             </Label>
           </div>

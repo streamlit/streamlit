@@ -133,11 +133,11 @@ class App extends PureComponent {
   }
 
   setWidgetState = (key, value) => {
+    // TODO (kantuni): do not mutate state
     let widgetState = this.getWidgetState()
     widgetState[key] = value
     this.setState({widgetState})
   }
-
 
   componentDidMount() {
     // Initialize connection manager here, to avoid

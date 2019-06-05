@@ -70,15 +70,15 @@
   }
 
   textarea {
-    color: $black;
     border: 2px solid $gray;
+    color: $black;
+    min-height: 42px;
   }
 
   textarea:focus {
     color: $black;
     border-color: $primary;
   }
-
 
   label > .label {
     font-size: $font-size-sm;

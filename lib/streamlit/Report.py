@@ -5,7 +5,6 @@ import base58
 import json
 import os
 import uuid
-import urllib
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue

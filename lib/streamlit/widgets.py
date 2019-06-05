@@ -1,6 +1,5 @@
-import uuid
-
 from pprint import pprint
+
 
 class Widgets(object):
     pass
@@ -22,7 +21,6 @@ class Widgets(object):
 
         Widgets._singleton = self
         self._state = {}
-
 
     def get(self, id):
         return self._state.get(id)

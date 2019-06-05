@@ -11,7 +11,6 @@ import functools
 import io
 import json
 import random
-import sys
 import textwrap
 import traceback
 import uuid
@@ -116,6 +115,7 @@ def _with_element(method):
                 self.exception(e)
 
     return wrapped_method
+
 
 def _widget(f):
     @_wraps_with_cleaned_sig(f)
