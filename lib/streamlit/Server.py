@@ -1,6 +1,6 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
-import json
+
 import logging
 import threading
 import urllib
@@ -19,7 +19,6 @@ from streamlit import util
 from streamlit.credentials import Credentials
 from streamlit.ScriptRunner import ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
-from streamlit.widgets import Widgets
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -62,7 +61,7 @@ class Server(object):
 
         Server._singleton = self
 
-        _fix_tornado_logging()
+        _set_tornado_log_levels()
 
         self._report = report
         self._scriptrunner = scriptrunner
@@ -99,7 +98,7 @@ class Server(object):
 
     def _get_routes(self):
         routes = [
-            (r'/stream', _SocketHandler, dict(server=self)),
+            (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
             (r'/healthz', _HealthHandler, dict(server=self)),
             (r'/debugz', _DebugHandler, dict(server=self)),
         ]
@@ -344,9 +343,23 @@ class Server(object):
                 progress_msg.SerializeToString(), binary=True)
             raise e
 
-    def _handle_rerun_script_request(self, cmd_line_str):
-        self._report.set_argv(cmd_line_str)
-        self._scriptrunner.request_rerun()
+    def _handle_rerun_script_request(self, command_line=None, widget_state=None):
+        """Tells the ScriptRunner to re-run its report.
+
+        Parameters
+        ----------
+        command_line : str | None
+            The new command line arguments to run the script with, or None
+            to use its previous command line value.
+        widget_state : dict | None
+            The widget state dictionary to run the script with, or None
+            to use its previous widget states.
+
+        """
+        argv = None
+        if command_line is not None:
+            argv = self._report.parse_argv_from_command_line(command_line)
+        self._scriptrunner.request_rerun(argv, widget_state)
 
     def _handle_clear_cache_request(self):
         # Setting verbose=True causes clear_cache to print to stdout.
@@ -405,7 +418,8 @@ class _DebugHandler(tornado.web.RequestHandler):
             ))
 
 
-class _SocketHandler(tornado.websocket.WebSocketHandler):
+class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
+    """Handles a WebSocket connection from the browser"""
     def initialize(self, server):
         self._server = server
 
@@ -432,7 +446,8 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             if msg_type == 'cloud_upload':
                 yield self._server._handle_save_request(self)
             elif msg_type == 'rerun_script':
-                self._server._handle_rerun_script_request(msg.rerun_script)
+                self._server._handle_rerun_script_request(
+                    command_line=msg.rerun_script)
             elif msg_type == 'clear_cache':
                 self._server._handle_clear_cache_request()
             elif msg_type == 'set_run_on_save':
@@ -440,10 +455,8 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == 'stop_report':
                 self._server._scriptrunner.request_stop()
             elif msg_type == 'widget_json':
-                payload = json.loads(msg.widget_json)
-                Widgets.get_current().set(payload)
-                #Widgets.get_current().dump()  # Removed for Insight Demo.
-                self._server._handle_rerun_script_request(' '.join(self._server._report.argv))
+                self._server._handle_rerun_script_request(
+                    widget_state=json.loads(msg.widget_json))
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -452,7 +465,7 @@ class _SocketHandler(tornado.websocket.WebSocketHandler):
             self._server._enqueue_exception(e)
 
 
-def _fix_tornado_logging():
+def _set_tornado_log_levels():
     if not config.get_option('global.developmentMode'):
         # Hide logs unless they're super important.
         # Example of stuff we don't care about: 404 about .js.map files.

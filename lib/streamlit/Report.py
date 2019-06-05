@@ -5,7 +5,6 @@ import base58
 import json
 import os
 import uuid
-import urllib
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
@@ -49,7 +48,20 @@ class Report(object):
             'master queue': self._master_queue.get_debug(),
         }
 
-    def set_argv(self, cmd_line_str):
+    def parse_argv_from_command_line(self, cmd_line_str):
+        """Parses an argv dict for this script from a command line string.
+
+        Parameters
+        ----------
+        cmd_line_str : str
+            The string to parse.
+
+        Returns
+        -------
+        dict
+            An argv dict, suitable for executing this Report with.
+
+        """
         import shlex
 
         cmd_line_list = shlex.split(cmd_line_str)

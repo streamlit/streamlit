@@ -4,11 +4,13 @@
 import sys
 import threading
 from collections import deque
+from collections import namedtuple
 
 from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
+from streamlit.widgets import Widgets
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 from streamlit.logger import get_logger
@@ -22,12 +24,24 @@ class ScriptState(object):
 
 
 class ScriptEvent(object):
-    # Stop the script, but don't shutdown the runner (no data)
+    # Stop the script, but don't shutdown the runner (data=None)
     STOP = 'STOP'
-    # Rerun the script (data=Report)
+    # Rerun the script (data=RerunData)
     RERUN = 'RERUN'
     # Shut down the ScriptRunner, stopping any running script first (data=None)
     SHUTDOWN = 'SHUTDOWN'
+
+
+# Data attached to RERUN events
+RerunData = namedtuple('RerunData', [
+    # The argv value to run the script with. If this is None,
+    # the argv from the most recent run of the script will be used instead.
+    'argv',
+
+    # Widget state dictionary to run the script with. If this is None, the
+    # widget_state from the most recent run of the script will be used instead.
+    'widget_state'
+])
 
 
 class ScriptEventQueue(object):
@@ -126,6 +140,7 @@ class ScriptRunner(object):
         self._report = report
         self._event_queue = ScriptEventQueue()
         self._state = ScriptState.STOPPED
+        self._last_run_data = RerunData(argv=report.argv, widget_state={})
 
         self.run_on_save = config.get_option('server.runOnSave')
 
@@ -176,15 +191,27 @@ class ScriptRunner(object):
     def is_shutdown(self):
         return self._state == ScriptState.IS_SHUTDOWN
 
-    def request_rerun(self):
-        """Signal that we're interested in running the script immediately.
+    def request_rerun(self, argv=None, widget_state=None):
+        """Signal that we're interested in running the script.
+
         If the script is not already running, it will be started immediately.
         Otherwise, a rerun will be requested.
+
+        Parameters
+        ----------
+        argv : dict | None
+            The new command line arguments to run the script with, or None
+            to use the argv from the previous run of the script.
+        widget_state : dict | None
+            The widget state dictionary to run the script with, or None
+            to use the widget state from the previous run of the script.
+
         """
         if self.is_shutdown():
             LOGGER.warning('Discarding RERUN event after shutdown')
             return
-        self._event_queue.enqueue(ScriptEvent.RERUN, self._report)
+        self._event_queue.enqueue(ScriptEvent.RERUN,
+                                  RerunData(argv, widget_state))
 
     def request_stop(self):
         if self.is_shutdown():
@@ -265,8 +292,15 @@ class ScriptRunner(object):
         if hasattr(sys, 'settrace'):
             sys.settrace(trace_calls)
 
-    def _run_script(self, report):
-        """Run our script"""
+    def _run_script(self, rerun_data):
+        """Run our script.
+
+        Parameters
+        ----------
+        rerun_data: RerunData
+            The RerunData to use.
+
+        """
         assert self._state == ScriptState.STOPPED
 
         # Reset delta generator so it starts from index 0.
@@ -282,16 +316,16 @@ class ScriptRunner(object):
             # Python 3 got rid of the native execfile() command, so we now read
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
-            with open(report.script_path) as f:
+            with open(self._report.script_path) as f:
                 filebody = f.read()
 
             if config.get_option('runner.magicEnabled'):
-                filebody = magic.add_magic(filebody, report.script_path)
+                filebody = magic.add_magic(filebody, self._report.script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                report.script_path,
+                self._report.script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 'exec',
@@ -314,10 +348,23 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
+        # Get our argv and widget_state for this run, defaulting to
+        # self._last_run_data for missing values.
+        # Also update self._last_run_data for the next run.
+        argv = rerun_data.argv or self._last_run_data.argv
+        widget_state = rerun_data.widget_state or \
+                       self._last_run_data.widget_state
+        self._last_run_data = RerunData(argv, widget_state)
+
+        # Update the Widget singleton with the new widget_state
+        Widgets.get_current().set_state(widget_state)
+
         if config.get_option('runner.installTracer'):
             self._install_tracer()
 
-        rerun_requested_with_data = None
+        # This will be set to a RerunData instance if our
+        # execution is interrupted by a RerunException.
+        rerun_request = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -337,16 +384,16 @@ class ScriptRunner(object):
             # but we already knew it from the argv surgery in cli.py.
             # TODO: Remove this feature when we implement interactivity! This is
             # not robust in a multi-user environment.
-            sys.argv = report.argv
+            sys.argv = argv
 
             # Add special variables to the module's dict.
-            module.__dict__['__file__'] = report.script_path
+            module.__dict__['__file__'] = self._report.script_path
 
-            with modified_sys_path(report):
+            with modified_sys_path(self._report):
                 exec(code, module.__dict__)
 
         except RerunException as e:
-            rerun_requested_with_data = e.report
+            rerun_request = e.rerun_data
 
         except StopException:
             pass
@@ -363,8 +410,8 @@ class ScriptRunner(object):
         self._local_sources_watcher.update_watched_modules()
         _clean_problem_modules()
 
-        if rerun_requested_with_data is not None:
-            self._run_script(rerun_requested_with_data)
+        if rerun_request is not None:
+            self._run_script(rerun_request)
 
 
 class ScriptControlException(BaseException):
@@ -379,8 +426,13 @@ class StopException(ScriptControlException):
 
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
-    def __init__(self, report):
-        self.report = report
+    def __init__(self, rerun_data):
+        """
+        Parameters
+        ----------
+        rerun_data : RerunData
+        """
+        self.rerun_data = rerun_data
 
 
 def _clean_problem_modules():

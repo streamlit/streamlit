@@ -123,7 +123,7 @@ def _widget(f):
     def wrapper(dg, element, *args, **kwargs):
         id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
         element.widget.id = id
-        ui_value = Widgets.get_current().get(id)
+        ui_value = Widgets.get_current().get_widget_value(id)
         return f(dg, element, ui_value, *args, **kwargs)
     return wrapper
 

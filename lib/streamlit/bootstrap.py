@@ -4,7 +4,6 @@
 import os
 import signal
 import sys
-import urllib
 
 import click
 import tornado.ioloop
