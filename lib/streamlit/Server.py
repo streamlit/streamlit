@@ -17,7 +17,7 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit import util
 from streamlit.credentials import Credentials
-from streamlit.ScriptRunner import State as ScriptState
+from streamlit.ScriptRunner import ScriptState
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.widgets import Widgets
 
@@ -241,10 +241,8 @@ class Server(object):
     def _enqueue_session_state_changed_message(self):
         msg = protobuf.ForwardMsg()
         msg.session_state_changed.run_on_save = self._scriptrunner.run_on_save
-        msg.session_state_changed.report_is_running = (
-            # Don't use is_running() because we want to indicate "running" to
-            # the user event if we're in the process of stopping.
-            not self._scriptrunner.is_fully_stopped())
+        msg.session_state_changed.report_is_running = \
+            self._scriptrunner.is_running()
         self.enqueue(msg)
 
     def _enqueue_file_change_message(self, _):

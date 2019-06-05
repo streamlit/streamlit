@@ -31,13 +31,13 @@ def _set_up_signal_handler(scriptrunner):
     LOGGER.debug('Setting up signal handler')
 
     def signal_handler(signal_number, stack_frame):
-        script_was_running = scriptrunner.is_running()
-        scriptrunner.request_stop()
-
         # If the script is running, users can use Ctrl-C to stop it, and then
         # another Ctrl-C to stop the server. If not running, Ctrl-C just stops
         # the server.
-        if not script_was_running:
+        if scriptrunner.is_running():
+            scriptrunner.request_stop()
+        else:
+            scriptrunner.request_shutdown()
             tornado.ioloop.IOLoop.current().stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
