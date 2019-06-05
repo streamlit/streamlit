@@ -81,7 +81,7 @@ def _with_element(method):
     This is a function decorator.
 
     Converts a method of the with arguments (self, element, ...) into a method
-    with arguments (self, ...). Thus, the intantiation of the element proto
+    with arguments (self, ...). Thus, the instantiation of the element proto
     object and creation of the element are handled automatically.
 
     Parameters
