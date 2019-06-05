@@ -76,7 +76,7 @@ software:
 """),
     Language(name='JavaScript',
              example="""
-console.log('This is an extremely looooooooooooooooooooooooooooooooooooong string.')
+console.log('This is an extremely looooooooooooooooooooooooooooooooooooooooooooooooooooong string.')
     """),
 ]
 
