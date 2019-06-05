@@ -20,10 +20,10 @@ int main(void) {
     return 0;
 }"""),
 
-    Language(name='Javascript',
+    Language(name='JavaScript',
              example="""
-// Javascript
-say_hello() {
+/* JavaScript */
+function sayHello() {
     const name = 'Streamlit';
     console.log(`Hello, ${name}!`);
 }"""),
@@ -46,7 +46,7 @@ SELECT * FROM software WHERE name = 'Streamlit';
 
 {
     "_comment": "This is a JSON file!",
-    name: "Streamlit", 
+    name: "Streamlit",
     version: 0.27
 }"""),
 
@@ -74,6 +74,10 @@ software:
     background: hsla(0, 0%, 100%, .5);
 }
 """),
+    Language(name='JavaScript',
+             example="""
+console.log('This is an extremely looooooooooooooooooooooooooooooooooooooooooooooooooooong string.')
+    """),
 ]
 
 
@@ -93,4 +97,3 @@ This is a _markdown_ block...
 print('...and syntax hiliting works here, too')
 ```
 """)
-

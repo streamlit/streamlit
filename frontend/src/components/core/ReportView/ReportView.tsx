@@ -5,6 +5,7 @@
 
 import React, {PureComponent, ReactNode} from 'react'
 import {AutoSizer} from 'react-virtualized'
+// @ts-ignore
 import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
 import {Progress} from 'reactstrap'
 import {dispatchOneOf} from 'lib/immutableProto'
