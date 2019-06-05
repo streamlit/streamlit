@@ -3,6 +3,7 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import {ScriptChangedDialog, Props as ScriptChangedProps} from 'components/core/StreamlitDialog/ScriptChangedDialog'
 import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
@@ -20,6 +21,7 @@ type DialogProps =
   ClearCacheProps |
   RerunScriptProps |
   SettingsProps |
+  ScriptChangedProps |
   ScriptCompileErrorProps |
   UploadProgressProps |
   UploadedProps |
@@ -35,6 +37,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return rerunScriptDialog(dialogProps)
     case 'settings':
       return settingsDialog(dialogProps)
+    case 'scriptChanged':
+      return <ScriptChangedDialog {...dialogProps}/>
     case 'scriptCompileError':
       return scriptCompileErrorDialog(dialogProps)
     case 'uploadProgress':
@@ -261,7 +265,7 @@ function warningDialog(props: WarningProps): ReactElement {
   )
 }
 
-function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: PlainEventHandler }): ReactElement {
+export function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: PlainEventHandler }): ReactElement {
   const isOpen = children !== undefined
   return (
     <Modal

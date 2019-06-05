@@ -78,7 +78,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         spec = json.loads(el.vega_lite_chart.spec)
 
-        # Checking vega lite is a lot of work so rather than doing that, we
+        # Checking Vega-Lite is a lot of work so rather than doing that, we
         # just checked to see if the spec data name matches the dataset.
         self.assertEqual(
             spec.get('data').get('name'),

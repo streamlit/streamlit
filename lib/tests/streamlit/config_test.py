@@ -256,6 +256,7 @@ class ConfigTest(unittest.TestCase):
             u'global.sharingMode',
             u'global.showWarningOnDirectExecution',
             u'global.unitTest',
+            u'global.useNode',
             u'proxy.autoCloseDelaySecs',
             u'proxy.enableCORS',
             u'proxy.isRemote',
