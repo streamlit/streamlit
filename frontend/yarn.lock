@@ -916,7 +916,7 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@craco/craco@^5.2.1":
+"@craco/craco@^5.0.2":
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/@craco/craco/-/craco-5.2.1.tgz#d0a8dd7f1eb1c55a7430a5f12534a4ccfbeb8cd0"
   integrity sha512-NJfGDeDbDd7yzHvnnf1pTpHg661RtQsC4J5g1qs0lswV+DnVcwG4vrQFdnKm/DkWNzk7lJuG0AdadM2IKMtx+A==
@@ -2611,10 +2611,10 @@ autoprefixer@^9.4.9:
     postcss "^7.0.16"
     postcss-value-parser "^3.3.1"
 
-aws-sdk@^2.461.0:
-  version "2.468.0"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.468.0.tgz#ce6ce1143eaa1630037afc862abcae62d16be02f"
-  integrity sha512-Bo4j1DLDBWSLgNsfpLNU2RKU2+24JzdFqgyyOKOyJ1p6RgrnDxcwoR2CPWK5olPU2cgXmIicetfOGDsC3LjLtg==
+aws-sdk@^2.454.0:
+  version "2.469.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.469.0.tgz#b52dbbffdcb52f3f01981eaad1559e0cdca53bd9"
+  integrity sha512-VaIrO3aBX83gKkBPk9xM0RHmu7fmq76kaF0SqbsWlPImgxc5foJ4rBlRMMlmeNogFZZ/XTQdI+gkFDVosV14Ig==
   dependencies:
     buffer "4.9.1"
     events "1.1.1"
@@ -2938,7 +2938,7 @@ body-parser@1.19.0:
     raw-body "2.4.0"
     type-is "~1.6.17"
 
-bokehjs@^1.2.0:
+bokehjs@^1.1.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/bokehjs/-/bokehjs-1.2.0.tgz#99cbfa9351cf0fa67463835be610995e97172ca9"
   integrity sha512-maXTfWLtcjlzw9P3ZABFsTIFVsnJH0jyeJjUegyLS2nRhvBnhzhwmIsUF1vL6Rjoe4o/x3TQQKjQJPupBG5HDA==
