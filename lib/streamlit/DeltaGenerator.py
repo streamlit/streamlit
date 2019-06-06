@@ -128,19 +128,6 @@ def _widget(f):
     return wrapper
 
 
-def _button_widget(f):
-    @_wraps_with_cleaned_sig(f)
-    @_with_element
-    def wrapper(dg, element, *args, **kwargs):
-        id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
-        element.widget.id = id
-        ui_value = Widgets.get_current().get(id)
-        # reset button state
-        Widgets.get_current().set_item(id, False)
-        return f(dg, element, ui_value, *args, **kwargs)
-    return wrapper
-
-
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
@@ -1149,11 +1136,11 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
-    @_button_widget
+    @_widget
     def button(self, element, ui_value, label):
         """Button doc string."""
-        # id = element.widget.id
-        # Widgets.get_current().set_item(id, False)
+        # Reset the button state
+        Widgets.get_current().set_item(element.widget.id, False)
 
         element.widget.label = label
         element.widget.button.value = False

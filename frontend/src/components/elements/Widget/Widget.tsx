@@ -43,19 +43,12 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.props.setWidgetState(element.get('id'), value)
   }
 
-  private handleButtonClick = (e: any) => {
-    // const oldValue = this.state.value
-    // const currentValue = true
-    // const id = e.target.id
-    // console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
-    // this.setState({ value: currentValue })
-    this.props.setWidgetState(e.target.id, true)
+  private handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.target as HTMLButtonElement
+    this.props.setWidgetState(target.id, true)
     this.props.sendBackMsg({
       type: 'widgetJson',
       widgetJson: JSON.stringify(this.props.getWidgetState())
-      // type: 'buttonClick',
-      // id: e.target.id,
-      // widgetJson: JSON.stringify(this.props.getWidgetState())
     })
   };
 
