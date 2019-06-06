@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import {Input, Label} from 'reactstrap'
+import {Input, Label, Button} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
@@ -31,6 +31,7 @@ class Widget extends PureStreamlitElement<Props, State> {
     let value = false
 
     dispatchOneOf(element, 'type', {
+      button: (data: ImmutableMap<string, any>) => null,
       checkbox: (data: ImmutableMap<string, any>) => value = data.get('value'),
       slider: (data: ImmutableMap<string, any>) => value = data.get('value'),
       textArea: (data: ImmutableMap<string, any>) => value = data.get('value'),
@@ -41,6 +42,22 @@ class Widget extends PureStreamlitElement<Props, State> {
     console.log(`Original value: ${value}, id = ${element.get('id')}`)
     this.props.setWidgetState(element.get('id'), value)
   }
+
+  private handleButtonClick = (e: any) => {
+    // const oldValue = this.state.value
+    // const currentValue = true
+    // const id = e.target.id
+    // console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
+    // this.setState({ value: currentValue })
+    this.props.setWidgetState(e.target.id, true)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
+      // type: 'buttonClick',
+      // id: e.target.id,
+      // widgetJson: JSON.stringify(this.props.getWidgetState())
+    })
+  };
 
   private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const oldValue = this.state.value
@@ -87,6 +104,20 @@ class Widget extends PureStreamlitElement<Props, State> {
     const id = element.get('id')
 
     return dispatchOneOf(element, 'type', {
+      button: () => {
+        const style = {
+          width: this.props.width,
+        }
+
+        return (
+          <div className="Widget row-widget">
+            <Button id={id} style={style} onClick={this.handleButtonClick}>
+              { label }
+            </Button>
+          </div>
+        )
+      },
+
       checkbox: () => {
         const style = {
           width: this.props.width,

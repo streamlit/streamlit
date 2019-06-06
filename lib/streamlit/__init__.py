@@ -105,6 +105,7 @@ audio           = _with_dg(_DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
 bokeh_chart     = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
+button          = _with_dg(_DeltaGenerator.button)  # noqa: E221
 checkbox        = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
 code            = _with_dg(_DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221

@@ -28,5 +28,8 @@ class Widgets(object):
     def set(self, state):
         self._state = state
 
+    def set_item(self, key, value):
+        self._state[key] = value
+
     def dump(self):
         pprint(self._state)
