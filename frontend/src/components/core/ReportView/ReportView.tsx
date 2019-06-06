@@ -5,6 +5,7 @@
 
 import React, {PureComponent, ReactNode} from 'react'
 import {AutoSizer} from 'react-virtualized'
+// @ts-ignore
 import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
 import {Progress} from 'reactstrap'
 import {dispatchOneOf} from 'lib/immutableProto'
@@ -13,11 +14,11 @@ import {ReportRunState} from 'lib/ReportRunState'
 import './ReportView.scss'
 
 // Load (non-lazy) core elements.
-import Chart from '../../elements/Chart'
-import DocString from '../../elements/DocString'
-import ExceptionElement from '../../elements/ExceptionElement'
-import Table from '../../elements/Table'
-import Text from '../../elements/Text'
+import Chart from '../../elements/Chart/'
+import DocString from '../../elements/DocString/'
+import ExceptionElement from '../../elements/ExceptionElement/'
+import Table from '../../elements/Table/'
+import Text from '../../elements/Text/'
 
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('../../elements/Audio/'))
@@ -30,7 +31,7 @@ const BokehChart = React.lazy(() => import('../../elements/BokehChart/'))
 const GraphVizChart = React.lazy(() => import('../../elements/GraphVizChart/'))
 const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart/'))
-const Video = React.lazy(() => import('../../elements/Video'))
+const Video = React.lazy(() => import('../../elements/Video/'))
 
 type Element = ImmutableMap<string, any>; // a report Element
 
@@ -156,7 +157,7 @@ export class ReportView extends PureComponent<Props> {
       imgs: (el: Element) => <ImageList element={el} width={width}/>,
       map: (el: Element) => <MapElement element={el} width={width}/>,
       plotlyChart: (el: Element) => <PlotlyChart element={el} width={width}/>,
-      progress: (el: Element) => <Progress value={el.get('value')} style={{width}}/>,
+      progress: (el: Element) => <Progress value={el.get('value')} className="stProgress" style={{width}}/>,
       table: (el: Element) => <Table element={el} width={width}/>,
       text: (el: Element) => <Text element={el} width={width}/>,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width}/>,

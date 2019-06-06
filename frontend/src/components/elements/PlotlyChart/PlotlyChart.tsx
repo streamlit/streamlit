@@ -6,7 +6,7 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {dispatchOneOf} from '../../../lib/immutableProto'
+import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import Plot from 'react-plotly.js'
 
@@ -17,8 +17,6 @@ interface Props extends StProps {
 const DEFAULT_HEIGHT = 500
 
 class PlotlyChart extends PureStreamlitElement<Props, StState> {
-  private chartNode = React.createRef<HTMLDivElement>();
-
   public safeRender(): React.ReactNode {
     const el = this.props.element
 
@@ -59,6 +57,7 @@ class PlotlyChart extends PureStreamlitElement<Props, StState> {
     const config = JSON.parse(figure.get('config'))
     return (
       <Plot
+        className="stPlotlyChart"
         data={spec.data}
         layout={spec.layout}
         config={config}

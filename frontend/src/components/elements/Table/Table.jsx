@@ -31,7 +31,7 @@ class Table extends PureStreamlitElement {
     // TODO(tvst): Make tables have a max width with overflow: scroll (when
     // media==screen). But need to fix the autosizer first.
     return (
-      <div className="streamlit-table">
+      <div className="streamlit-table stTable">
         <ReactTable className={hasNoData ? 'empty-table' : ''}>
           <thead>
             <TableRows
