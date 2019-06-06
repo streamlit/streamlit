@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import {Input, Label, Button} from 'reactstrap'
+import {Button, Input, Label} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'

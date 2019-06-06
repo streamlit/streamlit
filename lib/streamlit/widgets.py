@@ -2,7 +2,6 @@ from pprint import pprint
 
 
 class Widgets(object):
-    pass
     _singleton = None
 
     @classmethod
