@@ -219,6 +219,6 @@ serve-conda:
 	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000
 
 # Run E2E tests
-.PHONY: e2e
-e2e:
+.PHONY: e2etest
+e2etest:
 	./scripts/e2e.sh
