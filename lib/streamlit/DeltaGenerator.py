@@ -1141,7 +1141,6 @@ class DeltaGenerator(object):
         """Button doc string."""
         # Reset the button state
         Widgets.get_current().set_item(element.widget.id, False)
-
         current_value = ui_value if ui_value is not None else False
         element.widget.label = label
         element.widget.button.value = False

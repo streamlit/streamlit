@@ -50,6 +50,7 @@ class Widget extends PureStreamlitElement<Props, State> {
       type: 'widgetJson',
       widgetJson: JSON.stringify(this.props.getWidgetState())
     })
+    this.props.setWidgetState(target.id, false)
   };
 
   private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
