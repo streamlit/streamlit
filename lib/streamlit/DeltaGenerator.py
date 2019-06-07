@@ -1150,6 +1150,7 @@ class DeltaGenerator(object):
     def checkbox(self, element, ui_value, label, value=False):
         """Checkbox doc string."""
         element.widget.label = label
+        # TODO possible bug here, should use ui_value
         element.widget.checkbox.value = value
         return ui_value if ui_value is not None else value
 
