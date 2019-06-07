@@ -132,11 +132,13 @@ class App extends PureComponent {
     return this.state.widgetState
   }
 
-  setWidgetState = (key, value) => {
-    // TODO (kantuni): do not mutate state
-    let widgetState = this.getWidgetState()
-    widgetState[key] = value
-    this.setState({widgetState})
+  setWidgetState = (key, value, callback) => {
+    this.setState(state => ({
+      widgetState: {
+        ...state.widgetState,
+        [key]: value
+      }
+    }), callback)
   }
 
   componentDidMount() {

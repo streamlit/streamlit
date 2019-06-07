@@ -10,7 +10,6 @@ import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
 import './Widget.scss'
 
-
 interface Props {
   element: ImmutableMap<string, any>;
   getWidgetState: Function;
@@ -45,13 +44,14 @@ class Widget extends PureStreamlitElement<Props, State> {
 
   private handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const target = e.target as HTMLButtonElement
-    this.props.setWidgetState(target.id, true)
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify(this.props.getWidgetState())
+    this.props.setWidgetState(target.id, true, () => {
+      this.props.sendBackMsg({
+        type: 'widgetJson',
+        widgetJson: JSON.stringify(this.props.getWidgetState())
+      })
+      this.props.setWidgetState(target.id, false)
     })
-    this.props.setWidgetState(target.id, false)
-  };
+  }
 
   private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const oldValue = this.state.value
@@ -59,12 +59,13 @@ class Widget extends PureStreamlitElement<Props, State> {
     const id = e.target.id
     console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
     this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue)
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify(this.props.getWidgetState())
+    this.props.setWidgetState(id, currentValue, () => {
+      this.props.sendBackMsg({
+        type: 'widgetJson',
+        widgetJson: JSON.stringify(this.props.getWidgetState())
+      })
     })
-  };
+  }
 
   private handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const oldValue = this.state.value
@@ -72,12 +73,13 @@ class Widget extends PureStreamlitElement<Props, State> {
     const id = e.target.id
     console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
     this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue)
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify(this.props.getWidgetState())
+    this.props.setWidgetState(id, currentValue, () => {
+      this.props.sendBackMsg({
+        type: 'widgetJson',
+        widgetJson: JSON.stringify(this.props.getWidgetState())
+      })
     })
-  };
+  }
 
   private handleTextAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const oldValue = this.state.value
@@ -85,12 +87,13 @@ class Widget extends PureStreamlitElement<Props, State> {
     const id = e.target.id
     console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
     this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue)
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify(this.props.getWidgetState())
+    this.props.setWidgetState(id, currentValue, () => {
+      this.props.sendBackMsg({
+        type: 'widgetJson',
+        widgetJson: JSON.stringify(this.props.getWidgetState())
+      })
     })
-  };
+  }
 
   public safeRender(): React.ReactNode {
     const {element} = this.props
