@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "Delta.proto";
+import "Exception.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -18,7 +19,7 @@ message ForwardMsg {
     // Upload Progress
     ////
 
-    // Indicates the % progres of a report upload.
+    // Indicates the % progress of a report upload.
     uint32 upload_report_progress = 5;
 
     // Indicates that the upload is complete and gives the URL.
@@ -62,22 +63,18 @@ message NewReport {
   // The report ID
   string id = 1;
 
-  // The current working directory from which this report was launched.
-  string cwd = 2;
-
   // The command line that launched this report.
-  repeated string command_line = 3;
+  repeated string command_line = 2;
 
-  // Full path of the file that initiated the new report. When report is created
-  // from the REPL, this will be an empty string.
-  string source_file_path = 4;
+  // The basename of the script that launched this report. Example: "foo.py"
+  string name = 3;
 }
 
 // State for a session. Sent as part of the Initialize message, and also
 // on ReportSession state change events.
 message SessionState {
   // If true, streamlit will re-run the report if it detects that the report
-  // has been changed. This value comes from the proxy.watchFileSystem config.
+  // has been changed. This value comes from the server.runOnSave config.
   // The browser can change this option; it's sent here so that the browser
   // shows the correct initial value in its Settings dialog.
   bool run_on_save = 1;
@@ -89,16 +86,21 @@ message SessionState {
 // A transient event sent to all browsers connected to an associated report.
 message SessionEvent {
   oneof type {
-    // The report changed on disk, but is *not* being re-run automatically.
-    // The browser should prompt the user to re-run.
+    // The report's script changed on disk, but is *not* being re-run
+    // automatically. The browser should prompt the user to re-run.
     bool report_changed_on_disk = 1;
 
-    // The report was running, but it was manually stopped before
+    // The report's script was running, but it was manually stopped before
     // completion.
     bool report_was_manually_stopped = 2;
+
+    // Script compilation failed with an exception.
+    // We can't start running the report.
+    Exception script_compilation_exception = 3;
   }
 }
 
 message UserInfo {
   string installation_id = 1;
+  string email = 2;
 }

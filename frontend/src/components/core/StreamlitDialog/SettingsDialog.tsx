@@ -11,7 +11,7 @@ import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
 import {UserSettings} from './UserSettings'
 
 export interface Props {
-  isProxyConnected: boolean;
+  isServerConnected: boolean;
   onClose: () => void;
   onSave: (settings: UserSettings) => void;
   settings: UserSettings;
@@ -42,10 +42,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
         <ModalBody>
           <label>
             <input
-              disabled={!this.props.isProxyConnected}
+              disabled={!this.props.isServerConnected}
               type="checkbox"
               name="runOnSave"
-              checked={this.state.runOnSave && this.props.isProxyConnected}
+              checked={this.state.runOnSave && this.props.isServerConnected}
               onChange={this.handleCheckboxChange}
             />
             {' '}

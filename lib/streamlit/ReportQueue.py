@@ -1,217 +1,123 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
 """
-A queue of deltas associated with a particular Report.
-Whenever possible, deltas are combined.
+A queue of ForwardMsg associated with a particular report.
+Whenever possible, message deltas are combined.
 """
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
-
+import collections
 import copy
-import enum
+import threading
 
 from streamlit import protobuf
-from tornado import gen
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-# Largest message that can be sent via the WebSocket connection.
-# (Limit was picked by trial and error)
-# TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 10466493
-
-
-class QueueState(object):
-    # Indicates that the queue is accepting deltas.
-    OPEN = 0
-
-    # Indicates that the queue will close on the nextz flush.
-    CLOSING = 1
-
-    # Indicates that the queue is now closed.
-    CLOSED = 2
-
-
 class ReportQueue(object):
-    """Accumulates a bunch of deltas."""
+    """Thread-safe queue that smartly accumulates the report's messages."""
 
     def __init__(self):
         """Constructor."""
-        self._state = QueueState.OPEN
-        self._empty()
+        self._lock = threading.Lock()
 
-    def __call__(self, delta, catch_exceptions=True):
-        """Adds a delta into this queue.
+        with self._lock:
+            self._queue = []
+
+            # Map of msg.delta.id to the msg's index in _queue.
+            self._delta_id_map = dict()
+
+    def get_debug(self):
+        return {
+            'queue': [util.forwardmsg_to_debug(m) for m in self._queue],
+            'ids': list(self._delta_id_map.keys()),
+        }
+
+    def __iter__(self):
+        return iter(self._queue)
+
+    def is_empty(self):
+        return len(self._queue) == 0
+
+    def get_initial_msg(self):
+        if len(self._queue) > 0:
+            return self._queue[0]
+        return None
+
+    def enqueue(self, msg):
+        """Add message into queue, possibly composing it with another message.
 
         Parameters
         ----------
-        delta : Delta
-            The delta protobuf to enqueue.
-
-        catch_exceptions : bool
-            If true, will enqueue exceptions into this connection. Set to False
-            when enqueuing something from inside the exception handler below,
-            to avoid an infinite loop.
+        msg : protobuf.ForwardMsg
         """
-        try:
-            assert self._state != QueueState.CLOSED, \
-                'Cannot add deltas after the queue closes.'
+        with self._lock:
+            if not msg.HasField('delta'):
+                self._queue.append(msg)
 
-            if self._state == QueueState.CLOSING:
-                LOGGER.debug('Warning: Enqueing a delta in a closing queue.')
+            elif msg.delta.id in self._delta_id_map:
+                # Combine the previous message into the new messages.
+                index = self._delta_id_map[msg.delta.id]
+                old_msg = self._queue[index]
+                composed_delta = compose_deltas(old_msg.delta, msg.delta)
+                new_msg = protobuf.ForwardMsg()
+                new_msg.delta.CopyFrom(composed_delta)
+                self._queue[index] = new_msg
 
-            # Store the index if necessary.
-            if delta.id in self._id_map:
-                index = self._id_map[delta.id]
             else:
-                index = len(self._deltas)
-                self._id_map[delta.id] = index
-                self._deltas.append(None)
-
-            # Combine the previous and new delta if possible.
-            self._deltas[index] = self.compose(self._deltas[index], delta)
-
-        except Exception as e:
-            if catch_exceptions:
-                import streamlit.elements.exception_element as \
-                    exception_element
-                from streamlit import protobuf
-                delta = protobuf.Delta()
-                delta.id = max(self._id_map)
-                exception_element.marshall(delta.new_element, e)
-                self(delta, catch_exceptions=False)
-            else:
-                raise e
-
-    def get_deltas(self):
-        """Returns a list of deltas and clears this queue."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot get deltas after the queue closes.'
-
-        deltas = self._deltas
-        self._empty()
-
-        return deltas
-
-    @gen.coroutine
-    def flush_queue(self, ws):
-        """Sends the deltas across the websocket in a series of delta messages,
-        clearing the queue afterwards."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot get deltas after the queue closes.'
-
-        # Send any remaining deltas.
-        @gen.coroutine
-        def send_deltas():
-            deltas = self.get_deltas()
-            for delta in deltas:
-                msg = protobuf.ForwardMsg()
-                msg.delta.CopyFrom(delta)
-                yield send_message(ws, msg)
-            raise gen.Return(len(deltas) > 0)
-        yield send_deltas()
-
-        # Send report_finished method if this queue is closed.
-        if self._state == QueueState.CLOSING:
-            # Keep flushing the deltas until the queue is empty
-            while True:
-                sent_more_deltas = yield send_deltas()
-                LOGGER.debug(
-                    'Sent a final set of deltas: %s', sent_more_deltas)
-                if not sent_more_deltas:
-                    LOGGER.debug('No more deltas to send.')
-                    break
-            LOGGER.debug('This queue is closing.')
-            self._state = QueueState.CLOSED
-            msg = protobuf.ForwardMsg()
-            msg.report_finished = True
-            yield send_message(ws, msg)
-            LOGGER.debug('Sent report_finished message.')
+                self._delta_id_map[msg.delta.id] = len(self._queue)
+                self._queue.append(msg)
 
     def clone(self):
-        """Returns a clone of this ReportQueue."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot clone a closed queue.'
-        return copy.deepcopy(self)
+        """Return the elements of this ReportQueue as a collections.deque."""
+        r = ReportQueue()
 
-    def close(self):
-        """Tells the queue to close and send a report_finished message after the
-        next flush_queue call and send."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot re-close a queue.'
-        self._state = QueueState.CLOSING
+        with self._lock:
+            r._queue = list(self._queue)
+            r._delta_id_map = dict(self._delta_id_map)
 
-    def is_closed(self):
-        """Returns true if this queue has been closed."""
-        return self._state == QueueState.CLOSED
+        return r
 
-    def _empty(self):
-        """Returns this Accumulator to an empty state."""
-        assert self._state != QueueState.CLOSED, \
-            'Cannot empty a closed queue.'
-        self._deltas = []
-        self._id_map = dict() # use insead of {} for 2/3 compatibility
+    def _clear(self):
+        self._queue = []
+        self._delta_id_map = dict()
 
-    @staticmethod
-    def compose(delta1, delta2):
-        """Combines the two given deltas into one if possible."""
-        if delta1 == None:
-            return delta2
-        elif delta2.WhichOneof('type') == 'new_element':
-            return delta2
-        elif delta2.WhichOneof('type') == 'add_rows':
-            import streamlit.elements.data_frame_proto as data_frame_proto
-            data_frame_proto.add_rows(
-                delta1, delta2, name=delta2.add_rows.name)
-            return delta1
+    def clear(self):
+        """Clear this queue."""
+        with self._lock:
+            self._clear()
 
-        raise NotImplementedError('Need to implement the compose code.')
+    def flush(self):
+        with self._lock:
+            queue = self._queue
+            self._clear()
+        return queue
 
 
-def send_message(ws, msg):
-    """Sends msg via the websocket.
+def compose_deltas(old_delta, new_delta):
+    """Combines new_delta onto old_delta if possible.
 
-    Parameters
-    ----------
-    ws : WebSocket
-        The message through which we're sending this message.
-    msg : ForwardMsg
-        A Streamlit ForwardMsg to send over the websocket.
+    If combination takes place, returns old_delta, since it has the combined
+    data. If not, returns new_delta.
 
     """
-    msg_str = msg.SerializeToString()
+    new_delta_type = new_delta.WhichOneof('type')
 
-    if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        send_exception(ws, msg, 'RuntimeError', 'Data too large')
-        return
+    if new_delta_type == 'new_element':
+        return new_delta
 
-    try:
-        ws.write_message(msg_str, binary=True)
-    except Exception as e:
-        # Not all exceptions have a `message` attribute.
-        # https://www.python.org/dev/peps/pep-0352/
-        try:
-            exception_message = e.message
-        except AttributeError:
-            exception_message = str(e)
-        send_exception(ws, msg, type(e), exception_message)
+    elif new_delta_type == 'add_rows':
+        import streamlit.elements.data_frame_proto as data_frame_proto
+        # We should make data_frame_proto.add_rows *not* mutate any of the
+        # inputs. In the meantime, we have to deepcopy the input that will be
+        # mutated.
+        composed_delta = copy.deepcopy(old_delta)
+        data_frame_proto.add_rows(
+            composed_delta, new_delta, name=new_delta.add_rows.name)
+        return composed_delta
 
+    LOGGER.error('Old delta: %s;\nNew delta: %s;', old_delta, new_delta)
 
-def send_exception(ws, msg, exception_type, exception_message):
-    """Sends an exception via websocket in place of msg"""
-    if msg.delta is not None:
-        delta_id = msg.delta.id
-    else:
-        delta_id = 0
-
-    emsg = protobuf.ForwardMsg()
-    emsg.delta.id = delta_id
-    emsg.delta.new_element.exception.type = str(exception_type)
-    emsg.delta.new_element.exception.message = exception_message
-
-    ws.write_message(emsg.SerializeToString(), binary=True)
+    raise NotImplementedError('Need to implement the compose code.')

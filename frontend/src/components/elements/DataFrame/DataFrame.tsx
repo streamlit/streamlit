@@ -11,8 +11,8 @@ import {MultiGrid} from 'react-virtualized'
 import DataFrameCell from './DataFrameCell'
 import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {SortDirection} from './SortDirection'
-import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from '../../../lib/dataFrameProto'
-import {toFormattedString} from '../../../lib/format'
+import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from 'lib/dataFrameProto'
+import {toFormattedString} from 'lib/format'
 import './DataFrame.scss'
 
 /**
@@ -289,7 +289,7 @@ class DataFrame extends PureStreamlitElement<Props, State> {
 
     // Put it all together.
     return (
-      <div style={{width: elementWidth}} className="dataframe-container">
+      <div style={{width: elementWidth}} className="dataframe-container stDataFrame">
         <MultiGrid
           className="dataFrame"
           cellRenderer={cellRenderer}

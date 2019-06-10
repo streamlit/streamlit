@@ -1,12 +1,35 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
 
-"""Exports everything that should be visible to Streamlit users.
+"""Streamlit. Data Science, reimagined.
 
-The functions in this package wrap member functions of DeltaGenerator, as well
-as from any namespace within DeltaGenerator. What they do is get the
-DeltaGenerator from the singleton connection object (in streamlit.connection)
-and then call the corresponding function on that DeltaGenerator.
+How to use Streamlit in 3 seconds:
+
+    1. Write your code
+    >>> import streamlit as st
+    >>> st.write(anything_you_want)
+
+    2. Run your code
+    $ streamlit run my_script.py
+
+    3. Visualize your code
+    A new tab will open on your browser. That's your Streamlit report!
+
+    4. Modify your code, save it, and watch changes live on your browser.
+
+Take a look at the other commands in this module to find out what else
+Streamlit can do:
+
+    >>> dir(streamlit)
+
+Or try running our "Hello World":
+
+    $ streamlit hello
+
+For more detailed info, see https://streamlit.io/secret/docs.
 """
+
+# IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
 # NOTE: You'll see lots of "noqa: F821" in this file. That's because we
 # manually mess with the local namespace so the linter can't know that some
@@ -14,132 +37,135 @@ and then call the corresponding function on that DeltaGenerator.
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
+from streamlit.compatibility import setup_2_3_shims as _setup_2_3_shims, is_running_py3 as _is_running_py3
+_setup_2_3_shims(globals())
+
+# Must be at the top, to avoid circular dependency.
+from streamlit import logger as _logger
+from streamlit import config as _config
+_logger.set_log_level(_config.get_option('global.logLevel').upper())
+_logger.init_tornado_logs()
+_LOGGER = _logger.get_logger('root')
 
 # Give the package a version.
-import pkg_resources
-import uuid
+import pkg_resources as _pkg_resources
+import uuid as _uuid
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
-__version__ = pkg_resources.get_distribution('streamlit').version
+__version__ = _pkg_resources.get_distribution('streamlit').version
 
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode())))
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
 except UnicodeDecodeError:
-    __installation_id__ = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(uuid.getnode()).encode('utf-8')))
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode('utf-8')))
 
-# Must be at the top, to avoid circular dependency.
-from streamlit import logger
-from streamlit import config
-logger.set_log_level(config.get_option('global.logLevel').upper())
-logger.init_tornado_logs()
-LOGGER = logger.get_logger('root')
+import contextlib as _contextlib
+import functools as _functools
+import re as _re
+import sys as _sys
+import textwrap as _textwrap
+import threading as _threading
+import traceback as _traceback
+import types as _types
 
-import contextlib
-import functools
-import inspect
-import re
-import sys
-import textwrap
-import threading
-import traceback
-import types
+from streamlit import code_util as _code_util
+from streamlit import util as _util
+from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
-from streamlit.DeltaConnection import DeltaConnection
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.caching import cache  # Just for export.
-from streamlit import code_util
-from streamlit import util
+# Modules that the user should have access to.
+from streamlit.caching import cache  # noqa: F401
 
-this_module = sys.modules[__name__]
 
-# This delta generator has no queue so it can't send anything out on a
-# connection.
-_NULL_DELTA_GENERATOR = DeltaGenerator(None)
+# Delta generator with no queue so it can't send anything out.
+_NULL_DELTA_GENERATOR = _DeltaGenerator(None)
 
-_DATAFRAME_LIKE_TYPES = (
-    'DataFrame',  # pandas.core.frame.DataFrame
-    'Series',  # pandas.core.series.Series
-    'Index',  # pandas.core.indexes.base.Index
-    'ndarray',  # numpy.ndarray
-    'Styler',  # pandas.io.formats.style.Styler
-)
+# Root delta generator for this Streamlit report.
+# This gets overwritten in bootstrap.py and in tests.
+_delta_generator = _NULL_DELTA_GENERATOR
 
 
 def _with_dg(method):
-    @functools.wraps(method)
+    @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        # If we're unit testing, control the queue and don't make a
-        # connection.
-        if config.get_option('global.unitTest'):
-            from streamlit.ReportQueue import ReportQueue
-            delta_generator = DeltaGenerator(ReportQueue())
-        # TODO(armando): Figure out how to get code coverage on this.
-        # Module imports are hard to mock and cover ie
-        # streamlit.__init__.py vs streamlit.some_file.py  We test the
-        # functionality of DeltaConnection in delta_connection_test.py
-        # so right now getting code coverage on this decorator isn't
-        # that critical.
-        #
-        # Only output if the config allows us to.
-        elif config.get_option('client.displayEnabled'):  # pragma: no cover
-            connection = DeltaConnection.get_connection()
-            delta_generator = connection.get_delta_generator()
-        else:  # pragma: no cover
-            delta_generator = _NULL_DELTA_GENERATOR
+        if _delta_generator is _NULL_DELTA_GENERATOR:
+            _maybe_print_repl_warning()
 
-        return method(delta_generator, *args, **kwargs)
+        return method(_delta_generator, *args, **kwargs)
     return wrapped_method
 
 
 # DeltaGenerator methods:
 
-altair_chart    = _with_dg(DeltaGenerator.altair_chart)  # noqa: E221
-area_chart      = _with_dg(DeltaGenerator.area_chart)  # noqa: E221
-audio           = _with_dg(DeltaGenerator.audio)  # noqa: E221
-balloons        = _with_dg(DeltaGenerator.balloons)  # noqa: E221
-bar_chart       = _with_dg(DeltaGenerator.bar_chart)  # noqa: E221
-bokeh_chart     = _with_dg(DeltaGenerator.bokeh_chart)  # noqa: E221
-code            = _with_dg(DeltaGenerator.code)  # noqa: E221
-dataframe       = _with_dg(DeltaGenerator.dataframe)  # noqa: E221
-deck_gl_chart   = _with_dg(DeltaGenerator.deck_gl_chart)  # noqa: E221
-empty           = _with_dg(DeltaGenerator.empty)  # noqa: E221
-error           = _with_dg(DeltaGenerator.error)  # noqa: E221
-exception       = _with_dg(DeltaGenerator.exception)  # noqa: E221
-graphviz_chart  = _with_dg(DeltaGenerator.graphviz_chart)  # noqa: E221
-header          = _with_dg(DeltaGenerator.header)  # noqa: E221
-help            = _with_dg(DeltaGenerator.help)  # noqa: E221
-image           = _with_dg(DeltaGenerator.image)  # noqa: E221
-info            = _with_dg(DeltaGenerator.info)  # noqa: E221
-json            = _with_dg(DeltaGenerator.json)  # noqa: E221
-line_chart      = _with_dg(DeltaGenerator.line_chart)  # noqa: E221
-map             = _with_dg(DeltaGenerator.map)  # noqa: E221
-markdown        = _with_dg(DeltaGenerator.markdown)  # noqa: E221
-plotly_chart    = _with_dg(DeltaGenerator.plotly_chart)  # noqa: E221
-progress        = _with_dg(DeltaGenerator.progress)  # noqa: E221
-pyplot          = _with_dg(DeltaGenerator.pyplot)  # noqa: E221
-subheader       = _with_dg(DeltaGenerator.subheader)  # noqa: E221
-success         = _with_dg(DeltaGenerator.success)  # noqa: E221
-table           = _with_dg(DeltaGenerator.table)  # noqa: E221
-text            = _with_dg(DeltaGenerator.text)  # noqa: E221
-title           = _with_dg(DeltaGenerator.title)  # noqa: E221
-vega_lite_chart = _with_dg(DeltaGenerator.vega_lite_chart)  # noqa: E221
-video           = _with_dg(DeltaGenerator.video)  # noqa: E221
-warning         = _with_dg(DeltaGenerator.warning)  # noqa: E221
+altair_chart    = _with_dg(_DeltaGenerator.altair_chart)  # noqa: E221
+area_chart      = _with_dg(_DeltaGenerator.area_chart)  # noqa: E221
+audio           = _with_dg(_DeltaGenerator.audio)  # noqa: E221
+balloons        = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
+bar_chart       = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
+bokeh_chart     = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
+code            = _with_dg(_DeltaGenerator.code)  # noqa: E221
+dataframe       = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
+deck_gl_chart   = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
+empty           = _with_dg(_DeltaGenerator.empty)  # noqa: E221
+error           = _with_dg(_DeltaGenerator.error)  # noqa: E221
+exception       = _with_dg(_DeltaGenerator.exception)  # noqa: E221
+graphviz_chart  = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
+header          = _with_dg(_DeltaGenerator.header)  # noqa: E221
+help            = _with_dg(_DeltaGenerator.help)  # noqa: E221
+image           = _with_dg(_DeltaGenerator.image)  # noqa: E221
+info            = _with_dg(_DeltaGenerator.info)  # noqa: E221
+json            = _with_dg(_DeltaGenerator.json)  # noqa: E221
+line_chart      = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
+map             = _with_dg(_DeltaGenerator.map)  # noqa: E221
+markdown        = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
+plotly_chart    = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
+progress        = _with_dg(_DeltaGenerator.progress)  # noqa: E221
+pyplot          = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
+subheader       = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
+success         = _with_dg(_DeltaGenerator.success)  # noqa: E221
+table           = _with_dg(_DeltaGenerator.table)  # noqa: E221
+text            = _with_dg(_DeltaGenerator.text)  # noqa: E221
+title           = _with_dg(_DeltaGenerator.title)  # noqa: E221
+vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
+video           = _with_dg(_DeltaGenerator.video)  # noqa: E221
+warning         = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
-_native_chart   = _with_dg(DeltaGenerator._native_chart)  # noqa: E221
-_text_exception = _with_dg(DeltaGenerator._text_exception)  # noqa: E221
+_native_chart   = _with_dg(_DeltaGenerator._native_chart)  # noqa: E221
+_text_exception = _with_dg(_DeltaGenerator._text_exception)  # noqa: E221
+_reset          = _with_dg(_DeltaGenerator._reset)  # noqa: E221
 
 # Config
-set_option = config.set_option
-get_option = config.get_option
+set_option = _config.set_option
+get_option = _config.get_option
 
 
 # Special methods:
+
+_DATAFRAME_LIKE_TYPES = (
+    'DataFrame',  # pandas.core.frame.DataFrame
+    'Index',  # pandas.core.indexes.base.Index
+    'Series',  # pandas.core.series.Series
+    'Styler',  # pandas.io.formats.style.Styler
+    'ndarray',  # numpy.ndarray
+)
+
+_HELP_TYPES = (
+    _types.BuiltinFunctionType,
+    _types.BuiltinMethodType,
+    _types.FunctionType,
+    _types.MethodType,
+    _types.ModuleType,
+)
+
+
+if not _is_running_py3():
+    _HELP_TYPES = list(_HELP_TYPES)
+    _HELP_TYPES.append(_types.ClassType)
+    _HELP_TYPES.append(_types.InstanceType)
+    _HELP_TYPES = tuple(_HELP_TYPES)
+
 
 def write(*args):
     """Write arguments to the report.
@@ -228,11 +254,6 @@ def write(*args):
        height: 200px
 
     """
-    HELP_TYPES = (
-        types.FunctionType,
-        types.ModuleType,
-    )
-
     try:
         string_buffer = []
 
@@ -242,6 +263,7 @@ def write(*args):
                 string_buffer[:] = []
 
         for arg in args:
+            # Order matters!
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
             elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
@@ -250,22 +272,22 @@ def write(*args):
             elif isinstance(arg, Exception):
                 flush_buffer()
                 exception(arg)  # noqa: F821
-            elif isinstance(arg, HELP_TYPES):
+            elif isinstance(arg, _HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif util.is_altair_chart(arg):
+            elif _util.is_altair_chart(arg):
                 flush_buffer()
                 altair_chart(arg)
-            elif util.is_type(arg, 'matplotlib.figure.Figure'):
+            elif _util.is_type(arg, 'matplotlib.figure.Figure'):
                 flush_buffer()
                 pyplot(arg)
-            elif util.is_plotly_chart(arg):
+            elif _util.is_plotly_chart(arg):
                 flush_buffer()
                 plotly_chart(arg)
-            elif util.is_type(arg, 'bokeh.plotting.figure.Figure'):
+            elif _util.is_type(arg, 'bokeh.plotting.figure.Figure'):
                 flush_buffer()
                 bokeh_chart(arg)
-            elif util.is_graphviz_chart(arg):
+            elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
             elif util.is_keras_model(arg):
@@ -273,16 +295,16 @@ def write(*args):
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif type(arg) in dict_types:
+            elif type(arg) in dict_types:  # noqa: F821
                 flush_buffer()
                 json(arg)
             else:
-                string_buffer.append('`%s`' % util.escape_markdown(str(arg)))
+                string_buffer.append('`%s`' % _util.escape_markdown(str(arg)))
 
         flush_buffer()
 
     except Exception:
-        _, exc, exc_tb = sys.exc_info()
+        _, exc, exc_tb = _sys.exc_info()
         exception(exc, exc_tb)  # noqa: F821
 
 
@@ -322,6 +344,7 @@ def show(*args):
         return
 
     try:
+        import inspect
         # Get the calling line of code
         previous_frame = inspect.currentframe().f_back
         lines = inspect.getframeinfo(previous_frame)[3]
@@ -332,21 +355,21 @@ def show(*args):
 
         # Parse arguments from the line
         line = lines[0].split('show', 1)[1]
-        inputs = code_util.get_method_args_from_code(args, line)
+        inputs = _code_util.get_method_args_from_code(args, line)
 
         # Escape markdown and add deltas
         for idx, input in enumerate(inputs):
-            escaped = util.escape_markdown(input)
+            escaped = _util.escape_markdown(input)
 
             markdown('**%s**' % escaped)
             write(args[idx])
 
     except Exception:
-        _, exc, exc_tb = sys.exc_info()
+        _, exc, exc_tb = _sys.exc_info()
         exception(exc, exc_tb)  # noqa: F821
 
 
-@contextlib.contextmanager
+@_contextlib.contextmanager
 def spinner(text='In progress...'):
     """Temporarily displays a message while executing a block of code.
 
@@ -369,14 +392,14 @@ def spinner(text='In progress...'):
         DELAY_SECS = 0.1
         message = empty()  # noqa: F821
         display_message = True
-        display_message_lock = threading.Lock()
+        display_message_lock = _threading.Lock()
 
         def set_message():
             with display_message_lock:
                 if display_message:
                     message.warning(str(text))
 
-        threading.Timer(DELAY_SECS, set_message).start()
+        _threading.Timer(DELAY_SECS, set_message).start()
 
         # Yield control back to the context.
         yield
@@ -386,7 +409,10 @@ def spinner(text='In progress...'):
         message.empty()
 
 
-@contextlib.contextmanager
+_SPACES_RE = _re.compile('\\s*')
+
+
+@_contextlib.contextmanager
 def echo():
     """Use in a `with` block to draw some code on the report, then execute it.
 
@@ -397,31 +423,72 @@ def echo():
     >>>     st.write('This code will be printed')
 
     """
-    from streamlit.compatibility import running_py3
     code = empty()  # noqa: F821
     try:
-        spaces = re.compile('\s*')
-        frame = traceback.extract_stack()[-3]
-        if running_py3():
+        frame = _traceback.extract_stack()[-3]
+        if _is_running_py3():
             filename, start_line = frame.filename, frame.lineno
         else:
             filename, start_line = frame[:2]
         yield
-        if running_py3():
-            end_line = traceback.extract_stack()[-3].lineno
+        if _is_running_py3():
+            end_line = _traceback.extract_stack()[-3].lineno
         else:
-            end_line = traceback.extract_stack()[-3][1]
+            end_line = _traceback.extract_stack()[-3][1]
         lines_to_display = []
         with open(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
-            initial_spaces = spaces.match(lines_to_display[0]).end()
+            initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
-                if spaces.match(line).end() < initial_spaces:
+                if _SPACES_RE.match(line).end() < initial_spaces:
                     break
                 lines_to_display.append(line)
-        lines_to_display = textwrap.dedent(''.join(lines_to_display))
+        lines_to_display = _textwrap.dedent(''.join(lines_to_display))
         code.code(lines_to_display, 'python')
 
     except FileNotFoundError as err:  # noqa: F821
         code.warning('Unable to display code. %s' % err)
+
+
+def _transparent_write(*args):
+    """This is just st.write, but returns the arguments you passed to it."""
+    write(*args)
+    if len(args) == 1:
+        return args[0]
+    return args
+
+
+# We want to show a warning when the user runs a Streamlit script without
+# 'streamlit run', but we need to make sure the warning appears only once no
+# matter how many times __init__ gets loaded.
+_repl_warning_has_been_displayed = False
+
+
+def _maybe_print_repl_warning():
+    global _repl_warning_has_been_displayed
+
+    if not _repl_warning_has_been_displayed:
+        _repl_warning_has_been_displayed = True
+
+        if _util.is_repl():
+            _LOGGER.warning(_textwrap.dedent('''
+
+                Will not generate Streamlit report
+
+                  To generate report, use Streamlit in a file and run it with:
+                  $ streamlit run [FILE_NAME] [ARGUMENTS]
+
+                '''))
+
+        elif _config.get_option('global.showWarningOnDirectExecution'):
+            script_name = _sys.argv[0]
+
+            _LOGGER.warning(_textwrap.dedent('''
+
+                Will not generate Streamlit report
+
+                  To generate report, run this file with:
+                  $ streamlit run %s [ARGUMENTS]
+
+                '''), script_name)

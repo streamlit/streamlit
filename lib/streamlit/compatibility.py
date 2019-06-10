@@ -23,7 +23,7 @@ def setup_2_3_shims(caller_globals):
     And sets up a bunch of compatibility aliases to make python 2 more like
     python 3.
     """
-    if running_py3():
+    if is_running_py3():
         caller_globals['dict_types'] = (type({}),)
         caller_globals['string_types'] = (type(''),)
         caller_globals['native_dict'] = _dict
@@ -69,6 +69,6 @@ def setup_2_3_shims(caller_globals):
         install_aliases()
 
 
-def running_py3():
+def is_running_py3():
     """Returns True iff we're running 3 or above."""
     return sys.version_info >= (3, 0)

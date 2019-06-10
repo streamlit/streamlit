@@ -14,7 +14,7 @@ import { logMessage } from './log'
 export const WWW_PORT_DEV = 3000
 
 /**
- * This is the port used to connect to the proxy web socket when in dev.
+ * This is the port used to connect to the server web socket when in dev.
  * IMPORTANT: If changed, also change config.py
  */
 export const WEBSOCKET_PORT_DEV = 8501
@@ -57,6 +57,14 @@ export const AWS_REGION = 'us-west-2'
 export const COGNITO_IDENTITY_POOL_ID =
   'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06'
 
+/**
+ * Feature flag for https://github.com/streamlit/streamlit/issues/678.
+ * If this is true, we show a modal dialog to prompt the user to rerun
+ * when their script changes. If false, we show a less intrusive UI in
+ * StatusWidget.
+ */
+export const RERUN_PROMPT_MODAL_DIALOG = false
+
 
 export function setStreamlitVersion(version) {
   if (STREAMLIT_VERSION != null) {
@@ -69,6 +77,9 @@ export function setStreamlitVersion(version) {
 
 export function setInstallationId(installationId) {
   if (INSTALLATION_ID != null) {
+    if (installationId === INSTALLATION_ID) {
+      return
+    }
     throw new Error('Streamlit installationId is already set')
   }
 

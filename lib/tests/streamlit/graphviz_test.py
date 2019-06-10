@@ -2,14 +2,13 @@
 
 """Graphviz unit test."""
 
-import unittest
-
 import graphviz as graphviz
 
-from streamlit.DeltaGenerator import DeltaGenerator
+from tests import testutil
+import streamlit as st
 
 
-class GraphvizTest(unittest.TestCase):
+class GraphvizTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall graphviz_chart protos."""
 
     def test_spec(self):
@@ -19,11 +18,9 @@ class GraphvizTest(unittest.TestCase):
         graph.node('B', 'Sir Bedevere the Wise')
         graph.edges(['AB'])
 
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.graphviz_chart(graph)
+        st.graphviz_chart(graph)
 
-        c = queue[-1].new_element.graphviz_chart
+        c = self.get_delta_from_queue().new_element.graphviz_chart
         self.assertEqual(hasattr(c, 'spec'), True)
 
     def test_dot(self):
@@ -33,9 +30,7 @@ class GraphvizTest(unittest.TestCase):
         graph.node('B', 'Sir Bedevere the Wise')
         graph.edges(['AB'])
 
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.graphviz_chart(graph.source)
+        st.graphviz_chart(graph)
 
-        c = queue[-1].new_element.graphviz_chart
+        c = self.get_delta_from_queue().new_element.graphviz_chart
         self.assertEqual(hasattr(c, 'spec'), True)

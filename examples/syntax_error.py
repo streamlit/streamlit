@@ -34,16 +34,5 @@ st.write('(Some top text)')
 # # The line below is a compile-time error. Bad indentation.
 #        this_indentation_is_wrong = True  # EXPECTED: full-screen exception.
 
-# # Uncomment this as a block.
-# sys.stderr.write('FakeError: this looks like an exception. \n')
-# st.write('EXPECTED: You should see no error')
-# sys.exit(-1)
-
-# # Uncomment this as a block.
-# sys.stderr.write('Traceback (most recent call last):\n')  # Not required
-# sys.stderr.write('  File "foo/bar.py", line 30, in module foo\n')  # Required
-# sys.stderr.write('--> EXPECTED: full-screen exception\n')  # Not required
-# sys.stderr.write('FakeError: This looks like an exception.\n')  # Required
-# sys.exit(-1)
 
 st.write('(Some bottom text)')

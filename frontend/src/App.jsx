@@ -31,7 +31,7 @@ import { Delta, Text as TextProto } from 'autogen/protobuf'
 import { addRows } from 'lib/dataFrameProto'
 import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
 import { logError } from 'lib/log'
-import { setInstallationId, setStreamlitVersion } from 'lib/baseconsts'
+import {RERUN_PROMPT_MODAL_DIALOG, setInstallationId, setStreamlitVersion} from 'lib/baseconsts'
 import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
@@ -48,7 +48,7 @@ class App extends PureComponent {
       elements: fromJS([makeElementWithInfoText('Connecting...')]),
       userSettings: {
         wideMode: false,
-        runOnSave: true,
+        runOnSave: false,
       },
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
@@ -60,7 +60,7 @@ class App extends PureComponent {
     this.getUserLogin = this.getUserLogin.bind(this)
     this.handleConnectionError = this.handleConnectionError.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
-    this.isProxyConnected = this.isProxyConnected.bind(this)
+    this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
     this.onLogInSuccess = this.onLogInSuccess.bind(this)
     this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
@@ -70,7 +70,6 @@ class App extends PureComponent {
     this.clearCache = this.clearCache.bind(this)
     this.saveReport = this.saveReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
-    this.setReportName = this.setReportName.bind(this)
 
     this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -122,7 +121,7 @@ class App extends PureComponent {
         }
       },
     },
-  };
+  }
 
   componentDidMount() {
     // Initialize connection manager here, to avoid
@@ -131,7 +130,6 @@ class App extends PureComponent {
       getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
-      setReportName: this.setReportName,
       connectionStateChanged: newState => {
         this.setState({ connectionState: newState })
       },
@@ -201,7 +199,7 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.applyDelta(toImmutableProto(Delta, deltaMsg)),
-        reportFinished: () => this.clearOldElements(),
+        reportFinished: () => this.handleReportFinished(),
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: 'uploadProgress' }),
         reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
@@ -221,6 +219,7 @@ class App extends PureComponent {
 
     initRemoteTracker({
       gatherUsageStats: initializeMsg.gatherUsageStats,
+      email: initializeMsg.userInfo.email,
     })
 
     trackEventRemotely('createReport')
@@ -239,17 +238,25 @@ class App extends PureComponent {
    */
   handleSessionStateChanged(stateChangeProto) {
     this.setState(prevState => {
-      // If we have a pending run-state request, only change our reportRunState
-      // if our request has been processed.
-      let reportRunState
-      if (stateChangeProto.reportIsRunning) {
-        reportRunState =
-          prevState.reportRunState === ReportRunState.STOP_REQUESTED ?
-            ReportRunState.STOP_REQUESTED : ReportRunState.RUNNING
-      } else {
-        reportRunState =
-          prevState.reportRunState === ReportRunState.RERUN_REQUESTED ?
-            ReportRunState.RERUN_REQUESTED : ReportRunState.NOT_RUNNING
+
+      // Determine our new ReportRunState
+      let reportRunState = prevState.reportRunState
+
+      if (stateChangeProto.reportIsRunning &&
+        prevState.reportRunState !== ReportRunState.STOP_REQUESTED) {
+
+        // If the report is running, we change our ReportRunState only
+        // if we don't have a pending stop request
+        reportRunState = ReportRunState.RUNNING
+
+      } else if (!stateChangeProto.reportIsRunning &&
+        prevState.reportRunState !== ReportRunState.RERUN_REQUESTED &&
+        prevState.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+
+        // If the report is not running, we change our ReportRunState only
+        // if we don't have a pending rerun request, and we don't have
+        // a script compilation failure
+        reportRunState = ReportRunState.NOT_RUNNING
       }
 
       return ({
@@ -268,6 +275,19 @@ class App extends PureComponent {
    */
   handleSessionEvent(sessionEvent) {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
+    if (sessionEvent.type === 'scriptCompilationException') {
+      this.setState({ reportRunState: ReportRunState.COMPILATION_ERROR })
+      this.openDialog({
+        type: 'scriptCompileError',
+        exception: sessionEvent.scriptCompilationException,
+        onRerun: this.rerunScript,
+      })
+    } else if (RERUN_PROMPT_MODAL_DIALOG && sessionEvent.type === 'reportChangedOnDisk') {
+      this.openDialog({
+        type: 'scriptChanged',
+        onRerun: this.rerunScript,
+      })
+    }
   }
 
   /**
@@ -277,10 +297,26 @@ class App extends PureComponent {
   handleNewReport(newReportProto) {
     trackEventRemotely('updateReport')
 
+    const name = newReportProto.name
+    document.title = `${name} · Streamlit`
+
     this.setState({
       reportId: newReportProto.id,
       commandLine: newReportProto.commandLine.join(' '),
+      reportName: name,
     })
+  }
+
+  /**
+   * Handler for ForwardMsg.reportFinished messages
+   */
+  handleReportFinished() {
+    // When a script finishes running, we clear any stale elements left over
+    // from its previous run - unless our script had a fatal error during
+    // execution.
+    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+      this.clearOldElements()
+    }
   }
 
   /**
@@ -306,7 +342,7 @@ class App extends PureComponent {
 
     this.setState({userSettings: newSettings})
 
-    if (prevRunOnSave !== runOnSave && this.isProxyConnected()) {
+    if (prevRunOnSave !== runOnSave && this.isServerConnected()) {
       this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave})
     }
   }
@@ -315,6 +351,12 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
+    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+      // Only add messages to report when script is running. Otherwise, we get
+      // bugs like #685.
+      return
+    }
+
     const { reportId } = this.state
     this.setState(({ elements }) => ({
       elements: elements.update(delta.get('id'), element =>
@@ -328,20 +370,11 @@ class App extends PureComponent {
   }
 
   /**
-   * Empties out all elements whose reportIds are no longer current.
+   * Removes all elements whose reportIds are no longer current.
    */
   clearOldElements() {
     this.setState(({ elements, reportId }) => ({
-      elements: elements.map((elt) => {
-        if (elt && elt.get('reportId') === reportId) {
-          return elt
-        }
-        return fromJS({
-          reportId,
-          empty: { unused: true },
-          type: 'empty',
-        })
-      }),
+      elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
     }))
   }
 
@@ -349,7 +382,7 @@ class App extends PureComponent {
    * Callback to call when we want to save the report.
    */
   saveReport() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
         trackEventRemotely('shareReport')
         this.sendBackMsg({
@@ -370,7 +403,7 @@ class App extends PureComponent {
         })
       }
     } else {
-      logError('Cannot save report when proxy is disconnected')
+      logError('Cannot save report when disconnected from server')
     }
   }
 
@@ -378,7 +411,7 @@ class App extends PureComponent {
    * Opens the dialog to rerun the script.
    */
   openRerunScriptDialog() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       this.openDialog({
         type: 'rerunScript',
         getCommandLine: () => this.state.commandLine,
@@ -389,7 +422,7 @@ class App extends PureComponent {
         defaultAction: this.rerunScript,
       })
     } else {
-      logError('Cannot rerun script when proxy is disconnected.')
+      logError('Cannot rerun script when disconnected from server.')
     }
   }
 
@@ -397,14 +430,14 @@ class App extends PureComponent {
    * Reruns the script (given by this.state.commandLine).
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
-   * will be set to true, which will result in a request to the Proxy
+   * will be set to true, which will result in a request to the Server
    * to enable runOnSave for this report.
    */
   rerunScript(alwaysRunOnSave = false) {
     this.closeDialog()
 
-    if (!this.isProxyConnected()) {
-      logError('Cannot rerun script when proxy is disconnected.')
+    if (!this.isServerConnected()) {
+      logError('Cannot rerun script when disconnected from server.')
       return
     }
 
@@ -433,8 +466,8 @@ class App extends PureComponent {
 
   /** Requests that the server stop running the report */
   stopReport() {
-    if (!this.isProxyConnected()) {
-      logError('Cannot stop report when proxy is disconnected.')
+    if (!this.isServerConnected()) {
+      logError('Cannot stop report when disconnected from server.')
       return
     }
 
@@ -452,7 +485,7 @@ class App extends PureComponent {
    * Shows a dialog asking the user to confirm they want to clear the cache
    */
   openClearCacheDialog() {
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       this.openDialog({
         type: 'clearCache',
         confirmCallback: this.clearCache,
@@ -461,7 +494,7 @@ class App extends PureComponent {
         defaultAction: this.clearCache,
       })
     } else {
-      logError('Cannot clear cache: proxy is disconnected')
+      logError('Cannot clear cache: disconnected from server')
     }
   }
 
@@ -470,16 +503,16 @@ class App extends PureComponent {
    */
   clearCache() {
     this.closeDialog()
-    if (this.isProxyConnected()) {
+    if (this.isServerConnected()) {
       trackEventRemotely('clearCache')
       this.sendBackMsg({type: 'clearCache', clearCache: true})
     } else {
-      logError('Cannot clear cache: proxy is disconnected')
+      logError('Cannot clear cache: disconnected from server')
     }
   }
 
   /**
-   * Sends a message back to the proxy.
+   * Sends a message back to the server.
    */
   sendBackMsg(msg) {
     if (this.connectionManager) {
@@ -497,29 +530,21 @@ class App extends PureComponent {
   }
 
   /**
-   * Indicates whether we're connected to the proxy.
+   * Indicates whether we're connected to the server.
    */
-  isProxyConnected() {
+  isServerConnected() {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
       false
   }
 
-  /**
-   * Sets the reportName in state and upates the title bar.
-   */
-  setReportName(reportName) {
-    document.title = `${reportName} · Streamlit`
-    this.setState({ reportName })
-  }
-
   render() {
     const outerDivClass =
-        isEmbeddedInIFrame() ?
-          'streamlit-embedded' :
-          this.state.userSettings.wideMode ?
-            'streamlit-wide' :
-            'streamlit-regular'
+      isEmbeddedInIFrame() ?
+        'streamlit-embedded' :
+        this.state.userSettings.wideMode ?
+          'streamlit-wide' :
+          'streamlit-regular'
 
     const dialogProps = {
       ...this.state.dialog,
@@ -529,7 +554,7 @@ class App extends PureComponent {
     return (
       <div className={outerDivClass}>
         <header>
-          <div className="decoration" />
+          <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
           </div>
@@ -542,7 +567,7 @@ class App extends PureComponent {
             stopReport={this.stopReport}
           />
           <MainMenu
-            isProxyConnected={this.isProxyConnected}
+            isServerConnected={this.isServerConnected}
             saveCallback={this.saveReport}
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
@@ -550,7 +575,7 @@ class App extends PureComponent {
             settingsCallback={() => this.openDialog({
               type: 'settings',
               isOpen: true,
-              isProxyConnected: this.isProxyConnected(),
+              isServerConnected: this.isServerConnected(),
               settings: this.state.userSettings,
               onSave: this.saveSettings,
             })}
@@ -575,12 +600,13 @@ class App extends PureComponent {
                   elements={this.state.elements}
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
+                  showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
                 />
               }
             </Col>
           </Row>
 
-          <StreamlitDialog {...dialogProps} />
+          <StreamlitDialog {...dialogProps}/>
 
         </Container>
       </div>

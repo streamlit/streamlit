@@ -1,3 +1,4 @@
+# Copyright 2019 Streamlit Inc. All rights reserved.
 import unittest
 
 import pytest
@@ -100,6 +101,32 @@ class ConfigOptionTest(unittest.TestCase):
 
         self.assertFalse(c.is_expired())
 
+    def test_replaced_by_unexpired(self):
+        def config_getter(key):
+            self.assertEqual(key, 'mysection.newName')
+            return 'newValue'
 
-if __name__ == '__main__':
-    unittest.main()
+        c = ConfigOption(
+                'mysection.oldName',
+                description='My old description',
+                replaced_by='mysection.newName',
+                expiration_date='2100-01-01',
+                config_getter=config_getter)
+
+        self.assertTrue(c.deprecated)
+        self.assertFalse(c.is_expired())
+
+    def test_replaced_by_expired(self):
+        def config_getter(key):
+            self.assertEqual(key, 'mysection.newName')
+            return 'newValue'
+
+        c = ConfigOption(
+                'mysection.oldName',
+                description='My old description',
+                replaced_by='mysection.newName',
+                expiration_date='2000-01-01',
+                config_getter=config_getter)
+
+        self.assertTrue(c.deprecated)
+        self.assertTrue(c.is_expired())

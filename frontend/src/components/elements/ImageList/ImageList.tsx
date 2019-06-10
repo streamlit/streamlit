@@ -19,8 +19,9 @@ interface Props extends StProps {
  */
 function getImageSrcString(imgProto: ImmutableMap<string, any>): string {
   const type = imgProto.get('type')
-  if (type === 'base_64Png') {
-    return `data:image/png;base64,${imgProto.get('base_64Png')}`
+  if (type === 'data') {
+    let data = imgProto.get('data')
+    return `data:${data.get('mimeType')};base64,${data.get('base64')}`
   } else if (type === 'url') {
     return imgProto.get('url')
   }
@@ -54,7 +55,7 @@ class ImageList extends PureStreamlitElement<Props, StState> {
     return (
       <div style={{width}}>
         {element.get('imgs').map((img: ImmutableMap<string, any>, indx: string) => (
-          <div className="image-container" key={indx}>
+          <div className="image-container stImage" key={indx}>
             <img
               style={{width: imgWidth}}
               src={getImageSrcString(img)}

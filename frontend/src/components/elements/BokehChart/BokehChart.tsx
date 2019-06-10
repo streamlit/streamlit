@@ -4,8 +4,13 @@
  */
 
 import React from 'react'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
-import {Map as ImmutableMap} from 'immutable'
+import { embed as BokehEmbed } from 'bokehjs'
+import { Map as ImmutableMap } from 'immutable'
+import {
+  PureStreamlitElement,
+  StProps,
+  StState,
+} from 'components/shared/StreamlitElement/'
 
 interface Props extends StProps {
   element: ImmutableMap<string, any>;
@@ -22,12 +27,10 @@ class BokehChart extends PureStreamlitElement<Props, StState> {
   }
 
   private updateChart = (data: any) => {
-    const Bokeh = (window as any).Bokeh
     const chart = document.getElementById(this.chartId)
-    if (Bokeh && chart) {
+    if (chart !== null) {
       this.removeAllChildNodes(chart)
-      // TODO: use npm package instead
-      Bokeh.embed.embed_item(data, this.chartId)
+      BokehEmbed.embed_item(data, this.chartId)
     }
   }
 
@@ -48,7 +51,11 @@ class BokehChart extends PureStreamlitElement<Props, StState> {
   }
 
   public safeRender = (): React.ReactNode => (
-    <div id={this.chartId} style={{ width: this.props.width }}></div>
+    <div
+      id={this.chartId}
+      className="stBokehChart"
+      style={{ width: this.props.width }}
+    />
   )
 }
 

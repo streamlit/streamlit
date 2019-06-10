@@ -53,21 +53,21 @@ class MainMenu extends Component {
 
         <DropdownMenu right>
           <DropdownItem
-            disabled={!this.props.isProxyConnected()}
+            disabled={!this.props.isServerConnected()}
             onClick={this.props.quickRerunCallback}>
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
-            disabled={!this.props.isProxyConnected()}
+            disabled={!this.props.isServerConnected()}
             onClick={this.props.rerunCallback}>
             <span>Edit command</span>
             <span className="shortcut">&#x21e7;R</span>
           </DropdownItem>
 
           <DropdownItem
-            disabled={!this.props.isProxyConnected()}
+            disabled={!this.props.isServerConnected()}
             onClick={this.props.clearCacheCallback}>
             <span>Clear cache</span>
             <span className="shortcut">C</span>
@@ -76,7 +76,7 @@ class MainMenu extends Component {
           <DropdownItem divider/>
 
           <DropdownItem
-            disabled={!this.props.isProxyConnected()}
+            disabled={!this.props.isServerConnected()}
             onClick={this.props.saveCallback}>
             Share report
           </DropdownItem>

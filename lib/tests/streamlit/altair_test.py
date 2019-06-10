@@ -10,9 +10,9 @@ setup_2_3_shims(globals())
 import altair as alt
 import json
 import pandas as pd
-import unittest
 
-from streamlit.DeltaGenerator import DeltaGenerator
+from tests import testutil
+import streamlit as st
 
 
 df1 = pd.DataFrame(
@@ -23,17 +23,14 @@ df1 = pd.DataFrame(
 c1 = alt.Chart(df1).mark_bar().encode(x='a', y='b')
 
 
-class AltairTest(unittest.TestCase):
+class AltairTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall altair_chart proto."""
 
     def test_altair_chart(self):
         """Test that it can be called with no args."""
-        queue = []
-        dg = DeltaGenerator(queue.append)
+        st.altair_chart(c1)
 
-        dg.altair_chart(c1)
-
-        c = queue[-1].new_element.vega_lite_chart
+        c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField('data'), False)
         self.assertEqual(len(c.datasets), 1)
 

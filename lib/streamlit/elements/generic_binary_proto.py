@@ -19,7 +19,7 @@ def marshall(proto, data):
         data: a buffer with the binary data. Supported formats: str, bytes,
             BytesIO, NumPy array, or a file opened with io.open().
     """
-    if type(data) is str:
+    if type(data) in string_types:
         b64encodable = bytes(data)
     elif type(data) is newbytes:
         b64encodable = data

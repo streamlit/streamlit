@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018 Streamlit Inc. All rights reserved.
+ * Copyright 2019 Streamlit Inc. All rights reserved.
  *
  * @fileoverview This class is the "brother" of WebsocketConnection. The class
  * implements loading deltas over an HTTP connection (as opposed to with
@@ -9,75 +9,100 @@
 
 import url from 'url'
 import {ConnectionState} from './ConnectionState'
-import {Text as TextProto, Delta} from 'autogen/protobuf'
+import {ForwardMsg, Text as TextProto} from 'autogen/protobuf'
 import {getObject} from './s3helper'
+import {logError} from './log'
+
+interface Manifest {
+  name: string;
+  numMessages: number;
+  firstDeltaIndex: number;
+  numDeltas: number;
+}
 
 interface Props {
   reportId: string;
 
-  /** Manifest JSON from the server */
-  manifest: {name: string; nDeltas: number};
+  /** Manifest JSON from the server. */
+  manifest: Manifest;
 
   /** Function called when we receive a new message. */
-  onMessage: (message: any) => void;
+  onMessage: (message: ForwardMsg) => void;
 
   /**
    * Function called when our ConnectionState changes.
    * If the new ConnectionState is ERROR, errMsg will be defined.
    */
-  setConnectionState: (connectionState: ConnectionState, errMsg?: string) => void;
-
-  setReportName: (name: string) => void;
+  onConnectionStateChange: (connectionState: ConnectionState, errMsg?: string) => void;
 }
 
 /**
  * This class is the "brother" of WebsocketConnection. The class implements
- * loading deltas over an HTTP connection (as opposed to with websockets).
+ * loading ForwardMsgs over an HTTP connection (as opposed to with websockets).
  */
 export class StaticConnection {
   public constructor(props: Props) {
-    const {name, nDeltas} = props.manifest
+    props.onConnectionStateChange(ConnectionState.STATIC)
 
-    props.setConnectionState(ConnectionState.STATIC)
-    props.setReportName(name)
+    // This method returns a promise, but we don't care about its result.
+    StaticConnection.getAllMessages(props)
+  }
 
-    // TODO: Unify with App.js
-    const {hostname, pathname} = url.parse(window.location.href, true)
-    const bucket = hostname
-    const version = pathname != null ? pathname.split('/')[1] : 'null'
+  private static async getAllMessages(props: Props): Promise<void> {
+    const {numMessages, firstDeltaIndex, numDeltas} = props.manifest
+    const {bucket, version} = getBucketAndVersion()
 
-    for (let id = 0; id < nDeltas; id++) {
-      // Insert a loading message for this element.
-      props.onMessage(textElement({
-        id,
-        body: `Loading element ${id}...`,
-        format: TextProto.Format.INFO,
-      }))
-      const deltaKey = `${version}/reports/${props.reportId}/${id}.delta`
+    for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
+      const isDeltaMsg = msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
+      const deltaID = isDeltaMsg ? msgIdx - firstDeltaIndex : -1
 
-      getObject({Bucket: bucket, Key: deltaKey})
-        .then(response => response.arrayBuffer())
-        .then((arrayBuffer) => {
-          props.onMessage({
-            type: 'delta',
-            delta: Delta.decode(new Uint8Array(arrayBuffer)),
-          })
-        }).catch((error) => {
+      // If this is a delta message, insert a loading message
+      // for its associated element
+      if (isDeltaMsg) {
+        props.onMessage(textElement({
+          id: deltaID,
+          body: `Loading element ${deltaID}...`,
+          format: TextProto.Format.INFO,
+        }))
+      }
+
+      const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
+
+      try {
+        const response = await getObject({Bucket: bucket, Key: messageKey})
+        const arrayBuffer = await response.arrayBuffer()
+        props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
+      } catch (error) {
+        if (isDeltaMsg) {
           props.onMessage(textElement({
-            id,
-            body: `Error loading element ${id}: ${error}`,
+            id: deltaID,
+            body: `Error loading element ${deltaID}: ${error}`,
             format: TextProto.Format.ERROR,
           }))
-        })
+        } else {
+          logError(`Error loading non-delta message ${msgIdx}: ${error}`)
+        }
+      }
     }
   }
+}
+
+/**
+ * Parses the S3 data bucket name and report version from the window location href
+ */
+function getBucketAndVersion(): {bucket?: string; version: string} {
+  // TODO: Unify with ConnectionManager.ts
+  const {hostname, pathname} = url.parse(window.location.href, true)
+  const bucket = hostname
+  const version = pathname != null ? pathname.split('/')[1] : 'null'
+  return {bucket, version}
 }
 
 /**
  * Returns the json to construct a message which places an element at a
  * particular location in the document.
  */
-function textElement({id, body, format}: {id: number; body: string; format: TextProto.Format}): any {
+function textElement({id, body, format}: { id: number; body: string; format: TextProto.Format }): any {
   return {
     type: 'delta',
     delta: {

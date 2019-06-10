@@ -122,7 +122,7 @@ the following pattern:
 [referrer file name].[example name].py
 ```
 
-For example, if `docs/api/charts.py` includes an embedded example of a Vega Lite chart,
+For example, if `docs/api/charts.py` includes an embedded example of a Vega-Lite chart,
 then the Python script to generate that should be:
 
 ```

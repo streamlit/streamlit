@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import sys
 
+
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test):
         self._x_test = x_test
@@ -82,7 +83,7 @@ class MyCallback(keras.callbacks.Callback):
         getattr(epoch_chart, type)(type='monotone', data_key='acc',
             stroke='#82ca9d', fill='#82ca9d',
             dot="false", y_axis_id='acc_axis')
-        return st.DeltaConnection.get_connection().get_delta_generator()._native_chart(epoch_chart)
+        return st._delta_generator._native_chart(epoch_chart)
 
 st.title('MNIST CNN')
 
@@ -125,7 +126,7 @@ model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer=sgd,
     metrics=['accuracy'])
 
-show_terminal_output = not config.get_option('proxy.liveSave')
+show_terminal_output = not config.get_option('server.liveSave')
 model.fit(x_train, y_train, validation_data=(x_test, y_test),
     epochs=epochs, verbose=show_terminal_output, callbacks=[MyCallback(x_test)])
 

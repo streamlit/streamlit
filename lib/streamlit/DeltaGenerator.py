@@ -81,8 +81,8 @@ def _with_element(method):
     This is a function decorator.
 
     Converts a method of the with arguments (self, element, ...) into a method
-    with arguments (self, ...). Thus, the intantiation of the element proto
-    object and creation of the element are handled automaticallyself.
+    with arguments (self, ...). Thus, the instantiation of the element proto
+    object and creation of the element are handled automatically.
 
     Parameters
     ----------
@@ -119,25 +119,28 @@ def _with_element(method):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, queue, id=None):
+    def __init__(self, enqueue, id=0, is_root=True):
         """Constructor.
 
         Parameters
         ----------
-        queue : callable
-            Function that enqueues Deltas.
+        enqueue : callable
+            Function that (maybe) enqueues ForwardMsg's and returns True if
+            enqueued or False if not.
         id : int
-            ID for deltas, or None to create a new generator (with new ID) each
-            time.
+            ID for deltas, or None to create the root DeltaGenerator (which
+            produces DeltaGenerators with incremeting IDs)
 
         """
-        self._queue = queue
-        if id is None:
-            self._generate_new_ids = True
-            self._next_id = 0
-        else:
-            self._generate_new_ids = False
-            self._id = id
+        self._enqueue = enqueue
+        self._id = id
+        self._is_root = is_root
+
+    # Protected (should be used only by Streamlit, not by users).
+    def _reset(self):
+        """Reset delta generator so it starts from index 0."""
+        assert self._is_root
+        self._id = 0
 
     def _enqueue_new_element_delta(self, marshall_element):
         """Create NewElement delta, fill it, and enqueue it.
@@ -154,25 +157,30 @@ class DeltaGenerator(object):
             element.
 
         """
-        # "Null" delta generators (those wihtout queues), don't send anything.
-        if self._queue is None:
+        # "Null" delta generators (those without queues), don't send anything.
+        if self._enqueue is None:
             return self
 
-        # Create a delta message.
-        delta = protobuf.Delta()
-        marshall_element(delta.new_element)
+        msg = protobuf.ForwardMsg()
+        marshall_element(msg.delta.new_element)
+        msg.delta.id = self._id
 
         # Figure out if we need to create a new ID for this element.
-        if self._generate_new_ids:
-            delta.id = self._next_id
-            generator = DeltaGenerator(self._queue, delta.id)
-            self._next_id += 1
+        if self._is_root:
+            output_dg = DeltaGenerator(
+                self._enqueue, msg.delta.id, is_root=False)
         else:
-            delta.id = self._id
-            generator = self
+            output_dg = self
 
-        self._queue(delta)
-        return generator
+        msg_was_enqueued = self._enqueue(msg)
+
+        if not msg_was_enqueued:
+            return self
+
+        if self._is_root:
+            self._id += 1
+
+        return output_dg
 
     @_with_element
     def balloons(self, element):
@@ -292,8 +300,8 @@ class DeltaGenerator(object):
 
         """
         element.text.body = (
-                body if isinstance(body, string_types)  # noqa: F821
-                else json.dumps(body, default=str))
+            body if isinstance(body, string_types)  # noqa: F821
+            else json.dumps(body, default=lambda o: str(type(o))))
         element.text.format = protobuf.Text.JSON
 
     @_with_element
@@ -477,8 +485,9 @@ class DeltaGenerator(object):
         >>> st.exception(e)
 
         """
-        import streamlit.elements.exception_element as exception_element
-        exception_element.marshall(element, exception, exception_traceback)
+        import streamlit.elements.exception_proto as exception_proto
+        exception_proto.marshall(
+            element.exception, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -649,17 +658,17 @@ class DeltaGenerator(object):
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
-        """Display a chart using the Vega Lite library.
+        """Display a chart using the Vega-Lite library.
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
             or None
-            Either the data to be plotted or a Vega Lite spec containing the
-            data (which more closely follows the Vega Lite API).
+            Either the data to be plotted or a Vega-Lite spec containing the
+            data (which more closely follows the Vega-Lite API).
 
         spec : dict or None
-            The Vega Lite spec for the chart. If the spec was already passed in
+            The Vega-Lite spec for the chart. If the spec was already passed in
             the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
@@ -690,7 +699,7 @@ class DeltaGenerator(object):
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
-        Examples of Vega Lite usage without Streamlit can be found at
+        Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily
         translated to the syntax shown above.
 
@@ -1404,7 +1413,10 @@ class DeltaGenerator(object):
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        assert not self._generate_new_ids, \
+        if self._enqueue is None:
+            return self
+
+        assert not self._is_root, \
             'Only existing elements can add_rows.'
 
         import streamlit.elements.data_frame_proto as data_frame_proto
@@ -1421,16 +1433,16 @@ class DeltaGenerator(object):
                 'Wrong number of arguments to add_rows().'
                 'Method requires exactly one dataset')
 
-        delta = protobuf.Delta()
-        delta.id = self._id
+        msg = protobuf.ForwardMsg()
+        msg.delta.id = self._id
 
-        data_frame_proto.marshall_data_frame(data, delta.add_rows.data)
+        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
 
         if name:
-            delta.add_rows.name = name
-            delta.add_rows.has_name = True
+            msg.delta.add_rows.name = name
+            msg.delta.add_rows.has_name = True
 
-        self._queue(delta)
+        self._enqueue(msg)
 
         return self
 

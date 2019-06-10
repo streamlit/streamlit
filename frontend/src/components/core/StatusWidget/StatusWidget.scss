@@ -7,7 +7,7 @@
 
 /*
   "ConnectionStatus" styles are used for displaying
-  the status of our connection to the proxy (connected,
+  the status of our connection to the server (connected,
   disconnected, error, etc).
 */
 
@@ -97,10 +97,6 @@
   margin-right: -0.5rem;
 }
 
-.UnderlineFirstLetter::first-letter {
-  text-decoration: underline;
-}
-
 //
 // Top-level StatusWidget appear/disappear animations
 //
@@ -133,16 +129,38 @@
 }
 
 //
-// Report Changed prompt minimize animation
+// ReportStatus animations
 //
 
 $anim-time: 200ms;
 $anim-easing: ease-out;
 
-// Unminimized -> Minimized
-#ReportStatus.minimized label,
-#ReportStatus.minimized button,
-#ReportStatus.minimized button * {
+// "Report is Runnning" minimize animation
+// (Buttons remain visible)
+#ReportStatus.report-is-running-minimized label {
+  opacity: 0;
+  visibility: hidden;
+  padding: 0;
+  max-width: 0;
+  min-width: 0;
+  border: 0;
+  transition:
+    opacity $anim-time $anim-easing 0s,
+    clip $anim-time $anim-easing 0s,
+    min-width $anim-time $anim-easing 0s,
+    max-width $anim-time $anim-easing 0s,
+    padding $anim-time $anim-easing 0s,
+
+    // Hide at end of the transition
+    visibility 0s $anim-easing $anim-time;
+}
+
+
+// "Source file changed. Rerun?" minimize animation
+// (Buttons are hidden)
+#ReportStatus.rerun-prompt-minimized label,
+#ReportStatus.rerun-prompt-minimized button,
+#ReportStatus.rerun-prompt-minimized button * {
   opacity: 0;
   visibility: hidden;
   margin: 0;
@@ -158,11 +176,11 @@ $anim-easing: ease-out;
     margin $anim-time $anim-easing 0s,
     padding $anim-time $anim-easing 0s,
 
-    // Hide at end of the transition
+      // Hide at end of the transition
     visibility 0s $anim-easing $anim-time;
 }
 
-// Minimized -> Unminimized
+// Minimized -> Unminimized animation
 #ReportStatus label,
 #ReportStatus button,
 #ReportStatus button * {

@@ -139,11 +139,11 @@ except Exception as e:
             '"Working with Matplotlib on OSX" in the Matplotlib FAQ.'
     st.warning('Error running matplotlib: ' + err_str)
 
-st.subheader('Vega Lite')
+st.subheader('Vega-Lite')
 
 st.write(
     'For complex interactive charts, you can use '
-    '[Vega Lite](https://vega.github.io/vega-lite/):')
+    '[Vega-Lite](https://vega.github.io/vega-lite/):')
 
 with st.echo():
     df = pd.DataFrame(np.random.randn(200, 3), columns=['a', 'b', 'c'])
@@ -168,7 +168,7 @@ with st.echo():
 
 st.header('Visualizing data as images via Pillow.')
 
-@st.cache
+@st.cache(on_disk=True)
 def read_file_from_url(url):
     try:
         return urllib.request.urlopen(url).read()

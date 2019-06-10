@@ -27,7 +27,7 @@ class ExceptionElement extends PureStreamlitElement<Props, StState> {
 
     // Put it all together into a nice little html view.
     return (
-      <div className="alert alert-danger exception" style={{width}}>
+      <div className="alert alert-danger exception stException" style={{width}}>
         <div className="message"><strong>{type}</strong>{message}</div>
         <div className="stack-trace">{
           stackTrace.map((row: string, indx: string) =>

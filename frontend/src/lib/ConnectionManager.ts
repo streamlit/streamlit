@@ -2,15 +2,16 @@
  * @license
  * Copyright 2018 Streamlit Inc. All rights reserved.
  *
- * @fileoverview Manages our connection to the Proxy.
+ * @fileoverview Manages our connection to the Server.
  */
 
 import url from 'url'
 
+import {ConnectionState} from './ConnectionState'
+import {ForwardMsg} from 'autogen/protobuf'
+import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
 import {StaticConnection} from './StaticConnection'
 import {WebsocketConnection} from './WebsocketConnection'
-import {ConnectionState} from './ConnectionState'
-import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
 import {configureCredentials, getObject} from './s3helper'
 import {logError} from './log'
 
@@ -22,20 +23,14 @@ interface Props {
   getUserLogin: () => Promise<string>;
 
   /**
-   * Function to be called when we receive a message from the proxy.
+   * Function to be called when we receive a message from the server.
    */
-  onMessage: (message: any) => void;
+  onMessage: (message: ForwardMsg) => void;
 
   /**
    * Function to be called when the connection errors out.
    */
   onConnectionError: (errorMessage: string) => void;
-
-  /**
-   * Function that should be called to set the current report's name in the
-   * parent component.
-   */
-  setReportName: (reportName: string) => void;
 
   /**
    * Called when our ConnectionState is changed.
@@ -56,7 +51,7 @@ export class ConnectionManager {
   }
 
   /**
-   * Indicates whether we're connected to the proxy.
+   * Indicates whether we're connected to the server.
    */
   public isConnected(): boolean {
     return this.connectionState === ConnectionState.CONNECTED
@@ -72,28 +67,24 @@ export class ConnectionManager {
       this.connection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      logError(`Cannot send message when proxy is disconnected: ${obj}`)
+      logError(`Cannot send message when server is disconnected: ${obj}`)
     }
   }
 
   private async connect(): Promise<void> {
     const {query} = url.parse(window.location.href, true)
-    const reportName = query.name as string
     const reportId = query.id as string
 
     try {
-      if (reportName !== undefined) {
-        this.props.setReportName(reportName)
-        this.connection = await this.connectBasedOnWindowUrl(reportName)
-
-      } else if (reportId !== undefined) {
+      if (reportId !== undefined) {
         this.connection = await this.connectBasedOnManifest(reportId)
 
       } else {
-        throw new Error('URL must contain either a report name or an ID.')
+        this.connection = await this.connectToRunningServer()
       }
     } catch (err) {
-      this.setConnectionState(ConnectionState.ERROR, err.message)
+      this.setConnectionState(
+        ConnectionState.DISCONNECTED_FOREVER, err.message)
     }
   }
 
@@ -103,17 +94,18 @@ export class ConnectionManager {
       this.props.connectionStateChanged(connectionState)
     }
 
-    if (connectionState === ConnectionState.ERROR) {
+    if (connectionState === ConnectionState.DISCONNECTED_FOREVER) {
       this.props.onConnectionError(errMsg || 'unknown')
     }
-  };
+  }
 
-  private connectBasedOnWindowUrl(reportName: string): WebsocketConnection {
+  private connectToRunningServer(): WebsocketConnection {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
+    const hostname = window.location.hostname
     const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port
-    const uri = getWsUrl(window.location.hostname, port, reportName)
+    const uri = getWsUrl(hostname, port)
 
     return new WebsocketConnection({
       uriList: [
@@ -122,7 +114,8 @@ export class ConnectionManager {
         uri,
       ],
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
+      onConnectionStateChange: this.setConnectionState,
+      isLocal: hostname === 'localhost',
     })
   }
 
@@ -133,28 +126,28 @@ export class ConnectionManager {
   private async connectBasedOnManifest(reportId: string): Promise<WebsocketConnection | StaticConnection> {
     const manifest = await this.fetchManifestWithPossibleLogin(reportId)
 
-    return manifest.proxyStatus === 'running' ?
-      this.connectToRunningProxyFromManifest(manifest) :
+    return manifest.serverStatus === 'running' ?
+      this.connectToRunningServerFromManifest(manifest) :
       this.connectToStaticReportFromManifest(reportId, manifest)
   }
 
-  private connectToRunningProxyFromManifest(manifest: any): WebsocketConnection {
+  private connectToRunningServerFromManifest(manifest: any): WebsocketConnection {
     const {
-      name, configuredProxyAddress, internalProxyIP, externalProxyIP,
-      proxyPort,
+      configuredServerAddress, internalServerIP, externalServerIP, serverPort,
     } = manifest
 
-    const uriList = configuredProxyAddress ?
-      [getWsUrl(configuredProxyAddress, proxyPort, name)] :
+    const uriList = configuredServerAddress ?
+      [getWsUrl(configuredServerAddress, serverPort)] :
       [
-        getWsUrl(externalProxyIP, proxyPort, name),
-        getWsUrl(internalProxyIP, proxyPort, name),
+        getWsUrl(externalServerIP, serverPort),
+        getWsUrl(internalServerIP, serverPort),
       ]
 
     return new WebsocketConnection({
       uriList,
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
+      onConnectionStateChange: this.setConnectionState,
+      isLocal: false,
     })
   }
 
@@ -163,8 +156,7 @@ export class ConnectionManager {
       manifest,
       reportId,
       onMessage: this.props.onMessage,
-      setConnectionState: this.setConnectionState,
-      setReportName: this.props.setReportName,
+      onConnectionStateChange: this.setConnectionState,
     })
   }
 
@@ -216,6 +208,6 @@ async function fetchManifest(reportId: string): Promise<any> {
   return data.json()
 }
 
-function getWsUrl(host: string, port: number, reportName: string): string {
-  return `ws://${host}:${port}/stream/${encodeURIComponent(reportName)}`
+function getWsUrl(host: string, port: number): string {
+  return `ws://${host}:${port}/stream`
 }

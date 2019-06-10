@@ -67,11 +67,3 @@ POLICY = dedent('''{
         }
     ]
 }''')
-
-
-def main():
-    print(POLICY % {'bucket': sys.argv[1]})
-
-
-if __name__ == '__main__':
-    main()

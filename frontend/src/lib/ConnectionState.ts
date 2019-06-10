@@ -4,9 +4,12 @@
  */
 
 export enum ConnectionState {
-  INITIAL = 'initial',
-  CONNECTED = 'connected',
-  DISCONNECTED = 'disconnected',
-  ERROR = 'error',
-  STATIC = 'static',
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
+  DISCONNECTED_FOREVER = 'DISCONNECTED_FOREVER',
+  INITIAL = 'INITIAL',
+  INITIAL_CONNECTING = 'INITIAL_CONNECTING',  // Treat differently in the UI.
+  RECONNECTING = 'RECONNECTING',
+  STATIC = 'STATIC',
+  WAITING = 'WAITING',
 }

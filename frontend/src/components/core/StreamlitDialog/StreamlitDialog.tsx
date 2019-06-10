@@ -3,22 +3,26 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import {ScriptChangedDialog, Props as ScriptChangedProps} from 'components/core/StreamlitDialog/ScriptChangedDialog'
 import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
 
-import {STREAMLIT_VERSION} from '../../../lib/baseconsts'
+import {Exception} from 'autogen/protobuf'
 import {Props as SettingsDialogProps, SettingsDialog} from './SettingsDialog'
+import {STREAMLIT_VERSION} from 'lib/baseconsts'
 
 import './StreamlitDialog.scss'
 
-type CloseHandler = () => void;
+type PlainEventHandler = () => void;
 
 type DialogProps =
   AboutProps |
   ClearCacheProps |
   RerunScriptProps |
   SettingsProps |
+  ScriptChangedProps |
+  ScriptCompileErrorProps |
   UploadProgressProps |
   UploadedProps |
   WarningProps;
@@ -33,6 +37,10 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return rerunScriptDialog(dialogProps)
     case 'settings':
       return settingsDialog(dialogProps)
+    case 'scriptChanged':
+      return <ScriptChangedDialog {...dialogProps}/>
+    case 'scriptCompileError':
+      return scriptCompileErrorDialog(dialogProps)
     case 'uploadProgress':
       return uploadProgressDialog(dialogProps)
     case 'uploaded':
@@ -50,7 +58,7 @@ interface AboutProps {
   type: 'about';
 
   /** Callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /** About Dialog */
@@ -74,16 +82,18 @@ function aboutDialog(props: AboutProps): ReactElement {
 
 interface ClearCacheProps {
   type: 'clearCache';
-
   /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void;
 
   /** callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
  * Dialog shown when the user wants to clear the cache.
+ *
+ * confirmCallback - callback to send the clear_cache request to the Proxy
+ * onClose         - callback to close the dialog
  */
 function clearCacheDialog(props: ClearCacheProps): ReactElement {
   return (
@@ -114,7 +124,7 @@ interface RerunScriptProps {
   rerunCallback: () => void;
 
   /** Callback to close the dialog */
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -142,6 +152,34 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
   )
 }
 
+interface ScriptCompileErrorProps {
+  type: 'scriptCompileError';
+  exception: Exception;
+  onClose: PlainEventHandler;
+  onRerun: PlainEventHandler;
+}
+
+function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
+  let message = props.exception.message
+  if (message) {
+    message = `: ${message}`
+  }
+
+  return (
+    <BasicDialog onClose={props.onClose}>
+      <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
+      <ModalBody>
+        <div>
+          <strong>{props.exception.type}</strong>{message}
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button outline color="primary" onClick={props.onRerun}>Rerun</Button>
+      </ModalFooter>
+    </BasicDialog>
+  )
+}
+
 interface SettingsProps extends SettingsDialogProps {
   type: 'settings';
 }
@@ -158,7 +196,7 @@ function settingsDialog(props: SettingsProps): ReactElement {
 interface UploadProgressProps {
   type: 'uploadProgress';
   progress?: string | number;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -182,7 +220,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
 interface UploadedProps {
   type: 'uploaded';
   url: string;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -210,7 +248,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
 interface WarningProps {
   type: 'warning';
   msg: ReactNode;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**
@@ -219,7 +257,7 @@ interface WarningProps {
 function warningDialog(props: WarningProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
-      <ModalBody>{props.msg}</ModalBody>,
+      <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
         <Button outline onClick={props.onClose}>Done</Button>
       </ModalFooter>
@@ -227,7 +265,7 @@ function warningDialog(props: WarningProps): ReactElement {
   )
 }
 
-function BasicDialog({children, onClose}: { children?: ReactNode; onClose: CloseHandler }): ReactElement {
+export function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: PlainEventHandler }): ReactElement {
   const isOpen = children !== undefined
   return (
     <Modal
@@ -243,13 +281,13 @@ function BasicDialog({children, onClose}: { children?: ReactNode; onClose: Close
 /**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
-function noDialog({onClose}: { onClose: CloseHandler }): ReactElement {
+function noDialog({onClose}: { onClose: PlainEventHandler }): ReactElement {
   return <BasicDialog onClose={onClose}/>
 }
 
 interface NotRecognizedProps {
   type: string;
-  onClose: CloseHandler;
+  onClose: PlainEventHandler;
 }
 
 /**

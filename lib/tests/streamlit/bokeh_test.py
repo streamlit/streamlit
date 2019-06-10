@@ -2,21 +2,22 @@
 
 """Bokeh unit test."""
 
-import unittest
 from bokeh.plotting import figure
+
 from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.ReportQueue import ReportQueue
+from tests import testutil
+import streamlit as st
 
 
-class BokehTest(unittest.TestCase):
+class BokehTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall bokeh_chart protos."""
 
     def test_figure(self):
         """Test that it can be called with figure."""
         plot = figure()
         plot.line([1], [1])
-        queue = []
-        dg = DeltaGenerator(queue.append)
-        dg.bokeh_chart(plot)
+        st.bokeh_chart(plot)
 
-        c = queue[-1].new_element.bokeh_chart
+        c = self.get_delta_from_queue().new_element.bokeh_chart
         self.assertEqual(hasattr(c, 'figure'), True)

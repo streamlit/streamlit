@@ -30,7 +30,7 @@ setuptools.setup(
 
     entry_points = {
         'console_scripts': [
-            'streamlit = streamlit.__main__:main',
+            'streamlit = streamlit.cli:main',
         ],
     },
 
