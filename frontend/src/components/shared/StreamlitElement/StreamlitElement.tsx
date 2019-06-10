@@ -25,7 +25,7 @@ export interface StState {
    * when you get an exception inside a componentDidMount, componentDidUpdate,
    * etc.
    */
-  error?: Error | null;
+  error?: Error|null;
 }
 
 export abstract class StreamlitElement<P extends StProps, S extends StState>

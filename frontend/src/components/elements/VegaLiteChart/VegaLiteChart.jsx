@@ -58,7 +58,6 @@ class VegaLiteChart extends StreamlitElement {
 
     return (
       <VegaLite
-        className="stVegaLiteChart"
         spec={spec}
         data={dataObj}
         renderer="canvas"

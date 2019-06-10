@@ -8,10 +8,8 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import unittest
-
-import numpy as np
 import pandas as pd
-from parameterized import parameterized
+import numpy as np
 
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
@@ -19,9 +17,7 @@ from streamlit import protobuf
 
 
 class DataFrameStylingTest(unittest.TestCase):
-    """Tests marshalling of pandas.Styler dataframe styling data
-    with both st.dataframe and st.table.
-    """
+    """Tests marshalling of pandas.Styler dataframe styling data."""
 
     def setUp(self):
         self._report_queue = ReportQueue()
@@ -32,19 +28,14 @@ class DataFrameStylingTest(unittest.TestCase):
 
         self._dg = DeltaGenerator(enqueue)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_unstyled_has_no_style(self, element, proto):
+    def test_unstyled_has_no_style(self):
         """A DataFrame with an unmodified Styler should result in a protobuf
         with no styling data
         """
 
         df = pd.DataFrame({'A': [1, 2, 3, 4, 5]})
-
-        getattr(self._dg, element)(df.style)
-        proto_df = getattr(self._get_element(), proto)
+        self._dg.dataframe(df.style)
+        proto_df = self._get_element().data_frame
 
         rows, cols = df.shape
         for row in range(rows):
@@ -54,28 +45,18 @@ class DataFrameStylingTest(unittest.TestCase):
                 self.assertEqual(style.has_display_value, False)
                 self.assertEqual(len(style.css), 0)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_format(self, element, proto):
+    def test_format(self):
         """Tests DataFrame.style.format()"""
         values = [0.1, 0.2, 0.3352, np.nan]
         display_values = ['10.00%', '20.00%', '33.52%', 'nan%']
 
         df = pd.DataFrame({'A': values})
+        self._dg.dataframe(df.style.format('{:.2%}'))
 
-        get_delta = getattr(self._dg, element)
-        get_delta(df.style.format('{:.2%}'))
-
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = self._get_element().data_frame
         self._assert_column_display_values(proto_df, 0, display_values)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_css_styling(self, element, proto):
+    def test_css_styling(self):
         """Tests DataFrame.style css styling"""
 
         values = [-1, 1]
@@ -85,20 +66,14 @@ class DataFrameStylingTest(unittest.TestCase):
         ]
 
         df = pd.DataFrame({'A': values})
+        self._dg.dataframe(df.style
+                           .highlight_max(color='yellow')
+                           .applymap(lambda val: 'color: red' if val < 0 else 'color: black'))
 
-        get_delta = getattr(self._dg, element)
-        get_delta(df.style
-                  .highlight_max(color='yellow')
-                  .applymap(lambda val: 'color: red' if val < 0 else 'color: black'))
-
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_add_styled_rows(self, element, proto):
+    def test_add_styled_rows(self):
         """Add rows should preserve existing styles and append new styles"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -110,19 +85,13 @@ class DataFrameStylingTest(unittest.TestCase):
             {css_s('color', 'black')},
         ]
 
-        get_delta = getattr(self._dg, element)
-        x = get_delta(df1.style.applymap(lambda val: 'color: red'))
-
+        x = self._dg.dataframe(df1.style.applymap(lambda val: 'color: red'))
         x.add_rows(df2.style.applymap(lambda val: 'color: black'))
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_add_styled_rows_to_unstyled_rows(self, element, proto):
+    def test_add_styled_rows_to_unstyled_rows(self):
         """Adding styled rows to unstyled rows should work"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -134,17 +103,13 @@ class DataFrameStylingTest(unittest.TestCase):
             {css_s('color', 'black')},
         ]
 
-        x = getattr(self._dg, element)(df1)
+        x = self._dg.dataframe(df1)
         x.add_rows(df2.style.applymap(lambda val: 'color: black'))
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
 
-    @parameterized.expand([
-        ('dataframe', 'data_frame'),
-        ('table', 'table')
-    ])
-    def test_add_unstyled_rows_to_styled_rows(self, element, proto):
+    def test_add_unstyled_rows_to_styled_rows(self):
         """Adding unstyled rows to styled rows should work"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -156,12 +121,10 @@ class DataFrameStylingTest(unittest.TestCase):
             set(),
         ]
 
-        get_delta = getattr(self._dg, element)
-        x = get_delta(df1.style.applymap(lambda val: 'color: black'))
-
+        x = self._dg.dataframe(df1.style.applymap(lambda val: 'color: black'))
         x.add_rows(df2)
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = self._get_element().data_frame
         self._assert_column_css_styles(proto_df, 0, css_values)
 
     def _get_element(self):

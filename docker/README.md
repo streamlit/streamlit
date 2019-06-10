@@ -4,33 +4,19 @@ This is used for development.
 
 ## Build docker images
 ```
-$ (cd backend; docker-compose build)
+$ docker-compose build
 ```
 
-### Frontend errors
-* You'll most likely get an error like the following due to memory issues.
-
-![docs/images/docker_build_error.png](docs/images/docker_build_error.png)
-
-* Go to Docker -> Preferences -> Advanced
-
-![docs/images/docker_preferences.png](docs/images/docker_preferences.png)
-
-* The default has 2 GB of memory
-
-![docs/images/docker_advanced_defaults.png](docs/images/docker_advanced_defaults.png)
-
-* I increased it to 8.
-
-![docs/images/docker_advanced_8.png](docs/images/docker_advanced_8.png)
-
-## Run
+## List images
 ```
-$ (cd backend; docker-compose up streamlit)
+$ docker images | grep -i devel-${USER}
+streamlit/streamlit   2.7-devel-armando     cc146558d0ce        11 minutes ago       548MB
 ```
 
-Manually go to [http://127.0.0.1:8501](http://127.0.0.1:8501)
-
-## Pick a different script
-
-Edit [backend/docker-compose.override.yml](backend/docker-compose.override.yml) and change the `command` line.
+## Extract wheel files from docker images
+You can extract the wheel files from this docker image and upload it to pypi
+```
+rm -rf /tmp/release
+docker run --rm --name streamlit2.7 -d streamlit/streamlit:2.7-devel-armando sleep 20 ; docker cp streamlit2.7:/st/. /tmp/release/
+ls -la /tmp/release
+```

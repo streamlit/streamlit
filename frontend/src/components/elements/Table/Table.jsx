@@ -31,7 +31,7 @@ class Table extends PureStreamlitElement {
     // TODO(tvst): Make tables have a max width with overflow: scroll (when
     // media==screen). But need to fix the autosizer first.
     return (
-      <div className="streamlit-table stTable">
+      <div className="streamlit-table">
         <ReactTable className={hasNoData ? 'empty-table' : ''}>
           <thead>
             <TableRows
@@ -96,7 +96,7 @@ function TableRows({df, header, headerRows, rows, cols}) {
 function TableRow({df, rowIdx, cols}) {
   const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
-    const { contents, styles, type } = dataFrameGet(df, colIdx, rowIdx)
+    const { contents, type } = dataFrameGet(df, colIdx, rowIdx)
     const formattedContents = toFormattedString(contents)
     if (type === 'corner') {
       entries.push(<th key={colIdx}>&nbsp;</th>)
@@ -105,7 +105,7 @@ function TableRow({df, rowIdx, cols}) {
     } else if (type === 'col-header') {
       entries.push(<th key={colIdx}>{ formattedContents }</th>)
     } else if (type === 'data') {
-      entries.push(<td style={styles} key={colIdx}>{ formattedContents }</td>)
+      entries.push(<td key={colIdx}>{ formattedContents }</td>)
     } else {
       throw new Error(`Cannot parse type "${type}".`)
     }

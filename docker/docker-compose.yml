@@ -1,0 +1,10 @@
+version: '3.6'
+
+services:
+  streamlit-2.7:
+    image: streamlit/streamlit:2.7-devel-$USER
+    build:
+      context: ..
+      dockerfile: lib/Dockerfile
+      args:
+        PYTHON_VERSION: 2.7
