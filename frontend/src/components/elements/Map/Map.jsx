@@ -70,7 +70,7 @@ class Map extends PureStreamlitElement {
     const zoom = 13
 
     return (
-      <LeafletMap style={{width, height: width}} center={center} zoom={zoom}>
+      <LeafletMap center={center} zoom={zoom} className="stMap" style={{width, height: width}}>
         <TileLayer
           /* eslint-disable-next-line max-len */
           attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"

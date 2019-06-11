@@ -62,7 +62,7 @@ class DeckGlChart extends PureStreamlitElement {
   safeRender() {
     return (
       <div
-        className="deckglchart"
+        className="deckglchart stDeckGlChart"
         style={{
           height: this.initialViewState.height,
           width: this.initialViewState.width,

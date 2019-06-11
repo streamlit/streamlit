@@ -14,14 +14,8 @@ interface Props extends StProps {
 class Video extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     const {element, width} = this.props
-    return (
-      <video
-        style={{width}}
-        controls
-        src={`data:${element.get('format')};base64,${element.get('data')}`}
-      >
-      </video>
-    )
+    const dataUrl = 'data:' + element.get('format') + ';base64,' + element.get('data')
+    return <video controls src={dataUrl} className="stVideo" style={{ width }} />
   }
 }
 
