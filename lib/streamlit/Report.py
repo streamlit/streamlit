@@ -40,8 +40,8 @@ class Report(object):
         # queue needs to keep the initialization message even when you clear
         # it.
         self._master_queue = ReportQueue()
-        self._latest_id = None
 
+        self.report_id = None
         self.generate_new_id()
 
     def get_debug(self):
@@ -79,9 +79,8 @@ class Report(object):
     def generate_new_id(self):
         """Randomly generate an ID representing this report's execution."""
         # Convert to str for Python2
-        id = str(base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
-        self._latest_id = id
-        return id
+        self.report_id = str(
+            base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
 
     def get_url(self, host_ip):
         """Get this report's live URL.
@@ -125,7 +124,7 @@ class Report(object):
         manifest_json = json.dumps(manifest).encode('utf-8')
 
         return [(
-            'reports/%s/manifest.json' % self._latest_id,
+            'reports/%s/manifest.json' % self.report_id,
             manifest_json
         )]
 
@@ -164,16 +163,16 @@ class Report(object):
 
         manifest_json = json.dumps(manifest).encode('utf-8')
 
-        report_id = self._latest_id
-
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [(
-            'reports/%(id)s/%(idx)s.pb' % {'id': report_id, 'idx': msg_idx},
+            'reports/%(id)s/%(idx)s.pb' %
+                {'id': self.report_id, 'idx': msg_idx},
             msg.SerializeToString()
         ) for msg_idx, msg in enumerate(messages)]
 
         manifest_tuples = [(
-            'reports/%(id)s/manifest.json' % {'id': report_id}, manifest_json)]
+            'reports/%(id)s/manifest.json' %
+                {'id': self.report_id}, manifest_json)]
 
         # Manifest must be at the end, so clients don't connect and read the
         # manifest while the deltas haven't been saved yet.
@@ -273,6 +272,7 @@ def _get_browser_address_bar_port():
     server-browser websocket.
 
     """
-    if config.get_option('global.developmentMode') and config.get_option('global.useNode'):
+    if (config.get_option('global.developmentMode')
+            and config.get_option('global.useNode')):
         return 3000
     return config.get_option('browser.serverPort')

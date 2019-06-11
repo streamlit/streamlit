@@ -2,7 +2,11 @@
 ## Used to run end-to-end tests
 
 # Kill all active "streamlit run" processes
-pgrep -f "streamlit run" | xargs kill -9
+pids=$(pgrep -f 'streamlit run')
+if [ "$pids" ]
+then
+  kill -9 $pids
+fi
 
 # Test core streamlit elements
 for file in examples/core/*.py

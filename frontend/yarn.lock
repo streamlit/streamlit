@@ -15364,7 +15364,7 @@ vega-hierarchy@^4.0.1:
     vega-dataflow "^5.1.0"
     vega-util "^1.8.0"
 
-vega-lite@^3.3.0:
+vega-lite@^3.2.1:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/vega-lite/-/vega-lite-3.3.0.tgz#26db53d37edd0b22ab466e09b4d21ee2ae63aaf4"
   integrity sha512-LEfyuJK9EhnbLcs8FuSXbVl/Ks5mm/jjRY+s4zogxSv89Z7yiCNl/HTtGklJ7q0vHT8ffEsrnonIgEQxVzZegA==

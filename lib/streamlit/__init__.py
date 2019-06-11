@@ -43,8 +43,6 @@ _setup_2_3_shims(globals())
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-_logger.set_log_level(_config.get_option('global.logLevel').upper())
-_logger.init_tornado_logs()
 _LOGGER = _logger.get_logger('root')
 
 # Give the package a version.
@@ -85,6 +83,17 @@ _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
 # Root delta generator for this Streamlit report.
 # This gets overwritten in bootstrap.py and in tests.
 _delta_generator = _NULL_DELTA_GENERATOR
+
+
+def _set_log_level():
+    _logger.set_log_level(_config.get_option('global.logLevel').upper())
+    _logger.init_tornado_logs()
+
+
+# Make this file only depend on config option in an asynchronous manner. This
+# avoids a race condition when another file (such as a test file) tries to pass
+# in an alternatve config.
+_config.on_config_parsed(_set_log_level)
 
 
 def _with_dg(method):

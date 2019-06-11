@@ -19,11 +19,12 @@ import subprocess
 import sys
 import threading
 import urllib
-
 try:
     import urllib.request  # for Python3
 except ImportError:
     pass
+
+import click
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -45,9 +46,9 @@ _AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 HELP_DOC = 'https://streamlit.io/secret/docs/'
 
 
-def _decode_ascii(str):
+def _decode_ascii(string):
     """Decodes a string as ascii."""
-    return str.decode('ascii')
+    return string.decode('ascii')
 
 
 @contextlib.contextmanager
@@ -66,7 +67,7 @@ def streamlit_read(path, binary=False):
     """ % STREAMLIT_ROOT_DIRECTORY
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
-       raise Error('Read zero byte file: "%s"' % filename)
+        raise Error('Read zero byte file: "%s"' % filename)
 
     mode = 'r'
     if binary:
@@ -120,7 +121,7 @@ def escape_markdown(raw_string):
     Examples
     --------
     ::
-        escape_markdown("1 * 2") -> "1 \* 2"
+        escape_markdown("1 * 2") -> "1 \\* 2"
     """
     metacharacters = ['\\', '*', '-', '=', '`', '!', '#', '|']
     result = raw_string
@@ -130,6 +131,7 @@ def escape_markdown(raw_string):
 
 
 def get_static_dir():
+    """Get the folder where static HTML/JS/CSS files live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
 
@@ -145,7 +147,7 @@ def memoize(func):
     return wrapped_func
 
 
-def make_blocking_http_get(url, timeout=5):
+def _make_blocking_http_get(url, timeout=5):
     try:
         return urllib.request.urlopen(url, timeout=timeout).read()
     except Exception:
@@ -169,7 +171,7 @@ def get_external_ip():
     if _external_ip is not None:
         return _external_ip
 
-    response = make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
+    response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
 
     if response is None:
         LOGGER.warning(
@@ -378,8 +380,8 @@ def is_repl():
     return False
 
 
-def get_streamlit_file_path(filename):
-    """Return the full path to a filename in ~/.streamlit.
+def get_streamlit_file_path(*filepath):
+    """Return the full path to a filepath in ~/.streamlit.
 
     Creates ~/.streamlit if needed.
     """
@@ -388,15 +390,17 @@ def get_streamlit_file_path(filename):
     if home is None:
         raise RuntimeError('No home directory.')
 
-    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY)
+    folder_path = filepath[:-1]
+    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *folder_path)
 
     if not os.path.isdir(st_path):
         os.makedirs(st_path)
 
-    return os.path.join(st_path, filename)
+    return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
 
 
 def forwardmsg_to_debug(msg):
+    """Convert a ForwardMsg into a dict for debugging."""
     the_type = msg.WhichOneof('type')
     if the_type == 'delta':
         return {'delta': delta_to_debug(msg.delta)}
@@ -404,6 +408,7 @@ def forwardmsg_to_debug(msg):
 
 
 def delta_to_debug(delta):
+    """Convert a Delta into a dict for debugging."""
     the_type = delta.WhichOneof('type')
     out = {
         'id': delta.id
@@ -415,3 +420,9 @@ def delta_to_debug(delta):
         out['add_rows'] = ''
 
     return out
+
+
+def print_url(title, url):
+    """Pretty-print a URL on the terminal."""
+    click.secho('  %s: ' % title, nl=False)
+    click.secho(url, bold=True)

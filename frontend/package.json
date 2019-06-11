@@ -1,11 +1,11 @@
 {
   "name": "streamlit-browser",
-  "version": "0.37.0",
+  "version": "0.40.0",
   "private": true,
   "homepage": ".",
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build": "./scripts/preload.sh && craco build",
     "test": "craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open",
     "cy:run": "unset NODE_OPTIONS && cypress run",
@@ -49,7 +49,7 @@
     "recharts": "^1.6.2",
     "typed-signals": "^1.0.5",
     "vega": "^5.4.0",
-    "vega-lite": "^3.3.0",
+    "vega-lite": "^3.2.1",
     "vega-tooltip": "^0.17.0"
   },
   "devDependencies": {
