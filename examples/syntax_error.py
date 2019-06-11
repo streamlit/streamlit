@@ -3,12 +3,11 @@ import sys
 
 # # Uncomment this as a block.
 # # This tests that errors before the first st call get caught.
-# sys.stderr.write('You should not see this line!\n')
-# a = not_a_real_variable  # EXPECTED: full-screen exception.
+# a = not_a_real_variable  # EXPECTED: inline exception
 
 # # Uncomment this as a block.
 # # This tests that errors before the first st call get caught.
-# if True  # EXPECTED: full-screen exception.
+# if True  # EXPECTED: modal dialog
 
 st.title('Syntax error test')
 
@@ -27,23 +26,15 @@ st.write('(Some top text)')
 # a = not_a_real_variable  # EXPECTED: inline exception.
 
 # # Uncomment this as a block.
-# if True  # EXPECTED: full-screen exception.
+# if True  # EXPECTED: modal dialog
 
 # # Uncomment this as a block.
 # sys.stderr.write('Hello!\n')  # You should not see this.
 # # The line below is a compile-time error. Bad indentation.
-#        this_indentation_is_wrong = True  # EXPECTED: full-screen exception.
+#        this_indentation_is_wrong = True  # EXPECTED: modal dialog
 
 # # Uncomment this as a block.
-# sys.stderr.write('FakeError: this looks like an exception. \n')
-# st.write('EXPECTED: You should see no error')
-# sys.exit(-1)
-
-# # Uncomment this as a block.
-# sys.stderr.write('Traceback (most recent call last):\n')  # Not required
-# sys.stderr.write('  File "foo/bar.py", line 30, in module foo\n')  # Required
-# sys.stderr.write('--> EXPECTED: full-screen exception\n')  # Not required
-# sys.stderr.write('FakeError: This looks like an exception.\n')  # Required
-# sys.exit(-1)
+# # This tests that errors after the first st call get caught.
+# a = not_a_real_variable  # EXPECTED: inline exception.
 
 st.write('(Some bottom text)')

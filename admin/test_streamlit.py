@@ -12,7 +12,7 @@ import streamlit as st
 from streamlit import compatibility
 
 # This is how we get user input
-if not compatibility.running_py3():
+if not compatibility.is_running_py3():
     input = raw_input  # noqa: F821
 
 # True means we run through all tests automatically.
@@ -89,6 +89,11 @@ def main():
         'Standard System Errors',
         ['streamlit run does_not_exist.py'],
         comment='Checks to see that file not found error is caught')
+
+    run_commands(
+        'Hello script',
+        ['streamlit hello'],
+    )
 
     run_commands('Examples', [
         'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {

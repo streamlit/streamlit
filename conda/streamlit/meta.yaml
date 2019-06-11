@@ -1,5 +1,5 @@
 {% set name = "streamlit" %}
-{% set version = "0.37.0" %}
+{% set version = "0.40.0" %}
 
 package:
   name: "{{ name|lower }}"
@@ -39,6 +39,8 @@ requirements:
     - pillow
     - protobuf
     - psutil
+    - pydot
+    - tensorflow
     - toml
     - tornado
     - tzlocal

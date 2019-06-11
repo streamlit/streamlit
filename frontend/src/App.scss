@@ -1,0 +1,176 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+body.embedded {
+  overflow: hidden;
+}
+
+body.embedded:hover {
+  overflow: auto;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+}
+
+a,
+a:visited {
+  color: #F63366;
+}
+
+a:hover,
+a:active {
+  color: #F63366;
+  text-decoration: underline;
+}
+
+h1, .h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin: 2.5rem 0 1.5rem 0;
+  line-height: 1em;
+}
+
+h1:first-child, .h1:first-child {
+  margin-top: 0;
+}
+
+h2, .h2 {
+  font-weight: 300;
+  font-size: 2.0rem;
+  margin: 2.5rem 0 1rem 0;
+  line-height: 1em;
+}
+
+h3, .h3 {
+  font-weight: 500;
+  font-size: 1.25rem;
+  margin: 1.5rem 0 1rem 0;
+  line-height: 1em;
+}
+
+h4, .h4 {
+  font-weight: 700;
+  font-size: 1.0rem;
+  margin: 1.5rem 0 1rem 0;
+  line-height: 1em;
+}
+
+h5, .h5 {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin: 1.5rem 0 0.5rem 0;
+  line-height: 1em;
+}
+
+h6, .h6 {
+  font-weight: 300;
+  font-size: 0.8rem;
+  margin: 1.5rem 0 0.5rem 0;
+  line-height: 1em;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5rem;
+  padding: 0 1rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.streamlit-wide header {
+  background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
+}
+
+header .decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background-image: linear-gradient(90deg, #F63366, #FFFD80);
+}
+
+#brand {
+  font-weight: 700;
+  line-height: 1.5;
+  flex: 1 0;
+}
+
+#brand a {
+  color: #101620;
+}
+
+#brand a:hover {
+  color: #F63366;
+}
+
+iframe {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.streamlit-regular .streamlit-container {
+  margin-top: 80px;
+}
+
+.streamlit-wide .streamlit-container {
+  margin-top: 80px;
+  width: unset;
+  max-width: unset;
+}
+
+.streamlit-embedded .streamlit-container {
+  width: unset;
+  max-width: unset;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.streamlit-embedded header {
+  display: none;
+}
+
+.streamlit-container hr {
+  border-color: #F0F3F9;
+}
+
+.streamlit-container .footer {
+  height: 25px;
+}
+
+.progress {
+  background-color: #E6E9EF;
+}
+
+.progress-bar {
+  background-color: #2979E9;
+}
+
+.icon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  header,
+  .streamlit-wide header {
+    position: absolute;
+    background: unset;
+  }
+}
+
+// Utility class for underlining first letter in a text
+.underlineFirstLetter::first-letter {
+  text-decoration: underline;
+}

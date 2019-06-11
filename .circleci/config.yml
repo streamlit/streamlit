@@ -7,15 +7,15 @@ workflows:
   version: 2
   circleci:
     jobs:
-      - python-2.7.15:
+      - python-2.7.16:
           requires:
-            - python-3.6.6
-      - python-3.6.6
+            - python-3.7.3
+      - python-3.7.3
 
 jobs:
-  python-3.6.6: &job-template
+  python-3.7.3: &job-template
     docker:
-      - image: circleci/python:3.6.6-jessie
+      - image: circleci/python:3.7.3-stretch
 
     working_directory: ~/repo
 
@@ -26,15 +26,6 @@ jobs:
       #################################################################
       # Pre Cache Steps
       #################################################################
-      - run:
-          name: Fix apt sources due to https://discuss.circleci.com/t/apt-get-update-return-404/29237
-          command: |
-            sudo rm /etc/apt/sources.list
-            echo "deb http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
-            echo "deb-src http://archive.debian.org/debian/ jessie-backports main" | sudo tee -a /etc/apt/sources.list
-            echo "Acquire::Check-Valid-Until false;" | sudo tee -a /etc/apt/apt.conf.d/10-nocheckvalid
-            echo 'Package: *\nPin: origin "archive.debian.org"\nPin-Priority: 500' | sudo tee -a /etc/apt/preferences.d/10-archive-pin
-
       - run:
           name: set environment variables if in conda.
           command: |
@@ -52,6 +43,19 @@ jobs:
             fi
 
       - run:
+          name: install graphviz ie dot
+          command: |
+            echo 'export SUDO="sudo"' >> $BASH_ENV
+            if [ -f /usr/bin/dot ] ; then
+              cp -f /usr/bin/dot dot.bin
+              md5sum dot.bin > ~/dot.md5
+            else
+              touch dot.bin
+              md5sum dot.bin > ~/dot.md5
+              rm -f dot.bin
+            fi
+
+      - run:
           # We use the python Pipfile.lock as the cache key and also
           # the hash of the current python.
           # If dependencies haven't changed then use the cache.
@@ -63,8 +67,8 @@ jobs:
       - run:
           name: Create node_modules cache key.
           command: |
-            md5sum frontend/package-lock.json > ~/package-lock.md5
-            md5sum $(which python) >> ~/package-lock.md5
+            md5sum frontend/yarn.lock > ~/yarn.lock.md5
+            md5sum $(which python) >> ~/yarn.lock.md5
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
@@ -80,27 +84,32 @@ jobs:
       - restore_cache:
           name: Restore /opt/conda from cache
           keys:
-          - v11-opt-conda-{{ checksum "~/python_version.md5" }}
+          - v12-opt-conda-{{ checksum "~/python_version.md5" }}
 
       - restore_cache:
           name: Restore virtualenv from cache
           keys:
-          - v11-python-venv-{{ checksum "~/python_version.md5" }}
+          - v12-python-venv-{{ checksum "~/python_version.md5" }}
 
       - restore_cache:
           name: Restore nvm and node_modules from cache
           keys:
-          - v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+          - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache:
           name: Restore protobufs from cache
           keys:
-          - v11-protobuf-{{ checksum "~/protobuf.md5" }}
+          - v12-protobuf-{{ checksum "~/protobuf.md5" }}
 
       - restore_cache:
           name: Restore make from cache
           keys:
-          - v11_make.bin-{{ checksum "~/make.md5" }}
+          - v12_make.bin-{{ checksum "~/make.md5" }}
+
+      - restore_cache:
+          name: Restore dot from cache
+          keys:
+          - v12_dot.bin-{{ checksum "~/dot.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -120,9 +129,28 @@ jobs:
 
       - save_cache:
           name: Save make to cache
-          key: v11_make.bin-{{ checksum "~/make.md5" }}
+          key: v12_make.bin-{{ checksum "~/make.md5" }}
           paths:
             - make.bin
+
+      - run:
+          name: install dot
+          command: |
+            if [ -s dot.bin ] ; then
+              echo "dot.bin does exists and is non zero"
+            else
+              echo "/usr/bin/dot doesnt exist, installing"
+              ${SUDO} apt-get update -y
+              ${SUDO} apt-get install -y graphviz
+              cp -f /usr/bin/dot dot.bin
+            fi
+            ${SUDO} cp -f dot.bin /usr/bin/dot
+
+      - save_cache:
+          name: Save dot to cache
+          key: v12_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
 
 
       #################################################################
@@ -136,6 +164,8 @@ jobs:
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
               source "$HOME/.nvm/nvm.sh"
               nvm install --lts=dubnium
+              # install yarn
+              npm install -g yarn
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
@@ -162,7 +192,7 @@ jobs:
             else
               echo 'Not in conda, checking for virtualenv'
               if [ ! -d venv ] ; then
-                if [ "${CIRCLE_JOB}" == "python-2.7.15" ] ; then
+                if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
                   pip install virtualenv
                   python -m virtualenv venv
                 else
@@ -190,7 +220,7 @@ jobs:
             # the protobuf cache is restored, so checkout from github to
             # make sure.
             git checkout -- lib/streamlit/protobuf/__init__.py
-            if [ ! -e frontend/src/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+            if [ ! -e frontend/src/autogen/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
               # install protobuf v3
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y gnupg
@@ -222,40 +252,31 @@ jobs:
       #################################################################
       - save_cache:
           name: Save /opt/conda to cache
-          key: v11-opt-conda-{{ checksum "~/python_version.md5" }}
+          key: v12-opt-conda-{{ checksum "~/python_version.md5" }}
           paths:
             - /opt/conda
 
       - save_cache:
           name: Save virtualenv to cache
-          key: v11-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v12-python-venv-{{ checksum "~/python_version.md5" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v11-nvm_node_modules-{{ checksum "~/package-lock.md5" }}
+          key: v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - frontend/node_modules
             - ~/.nvm
 
       - save_cache:
           name: Save generated protobufs to cache
-          key: v11-protobuf-{{ checksum "~/protobuf.md5" }}
+          key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
-            - frontend/src/protobuf.js
+            - frontend/src/autogen/protobuf.js
             - lib/streamlit/protobuf
 
-  python-3.5.6:
+  python-2.7.16:
     <<: *job-template
     docker:
-      - image: circleci/python:3.5.6-jessie
-
-  python-2.7.15:
-    <<: *job-template
-    docker:
-      - image: circleci/python:2.7.15-jessie
-  miniconda3-4.5.12:
-    <<: *job-template
-    docker:
-      - image: continuumio/miniconda3:4.5.12
+      - image: circleci/python:2.7.16-stretch

@@ -1,0 +1,99 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+import React from 'react'
+import {Balloons as BalloonsProto} from 'autogen/protobuf'
+import {Map as ImmutableMap} from 'immutable'
+import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
+import BalloonEmoji from 'assets/img/emoji/emoji_u1f388.png'
+import HappyFaceEmoji from 'assets/img/emoji/emoji_u1f604.png'
+import StarFaceEmoji from 'assets/img/emoji/emoji_u1f929.png'
+import CoolFaceEmoji from 'assets/img/emoji/emoji_u1f60e.png'
+import './Balloons.scss'
+
+const NUM_BALLOONS = 15
+const POS_MIN_VW = 30
+const POS_MAX_VW = 70
+const DELAY_MAX_MS = 500
+
+const BALLOON_PROB = 0.5
+
+const MAX_ANIMATION_DURATION_MS = 1000  // see CSS
+
+const BALLOONS_INDICES = Array.from({length: NUM_BALLOONS})
+
+const BALLOON_IMAGES: string[] = []
+BALLOON_IMAGES[0] = ''  // 0 means random
+BALLOON_IMAGES[BalloonsProto.Type.BALLOON] = BalloonEmoji
+BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = HappyFaceEmoji
+BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = StarFaceEmoji
+BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = CoolFaceEmoji
+
+interface Props extends StProps {
+  element: ImmutableMap<string, any>;
+}
+
+interface State extends StState {
+  drawnId: boolean;
+}
+
+class Balloons extends PureStreamlitElement<Props, State> {
+  public readonly state: State = {
+    drawnId: true,
+  }
+
+  public safeRender(): React.ReactNode {
+    if (this.state.drawnId === this.props.element.get('executionId')) {
+      return ''
+    }
+
+    this.setTimer()
+
+    return (
+      <div className="balloons">
+        {BALLOONS_INDICES.map((_, i) => (
+          <img
+            className="balloon"
+            key={i}
+            src={getBalloonUrl(this.props.element)}
+            alt=""
+            style={{
+              left: Math.random() * (POS_MAX_VW - POS_MIN_VW)
+                  + POS_MIN_VW + 'vw',
+              animationDelay: Math.random() * DELAY_MAX_MS + 'ms',
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  private setTimer(): void {
+    // Remove DOM elements after animation ends.
+    window.setTimeout(
+      () => this.setState({
+        drawnId: this.props.element.get('executionId'),
+      }),
+      MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100)
+  }
+}
+
+
+function getBalloonUrl(balloonsProto: ImmutableMap<string, any>): string {
+  const type = balloonsProto.get('type')
+
+  if (type === BalloonsProto.Type.DEFAULT) {
+    if (Math.random() > BALLOON_PROB) {
+      const rand = Math.ceil(Math.random() * (BALLOON_IMAGES.length - 1))
+      return BALLOON_IMAGES[rand]
+    } else {
+      return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
+    }
+  }
+
+  return BALLOON_IMAGES[type]
+}
+
+export default Balloons

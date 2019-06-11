@@ -1,6 +1,6 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
 
-"""A Python wrapper around Vega Lite."""
+"""A Python wrapper around Vega-Lite."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -17,7 +17,7 @@ LOGGER = get_logger(__name__)
 
 
 def marshall(proto, data=None, spec=None, **kwargs):
-    """Construct a Vega Lite chart object.
+    """Construct a Vega-Lite chart object.
 
     See DeltaGenerator.vega_lite_chart for docs.
     """
@@ -27,7 +27,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
         spec = data
         data = None
         if not _looks_like_vega_lite_spec(spec):
-            raise ValueError('Invalid Vega Lite chart spec: %s' % spec)
+            raise ValueError('Invalid Vega-Lite chart spec: %s' % spec)
 
     # Support passing in kwargs. Example:
     #   marshall(proto, {foo: 'bar'}, baz='boz')
@@ -43,7 +43,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
         spec = dict(spec, **dicttools.unflatten(kwargs, _ENCODINGS))
 
     if spec is None or len(spec) == 0:
-        raise ValueError('Vega Lite charts require a non-empty spec dict.')
+        raise ValueError('Vega-Lite charts require a non-empty spec dict.')
 
     # Pull data out of spec dict when it's in a 'dataset' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
@@ -57,15 +57,15 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
     # Pull data out of spec dict when it's in a 'data' key:
     #   marshall(proto, {data: df})
-    #   marshall(proto, {data: {value: df, ...}})
+    #   marshall(proto, {data: {values: df, ...}})
     #   marshall(proto, {data: {url: 'url'}})
     if 'data' in spec:
         data_spec = spec['data']
 
         if type(data_spec) in dict_types:
-            if 'value' in data_spec:
-                data = data_spec['value']
-                del data_spec['value']
+            if 'values' in data_spec:
+                data = data_spec['values']
+                del data_spec['values']
         else:
             data = data_spec
             del spec['data']
@@ -77,7 +77,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
 
 def _looks_like_vega_lite_spec(spec):
-    # Vega Lite specs require both a 'mark' key and a 'data' key. Here we only
+    # Vega-Lite specs require both a 'mark' key and a 'data' key. Here we only
     # check for 'mark' because we allow passing in the data separately.
     return 'mark' in spec
 

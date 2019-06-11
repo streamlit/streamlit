@@ -1,4 +1,5 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
+
 """DeltaGenerator Unittest."""
 
 # Python 2/3 compatibility
@@ -8,7 +9,6 @@ setup_2_3_shims(globals())
 
 import json
 import sys
-import unittest
 
 import pandas as pd
 
@@ -19,8 +19,10 @@ except ImportError:
 
 from streamlit import protobuf
 from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
-    _clean_up_sig, _with_element
+        _clean_up_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
+from tests import testutil
+import streamlit as st
 
 
 class FakeDeltaGenerator(object):
@@ -83,7 +85,7 @@ class MockQueue(object):
         self._deltas.append(data)
 
 
-class DeltaGeneratorTest(unittest.TestCase):
+class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
 
     def test_wraps_with_cleaned_sig(self):
@@ -91,7 +93,8 @@ class DeltaGeneratorTest(unittest.TestCase):
         wrapped = wrapped_function.keywords.get('wrapped')
 
         # Check meta data.
-        self.assertEqual(wrapped.__module__, 'delta_generator_test')
+        self.assertEqual(
+            wrapped.__module__, 'delta_generator_test')
         self.assertEqual(wrapped.__name__, 'fake_text')
         self.assertEqual(wrapped.__doc__, 'Fake text delta generator.')
 
@@ -140,41 +143,33 @@ class DeltaGeneratorTest(unittest.TestCase):
         self.assertEqual(dg._exception_msg, 'Exception in fake_text_raise_exception')
 
 
-class DeltaGeneratorClassTest(unittest.TestCase):
+class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
 
     def setUp(self):
-        """Setup."""
-        self._mock_queue = 'mock queue'
+        super(DeltaGeneratorClassTest, self).setUp(override_root=False)
 
     def test_constructor(self):
         """Test default DeltaGenerator()."""
-        dg = DeltaGenerator(self._mock_queue)
-
-        self.assertEqual(dg._queue, self._mock_queue)
-        self.assertTrue(dg._generate_new_ids)
-        self.assertEqual(dg._next_id, 0)
-        self.assertFalse(hasattr(dg, '_id'))
+        dg = self.new_delta_generator()
+        self.assertTrue(dg._is_root)
+        self.assertEqual(dg._id, 0)
 
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
-        some_id = 1234
-        dg = DeltaGenerator(self._mock_queue, id=some_id)
-
-        self.assertFalse(dg._generate_new_ids)
-        self.assertEqual(dg._id, some_id)
-        self.assertFalse(hasattr(dg, '_next_id'))
+        dg = self.new_delta_generator(id=1234, is_root=False)
+        self.assertFalse(dg._is_root)
+        self.assertEqual(dg._id, 1234)
 
     def test_enqueue_new_element_delta_null(self):
         # Test "Null" Delta generators
-        dg = DeltaGenerator(None)
+        dg = self.new_delta_generator(None)
         new_dg = dg._enqueue_new_element_delta(None)
         self.assertEqual(dg, new_dg)
 
     def test_enqueue_new_element_delta(self):
-        queue = MockQueue()
-        dg = DeltaGenerator(queue)
-        self.assertEqual(0, dg._next_id)
+        dg = self.new_delta_generator()
+        self.assertEqual(0, dg._id)
 
         test_data = 'some test data'
         # Use FakeDeltaGenerator.fake_text cause if we use
@@ -187,14 +182,13 @@ class DeltaGeneratorClassTest(unittest.TestCase):
 
         new_dg = dg._enqueue_new_element_delta(marshall_element)
         self.assertNotEqual(dg, new_dg)
-        self.assertEqual(1, dg._next_id)
+        self.assertEqual(1, dg._id)
 
-        delta = queue._deltas.pop()
-        self.assertEqual(delta.new_element.text.body, test_data)
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(element.text.body, test_data)
 
     def test_enqueue_new_element_delta_same_id(self):
-        queue = MockQueue()
-        dg = DeltaGenerator(queue, id=123)
+        dg = self.new_delta_generator(id=123, is_root=False)
         self.assertEqual(123, dg._id)
 
         test_data = 'some test data'
@@ -209,17 +203,13 @@ class DeltaGeneratorClassTest(unittest.TestCase):
         new_dg = dg._enqueue_new_element_delta(marshall_element)
         self.assertEqual(dg, new_dg)
 
-        delta = queue._deltas.pop()
+        delta = self.get_delta_from_queue()
         self.assertEqual(123, delta.id)
         self.assertEqual(delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorTextTest(unittest.TestCase):
+class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text Proto Class."""
-
-    def setUp(self):
-        """Setup."""
-        self._dg = DeltaGenerator(ReportQueue())
 
     def test_generic_text(self):
         """Test protobuf.Text generic str(body) stuff."""
@@ -235,10 +225,10 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         input_data = '    Some string  '
         cleaned_data = 'Some string'
         for name, format in test_data.items():
-            method = getattr(self._dg, name)
+            method = getattr(st, name)
             method(input_data)
 
-            element = get_element(self._dg)
+            element = self.get_delta_from_queue().new_element
             self.assertEqual(cleaned_data, getattr(element, 'text').body)
             self.assertEqual(format, getattr(element, 'text').format)
 
@@ -246,10 +236,10 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         input_data = 123
         cleaned_data = '123'
         for name, format in test_data.items():
-            method = getattr(self._dg, name)
+            method = getattr(st, name)
             method(input_data)
 
-            element = get_element(self._dg)
+            element = self.get_delta_from_queue().new_element
             self.assertEqual(str(cleaned_data), getattr(element, 'text').body)
             self.assertEqual(format, getattr(element, 'text').format)
 
@@ -260,11 +250,11 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         }
 
         # Testing python object
-        self._dg.json(json_data)
+        st.json(json_data)
 
         json_string = json.dumps(json_data)
 
-        element = get_element(self._dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.text.body)
         self.assertEqual(protobuf.Text.JSON, element.text.format)
 
@@ -273,9 +263,9 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         json_string = u'{"key": "value"}'
 
         # Testing JSON string
-        self._dg.json(json_string)
+        st.json(json_string)
 
-        element = get_element(self._dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.text.body)
         self.assertEqual(protobuf.Text.JSON, element.text.format)
 
@@ -284,20 +274,22 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         obj = json  # Modules aren't serializable.
 
         # Testing unserializable object.
-        self._dg.json(obj)
+        st.json(obj)
 
-        element = get_element(self._dg)
-        self.assertTrue(
-            element.text.body.startswith('"<module \'json\' from '))
+        element = self.get_delta_from_queue().new_element
+        if sys.version_info >= (3, 0):
+            self.assertEqual('"<class \'module\'>"', element.text.body)
+        else:
+            self.assertEqual('"<type \'module\'>"', element.text.body)
         self.assertEqual(protobuf.Text.JSON, element.text.format)
 
     def test_markdown(self):
         """Test protobuf.Text.MARKDOWN."""
         test_string = '    data         '
 
-        self._dg.markdown(test_string)
+        st.markdown(test_string)
 
-        element = get_element(self._dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(u'data', element.text.body)
         self.assertEqual(protobuf.Text.MARKDOWN, element.text.format)
 
@@ -306,8 +298,8 @@ class DeltaGeneratorTextTest(unittest.TestCase):
         code = "print('Hello, %s!' % 'Streamlit')"
         expected_body = '```python\n%s\n```' % code
 
-        self._dg.code(code, language='python')
-        element = get_element(self._dg)
+        st.code(code, language='python')
+        element = self.get_delta_from_queue().new_element
 
         # st.code() creates a MARKDOWN text object that wraps
         # the body inside a codeblock declaration
@@ -316,68 +308,58 @@ class DeltaGeneratorTextTest(unittest.TestCase):
 
     def test_empty(self):
         """Test protobuf.Empty."""
-        self._dg.empty()
+        st.empty()
 
-        element = get_element(self._dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(True, element.empty.unused)
 
 
-class DeltaGeneratorProgressTest(unittest.TestCase):
+class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Progress."""
 
     def test_progress_int(self):
         """Test protobuf.Progress with int values."""
-        dg = DeltaGenerator(ReportQueue())
-
         values = [0, 42, 100]
         for value in values:
-            dg.progress(value)
+            st.progress(value)
 
-            element = get_element(dg)
+            element = self.get_delta_from_queue().new_element
             self.assertEqual(value, element.progress.value)
 
     def test_progress_float(self):
         """Test protobuf.Progress with float values."""
-        dg = DeltaGenerator(ReportQueue())
-
         values = [0.0, 0.42, 1.0]
         for value in values:
-            dg.progress(value)
+            st.progress(value)
 
-            element = get_element(dg)
+            element = self.get_delta_from_queue().new_element
             self.assertEqual(int(value * 100), element.progress.value)
 
     def test_progress_bad_values(self):
         """Test protobuf.Progress with bad values."""
-        dg = DeltaGenerator(ReportQueue())
-
         values = [-1, 101, -0.01, 1.01]
         for value in values:
-            dg.progress(value)
+            st.progress(value)
 
-            element = get_element(dg)
+            element = self.get_delta_from_queue().new_element
             self.assertEqual(element.exception.type, 'ValueError')
 
-        dg.progress('some string')
+        st.progress('some string')
 
-        element = get_element(dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.exception.type, 'TypeError')
 
 
-class DeltaGeneratorChartTest(unittest.TestCase):
+class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Charts."""
-
-    def setUp(self):
-        """Setup."""
-        self._dg = DeltaGenerator(ReportQueue())
 
     def test_line_chart(self):
         """Test dg.line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = self._dg.line_chart(data)
+        dg = st.line_chart(data)
 
-        element = get_element(dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.chart.type, 'LineChart')
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
@@ -386,9 +368,9 @@ class DeltaGeneratorChartTest(unittest.TestCase):
         """Test dg.area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = self._dg.area_chart(data)
+        dg = st.area_chart(data)
 
-        element = get_element(dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.chart.type, 'AreaChart')
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
@@ -397,19 +379,16 @@ class DeltaGeneratorChartTest(unittest.TestCase):
         """Test dg.bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = self._dg.bar_chart(data)
+        dg = st.bar_chart(data)
 
-        element = get_element(dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.chart.type, 'BarChart')
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
 
 
-class DeltaGeneratorImageTest(unittest.TestCase):
+class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Images"""
-
-    def setUp(self):
-        self._dg = DeltaGenerator(ReportQueue())
 
     def test_image_from_url(self):
         """Tests dg.image with single and multiple image URLs"""
@@ -418,16 +397,16 @@ class DeltaGeneratorImageTest(unittest.TestCase):
         caption = 'ahoy!'
 
         # single URL
-        dg = self._dg.image(url, caption=caption, width=200)
-        element = get_element(dg)
+        dg = st.image(url, caption=caption, width=200)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.imgs.width, 200)
         self.assertEqual(len(element.imgs.imgs), 1)
         self.assertEqual(element.imgs.imgs[0].url, url)
         self.assertEqual(element.imgs.imgs[0].caption, caption)
 
         # multiple URLs
-        dg = self._dg.image([url] * 5, caption=[caption] * 5, width=200)
-        element = get_element(dg)
+        dg = st.image([url] * 5, caption=[caption] * 5, width=200)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(len(element.imgs.imgs), 5)
         self.assertEqual(element.imgs.imgs[4].url, url)
         self.assertEqual(element.imgs.imgs[4].caption, caption)
@@ -439,12 +418,8 @@ class DeltaGeneratorImageTest(unittest.TestCase):
         url = 'https://streamlit.io/an_image.png'
         caption = 'ahoy!'
 
-        self._dg.image([url] * 5, caption=[caption] * 2)
+        st.image([url] * 5, caption=[caption] * 2)
 
-        element = get_element(self._dg)
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.exception.message,
                          'Cannot pair 2 captions with 5 images.')
-
-
-def get_element(dg):
-    return dg._queue.get_deltas()[-1].new_element

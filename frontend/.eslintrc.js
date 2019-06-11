@@ -18,6 +18,9 @@ module.exports = {
     'fbjs',
   ],
   'rules': {
+    // No semicolons,
+    'semi': ['warn', 'never'],
+
     // Enforce spaces inside of blocks after opening
     // block and before closing block
     'block-spacing': ['warn', 'always'],

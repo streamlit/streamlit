@@ -4,7 +4,7 @@ import numpy as np
 from dateutil.parser import parse
 
 
-st.title('Vega Lite support')
+st.title('Vega-Lite support')
 
 st.header('Different ways to get the exact same plot')
 
@@ -60,7 +60,7 @@ st.write(
     'Putting the `df` inside the spec, as inline `data` (different notation):')
 
 st.vega_lite_chart({
-    'data': {'value': df},
+    'data': {'values': df},
     'mark': 'bar',
     'encoding': {
       'x': {'field': 'a', 'type': 'ordinal'},
@@ -182,7 +182,7 @@ st.vega_lite_chart(df, {
 st.header('Box plot')
 
 st.write(
-    'This example is straight from the [Vega Lite docs]'
+    'This example is straight from the [Vega-Lite docs]'
     '(https://vega.github.io/vega-lite/examples/interactive_query_widgets.html)'
     )
 
@@ -210,7 +210,7 @@ st.vega_lite_chart(None,
 st.header('Query widgets')
 
 st.write(
-    'This example is straight from the [Vega Lite docs]'
+    'This example is straight from the [Vega-Lite docs]'
     '(https://vega.github.io/vega-lite/examples/interactive_query_widgets.html)'
     )
 

@@ -1,0 +1,197 @@
+@import 'src/assets/css/variables';
+
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+/*
+  "ConnectionStatus" styles are used for displaying
+  the status of our connection to the server (connected,
+  disconnected, error, etc).
+*/
+
+#ConnectionStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#ConnectionStatus label {
+  font-size: 0.8rem;
+  color: $gray;
+  text-transform: uppercase;
+  margin: 0 1rem 0 0.5rem;
+  white-space: nowrap;
+  max-width: 20rem;
+  transition:
+      opacity 500ms 0ms,
+      clip 500ms 0ms,
+      max-width 500ms 0ms,
+      margin 500ms 0ms,
+      visibility 0ms 500ms;
+}
+
+#ConnectionStatus svg * {
+  fill: $gray-700;
+}
+
+#ConnectionStatus.minimized label {
+  opacity: 0;
+  visibility: hidden;
+  margin-right: 0;
+  max-width: 0;
+}
+
+/*
+  "ReportStatus" styles are for report-related statuses:
+  whether it's running, if the source file has changed on disk,
+  etc.
+*/
+
+#ReportStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5rem;
+  margin: 0 1rem 0 0;
+  padding-left: 3rem; // extra padding for a bigger hover target
+  background-color: white; // opaque background
+}
+
+#ReportStatus label {
+  font-size: 0.8rem;
+  color: $gray;
+  text-transform: uppercase;
+  margin: 0 0 0 1rem;
+  white-space: nowrap;
+  max-width: 20rem;
+}
+
+#ReportStatus label.prompt {
+  font-size: 0.8rem;
+  color: $gray-dark;
+  background-color: white;
+  border-radius: $border-radius-sm;
+  text-transform: none;
+  margin-right: 0;
+}
+
+#ReportStatus button {
+  min-width: 4rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+#ReportStatus svg.icon {
+  fill: $gray-700;
+  width: 1rem;
+  height: 1rem;
+  margin-right: -0.5rem;
+}
+
+.ReportRunningIcon {
+  opacity: 0.4;
+  width: $line-height-base * 1rem;
+  height: $line-height-base * 1rem;
+  margin-right: -0.5rem;
+}
+
+//
+// Top-level StatusWidget appear/disappear animations
+//
+
+.StatusWidget-appear {
+  opacity: 0;
+}
+
+.StatusWidget-appear-active {
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.StatusWidget-enter {
+  opacity: 0;
+}
+
+.StatusWidget-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.StatusWidget-exit {
+  opacity: 1;
+}
+
+.StatusWidget-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+//
+// ReportStatus animations
+//
+
+$anim-time: 200ms;
+$anim-easing: ease-out;
+
+// "Report is Runnning" minimize animation
+// (Buttons remain visible)
+#ReportStatus.report-is-running-minimized label {
+  opacity: 0;
+  visibility: hidden;
+  padding: 0;
+  max-width: 0;
+  min-width: 0;
+  border: 0;
+  transition:
+    opacity $anim-time $anim-easing 0s,
+    clip $anim-time $anim-easing 0s,
+    min-width $anim-time $anim-easing 0s,
+    max-width $anim-time $anim-easing 0s,
+    padding $anim-time $anim-easing 0s,
+
+    // Hide at end of the transition
+    visibility 0s $anim-easing $anim-time;
+}
+
+
+// "Source file changed. Rerun?" minimize animation
+// (Buttons are hidden)
+#ReportStatus.rerun-prompt-minimized label,
+#ReportStatus.rerun-prompt-minimized button,
+#ReportStatus.rerun-prompt-minimized button * {
+  opacity: 0;
+  visibility: hidden;
+  margin: 0;
+  padding: 0;
+  max-width: 0;
+  min-width: 0;
+  border: 0;
+  transition:
+    opacity $anim-time $anim-easing 0s,
+    clip $anim-time $anim-easing 0s,
+    min-width $anim-time $anim-easing 0s,
+    max-width $anim-time $anim-easing 0s,
+    margin $anim-time $anim-easing 0s,
+    padding $anim-time $anim-easing 0s,
+
+      // Hide at end of the transition
+    visibility 0s $anim-easing $anim-time;
+}
+
+// Minimized -> Unminimized animation
+#ReportStatus label,
+#ReportStatus button,
+#ReportStatus button * {
+  transition:
+    opacity $anim-time $anim-easing 0s,
+    clip $anim-time $anim-easing 0s,
+    min-width $anim-time $anim-easing 0s,
+    max-width $anim-time $anim-easing 0s,
+    margin $anim-time $anim-easing 0s,
+    padding $anim-time $anim-easing 0s,
+
+    // Show immediately
+    visibility 0s;
+}

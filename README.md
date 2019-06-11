@@ -36,3 +36,7 @@ For more help and a complete API documentation, please run:
 ```bash
 streamlit docs
 ```
+
+## Contributing to Streamlit
+
+See the [wiki](https://github.com/streamlit/streamlit/wiki/Contributing-to-Streamlit).

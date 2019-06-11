@@ -8,7 +8,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 # flake8: noqa
-import base58
 import contextlib
 import errno
 import functools
@@ -20,12 +19,12 @@ import subprocess
 import sys
 import threading
 import urllib
-import uuid
-
 try:
     import urllib.request  # for Python3
 except ImportError:
     pass
+
+import click
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -47,9 +46,9 @@ _AWS_CHECK_IP = 'http://checkip.amazonaws.com'
 HELP_DOC = 'https://streamlit.io/secret/docs/'
 
 
-def _decode_ascii(str):
+def _decode_ascii(string):
     """Decodes a string as ascii."""
-    return str.decode('ascii')
+    return string.decode('ascii')
 
 
 @contextlib.contextmanager
@@ -58,7 +57,7 @@ def streamlit_read(path, binary=False):
 
     For example:
 
-    with read('foo.txt') as foo:
+    with streamlit_read('foo.txt') as foo:
         ...
 
     opens the file `%s/foo.txt`
@@ -66,9 +65,9 @@ def streamlit_read(path, binary=False):
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
     """ % STREAMLIT_ROOT_DIRECTORY
-    filename = os.path.abspath(os.path.join(STREAMLIT_ROOT_DIRECTORY, path))
+    filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
-       raise Error('Read zero byte file: "%s"' % filename)
+        raise Error('Read zero byte file: "%s"' % filename)
 
     mode = 'r'
     if binary:
@@ -83,7 +82,7 @@ def streamlit_write(path, binary=False):
     Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
-        with open_ensuring_path('foo/bar.txt') as bar:
+        with streamlit_write('foo/bar.txt') as bar:
             ...
 
     opens the file %s/foo/bar.txt for writing,
@@ -95,10 +94,7 @@ def streamlit_write(path, binary=False):
     mode = 'w'
     if binary:
         mode += 'b'
-    path = os.path.join(STREAMLIT_ROOT_DIRECTORY, path)
-    directory = os.path.split(path)[0]
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    path = get_streamlit_file_path(path)
     try:
         with open(path, mode) as handle:
             yield handle
@@ -125,7 +121,7 @@ def escape_markdown(raw_string):
     Examples
     --------
     ::
-        escape_markdown("1 * 2") -> "1 \* 2"
+        escape_markdown("1 * 2") -> "1 \\* 2"
     """
     metacharacters = ['\\', '*', '-', '=', '`', '!', '#', '|']
     result = raw_string
@@ -135,6 +131,7 @@ def escape_markdown(raw_string):
 
 
 def get_static_dir():
+    """Get the folder where static HTML/JS/CSS files live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, 'static'))
 
@@ -150,29 +147,7 @@ def memoize(func):
     return wrapped_func
 
 
-def write_proto(ws, msg):
-    """Writes a proto to a websocket.
-
-    Parameters
-    ----------
-    ws : WebSocket
-    msg : Proto
-
-    Returns
-    -------
-    Future
-        See tornado.websocket.websocket_connect. This returns a Future whose
-        result is a WebSocketClientConnection.
-    """
-    return ws.write_message(msg.SerializeToString(), binary=True)
-
-
-def build_report_id():
-    """Randomly generate a report ID."""
-    return base58.b58encode(uuid.uuid4().bytes).decode("utf-8")
-
-
-def make_blocking_http_get(url, timeout=5):
+def _make_blocking_http_get(url, timeout=5):
     try:
         return urllib.request.urlopen(url, timeout=timeout).read()
     except Exception:
@@ -196,7 +171,7 @@ def get_external_ip():
     if _external_ip is not None:
         return _external_ip
 
-    response = make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
+    response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
 
     if response is None:
         LOGGER.warning(
@@ -328,12 +303,29 @@ def is_altair_chart(obj):
         is_type(obj, 'altair.vegalite.v3.api.Chart'))
 
 
+def is_keras_model(obj):
+    """True if input looks like a Keras model."""
+    return (
+        is_type(obj, 'keras.engine.sequential.Sequential') or
+        is_type(obj, 'keras.engine.training.Model') or
+        is_type(obj, 'tensorflow.python.keras.engine.sequential.Sequential') or
+        is_type(obj, 'tensorflow.python.keras.engine.training.Model'))
+
+
 def is_plotly_chart(obj):
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, 'plotly.graph_objs._figure.Figure') or
         _is_list_of_plotly_objs(obj) or
         _is_probably_plotly_dict(obj)
+    )
+
+
+def is_graphviz_chart(obj):
+    """True if input looks like a GraphViz chart."""
+    return (
+        is_type(obj, 'graphviz.dot.Graph') or
+        is_type(obj, 'graphviz.dot.Digraph')
     )
 
 
@@ -369,3 +361,68 @@ def _is_probably_plotly_dict(obj):
         return True
 
     return False
+
+
+def is_repl():
+    """Return True if running in the Python REPL."""
+    import inspect
+    root_frame = inspect.stack()[-1]
+    filename = root_frame[1]  # 1 is the filename field in this tuple.
+
+    if filename.endswith(os.path.join('bin', 'ipython')):
+        return True
+
+    # <stdin> is what the basic Python REPL calls the root frame's
+    # filename, and <string> is what iPython sometimes calls it.
+    if filename in ('<stdin>', '<string>'):
+        return True
+
+    return False
+
+
+def get_streamlit_file_path(*filepath):
+    """Return the full path to a filepath in ~/.streamlit.
+
+    Creates ~/.streamlit if needed.
+    """
+    # os.path.expanduser works on OSX, Linux and Windows
+    home = os.path.expanduser('~')
+    if home is None:
+        raise RuntimeError('No home directory.')
+
+    folder_path = filepath[:-1]
+    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *folder_path)
+
+    if not os.path.isdir(st_path):
+        os.makedirs(st_path)
+
+    return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
+
+
+def forwardmsg_to_debug(msg):
+    """Convert a ForwardMsg into a dict for debugging."""
+    the_type = msg.WhichOneof('type')
+    if the_type == 'delta':
+        return {'delta': delta_to_debug(msg.delta)}
+    return the_type
+
+
+def delta_to_debug(delta):
+    """Convert a Delta into a dict for debugging."""
+    the_type = delta.WhichOneof('type')
+    out = {
+        'id': delta.id
+    }
+
+    if the_type == 'new_element':
+        out['new_element'] = delta.new_element.WhichOneof('type')
+    elif the_type == 'add_rows':
+        out['add_rows'] = ''
+
+    return out
+
+
+def print_url(title, url):
+    """Pretty-print a URL on the terminal."""
+    click.secho('  %s: ' % title, nl=False)
+    click.secho(url, bold=True)

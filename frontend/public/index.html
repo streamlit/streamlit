@@ -1,13 +1,11 @@
-<!doctype html>
 <!-- Copyright 2018 Streamlit Inc. All rights reserved -->
+
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
-    <link rel="stylesheet" href="%PUBLIC_URL%/fonts/fonts.css" />
 
     <title>Streamlit</title>
 
@@ -37,15 +35,8 @@
     </script>
     <script src="https://api.ipify.org?format=jsonp&callback=setBrowserIP"></script>
 
-    <!-- Bokeh charts -->
-    <!-- TODO: use npm instead -->
-    <link rel="stylesheet" href="%PUBLIC_URL%/vendor/bokeh/bokeh-1.1.0.min.css" />
-    <link rel="stylesheet" href="%PUBLIC_URL%/vendor/bokeh/bokeh-widgets-1.1.0.min.css" />
-    <link rel="stylesheet" href="%PUBLIC_URL%/vendor/bokeh/bokeh-tables-1.1.0.min.css" />
-    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-1.1.0.min.js"></script>
-    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-widgets-1.1.0.min.js"></script>
-    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-tables-1.1.0.min.js"></script>
-    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-api-1.1.0.min.js"></script>
+    <!-- load via script to enable web workers -->
+    <script src="%PUBLIC_URL%/vendor/viz/viz-1.8.0.min.js" type="javascript/worker"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
