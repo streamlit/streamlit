@@ -1,0 +1,12 @@
+/**
+ * @license
+ * Copyright 2019 Streamlit Inc. All rights reserved.
+ */
+
+@import '../../../assets/css/variables';
+
+.Widget {
+  input[type=checkbox] {
+    margin: 0 ($font-size-sm/2) 0 0;
+  }
+}

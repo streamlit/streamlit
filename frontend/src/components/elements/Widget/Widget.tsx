@@ -8,6 +8,9 @@ import {Button, Input, Label} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
+
+import Checkbox from 'components/widgets/Checkbox/'
+
 import './Widget.scss'
 
 interface Props {
@@ -115,20 +118,7 @@ class Widget extends PureStreamlitElement<Props, State> {
         )
       },
 
-      checkbox: () => {
-        const style = {
-          width: this.props.width,
-        }
-
-        return (
-          <div className="Widget row-widget">
-            <Label style={style} check>
-              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleCheckboxChange} />
-              <span className="label">{ label }</span>
-            </Label>
-          </div>
-        )
-      },
+      checkbox: () => <Checkbox {...this.props}/>,
 
       slider: (data: ImmutableMap<string, any>) => {
         const min = data.get('min')
