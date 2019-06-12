@@ -11,7 +11,7 @@ import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/
 
 import ButtonWidget from 'components/widgets/Button/'
 import CheckboxWidget from 'components/widgets/Checkbox/'
-// import SliderWidget from 'components/widgets/Slider/'
+import SliderWidget from 'components/widgets/Slider/'
 // import TextAreaWidget from 'components/widgets/TextArea/'
 
 
@@ -47,20 +47,6 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.props.setWidgetState(element.get('id'), value)
   }
 
-  private handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const oldValue = this.state.value
-    const currentValue = parseInt(e.target.value, 10)
-    const id = e.target.id
-    console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
-    this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue, () => {
-      this.props.sendBackMsg({
-        type: 'widgetJson',
-        widgetJson: JSON.stringify(this.props.getWidgetState())
-      })
-    })
-  }
-
   private handleTextAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const oldValue = this.state.value
     const currentValue = e.target.value
@@ -84,27 +70,8 @@ class Widget extends PureStreamlitElement<Props, State> {
 
       button: () => <ButtonWidget {...this.props}/>,
       checkbox: () => <CheckboxWidget {...this.props}/>,
-      // slider: () => <SliderWidget {...this.props}/>,
+      slider: () => <SliderWidget {...this.props}/>,
       // textarea: () => <TextAreaWidget {...this.props}/>,
-
-      slider: (data: ImmutableMap<string, any>) => {
-        const min = data.get('min')
-        const max = data.get('max')
-        const step = data.get('step')
-        const style = {
-          width: this.props.width,
-        }
-
-        return (
-          <div className="Widget">
-            <Label style={style} check>
-              <div className="label">{ label }: {this.state.value}</div>
-              <Input type="range" className="col-4" id={id} min={min} max={max} step={step} value={this.state.value}
-                onChange={this.handleSliderChange} />
-            </Label>
-          </div>
-        )
-      },
 
       textArea: () => {
         const style = {
