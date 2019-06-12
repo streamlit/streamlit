@@ -44,9 +44,9 @@ export abstract class StreamlitElement<P extends StProps, S extends StState>
     }
   }
 
-  public shouldComponentUpdate(): boolean {
+  public shouldComponentUpdate(nextProps: Readonly<P>, nextState: Readonly<S>, nextContext: any): boolean {
     try {
-      return this.safeShouldComponentUpdate()
+      return this.safeShouldComponentUpdate(nextProps, nextState, nextContext)
     } catch (exception) {
       this.setState(exception)
     }
@@ -79,7 +79,7 @@ export abstract class StreamlitElement<P extends StProps, S extends StState>
 
   public abstract safeRender(): React.ReactNode
 
-  public safeShouldComponentUpdate(): boolean {
+  public safeShouldComponentUpdate(nextProps: Readonly<P>, nextState: Readonly<S>, nextContext: any): boolean {
     return true
   }
 

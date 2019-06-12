@@ -4,11 +4,14 @@
  */
 
 import React from 'react'
-import { StreamlitElement } from 'components/shared/StreamlitElement/'
-import { tableGetRowsAndCols, indexGet, tableGet } from '../../../lib/dataFrameProto'
+import {Map as ImmutableMap} from 'immutable'
+import { StreamlitElement, StProps, StState } from 'components/shared/StreamlitElement/'
+import { tableGetRowsAndCols, indexGet, tableGet } from 'lib/dataFrameProto'
+import { logMessage } from 'lib/log'
 
-import VegaLite from 'react-vega-lite'
-import vegaTooltip from 'vega-tooltip'
+import * as vega from 'vega'
+import * as vl from 'vega-lite'
+import tooltip from 'vega-tooltip'
 
 import './VegaLiteChart.scss'
 
@@ -28,53 +31,51 @@ const SUPPORTED_INDEX_TYPES = new Set([
   'uint_64Index',
 ])
 
+interface Props extends StProps {
+  element: ImmutableMap<string, any>;
+}
 
-class VegaLiteChart extends StreamlitElement {
-  constructor(props) {
-    super(props)
 
-    /** This will be initialized with VegaLite's View object. */
-    this.vegaView = null
-  }
+class VegaLiteChart extends StreamlitElement<Props, StState> {
+  /**
+   * The Vega view object
+   */
+  private vegaView: vega.View | undefined
 
-  safeRender() {
-    const el = this.props.element
+  /** 
+   * The default data name to add to.
+   */
+  private defaultDataName = 'source'
 
-    const spec = JSON.parse(el.get('spec'))
-    maybeAddAutosizing(spec)
+  /**
+   * The html element we attach the Vega view to.
+   */
+  private element: HTMLDivElement | null = null
 
-    const dataObj = getInlineData(el)
-    const datasets = getDataSets(el, spec)
-    if (datasets) {
-      if (!spec.data) {
-        throw new Error(
-          'Must specify "data" field when using "dataset"')
-      }
-      spec.datasets = datasets
-    }
 
-    const height = spec.height == null ? 200 : spec.height
-    const width = spec.width == null ? this.props.width : spec.width
-
+  public safeRender(): JSX.Element {
     return (
-      <VegaLite
-        className="stVegaLiteChart"
-        spec={spec}
-        data={dataObj}
-        renderer="canvas"
-        width={width}
-        height={height}
-        onNewView={this._onNewView.bind(this)}
-      />
-    )
+      // Create the container Vega draws inside.
+      <div className="stVegaLiteChart" ref={c => this.element = c} />)
   }
+
+
+  public safeComponentDidMount(): void {
+    this.createView()
+  }
+
+
+  public safeComponentDidUpdate(): void {
+    this.createView()
+  }
+
 
   /**
    * Detect whether rows were appended to dataframe and, if so, pretend this
-   * component did not update and instead use VegaLite's own .insert() method,
+   * component did not update and instead use Vega Views's own .insert() method,
    * which is faster.
    */
-  shouldComponentUpdate(newProps, newState) {
+  public safeShouldComponentUpdate(newProps: Props, newState: StState): boolean {
     const data0 = this.props.element.get('data')
     const data1 = newProps.element.get('data')
 
@@ -89,15 +90,14 @@ class VegaLiteChart extends StreamlitElement {
 
     const dataChanged = data0 !== data1
     const specChanged = spec0 !== spec1
-    const widthChanged = this.props.width !== newProps.width
 
-    // If spec or width changed, doesn't matter whether data changed. Redraw
+    // If spec changed, doesn't matter whether data changed. Redraw
     // whole chart.
-    if (specChanged || widthChanged) {
+    if (specChanged) {
       return true
     }
 
-    // Just a small optimization: if spec, width, and data are all the same,
+    // Just a small optimization: if spec and data are all the same,
     // we know there's no need to redraw anything and can quit here.
     if (!dataChanged) {
       return false
@@ -122,69 +122,97 @@ class VegaLiteChart extends StreamlitElement {
     return true
   }
 
+
   /**
-   * Uses VegaLite's insert() method to add more data to the chart.
+   * Uses Vega View's insert() method to add more data to the chart.
    * See https://vega.github.io/vega/docs/api/view/
    */
-  addRows(data, startIndex) {
+  private addRows(data: any, startIndex: number): void {
     if (!this.vegaView) {
       throw new Error('Chart has not been drawn yet')
     }
     const rows = getDataArray(data, startIndex)
     // TODO: Support adding rows to datasets with different names.
-    // "data_0" is what Vega calls the 0th unnamed dataset.
-    this.vegaView.insert('data_0', rows)
+    this.vegaView.insert(this.defaultDataName, rows)
     this.vegaView.run()
   }
 
-  toCanvas(scaleFactor) {
-    if (!this.vegaView) {
-      throw new Error('Chart has not been drawn yet')
-    }
-    return this.vegaView.toCanvas(scaleFactor)
-  }
 
-  toSVG(scaleFactor) {
-    if (!this.vegaView) {
-      throw new Error('Chart has not been drawn yet')
-    }
-    return this.vegaView.toSVG(scaleFactor)
-  }
+  private createView(): void {
+    logMessage('Creating a new Vega view. We only should do this when the spec changes.')
 
-  toImageUrl(type, scaleFactor) {
-    if (!this.vegaView) {
-      throw new Error('Chart has not been drawn yet')
+    if (this.vegaView) {
+      // Finalize the previous view so it can be garbage collected.
+      this.vegaView.finalize()
     }
-    return this.vegaView.toImageUrl(type, scaleFactor)
-  }
 
-  _onNewView(view) {
+    const el = this.props.element
+
+    const spec = JSON.parse(el.get('spec'))
+
+    if (spec.datasets) {
+      throw new Error('Datasets should not be passed as part of the spec')
+    }
+
+    const datasets = getDataSets(el)
+
+    if (datasets) {
+      if (!spec.data) {
+        throw new Error(
+          'Must specify "data" field when using "dataset"')
+      }
+      spec.datasets = datasets
+    }
+
+    const vgSpec = vl.compile(spec).spec
+
+    // Heuristic to determine the default dataset name.
+    const datasetNames = datasets ? Object.keys(datasets) : []
+    if (datasetNames.length === 1) {
+      this.defaultDataName = datasetNames[0]
+    } else if (datasetNames.length === 0 && vgSpec.data) {
+      this.defaultDataName = vgSpec.data[0].name
+    }
+
+    const runtime = vega.parse(vgSpec)
+    const view = new vega.View(runtime, {
+      logLevel:  vega.Warn,
+      render: 'canvas',
+      container: this.element,
+    })
+
+    const dataObj = getInlineData(el)
+    if (dataObj) {
+      view.insert(this.defaultDataName, dataObj)
+    }
+
+    tooltip(view)
+
     this.vegaView = view
-    vegaTooltip(view)
+    view.run()
   }
 }
 
 
-function getInlineData(el) {
+function getInlineData(el: ImmutableMap<string, any>): {[field: string]: any}[] | null {
   const dataProto = el.get('data')
 
   if (!dataProto) {
     return null
   }
 
-  const dataArr = getDataArray(dataProto)
-  return {values: dataArr}
+  return getDataArray(dataProto)
 }
 
 
-function getDataSets(el, spec) {
+function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: any[] } | null {
   if (!el.get('datasets') || el.get('datasets').isEmpty()) {
     return null
   }
 
-  const datasets = {}
+  const datasets: {[dataset: string]: any[]} = {}
 
-  el.get('datasets').forEach((x, i) => {
+  el.get('datasets').forEach((x: any, i: number) => {
     if (!x) { return }
     datasets[x.get('name')] = getDataArray(x.get('data'))
   })
@@ -193,7 +221,7 @@ function getDataSets(el, spec) {
 }
 
 
-function getDataArray(dataProto, startIndex = 0) {
+function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] {
   if (!dataProto.get('data')) { return [] }
   if (!dataProto.get('index')) { return [] }
   if (!dataProto.get('columns')) { return [] }
@@ -205,7 +233,7 @@ function getDataArray(dataProto, startIndex = 0) {
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
 
   for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
-    let row = {}
+    let row: {[field: string]: any} = {}
 
     if (hasSupportedIndex) {
       row[MagicFields.DATAFRAME_INDEX] =
@@ -221,16 +249,6 @@ function getDataArray(dataProto, startIndex = 0) {
   }
 
   return dataArr
-}
-
-
-function maybeAddAutosizing(spec) {
-  if (spec.autosize) { return }
-  spec.autosize = {
-    type: 'fit',
-    contains: 'padding',
-    resize: true,
-  }
 }
 
 
