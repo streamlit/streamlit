@@ -4,12 +4,16 @@
  */
 
 import React from 'react'
-import {Button, Input, Label} from 'reactstrap'
+import {Input, Label} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from 'lib/immutableProto'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
 
-import Checkbox from 'components/widgets/Checkbox/'
+import ButtonWidget from 'components/widgets/Button/'
+import CheckboxWidget from 'components/widgets/Checkbox/'
+// import SliderWidget from 'components/widgets/Slider/'
+// import TextAreaWidget from 'components/widgets/TextArea/'
+
 
 import './Widget.scss'
 
@@ -40,34 +44,7 @@ class Widget extends PureStreamlitElement<Props, State> {
     })
 
     this.state = { value }
-
-    console.log(`Original value: ${value}, id = ${element.get('id')}`)
     this.props.setWidgetState(element.get('id'), value)
-  }
-
-  private handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const target = e.target as HTMLButtonElement
-    this.props.setWidgetState(target.id, true, () => {
-      this.props.sendBackMsg({
-        type: 'widgetJson',
-        widgetJson: JSON.stringify(this.props.getWidgetState())
-      })
-      this.props.setWidgetState(target.id, false)
-    })
-  }
-
-  private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const oldValue = this.state.value
-    const currentValue = e.target.checked
-    const id = e.target.id
-    console.log(`id = ${id}, old = ${oldValue}, current = ${currentValue}`)
-    this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue, () => {
-      this.props.sendBackMsg({
-        type: 'widgetJson',
-        widgetJson: JSON.stringify(this.props.getWidgetState())
-      })
-    })
   }
 
   private handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,21 +81,11 @@ class Widget extends PureStreamlitElement<Props, State> {
     const id = element.get('id')
 
     return dispatchOneOf(element, 'type', {
-      button: () => {
-        const style = {
-          width: this.props.width,
-        }
 
-        return (
-          <div className="Widget row-widget">
-            <Button id={id} style={style} onClick={this.handleButtonClick}>
-              { label }
-            </Button>
-          </div>
-        )
-      },
-
-      checkbox: () => <Checkbox {...this.props}/>,
+      button: () => <ButtonWidget {...this.props}/>,
+      checkbox: () => <CheckboxWidget {...this.props}/>,
+      // slider: () => <SliderWidget {...this.props}/>,
+      // textarea: () => <TextAreaWidget {...this.props}/>,
 
       slider: (data: ImmutableMap<string, any>) => {
         const min = data.get('min')

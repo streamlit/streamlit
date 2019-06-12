@@ -4,10 +4,9 @@
  */
 
 import React from 'react'
-import {Input, Label} from 'reactstrap'
+import {Button as UIButton} from 'reactstrap'
 import {Map as ImmutableMap} from 'immutable'
 import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
-import './Checkbox.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -21,27 +20,25 @@ interface State extends StState {
   value: any;
 }
 
-class Checkbox extends PureStreamlitElement<Props, State> {
+class Button extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
     const {element} = this.props
-    const value = element.get('checkbox').get('value')
+    const value = false
 
     this.state = { value }
     this.props.setWidgetState(element.get('id'), value)
   }
 
-  private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const currentValue = e.target.checked
-    const id = e.target.id
-
-    this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue, () => {
+  private handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.target as HTMLButtonElement
+    this.props.setWidgetState(target.id, true, () => {
       this.props.sendBackMsg({
         type: 'widgetJson',
         widgetJson: JSON.stringify(this.props.getWidgetState())
       })
+      this.props.setWidgetState(target.id, false)
     })
   }
 
@@ -55,19 +52,14 @@ class Checkbox extends PureStreamlitElement<Props, State> {
     }
 
     return (
-      <div className="Widget row-widget stCheckbox">
-        <Label style={style} check>
-          <Input
-            type="checkbox"
-            id={id}
-            checked={this.state.value}
-            onChange={this.handleChange}
-          />
-          <span className="label">{ label }</span>
-        </Label>
+      // @ts-ignore
+      <div className="Widget row-widget stButton">
+        <UIButton id={id} style={style} onClick={this.handleClick}>
+          { label }
+        </UIButton>
       </div>
     )
   }
 }
 
-export default Checkbox
+export default Button
