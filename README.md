@@ -12,7 +12,7 @@ pip install streamlit
 
 ## Static Example
 
-Copy and paste this example and it should work:
+Copy and paste this example into a file such as `program.py`:
 
 ```python
 import streamlit as st
@@ -29,6 +29,8 @@ for i in range(100):
   bar.progress(i + 1)
   time.sleep(0.1)
 ```
+
+Then run it with `streamlit run program.py`, which should start Streamlit. 
 
 ## More Help
 
