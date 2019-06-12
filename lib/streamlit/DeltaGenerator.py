@@ -741,8 +741,8 @@ class DeltaGenerator(object):
         https://altair-viz.github.io/gallery/.
 
         """
-        import streamlit.elements.vega_lite as vega_lite
-        vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
+        import streamlit.elements.altair as altair
+        altair.marshall(element.vega_lite_chart, altair_chart)
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
