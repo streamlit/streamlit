@@ -1,6 +1,6 @@
-# Understanding Streamlit's core mechanics
+# Core mechanics
 
-**Working with Streamlit is simple:** first you sprinkle a few _Streamlit
+Working with Streamlit is simple: first you sprinkle a few _Streamlit
 commands_ into a normal Python script, and then you run the script
 normally.
 
@@ -21,7 +21,7 @@ command writes pure text to the report, and
 
 ## Updating the report
 
-**Every time you want to update your report, you just save your script**
+Every time you want to update your report, you just save your script
 and the Streamlit server will automatically notice it and update the report
 as needed.
 
@@ -86,8 +86,8 @@ data_element.dataframe(df)
 # Replaces "Loading data..." with a table containing the actual data.
 ```
 
-This replacement mechanism allows you to **easily create animations in
-Streamlit** as explained in the _Animating elements_ section, below.
+This replacement mechanism allows you to easily create animations in
+Streamlit as explained in the _Animating elements_ section, below.
 
 ## Inserting elements out of order
 

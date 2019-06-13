@@ -1,10 +1,7 @@
-# Tutorial 2: Caching, mapping, and more!
+# Tutorial: Caching, mapping, and more!
 
-At this point, you have probably [already set up Streamlit](/getting_started),
-and even created [your first Streamlit
-report](/tutorial/tutorial1_first_steps). So now let's get down to a more
-concrete example of how you'd use Streamlit when trying to accomplish a real
-world task.
+At this point, you've probably [set up Streamlit](/getting_started),
+and run the ["Hello world" report](/index). Now let's take a look at how you can use Streamlit to fetch, cache and map an Uber dataset.
 
 ## The task
 
@@ -13,7 +10,7 @@ information about their pickups and dropoffs. I don't know about you, but to me
 that sounds like an awesome trove of data --- let's use Streamlit to take a
 quick look at it!
 
-First, **create a new file called `uber_pickups.py`** and paste the following
+First, create a new file called `uber_pickups.py` and paste the following
 imports into it:
 
 ```python
@@ -30,12 +27,13 @@ st.title('Uber pickups in NYC')
 
 ...and then running the script.
 
-As usual, **when you run the script your Streamlit report will automatically
-pop up in your browser**. Of course, at this point it's just a blank canvas.
+As usual, when you run the script your Streamlit report will automatically
+pop up in your browser. Of course, at this point it's just a blank canvas.
 
-_**REMINDER:** We recommend **arranging your browser window and text editor
-side by side,** so you can always see both at the same time._
-
+```eval_rst
+.. tip::
+  We recommend arranging your browser window and text editor side by side, so you can always see both at the same time.
+```
 
 ## Fetching some data
 
@@ -67,14 +65,14 @@ data = load_data(10000)
 data_load_state.text('Loading data... done!')
 ```
 
-Well, that's... _underwhelming_ ☹
+Well, that's... underwhelming ☹
 
 Turns out, downloading the data takes a long time. Who knew?! And converting
 the date column to datetime costs us another huge chunk time. That's quite
 annoying.
 
-And just to show you exactly _how annoying_ this is, let's go ahead and **take
-a look at the data we just loaded**:
+And just to show you exactly how annoying this is, let's go ahead and take
+a look at the data we just loaded:
 
 ```python
 st.subheader('Raw data')
@@ -83,7 +81,7 @@ st.write(data)
 
 ...ugh. Another. Long. Wait.
 
-Wouldn't it be amazing if we could **avoid repeating this lengthy step** every
+Wouldn't it be amazing if we could avoid repeating this lengthy step every
 time we re-ran the script?
 
 Streamlit to the rescue! Let's have a conversation about caching.
@@ -111,13 +109,13 @@ Replace the line `st.write('Done!')` with this:
 st.write('Done! (using st.cache)')
 ```
 
-...then save and notice how **the line you just added appears _immediately_**.
+...then save and notice how the line you just added appears immediately.
 
 If you take a step back for a second, this is actually quite amazing. Something
 magical is happening behind the scenes, and it's just a single line of code to
 activate it.
 
-### But _how_?
+### But how?
 
 Let me go into a sidebar at this point and tell you how `@st.cache` actually
 works.
@@ -139,8 +137,8 @@ reads the output from the local cache and passes it on to the caller.
 
 Bam! Like magic.
 
-"_But, wait a second,_" you're thinking, "_this sounds too good. What are the
-limitations of all this awesomesauce?_"
+"But, wait a second," you're thinking, "this sounds too good. What are the
+limitations of all this awesomesauce?"
 
 The main limitation is related to item #2, above. That is, Streamlit's cache
 feature doesn't know about changes that take place outside the body of the
@@ -176,7 +174,7 @@ NYC.
 
 ## Drawing a histogram
 
-A basic question you might ask is "_what are Uber's busiest hours?_" To answer
+A basic question you might ask is "what are Uber's busiest hours?" To answer
 that, let's break down all the pickup times into at histogram, binned by hour:
 
 ```python
@@ -208,7 +206,7 @@ And since this is not the 90s, the map is interactive: go ahead and try panning
 and zooming it a bit!
 
 But let's do one better. In the previous section, we learned that the peak Uber
-hour is 17:00, so you may be wondering "what are the peak Uber _locations_ at
+hour is 17:00, so you may be wondering "what are the peak Uber locations at
 5pm?"
 
 Well, that should be easy to find out: just filter the map to show only pickups
@@ -227,8 +225,8 @@ st.map(filtered_data)
 
 And we're done!
 
-Looks like **Uber's prime real estate at that time is Midtown, slightly
-off-center toward the East side**. Groovy!
+Looks like Uber's prime real estate at that time is Midtown, slightly
+off-center toward the East side. Groovy!
 
 
 ## Appendix: the final script

@@ -7,7 +7,7 @@ Here is an example of how to use it:
 
 Install with:
 ```bash
-pip install streamlit
+$ pip install streamlit
 ```
 
 ## Static Example
@@ -36,7 +36,7 @@ Then run it with `streamlit run program.py`, which should start Streamlit.
 
 For more help and a complete API documentation, please run:
 ```bash
-streamlit docs
+$ streamlit docs
 ```
 
 ## Contributing to Streamlit

@@ -25,8 +25,9 @@ Before you get started, you're going to need a few things:
 * One of these package management tools:
   * [PIP](https://pip.pypa.io/en/stable/installing/)
   * [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+* [Streamlit](index.md) - Follow these instructions to install Streamlit if you haven't already.
 
-## Install Streamlit
+## Set up your virtual environment
 
 Regardless of which package management tool you're using, we recommend running these commands in a virtual environment. This ensures that the dependencies pulled in for Streamlit don't impact any other your other Python projects you're working on.
 
@@ -36,32 +37,6 @@ If you're not using Conda, you have a few options:
 * [virtualenv](https://virtualenv.pypa.io/en/latest/)
 * [venv](https://docs.python.org/3/library/venv.html)
 * [pipenv](https://docs.pipenv.org/en/latest/)
-
-### PIP
-
-If you're using PIP to install Streamlit, don't worry, some of the more popular data science and machine learning libraries like Numpy and Pandas are downloaded during installation.
-
-Run this command to install Streamlit via PIP:
-
-```bash
-$ pip install streamlit
-```
-
-### Conda
-
-Run this command to install Streamlit with Conda:
-
-```bash
-# Add required channels.
-$ conda config --add channels conda-forge
-$ conda config --add channels https://repo.streamlit.io/streamlit-forge
-
-# Update conda (always a good idea)
-$ conda update conda
-
-# Install Streamlit!
-$ conda install streamlit
-```
 
 ## Import Streamlit
 
@@ -84,10 +59,12 @@ Now that everything's installed, let's create a new Python script and import Str
 3. Run your report. A new tab will open in your default browser, and you should see a title. In the next few sections we'll populate the report with additional text, tables, and charts.
 
    ```bash
-   $ python first_report.py
+   $ streamlit run first_report.py
    ```
 
    Running a Streamlit report is no different than any other Python script. Whenever you need to view the report, you can use this command.
+
+4. You can kill the report at any time by typing **Ctrl+c** in the terminal.
 
 ## Add text to a report
 
