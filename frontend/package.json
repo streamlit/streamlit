@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.454.0",
+    "baseui": "^7.2.0",
     "bokehjs": "^1.1.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
@@ -46,10 +47,13 @@
     "react-virtualized": "^9.21.0",
     "reactstrap": "^8.0.0",
     "recharts": "^1.6.0",
+    "styletron-engine-atomic": "^1.3.0",
+    "styletron-react": "^5.1.3",
     "typed-signals": "^1.0.5",
     "vega": "^5.4.0",
     "vega-lite": "^3.2.1",
-    "vega-tooltip": "^0.17.0"
+    "vega-tooltip": "^0.17.0",
+    "why-did-you-update": "^1.0.6"
   },
   "devDependencies": {
     "@craco/craco": "^5.0.2",

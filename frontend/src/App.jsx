@@ -37,6 +37,9 @@ import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 import 'assets/css/theme.scss'
 import './App.scss'
 
+import { whyDidYouUpdate } from 'why-did-you-update'
+whyDidYouUpdate(React)
+
 
 class App extends PureComponent {
   constructor(props) {
@@ -53,7 +56,6 @@ class App extends PureComponent {
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
-      widgetState: {},
     }
 
     // Bind event handlers.
@@ -71,6 +73,8 @@ class App extends PureComponent {
     this.clearCache = this.clearCache.bind(this)
     this.saveReport = this.saveReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
+    this.settingsCallback = this.settingsCallback.bind(this)
+    this.aboutCallback = this.aboutCallback.bind(this)
 
     this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -126,19 +130,6 @@ class App extends PureComponent {
         }
       },
     },
-  }
-
-  getWidgetState = () => {
-    return this.state.widgetState
-  }
-
-  setWidgetState = (key, value, callback) => {
-    this.setState(state => ({
-      widgetState: {
-        ...state.widgetState,
-        [key]: value
-      }
-    }), callback)
   }
 
   componentDidMount() {
@@ -591,6 +582,23 @@ class App extends PureComponent {
       false
   }
 
+  settingsCallback() {
+    this.openDialog({
+      type: 'settings',
+      isOpen: true,
+      isServerConnected: this.isServerConnected(),
+      settings: this.state.userSettings,
+      onSave: this.saveSettings,
+    })
+  }
+
+  aboutCallback() {
+    this.openDialog({
+      type: 'about',
+      onClose: this.closeDialog,
+    })
+  }
+
   render() {
     const outerDivClass =
       isEmbeddedInIFrame() ?
@@ -625,17 +633,8 @@ class App extends PureComponent {
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
             clearCacheCallback={this.openClearCacheDialog}
-            settingsCallback={() => this.openDialog({
-              type: 'settings',
-              isOpen: true,
-              isServerConnected: this.isServerConnected(),
-              settings: this.state.userSettings,
-              onSave: this.saveSettings,
-            })}
-            aboutCallback={() => this.openDialog({
-              type: 'about',
-              onClose: this.closeDialog,
-            })}
+            settingsCallback={this.settingsCallback}
+            aboutCallback={this.aboutCallback}
           />
         </header>
 
@@ -655,8 +654,6 @@ class App extends PureComponent {
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
                   sendBackMsg={this.sendThrottledWidgetBackMsg}
-                  getWidgetState={this.getWidgetState}
-                  setWidgetState={this.setWidgetState}
                 />
               }
             </Col>

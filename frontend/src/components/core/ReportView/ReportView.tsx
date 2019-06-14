@@ -54,15 +54,28 @@ interface Props {
   showStaleElementIndicator: boolean;
 
   sendBackMsg: Function;
-  getWidgetState: Function;
-  setWidgetState: Function;
 }
+
+
+/*
+interface State {
+  widgetState: any;
+}
+*/
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 export class ReportView extends PureComponent<Props> {
   private elementsToRender: Iterable<number, Element | undefined> = List<Element>();
+
+  private constructor(props: Props){
+    super(props)
+
+    this.state = {
+      widgetState: {},
+    }
+  }
 
   public render(): ReactNode {
     return (
@@ -142,6 +155,24 @@ export class ReportView extends PureComponent<Props> {
     }
   }
 
+  private getWidgetState = () => {
+    // @ts-ignore
+    return this.state.widgetState
+  }
+
+  // @ts-ignore
+  private setWidgetState = (key, value, callback) => {
+    // @ts-ignore
+    this.setState(state => ({
+      // @ts-ignore
+      widgetState: {
+        // @ts-ignore
+        ...state.widgetState,
+        [key]: value
+      }
+    }), callback)
+  }
+
   private renderElement(element: Element, index: number, width: number): ReactNode {
     if (!element) {
       throw new Error('Transmission error.')
@@ -171,8 +202,8 @@ export class ReportView extends PureComponent<Props> {
           element={el}
           width={width}
           sendBackMsg={this.props.sendBackMsg}
-          setWidgetState={this.props.setWidgetState}
-          getWidgetState={this.props.getWidgetState}
+          setWidgetState={this.setWidgetState}
+          getWidgetState={this.getWidgetState}
         />
       ),
     })
