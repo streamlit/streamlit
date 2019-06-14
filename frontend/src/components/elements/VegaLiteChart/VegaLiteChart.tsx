@@ -42,7 +42,7 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
    */
   private vegaView: vega.View | undefined
 
-  /** 
+  /**
    * The default data name to add to.
    */
   private defaultDataName = 'source'
