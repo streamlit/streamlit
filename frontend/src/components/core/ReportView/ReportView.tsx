@@ -69,7 +69,7 @@ interface State {
 export class ReportView extends PureComponent<Props> {
   private elementsToRender: Iterable<number, Element | undefined> = List<Element>();
 
-  private constructor(props: Props){
+  public constructor(props: Props){
     super(props)
 
     this.state = {
