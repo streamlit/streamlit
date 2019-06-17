@@ -152,6 +152,7 @@ const Defaults = {
     getPixelOffset:
       d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
     getPosition: getPositionFromLatLonColumns,
+    getAlignmentBaseline: 'bottom',
   },
 }
 

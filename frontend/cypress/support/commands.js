@@ -23,3 +23,20 @@
 //
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+
+import path from 'path'
+
+// https://github.com/palmerhq/cypress-image-snapshot#installation
+import {addMatchImageSnapshotCommand} from 'cypress-image-snapshot/command'
+
+/**
+ * Returns an OS-specific snapshot folder, e.g. <rootDir>/cypress/snapshots/darwin
+ * (We use per-OS snapshots to account for rendering differences in fonts and UI widgets.)
+ */
+function getSnapshotFolder() {
+  return path.join('cypress', 'snapshots', Cypress.platform)
+}
+
+addMatchImageSnapshotCommand({
+  customSnapshotsDir: getSnapshotFolder(),
+})

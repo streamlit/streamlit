@@ -346,6 +346,14 @@ class App extends PureComponent {
    * Closes the upload dialog if it's open.
    */
   closeDialog() {
+    // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
+    // when a modal is open. Otherwise, when the user causes a syntax error in
+    // Python and we show an "Error" modal, and then the user presses "R" while
+    // that modal is showing, this causes "modal-open" to *not* be removed
+    // properly from <body>, thereby breaking scrolling. This seems to be
+    // related to the modal-close animation taking too long.
+    document.body.classList.remove('modal-open')
+
     this.setState({ dialog: undefined })
   }
 
@@ -367,7 +375,10 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
-    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+    if (
+      this.state.reportRunState !== ReportRunState.RUNNING &&
+      !this.connectionManager.isStaticConnection()
+    ) {
       // Only add messages to report when script is running. Otherwise, we get
       // bugs like #685.
       return
@@ -590,12 +601,14 @@ class App extends PureComponent {
   }
 
   render() {
-    const outerDivClass =
+    const outerDivClass = [
+      'stApp',
       isEmbeddedInIFrame() ?
         'streamlit-embedded' :
         this.state.userSettings.wideMode ?
           'streamlit-wide' :
-          'streamlit-regular'
+          'streamlit-regular',
+    ].join(' ')
 
     const dialogProps = {
       ...this.state.dialog,
@@ -604,7 +617,8 @@ class App extends PureComponent {
 
     return (
       <div className={outerDivClass}>
-        <header>
+        {/* The tabindex below is required for testing. */}
+        <header tabindex="-1">
           <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
@@ -690,9 +704,11 @@ class App extends PureComponent {
 
 
 function handleNewElementMessage(element, reportId) {
-  trackEventRemotely('visualElementUpdated', {
-    elementType: element.get('type'),
-  })
+  // TODO: Readd this when #652 is fixed.
+  // trackEventRemotely('visualElementUpdated', {
+  //   elementType: element.get('type'),
+  // })
+
   // Set reportId on elements so we can clear old elements when the report
   // script is re-executed.
   return element.set('reportId', reportId)
@@ -700,7 +716,8 @@ function handleNewElementMessage(element, reportId) {
 
 
 function handleAddRowsMessage(element, namedDataSet) {
-  trackEventRemotely('dataMutated')
+  // TODO: Readd this when #652 is fixed.
+  // trackEventRemotely('dataMutated')
   return addRows(element, namedDataSet)
 }
 

@@ -44,21 +44,23 @@ class CacheError(Exception):
 mem_cache = {}
 
 
-def read_from_mem_cache(path):
-    if path in mem_cache:
-        rv = mem_cache[path]
+def read_from_mem_cache(key):
+    if key in mem_cache:
+        rv = mem_cache[key]
         LOGGER.debug('Cache HIT: %s', type(rv))
         return rv
     else:
-        LOGGER.debug('Cache MISS: %s', path)
-        raise FileNotFoundError('Path not found in mem cache')
+        LOGGER.debug('Cache MISS: %s', key)
+        raise FileNotFoundError('Key not found in mem cache')
 
 
-def write_to_mem_cache(path, rv):
-    mem_cache[path] = copy.deepcopy(rv)
+def write_to_mem_cache(key, rv):
+    mem_cache[key] = copy.deepcopy(rv)
 
 
-def read_from_disk_cache(path):
+def read_from_disk_cache(key):
+    path = util.get_streamlit_file_path('cache', '%s.pickle' % key)
+
     try:
         with util.streamlit_read(path, binary=True) as input:
             rv = pickle.load(input)
@@ -69,7 +71,9 @@ def read_from_disk_cache(path):
     return rv
 
 
-def write_to_disk_cache(path, rv):
+def write_to_disk_cache(key, rv):
+    path = util.get_streamlit_file_path('cache', '%s.pickle' % key)
+
     try:
         with util.streamlit_write(path, binary=True) as output:
             pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
@@ -85,18 +89,18 @@ def write_to_disk_cache(path, rv):
         raise CacheError('Unable to write to cache: %s' % e)
 
 
-def read_from_cache(path, use_disk_cache=False):
+def read_from_cache(key, use_disk_cache=False):
     if use_disk_cache:
-        return read_from_disk_cache(path)
+        return read_from_disk_cache(key)
     else:
-        return read_from_mem_cache(path)
+        return read_from_mem_cache(key)
 
 
-def write_to_cache(path, rv, use_disk_cache=False):
+def write_to_cache(key, rv, use_disk_cache=False):
     if use_disk_cache:
-        return write_to_disk_cache(path, rv)
+        return write_to_disk_cache(key, rv)
     else:
-        return write_to_mem_cache(path, rv)
+        return write_to_mem_cache(key, rv)
 
 
 def cache(func=None, on_disk=False):
@@ -164,15 +168,15 @@ def cache(func=None, on_disk=False):
                 len(arg_string), func.__name__)
             hasher.update(arg_string)
             hasher.update(inspect.getsource(func).encode('utf-8'))
-            path = 'cache/%s.pickle' % hasher.hexdigest()
-            LOGGER.debug('Cache filename: %s', path)
+            key = hasher.hexdigest()
+            LOGGER.debug('Cache key: %s', key)
 
             # Load the file (hit) or compute the function (miss).
             try:
-                rv = read_from_cache(path, on_disk)
+                rv = read_from_cache(key, on_disk)
             except (FileNotFoundError, IOError, OSError):
                 rv = func(*argc, **argv)
-                write_to_cache(path, rv, on_disk)
+                write_to_cache(key, rv, on_disk)
         return rv
 
     # Make this a well-behaved decorator by preserving important function
@@ -192,16 +196,21 @@ def clear_cache():
     Returns
     -------
     boolean
-        True if the cache was cleared. False otherwise (e.g. cache file doesn't
-        exist on disk).
+        True if the disk cache was cleared. False otherwise (e.g. cache file
+        doesn't exist on disk).
     """
-    return _clear_disk_cache() or _clear_mem_cache()
+    _clear_mem_cache()
+    return _clear_disk_cache()
+
+
+def get_cache_path():
+    return util.get_streamlit_file_path('cache')
 
 
 def _clear_disk_cache():
     # TODO: Only delete disk cache for functions related to the user's current
     # script.
-    cache_path = os.path.join(util.STREAMLIT_ROOT_DIRECTORY, 'cache')
+    cache_path = get_cache_path()
     if os.path.isdir(cache_path):
         shutil.rmtree(cache_path)
         return True
@@ -211,4 +220,3 @@ def _clear_disk_cache():
 def _clear_mem_cache():
     global mem_cache
     mem_cache = {}
-    return True

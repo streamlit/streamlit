@@ -74,9 +74,18 @@ else:
         st.error('Fail')
 
     st.subheader('Test that you can turn on caching')
-    before = num_executions
     config.set_option('client.caching', True)
+
+    # Redefine my_func because the st.cache-decorated function "remembers" the
+    # config option from when it was declared.
+    @st.cache
+    def my_func(arg1, arg2=None, *args, **kwargs):
+        global num_executions
+        num_executions += 1
+        return random.randint(0, 2 ** 32)
+
     v1 = my_func(1, 2, dont_care=10)
+    before = num_executions
     v2 = my_func(1, 2, dont_care=10)
     after = num_executions
     if after == before:

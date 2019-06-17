@@ -5,12 +5,12 @@ describe('st.deck_gl_chart', () => {
     cy.visit('http://localhost:3000/')
   })
 
-  // There is an issue between cypress and deck.gl:
-  // https://github.com/cypress-io/cypress/issues/4322
+  it('displays 2 deck.gl charts', () => {
+    const els = cy.get('.element-container .stDeckGlChart')
 
-  // it('displays a deck.gl chart', () => {
-  //   cy.get('.element-container .stDeckGlChart')
-  //     .find('canvas')
-  //     .should('have.attr', 'height', '1000')
-  // })
+    els.should('have.length', 6)
+
+    els.find('canvas')
+      .should('have.attr', 'height', '1000')
+  })
 })

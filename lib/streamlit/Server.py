@@ -10,6 +10,7 @@ import tornado.concurrent
 import tornado.gen
 import tornado.web
 import tornado.websocket
+import tornado.ioloop
 
 from streamlit import __installation_id__, __version__
 from streamlit import caching
@@ -74,6 +75,7 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._sent_initialize_message = False
+        self._ioloop = tornado.ioloop.IOLoop.current()
 
         self._storage = None
         self._credentials = Credentials.get_current()
@@ -182,12 +184,14 @@ class Server(object):
         self._set_state(State.STOPPING)
         self._must_stop.set()
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _clear_queue(self):
         self._report.clear()
 
         for browser_queue in self._browser_queues.values():
             browser_queue.clear()
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def enqueue(self, msg):
         self._report.enqueue(msg)
 
@@ -226,8 +230,13 @@ class Server(object):
 
         self.enqueue(msg)
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _enqueue_script_state_changed_message(self, new_script_state):
         if new_script_state == ScriptState.RUNNING:
+            if config.get_option('server.liveSave'):
+                # Enqueue into the IOLoop so it runs without blocking AND runs
+                # on the main thread.
+                self._ioloop.spawn_callback(self._save_running_report)
             self._clear_queue()
             self._maybe_enqueue_initialize_message()
             self._enqueue_new_report_message()
@@ -236,7 +245,12 @@ class Server(object):
 
         if new_script_state == ScriptState.STOPPED:
             self._enqueue_report_finished_message()
+            if config.get_option('server.liveSave'):
+                # Enqueue into the IOLoop so it runs without blocking AND runs
+                # on the main thread.
+                self._ioloop.spawn_callback(self._save_final_report_and_quit)
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _enqueue_session_state_changed_message(self):
         msg = protobuf.ForwardMsg()
         msg.session_state_changed.run_on_save = self._scriptrunner.run_on_save
@@ -263,6 +277,7 @@ class Server(object):
             msg.session_event.script_compilation_exception, exc)
         self.enqueue(msg)
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _maybe_enqueue_initialize_message(self):
         if self._sent_initialize_message:
             return
@@ -293,25 +308,24 @@ class Server(object):
 
         self.enqueue(msg)
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _enqueue_new_report_message(self):
+        self._report.generate_new_id()
         msg = protobuf.ForwardMsg()
-        msg.new_report.id = self._report.generate_new_id()
+        msg.new_report.id = self._report.report_id
         msg.new_report.command_line.extend(self._report.argv)
         msg.new_report.name = self._report.name
         self.enqueue(msg)
 
+    # IMPORTANT: This method gest called in the scriptrunner thread.
     def _enqueue_report_finished_message(self):
         msg = protobuf.ForwardMsg()
         msg.report_finished = True
         self.enqueue(msg)
 
-    # TODO [0px] Also handle server.livesave! serialize_running_report_to_files
     @tornado.gen.coroutine
     def _handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""
-        if self._storage is None:
-            self._storage = Storage()
-
         @tornado.gen.coroutine
         def progress(percent):
             progress_msg = protobuf.ForwardMsg()
@@ -323,9 +337,7 @@ class Server(object):
         try:
             yield progress(0)
 
-            files = self._report.serialize_final_report_to_files()
-            url = yield self._storage.save_report_files(
-                self._report._latest_id, files, progress)
+            url = yield self._save_final_report(progress)
 
             # Indicate that the save is done.
             progress_msg = protobuf.ForwardMsg()
@@ -371,6 +383,38 @@ class Server(object):
     def _handle_set_run_on_save_request(self, new_value):
         self._scriptrunner.run_on_save = new_value
         self._enqueue_session_state_changed_message()
+
+    @tornado.gen.coroutine
+    def _save_running_report(self):
+        files = self._report.serialize_running_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._report.report_id, files)
+
+        if config.get_option('server.liveSave'):
+            util.print_url('Saved running report', url)
+
+        raise tornado.gen.Return(url)
+
+    @tornado.gen.coroutine
+    def _save_final_report(self, progress=None):
+        files = self._report.serialize_final_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._report.report_id, files, progress)
+
+        if config.get_option('server.liveSave'):
+            util.print_url('Saved final report', url)
+
+        raise tornado.gen.Return(url)
+
+    @tornado.gen.coroutine
+    def _save_final_report_and_quit(self):
+        yield self._save_final_report()
+        self._ioloop.stop()
+
+    def _get_storage(self):
+        if self._storage is None:
+            self._storage = Storage()
+        return self._storage
 
 
 class _StaticFileHandler(tornado.web.StaticFileHandler):

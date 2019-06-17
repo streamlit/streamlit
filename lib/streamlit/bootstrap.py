@@ -35,6 +35,9 @@ def _set_up_signal_handler(scriptrunner):
         # the server.
         if scriptrunner.is_running():
             scriptrunner.request_stop()
+            click.secho(
+                'Script successfully stopped. '
+                'Press Ctrl-C again to stop Streamlit server.')
         else:
             scriptrunner.request_shutdown()
             tornado.ioloop.IOLoop.current().stop()
@@ -67,7 +70,12 @@ def _on_server_start(server, report):
             # connect, and it happens to success before we launch the browser.
             return
 
-        util.open_browser(report.get_url('localhost'))
+        if config.is_manually_set('browser.serverAddress'):
+            addr = config.get_option('browser.serverAddress')
+        else:
+            addr = 'localhost'
+
+        util.open_browser(report.get_url(addr))
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.
@@ -77,21 +85,22 @@ def _on_server_start(server, report):
 
 def _print_url(report):
     title_message = 'You can now view your Streamlit report in your browser.'
-    urls = []
+    named_urls = []
 
     if config.is_manually_set('browser.serverAddress'):
-        urls = [
-            ('URL', report.get_url(config.get_option('browser.serverAddress'))),
+        named_urls = [
+            ('URL',
+                report.get_url(config.get_option('browser.serverAddress'))),
         ]
 
     elif config.get_option('server.headless'):
-        urls = [
+        named_urls = [
             ('Network URL', report.get_url(util.get_internal_ip())),
             ('External URL', report.get_url(util.get_external_ip())),
         ]
 
     else:
-        urls = [
+        named_urls = [
             ('Local URL', report.get_url('localhost')),
             ('Network URL', report.get_url(util.get_internal_ip())),
         ]
@@ -100,9 +109,8 @@ def _print_url(report):
     click.secho('  %s' % title_message, fg='green')
     click.secho('')
 
-    for url_name, url in urls:
-        click.secho('  %s: ' % url_name, nl=False)
-        click.secho(url, bold=True)
+    for url_name, url in named_urls:
+        util.print_url(url_name, url)
 
     click.secho('')
 
@@ -131,9 +139,9 @@ def run(script_path):
     ioloop.spawn_callback(server.loop_coroutine)
 
     def maybe_enqueue(msg):
+        scriptrunner.maybe_handle_execution_control_request()
         if not config.get_option('client.displayEnabled'):
             return False
-        scriptrunner.maybe_handle_execution_control_request()
         server.enqueue(msg)
         return True
 
