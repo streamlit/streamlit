@@ -7,15 +7,13 @@ import React from 'react'
 import { Button as UIButton } from 'reactstrap'
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
+import { WidgetState } from 'components/core/ReportView/'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  // (HK) TODO: Function to actual type
-  getWidgetState: Function;
-  // (HK) TODO: Function to actual type
-  sendBackMsg: Function;
-  // (HK) TODO: Function to actual type
-  setWidgetState: Function;
+  getWidgetState: () => WidgetState;
+  sendBackMsg: (msg: Object) => void;
+  setWidgetState: (key: string, value: any) => void;
   width: number;
 }
 
@@ -30,13 +28,12 @@ class Button extends PureStreamlitElement<Props, StState> {
 
   private handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const target = e.target as HTMLButtonElement
-    this.props.setWidgetState(target.id, true, () => {
-      this.props.sendBackMsg({
-        type: 'widgetJson',
-        widgetJson: JSON.stringify(this.props.getWidgetState())
-      })
-      this.props.setWidgetState(target.id, false)
+    this.props.setWidgetState(target.id, true)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
     })
+    this.props.setWidgetState(target.id, false)
   }
 
   public safeRender(): React.ReactNode {

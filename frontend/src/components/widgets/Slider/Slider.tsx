@@ -7,16 +7,14 @@ import React from 'react'
 import { Input, Label } from 'reactstrap'
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
+import { WidgetState } from 'components/core/ReportView/'
 import './Slider.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  // (HK) TODO: Function to actual type
-  getWidgetState: Function;
-  // (HK) TODO: Function to actual type
-  sendBackMsg: Function;
-  // (HK) TODO: Function to actual type
-  setWidgetState: Function;
+  getWidgetState: () => WidgetState;
+  sendBackMsg: (msg: Object) => void;
+  setWidgetState: (key: string, value: any) => void;
   width: number;
 }
 
@@ -39,11 +37,10 @@ class Slider extends PureStreamlitElement<Props, State> {
     const value = parseInt(e.target.value, 10)
 
     this.setState({ value })
-    this.props.setWidgetState(widgetId, value, () => {
-      this.props.sendBackMsg({
-        type: 'widgetJson',
-        widgetJson: JSON.stringify(this.props.getWidgetState())
-      })
+    this.props.setWidgetState(widgetId, value)
+    this.props.sendBackMsg({
+      type: 'widgetJson',
+      widgetJson: JSON.stringify(this.props.getWidgetState())
     })
   }
 

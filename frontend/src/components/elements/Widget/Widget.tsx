@@ -7,6 +7,7 @@ import React from 'react'
 import { Map as ImmutableMap } from 'immutable'
 import { dispatchOneOf } from 'lib/immutableProto'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
+import { WidgetState } from 'components/core/ReportView/'
 import ButtonWidget from 'components/widgets/Button/'
 import CheckboxWidget from 'components/widgets/Checkbox/'
 import SliderWidget from 'components/widgets/Slider/'
@@ -15,12 +16,9 @@ import './Widget.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  // (HK) TODO: Function to actual type
-  getWidgetState: Function;
-  // (HK) TODO: Function to actual type
-  sendBackMsg: Function;
-  // (HK) TODO: Function to actual type
-  setWidgetState: Function;
+  getWidgetState: () => WidgetState;
+  sendBackMsg: (msg: Object) => void;
+  setWidgetState: (key: string, value: any) => void;
   width: number;
 }
 

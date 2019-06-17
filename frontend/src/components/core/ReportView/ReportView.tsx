@@ -53,21 +53,19 @@ interface Props {
    */
   showStaleElementIndicator: boolean;
 
-  sendBackMsg: Function;
+  sendBackMsg: (msg: Object) => void;
 }
 
-interface State {
-  widgetState: Object;
+export interface WidgetState {
+  [key: string]: any;
 }
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
-export class ReportView extends PureComponent<Props, State> {
-  private elementsToRender: Iterable<number, Element | undefined> = List<Element>();
-  public state = {
-    widgetState: {}
-  }
+export class ReportView extends PureComponent<Props> {
+  private elementsToRender: Iterable<number, Element | undefined> = List<Element>()
+  private widgetState: WidgetState = {}
 
   public render(): ReactNode {
     return (
@@ -75,6 +73,14 @@ export class ReportView extends PureComponent<Props, State> {
         {({width}) => this.renderElements(width)}
       </AutoSizer>
     )
+  }
+
+  private getWidgetState = () => {
+    return this.widgetState
+  }
+
+  private setWidgetState = (key: string, value: any) => {
+    this.widgetState[key] = value
   }
 
   private renderElements(width: number): ReactNode[] {
@@ -145,19 +151,6 @@ export class ReportView extends PureComponent<Props, State> {
     } else {
       return false
     }
-  }
-
-  private getWidgetState = () => {
-    return this.state.widgetState
-  }
-
-  private setWidgetState = (key: string, value: any, callback?: () => void) => {
-    this.setState(state => ({
-      widgetState: {
-        ...state.widgetState,
-        [key]: value
-      }
-    }), callback)
   }
 
   private renderElement(element: Element, index: number, width: number): ReactNode {
