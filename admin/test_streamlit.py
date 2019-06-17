@@ -90,6 +90,11 @@ def main():
         ['streamlit run does_not_exist.py'],
         comment='Checks to see that file not found error is caught')
 
+    run_commands(
+        'Hello script',
+        ['streamlit hello'],
+    )
+
     run_commands('Examples', [
         'streamlit run %(EXAMPLE_DIR)s/%(filename)s' % {
             'EXAMPLE_DIR': EXAMPLE_DIR,

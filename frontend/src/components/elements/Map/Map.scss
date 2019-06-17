@@ -1,0 +1,9 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+.stMap {
+  z-index: 0;  // Otherwise it goes over other elements.
+}
+

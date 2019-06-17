@@ -18,6 +18,7 @@ import {
   tableGetRowsAndCols,
 } from '../../../lib/dataFrameProto'
 import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
+import './Map.scss'
 
 /**
   * Functional element representing formatted text.

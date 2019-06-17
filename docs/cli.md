@@ -2,7 +2,7 @@
 :tocdepth: 1
 ```
 
-# Command-line tool
+# Command-line interface
 
 When you install Streamlit, the Streamlit command-line CLI tool gets installed
 as well. The main purpose of this tool is to help you diagnose and fix issues.
@@ -14,6 +14,14 @@ $ streamlit --help
 ```
 
 Below are a few of the most useful commands accepted by Streamlit CLI:
+
+## streamlit run
+
+```bash
+$ streamlit run your_script.py [script args]
+```
+
+Runs your report. At any time you can kill the server with **Ctrl+c**. This is useful when making config changes or changing reports/scripts.
 
 ## \-\-version
 
@@ -36,15 +44,6 @@ $ streamlit hello
 ```
 Opens Streamlit's Hello World report in a web browser. This is useful for
 testing Streamlit.
-
-## proxy kill
-
-```bash
-$ streamlit proxy kill
-```
-Kills the Streamlit proxy server, if any. This is useful when making config
-changes, for example, since the config file is read when the server
-initializes.
 
 ## config show
 

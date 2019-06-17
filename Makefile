@@ -215,6 +215,7 @@ docker-build-frontend:
 create-conda-packages:
 	cd conda ; ./create_packages.sh
 
+.PHONY: serve-conda
 serve-conda:
 	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000
 

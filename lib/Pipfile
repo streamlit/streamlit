@@ -25,6 +25,8 @@ scipy = "*"
 plotly = "*"
 bokeh = "*"
 graphviz = "*"
+pydot = "*"
+tensorflow = "*"
 # TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
 # When you update the packages here, you have to update
 # conda/streamlit/meta.yaml as well.
@@ -53,8 +55,6 @@ pandas = "*"
 pillow = "!=5.1.0"
 protobuf = "*"
 psutil = "*"
-pydot = "*"
-tensorflow = "*"
 toml = "*"
 tornado = "<6.0"
 tzlocal = "*"
