@@ -7,14 +7,11 @@ import React from 'react'
 import { Input, Label } from 'reactstrap'
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
-import { WidgetState } from 'components/core/ReportView/'
 import './TextArea.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  getWidgetState: () => WidgetState;
   sendBackMsg: (msg: Object) => void;
-  setWidgetState: (key: string, value: any) => void;
   width: number;
 }
 
@@ -26,10 +23,8 @@ class TextArea extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const widgetId = this.props.element.get('id')
     const value = this.props.element.get('textArea').get('value')
     this.state = { value }
-    this.props.setWidgetState(widgetId, value)
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,10 +32,9 @@ class TextArea extends PureStreamlitElement<Props, State> {
     const value = e.target.value
 
     this.setState({ value })
-    this.props.setWidgetState(widgetId, value)
     this.props.sendBackMsg({
       type: 'widgetJson',
-      widgetJson: JSON.stringify(this.props.getWidgetState())
+      widgetJson: JSON.stringify({ [widgetId]: value })
     })
   }
 

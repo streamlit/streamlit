@@ -56,16 +56,11 @@ interface Props {
   sendBackMsg: (msg: Object) => void;
 }
 
-export interface WidgetState {
-  [key: string]: any;
-}
-
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 export class ReportView extends PureComponent<Props> {
   private elementsToRender: Iterable<number, Element | undefined> = List<Element>()
-  private widgetState: WidgetState = {}
 
   public render(): ReactNode {
     return (
@@ -73,14 +68,6 @@ export class ReportView extends PureComponent<Props> {
         {({width}) => this.renderElements(width)}
       </AutoSizer>
     )
-  }
-
-  private getWidgetState = () => {
-    return this.widgetState
-  }
-
-  private setWidgetState = (key: string, value: any) => {
-    this.widgetState[key] = value
   }
 
   private renderElements(width: number): ReactNode[] {
@@ -182,8 +169,6 @@ export class ReportView extends PureComponent<Props> {
           element={el}
           width={width}
           sendBackMsg={this.props.sendBackMsg}
-          setWidgetState={this.setWidgetState}
-          getWidgetState={this.getWidgetState}
         />
       ),
     })
