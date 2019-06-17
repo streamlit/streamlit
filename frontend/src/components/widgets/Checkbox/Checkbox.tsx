@@ -4,40 +4,42 @@
  */
 
 import React from 'react'
-import {Input, Label} from 'reactstrap'
-import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
+import { Input, Label } from 'reactstrap'
+import { Map as ImmutableMap } from 'immutable'
+import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './Checkbox.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
+  // (HK) TODO: Function to actual type
   getWidgetState: Function;
+  // (HK) TODO: Function to actual type
   sendBackMsg: Function;
+  // (HK) TODO: Function to actual type
   setWidgetState: Function;
   width: number;
 }
 
 interface State extends StState {
-  value: any;
+  value: boolean;
 }
 
 class Checkbox extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const {element} = this.props
-    const value = element.get('checkbox').get('value')
-
+    const widgetId = this.props.element.get('id')
+    const value = this.props.element.get('checkbox').get('value')
     this.state = { value }
-    this.props.setWidgetState(element.get('id'), value)
+    this.props.setWidgetState(widgetId, value)
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const currentValue = e.target.checked
-    const id = e.target.id
+    const widgetId = e.target.id
+    const value = e.target.checked
 
-    this.setState({ value: currentValue })
-    this.props.setWidgetState(id, currentValue, () => {
+    this.setState({ value })
+    this.props.setWidgetState(widgetId, value, () => {
       this.props.sendBackMsg({
         type: 'widgetJson',
         widgetJson: JSON.stringify(this.props.getWidgetState())
@@ -46,24 +48,20 @@ class Checkbox extends PureStreamlitElement<Props, State> {
   }
 
   public safeRender(): React.ReactNode {
-    const {element} = this.props
-    const label = element.get('label')
-    const id = element.get('id')
-
-    const style = {
-      width: this.props.width,
-    }
+    const widgetId = this.props.element.get('id')
+    const label = this.props.element.get('label')
+    const style = { width: this.props.width }
 
     return (
       <div className="Widget row-widget stCheckbox">
         <Label style={style} check>
           <Input
             type="checkbox"
-            id={id}
+            id={widgetId}
             checked={this.state.value}
             onChange={this.handleChange}
           />
-          <span className="label">{ label }</span>
+          <span className="label">{label}</span>
         </Label>
       </div>
     )

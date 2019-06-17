@@ -37,8 +37,8 @@ import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 import 'assets/css/theme.scss'
 import './App.scss'
 
-import { whyDidYouUpdate } from 'why-did-you-update'
-whyDidYouUpdate(React)
+// import { whyDidYouUpdate } from 'why-did-you-update'
+// whyDidYouUpdate(React)
 
 
 class App extends PureComponent {

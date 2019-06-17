@@ -13,25 +13,25 @@ import {ReportRunState} from 'lib/ReportRunState'
 import './ReportView.scss'
 
 // Load (non-lazy) core elements.
-import Chart from '../../elements/Chart'
-import DocString from '../../elements/DocString'
-import ExceptionElement from '../../elements/ExceptionElement'
-import Table from '../../elements/Table'
-import Text from '../../elements/Text'
+import Chart from 'components/elements/Chart'
+import DocString from 'components/elements/DocString'
+import ExceptionElement from 'components/elements/ExceptionElement'
+import Table from 'components/elements/Table'
+import Text from 'components/elements/Text'
 
 // Lazy-load display elements.
-const Audio = React.lazy(() => import('../../elements/Audio/'))
-const Balloons = React.lazy(() => import('../../elements/Balloons/'))
-const DataFrame = React.lazy(() => import('../../elements/DataFrame/'))
-const ImageList = React.lazy(() => import('../../elements/ImageList/'))
-const MapElement = React.lazy(() => import('../../elements/Map/'))
-const DeckGlChart = React.lazy(() => import('../../elements/DeckGlChart/'))
-const BokehChart = React.lazy(() => import('../../elements/BokehChart/'))
-const GraphVizChart = React.lazy(() => import('../../elements/GraphVizChart/'))
-const PlotlyChart = React.lazy(() => import('../../elements/PlotlyChart/'))
-const VegaLiteChart = React.lazy(() => import('../../elements/VegaLiteChart/'))
-const Video = React.lazy(() => import('../../elements/Video'))
-const Widget = React.lazy(() => import('../../elements/Widget'))
+const Audio = React.lazy(() => import('components/elements/Audio/'))
+const Balloons = React.lazy(() => import('components/elements/Balloons/'))
+const DataFrame = React.lazy(() => import('components/elements/DataFrame/'))
+const ImageList = React.lazy(() => import('components/elements/ImageList/'))
+const MapElement = React.lazy(() => import('components/elements/Map/'))
+const DeckGlChart = React.lazy(() => import('components/elements/DeckGlChart/'))
+const BokehChart = React.lazy(() => import('components/elements/BokehChart/'))
+const GraphVizChart = React.lazy(() => import('components/elements/GraphVizChart/'))
+const PlotlyChart = React.lazy(() => import('components/elements/PlotlyChart/'))
+const VegaLiteChart = React.lazy(() => import('components/elements/VegaLiteChart/'))
+const Video = React.lazy(() => import('components/elements/Video'))
+const Widget = React.lazy(() => import('components/elements/Widget'))
 
 type Element = ImmutableMap<string, any>; // a report Element
 
@@ -56,25 +56,17 @@ interface Props {
   sendBackMsg: Function;
 }
 
-
-/*
 interface State {
-  widgetState: any;
+  widgetState: Object;
 }
-*/
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
-export class ReportView extends PureComponent<Props> {
+export class ReportView extends PureComponent<Props, State> {
   private elementsToRender: Iterable<number, Element | undefined> = List<Element>();
-
-  public constructor(props: Props){
-    super(props)
-
-    this.state = {
-      widgetState: {},
-    }
+  public state = {
+    widgetState: {}
   }
 
   public render(): ReactNode {
@@ -156,17 +148,12 @@ export class ReportView extends PureComponent<Props> {
   }
 
   private getWidgetState = () => {
-    // @ts-ignore
     return this.state.widgetState
   }
 
-  // @ts-ignore
-  private setWidgetState = (key, value, callback) => {
-    // @ts-ignore
+  private setWidgetState = (key: string, value: any, callback?: () => void) => {
     this.setState(state => ({
-      // @ts-ignore
       widgetState: {
-        // @ts-ignore
         ...state.widgetState,
         [key]: value
       }
@@ -179,24 +166,24 @@ export class ReportView extends PureComponent<Props> {
     }
 
     return dispatchOneOf(element, 'type', {
-      audio: (el: Element) => <Audio element={el} width={width}/>,
-      balloons: (el: Element) => <Balloons element={el} width={width}/>,
-      bokehChart: (el: Element) => <BokehChart element={el} id={index} width={width}/>,
-      chart: (el: Element) => <Chart element={el} width={width}/>,
-      dataFrame: (el: Element) => <DataFrame element={el} width={width}/>,
-      deckGlChart: (el: Element) => <DeckGlChart element={el} width={width}/>,
-      docString: (el: Element) => <DocString element={el} width={width}/>,
+      audio: (el: Element) => <Audio element={el} width={width} />,
+      balloons: (el: Element) => <Balloons element={el} width={width} />,
+      bokehChart: (el: Element) => <BokehChart element={el} id={index} width={width} />,
+      chart: (el: Element) => <Chart element={el} width={width} />,
+      dataFrame: (el: Element) => <DataFrame element={el} width={width} />,
+      deckGlChart: (el: Element) => <DeckGlChart element={el} width={width} />,
+      docString: (el: Element) => <DocString element={el} width={width} />,
       empty: () => undefined,
-      exception: (el: Element) => <ExceptionElement element={el} width={width}/>,
+      exception: (el: Element) => <ExceptionElement element={el} width={width} />,
       graphvizChart: (el: Element) => <GraphVizChart element={el} id={index} width={width} />,
-      imgs: (el: Element) => <ImageList element={el} width={width}/>,
-      map: (el: Element) => <MapElement element={el} width={width}/>,
-      plotlyChart: (el: Element) => <PlotlyChart element={el} width={width}/>,
-      progress: (el: Element) => <Progress value={el.get('value')} style={{width}}/>,
-      table: (el: Element) => <Table element={el} width={width}/>,
-      text: (el: Element) => <Text element={el} width={width}/>,
-      vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width}/>,
-      video: (el: Element) => <Video element={el} width={width}/>,
+      imgs: (el: Element) => <ImageList element={el} width={width} />,
+      map: (el: Element) => <MapElement element={el} width={width} />,
+      plotlyChart: (el: Element) => <PlotlyChart element={el} width={width} />,
+      progress: (el: Element) => <Progress value={el.get('value')} style={{width}} />,
+      table: (el: Element) => <Table element={el} width={width} />,
+      text: (el: Element) => <Text element={el} width={width} />,
+      vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width} />,
+      video: (el: Element) => <Video element={el} width={width} />,
       widget: (el: Element) => (
         <Widget
           element={el}

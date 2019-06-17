@@ -4,31 +4,28 @@
  */
 
 import React from 'react'
-import {Button as UIButton} from 'reactstrap'
-import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StState} from 'components/shared/StreamlitElement/'
+import { Button as UIButton } from 'reactstrap'
+import { Map as ImmutableMap } from 'immutable'
+import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
+  // (HK) TODO: Function to actual type
   getWidgetState: Function;
+  // (HK) TODO: Function to actual type
   sendBackMsg: Function;
+  // (HK) TODO: Function to actual type
   setWidgetState: Function;
   width: number;
 }
 
-interface State extends StState {
-  value: any;
-}
-
-class Button extends PureStreamlitElement<Props, State> {
+class Button extends PureStreamlitElement<Props, StState> {
   public constructor(props: Props) {
     super(props)
 
-    const {element} = this.props
+    const widgetId = this.props.element.get('id')
     const value = false
-
-    this.state = { value }
-    this.props.setWidgetState(element.get('id'), value)
+    this.props.setWidgetState(widgetId, value)
   }
 
   private handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -43,19 +40,14 @@ class Button extends PureStreamlitElement<Props, State> {
   }
 
   public safeRender(): React.ReactNode {
-    const {element} = this.props
-    const label = element.get('label')
-    const id = element.get('id')
-
-    const style = {
-      width: this.props.width,
-    }
+    const widgetId = this.props.element.get('id')
+    const label = this.props.element.get('label')
+    const style = { width: this.props.width }
 
     return (
-      // @ts-ignore
       <div className="Widget row-widget stButton">
-        <UIButton id={id} style={style} onClick={this.handleClick}>
-          { label }
+        <UIButton id={widgetId} style={style} onClick={this.handleClick}>
+          {label}
         </UIButton>
       </div>
     )
