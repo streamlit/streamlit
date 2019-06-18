@@ -28,6 +28,9 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import os
+import threading
+
+from blinker import Signal, ANY
 
 from streamlit.watcher import util
 from watchdog import events
@@ -62,6 +65,7 @@ class EventBasedFileWatcher(object):
         """
         file_path = os.path.abspath(file_path)
         self._file_path = file_path
+        self._on_file_changed = on_file_changed
 
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.watch_file(file_path, on_file_changed)
@@ -70,7 +74,7 @@ class EventBasedFileWatcher(object):
     def close(self):
         """Stop watching the file system."""
         file_watcher = _MultiFileWatcher.get_singleton()
-        file_watcher.stop_watching_file(self._file_path)
+        file_watcher.stop_watching_file(self._file_path, self._on_file_changed)
 
 
 class _MultiFileWatcher(object):
@@ -80,7 +84,7 @@ class _MultiFileWatcher(object):
 
     @classmethod
     def get_singleton(cls):
-        """Return the singleton DeltaConnection object.
+        """Return the singleton _MultiFileWatcher object.
 
         Instantiates one if necessary.
         """
@@ -103,6 +107,9 @@ class _MultiFileWatcher(object):
 
         # Map of folder_to_watch -> _FolderEventHandler.
         self._folder_handlers = {}
+
+        # Used for mutation of _folder_handlers dict
+        self._lock = threading.Lock()
 
         # The Observer object from the Watchdog module. Since this class is
         # only instantiated once, we only have a single Observer in Streamlit,
@@ -128,23 +135,25 @@ class _MultiFileWatcher(object):
         file_path : str
             The full path of the file to watch.
 
-        callback : callable
+        callback : Callable
             The function to execute when the file is changed.
 
         """
         folder_path = os.path.abspath(os.path.dirname(file_path))
-        folder_handler = self._folder_handlers.get(folder_path)
 
-        if folder_handler is None:
-            folder_handler = _FolderEventHandler()
-            self._folder_handlers[folder_path] = folder_handler
+        with self._lock:
+            folder_handler = self._folder_handlers.get(folder_path)
 
-            folder_handler.watch = self._observer.schedule(
-                folder_handler, folder_path, recursive=False)
+            if folder_handler is None:
+                folder_handler = _FolderEventHandler()
+                self._folder_handlers[folder_path] = folder_handler
 
-        folder_handler.add_file_change_listener(file_path, callback)
+                folder_handler.watch = self._observer.schedule(
+                    folder_handler, folder_path, recursive=False)
 
-    def stop_watching_file(self, file_path):
+            folder_handler.add_file_change_listener(file_path, callback)
+
+    def stop_watching_file(self, file_path, callback):
         """Stop watching a file.
 
         Parameters
@@ -152,21 +161,26 @@ class _MultiFileWatcher(object):
         file_path : str
             The full path of the file to stop watching.
 
+        callback : Callable
+            The function to execute when the file is changed.
+
         """
         folder_path = os.path.abspath(os.path.dirname(file_path))
-        folder_handler = self._folder_handlers.get(folder_path)
 
-        if folder_handler is None:
-            LOGGER.debug(
-                'Cannot stop watching path, because it is already not being '
-                'watched. %s', folder_path)
-            return
+        with self._lock:
+            folder_handler = self._folder_handlers.get(folder_path)
 
-        folder_handler.remove_file_change_listener(file_path)
+            if folder_handler is None:
+                LOGGER.debug(
+                    'Cannot stop watching path, because it is already not being '
+                    'watched. %s', folder_path)
+                return
 
-        if not folder_handler.is_watching_files():
-            self._observer.unschedule(folder_handler.watch)
-            del self._folder_handlers[folder_path]
+            folder_handler.remove_file_change_listener(file_path, callback)
+
+            if not folder_handler.is_watching_files():
+                self._observer.unschedule(folder_handler.watch)
+                del self._folder_handlers[folder_path]
 
     def close(self):
         """Close this _MultiFileWatcher object forever."""
@@ -183,10 +197,11 @@ class _MultiFileWatcher(object):
 
 
 class WatchedFile(object):
-    def __init__(self, md5, modification_time, fn):
+    """Emits notifications when a single file is modified."""
+    def __init__(self, md5, modification_time):
         self.md5 = md5
         self.modification_time = modification_time
-        self.fn = fn
+        self.on_file_changed = Signal()
 
 
 class _FolderEventHandler(events.FileSystemEventHandler):
@@ -205,9 +220,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         """Constructor."""
         super(_FolderEventHandler, self).__init__()
         self._watched_files = {}
-
-        # A watchdog.Watch instance.
-        self.watch = None
+        self._lock = threading.Lock()  # for watched_files mutations
 
     def add_file_change_listener(self, file_path, callback):
         """Add a file to this object's event filter.
@@ -218,28 +231,34 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         callback : Callable
 
         """
-        if file_path in self._watched_files:
-            LOGGER.debug('Already watching file: %s', file_path)
-            return
+        with self._lock:
+            watched_file = self._watched_files.get(file_path, None)
+            if watched_file is None:
+                md5 = util.calc_md5_with_blocking_retries(file_path)
+                modification_time = os.stat(file_path).st_mtime
+                watched_file = WatchedFile(
+                    md5=md5, modification_time=modification_time)
+                self._watched_files[file_path] = watched_file
 
-        md5 = util.calc_md5_with_blocking_retries(file_path)
-        modification_time = os.stat(file_path).st_mtime
+            watched_file.on_file_changed.connect(callback, weak=False)
 
-        self._watched_files[file_path] = WatchedFile(
-            md5=md5, modification_time=modification_time, fn=callback)
-
-    def remove_file_change_listener(self, file_path):
+    def remove_file_change_listener(self, file_path, callback):
         """Remove a file from this object's event filter.
 
         Parameters
         ----------
         file_path : str
+        callback : Callable
 
         """
-        if file_path not in self._watched_files:
-            return
+        with self._lock:
+            watched_file = self._watched_files.get(file_path, None)
+            if watched_file is None:
+                return
 
-        del self._watched_files[file_path]
+            watched_file.on_file_changed.disconnect(callback)
+            if not watched_file.on_file_changed.has_receivers_for(ANY):
+                del self._watched_files[file_path]
 
     def is_watching_file(self, file_path):
         """Return true if this object is watching the given file."""
@@ -283,13 +302,12 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         file_path = os.path.abspath(file_path)
 
-        if file_path not in self._watched_files:
+        file_info = self._watched_files.get(file_path, None)
+        if file_info is None:
             LOGGER.debug(
                 'Ignoring file %s.\nWatched_files: %s',
                 file_path, self._watched_files)
             return
-
-        file_info = self._watched_files[file_path]
 
         modification_time = os.stat(file_path).st_mtime
         if modification_time == file_info.modification_time:
@@ -305,7 +323,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         LOGGER.debug('File MD5 changed: %s', file_path)
         file_info.md5 = new_md5
-        file_info.fn(file_path)
+        file_info.on_file_changed.send(file_path)
 
     def on_created(self, event):
         if event.is_directory:
