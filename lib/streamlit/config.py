@@ -1014,7 +1014,9 @@ def on_config_parsed(func):
     if config_file_has_been_parsed:
         func()
     else:
-        _on_config_parsed.connect(lambda _: func())
+        # weak=False, because we're using an anonymous lambda that
+        # goes out of scope immediately.
+        _on_config_parsed.connect(lambda _: func(), weak=False)
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid
