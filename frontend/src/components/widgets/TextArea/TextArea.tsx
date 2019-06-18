@@ -23,7 +23,7 @@ class TextArea extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const value = this.props.element.get('textArea').get('value')
+    const value = this.props.element.get('value')
     this.state = { value }
   }
 

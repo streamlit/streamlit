@@ -122,7 +122,10 @@ def _widget(f):
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
         id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
-        element.widget.id = id
+
+        el = getattr(element, f.__name__)
+        el.id = id
+
         ui_value = Widgets.get_current().get(id)
         return f(dg, element, ui_value, *args, **kwargs)
     return wrapper
@@ -1140,18 +1143,18 @@ class DeltaGenerator(object):
     def button(self, element, ui_value, label):
         """Button doc string."""
         # Reset the button state
-        Widgets.get_current().set_item(element.widget.id, False)
+        Widgets.get_current().set_item(element.button.id, False)
         current_value = ui_value if ui_value is not None else False
-        element.widget.label = label
-        element.widget.button.value = False
+        element.button.label = label
+        element.button.value = False
         return current_value
 
     @_widget
     def checkbox(self, element, ui_value, label, value=False):
         """Checkbox doc string."""
         current_value = ui_value if ui_value is not None else value
-        element.widget.label = label
-        element.widget.checkbox.value = current_value
+        element.checkbox.label = label
+        element.checkbox.value = current_value
         return current_value
 
     @_widget
@@ -1159,19 +1162,19 @@ class DeltaGenerator(object):
         """Slider doc string."""
         # TODO: Support floats.
         current_value = ui_value if ui_value is not None else value
-        element.widget.label = label
-        element.widget.slider.min = min
-        element.widget.slider.max = max
-        element.widget.slider.step = step
-        element.widget.slider.value = current_value
+        element.slider.label = label
+        element.slider.min = min
+        element.slider.max = max
+        element.slider.step = step
+        element.slider.value = current_value
         return current_value
 
     @_widget
     def text_area(self, element, ui_value, label, value=''):
         """Text box doc string."""
         current_value = ui_value if ui_value is not None else value
-        element.widget.label = label
-        element.widget.text_area.value = current_value
+        element.text_area.label = label
+        element.text_area.value = current_value
         return current_value
 
     @_with_element

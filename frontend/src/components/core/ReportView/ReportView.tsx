@@ -11,6 +11,7 @@ import {dispatchOneOf} from 'lib/immutableProto'
 import {Text as TextProto} from 'autogen/protobuf'
 import {ReportRunState} from 'lib/ReportRunState'
 import './ReportView.scss'
+import './Widget.scss'
 
 // Load (non-lazy) core elements.
 import Chart from 'components/elements/Chart'
@@ -18,6 +19,12 @@ import DocString from 'components/elements/DocString'
 import ExceptionElement from 'components/elements/ExceptionElement'
 import Table from 'components/elements/Table'
 import Text from 'components/elements/Text'
+
+// Lazy-load display widgets.
+const Button = React.lazy(() => import('components/widgets/Button/'))
+const Checkbox = React.lazy(() => import('components/widgets/Checkbox/'))
+const Slider = React.lazy(() => import('components/widgets/Slider/'))
+const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
 
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('components/elements/Audio/'))
@@ -31,7 +38,6 @@ const GraphVizChart = React.lazy(() => import('components/elements/GraphVizChart
 const PlotlyChart = React.lazy(() => import('components/elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('components/elements/VegaLiteChart/'))
 const Video = React.lazy(() => import('components/elements/Video'))
-const Widget = React.lazy(() => import('components/elements/Widget'))
 
 type Element = ImmutableMap<string, any>; // a report Element
 
@@ -145,6 +151,8 @@ export class ReportView extends PureComponent<Props> {
       throw new Error('Transmission error.')
     }
 
+    const {sendBackMsg} = this.props
+
     return dispatchOneOf(element, 'type', {
       audio: (el: Element) => <Audio element={el} width={width} />,
       balloons: (el: Element) => <Balloons element={el} width={width} />,
@@ -164,13 +172,10 @@ export class ReportView extends PureComponent<Props> {
       text: (el: Element) => <Text element={el} width={width} />,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width} />,
       video: (el: Element) => <Video element={el} width={width} />,
-      widget: (el: Element) => (
-        <Widget
-          element={el}
-          width={width}
-          sendBackMsg={this.props.sendBackMsg}
-        />
-      ),
+      button: (el: Element) => <Button element={el} width={width} sendBackMsg={sendBackMsg} />,
+      checkbox: (el: Element) => <Checkbox element={el} width={width} sendBackMsg={sendBackMsg} />,
+      slider: (el: Element) => <Slider element={el} width={width} sendBackMsg={sendBackMsg} />,
+      textArea: (el: Element) => <TextArea element={el} width={width} sendBackMsg={sendBackMsg} />,
     })
   }
 }

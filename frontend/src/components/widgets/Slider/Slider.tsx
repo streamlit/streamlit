@@ -23,7 +23,7 @@ class Slider extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const value = this.props.element.get('slider').get('value')
+    const value = this.props.element.get('value')
     this.state = { value }
   }
 
@@ -41,10 +41,9 @@ class Slider extends PureStreamlitElement<Props, State> {
   public safeRender(): React.ReactNode {
     const widgetId = this.props.element.get('id')
     const label = this.props.element.get('label')
-    const data = this.props.element.get('slider')
-    const min = data.get('min')
-    const max = data.get('max')
-    const step = data.get('step')
+    const min = this.props.element.get('min')
+    const max = this.props.element.get('max')
+    const step = this.props.element.get('step')
     const style = { width: this.props.width }
 
     return (

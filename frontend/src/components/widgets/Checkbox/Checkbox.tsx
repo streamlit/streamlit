@@ -23,7 +23,7 @@ class Checkbox extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const value = this.props.element.get('checkbox').get('value')
+    const value = this.props.element.get('value')
     this.state = { value }
   }
 
