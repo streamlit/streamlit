@@ -117,16 +117,6 @@ class _MultiFileWatcher(object):
         self._observer = Observer()
         self._observer.start()  # Start observer thread.
 
-    def is_watching_file(self, file_path):
-        """Return whether the file is currently being watched."""
-        folder_path = os.path.abspath(os.path.dirname(file_path))
-        folder_handler = self._folder_handlers.get(folder_path)
-
-        if folder_handler is None:
-            return False
-
-        return folder_handler.is_watching_file(file_path)
-
     def watch_file(self, file_path, callback):
         """Start watching a file.
 
@@ -259,10 +249,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             watched_file.on_file_changed.disconnect(callback)
             if not watched_file.on_file_changed.has_receivers_for(ANY):
                 del self._watched_files[file_path]
-
-    def is_watching_file(self, file_path):
-        """Return true if this object is watching the given file."""
-        return file_path in self._watched_files
 
     def is_watching_files(self):
         """Return true if this object has 1+ files in its event filter."""
