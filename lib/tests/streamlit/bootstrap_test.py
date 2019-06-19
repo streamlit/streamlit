@@ -38,7 +38,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, 'get_option', new=mock_get_option), \
             patch.object(
                 config, 'is_manually_set', new=mock_is_manually_set):
-            bootstrap._print_url(report)
+            bootstrap._print_url()
 
         out = sys.stdout.getvalue()
         self.assertTrue('URL: http://the-address' in out)
@@ -59,7 +59,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, 'get_option', new=mock_get_option), \
             patch.object(
                 config, 'is_manually_set', new=mock_is_manually_set):
-            bootstrap._print_url(report)
+            bootstrap._print_url()
 
         out = sys.stdout.getvalue()
         self.assertTrue('Network URL: http://internal-ip' in out)
@@ -77,7 +77,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, 'get_option', new=mock_get_option), \
             patch.object(
                 config, 'is_manually_set', new=mock_is_manually_set):
-            bootstrap._print_url(report)
+            bootstrap._print_url()
 
         out = sys.stdout.getvalue()
         self.assertTrue('Local URL: http://localhost' in out)

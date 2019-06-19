@@ -11,13 +11,12 @@ import functools
 import io
 import json
 import random
-import sys
 import textwrap
 import traceback
 import uuid
 
 from streamlit import protobuf
-from streamlit.widgets import Widgets
+from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
@@ -117,13 +116,19 @@ def _with_element(method):
 
     return wrapped_method
 
+
 def _widget(f):
     @_wraps_with_cleaned_sig(f)
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
-        id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
-        element.widget.id = id
-        ui_value = Widgets.get_current().get_widget_value(id)
+        ctx = get_report_ctx()
+
+        widget_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
+        element.widget.id = widget_id
+        ui_value = (
+            ctx.widgets.get_widget_value(widget_id) if ctx else None
+        )
+
         return f(dg, element, ui_value, *args, **kwargs)
     return wrapper
 

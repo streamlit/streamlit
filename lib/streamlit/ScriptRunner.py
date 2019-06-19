@@ -5,15 +5,17 @@ import sys
 import threading
 from collections import deque
 from collections import namedtuple
+from contextlib import contextmanager
 
 from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
-from streamlit.widgets import Widgets
-from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
-
+from streamlit.ReportThread import ReportThread
 from streamlit.logger import get_logger
+from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
+from streamlit.widgets import Widgets
+
 LOGGER = get_logger(__name__)
 
 
@@ -141,6 +143,7 @@ class ScriptRunner(object):
         self._event_queue = ScriptEventQueue()
         self._state = ScriptState.STOPPED
         self._last_run_data = RerunData(argv=report.argv, widget_state={})
+        self._widgets = Widgets()
 
         self.run_on_save = config.get_option('server.runOnSave')
 
@@ -171,11 +174,46 @@ class ScriptRunner(object):
         # Will be set to true when we process a SHUTDOWN event
         self._shutdown_requested = False
 
+        self._script_thread = None
+        self._ctx = None
+
+        # Set to true while we're executing. Used by
+        # maybe_handle_execution_control_request.
+        self._execing = False
+
+    @property
+    def widgets(self):
+        """
+        Returns
+        -------
+        Widgets
+            Our widget state dictionary
+
+        """
+        return self._widgets
+
+    def start_run_loop(self, ctx):
+        """Starts the ScriptRunner's thread.
+
+        This must be called only once.
+
+        Parameters
+        ----------
+        ctx : ReportContext
+            The ReportContext that owns this ScriptRunner. This will be
+            attached to the ScriptRunner's runloop thread.
+
+        """
+
+        assert self._script_thread is None, 'Already started!'
+        self._ctx = ctx
+
         # start our thread
-        self._run_loop_thread = threading.Thread(
+        self._script_thread = ReportThread(
+            ctx,
             target=self._loop,
             name='ScriptRunner.loop')
-        self._run_loop_thread.start()
+        self._script_thread.start()
 
     def _set_state(self, new_state):
         if self._state == new_state:
@@ -226,11 +264,18 @@ class ScriptRunner(object):
         self._event_queue.enqueue(ScriptEvent.SHUTDOWN)
 
     def maybe_handle_execution_control_request(self):
-        if self._run_loop_thread != threading.current_thread():
+        if self._script_thread != threading.current_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
             # be enqueued (and, therefore, for this function to be called)
             # in separate threads, so we check for that here.
+            return
+
+        if not self._execing:
+            # If the _execing flag is not set, we're not actually inside
+            # an exec() call. This happens when our script exec() completes,
+            # we change our state to STOPPED, and a statechange-listener
+            # enqueues a new ForwardEvent
             return
 
         # Pop the next event from our queue. Don't block if there's no event
@@ -245,14 +290,15 @@ class ScriptRunner(object):
             self._shutdown_requested = True
             raise StopException()
         elif event == ScriptEvent.RERUN:
-            raise RerunException(event_data)
+            raise RerunException()
         else:
             raise RuntimeError('Unrecognized ScriptEvent: %s' % event)
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self.run_on_save:
-            self._event_queue.enqueue(ScriptEvent.RERUN, self._report)
+            self._event_queue.enqueue(ScriptEvent.RERUN,
+                                      RerunData(argv=None, widget_state=None))
         else:
             self.on_file_change_not_handled.send()
 
@@ -279,6 +325,9 @@ class ScriptRunner(object):
             else:
                 raise RuntimeError('Unrecognized ScriptEvent: %s' % event)
 
+        # Release resources
+        self._local_sources_watcher.close()
+
         self._set_state(ScriptState.IS_SHUTDOWN)
 
     def _install_tracer(self):
@@ -291,6 +340,18 @@ class ScriptRunner(object):
         # Python interpreters are not required to implement sys.settrace.
         if hasattr(sys, 'settrace'):
             sys.settrace(trace_calls)
+
+    @contextmanager
+    def _set_execing_flag(self):
+        """A context for setting the ScriptRunner._execing flag.
+
+        Used by maybe_handle_execution_control_request to ensure that
+        we only handle requests while we're inside an exec() call
+        """
+        prev_value = self._execing
+        self._execing = True
+        yield
+        self._execing = prev_value
 
     def _run_script(self, rerun_data):
         """Run our script.
@@ -357,14 +418,14 @@ class ScriptRunner(object):
         self._last_run_data = RerunData(argv, widget_state)
 
         # Update the Widget singleton with the new widget_state
-        Widgets.get_current().set_state(widget_state)
+        self._ctx.widgets.set_state(widget_state)
 
         if config.get_option('runner.installTracer'):
             self._install_tracer()
 
-        # This will be set to a RerunData instance if our
-        # execution is interrupted by a RerunException.
-        rerun_request = None
+        # This will be set to True if our execution is interrupted by a
+        # RerunException.
+        rerun_requested = False
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -382,18 +443,18 @@ class ScriptRunner(object):
             # asked them to be via the GUI.
             # IMPORTANT: This means we can't count on sys.argv in our code ---
             # but we already knew it from the argv surgery in cli.py.
-            # TODO: Remove this feature when we implement interactivity! This is
-            # not robust in a multi-user environment.
+            # TODO: Remove this feature when we implement interactivity!
+            #  This is not robust in a multi-user environment.
             sys.argv = argv
 
-            # Add special variables to the module's dict.
+            # Add special variables to the module's globals dict.
             module.__dict__['__file__'] = self._report.script_path
 
-            with modified_sys_path(self._report):
+            with modified_sys_path(self._report), self._set_execing_flag():
                 exec(code, module.__dict__)
 
-        except RerunException as e:
-            rerun_request = e.rerun_data
+        except RerunException:
+            rerun_requested = True
 
         except StopException:
             pass
@@ -410,8 +471,8 @@ class ScriptRunner(object):
         self._local_sources_watcher.update_watched_modules()
         _clean_problem_modules()
 
-        if rerun_request is not None:
-            self._run_script(rerun_request)
+        if rerun_requested:
+            self._run_script(RerunData(argv=None, widget_state=None))
 
 
 class ScriptControlException(BaseException):
@@ -426,13 +487,7 @@ class StopException(ScriptControlException):
 
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
-    def __init__(self, rerun_data):
-        """
-        Parameters
-        ----------
-        rerun_data : RerunData
-        """
-        self.rerun_data = rerun_data
+    pass
 
 
 def _clean_problem_modules():

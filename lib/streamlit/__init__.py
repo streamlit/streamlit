@@ -71,6 +71,7 @@ import types as _types
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
+from streamlit.ReportThread import get_report_ctx, add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
@@ -79,10 +80,6 @@ from streamlit.caching import cache  # noqa: F401
 
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
-
-# Root delta generator for this Streamlit report.
-# This gets overwritten in bootstrap.py and in tests.
-_delta_generator = _NULL_DELTA_GENERATOR
 
 
 def _set_log_level():
@@ -99,10 +96,9 @@ _config.on_config_parsed(_set_log_level)
 def _with_dg(method):
     @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        if _delta_generator is _NULL_DELTA_GENERATOR:
-            _maybe_print_repl_warning()
-
-        return method(_delta_generator, *args, **kwargs)
+        ctx = get_report_ctx()
+        dg = ctx.root_dg if ctx is not None else _NULL_DELTA_GENERATOR
+        return method(dg, *args, **kwargs)
     return wrapped_method
 
 
@@ -411,7 +407,7 @@ def spinner(text='In progress...'):
                 if display_message:
                     message.warning(str(text))
 
-        _threading.Timer(DELAY_SECS, set_message).start()
+        add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
