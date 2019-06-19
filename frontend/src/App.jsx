@@ -77,13 +77,7 @@ class App extends PureComponent {
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
-
-    // TODO: move widget throttle into WidgetStateManager
-    this.widgetMgr = new WidgetStateManager(this.sendThrottledWidgetBackMsg)
-
-    // Widget-throttle bits. TODO: cleanup or remove!
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
+    this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
   }
 
   /**
@@ -539,41 +533,6 @@ class App extends PureComponent {
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
-  }
-
-  /**
-   * A quick hack to throttle widget-related BackMsgs
-   * TODO: remove me post-May 2019 hackathon!
-   */
-  sendThrottledWidgetBackMsg = (msg) => {
-    const THROTTLE_MS = 400
-
-    this.latestWidgetBackMsg = msg
-
-    if (this.widgetThrottleTimer != null) {
-      // A timer is already running. It'll send this BackMsg when
-      // it wakes up
-      return
-    }
-
-    const delta = Date.now() - this.lastBackMsgTime
-    if (delta >= THROTTLE_MS) {
-      // We can send our message immediately
-      this.sendLatestWidgetBackMsg()
-    } else {
-      // Schedule our throttle timer
-      this.widgetThrottleTimer = window.setTimeout(
-        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
-    }
-  }
-
-  sendLatestWidgetBackMsg = () => {
-    if (this.latestWidgetBackMsg != null) {
-      this.sendBackMsg(this.latestWidgetBackMsg)
-      this.lastBackMsgTime = Date.now()
-    }
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
   }
 
   /**

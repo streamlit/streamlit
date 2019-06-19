@@ -6,16 +6,18 @@ import {BackMsg, IBackMsg, WidgetState, WidgetStates} from 'autogen/protobuf'
 export class WidgetStateManager {
   /** Called to deliver a message to the server */
   private readonly sendBackMsg: (msg: IBackMsg) => void
+
   private readonly widgetStates: Map<string, WidgetState> = new Map<string, WidgetState>()
+  private latestPendingMessage?: IBackMsg
+  private widgetThrottleTimer?: number
+  private lastBackMsgTime: number = 0
 
   public constructor(sendBackMsg: (msg: any) => void) {
     this.sendBackMsg = sendBackMsg
   }
 
-  public setTriggerValue(widgetId: string): void {
-    this.getOrCreateWidgetStateProto(widgetId).triggerValue = true
-    this.sendUpdateWidgetsMessage()
-    this.getOrCreateWidgetStateProto(widgetId).triggerValue = false
+  public setTriggerValue(widgetId: string, value: boolean): void {
+    this.getOrCreateWidgetStateProto(widgetId).triggerValue = value
   }
 
   public setBoolValue(widgetId: string, value: boolean): void {
@@ -35,7 +37,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendBackMsg(BackMsg.create({updateWidgets: this.createWigetStatesMsg()}))
+    this.sendThrottledBackMsg(BackMsg.create({updateWidgets: this.createWigetStatesMsg()}))
   }
 
   private createWigetStatesMsg(): WidgetStates {
@@ -59,6 +61,37 @@ export class WidgetStateManager {
 
   private getWidgetStateProto(id: string): WidgetState | undefined {
     return this.widgetStates.get(id)
+  }
+
+  private sendThrottledBackMsg(msg: IBackMsg): void {
+    const THROTTLE_MS = 400
+
+    this.latestPendingMessage = msg
+
+    if (this.widgetThrottleTimer !== undefined) {
+      // A timer is already running. It'll send this BackMsg when
+      // it wakes up
+      return
+    }
+
+    const delta = Date.now() - this.lastBackMsgTime
+    if (delta >= THROTTLE_MS) {
+      // We can send our message immediately
+      this.sendLatestWidgetBackMsg()
+    } else {
+      // Schedule our throttle timer
+      this.widgetThrottleTimer = window.setTimeout(
+        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
+    }
+  }
+
+  private sendLatestWidgetBackMsg = (): void => {
+    if (this.latestPendingMessage != null) {
+      this.sendBackMsg(this.latestPendingMessage)
+      this.lastBackMsgTime = Date.now()
+    }
+    this.latestPendingMessage = undefined
+    this.widgetThrottleTimer = undefined
   }
 
 }
