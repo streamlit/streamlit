@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import base58
+import copy
 import json
 import os
 import uuid
@@ -142,7 +143,7 @@ class Report(object):
         LOGGER.debug('Serializing final report')
 
         messages = [
-            msg for msg in self._master_queue
+            copy.deepcopy(msg) for msg in self._master_queue
             if _should_save_report_msg(msg)
         ]
 
@@ -150,6 +151,7 @@ class Report(object):
         num_deltas = 0
         for idx in range(len(messages)):
             if messages[idx].HasField('delta'):
+                messages[idx].delta.id = num_deltas
                 if num_deltas == 0:
                     first_delta_index = idx
                 num_deltas += 1
