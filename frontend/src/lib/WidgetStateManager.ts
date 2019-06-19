@@ -12,7 +12,7 @@ export class WidgetStateManager {
   private widgetThrottleTimer?: number
   private lastBackMsgTime: number = 0
 
-  public constructor(sendBackMsg: (msg: any) => void) {
+  public constructor(sendBackMsg: (msg: IBackMsg) => void) {
     this.sendBackMsg = sendBackMsg
   }
 
