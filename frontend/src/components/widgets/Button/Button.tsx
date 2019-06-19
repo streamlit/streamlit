@@ -4,7 +4,8 @@
  */
 
 import React from 'react'
-import { Button as UIButton } from 'reactstrap'
+// @ts-ignore
+import { Button as UIButton } from 'baseui/button'
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
@@ -29,8 +30,8 @@ class Button extends PureStreamlitElement<Props, StState> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget row-widget stButton">
-        <UIButton id={widgetId} style={style} onClick={this.handleClick}>
+      <div className="Widget row-widget stButton" style={style} >
+        <UIButton id={widgetId} onClick={this.handleClick}>
           {label}
         </UIButton>
       </div>

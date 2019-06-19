@@ -4,10 +4,10 @@
  */
 
 import React from 'react'
-import { Input, Label } from 'reactstrap'
+// @ts-ignore
+import { Checkbox as UICheckbox } from 'baseui/checkbox';
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
-import './Checkbox.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -20,40 +20,37 @@ interface State extends StState {
 }
 
 class Checkbox extends PureStreamlitElement<Props, State> {
+  private widgetId: string
+
   public constructor(props: Props) {
     super(props)
 
-    const value = this.props.element.get('value')
-    this.state = { value }
+    // Re-review the setting of the widget Id.
+    // Compare with the Button which does things differently
+    this.widgetId = this.props.element.get('id')
+    console.log(this.widgetId)
+    this.state = { value: this.props.element.get('value') }
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const widgetId = e.target.id
     const value = e.target.checked
 
     this.setState({ value })
     this.props.sendBackMsg({
       type: 'widgetJson',
-      widgetJson: JSON.stringify({ [widgetId]: value })
+      widgetJson: JSON.stringify({ [this.widgetId]: value })
     })
   }
 
   public safeRender(): React.ReactNode {
-    const widgetId = this.props.element.get('id')
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget row-widget stCheckbox">
-        <Label style={style} check>
-          <Input
-            type="checkbox"
-            id={widgetId}
-            checked={this.state.value}
-            onChange={this.handleChange}
-          />
-          <span className="label">{label}</span>
-        </Label>
+      <div className="Widget row-widget stCheckbox" style={style}>
+        <UICheckbox checked={this.state.value} onChange={this.handleChange}>
+          {label}
+        </UICheckbox>
       </div>
     )
   }

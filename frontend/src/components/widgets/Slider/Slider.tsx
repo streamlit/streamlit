@@ -4,7 +4,8 @@
  */
 
 import React from 'react'
-import { Input, Label } from 'reactstrap'
+// @ts-ignore
+import {Slider as UISlider} from 'baseui/slider';
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './Slider.scss'
@@ -16,25 +17,26 @@ interface Props {
 }
 
 interface State extends StState {
-  value: number;
+  value: number[];
 }
 
 class Slider extends PureStreamlitElement<Props, State> {
+  private widgetId: string
+
   public constructor(props: Props) {
     super(props)
 
+    this.widgetId = this.props.element.get('id')
+
     const value = this.props.element.get('value')
-    this.state = { value }
+    this.state = { value: [value] }
   }
 
-  private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const widgetId = e.target.id
-    const value = parseInt(e.target.value, 10)
-
-    this.setState({ value })
+  private handleChange = (e: any) => {
+    this.setState({ value: e.value })
     this.props.sendBackMsg({
       type: 'widgetJson',
-      widgetJson: JSON.stringify({ [widgetId]: value })
+      widgetJson: JSON.stringify({ [this.widgetId]: e.value[0] })
     })
   }
 
@@ -47,20 +49,16 @@ class Slider extends PureStreamlitElement<Props, State> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget stSlider">
-        <Label style={style} check>
-          <div className="label">{label}: {this.state.value}</div>
-          <Input
-            type="range"
-            id={widgetId}
-            className="col-4"
-            min={min}
-            max={max}
-            step={step}
-            value={this.state.value}
-            onChange={this.handleChange}
-          />
-        </Label>
+      <div className="Widget stSlider" style={style}>
+        <p className="label">{label}: {this.state.value}</p>
+        <UISlider
+          id={widgetId}
+          min={min}
+          max={max}
+          step={step}
+          value={this.state.value}
+          onChange={this.handleChange}
+        />
       </div>
     )
   }
