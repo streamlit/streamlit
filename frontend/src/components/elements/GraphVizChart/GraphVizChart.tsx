@@ -6,11 +6,10 @@
 import React from 'react'
 import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {Map as ImmutableMap} from 'immutable'
-
 import { select } from 'd3'
 import { graphviz } from 'd3-graphviz'
-
 import {logError} from 'lib/log'
+import './GraphVizChart.scss'
 
 interface Props extends StProps {
   element: ImmutableMap<string, any>;
@@ -69,7 +68,7 @@ class GraphVizChart extends PureStreamlitElement<Props, StState> {
     const width: number = this.props.element.get('width') || this.props.width
 
     return (
-      <div className="graphviz" id={this.chartId} style={{ width }} />
+      <div className="graphviz stGraphVizChart" id={this.chartId} style={{ width }} />
     )
   }
 }

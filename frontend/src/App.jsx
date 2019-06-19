@@ -567,7 +567,7 @@ class App extends PureComponent {
     return (
       <div className={outerDivClass}>
         {/* The tabindex below is required for testing. */}
-        <header tabindex="-1">
+        <header tabIndex="-1">
           <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>

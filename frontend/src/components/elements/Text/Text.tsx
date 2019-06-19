@@ -96,8 +96,8 @@ class Text extends PureStreamlitElement<Props, StState> {
       case TextProto.Format.INFO:
       case TextProto.Format.SUCCESS:
         return (
-          <div className={`alert ${getAlertCSSClass(format)}`} style={{width}}>
-            <div className="markdown-text-container stText">
+          <div className={`alert ${getAlertCSSClass(format)} stText`} style={{width}}>
+            <div className="markdown-text-container">
               <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
             </div>
           </div>

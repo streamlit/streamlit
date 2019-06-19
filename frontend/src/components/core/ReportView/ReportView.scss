@@ -6,16 +6,112 @@
 @import 'src/assets/css/variables';
 
 
-.streamlit-container .element-container {
-  display: inline-block;
-  margin-bottom: 1rem;
-}
+.streamlit-container {
+  .element-container {
+    display: block;
+    margin-bottom: 1rem;
+  }
 
-.streamlit-container .stale-element {
-  opacity: 0.33;
-  transition: opacity 1s ease-in 0.5s;
-}
+  .stale-element {
+    opacity: 0.33;
+    transition: opacity 1s ease-in 0.5s;
+  }
 
-.streamlit-container .element-container:last-child {
-  margin-bottom: 0;
+  h1, h2, h3 {
+    // Use rem so we can remove it when first child, knowing that the
+    // element-container above always adds 1rem.
+    margin: 1.5rem 0 0.5rem 0;
+    // Set padding in em-units to give it some adjustment that is proportional
+    // to font size.
+    padding: 0.5em 0 0.25em;
+    // Set to 1 so it looks nice when wrapped.
+    line-height: 1;
+  }
+
+  h4, h5, h6 {
+    margin: 1rem 0 0 0;
+    padding: 0.5em 0 0.25em;
+    line-height: 1;
+  }
+
+  h1:first-child, h2:first-child, h3:first-child {
+    margin-top: 0.5rem;
+  }
+
+  h4:first-child, h5:first-child, h6:first-child {
+    margin-top: 0;
+  }
+
+  h1 {
+    font-weight: 700;
+    font-size: 2.25rem;
+  }
+
+  h2 {
+    font-weight: 400;
+    font-size: 1.75rem;
+  }
+
+  h3 {
+    font-weight: 500;
+    font-size: 1.25rem;
+  }
+
+  h4 {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  h5 {
+    font-weight: 900;
+    font-size: 0.8rem;
+  }
+
+  h6 {
+    font-weight: 300;
+    font-size: 0.8rem;
+  }
+
+  p,
+  ul,
+  ol,
+  dl {
+    font-size: 1rem;
+    margin: 0 0 1em 0;
+    padding: 0;
+    font-weight: 400;
+  }
+
+  li {
+    margin: 0.2em 0 0.2em 1.2em;
+    padding: 0 0 0 0.6em;
+    font-size: 1rem;
+  }
+
+  dt {
+    font-weight: 600;
+    margin: 1em 0 0.2em 0;
+    padding: 0;
+    font-size: 1rem;
+  }
+
+  dd {
+    margin: 0 0 0.2em 1.2em;
+    font-size: 1rem;
+  }
+
+  samp,
+  blockquote {
+    margin: 1em 0 1em -1px;
+    padding: 0 0 0 1.2em;
+    font-size: 1rem;
+    border-left: 1px solid $gray-light;
+  }
+
+  hr {
+    border: none;
+    border-bottom: 1px solid $gray-light;
+    margin: 2em 0;
+    padding: 0;
+  }
 }
