@@ -1,7 +1,29 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
+import copy
 from pprint import pprint
+
+
+def reset_widget_triggers(widget_states):
+    """Resets all widget trigger values to False.
+
+    Parameters
+    ----------
+    widget_states : WidgetStates
+        A WidgetStates protobuf
+
+    Returns
+    -------
+    WidgetStates
+        A copy of the passed-in value, with triggers set to False
+    """
+    widget_states = copy.deepcopy(widget_states)
+    for wstate in widget_states.widgets:
+        if wstate.WhichOneof('value') == 'trigger_value':
+            wstate.trigger_value = False
+
+    return widget_states
 
 
 class Widgets(object):
@@ -46,15 +68,6 @@ class Widgets(object):
         self._state = {}
         for wstate in widget_states.widgets:
             self._state[wstate.id] = wstate
-
-    def reset_triggers(self):
-        """Resets all widget trigger values to False.
-
-        This should be called after the report has been run.
-        """
-        for wstate in self._state.values():
-            if wstate.WhichOneof('value') == 'trigger_value':
-                wstate.trigger_value = False
 
     def dump(self):
         pprint(self._state)

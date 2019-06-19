@@ -16,6 +16,7 @@ from streamlit.logger import get_logger
 from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 from streamlit.widgets import Widgets
+from streamlit.widgets import reset_widget_triggers
 
 LOGGER = get_logger(__name__)
 
@@ -418,7 +419,8 @@ class ScriptRunner(object):
         argv = rerun_data.argv or self._last_run_data.argv
         widget_state = rerun_data.widget_state or \
                        self._last_run_data.widget_state
-        self._last_run_data = RerunData(argv, widget_state)
+        self._last_run_data = RerunData(
+            argv, reset_widget_triggers(widget_state))
 
         # Update the Widget singleton with the new widget_state
         self._ctx.widgets.set_state(widget_state)
