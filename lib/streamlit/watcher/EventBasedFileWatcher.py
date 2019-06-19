@@ -135,7 +135,7 @@ class _MultiFileWatcher(object):
         file_path : str
             The full path of the file to watch.
 
-        callback : Callable
+        callback : callable
             The function to execute when the file is changed.
 
         """
@@ -161,7 +161,7 @@ class _MultiFileWatcher(object):
         file_path : str
             The full path of the file to stop watching.
 
-        callback : Callable
+        callback : callable
             The function to execute when the file is changed.
 
         """
@@ -228,7 +228,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         Parameters
         ----------
         file_path : str
-        callback : Callable
+        callback : callable
 
         """
         with self._lock:
@@ -248,7 +248,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         Parameters
         ----------
         file_path : str
-        callback : Callable
+        callback : callable
 
         """
         with self._lock:
