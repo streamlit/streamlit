@@ -3,6 +3,7 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import {WidgetStateManager} from 'lib/WidgetStateManager'
 import React, {PureComponent, ReactNode} from 'react'
 import {AutoSizer} from 'react-virtualized'
 // @ts-ignore
@@ -54,9 +55,7 @@ interface Props {
    */
   showStaleElementIndicator: boolean;
 
-  sendBackMsg: Function;
-  getWidgetState: Function;
-  setWidgetState: Function;
+  widgetMgr: WidgetStateManager;
 }
 
 /**
@@ -167,10 +166,7 @@ export class ReportView extends PureComponent<Props> {
       text: (el: Element) => <Text element={el} width={width}/>,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width}/>,
       video: (el: Element) => <Video element={el} width={width}/>,
-      widget: (el: Element) => <Widget element={el} width={width}
-        sendBackMsg={this.props.sendBackMsg}
-        setWidgetState={this.props.setWidgetState}
-        getWidgetState={this.props.getWidgetState}/>,
+      widget: (el: Element) => <Widget element={el} width={width} widgetMgr={this.props.widgetMgr}/>,
     })
   }
 }

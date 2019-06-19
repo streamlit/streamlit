@@ -3,20 +3,19 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
+import {WidgetStateManager} from 'lib/WidgetStateManager'
+import React from 'react'
+
+import {Input, Label} from 'reactstrap'
 import {dispatchOneOf} from '../../../lib/immutableProto'
 import {PureStreamlitElement, StState} from '../../shared/StreamlitElement'
 import './Widget.scss'
 
-import {Input, Label} from 'reactstrap'
-
 interface Props {
   width: number;
   element: ImmutableMap<string, any>;
-  sendBackMsg: Function;
-  getWidgetState: Function;
-  setWidgetState: Function;
+  widgetMgr: WidgetStateManager;
 }
 
 interface State extends StState {
@@ -28,35 +27,29 @@ class Widget extends PureStreamlitElement<Props, State> {
     super(props)
 
     const {element} = this.props
-    let value = false
+    const id = element.get('id')
+    let value: any = undefined
 
     dispatchOneOf(element, 'type', {
-      checkbox: (data: ImmutableMap<string, any>) => value = data.get('value'),
-      slider: (data: ImmutableMap<string, any>) => value = data.get('value'),
-      textArea: (data: ImmutableMap<string, any>) => value = data.get('value'),
+      checkbox: (data: ImmutableMap<string, any>) => {
+        value = data.get('value')
+        this.props.widgetMgr.setBoolValue(id, value)
+      },
+      slider: (data: ImmutableMap<string, any>) => {
+        value = data.get('value')
+        this.props.widgetMgr.setIntValue(id, value)
+      },
+      textArea: (data: ImmutableMap<string, any>) => {
+        value = data.get('value')
+        this.props.widgetMgr.setStringValue(id, value)
+      },
     })
 
-    this.state = {
-      value: value,
-    }
-
+    this.state = {value: value}
     console.log(`Original value: ${value}, id = ${element.get('id')}`)
-    this.setWidgetState(element.get('id'), value)
   }
 
-  private sendBackMsg(obj: any): void {
-    this.props.sendBackMsg(obj)
-  }
-
-  private getWidgetState(): void {
-    return this.props.getWidgetState()
-  }
-
-  private setWidgetState(key: string, value: any): void {
-    this.props.setWidgetState(key, value)
-  }
-
-  private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  private handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let old = this.state.value
     let current = e.target.checked
     let id = e.target.id
@@ -64,8 +57,8 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.setState({
       value: current,
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
+    this.props.widgetMgr.setBoolValue(id, current)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   };
 
   private handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,8 +69,8 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.setState({
       value: current,
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
+    this.props.widgetMgr.setIntValue(id, current)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   };
 
   private handleTextAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,8 +81,8 @@ class Widget extends PureStreamlitElement<Props, State> {
     this.setState({
       value: current,
     })
-    this.setWidgetState(id, current)
-    this.sendBackMsg({type: 'widgetJson', widgetJson: JSON.stringify(this.getWidgetState())})
+    this.props.widgetMgr.setStringValue(id, current)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   };
 
 
@@ -107,7 +100,7 @@ class Widget extends PureStreamlitElement<Props, State> {
         return (
           <div className="Widget row-widget">
             <Label style={style} check>
-              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleChange} />
+              <Input type="checkbox" id={id} checked={this.state.value} onChange={this.handleCheckboxChange} />
               <span className="label">{ label }</span>
             </Label>
           </div>

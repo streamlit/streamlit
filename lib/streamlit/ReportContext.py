@@ -271,8 +271,8 @@ class ReportContext(object):
         command_line : str | None
             The new command line arguments to run the script with, or None
             to use its previous command line value.
-        widget_state : dict | None
-            The widget state dictionary to run the script with, or None
+        widget_state : WidgetStates | None
+            The WidgetStates protobuf to run the script with, or None
             to use its previous widget states.
 
         """

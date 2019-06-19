@@ -10,7 +10,7 @@ from streamlit.widgets import Widgets
 
 @st.cache
 def create_image(r=0,g=0,b=0,a=0):
-    color='rgb(%d%%, %d%%, %d%%)' % (r, g, b)
+    color='rgb(%d%%, %d%%, %d%%)' % (int(r), int(g), int(b))
     size = 200
     step = 10
     half = size /2

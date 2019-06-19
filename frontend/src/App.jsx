@@ -21,6 +21,7 @@ import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
 import { StreamlitDialog } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { StatusWidget } from 'components/core/StatusWidget/'
@@ -53,7 +54,6 @@ class App extends PureComponent {
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
-      widgetState: {},
     }
 
     // Bind event handlers.
@@ -77,6 +77,9 @@ class App extends PureComponent {
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
+
+    // TODO: move widget throttle into WidgetStateManager
+    this.widgetMgr = new WidgetStateManager(this.sendThrottledWidgetBackMsg)
 
     // Widget-throttle bits. TODO: cleanup or remove!
     this.latestWidgetBackMsg = null
@@ -127,17 +130,6 @@ class App extends PureComponent {
       },
     },
   }
-
-  getWidgetState = () => {
-    return this.state.widgetState
-  }
-
-  setWidgetState = (key, value) => {
-    let widgetState = this.getWidgetState()
-    widgetState[key] = value
-    this.setState({widgetState})
-  }
-
 
   componentDidMount() {
     // Initialize connection manager here, to avoid
@@ -618,7 +610,7 @@ class App extends PureComponent {
     return (
       <div className={outerDivClass}>
         {/* The tabindex below is required for testing. */}
-        <header tabindex="-1">
+        <header tabIndex="-1">
           <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
@@ -666,9 +658,7 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                  sendBackMsg={this.sendThrottledWidgetBackMsg}
-                  getWidgetState={this.getWidgetState}
-                  setWidgetState={this.setWidgetState}
+                  widgetMgr={this.widgetMgr}
                 />
               }
             </Col>

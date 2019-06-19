@@ -13,6 +13,7 @@ from streamlit import config
 from streamlit import magic
 from streamlit.ReportThread import ReportThread
 from streamlit.logger import get_logger
+from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 from streamlit.widgets import Widgets
 
@@ -142,7 +143,9 @@ class ScriptRunner(object):
         self._report = report
         self._event_queue = ScriptEventQueue()
         self._state = ScriptState.STOPPED
-        self._last_run_data = RerunData(argv=report.argv, widget_state={})
+        self._last_run_data = RerunData(
+            argv=report.argv,
+            widget_state=WidgetStates())
         self._widgets = Widgets()
 
         self.run_on_save = config.get_option('server.runOnSave')
