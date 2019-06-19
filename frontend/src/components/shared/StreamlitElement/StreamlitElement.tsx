@@ -53,9 +53,9 @@ export abstract class StreamlitElement<P extends StProps, S extends StState>
     return true
   }
 
-  public componentDidUpdate(): void {
+  public componentDidUpdate(prevProps: Readonly<P>, prevState: Readonly<S>): void {
     try {
-      this.safeComponentDidUpdate()
+      this.safeComponentDidUpdate(prevProps, prevState)
     } catch (exception) {
       this.setState(exception)
     }
@@ -84,7 +84,7 @@ export abstract class StreamlitElement<P extends StProps, S extends StState>
   }
 
   public safeComponentDidMount(): void {}
-  public safeComponentDidUpdate(): void {}
+  public safeComponentDidUpdate(prevProps: Readonly<P>, prevState: Readonly<S>): void {}
   public safeComponentWillUnmount(): void {}
   public safeComponentDidCatch(error: Error, i: React.ErrorInfo): void {}
 
@@ -110,9 +110,9 @@ export abstract class PureStreamlitElement<P extends StProps, S extends StState>
     }
   }
 
-  public componentDidUpdate(): void {
+  public componentDidUpdate(prevProps: Readonly<P>, prevState: Readonly<S>): void {
     try {
-      this.safeComponentDidUpdate()
+      this.safeComponentDidUpdate(prevProps, prevState)
     } catch (exception) {
       this.setState(exception)
     }
@@ -137,7 +137,7 @@ export abstract class PureStreamlitElement<P extends StProps, S extends StState>
   public abstract safeRender(): React.ReactNode
 
   public safeComponentDidMount(): void {}
-  public safeComponentDidUpdate(): void {}
+  public safeComponentDidUpdate(prevProps: Readonly<P>, prevState: Readonly<S>): void {}
   public safeComponentWillUnmount(): void {}
   public safeComponentDidCatch(error: Error, i: React.ErrorInfo): void {}
 
