@@ -2,11 +2,6 @@
 
 """st.altair_chart unit test."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
-
 import altair as alt
 import json
 import pandas as pd
@@ -40,7 +35,7 @@ class AltairTest(testutil.DeltaGeneratorTestCase):
             'x': {'field': 'a', 'type': 'nominal'},
         })
         self.assertEqual(spec_dict['data'], {
-            'name': 'data-7cc8c5586364b460a7f3c4622e11a92e',
+            'name': c.datasets[0].name,
         })
         self.assertEqual(spec_dict['mark'], 'bar')
         self.assertTrue('config' in spec_dict)

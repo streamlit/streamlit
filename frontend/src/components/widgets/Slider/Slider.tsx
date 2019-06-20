@@ -7,12 +7,13 @@ import React from 'react'
 // @ts-ignore
 import { Slider as UISlider } from 'baseui/slider';
 import { Map as ImmutableMap } from 'immutable'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './Slider.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  sendBackMsg: (msg: Object) => void;
+  widgetMgr: WidgetStateManager;
   width: number;
 }
 
@@ -21,8 +22,15 @@ interface State extends StState {
 }
 
 class Slider extends PureStreamlitElement<Props, State> {
-  public state = {
-    value: this.props.element.get('value').toArray()
+  public constructor(props: Props) {
+    super(props)
+
+    const widgetId = this.props.element.get('id')
+    const value = this.props.element.get('value').toArray()
+
+    this.state = { value }
+    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = (e: any) => {
@@ -30,12 +38,8 @@ class Slider extends PureStreamlitElement<Props, State> {
     const value = e.value
 
     this.setState({ value })
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify({
-        [widgetId]: value
-      })
-    })
+    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {

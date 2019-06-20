@@ -62,7 +62,7 @@ class DeckGlChart extends PureStreamlitElement {
   safeRender() {
     return (
       <div
-        className="deckglchart"
+        className="deckglchart stDeckGlChart"
         style={{
           height: this.initialViewState.height,
           width: this.initialViewState.width,
@@ -152,6 +152,7 @@ const Defaults = {
     getPixelOffset:
       d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
     getPosition: getPositionFromLatLonColumns,
+    getAlignmentBaseline: 'bottom',
   },
 }
 

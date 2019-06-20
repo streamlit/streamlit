@@ -21,6 +21,7 @@ import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
 import { StreamlitDialog } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { StatusWidget } from 'components/core/StatusWidget/'
@@ -81,10 +82,7 @@ class App extends PureComponent {
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
-
-    // Widget-throttle bits. TODO: cleanup or remove!
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
+    this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
   }
 
   /**
@@ -339,6 +337,14 @@ class App extends PureComponent {
    * Closes the upload dialog if it's open.
    */
   closeDialog() {
+    // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
+    // when a modal is open. Otherwise, when the user causes a syntax error in
+    // Python and we show an "Error" modal, and then the user presses "R" while
+    // that modal is showing, this causes "modal-open" to *not* be removed
+    // properly from <body>, thereby breaking scrolling. This seems to be
+    // related to the modal-close animation taking too long.
+    document.body.classList.remove('modal-open')
+
     this.setState({ dialog: undefined })
   }
 
@@ -360,7 +366,10 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   applyDelta(delta) {
-    if (this.state.reportRunState !== ReportRunState.RUNNING) {
+    if (
+      this.state.reportRunState !== ReportRunState.RUNNING &&
+      !this.connectionManager.isStaticConnection()
+    ) {
       // Only add messages to report when script is running. Otherwise, we get
       // bugs like #685.
       return
@@ -525,45 +534,11 @@ class App extends PureComponent {
    */
   sendBackMsg = (msg) => {
     if (this.connectionManager) {
+      console.log(msg)
       this.connectionManager.sendMessage(msg)
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
-  }
-
-  /**
-   * A quick hack to throttle widget-related BackMsgs
-   * TODO: remove me post-May 2019 hackathon!
-   */
-  sendThrottledWidgetBackMsg = (msg) => {
-    const THROTTLE_MS = 400
-
-    this.latestWidgetBackMsg = msg
-
-    if (this.widgetThrottleTimer != null) {
-      // A timer is already running. It'll send this BackMsg when
-      // it wakes up
-      return
-    }
-
-    const delta = Date.now() - this.lastBackMsgTime
-    if (delta >= THROTTLE_MS) {
-      // We can send our message immediately
-      this.sendLatestWidgetBackMsg()
-    } else {
-      // Schedule our throttle timer
-      this.widgetThrottleTimer = window.setTimeout(
-        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
-    }
-  }
-
-  sendLatestWidgetBackMsg = () => {
-    if (this.latestWidgetBackMsg != null) {
-      this.sendBackMsg(this.latestWidgetBackMsg)
-      this.lastBackMsgTime = Date.now()
-    }
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
   }
 
   /**
@@ -600,12 +575,14 @@ class App extends PureComponent {
   }
 
   render() {
-    const outerDivClass =
+    const outerDivClass = [
+      'stApp',
       isEmbeddedInIFrame() ?
         'streamlit-embedded' :
         this.state.userSettings.wideMode ?
           'streamlit-wide' :
-          'streamlit-regular'
+          'streamlit-regular',
+    ].join(' ')
 
     const dialogProps = {
       ...this.state.dialog,
@@ -614,7 +591,8 @@ class App extends PureComponent {
 
     return (
       <div className={outerDivClass}>
-        <header>
+        {/* The tabindex below is required for testing. */}
+        <header tabIndex="-1">
           <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
@@ -653,7 +631,7 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                  sendBackMsg={this.sendThrottledWidgetBackMsg}
+                  widgetMgr={this.widgetMgr}
                 />
               }
             </Col>
@@ -689,9 +667,11 @@ class App extends PureComponent {
 
 
 function handleNewElementMessage(element, reportId) {
-  trackEventRemotely('visualElementUpdated', {
-    elementType: element.get('type'),
-  })
+  // TODO: Readd this when #652 is fixed.
+  // trackEventRemotely('visualElementUpdated', {
+  //   elementType: element.get('type'),
+  // })
+
   // Set reportId on elements so we can clear old elements when the report
   // script is re-executed.
   return element.set('reportId', reportId)
@@ -699,7 +679,8 @@ function handleNewElementMessage(element, reportId) {
 
 
 function handleAddRowsMessage(element, namedDataSet) {
-  trackEventRemotely('dataMutated')
+  // TODO: Readd this when #652 is fixed.
+  // trackEventRemotely('dataMutated')
   return addRows(element, namedDataSet)
 }
 

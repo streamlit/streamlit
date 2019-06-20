@@ -5,8 +5,12 @@
 
 import React from 'react'
 import { embed as BokehEmbed } from 'bokehjs'
-import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
+import { Map as ImmutableMap } from 'immutable'
+import {
+  PureStreamlitElement,
+  StProps,
+  StState,
+} from 'components/shared/StreamlitElement/'
 
 interface Props extends StProps {
   element: ImmutableMap<string, any>;
@@ -47,7 +51,11 @@ class BokehChart extends PureStreamlitElement<Props, StState> {
   }
 
   public safeRender = (): React.ReactNode => (
-    <div id={this.chartId} style={{ width: this.props.width }}></div>
+    <div
+      id={this.chartId}
+      className="stBokehChart"
+      style={{ width: this.props.width }}
+    />
   )
 }
 

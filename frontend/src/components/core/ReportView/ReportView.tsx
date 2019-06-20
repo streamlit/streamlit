@@ -3,8 +3,10 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import {WidgetStateManager} from 'lib/WidgetStateManager'
 import React, {PureComponent, ReactNode} from 'react'
 import {AutoSizer} from 'react-virtualized'
+// @ts-ignore
 import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
 import {Progress} from 'reactstrap'
 import {dispatchOneOf} from 'lib/immutableProto'
@@ -60,7 +62,7 @@ interface Props {
    */
   showStaleElementIndicator: boolean;
 
-  sendBackMsg: (msg: Object) => void;
+  widgetMgr: WidgetStateManager;
 }
 
 /**
@@ -152,8 +154,6 @@ export class ReportView extends PureComponent<Props> {
       throw new Error('Transmission error.')
     }
 
-    const {sendBackMsg} = this.props
-
     return dispatchOneOf(element, 'type', {
       audio: (el: Element) => <Audio element={el} width={width} />,
       balloons: (el: Element) => <Balloons element={el} width={width} />,
@@ -168,16 +168,16 @@ export class ReportView extends PureComponent<Props> {
       imgs: (el: Element) => <ImageList element={el} width={width} />,
       map: (el: Element) => <MapElement element={el} width={width} />,
       plotlyChart: (el: Element) => <PlotlyChart element={el} width={width} />,
-      progress: (el: Element) => <Progress value={el.get('value')} style={{width}} />,
+      progress: (el: Element) => <Progress value={el.get('value')} className="stProgress" style={{width}} />,
       table: (el: Element) => <Table element={el} width={width} />,
       text: (el: Element) => <Text element={el} width={width} />,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width} />,
       video: (el: Element) => <Video element={el} width={width} />,
-      button: (el: Element) => <Button element={el} width={width} sendBackMsg={sendBackMsg} />,
-      checkbox: (el: Element) => <Checkbox element={el} width={width} sendBackMsg={sendBackMsg} />,
-      radio: (el: Element) => <Radio element={el} width={width} sendBackMsg={sendBackMsg} />,
-      slider: (el: Element) => <Slider element={el} width={width} sendBackMsg={sendBackMsg} />,
-      textArea: (el: Element) => <TextArea element={el} width={width} sendBackMsg={sendBackMsg} />,
+      button: (el: Element) => <Button element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,
     })
   }
 }

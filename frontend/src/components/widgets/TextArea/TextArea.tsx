@@ -5,14 +5,15 @@
 
 import React from 'react'
 // @ts-ignore
-import { Textarea } from 'baseui/textarea'
+import { Textarea as UITextArea } from 'baseui/textarea'
 import { Map as ImmutableMap } from 'immutable'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './TextArea.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  sendBackMsg: (msg: Object) => void;
+  widgetMgr: WidgetStateManager;
   width: number;
 }
 
@@ -21,24 +22,24 @@ interface State extends StState {
 }
 
 class TextArea extends PureStreamlitElement<Props, State> {
-  private widgetId: string
-
   public constructor(props: Props) {
     super(props)
 
-    this.widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
+
     this.state = { value }
+    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const widgetId = this.props.element.get('id')
     const value = e.target.value
 
     this.setState({ value })
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify({ [this.widgetId]: value })
-    })
+    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {
@@ -48,7 +49,7 @@ class TextArea extends PureStreamlitElement<Props, State> {
     return (
       <div className="Widget stTextArea" style={style}>
         <p className="label">{label}</p>
-        <Textarea
+        <UITextArea
           value={this.state.value}
           onChange={this.handleChange}
         />

@@ -21,9 +21,10 @@ sys.path.append(os.path.abspath('./_ext'))
 project = u'Streamlit'
 copyright = u'2019, Streamlit Inc.'
 author = u'Streamlit Inc.'
+display_version = True
 
 # The short X.Y version
-version = u''
+version = u'0.40'
 
 # The full version, including alpha/beta/rc tags
 import streamlit as st

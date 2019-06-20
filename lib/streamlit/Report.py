@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import base58
+import copy
 import json
 import os
 import uuid
@@ -15,6 +16,33 @@ LOGGER = get_logger(__name__)
 
 
 class Report(object):
+    """
+    Contains parameters related to running a report, and also houses
+    the two ReportQueues (master_queue and browser_queue) that are used
+    to deliver messages to a connected browser, and to serialize the
+    running report.
+    """
+
+    @classmethod
+    def get_url(cls, host_ip):
+        """Get the URL for any report served at the given host_ip.
+
+        Parameters
+        ----------
+        host_ip : str
+            The IP address of the machine that is running the Streamlit Server.
+
+        Returns
+        -------
+        str
+            The URL.
+        """
+        port = _get_browser_address_bar_port()
+        return ('http://%(host_ip)s:%(port)s' % {
+            'host_ip': host_ip,
+            'port': port,
+        })
+
     def __init__(self, script_path, argv):
         """Constructor.
 
@@ -34,13 +62,17 @@ class Report(object):
         self.argv = argv
         self.name = os.path.splitext(basename)[0]
 
-        # Keep the master queue private because the way we clear the master
-        # queue is different from how we clear each browser-queue. The master
-        # queue needs to keep the initialization message even when you clear
-        # it.
+        # The master queue contains all messages that comprise the report.
+        # If the user chooses to share a saved version of the report,
+        # we serialize the contents of the master queue.
         self._master_queue = ReportQueue()
-        self._latest_id = None
 
+        # The browser queue contains messages that haven't yet been
+        # delivered to the browser. Periodically, the server flushes
+        # this queue and delivers its contents to the browser.
+        self._browser_queue = ReportQueue()
+
+        self.report_id = None
         self.generate_new_id()
 
     def get_debug(self):
@@ -48,7 +80,20 @@ class Report(object):
             'master queue': self._master_queue.get_debug(),
         }
 
-    def set_argv(self, cmd_line_str):
+    def parse_argv_from_command_line(self, cmd_line_str):
+        """Parses an argv dict for this script from a command line string.
+
+        Parameters
+        ----------
+        cmd_line_str : str
+            The string to parse.
+
+        Returns
+        -------
+        dict
+            An argv dict, suitable for executing this Report with.
+
+        """
         import shlex
 
         cmd_line_list = shlex.split(cmd_line_str)
@@ -63,43 +108,40 @@ class Report(object):
 
     def enqueue(self, msg):
         self._master_queue.enqueue(msg)
+        self._browser_queue.enqueue(msg)
 
     def clear(self):
+        # Master_queue retains its initial message; browser_queue is
+        # completely cleared.
         initial_msg = self._master_queue.get_initial_msg()
-
         self._master_queue.clear()
-
         if initial_msg:
             self._master_queue.enqueue(initial_msg)
 
-    def clone_queue(self):
-        return self._master_queue.clone()
+        self._browser_queue.clear()
+
+    def flush_browser_queue(self):
+        """Clears our browser queue and returns the messages it contained.
+
+        The Server calls this periodically to deliver new messages
+        to the browser connected to this report.
+
+        This doesn't affect the master_queue.
+
+        Returns
+        -------
+        list[ForwardMsg]
+            The messages that were removed from the queue and should
+            be delivered to the browser.
+
+        """
+        return self._browser_queue.flush()
 
     def generate_new_id(self):
         """Randomly generate an ID representing this report's execution."""
         # Convert to str for Python2
-        id = str(base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
-        self._latest_id = id
-        return id
-
-    def get_url(self, host_ip):
-        """Get this report's live URL.
-
-        Parameters
-        ----------
-        host_ip : str
-            The IP address of the machine that is running the Streamlit Server.
-
-        Returns
-        -------
-        str
-            The URL.
-        """
-        port = _get_browser_address_bar_port()
-        return ('http://%(host_ip)s:%(port)s' % {
-            'host_ip': host_ip,
-            'port': port,
-        })
+        self.report_id = str(
+            base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -124,7 +166,7 @@ class Report(object):
         manifest_json = json.dumps(manifest).encode('utf-8')
 
         return [(
-            'reports/%s/manifest.json' % self._latest_id,
+            'reports/%s/manifest.json' % self.report_id,
             manifest_json
         )]
 
@@ -142,7 +184,7 @@ class Report(object):
         LOGGER.debug('Serializing final report')
 
         messages = [
-            msg for msg in self._master_queue
+            copy.deepcopy(msg) for msg in self._master_queue
             if _should_save_report_msg(msg)
         ]
 
@@ -150,6 +192,7 @@ class Report(object):
         num_deltas = 0
         for idx in range(len(messages)):
             if messages[idx].HasField('delta'):
+                messages[idx].delta.id = num_deltas
                 if num_deltas == 0:
                     first_delta_index = idx
                 num_deltas += 1
@@ -163,16 +206,16 @@ class Report(object):
 
         manifest_json = json.dumps(manifest).encode('utf-8')
 
-        report_id = self._latest_id
-
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [(
-            'reports/%(id)s/%(idx)s.pb' % {'id': report_id, 'idx': msg_idx},
+            'reports/%(id)s/%(idx)s.pb' %
+                {'id': self.report_id, 'idx': msg_idx},
             msg.SerializeToString()
         ) for msg_idx, msg in enumerate(messages)]
 
         manifest_tuples = [(
-            'reports/%(id)s/manifest.json' % {'id': report_id}, manifest_json)]
+            'reports/%(id)s/manifest.json' %
+                {'id': self.report_id}, manifest_json)]
 
         # Manifest must be at the end, so clients don't connect and read the
         # manifest while the deltas haven't been saved yet.
@@ -272,6 +315,7 @@ def _get_browser_address_bar_port():
     server-browser websocket.
 
     """
-    if config.get_option('global.developmentMode') and config.get_option('global.useNode'):
+    if (config.get_option('global.developmentMode')
+            and config.get_option('global.useNode')):
         return 3000
     return config.get_option('browser.serverPort')

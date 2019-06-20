@@ -7,11 +7,12 @@ import React from 'react'
 // @ts-ignore
 import { Radio as UIRadio, RadioGroup } from 'baseui/radio';
 import { Map as ImmutableMap } from 'immutable'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  sendBackMsg: (msg: Object) => void;
+  widgetMgr: WidgetStateManager;
   width: number;
 }
 
@@ -22,7 +23,15 @@ interface State extends StState {
 class Radio extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
-    this.state = { value: this.props.element.get('value') }
+
+    const widgetId = this.props.element.get('id')
+    const value = this.props.element.get('value')
+
+    this.state = { value }
+    if (value){
+      this.props.widgetMgr.setStringValue(widgetId, value)
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+    }
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,11 +39,8 @@ class Radio extends PureStreamlitElement<Props, State> {
     const widgetId = this.props.element.get('id')
 
     this.setState({ value })
-
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify({ [widgetId]: value })
-    })
+    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {

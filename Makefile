@@ -26,6 +26,7 @@ help:
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
 	@echo " pytest       - Runs python unit tests."
 	@echo " jslint       - Lints the frontend."
+	@echo " e2etest      - Run E2E tests"
 
 .PHONY: all
 all: clean init install build develop
@@ -214,5 +215,11 @@ docker-build-frontend:
 create-conda-packages:
 	cd conda ; ./create_packages.sh
 
+.PHONY: serve-conda
 serve-conda:
 	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000
+
+# Run E2E tests
+.PHONY: e2etest
+e2etest:
+	./scripts/e2e.sh
