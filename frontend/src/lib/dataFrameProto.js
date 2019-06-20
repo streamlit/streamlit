@@ -365,7 +365,7 @@ function anyArrayData(anyArray) {
 }
 
 /**
- * Concatenates delta1 and delta2 together, returning a new element.
+ * Concatenates namedDataSet into element, returning a new element.
  */
 export function addRows(element, namedDataSet) {
   const name = namedDataSet.get('hasName') ?

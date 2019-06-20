@@ -16,7 +16,7 @@ import traceback
 import uuid
 
 from streamlit import protobuf
-from streamlit.widgets import Widgets
+from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
@@ -82,8 +82,8 @@ def _with_element(method):
     This is a function decorator.
 
     Converts a method of the with arguments (self, element, ...) into a method
-    with arguments (self, ...). Thus, the intantiation of the element proto
-    object and creation of the element are handled automaticallyself.
+    with arguments (self, ...). Thus, the instantiation of the element proto
+    object and creation of the element are handled automatically.
 
     Parameters
     ----------
@@ -121,12 +121,15 @@ def _widget(f):
     @_wraps_with_cleaned_sig(f)
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
-        id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
+        ctx = get_report_ctx()
+        widget_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
 
         el = getattr(element, f.__name__)
-        el.id = id
+        el.id = widget_id
 
-        ui_value = Widgets.get_current().get(id)
+        ui_value = (
+            ctx.widgets.get_widget_value(widget_id) if ctx else None
+        )
         return f(dg, element, ui_value, *args, **kwargs)
     return wrapper
 
@@ -758,8 +761,8 @@ class DeltaGenerator(object):
         https://altair-viz.github.io/gallery/.
 
         """
-        import streamlit.elements.vega_lite as vega_lite
-        vega_lite.marshall(element.vega_lite_chart, altair_chart.to_dict())
+        import streamlit.elements.altair as altair
+        altair.marshall(element.vega_lite_chart, altair_chart)
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
@@ -1142,8 +1145,6 @@ class DeltaGenerator(object):
     @_widget
     def button(self, element, ui_value, label):
         """Button doc string."""
-        # Reset the button state
-        Widgets.get_current().set_item(element.button.id, False)
         current_value = ui_value if ui_value is not None else False
         element.button.label = label
         element.button.value = False

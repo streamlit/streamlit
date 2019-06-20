@@ -16,6 +16,7 @@ import urllib
 import collections
 
 import click
+from blinker import Signal
 
 from streamlit import development
 from streamlit import util
@@ -39,6 +40,10 @@ _config_options = dict()
 
 # Makes sure we only parse the config file once.
 config_file_has_been_parsed = False
+
+# Allow outside modules to wait for the config file to be parsed before doing
+# something.
+_on_config_parsed = Signal(doc='Emitted when the config file is parsed.')
 
 
 def set_option(key, value):
@@ -70,6 +75,9 @@ def get_option(key):
         available options, run `streamlit config show` on a terminal.
 
     """
+    # Don't worry, this call cached and only runs once:
+    parse_config_file()
+
     if key not in _config_options:
         raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].value
@@ -217,7 +225,8 @@ def _global_unit_test():
 
 _create_option(
     'global.useNode',
-    description='Whether to serve static content from node.',
+    description='''Whether to serve static content from node. Only applies when
+        developmentMode is True.''',
     visibility='hidden',
     default_val=True)
 
@@ -389,7 +398,7 @@ _create_option(
         Allows you to type a variable or string by itself in a single line of
         Python code to write it to the report.
         ''',
-    default_val=True)
+    default_val=False)
 
 _create_option(
     'runner.installTracer',
@@ -925,9 +934,20 @@ def parse_config_file(file_contents=None):
             file_contents = input.read()
 
     _update_config_with_toml(file_contents, config_filename)
-    _check_conflicts()
 
     config_file_has_been_parsed = True
+    _on_config_parsed.send()
+
+
+def _clean_paragraphs(txt):
+    paragraphs = txt.split('\n\n')
+    cleaned_paragraphs = [_clean(x) for x in paragraphs]
+    return cleaned_paragraphs
+
+
+def _clean(txt):
+    """Replace all whitespace with a single space."""
+    return ' '.join(txt.split()).strip()
 
 
 def _check_conflicts():
@@ -981,15 +1001,25 @@ def _check_conflicts():
         assert _is_unset('s3.profile'), WARNING_STR
 
 
-def _clean_paragraphs(txt):
-    paragraphs = txt.split('\n\n')
-    cleaned_paragraphs = [_clean(x) for x in paragraphs]
-    return cleaned_paragraphs
+def _set_development_mode():
+    development.is_development_mode = get_option('global.developmentMode')
 
 
-def _clean(txt):
-    """Replace all whitespace with a single space."""
-    return ' '.join(txt.split()).strip()
+def on_config_parsed(func):
+    """Wait for the config file to be parsed then call func.
+
+    If the config file has already been parsed, just calls fun immediately.
+
+    """
+    if config_file_has_been_parsed:
+        func()
+    else:
+        # weak=False, because we're using an anonymous lambda that
+        # goes out of scope immediately.
+        _on_config_parsed.connect(lambda _: func(), weak=False)
 
 
-development.is_development_mode = get_option('global.developmentMode')
+# Run _check_conflicts only once the config file is parsed in order to avoid
+# loops.
+on_config_parsed(_check_conflicts)
+on_config_parsed(_set_development_mode)

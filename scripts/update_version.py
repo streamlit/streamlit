@@ -48,7 +48,6 @@ PYTHON = {
 }
 
 NODE = {
-    'frontend/package-lock.json': r'(?P<pre>^  "version": ").*(?P<post>",$)',
     'frontend/package.json': r'(?P<pre>^  "version": ").*(?P<post>",$)',
 }
 

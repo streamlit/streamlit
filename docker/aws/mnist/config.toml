@@ -1,0 +1,6 @@
+[global]
+logLevel = "debug"
+useNode = false
+
+[browser]
+serverAddress = "demo.streamlit.io"

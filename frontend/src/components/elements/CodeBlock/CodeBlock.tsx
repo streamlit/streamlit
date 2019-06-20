@@ -5,10 +5,8 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
-import Prism from 'prismjs'
 import React from 'react'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
-
+import Prism from 'prismjs'
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
 import 'prismjs/components/prism-jsx'
@@ -20,7 +18,8 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
-
+import { PureStreamlitElement, StProps, StState } from 'components/shared/StreamlitElement/'
+import CopyButton from './CopyButton'
 import './CodeBlock.scss'
 
 interface Props extends StProps {
@@ -35,7 +34,12 @@ class CodeBlock extends PureStreamlitElement<Props, StState> {
   public safeRender(): React.ReactNode {
     if (this.props.language == null) {
       return (
-        <pre><code>{this.props.value}</code></pre>
+        <pre>
+          <div className="scrollable">
+            <code>{this.props.value}</code>
+          </div>
+          <CopyButton text={this.props.value} />
+        </pre>
       )
     }
 
@@ -46,12 +50,17 @@ class CodeBlock extends PureStreamlitElement<Props, StState> {
       lang = Prism.languages.python
     }
 
-    const html = Prism.highlight(this.props.value, lang, '')
-    const cls = `language-${this.props.language}`
-
+    const safeHtml = Prism.highlight(this.props.value, lang, '')
+    const languageClassName = `language-${this.props.language}`
     return (
-      <pre className={cls}>
-        <code dangerouslySetInnerHTML={{ __html: html }} className={cls} />
+      <pre>
+        <div className="scrollable">
+          <code
+            className={languageClassName}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
+        </div>
+        <CopyButton text={this.props.value} />
       </pre>
     )
   }

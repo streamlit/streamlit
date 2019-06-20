@@ -40,7 +40,7 @@ def marshall(proto, data=None, spec=None, **kwargs):
 
         # Merge spec with unflattened kwargs, where kwargs take precedence.
         # This only works for string keys, but kwarg keys are strings anyways.
-        spec = dict(spec, **dicttools.unflatten(kwargs, _ENCODINGS))
+        spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
 
     if spec is None or len(spec) == 0:
         raise ValueError('Vega-Lite charts require a non-empty spec dict.')
@@ -55,10 +55,11 @@ def marshall(proto, data=None, spec=None, **kwargs):
             data_frame_proto.marshall_data_frame(v, dataset.data)
         del spec['datasets']
 
-    # Pull data out of spec dict when it's in a 'data' key:
+    # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})
     #   marshall(proto, {data: {values: df, ...}})
     #   marshall(proto, {data: {url: 'url'}})
+    #   marshall(proto, {data: {name: 'foo'}})
     if 'data' in spec:
         data_spec = spec['data']
 
@@ -83,15 +84,22 @@ def _looks_like_vega_lite_spec(spec):
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
-_ENCODINGS = set([
+_CHANNELS = set([
     'x',
     'y',
     'x2',
     'y2',
+    'xError',
+    'yError2',
+    'xError',
+    'yError2',
     'longitude',
     'latitude',
     'color',
     'opacity',
+    'fillOpacity',
+    'strokeOpacity',
+    'strokeWidth',
     'size',
     'shape',
     'text',
@@ -100,6 +108,7 @@ _ENCODINGS = set([
     'key',
     'order',
     'detail',
+    'facet',
     'row',
     'column',
 ])

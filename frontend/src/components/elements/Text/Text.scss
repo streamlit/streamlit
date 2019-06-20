@@ -29,11 +29,21 @@
 .streamlit-container .markdown-text-container pre {
   border: 1px solid #E6E9EE;
   border-radius: 3px;
-  padding: 1rem;
   margin: 0 0 1rem 0;
+  padding: 1rem;
+  position: relative;
 }
 
-.streamlit-container .markdown-text-container pre > code {
+.streamlit-container .markdown-text-container .scrollable {
+  margin-right: 40px;
+  overflow: hidden;
+}
+
+.streamlit-container .markdown-text-container .scrollable:hover {
+  overflow: auto;
+}
+
+.streamlit-container .markdown-text-container pre code {
   background: transparent;
   border: 0;
   display: inline;

@@ -7,11 +7,12 @@ import React from 'react'
 // @ts-ignore
 import { Checkbox as UICheckbox } from 'baseui/checkbox';
 import { Map as ImmutableMap } from 'immutable'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
-  sendBackMsg: (msg: Object) => void;
+  widgetMgr: WidgetStateManager;
   width: number;
 }
 
@@ -20,26 +21,28 @@ interface State extends StState {
 }
 
 class Checkbox extends PureStreamlitElement<Props, State> {
-  private widgetId: string
-
   public constructor(props: Props) {
     super(props)
 
-    // Re-review the setting of the widget Id.
-    // Compare with the Button which does things differently
-    this.widgetId = this.props.element.get('id')
-    console.log(this.widgetId)
-    this.state = { value: this.props.element.get('value') }
+    const widgetId = this.props.element.get('id')
+    const value = this.props.element.get('value')
+
+    console.log(value)
+
+    this.state = { value }
+    this.props.widgetMgr.setBoolValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const widgetId = this.props.element.get('id')
     const value = e.target.checked
 
+    console.log(value)
+
     this.setState({ value })
-    this.props.sendBackMsg({
-      type: 'widgetJson',
-      widgetJson: JSON.stringify({ [this.widgetId]: value })
-    })
+    this.props.widgetMgr.setBoolValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {

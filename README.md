@@ -7,12 +7,12 @@ Here is an example of how to use it:
 
 Install with:
 ```bash
-pip install streamlit
+$ pip install streamlit
 ```
 
 ## Static Example
 
-Copy and paste this example and it should work:
+Copy and paste this example into a file such as `program.py`:
 
 ```python
 import streamlit as st
@@ -30,11 +30,13 @@ for i in range(100):
   time.sleep(0.1)
 ```
 
+Then run it with `streamlit run program.py`, which should start Streamlit. 
+
 ## More Help
 
 For more help and a complete API documentation, please run:
 ```bash
-streamlit docs
+$ streamlit docs
 ```
 
 ## Contributing to Streamlit

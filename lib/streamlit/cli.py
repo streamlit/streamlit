@@ -14,9 +14,6 @@ from streamlit.credentials import Credentials
 from streamlit import config
 
 
-config.parse_config_file()
-
-
 LOG_LEVELS = ['error', 'warning', 'info', 'debug']
 
 
@@ -72,10 +69,17 @@ def main_docs():
 @main.command('hello')
 def main_hello():
     """Runs the Hello World script."""
-    Credentials.get_current().check_activated(auto_resolve=True)
     print('Showing Hello World script in browser...')
     import streamlit.hello
-    _main_run(streamlit.hello.__file__)
+
+    filename = streamlit.hello.__file__
+
+    # For Python 2 when Streamlit is actually installed (make install rather
+    # than make develop).
+    if filename.endswith('.pyc'):
+        filename = '%s.py' % filename[:-4]
+
+    _main_run(filename)
 
 
 @main.command('run')
@@ -131,10 +135,11 @@ def cache_clear():
     """Clear the Streamlit on-disk cache."""
     import streamlit.caching
     result = streamlit.caching.clear_cache()
+    cache_path = streamlit.caching.get_cache_path()
     if result:
-        print('Cleared %s directory.' % cache_path)
+        print('Cleared directory %s.' % cache_path)
     else:
-        print('No such directory %s so nothing to clear. :)' % cache_path)
+        print('Nothing to clear at %s.' % cache_path)
 
 
 # SUBCOMMAND: config

@@ -140,15 +140,24 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
 
         # Strings
         elif isinstance(image, six.string_types):
-            p = urlparse(image)
             # If it's a url, then set the protobuf and continue
-            if p.scheme:
-                proto_img.url = image
-                continue
-            # If not, then must be a file and just open it and continue
-            else:
+            try:
+                p = urlparse(image)
+                if p.scheme:
+                    proto_img.url = image
+                    continue
+            except UnicodeDecodeError:
+                pass
+
+            # If not, see if it's a file.
+            try:
+                # If file, open and continue.
                 with open(image, 'rb') as f:
                     data = f.read()
+            # Ok, then it must be bytes inside a str. This happens with
+            # Python2's version of open().
+            except TypeError:
+                data = image
 
         # By default, image payload is bytes
         else:
