@@ -5,7 +5,7 @@
 
 import React from 'react'
 // @ts-ignore
-import {Slider as UISlider} from 'baseui/slider';
+import { Slider as UISlider } from 'baseui/slider';
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './Slider.scss'
@@ -21,27 +21,24 @@ interface State extends StState {
 }
 
 class Slider extends PureStreamlitElement<Props, State> {
-  private widgetId: string
-
-  public constructor(props: Props) {
-    super(props)
-
-    this.widgetId = this.props.element.get('id')
-
-    const value = this.props.element.get('value')
-    this.state = { value: [value] }
+  public state = {
+    value: this.props.element.get('value').toArray()
   }
 
   private handleChange = (e: any) => {
-    this.setState({ value: e.value })
+    const widgetId = this.props.element.get('id')
+    const value = e.value
+
+    this.setState({ value })
     this.props.sendBackMsg({
       type: 'widgetJson',
-      widgetJson: JSON.stringify({ [this.widgetId]: e.value[0] })
+      widgetJson: JSON.stringify({
+        [widgetId]: value
+      })
     })
   }
 
   public safeRender(): React.ReactNode {
-    const widgetId = this.props.element.get('id')
     const label = this.props.element.get('label')
     const min = this.props.element.get('min')
     const max = this.props.element.get('max')
@@ -50,9 +47,8 @@ class Slider extends PureStreamlitElement<Props, State> {
 
     return (
       <div className="Widget stSlider" style={style}>
-        <p className="label">{label}: {this.state.value}</p>
+        <p className="label">{label}: {this.state.value.join(" ")}</p>
         <UISlider
-          id={widgetId}
           min={min}
           max={max}
           step={step}

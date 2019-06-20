@@ -3,8 +3,8 @@ syntax = "proto3";
 message Slider {
   string id = 1;
   string label = 2;
-  int32 value = 3;
-  int32 min = 4;
-  int32 max = 5;
-  int32 step = 6;
+  repeated float value = 3;
+  float min = 4;
+  float max = 5;
+  float step = 6;
 }

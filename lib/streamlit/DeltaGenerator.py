@@ -1158,15 +1158,18 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def slider(self, element, ui_value, label, value=0, min=0, max=100, step=1):
+    def slider(self, element, ui_value, label, value=0, min_value=0, max_value=100, step=1):
         """Slider doc string."""
-        # TODO: Support floats.
         current_value = ui_value if ui_value is not None else value
         element.slider.label = label
-        element.slider.min = min
-        element.slider.max = max
+        if type(current_value) is list:
+            assert len(current_value) <= 2
+            element.slider.value[:] = current_value
+        else:
+            element.slider.value[:] = [current_value]
+        element.slider.min = min_value
+        element.slider.max = max_value
         element.slider.step = step
-        element.slider.value = current_value
         return current_value
 
     @_widget
