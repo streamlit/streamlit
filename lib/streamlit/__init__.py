@@ -125,6 +125,7 @@ markdown        = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
 plotly_chart    = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress        = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot          = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
+radio           = _with_dg(_DeltaGenerator.radio)  # noqa: E221
 slider          = _with_dg(_DeltaGenerator.slider)  # noqa: E221
 subheader       = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
 success         = _with_dg(_DeltaGenerator.success)  # noqa: E221

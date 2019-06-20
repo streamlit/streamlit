@@ -1158,6 +1158,22 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
+    def radio(self, element, ui_value, label, value=None, options=None):
+        """Radio doc string."""
+        current_value = ui_value if ui_value is not None else value
+
+        element.radio.label = label
+        if current_value is not None:
+            element.radio.value = current_value
+
+        for option in options:
+            option_proto = element.radio.options.add()
+            option_proto.key = option[0]
+            option_proto.value = option[1]
+
+        return current_value
+
+    @_widget
     def slider(self, element, ui_value, label, value=0, min=0, max=100, step=1):
         """Slider doc string."""
         # TODO: Support floats.

@@ -16,6 +16,7 @@ import "Image.proto";
 import "Map.proto";
 import "PlotlyChart.proto";
 import "Progress.proto";
+import "Radio.proto";
 import "Slider.proto";
 import "Text.proto";
 import "TextArea.proto";
@@ -44,12 +45,13 @@ message Element {
     Map map = 9;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
+    Radio radio = 23;
     Slider slider = 21;
     Text text = 1;
     TextArea text_area = 22;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 23
+    // Next ID: 24
   }
 }

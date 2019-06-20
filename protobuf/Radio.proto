@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message Radio {
+  string id = 1;
+  string label = 2;
+  string value = 3;
+  repeated RadioOption options = 4;
+}
+
+message RadioOption {
+  string key = 1;
+  string value = 2;
+}
