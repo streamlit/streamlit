@@ -7,7 +7,7 @@
 
 import { fromJS } from 'immutable'
 import { IS_DEV_ENV } from './baseconsts'
-import { logMessage } from './log'
+// import { logMessage } from './log'
 
 /**
  * Converts a protobuf JS object into its immutable counterpart.

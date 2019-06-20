@@ -4,7 +4,8 @@
  */
 
 import React from 'react'
-import { Input, Label } from 'reactstrap'
+// @ts-ignore
+import { Textarea } from 'baseui/textarea'
 import { Map as ImmutableMap } from 'immutable'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './TextArea.scss'
@@ -20,41 +21,37 @@ interface State extends StState {
 }
 
 class TextArea extends PureStreamlitElement<Props, State> {
+  private widgetId: string
+
   public constructor(props: Props) {
     super(props)
 
+    this.widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
     this.state = { value }
   }
 
   private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const widgetId = e.target.id
     const value = e.target.value
 
     this.setState({ value })
     this.props.sendBackMsg({
       type: 'widgetJson',
-      widgetJson: JSON.stringify({ [widgetId]: value })
+      widgetJson: JSON.stringify({ [this.widgetId]: value })
     })
   }
 
   public safeRender(): React.ReactNode {
-    const widgetId = this.props.element.get('id')
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget stTextArea">
-        <Label style={style} check>
-          <div className="label">{label}</div>
-          <Input
-            type="textarea"
-            id={widgetId}
-            className="col-6"
-            value={this.state.value}
-            onChange={this.handleChange}
-          />
-        </Label>
+      <div className="Widget stTextArea" style={style}>
+        <p className="label">{label}</p>
+        <Textarea
+          value={this.state.value}
+          onChange={this.handleChange}
+        />
       </div>
     )
   }
