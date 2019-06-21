@@ -88,42 +88,55 @@ class LocalSourcesWatcher(object):
         modules = dict(sys.modules)
 
         for name, module in modules.items():
-            spec = getattr(module, '__spec__', None)
+            try:
+                spec = getattr(module, '__spec__', None)
 
-            if spec is None:
-                filepath = getattr(module, '__file__', None)
+                if spec is None:
+                    filepath = getattr(module, '__file__', None)
+                    if filepath is None:
+                        # Some modules have neither a spec nor a file. But we
+                        # can ignore those since they're not the user-created
+                        # modules we want to watch anyway.
+                        continue
+                else:
+                    filepath = spec.origin
+
                 if filepath is None:
-                    # Some modules have neither a spec nor a file. But we can
-                    # ignore those since they're not the user-created modules
-                    # we want to watch anyway.
+                    # Built-in modules (and other stuff) don't have origins.
                     continue
-            else:
-                filepath = spec.origin
 
-            if filepath is None:
-                # Built-in modules (and other stuff) don't have origins.
+                filepath = os.path.abspath(filepath)
+
+                if not os.path.isfile(filepath):
+                    # There are some modules that have a .origin, but don't
+                    # point to real files. For example, there's a module where
+                    # .origin is 'built-in'.
+                    continue
+
+                file_is_new = filepath not in self._watched_modules
+                file_is_local = _file_is_in_folder(
+                    filepath, self._report.script_folder)
+
+                local_filepaths.append(filepath)
+
+                if file_is_local and file_is_new:
+                    self._register_watcher(filepath, name)
+
+            except Exception:
+                # In case there's a problem introspecting some specific module,
+                # let's not stop the entire loop from running.  For example,
+                # the __spec__ field in some modules (like IPython) is actually
+                # a dynamic property, which can crash if the underlying
+                # module's code has a bug (as discovered by one of our users).
                 continue
 
-            filepath = os.path.abspath(filepath)
-
-            if not os.path.isfile(filepath):
-                # There are some modules that have a .origin, but don't point
-                # to real files. For example, there's a module where .origin is
-                # 'built-in'.
-                continue
-
-            file_is_new = filepath not in self._watched_modules
-            file_is_local = _file_is_in_folder(
-                filepath, self._report.script_folder)
-
-            local_filepaths.append(filepath)
-
-            if file_is_local and file_is_new:
-                self._register_watcher(filepath, name)
+        # Clone dict here because we may alter the original dict inside the
+        # loop.
+        watched_modules = dict(self._watched_modules)
 
         # Remove no-longer-depended-on files from self._watched_modules
         # Will this ever happen?
-        for filepath in self._watched_modules:
+        for filepath in watched_modules:
             if filepath not in local_filepaths:
                 self._deregister_watcher(filepath)
 

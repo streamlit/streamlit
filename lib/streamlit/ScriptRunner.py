@@ -232,8 +232,10 @@ class ScriptRunner(object):
         finally:
             self._set_state(State.STOPPED)
 
-        self._local_sources_watcher.update_watched_modules()
-        _clean_problem_modules()
+        # Use _log_if_error() make sure we never ever ever stop running the
+        # script without meaning to.
+        _log_if_error(self._local_sources_watcher.update_watched_modules)
+        _log_if_error(_clean_problem_modules)
 
         if rerun_requested:
             self._run()
@@ -329,3 +331,12 @@ class modified_sys_path(object):
 
         # Returning False causes any exceptions to be re-raised.
         return False
+
+
+# The reason this is not a decorator is because we want to make it clear at the
+# calling location that this function is being used.
+def _log_if_error(fn):
+    try:
+        fn()
+    except Exception as e:
+        LOGGER.warning(e)
