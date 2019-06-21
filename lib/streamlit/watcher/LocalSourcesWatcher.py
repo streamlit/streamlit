@@ -19,6 +19,8 @@ except ImportError:
     # Fallback that doesn't use watchdog.
     from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
+from streamlit import config
+
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
@@ -32,6 +34,9 @@ class LocalSourcesWatcher(object):
         self._report = report
         self._on_file_changed = on_file_changed
         self._is_closed = False
+
+        self._folder_blacklist = config.get_option(
+            'server.folderWatchBlacklist')
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
@@ -113,6 +118,14 @@ class LocalSourcesWatcher(object):
                     # .origin is 'built-in'.
                     continue
 
+                folder_is_blacklisted = any(
+                    _file_is_in_folder(filepath, blacklisted_folder)
+                    for blacklisted_folder in self._folder_blacklist
+                )
+
+                if folder_is_blacklisted:
+                    continue
+
                 file_is_new = filepath not in self._watched_modules
                 file_is_local = _file_is_in_folder(
                     filepath, self._report.script_folder)
@@ -142,5 +155,6 @@ class LocalSourcesWatcher(object):
 
 
 def _file_is_in_folder(filepath, folderpath):
-    filepath = os.path.abspath(filepath)
+    # Assumes filepath is an absolute path, as a teeny tiny optimization.
+    folderpath = os.path.abspath(folderpath) + '/'
     return filepath.startswith(folderpath)

@@ -8,8 +8,9 @@ import unittest
 
 from mock import patch
 
-from streamlit.watcher import LocalSourcesWatcher
+from streamlit import config
 from streamlit.Report import Report
+from streamlit.watcher import LocalSourcesWatcher
 
 
 class FileIsInFolderTest(unittest.TestCase):
@@ -158,6 +159,28 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
+
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    def test_blacklist(self, fob):
+        prev_blacklist = config.get_option('server.folderWatchBlacklist')
+
+        config.set_option(
+                'server.folderWatchBlacklist',
+                [os.path.dirname(DUMMY_MODULE_1.__file__)])
+
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+
+        fob.assert_called_once()
+
+        sys.modules['DUMMY_MODULE_1'] = DUMMY_MODULE_1
+        fob.reset_mock()
+
+        lso.update_watched_modules()
+
+        fob.assert_not_called()
+
+        # Reset the config object.
+        config.set_option('server.folderWatchBlacklist', prev_blacklist)
 
 
 def sort_args_list(args_list):

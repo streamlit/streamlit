@@ -276,6 +276,7 @@ class ConfigTest(unittest.TestCase):
             u's3.secretAccessKey',
             u's3.url',
             u'server.enableCORS',
+            u'server.folderWatchBlacklist',
             u'server.headless',
             u'server.liveSave',
             u'server.port',
