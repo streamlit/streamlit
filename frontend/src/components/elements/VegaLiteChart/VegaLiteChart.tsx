@@ -52,23 +52,19 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
    */
   private element: HTMLDivElement | null = null
 
-
   public safeRender(): JSX.Element {
     return (
       // Create the container Vega draws inside.
       <div className="stVegaLiteChart" ref={c => this.element = c} />)
   }
 
-
   public safeComponentDidMount(): void {
     this.createView()
   }
 
-
   public safeComponentDidUpdate(): void {
     this.createView()
   }
-
 
   /**
    * Detect whether rows were appended to dataframe and, if so, pretend this
@@ -122,7 +118,6 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
     return true
   }
 
-
   /**
    * Uses Vega View's insert() method to add more data to the chart.
    * See https://vega.github.io/vega/docs/api/view/
@@ -136,7 +131,6 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
     this.vegaView.insert(this.defaultDataName, rows)
     this.vegaView.run()
   }
-
 
   private createView(): void {
     logMessage('Creating a new Vega view. We only should do this when the spec changes.')
@@ -152,6 +146,10 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
 
     if (spec.datasets) {
       throw new Error('Datasets should not be passed as part of the spec')
+    }
+
+    if (spec.width === 0) {
+      spec.width = this.props.width
     }
 
     const datasets = getDataSets(el)

@@ -16,7 +16,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, data=None, spec=None, **kwargs):
+def marshall(proto, data=None, spec=None, width=0, **kwargs):
     """Construct a Vega-Lite chart object.
 
     See DeltaGenerator.vega_lite_chart for docs.
@@ -29,15 +29,25 @@ def marshall(proto, data=None, spec=None, **kwargs):
         if not _looks_like_vega_lite_spec(spec):
             raise ValueError('Invalid Vega-Lite chart spec: %s' % spec)
 
+    # Support passing no spec arg, but filling it with kwargs.
+    # Example:
+    #   marshall(proto, baz='boz')
+    if spec is None:
+        spec = dict()
+    else:
+        # Clone the spec dict, since we may be mutating it.
+        spec = dict(spec)
+
+    # TODO: Improve autosizing code. It doesn't work with some kinds of charts,
+    # like composed charts, for example.
+    if width >= 0 and 'width' not in spec:
+        spec['width'] = width
+        if 'autosize' not in spec:
+            spec['autosize'] = {'type': 'fit', 'contains': 'padding'}
+
     # Support passing in kwargs. Example:
     #   marshall(proto, {foo: 'bar'}, baz='boz')
     if len(kwargs):
-        # Support passing no spec arg, but filling it with kwargs.
-        # Example:
-        #   marshall(proto, baz='boz')
-        if spec is None:
-            spec = dict()
-
         # Merge spec with unflattened kwargs, where kwargs take precedence.
         # This only works for string keys, but kwarg keys are strings anyways.
         spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))

@@ -656,7 +656,8 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
+    def vega_lite_chart(
+            self, element, data=None, spec=None, width=0, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -670,6 +671,12 @@ class DeltaGenerator(object):
             The Vega-Lite spec for the chart. If the spec was already passed in
             the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
+
+        width : number
+            If 0 (default), stretch chart to the full document width. If -1,
+            use the default from Vega-Lite. If greater than 0, sets the width.
+            Note that if spec['width'] is defined, it takes precedence over
+            this argument.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -705,7 +712,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
         vega_lite.marshall(
-            element.vega_lite_chart, data, spec, **kwargs)
+            element.vega_lite_chart, data, spec, width, **kwargs)
 
     @_with_element
     def altair_chart(self, element, altair_chart):
