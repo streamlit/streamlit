@@ -26,8 +26,6 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
     if type(data) in dict_types and spec is None:
         spec = data
         data = None
-        if not _looks_like_vega_lite_spec(spec):
-            raise ValueError('Invalid Vega-Lite chart spec: %s' % spec)
 
     # Support passing no spec arg, but filling it with kwargs.
     # Example:
@@ -85,12 +83,6 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
 
     if data is not None:
         data_frame_proto.marshall_data_frame(data, proto.data)
-
-
-def _looks_like_vega_lite_spec(spec):
-    # Vega-Lite specs require both a 'mark' key and a 'data' key. Here we only
-    # check for 'mark' because we allow passing in the data separately.
-    return 'mark' in spec
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html

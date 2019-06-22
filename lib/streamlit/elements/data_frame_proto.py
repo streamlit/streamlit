@@ -439,7 +439,7 @@ def _get_data_frame(delta, name=None):
         elif element_type == 'vega_lite_chart':
             chart_proto = delta.new_element.vega_lite_chart
             if name:
-                return _get_dataset(chart_proto.datasets, name)
+                return _get_or_create_dataset(chart_proto.datasets, name)
             elif len(chart_proto.datasets) == 1:
                 # Support the case where the dataset name was randomly given by
                 # the charting library (e.g. Altair) and the user has no
@@ -458,12 +458,15 @@ def _get_data_frame(delta, name=None):
         raise ValueError('Cannot extract DataFrame from %s.' % delta_type)
 
 
-def _get_dataset(datasets_proto, name):
+def _get_or_create_dataset(datasets_proto, name):
     for dataset in datasets_proto:
         if dataset.has_name and dataset.name == name:
             return dataset.data
 
-    raise ValueError('No dataset found with name "%s".' % name)
+    dataset = datasets_proto.add()
+    dataset.name = name
+    dataset.has_name = True
+    return dataset.data
 
 
 def _index_len(index):

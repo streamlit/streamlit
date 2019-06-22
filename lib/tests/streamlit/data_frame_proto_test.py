@@ -607,8 +607,8 @@ class DataFrameProtoTest(unittest.TestCase):
         err_msg = 'No dataset found with name "None".'
         self.assertEqual(err_msg, str(e.value))
 
-    def test_get_dataset(self):
-        """Test streamlit.data_frame_proto._get_dataset."""
+    def test_get_or_create_dataset(self):
+        """Test streamlit.data_frame_proto._get_or_create_dataset."""
         chart = VegaLiteChart()
 
         ds1 = NamedDataSet()
@@ -625,13 +625,9 @@ class DataFrameProtoTest(unittest.TestCase):
 
         chart.datasets.extend([ds1, ds2])
 
-        ret = data_frame_proto._get_dataset(chart.datasets, 'dataset 1')
+        ret = data_frame_proto._get_or_create_dataset(chart.datasets, 'dataset 1')
         self.assertEqual(ret, ds1.data)
 
-        with pytest.raises(ValueError) as e:
-            data_frame_proto._get_dataset(chart.datasets, 'dataset 3')
-        err_msg = 'ValueError: No dataset found with name "dataset 3"'
-        self.assertTrue(err_msg in str(e))
 
     def test_index_len(self):
         """Test streamlit.data_frame_proto._index_len."""
