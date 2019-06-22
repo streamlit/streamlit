@@ -94,7 +94,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
     const dataSets = getDataSets(element) || {}
 
     for (const [name, dataset] of Object.entries(dataSets)) {
-      const datasetName = name ? this.defaultDataName : name
+      const datasetName = name ? name : this.defaultDataName
       const prevDataset = prevDataSets[datasetName]
       this.updateData(datasetName, prevDataset, dataset)
     }
