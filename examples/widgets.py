@@ -6,9 +6,9 @@ st.subheader('Checkbox')
 w1 = st.checkbox('I am human', True)
 st.write(w1)
 
-st.subheader('Slider')
-w2 = st.slider('Age', 32, 0, 100, 1)
-st.write(w2)
+# st.subheader('Slider')
+# w2 = st.slider('Age', 32, 0, 100, 1)
+# st.write(w2)
 
 st.subheader('Textarea')
 w3 = st.text_area('Comments', 'Streamlit is awesomeness!')
@@ -24,3 +24,7 @@ if w4:
 st.subheader('Radio')
 w5 = st.radio('radio widget', '1', [('1', 'first'), ('2', 'second')])
 st.write(w5)
+
+st.subheader('Input')
+w6 = st.input('input widget', 'i iz input')
+st.write(w6)

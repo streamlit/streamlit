@@ -123,6 +123,7 @@ header          = _with_dg(_DeltaGenerator.header)  # noqa: E221
 help            = _with_dg(_DeltaGenerator.help)  # noqa: E221
 image           = _with_dg(_DeltaGenerator.image)  # noqa: E221
 info            = _with_dg(_DeltaGenerator.info)  # noqa: E221
+input           = _with_dg(_DeltaGenerator.input)  # noqa: E221
 json            = _with_dg(_DeltaGenerator.json)  # noqa: E221
 line_chart      = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
 map             = _with_dg(_DeltaGenerator.map)  # noqa: E221

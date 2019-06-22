@@ -25,6 +25,7 @@ import Text from 'components/elements/Text'
 // Lazy-load display widgets.
 const Button = React.lazy(() => import('components/widgets/Button/'))
 const Checkbox = React.lazy(() => import('components/widgets/Checkbox/'))
+const Input = React.lazy(() => import('components/widgets/Input/'))
 const Radio = React.lazy(() => import('components/widgets/Radio/'))
 const Slider = React.lazy(() => import('components/widgets/Slider/'))
 const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
@@ -175,6 +176,7 @@ export class ReportView extends PureComponent<Props> {
       video: (el: Element) => <Video element={el} width={width} />,
       button: (el: Element) => <Button element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      input: (el: Element) => <Input element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,

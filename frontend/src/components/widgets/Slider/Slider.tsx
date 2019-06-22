@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-// @ts-ignore
 import { Slider as UISlider } from 'baseui/slider';
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'

@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Checkbox as UICheckbox } from 'baseui/checkbox';
+import { Input as UIInput } from 'baseui/input';
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -16,31 +16,32 @@ interface Props {
 }
 
 interface State extends StState {
-  value: boolean;
+  value: any;
 }
 
-class Checkbox extends PureStreamlitElement<Props, State> {
+class Input extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    console.log(value)
-
+    // TODO should we set the value to the state even if it's undefined?
     this.state = { value }
-    this.props.widgetMgr.setBoolValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    if (value){
+      // TODO do we need to set and send the widget state here?
+      //  what changes if we dont?
+      this.props.widgetMgr.setStringValue(widgetId, value)
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+    }
   }
 
-  private handleChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+  private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const value = (e.target as HTMLInputElement).value
     const widgetId = this.props.element.get('id')
-    const value = (e.target as HTMLInputElement).checked
-
-    console.log(value)
 
     this.setState({ value })
-    this.props.widgetMgr.setBoolValue(widgetId, value)
+    this.props.widgetMgr.setStringValue(widgetId, value)
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -49,13 +50,13 @@ class Checkbox extends PureStreamlitElement<Props, State> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget row-widget stCheckbox" style={style}>
-        <UICheckbox checked={this.state.value} onChange={this.handleChange}>
+      <div className="Widget row-widget stInput" style={style}>
+        <UIInput onChange={this.onChange} value={this.state.value}>
           {label}
-        </UICheckbox>
+        </UIInput>
       </div>
     )
   }
 }
 
-export default Checkbox
+export default Input

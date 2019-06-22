@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-// @ts-ignore
 import { Button as UIButton } from 'baseui/button'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
@@ -17,7 +16,7 @@ interface Props {
 }
 
 class Button extends PureStreamlitElement<Props, StState> {
-  private handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  private handleClick = (e: React.SyntheticEvent<HTMLButtonElement>) => {
     const widgetId = this.props.element.get('id')
 
     this.props.widgetMgr.setTriggerValue(widgetId, true)
@@ -29,7 +28,7 @@ class Button extends PureStreamlitElement<Props, StState> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget row-widget stButton" style={style} >
+      <div className="Widget row-widget stButton" style={style}>
         <UIButton onClick={this.handleClick}>
           {label}
         </UIButton>

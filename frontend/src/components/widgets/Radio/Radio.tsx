@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-// @ts-ignore
 import { Radio as UIRadio, RadioGroup } from 'baseui/radio';
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
@@ -34,8 +33,8 @@ class Radio extends PureStreamlitElement<Props, State> {
     }
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+  private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const value = (e.target as HTMLInputElement).value
     const widgetId = this.props.element.get('id')
 
     this.setState({ value })

@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-// @ts-ignore
 import { Textarea as UITextArea } from 'baseui/textarea'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
@@ -33,9 +32,9 @@ class TextArea extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  private handleChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const widgetId = this.props.element.get('id')
-    const value = e.target.value
+    const value = (e.target as HTMLTextAreaElement).value
 
     this.setState({ value })
     this.props.widgetMgr.setStringValue(widgetId, value)

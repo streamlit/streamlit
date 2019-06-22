@@ -1159,6 +1159,15 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
+    def input(self, element, ui_value, label, value=''):
+        """Input doc string."""
+        # TODO int/float only?
+        current_value = ui_value if ui_value is not None else value
+        element.input.label = label
+        element.input.value = current_value
+        return current_value
+
+    @_widget
     def radio(self, element, ui_value, label, value=None, options=None):
         """Radio doc string."""
         current_value = ui_value if ui_value is not None else value
