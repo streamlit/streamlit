@@ -339,8 +339,7 @@ function anyArrayLen(anyArray) {
  * Returns the ith element of this AnyArray.
  */
 function anyArrayGet(anyArray, i) {
-  const getData = (obj) => obj.get('data')
-    .get(i)
+  const getData = (obj) => obj.get('data').get(i)
   return dispatchOneOf(anyArray, 'type', {
     strings: getData,
     doubles: getData,
@@ -373,29 +372,37 @@ export function addRows(element, namedDataSet) {
   const newRows = namedDataSet.get('data')
   const namedDataSets = getNamedDataSets(element)
 
-  let existingDataSet
-  let existingDatasetIndex
-  let existingDataFrame
+  const [existingDatasetIndex, existingDataSet] = getNamedDataSet(namedDataSets, name)
+  let dataframeToModify;
 
+  // There are 5 cases to consider:
+  // 1. add_rows has a named dataset
+  //   a) element has a named dataset with that name -> use that one
+  //   b) element has no named dataset with that name -> put the new dataset into the element
+  // 2. add_rows as an unnamed dataset
+  //   a) element has an unnamed dataset -> use that one
+  //   b) element has only named datasets -> use the first named dataset
+  //   c) element has no dataset -> put the new dataset into the element
   if (namedDataSet.get('hasName')) {
-    [existingDatasetIndex, existingDataSet] = getNamedDataSet(namedDataSets, name)
-  }
-  
-  if (existingDataSet) {
-    existingDataFrame = existingDataSet.get('data')
-  } else {
-    existingDataFrame = getDataFrame(element)
-  }
-
-  if (!existingDataFrame) {
-    if (namedDataSet) {
-      return pushNamedDataSet(element, namedDataSet)
+    if (existingDataSet) {
+      dataframeToModify = existingDataSet.get('data')
     } else {
-      return setDataFrame(element, newRows)
+      return pushNamedDataSet(element, namedDataSet)
+    }
+  } else {
+    const existingDataFrame = getDataFrame(element)
+    if (existingDataFrame) {
+      dataframeToModify = existingDataFrame
+    } else {
+      if (existingDataSet) {
+        dataframeToModify = existingDataSet.get('data')
+      } else {
+        setDataFrame(element, newRows)
+      }
     }
   }
 
-  const newDataFrame = existingDataFrame
+  const newDataFrame = dataframeToModify
     .update('index', index => concatIndex(index, newRows.get('index')))
     .updateIn(['data', 'cols'], (cols) => {
       return cols.zipWith(
@@ -498,6 +505,7 @@ function getDataFrame(element) {
 function getNamedDataSets(element) {
   return dispatchOneOf(element, 'type', {
     vegaLiteChart: (chart) => chart.get('datasets'),
+    _else: () => null,
   })
 }
 
