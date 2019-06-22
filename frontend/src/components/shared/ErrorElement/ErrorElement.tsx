@@ -12,26 +12,28 @@ import React from 'react'
 import {Alert} from 'reactstrap'
 
 export interface Props {
-  error: Error;
+  name: string;
+  message: string;
+  stack?: string;
   width?: number;
 }
 
 class ErrorElement extends React.PureComponent<Props> {
   public render(): React.ReactNode {
-    const error = this.props.error
+    const {name, message, stack} = this.props
 
     // Remove first line from stack (because it's just the error message) and
     // trim indentation.
-    const stack = error.stack ? error.stack.split('\n') : []
-    stack.shift()
-    const cleanedStack = stack
+    const stackArray = stack ? stack.split('\n') : []
+    stackArray.shift()
+    const cleanedStack = stackArray
       .map(s => s.trim())
       .join('\n')
 
     return (
       <Alert
         color="danger" style={{width: this.props.width}}>
-        <strong>{error.name}:</strong>{' '}{error.message}
+        <strong>{name}:</strong>{' '}{message}
         {
           stack ?
             <pre className="error"><code>{ cleanedStack }</code></pre>
