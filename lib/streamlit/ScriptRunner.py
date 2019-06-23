@@ -225,6 +225,7 @@ class ScriptRunner(object):
 
         except BaseException as e:
             # Show exceptions in the Streamlit report.
+            LOGGER.debug(e)
             st.exception(e)  # This is OK because we're in the script thread.
             # TODO: Clean up the stack trace, so it doesn't include
             # ScriptRunner.
