@@ -1184,6 +1184,22 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
+    def select(self, element, ui_value, label, value=None, options=None):
+        """Select doc string."""
+        current_value = ui_value if ui_value is not None else value
+
+        element.select.label = label
+        if current_value is not None:
+            element.select.value = current_value
+
+        for option in options:
+            option_proto = element.select.options.add()
+            option_proto.key = option[0]
+            option_proto.value = option[1]
+
+        return current_value
+
+    @_widget
     def slider(self, element, ui_value, label, value=0, min_value=0, max_value=100, step=1):
         """Slider doc string."""
         current_value = ui_value if ui_value is not None else value
