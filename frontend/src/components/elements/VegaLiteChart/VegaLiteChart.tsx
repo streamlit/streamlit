@@ -285,7 +285,7 @@ function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] 
  */
 function dataIsAnAppendOfPrev(
     prevData: ImmutableMap<string, number>, prevNumCols: number, prevNumRows: number,
-    data: ImmutableMap<string, number>, numCols: number, numRows: number) {
+    data: ImmutableMap<string, number>, numRows: number, numCols: number) {
   // Check whether dataframes have the same shape.
 
   if (prevNumCols !== numCols) {

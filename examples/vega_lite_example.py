@@ -58,6 +58,7 @@ st.vega_lite_chart({
 
 st.write(
     'Putting the `df` inside the spec, as inline `data` (different notation):')
+st.write('**This fails now, but not a big deal. It\'s a weird notation.**')
 
 st.vega_lite_chart({
     'data': {'values': df},
