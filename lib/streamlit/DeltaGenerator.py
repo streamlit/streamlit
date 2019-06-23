@@ -1186,16 +1186,17 @@ class DeltaGenerator(object):
     @_widget
     def select(self, element, ui_value, label, value=None, options=None):
         """Select doc string."""
+        element.select.label = label
         current_value = ui_value if ui_value is not None else value
 
-        element.select.label = label
         if current_value is not None:
-            element.select.value = current_value
+            item = next(iter(filter(lambda x: x[0] == current_value, options)), None)
+            element.select.value = item[0]
 
         for option in options:
             option_proto = element.select.options.add()
-            option_proto.key = option[0]
-            option_proto.value = option[1]
+            option_proto.value = option[0]
+            option_proto.label = option[1]
 
         return current_value
 

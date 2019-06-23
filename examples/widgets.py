@@ -30,5 +30,5 @@ w6 = st.input('input widget', 'i iz input')
 st.write(w6)
 
 st.subheader('Select')
-w7 = st.select('select widget', 'one', [('one', 'first'), ('two', 'second')])
+w7 = st.select('select widget', '1', [('1', 'first'), ('2', 'second')])
 st.write(w7)

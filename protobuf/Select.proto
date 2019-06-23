@@ -15,6 +15,6 @@ message Select {
 }
 
 message SelectOption {
-  string key = 1;
+  string label = 1;
   string value = 2;
 }
