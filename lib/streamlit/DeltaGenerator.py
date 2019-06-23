@@ -147,7 +147,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
         marshall_element : callable
-            Function which sets the fields for a protobuf.Delta.
+            Function which sets the fields for a protobuf.NewElement.
 
         Returns
         -------

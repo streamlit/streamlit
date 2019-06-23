@@ -9,6 +9,7 @@
 
 import camelcase from 'camelcase'
 import { dispatchOneOf, mapOneOf, updateOneOf } from './immutableProto'
+import { fromJS } from 'immutable'
 import { format } from './format'
 
 // Must match dict_builder.py
@@ -393,13 +394,16 @@ export function addRows(element, namedDataSet) {
     const existingDataFrame = getDataFrame(element)
     if (existingDataFrame) {
       dataframeToModify = existingDataFrame
+    } else if (existingDataSet) {
+      dataframeToModify = existingDataSet.get('data')
     } else {
-      if (existingDataSet) {
-        dataframeToModify = existingDataSet.get('data')
-      } else {
-        setDataFrame(element, newRows)
-      }
+      return setDataFrame(element, newRows)
     }
+  }
+
+  if (dataframeToModify.get('data') == null) {
+    dataframeToModify = dataframeToModify.set('data', fromJS({cols: []}))
+    dataframeToModify = dataframeToModify.set('style', fromJS({cols: []}))
   }
 
   const newDataFrame = dataframeToModify

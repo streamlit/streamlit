@@ -94,7 +94,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
     const dataSets = getDataSets(element) || {}
 
     for (const [name, dataset] of Object.entries(dataSets)) {
-      const datasetName = name ? this.defaultDataName : name
+      const datasetName = name ? name : this.defaultDataName
       const prevDataset = prevDataSets[datasetName]
       this.updateData(datasetName, prevDataset, dataset)
     }
@@ -118,15 +118,12 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
       throw new Error('Chart has not been drawn yet')
     }
 
-    if (!data) {
-      if (!prevData) {
-        return
-      }
+    if (!data || !data.get('data') || !data.get('data').get('data')) {
       this.vegaView.remove(name, vega.truthy)
       return
     }
 
-    if (!prevData) {
+    if (!prevData || !prevData.get('data') || !prevData.get('data').get('data')) {
       this.vegaView.insert(name, getDataArray(data))
       return
     }
