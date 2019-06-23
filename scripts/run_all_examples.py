@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Runs all the scripts in the examples folder (except this one)."""
 
 # Python 2/3 compatibility
