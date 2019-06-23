@@ -1,5 +1,10 @@
+# Copyright 2019 Streamlit Inc. All rights reserved.
+
 import sys
 import traceback
+
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 
 def marshall(exception_proto, exception, exception_traceback=None):
@@ -19,8 +24,39 @@ def marshall(exception_proto, exception, exception_traceback=None):
         displays the given traceback.
     """
     exception_proto.type = type(exception).__name__
-    exception_proto.message = str(exception)
 
+    stack_trace = get_stack_trace(exception, exception_traceback)
+    exception_proto.stack_trace.extend(stack_trace)
+
+    try:
+        exception_proto.message = str(exception)
+    except Exception as str_exception:
+        # Sometimes the exception's __str__/__unicode__ method itself
+        # raises an error.
+        exception_proto.message = ''
+        LOGGER.warning('''
+
+Streamlit was unable to parse the data from an exception in the user's script.
+This is usually due to a bug in the Exception object itself. Here is some info
+about that Exception object, so you can report a bug to the original author:
+
+Exception type:
+  %(etype)s
+
+Problem:
+  %(str_exception)s
+
+Traceback:
+%(str_exception_tb)s
+
+        ''' % {
+            'etype': type(exception).__name__,
+            'str_exception': str_exception,
+            'str_exception_tb': '\n'.join(get_stack_trace(str_exception)),
+        })
+
+
+def get_stack_trace(exception, exception_traceback=None):
     # Get and extract the traceback for the exception.
     if exception_traceback is not None:
         extracted_traceback = traceback.extract_tb(exception_traceback)
@@ -45,5 +81,4 @@ def marshall(exception_proto, exception, exception_traceback=None):
     else:
         stack_trace = traceback.format_list(extracted_traceback)
 
-    exception_proto.stack_trace.extend(stack_trace)
-
+    return stack_trace
