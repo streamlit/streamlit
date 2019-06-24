@@ -112,8 +112,9 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
    * @param data The dataset at the current state.
    */
   private updateData(
-      name: string, prevData: ImmutableMap<string, any>,
-      data: ImmutableMap<string, any>): void {
+    name: string, prevData: ImmutableMap<string, any>,
+    data: ImmutableMap<string, any>): void {
+
     if (!this.vegaView) {
       throw new Error('Chart has not been drawn yet')
     }
@@ -284,8 +285,9 @@ function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] 
  * Checks if data looks like it's just prevData plus some appended rows.
  */
 function dataIsAnAppendOfPrev(
-    prevData: ImmutableMap<string, number>, prevNumCols: number, prevNumRows: number,
-    data: ImmutableMap<string, number>, numRows: number, numCols: number) {
+  prevData: ImmutableMap<string, number>, prevNumCols: number, prevNumRows: number,
+  data: ImmutableMap<string, number>, numRows: number, numCols: number,
+): boolean {
   // Check whether dataframes have the same shape.
 
   if (prevNumCols !== numCols) {
