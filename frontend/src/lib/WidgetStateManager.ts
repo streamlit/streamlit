@@ -1,11 +1,10 @@
-import {BackMsg, IBackMsg, WidgetState, WidgetStates} from 'autogen/protobuf'
-
+import {IBackMsg, BackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/protobuf'
 
 /**
  * Manages widget values, and sends widget update messages back to the server.
  */
 export class WidgetStateManager {
-  /** Called to deliver a message to the server */
+  // Called to deliver a message to the server
   private readonly sendBackMsg: (msg: IBackMsg) => void
 
   private readonly widgetStates: Map<string, WidgetState> = new Map<string, WidgetState>()
@@ -38,8 +37,8 @@ export class WidgetStateManager {
     this.getOrCreateWidgetStateProto(widgetId).stringValue = value
   }
 
-  public setFloatArrayValue(widgetId: string, value: WidgetState.IFloatArray): void {
-    this.getOrCreateWidgetStateProto(widgetId).floatArrayValue = value
+  public setFloatArrayValue(widgetId: string, value: number[]): void {
+    this.getOrCreateWidgetStateProto(widgetId).floatArrayValue = FloatArray.fromObject({ value })
   }
 
   public sendUpdateWidgetsMessage(): void {
@@ -59,7 +58,7 @@ export class WidgetStateManager {
   private getOrCreateWidgetStateProto(id: string): WidgetState {
     let state = this.getWidgetStateProto(id)
     if (state == null) {
-      state = new WidgetState({id: id})
+      state = new WidgetState({ id })
       this.widgetStates.set(id, state)
     }
     return state
@@ -99,5 +98,4 @@ export class WidgetStateManager {
     this.latestPendingMessage = undefined
     this.widgetThrottleTimer = undefined
   }
-
 }

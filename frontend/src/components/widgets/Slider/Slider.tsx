@@ -5,7 +5,7 @@
 
 import React from 'react'
 // @ts-ignore
-import { Slider as UISlider } from 'baseui/slider';
+import { Slider as UISlider } from 'baseui/slider'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -21,6 +21,10 @@ interface State extends StState {
   value: number[];
 }
 
+interface SliderValue {
+  value: number[];
+}
+
 class Slider extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
@@ -33,9 +37,8 @@ class Slider extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  private handleChange = (e: any) => {
+  private handleChange = ({ value }: SliderValue) => {
     const widgetId = this.props.element.get('id')
-    const value = e.value
 
     this.setState({ value })
     this.props.widgetMgr.setFloatArrayValue(widgetId, value)
