@@ -118,6 +118,64 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         ro.close()
 
+    def test_multiple_watchers_same_file(self):
+        """Test that we can have multiple watchers of the same file."""
+        filename = '/this/is/my/file.py'
+
+        mod_count = [0]
+        def modify_mock_file():
+            self.os.stat = lambda x: FakeStat(mod_count[0])
+            self.mock_util.calc_md5_with_blocking_retries = \
+                lambda x: '%d' % mod_count[0]
+
+            mod_count[0] += 1
+
+        def sleep():
+            try:
+                time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
+            except AssertionError:
+                pass
+
+        modify_mock_file()
+
+        cb1 = mock.Mock()
+        cb2 = mock.Mock()
+
+        watcher1 = PollingFileWatcher.PollingFileWatcher(filename, cb1)
+        watcher2 = PollingFileWatcher.PollingFileWatcher(filename, cb2)
+
+        sleep()
+
+        cb1.assert_not_called()
+        cb2.assert_not_called()
+
+        # "Modify" our file
+        modify_mock_file()
+        sleep()
+
+        assert 1 == cb1.call_count
+        assert 1 == cb2.call_count
+
+        # Close watcher1. Only watcher2's callback should be called after this.
+        watcher1.close()
+
+        # Modify our file again
+        modify_mock_file()
+        sleep()
+
+        assert 1 == cb1.call_count
+        assert 2 == cb2.call_count
+
+        watcher2.close()
+
+        # Modify our file a final time
+        modify_mock_file()
+
+        # Both watchers are now closed, so their callback counts
+        # should not have increased.
+        assert 1 == cb1.call_count
+        assert 2 == cb2.call_count
+
 
 class FakeStat(object):
     """Emulates the output of os.stat()."""

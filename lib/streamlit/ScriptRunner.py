@@ -225,6 +225,7 @@ class ScriptRunner(object):
 
         except BaseException as e:
             # Show exceptions in the Streamlit report.
+            LOGGER.debug(e)
             st.exception(e)  # This is OK because we're in the script thread.
             # TODO: Clean up the stack trace, so it doesn't include
             # ScriptRunner.
@@ -232,8 +233,10 @@ class ScriptRunner(object):
         finally:
             self._set_state(State.STOPPED)
 
-        self._local_sources_watcher.update_watched_modules()
-        _clean_problem_modules()
+        # Use _log_if_error() make sure we never ever ever stop running the
+        # script without meaning to.
+        _log_if_error(self._local_sources_watcher.update_watched_modules)
+        _log_if_error(_clean_problem_modules)
 
         if rerun_requested:
             self._run()
@@ -287,10 +290,19 @@ class RerunException(ScriptControlException):
 
 
 def _clean_problem_modules():
+    """Some modules are stateful, so we have to clear their state."""
+
     if 'keras' in sys.modules:
         try:
             keras = sys.modules['keras']
             keras.backend.clear_session()
+        except:
+            pass
+
+    if 'matplotlib.pyplot' in sys.modules:
+        try:
+            plt = sys.modules['matplotlib.pyplot']
+            plt.close('all')
         except:
             pass
 
@@ -329,3 +341,12 @@ class modified_sys_path(object):
 
         # Returning False causes any exceptions to be re-raised.
         return False
+
+
+# The reason this is not a decorator is because we want to make it clear at the
+# calling location that this function is being used.
+def _log_if_error(fn):
+    try:
+        fn()
+    except Exception as e:
+        LOGGER.warning(e)

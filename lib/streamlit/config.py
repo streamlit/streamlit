@@ -9,7 +9,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import os
-import sys
 import platform
 import toml
 import urllib
@@ -223,6 +222,7 @@ def _global_unit_test():
     """
     return False
 
+
 _create_option(
     'global.useNode',
     description='''Whether to serve static content from node. Only applies when
@@ -413,6 +413,16 @@ _create_option(
 # Config Section: Server #
 
 _create_section('server', 'Settings for the Streamlit server')
+
+
+_create_option(
+    'server.folderWatchBlacklist',
+    description='''List of folders that should not be watched for changes.
+    Relative paths will be taken as relative to the current working directory.
+
+    Example: ['/home/user1/env', 'relative/path/to/folder']
+    ''',
+    default_val=[])
 
 
 @_create_option('server.headless')
@@ -879,8 +889,8 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if (isinstance(value, string_types) and
-            value.startswith('env:')):  # noqa F821
+    if (isinstance(value, string_types) and  # noqa F821
+            value.startswith('env:')):
         var_name = value[len('env:'):]
         env_var = os.environ.get(var_name)
 
@@ -1014,7 +1024,9 @@ def on_config_parsed(func):
     if config_file_has_been_parsed:
         func()
     else:
-        _on_config_parsed.connect(lambda _: func())
+        # weak=False, because we're using an anonymous lambda that
+        # goes out of scope immediately.
+        _on_config_parsed.connect(lambda _: func(), weak=False)
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

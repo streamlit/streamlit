@@ -62,7 +62,7 @@ export class ReportView extends PureComponent<Props> {
 
   public render(): ReactNode {
     return (
-      <AutoSizer className="main">
+      <AutoSizer className="main" disableHeight={true}>
         {({width}) => this.renderElements(width)}
       </AutoSizer>
     )
@@ -115,13 +115,6 @@ export class ReportView extends PureComponent<Props> {
         </div>
       )
     })
-
-    // add a Footer
-    out.push(
-      <div className="element-container" key={this.props.elements.size}>
-        <div style={{width}} className="footer"/>
-      </div>
-    )
 
     return out
   }

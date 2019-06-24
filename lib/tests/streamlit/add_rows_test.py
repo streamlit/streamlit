@@ -158,18 +158,21 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self._dg._reset()
             self.report_queue.clear()
 
-    def test_add_rows_fails_when_wrong_name(self):
-        """Test add_rows with wrongfully named datasets."""
-        all_methods = (
-            self._get_unnamed_data_methods() + self._get_named_data_methods())
+    def test_add_rows_works_when_new_name(self):
+        """Test add_rows with new named datasets."""
 
-        for method in all_methods:
+        for method in self._get_named_data_methods():
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(DATAFRAME)
+            self.report_queue.clear()
 
-            with self.assertRaises(ValueError):
-                # This is what we're testing:
-                el.add_rows(wrong_name=NEW_ROWS)
+            # This is what we're testing:
+            el.add_rows(new_name=NEW_ROWS)
+
+            # Make sure there are 3 rows in the delta that got appended.
+            ar = self.get_delta_from_queue().add_rows
+            num_rows = len(ar.data.data.cols[0].int64s.data)
+            self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
             self._dg._reset()

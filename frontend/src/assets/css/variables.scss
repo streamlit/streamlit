@@ -5,6 +5,7 @@
 
 // Overwrite some basic colors.
 $white:      #FFFFFF;
+$gray-050:   #F6F8F9;
 $gray-100:   #F0F3F9;
 $gray-200:   #E6E9EF;
 $gray-300:   $gray-200;  // We don't need a million grays!
@@ -21,6 +22,7 @@ $blue:       #2979E9;
 $green:      #199939;
 
 // Custom color for our own use.
+$gray-faint:    $gray-050;
 $gray-lightest: $gray-100;
 $gray-lighter:  $gray-200;
 $gray-light:    $gray-500;

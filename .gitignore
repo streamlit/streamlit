@@ -74,4 +74,4 @@ lib/Pipfile.lock
 # Cypress
 ########################################################################
 frontend/cypress/videos
-
+__diff_output__

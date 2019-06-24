@@ -10,7 +10,6 @@ import copy
 import threading
 
 from streamlit import protobuf
-from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -30,8 +29,9 @@ class ReportQueue(object):
             self._delta_id_map = dict()
 
     def get_debug(self):
+        from google.protobuf.json_format import MessageToDict
         return {
-            'queue': [util.forwardmsg_to_debug(m) for m in self._queue],
+            'queue': [MessageToDict(m) for m in self._queue],
             'ids': list(self._delta_id_map.keys()),
         }
 

@@ -14,3 +14,6 @@ spec = {
     }
 }
 st.vega_lite_chart(df, spec)
+st.vega_lite_chart(df, spec, width=0)
+st.vega_lite_chart(df, spec, width=-1)
+st.vega_lite_chart(df, spec, width=500)

@@ -3,6 +3,15 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-.recharts-wrapper {
-  font-size: 0.8rem;
+@import 'src/assets/css/variables';
+
+
+.stChart {
+  font-size: $font-size-sm;
+
+  li {
+    font-size: $font-size-sm;
+    margin: 0 1rem;
+    padding: 0;
+  }
 }

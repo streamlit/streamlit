@@ -24,27 +24,36 @@ def add_magic(code, script_path):
     if compatibility.is_running_py3():
         # Pass script_path so we get pretty exceptions.
         tree = ast.parse(code, script_path, 'exec')
-        return _modify_ast_subtree(tree, True)
+        return _modify_ast_subtree(tree, is_root=True)
     return code
 
 
-def _modify_ast_subtree(tree, is_root):
+def _modify_ast_subtree(tree, body_attr='body', is_root=False):
     """Parses magic commands and modifies the given AST (sub)tree."""
 
-    for i, node in enumerate(tree.body):
-        new_value = None
+    body = getattr(tree, body_attr)
 
-        # Parse the contents of functions
-        if type(node) is ast.FunctionDef:
-            node = _modify_ast_subtree(node, is_root=False)
-            tree.body[i] = node
+    for i, node in enumerate(body):
+        new_value = None
+        node_type = type(node)
+
+        # Parse the contents of functions and With statements
+        if node_type is ast.FunctionDef or node_type is ast.With:
+            body[i] = _modify_ast_subtree(node)
+
+        # Parse the contents of try statements
+        elif node_type is ast.Try:
+            for j, inner_node in enumerate(node.handlers):
+                node.handlers[j] = _modify_ast_subtree(inner_node)
+            finally_node = _modify_ast_subtree(node, body_attr='finalbody')
+            node.finalbody = finally_node.finalbody
+            body[i] = _modify_ast_subtree(node)
 
         # Convert expression nodes to st.write
-        if type(node) is ast.Expr:
-            new_value = _get_st_write_from_expr(node, i)
-
-        if new_value is not None:
-            node.value = new_value
+        elif node_type is ast.Expr:
+            value = _get_st_write_from_expr(node, i, parent_type=type(tree))
+            if value is not None:
+                node.value = value
 
     if is_root:
         # Import Streamlit so we can use it in the new_value above.
@@ -106,15 +115,15 @@ def _build_st_write_call(nodes):
     )
 
 
-def _get_st_write_from_expr(node, i):
+def _get_st_write_from_expr(node, i, parent_type):
     # Don't change function calls
     if type(node.value) is ast.Call:
         return None
 
     # Don't change Docstring nodes
-    if type(node.value) is ast.Str:
-        if i == 0:
-            return None
+    if (i == 0 and type(node.value) is ast.Str
+            and parent_type in (ast.FunctionDef, ast.Module)):
+        return None
 
     # If tuple, call st.write on the 0th element (rather than the
     # whole tuple). This allows us to add a comma at the end of a statement

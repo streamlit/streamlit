@@ -58,6 +58,7 @@ st.vega_lite_chart({
 
 st.write(
     'Putting the `df` inside the spec, as inline `data` (different notation):')
+st.write('**This fails now, but not a big deal. It\'s a weird notation.**')
 
 st.vega_lite_chart({
     'data': {'values': df},
@@ -85,7 +86,7 @@ df = pd.DataFrame({
 c = st.vega_lite_chart(df,
     mark='line',
     x_field='day',
-    x_type='ordinal',
+    x_type='quantitative',
     y_field='stock price',
     y_type='quantitative')
 
@@ -153,7 +154,7 @@ df = stack_dataframe(df)
 st.vega_lite_chart(df,
     mark='line',
     x_field='(index)',  # Magic field name. TODO: Support named indices in JS.
-    x_type='ordinal',
+    x_type='quantitative',
     y_field='values',
     y_type='quantitative',
     color_field='keys',

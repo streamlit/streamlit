@@ -19,11 +19,10 @@ to the latest version of Streamlit:
 
 ```bash
 $ pip install --upgrade streamlit
-$ streamlit proxy kill
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.40.1`.
+...and then verify that the version number printed is `0.41.0`.
 
 **Try reproducing the issue now.**
 
@@ -60,9 +59,9 @@ continue reading this page or [contact us](mailto:help@streamlit.io).
 
 ## Remote operation: report URL doesn't load
 
-You ran `streamlit hello` or `python my_script.py` and it printed out the URL
-where you should find your report --- but it doesn't seem to work when you open
-that link in a browser!
+You ran `streamlit hello` or `streamlit run my_script.py` and it printed out
+the URL where you should find your report --- but it doesn't seem to work when
+you open that link in a browser!
 
 When running Streamlit remotely, the number one culprit for this is the
 Streamlit port not being opened on your machine/instance.
@@ -74,16 +73,6 @@ Console](https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#I
 Then scroll down and click on _Security Groups_ → _Inbound_ → _Edit_. Next, add
 a _Custom TCP_ rule that allows the _Port Range_ `8501` with _Source_
 `0.0.0.0/0`.
-
-## Streamlit just hangs when I run my script
-
-In some rare occasions, the Streamlit Proxy from a previous run could be
-frozen. A quick way to fix that is shutting down that Proxy before running
-your script:
-
-```bash
-$ streamlit proxy kill
-```
 
 ## Using Streamlit with Pex
 
@@ -113,5 +102,17 @@ $ pex streamlit foo bar -o mypexbinary.pex
 - Running the Streamlit CLI tool:
   ```bash
   $ ./mypexbinary.pex -m streamlit hello
-  $ ./mypexbinary.pex -m streamlit proxy kill
   ```
+
+## Downgrade Streamlit
+
+If you've upgraded to the latest version of Streamlit and things aren't working, you can downgrade at any time using these commands:
+
+You can downgrade at any time with these commands:
+
+```bash
+$ pip install --upgrade streamlit==0.37 # <- To downgrade Streamlit!
+```
+
+```bash
+$ conda install streamlit=0.37

@@ -1,0 +1,50 @@
+version: '3.6'
+
+services:
+  streamlit:
+    image: streamlit/streamlit:0.41.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  # Copy wheel to wheel/ directory, uncomment streamlit-wheel, run these commands
+  #   (cd docker/aws; docker-compose build streamlit-wheel)
+  #   (cd docker/aws; docker push streamlit/streamlit:my_wheel)
+  #
+  #streamlit-wheel:
+  #  image: streamlit/streamlit:my_wheel
+  #  build:
+  #    context: wheel
+  #    dockerfile: Dockerfile
+
+  streamlit-examples:
+    image: streamlit/streamlit:examples
+    build:
+      context: ../../examples
+      dockerfile: Dockerfile
+
+  streamlit-examples-images:
+    image: streamlit/streamlit:examples
+    build:
+      context: ../../examples
+      dockerfile: Dockerfile
+    command: /examples/images.py
+    ports:
+      - 5600:8501
+
+  streamlit-examples-reference:
+    image: streamlit/streamlit:examples
+    build:
+      context: ../../examples
+      dockerfile: Dockerfile
+    command: /examples/reference.py
+    ports:
+      - 5601:8501
+
+  streamlit-examples-mnist:
+    image: streamlit/streamlit:mnist
+    build:
+      context: mnist
+      dockerfile: Dockerfile
+    ports:
+      - 5602:8501

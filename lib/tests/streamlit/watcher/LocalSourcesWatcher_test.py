@@ -8,8 +8,9 @@ import unittest
 
 from mock import patch
 
-from streamlit.watcher import LocalSourcesWatcher
+from streamlit import config
 from streamlit.Report import Report
+from streamlit.watcher import LocalSourcesWatcher
 
 
 class FileIsInFolderTest(unittest.TestCase):
@@ -30,9 +31,11 @@ class FileIsInFolderTest(unittest.TestCase):
 if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
+    import test_data.misbehaved_module as MISBEHAVED_MODULE
 else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
+    import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 
 REPORT_PATH = os.path.join(
         os.path.dirname(__file__), 'test_data/not_a_real_script.py')
@@ -44,25 +47,22 @@ DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
-        try:
-            del sys.modules[DUMMY_MODULE_1.__name__]
-        except:
-            pass
+        modules = [
+            'DUMMY_MODULE_1', 'DUMMY_MODULE_2', 'MISBEHAVED_MODULE',
+        ]
 
-        try:
-            del sys.modules[DUMMY_MODULE_2.__name__]
-        except:
-            pass
+        the_globals = globals()
 
-        try:
-            del sys.modules['DUMMY_MODULE_1']
-        except:
-            pass
+        for name in modules:
+            try:
+                del sys.modules[the_globals[name].__name__]
+            except:
+                pass
 
-        try:
-            del sys.modules['DUMMY_MODULE_2']
-        except:
-            pass
+            try:
+                del sys.modules[name]
+            except:
+                pass
 
     @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
     def test_just_script(self, fob):
@@ -147,6 +147,40 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(type(args[1]), method_type)
 
         fob.assert_called_once()
+
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    def test_misbehaved_module(self, fob):
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+
+        fob.assert_called_once()
+
+        sys.modules['MISBEHAVED_MODULE'] = MISBEHAVED_MODULE.MisbehavedModule
+        fob.reset_mock()
+        lso.update_watched_modules()
+
+        fob.assert_called_once()  # Just __init__.py
+
+    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    def test_blacklist(self, fob):
+        prev_blacklist = config.get_option('server.folderWatchBlacklist')
+
+        config.set_option(
+                'server.folderWatchBlacklist',
+                [os.path.dirname(DUMMY_MODULE_1.__file__)])
+
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+
+        fob.assert_called_once()
+
+        sys.modules['DUMMY_MODULE_1'] = DUMMY_MODULE_1
+        fob.reset_mock()
+
+        lso.update_watched_modules()
+
+        fob.assert_not_called()
+
+        # Reset the config object.
+        config.set_option('server.folderWatchBlacklist', prev_blacklist)
 
 
 def sort_args_list(args_list):

@@ -5,9 +5,26 @@ describe('st.vega_lite_chart', () => {
     cy.visit('http://localhost:3000/')
   })
 
-  it('displays a vega lite chart', () => {
+  it('displays charts on the DOM', () => {
+    cy.get('.element-container .stVegaLiteChart')
+      .should('have.length', 4)
+
     cy.get('.element-container .stVegaLiteChart')
       .find('canvas')
       .should('have.class', 'marks')
+  })
+
+  it('sets the correct chart width', () => {
+    cy.get('.stVegaLiteChart canvas')
+      .eq(0).should('have.css', 'width', '610px')
+
+    cy.get('.stVegaLiteChart canvas')
+      .eq(1).should('have.css', 'width', '610px')
+
+    cy.get('.stVegaLiteChart canvas')
+      .eq(2).should('have.css', 'width', '293px')
+
+    cy.get('.stVegaLiteChart canvas')
+      .eq(3).should('have.css', 'width', '500px')
   })
 })

@@ -3,41 +3,45 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
+@import 'src/assets/css/variables';
+
+
 .streamlit-container .fixed-width {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: $font-family-monospace;
   white-space: pre;
-  font-size: 0.8rem;
+  font-size: $font-size-sm;
   overflow-x: auto;
 }
 
 .streamlit-container .markdown-text-container {
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: $font-family-sans-serif;
   margin-bottom: -1rem;
 }
 
-.streamlit-container .markdown-text-container p {
-  margin: 0 0 1rem 0;
+.streamlit-container .markdown-text-container a {
+  color: $blue;
 }
 
 .streamlit-container .markdown-text-container code {
   padding: 0.2em 0.4em;
   margin: 0;
-  border: 1px solid #E6E9EE;
-  border-radius: 3px;
+  border-radius: $border-radius;
+  background: $gray-faint;
+  color: $green;
 }
 
 .streamlit-container .markdown-text-container pre {
-  border: 1px solid #E6E9EE;
-  border-radius: 3px;
   padding: 1rem;
   margin: 0 0 1rem 0;
+  border-radius: $border-radius;
+  background: $gray-faint;
 }
 
 .streamlit-container .markdown-text-container pre > code {
   background: transparent;
   border: 0;
   display: inline;
-  font-size: 0.8rem;
+  font-size: $font-size-sm;
   line-height: inherit;
   margin: 0;
   max-width: auto;
@@ -46,40 +50,34 @@
   word-break: normal;
   word-wrap: normal;
   overflow-x: auto;
-}
-
-.streamlit-container .markdown-text-container blockquote {
-  margin: 0;
-  border-left: 0.5em #E6E9EE solid;
-  padding: 1rem 0 1rem 1rem;
-  margin: 0 0 1rem 0;
+  color: $black;
 }
 
 .streamlit-container .markdown-text-container tr {
-  border-top: 1px solid #c6cbd1;
-  background: #fff;
+  border-top: 1px solid $gray-lighter;
+  background: $white;
 }
 
 .streamlit-container .markdown-text-container th, td {
   padding: 6px 13px;
-  border: 1px solid #E6E9EE;
+  border: 1px solid $gray-lighter;
 }
 
 .streamlit-container .markdown-text-container table tr:nth-child(2n) {
-  background: #f6f9fa;
+  background: $gray-faint;
 }
 
 .streamlit-container pre.error {
-  padding: 5px;
+  padding: $border-radius;
   white-space: pre-wrap;
   word-wrap: break-word;
   color: inherit;
-  font-size: 0.8rem;
+  font-size: $font-size-sm;
 }
 
 .streamlit-container .react-json-view {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
+  font-family: $font-family-monospace;
+  font-size: $font-size-sm;
 }
 
 .streamlit-container .alert {

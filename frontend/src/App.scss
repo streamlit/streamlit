@@ -3,6 +3,9 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
+@import 'src/assets/css/variables';
+
+
 body.embedded {
   overflow: hidden;
 }
@@ -18,60 +21,13 @@ body.embedded:hover {
 
 a,
 a:visited {
-  color: #F63366;
+  color: $primary;
 }
 
 a:hover,
 a:active {
-  color: #F63366;
+  color: $primary;
   text-decoration: underline;
-}
-
-h1, .h1 {
-  font-weight: 700;
-  font-size: 2.5rem;
-  margin: 2.5rem 0 1.5rem 0;
-  line-height: 1em;
-}
-
-h1:first-child, .h1:first-child {
-  margin-top: 0;
-}
-
-h2, .h2 {
-  font-weight: 300;
-  font-size: 2.0rem;
-  margin: 2.5rem 0 1rem 0;
-  line-height: 1em;
-}
-
-h3, .h3 {
-  font-weight: 500;
-  font-size: 1.25rem;
-  margin: 1.5rem 0 1rem 0;
-  line-height: 1em;
-}
-
-h4, .h4 {
-  font-weight: 700;
-  font-size: 1.0rem;
-  margin: 1.5rem 0 1rem 0;
-  line-height: 1em;
-}
-
-h5, .h5 {
-  font-weight: 700;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  margin: 1.5rem 0 0.5rem 0;
-  line-height: 1em;
-}
-
-h6, .h6 {
-  font-weight: 300;
-  font-size: 0.8rem;
-  margin: 1.5rem 0 0.5rem 0;
-  line-height: 1em;
 }
 
 header {
@@ -107,11 +63,11 @@ header .decoration {
 }
 
 #brand a {
-  color: #101620;
+  color: $black;
 }
 
 #brand a:hover {
-  color: #F63366;
+  color: $primary;
 }
 
 iframe {
@@ -121,7 +77,7 @@ iframe {
 }
 
 .streamlit-regular .streamlit-container {
-  margin-top: 80px;
+  margin: 80px auto;
 }
 
 .streamlit-wide .streamlit-container {
@@ -141,20 +97,12 @@ iframe {
   display: none;
 }
 
-.streamlit-container hr {
-  border-color: #F0F3F9;
-}
-
-.streamlit-container .footer {
-  height: 25px;
-}
-
 .progress {
-  background-color: #E6E9EF;
+  background-color: $gray-lightest;
 }
 
 .progress-bar {
-  background-color: #2979E9;
+  background-color: $blue;
 }
 
 .icon {
