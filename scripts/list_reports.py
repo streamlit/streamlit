@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Lists all the reports in share.streamlit.io.
 """

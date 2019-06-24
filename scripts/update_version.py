@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Update version number across the entire repo.
 
 If the current version is 0.15.2 and I wanted to create a release for

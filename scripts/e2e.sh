@@ -16,12 +16,19 @@ do
   streamlit run $file &
   yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts"
 
-  # If exit code is nonzero, quit
-  if [ "$?" -ne "0"]
-  then
-    exit 1
-  fi
+  EXITCODE="$?"
 
   # Kill the last process executed in the background
   kill -9 $!
+
+  # If exit code is nonzero, quit
+  if [ "$EXITCODE" -ne "0" ]
+  then
+    echo "Test failed: ${file}"
+    read -p "Continue? [y/n] " yn
+    case $yn in
+      [Yy]* ) continue ;;
+      * ) exit 1 ;;
+    esac
+  fi
 done

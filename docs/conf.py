@@ -23,12 +23,12 @@ copyright = u'2019, Streamlit Inc.'
 author = u'Streamlit Inc.'
 display_version = True
 
-# The short X.Y version
-version = u'0.40'
-
 # The full version, including alpha/beta/rc tags
 import streamlit as st
 release = st.__version__
+
+# The short X.Y version
+version = '.'.join(st.__version__.split('.')[0:2])
 
 
 # -- General configuration ---------------------------------------------------
