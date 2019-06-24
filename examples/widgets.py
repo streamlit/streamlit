@@ -28,3 +28,7 @@ st.write(w5)
 st.subheader('Input')
 w6 = st.input('input widget', 'i iz input')
 st.write(w6)
+
+st.subheader('Time')
+w7 = st.time('time widget', '12:00')
+st.write(w7)

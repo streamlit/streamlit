@@ -138,6 +138,7 @@ success         = _with_dg(_DeltaGenerator.success)  # noqa: E221
 table           = _with_dg(_DeltaGenerator.table)  # noqa: E221
 text            = _with_dg(_DeltaGenerator.text)  # noqa: E221
 text_area       = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
+time           = _with_dg(_DeltaGenerator.time)  # noqa: E221
 title           = _with_dg(_DeltaGenerator.title)  # noqa: E221
 vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video           = _with_dg(_DeltaGenerator.video)  # noqa: E221

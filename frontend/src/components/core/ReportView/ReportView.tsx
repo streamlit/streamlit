@@ -29,6 +29,7 @@ const Input = React.lazy(() => import('components/widgets/Input/'))
 const Radio = React.lazy(() => import('components/widgets/Radio/'))
 const Slider = React.lazy(() => import('components/widgets/Slider/'))
 const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
+const Time = React.lazy(() => import('components/widgets/Time/'))
 
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('components/elements/Audio/'))
@@ -180,6 +181,7 @@ export class ReportView extends PureComponent<Props> {
       radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      time: (el: Element) => <Time element={el} width={width} widgetMgr={this.props.widgetMgr} />,
     })
   }
 }

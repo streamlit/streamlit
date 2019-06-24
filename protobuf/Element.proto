@@ -21,6 +21,7 @@ import "Radio.proto";
 import "Slider.proto";
 import "Text.proto";
 import "TextArea.proto";
+import "Time.proto";
 import "VegaLiteChart.proto";
 import "Video.proto";
 
@@ -51,9 +52,10 @@ message Element {
     Slider slider = 21;
     Text text = 1;
     TextArea text_area = 22;
+    Time time = 25;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 25
+    // Next ID: 26
   }
 }
