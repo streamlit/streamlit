@@ -29,6 +29,10 @@ st.subheader('Input')
 w6 = st.input('input widget', 'i iz input')
 st.write(w6)
 
-st.subheader('Time')
-w7 = st.time('time widget', '12:00')
+st.subheader('Select')
+w7 = st.select('select widget', '1', [('1', 'first'), ('2', 'second')])
 st.write(w7)
+
+st.subheader('Time')
+w8 = st.time('HH:MM', '12:00')
+st.write(w8)

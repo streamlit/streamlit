@@ -27,6 +27,7 @@ const Button = React.lazy(() => import('components/widgets/Button/'))
 const Checkbox = React.lazy(() => import('components/widgets/Checkbox/'))
 const Input = React.lazy(() => import('components/widgets/Input/'))
 const Radio = React.lazy(() => import('components/widgets/Radio/'))
+const Select = React.lazy(() => import('components/widgets/Select/'))
 const Slider = React.lazy(() => import('components/widgets/Slider/'))
 const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
 const Time = React.lazy(() => import('components/widgets/Time/'))
@@ -179,6 +180,7 @@ export class ReportView extends PureComponent<Props> {
       checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       input: (el: Element) => <Input element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      select: (el: Element) => <Select element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       time: (el: Element) => <Time element={el} width={width} widgetMgr={this.props.widgetMgr} />,
