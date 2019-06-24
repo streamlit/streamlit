@@ -24,3 +24,7 @@ if w4:
 st.subheader('Radio')
 w5 = st.radio('radio widget', '1', [('1', 'first'), ('2', 'second')])
 st.write(w5)
+
+st.subheader('Input')
+w6 = st.input('input widget', 'i iz input')
+st.write(w6)

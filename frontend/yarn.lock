@@ -1367,6 +1367,14 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
+"@types/baseui@^6.20.0":
+  version "6.20.0"
+  resolved "https://registry.yarnpkg.com/@types/baseui/-/baseui-6.20.0.tgz#8d9dd87ce50e74b20091268615fb41ada178f148"
+  dependencies:
+    "@types/prop-types" "*"
+    "@types/react" "*"
+    "@types/styletron-react" "*"
+
 "@types/clipboard@^2.0.1":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/clipboard/-/clipboard-2.0.1.tgz#75a74086c293d75b12bc93ff13bc7797fef05a40"
@@ -1719,6 +1727,25 @@
 "@types/stack-utils@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-1.0.1.tgz#0a851d3bd96498fa25c33ab7278ed3bd65f06c3e"
+
+"@types/styletron-engine-atomic@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@types/styletron-engine-atomic/-/styletron-engine-atomic-1.1.0.tgz#aea5f44e946aa4641e576b13048a78e0efebdfc3"
+  dependencies:
+    "@types/styletron-standard" "*"
+
+"@types/styletron-react@*", "@types/styletron-react@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@types/styletron-react/-/styletron-react-5.0.0.tgz#aa5fc72e383f6e526cf78a3d2e9d101dc69a2560"
+  dependencies:
+    "@types/react" "*"
+    "@types/styletron-standard" "*"
+
+"@types/styletron-standard@*", "@types/styletron-standard@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/styletron-standard/-/styletron-standard-2.0.0.tgz#fff4c89cb2cb1f6cc48699188fcea31a02191052"
+  dependencies:
+    csstype "^2.6.4"
 
 "@types/unist@*", "@types/unist@^2.0.0", "@types/unist@^2.0.2":
   version "2.0.3"
@@ -2530,13 +2557,13 @@ base@^0.11.1:
     mixin-deep "^1.2.0"
     pascalcase "^0.1.1"
 
-baseui@^7.3.1:
-  version "7.3.1"
-  resolved "https://registry.yarnpkg.com/baseui/-/baseui-7.3.1.tgz#e84fce6c3732088bdd924ff71d8a974958a1d7b8"
+baseui@^7.6.1:
+  version "7.6.1"
+  resolved "https://registry.yarnpkg.com/baseui/-/baseui-7.6.1.tgz#cb2f2bbbcc90c64c0b8a9e8aaed065d11873815a"
   dependencies:
     card-validator "^6.1.0"
-    date-fns "2.0.0-alpha.34"
-    focus-trap "^5.0.0"
+    date-fns "2.0.0-alpha.36"
+    focus-trap-react "^6.0.0"
     just-extend "^4.0.2"
     memoize-one "^5.0.0"
     polished "^3.2.0"
@@ -3909,7 +3936,7 @@ cssstyle@^1.0.0, cssstyle@^1.1.1:
   dependencies:
     cssom "0.3.x"
 
-csstype@^2.2.0:
+csstype@2.6.5, csstype@^2.2.0, csstype@^2.6.4:
   version "2.6.5"
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-2.6.5.tgz#1cd1dff742ebf4d7c991470ae71e12bb6751e034"
 
@@ -4289,9 +4316,9 @@ data-urls@^1.0.0, data-urls@^1.1.0:
     whatwg-mimetype "^2.2.0"
     whatwg-url "^7.0.0"
 
-date-fns@2.0.0-alpha.34:
-  version "2.0.0-alpha.34"
-  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.0.0-alpha.34.tgz#5d3ae7ca0d08915ccfc87a20545250af4e9c3cae"
+date-fns@2.0.0-alpha.36:
+  version "2.0.0-alpha.36"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.0.0-alpha.36.tgz#e3d106fbc6a7247e951916229b948d47848d6102"
 
 date-fns@^1.27.2:
   version "1.30.1"
@@ -5550,11 +5577,17 @@ flux@^3.1.3:
     fbemitter "^2.0.0"
     fbjs "^0.8.0"
 
-focus-trap@^5.0.0:
-  version "5.0.1"
-  resolved "https://registry.yarnpkg.com/focus-trap/-/focus-trap-5.0.1.tgz#285f9df2cd9f5ef82dd1abb5d8a70e66cd4f99e3"
+focus-trap-react@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/focus-trap-react/-/focus-trap-react-6.0.0.tgz#3f5a9f68447dd374d22388fb4c50018be83e74a5"
   dependencies:
-    tabbable "^4.0.0"
+    focus-trap "^4.0.2"
+
+focus-trap@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/focus-trap/-/focus-trap-4.0.2.tgz#4ee2b96547c9ea0e4252a2d4b2cca68944194663"
+  dependencies:
+    tabbable "^3.1.2"
     xtend "^4.0.1"
 
 follow-redirects@^1.0.0:
@@ -12575,24 +12608,25 @@ stylehacks@^4.0.0:
     postcss "^7.0.0"
     postcss-selector-parser "^3.0.0"
 
-styletron-engine-atomic@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/styletron-engine-atomic/-/styletron-engine-atomic-1.3.0.tgz#9300a3ce8b143c1e0eb74a4c376112e8dc0ee19f"
+styletron-engine-atomic@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/styletron-engine-atomic/-/styletron-engine-atomic-1.4.0.tgz#fad82091396c02d92c4f64ff299b054054da23ad"
   dependencies:
     inline-style-prefixer "^5.1.0"
-    styletron-standard "^2.0.4"
+    styletron-standard "^3.0.0"
 
-styletron-react@^5.1.3:
-  version "5.1.3"
-  resolved "https://registry.yarnpkg.com/styletron-react/-/styletron-react-5.1.3.tgz#038b0acfd56cab7dfed784fc382018fa82a1b24e"
+styletron-react@^5.2.0:
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/styletron-react/-/styletron-react-5.2.0.tgz#670f276782fc65a64d9af3ae8f50da2935869ee4"
   dependencies:
     prop-types "^15.6.0"
-    styletron-standard "^2.0.4"
+    styletron-standard "^3.0.0"
 
-styletron-standard@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/styletron-standard/-/styletron-standard-2.0.4.tgz#764a944882d62bf0f0f5d40442c9a6d7cf1aa1fb"
+styletron-standard@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/styletron-standard/-/styletron-standard-3.0.0.tgz#a6d75b4e1390331186ab6b01c69df391f1c7c277"
   dependencies:
+    csstype "2.6.5"
     inline-style-prefixer "^5.1.0"
 
 supercluster@^2.3.0:
@@ -12685,9 +12719,9 @@ symbol-tree@^3.2.2:
   version "3.2.2"
   resolved "https://registry.yarnpkg.com/symbol-tree/-/symbol-tree-3.2.2.tgz#ae27db38f660a7ae2e1c3b7d1bc290819b8519e6"
 
-tabbable@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/tabbable/-/tabbable-4.0.0.tgz#5bff1d1135df1482cf0f0206434f15eadbeb9261"
+tabbable@^3.1.2:
+  version "3.1.2"
+  resolved "https://registry.yarnpkg.com/tabbable/-/tabbable-3.1.2.tgz#f2d16cccd01f400e38635c7181adfe0ad965a4a2"
 
 table@^5.2.3:
   version "5.4.0"

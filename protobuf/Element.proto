@@ -13,6 +13,7 @@ import "Empty.proto";
 import "Exception.proto";
 import "GraphVizChart.proto";
 import "Image.proto";
+import "Input.proto";
 import "Map.proto";
 import "PlotlyChart.proto";
 import "Progress.proto";
@@ -42,6 +43,7 @@ message Element {
     Exception exception = 8;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
+    Input input = 24;
     Map map = 9;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
@@ -52,6 +54,6 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 24
+    // Next ID: 25
   }
 }
