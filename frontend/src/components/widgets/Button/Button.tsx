@@ -25,7 +25,10 @@ class Button extends PureStreamlitElement<Props, StState> {
 
   public safeRender(): React.ReactNode {
     const label = this.props.element.get('label')
+    const widgetId = this.props.element.get('id')
     const style = { width: this.props.width }
+
+    this.props.widgetMgr.setTriggerValue(widgetId, false)
 
     return (
       <div className="Widget row-widget stButton" style={style}>

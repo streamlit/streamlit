@@ -29,7 +29,6 @@ class Radio extends PureStreamlitElement<Props, State> {
     this.state = { value }
     if (value){
       this.props.widgetMgr.setStringValue(widgetId, value)
-      this.props.widgetMgr.sendUpdateWidgetsMessage()
     }
   }
 

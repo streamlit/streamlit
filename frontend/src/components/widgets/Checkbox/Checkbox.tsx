@@ -30,7 +30,6 @@ class Checkbox extends PureStreamlitElement<Props, State> {
 
     this.state = { value }
     this.props.widgetMgr.setBoolValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = (e: React.SyntheticEvent<HTMLInputElement>) => {

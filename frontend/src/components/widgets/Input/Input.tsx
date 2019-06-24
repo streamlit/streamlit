@@ -29,10 +29,7 @@ class Input extends PureStreamlitElement<Props, State> {
     // TODO should we set the value to the state even if it's undefined?
     this.state = { value }
     if (value){
-      // TODO do we need to set and send the widget state here?
-      //  what changes if we dont?
       this.props.widgetMgr.setStringValue(widgetId, value)
-      this.props.widgetMgr.sendUpdateWidgetsMessage()
     }
   }
 

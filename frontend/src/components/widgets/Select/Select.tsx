@@ -39,7 +39,6 @@ class Select extends PureStreamlitElement<Props, State> {
     this.state = { value }
     if (value){
       this.props.widgetMgr.setStringValue(widgetId, valueId)
-      this.props.widgetMgr.sendUpdateWidgetsMessage()
     }
   }
 

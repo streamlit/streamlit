@@ -34,7 +34,6 @@ class Slider extends PureStreamlitElement<Props, State> {
 
     this.state = { value }
     this.props.widgetMgr.setFloatArrayValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = ({ value }: SliderValue) => {

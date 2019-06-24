@@ -29,7 +29,6 @@ class TextArea extends PureStreamlitElement<Props, State> {
 
     this.state = { value }
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private handleChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
