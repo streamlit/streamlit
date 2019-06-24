@@ -35,7 +35,6 @@ class Select extends PureStreamlitElement<Props, State> {
         }]
       }
     })
-    console.log(value)
 
     this.state = { value }
     if (value){
