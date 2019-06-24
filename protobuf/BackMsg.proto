@@ -25,7 +25,7 @@ message BackMsg {
     // Requests that the report's execution be stopped
     bool stop_report = 7;
 
-//    string widget_json = 8;
+    // string widget_json = 8;
 
     WidgetStates update_widgets = 9;
   }
@@ -55,8 +55,8 @@ message WidgetState {
     string string_value = 6;
     FloatArray float_array_value = 7;
   }
+}
 
-  message FloatArray {
-    repeated float float_array_value = 8;
-  }
+message FloatArray {
+  repeated float value = 1;
 }

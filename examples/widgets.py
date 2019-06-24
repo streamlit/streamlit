@@ -6,9 +6,9 @@ st.subheader('Checkbox')
 w1 = st.checkbox('I am human', True)
 st.write(w1)
 
-# st.subheader('Slider')
-# w2 = st.slider('Age', 32, 0, 100, 1)
-# st.write(w2)
+st.subheader('Slider')
+w2 = st.slider('Age', [32.5, 72.5], 0, 100, 0.5)
+st.write(w2)
 
 st.subheader('Textarea')
 w3 = st.text_area('Comments', 'Streamlit is awesomeness!')

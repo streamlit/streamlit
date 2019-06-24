@@ -5,6 +5,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import functools
@@ -20,8 +21,8 @@ from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
-LOGGER = get_logger(__name__)
 
+LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -70,9 +71,11 @@ def _clean_up_sig(method):
     function as above, the wrapped function will be called this way:
         dg.some_function(None, stuff)
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
+
     return wrapped_method
 
 
@@ -96,11 +99,13 @@ def _with_element(method):
         A new DeltaGenerator method with arguments (self, ...)
 
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def marshall_element(element):
                 return method(self, element, *args, **kwargs)
+
             return self._enqueue_new_element_delta(marshall_element)
         except Exception as e:
             # First, write the delta to stderr.
@@ -131,6 +136,7 @@ def _widget(f):
             ctx.widgets.get_widget_value(widget_id) if ctx else None
         )
         return f(dg, element, ui_value, *args, **kwargs)
+
     return wrapper
 
 
@@ -570,6 +576,7 @@ class DeltaGenerator(object):
 
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
+
         return self._enqueue_new_element_delta(set_data_frame)
 
     # TODO: Either remove this or make it public. This is only used in the
@@ -833,8 +840,8 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-            self, element, figure_or_data, width=0, height=0,
-            sharing='streamlit', **kwargs):
+        self, element, figure_or_data, width=0, height=0,
+        sharing='streamlit', **kwargs):
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -1029,8 +1036,8 @@ class DeltaGenerator(object):
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
-            self, element, image, caption=None, width=None,
-            use_column_width=False, clamp=False):
+        self, element, image, caption=None, width=None,
+        use_column_width=False, clamp=False):
         """Display an image or list of images.
 
         Parameters
@@ -1205,11 +1212,13 @@ class DeltaGenerator(object):
         """Slider doc string."""
         current_value = ui_value if ui_value is not None else value
         element.slider.label = label
-        if type(current_value) is list:
-            assert len(current_value) <= 2
-            element.slider.value[:] = current_value
+        if isinstance(current_value, list):
+            assert len(current_value) == 2
+        elif isinstance(current_value, (int, float)):
+            current_value = [current_value]
         else:
-            element.slider.value[:] = [current_value]
+            current_value = getattr(current_value, 'value')
+        element.slider.value[:] = current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
