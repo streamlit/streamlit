@@ -374,7 +374,7 @@ export function addRows(element, namedDataSet) {
   const namedDataSets = getNamedDataSets(element)
 
   const [existingDatasetIndex, existingDataSet] = getNamedDataSet(namedDataSets, name)
-  let dataframeToModify;
+  let dataframeToModify
 
   // There are 5 cases to consider:
   // 1. add_rows has a named dataset
