@@ -19,7 +19,7 @@ interface State extends StState {
   value: Date;
 }
 
-class Time extends PureStreamlitElement<Props, State> {
+class TimePicker extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -30,14 +30,6 @@ class Time extends PureStreamlitElement<Props, State> {
       value: this.stringToDate(value)
     }
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
-  }
-
-  private handleChange = (value: Date): void => {
-    const widgetId = this.props.element.get('id')
-
-    this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(value))
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -53,6 +45,14 @@ class Time extends PureStreamlitElement<Props, State> {
     const hours = value.getHours().toString().padStart(2, '0')
     const minutes = value.getMinutes().toString().padStart(2, '0')
     return hours + ':' + minutes
+  }
+
+  private handleChange = (value: Date): void => {
+    const widgetId = this.props.element.get('id')
+
+    this.setState({ value })
+    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(value))
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {
@@ -72,4 +72,4 @@ class Time extends PureStreamlitElement<Props, State> {
   }
 }
 
-export default Time
+export default TimePicker

@@ -1240,6 +1240,14 @@ class DeltaGenerator(object):
         element.time.value = current_value
         return current_value
 
+    @_widget
+    def date(self, element, ui_value, label, value=''):
+        """Date picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.date.label = label
+        element.date.value = current_value
+        return current_value
+
     @_with_element
     def progress(self, element, value):
         """Display a progress bar.

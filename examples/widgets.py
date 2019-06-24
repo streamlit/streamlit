@@ -34,5 +34,9 @@ w7 = st.select('select widget', '1', [('1', 'first'), ('2', 'second')])
 st.write(w7)
 
 st.subheader('Time')
-w8 = st.time('HH:MM', '12:00')
+w8 = st.time('Set an alarm for', '12:00')
 st.write(w8)
+
+st.subheader('Date')
+w9 = st.date('A date to celebrate', '1994/04/06')
+st.write(w9)

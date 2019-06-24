@@ -114,6 +114,7 @@ button          = _with_dg(_DeltaGenerator.button)  # noqa: E221
 checkbox        = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
 code            = _with_dg(_DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
+date            = _with_dg(_DeltaGenerator.date)  # noqa: E221
 deck_gl_chart   = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty           = _with_dg(_DeltaGenerator.empty)  # noqa: E221
 error           = _with_dg(_DeltaGenerator.error)  # noqa: E221
