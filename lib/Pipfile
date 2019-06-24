@@ -53,7 +53,9 @@ numpy = "*"
 pandas = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
 pillow = "!=5.1.0"
-protobuf = "*"
+# Set protobuf version based on the protoc version on the release machine (i.e.
+# Thiago's machine)
+protobuf = ">=3.6.0"
 psutil = "*"
 toml = "*"
 tornado = "<6.0"
