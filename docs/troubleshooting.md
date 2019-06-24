@@ -22,7 +22,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.40.1`.
+...and then verify that the version number printed is `0.41.0`.
 
 **Try reproducing the issue now.**
 
