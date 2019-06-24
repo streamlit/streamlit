@@ -22,7 +22,7 @@ describe('st.vega_lite_chart', () => {
       .eq(1).should('have.css', 'width', '610px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(2).should('have.css', 'width', '292px')
+      .eq(2).should('have.css', 'width', '293px')
 
     cy.get('.stVegaLiteChart canvas')
       .eq(3).should('have.css', 'width', '500px')

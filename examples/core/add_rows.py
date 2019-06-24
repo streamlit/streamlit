@@ -20,7 +20,7 @@ df = pd.DataFrame({'a': [1, 2, 3], 'b': [10, 0, 30], 'c': [100, 200, -100]})
 
 df1 = df.iloc[0:1, :]
 
-for coalesce_in_js in [False, True]:
+for test_type in ['coalesce in Py', 'coalesce in JS', 'clear after addrows']:
 
     table_el = st.table(df1)
     dataframe_el = st.dataframe(df1)
@@ -63,7 +63,7 @@ for coalesce_in_js in [False, True]:
 
     for i in range(1, num_rows):
         # Make rows get merged in JS rather than Python.
-        if coalesce_in_js:
+        if test_type == 'coalesce in JS':
             time.sleep(0.2)
 
         df2 = df.iloc[i:i+1, :]
@@ -76,6 +76,47 @@ for coalesce_in_js in [False, True]:
         vega_el3.add_rows(foo=df2)
         altair_el.add_rows(df2)
 
+    if test_type == 'clear after addrows':
+        # Clear all elements.
+        table_el.table([])
+        dataframe_el.dataframe([])
+        chart_el.line_chart([])
+        vega_el1.vega_lite_chart([], {
+            'mark': {'type': 'line', 'point': True},
+            'encoding': {
+                'x': {'field': 'a', 'type': 'quantitative'},
+                'y': {'field': 'b', 'type': 'quantitative'},
+            },
+        })
+        vega_el2.vega_lite_chart({
+            'datasets': {
+                'foo': [],
+            },
+            'data': {'name': 'foo'},
+            'mark': {'type': 'line', 'point': True},
+            'encoding': {
+                'x': {'field': 'a', 'type': 'quantitative'},
+                'y': {'field': 'b', 'type': 'quantitative'},
+            },
+        })
+        vega_el3.vega_lite_chart({
+            'datasets': {
+                'foo': [],
+            },
+            'data': {'name': 'foo'},
+            'mark': {'type': 'line', 'point': True},
+            'encoding': {
+                'x': {'field': 'a', 'type': 'quantitative'},
+                'y': {'field': 'b', 'type': 'quantitative'},
+            },
+        })
+        altair_el.altair_chart(
+            alt.Chart(pd.DataFrame())
+                .mark_line(point=True)
+                .encode(x='x:Q', y='y:Q')
+                .interactive())
+
 # Test that add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.
+dataframe_el = st.dataframe(df1)
 dataframe_el.add_rows(np.abs(np.random.randn(num_rows, 6)))

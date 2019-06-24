@@ -5,9 +5,9 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import { StProps, StState, PureStreamlitElement } from 'components/shared/StreamlitElement/'
-import { tableGetRowsAndCols, indexGet, tableGet } from 'lib/dataFrameProto'
-import { logMessage } from 'lib/log'
+import {StProps, StState, PureStreamlitElement} from 'components/shared/StreamlitElement/'
+import {tableGetRowsAndCols, indexGet, tableGet} from 'lib/dataFrameProto'
+import {logMessage} from 'lib/log'
 
 import * as vega from 'vega'
 import * as vl from 'vega-lite'
@@ -19,6 +19,9 @@ import './VegaLiteChart.scss'
 const MagicFields = {
   DATAFRAME_INDEX: '(index)',
 }
+
+
+const DEFAULT_DATA_NAME = 'source'
 
 
 /** Types of dataframe-indices that are supported as x axes. */
@@ -45,7 +48,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
   /**
    * The default data name to add to.
    */
-  private defaultDataName = 'source'
+  private defaultDataName = DEFAULT_DATA_NAME
 
   /**
    * The html element we attach the Vega view to.
@@ -64,7 +67,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
 
   public safeComponentDidUpdate(prevProps: Props): void {
     // TODO: Don't create a new view just because the width changed.
-    // Instead, we should set the `width` signal. 
+    // Instead, we should set the `width` signal.
     if (prevProps.width !== this.props.width) {
       this.createView()
       return
@@ -91,8 +94,9 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
     const dataSets = getDataSets(element) || {}
 
     for (const [name, dataset] of Object.entries(dataSets)) {
-      const prevDataset = prevDataSets[name]
-      this.updateData(name || this.defaultDataName, prevDataset, dataset)
+      const datasetName = name ? name : this.defaultDataName
+      const prevDataset = prevDataSets[datasetName]
+      this.updateData(datasetName, prevDataset, dataset)
     }
 
     this.vegaView.resize().runAsync()
@@ -102,25 +106,26 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
   /**
    * Update the dataset in the Vega view. This method tried to minimize changes
    * by automatically creating and applying diffs.
-   * 
-   * @param name The name of the dataset. 
+   *
+   * @param name The name of the dataset.
    * @param prevData The dataset before the update.
    * @param data The dataset at the current state.
    */
-  private updateData(name: string, prevData: any, data: any): void {
+  private updateData(
+    name: string, prevData: ImmutableMap<string, any>,
+    data: ImmutableMap<string, any>): void {
+
     if (!this.vegaView) {
       throw new Error('Chart has not been drawn yet')
     }
 
-    if (!data) {
+    if (!data || !data.get('data')) {
       this.vegaView.remove(name, vega.truthy)
       return
     }
 
-    if (!prevData) {
-      if (data) {
-        this.vegaView.insert(name, getDataArray(data))
-      }
+    if (!prevData || !prevData.get('data')) {
+      this.vegaView.insert(name, getDataArray(data))
       return
     }
 
@@ -128,10 +133,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
     const [numRows, numCols] = tableGetRowsAndCols(data.get('data'))
 
     // Check if dataframes have same "shape" but the new one has more rows.
-    if (prevNumCols === numCols && prevNumRows <= numRows &&
-        // Check if the new dataframe looks like it's a superset of the old one.
-        // (this is a very light check, and not guaranteed to be right!)
-        prevData[0] === data[0] && prevData[prevNumRows - 1] === data[prevNumRows - 1]) {
+    if (dataIsAnAppendOfPrev(prevData, prevNumRows, prevNumCols, data, numRows, numCols)) {
       if (prevNumRows < numRows) {
         this.vegaView.insert(name, getDataArray(data, prevNumRows))
       }
@@ -168,8 +170,6 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
       spec.width = this.props.width
     }
 
-    console.log(spec)
-
     const vgSpec = vl.compile(spec).spec
 
     // Heuristic to determine the default dataset name.
@@ -177,7 +177,7 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
     if (datasetNames.length === 1) {
       this.defaultDataName = datasetNames[0]
     } else if (datasetNames.length === 0 && vgSpec.data) {
-      this.defaultDataName = 'source'
+      this.defaultDataName = DEFAULT_DATA_NAME
     }
 
     const runtime = vega.parse(vgSpec)
@@ -242,7 +242,8 @@ function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: any} | 
 
   el.get('datasets').forEach((x: any, i: number) => {
     if (!x) { return }
-    datasets[x.get('name')] = x.get('data')
+    const name = x.get('hasName') ? x.get('name') : null
+    datasets[name] = x.get('data')
   })
 
   return datasets
@@ -277,6 +278,40 @@ function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] 
   }
 
   return dataArr
+}
+
+
+/**
+ * Checks if data looks like it's just prevData plus some appended rows.
+ */
+function dataIsAnAppendOfPrev(
+  prevData: ImmutableMap<string, number>, prevNumCols: number, prevNumRows: number,
+  data: ImmutableMap<string, number>, numRows: number, numCols: number,
+): boolean {
+  // Check whether dataframes have the same shape.
+
+  if (prevNumCols !== numCols) {
+    return false
+  }
+
+  if (prevNumRows > numRows) {
+    return false
+  }
+
+  const df0 = prevData.get('data')
+  const df1 = data.get('data')
+  const c = numCols - 1
+  const r0 = prevNumRows - 1
+  const r1 = numRows - 1
+
+  // Check if the new dataframe looks like it's a superset of the old one.
+  // (this is a very light check, and not guaranteed to be right!)
+  if (tableGet(df0, c, 0) !== tableGet(df1, c, 0) ||
+      tableGet(df0, c, r0) !== tableGet(df1, c, r1)) {
+    return false
+  }
+
+  return true
 }
 
 

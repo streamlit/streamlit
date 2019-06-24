@@ -399,29 +399,6 @@ def get_streamlit_file_path(*filepath):
     return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
 
 
-def forwardmsg_to_debug(msg):
-    """Convert a ForwardMsg into a dict for debugging."""
-    the_type = msg.WhichOneof('type')
-    if the_type == 'delta':
-        return {'delta': delta_to_debug(msg.delta)}
-    return the_type
-
-
-def delta_to_debug(delta):
-    """Convert a Delta into a dict for debugging."""
-    the_type = delta.WhichOneof('type')
-    out = {
-        'id': delta.id
-    }
-
-    if the_type == 'new_element':
-        out['new_element'] = delta.new_element.WhichOneof('type')
-    elif the_type == 'add_rows':
-        out['add_rows'] = ''
-
-    return out
-
-
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
     click.secho('  %s: ' % title, nl=False)
