@@ -30,7 +30,6 @@ class TimePicker extends PureStreamlitElement<Props, State> {
       value: this.stringToDate(value)
     }
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private stringToDate = (value: string): Date => {

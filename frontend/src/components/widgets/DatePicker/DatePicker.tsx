@@ -31,7 +31,6 @@ class DatePicker extends PureStreamlitElement<Props, State> {
       value: moment(value, 'YYYY/MM/DD').toDate()
     }
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   private dateToString = (date: Date): string => {
