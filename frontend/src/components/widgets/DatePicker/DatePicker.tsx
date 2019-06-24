@@ -4,11 +4,11 @@
  */
 
 import React from 'react'
-import { Slider as UISlider } from 'baseui/slider'
+import { Datepicker as UIDatePicker } from 'baseui/datepicker'
 import { Map as ImmutableMap } from 'immutable'
+import moment from 'moment'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
-import './Slider.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -17,46 +17,44 @@ interface Props {
 }
 
 interface State extends StState {
-  value: number[];
+  value: Date;
 }
 
-interface SliderValue {
-  value: number[];
-}
-
-class Slider extends PureStreamlitElement<Props, State> {
+class DatePicker extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
     const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value').toArray()
+    const value = this.props.element.get('value')
 
-    this.state = { value }
-    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
+    this.state = {
+      value: moment(value, 'YYYY/MM/DD').toDate()
+    }
+    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  private handleChange = ({ value }: SliderValue) => {
+  private dateToString = (date: Date): string => {
+    return moment(date).format('YYYY/MM/DD')
+  }
+
+  private handleChange = (e: any): void => {
     const widgetId = this.props.element.get('id')
 
-    this.setState({ value })
-    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
+    this.setState({ value: e.date })
+    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(e.date))
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public safeRender(): React.ReactNode {
     const label = this.props.element.get('label')
-    const min = this.props.element.get('min')
-    const max = this.props.element.get('max')
-    const step = this.props.element.get('step')
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget stSlider" style={style}>
-        <p className="label">{label}: {this.state.value.join(" ")}</p>
-        <UISlider
-          min={min}
-          max={max}
-          step={step}
+      <div className="Widget stDate" style={style}>
+        <p className="label">{label}</p>
+        <UIDatePicker
+          formatString="yyyy/MM/dd"
           value={this.state.value}
           onChange={this.handleChange}
         />
@@ -65,4 +63,4 @@ class Slider extends PureStreamlitElement<Props, State> {
   }
 }
 
-export default Slider
+export default DatePicker

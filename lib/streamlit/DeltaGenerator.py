@@ -153,7 +153,7 @@ class DeltaGenerator(object):
             enqueued or False if not.
         id : int
             ID for deltas, or None to create the root DeltaGenerator (which
-            produces DeltaGenerators with incremeting IDs)
+            produces DeltaGenerators with incrementing IDs)
 
         """
         self._enqueue = enqueue
@@ -1230,6 +1230,22 @@ class DeltaGenerator(object):
         current_value = ui_value if ui_value is not None else value
         element.text_area.label = label
         element.text_area.value = current_value
+        return current_value
+
+    @_widget
+    def time(self, element, ui_value, label, value=''):
+        """Time picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.time.label = label
+        element.time.value = current_value
+        return current_value
+
+    @_widget
+    def date(self, element, ui_value, label, value=''):
+        """Date picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.date.label = label
+        element.date.value = current_value
         return current_value
 
     @_with_element
