@@ -99,6 +99,13 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
       this.updateData(datasetName, prevDataset, dataset)
     }
 
+    // Remove all datasets that are in the previous but not the current datasets.
+    for (const name of Object.keys(prevDataSets)) {
+      if (!dataSets.hasOwnProperty(name) && name !== this.defaultDataName) {
+        this.updateData(name, null, null)
+      }
+    }
+
     this.vegaView.resize().runAsync()
   }
 
@@ -112,15 +119,18 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
    * @param data The dataset at the current state.
    */
   private updateData(
-    name: string, prevData: ImmutableMap<string, any>,
-    data: ImmutableMap<string, any>): void {
+    name: string, prevData: ImmutableMap<string, any> | null,
+    data: ImmutableMap<string, any> | null): void {
 
     if (!this.vegaView) {
       throw new Error('Chart has not been drawn yet')
     }
 
     if (!data || !data.get('data')) {
-      this.vegaView.remove(name, vega.truthy)
+      const viewHasDataWithName = (this.vegaView as any)._runtime.data.hasOwnProperty(name)
+      if (viewHasDataWithName) {
+        this.vegaView.remove(name, vega.truthy)
+      }
       return
     }
 
