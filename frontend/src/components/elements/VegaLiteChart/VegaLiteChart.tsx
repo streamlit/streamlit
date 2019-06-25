@@ -46,6 +46,11 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
   private vegaView: vega.View | undefined
 
   /**
+   * The width from the parsed Vega-Lite spec.
+   */
+  private specWidth: number | undefined;
+
+  /**
    * The default data name to add to.
    */
   private defaultDataName = DEFAULT_DATA_NAME
@@ -66,13 +71,6 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
   }
 
   public safeComponentDidUpdate(prevProps: Props): void {
-    // TODO: Don't create a new view just because the width changed.
-    // Instead, we should set the `width` signal.
-    if (prevProps.width !== this.props.width) {
-      this.createView()
-      return
-    }
-
     const prevElement = prevProps.element
     const element = this.props.element
 
@@ -85,10 +83,16 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
       return
     }
 
+    if (prevProps.width !== this.props.width && this.specWidth === 0) {
+      this.vegaView.width(this.props.width)
+    }
+
     const prevData = prevElement.get('data')
     const data = element.get('data')
 
-    this.updateData(this.defaultDataName, prevData, data)
+    if (prevData || data) {
+      this.updateData(this.defaultDataName, prevData, data)
+    }
 
     const prevDataSets = getDataSets(prevElement) || {}
     const dataSets = getDataSets(element) || {}
@@ -176,10 +180,6 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
 
     const datasets = getDataArrays(el)
 
-    if (spec.width === 0) {
-      spec.width = this.props.width
-    }
-
     const vgSpec = vl.compile(spec).spec
 
     // Heuristic to determine the default dataset name.
@@ -205,6 +205,12 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
       for (const [name, data] of Object.entries(datasets)) {
         view.insert(name, data)
       }
+    }
+
+    this.specWidth = spec.width
+
+    if (this.specWidth === 0) {
+      view.width(this.props.width)
     }
 
     tooltip(view)
@@ -243,7 +249,7 @@ function getDataArrays(el: ImmutableMap<string, any>): {[dataset: string]: any[]
 }
 
 
-function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: any} | null {
+function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: ImmutableMap<string, any>} | null {
   if (!el.get('datasets') || el.get('datasets').isEmpty()) {
     return null
   }
@@ -260,7 +266,7 @@ function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: any} | 
 }
 
 
-function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] {
+function getDataArray(dataProto: ImmutableMap<string, any>, startIndex = 0): {[field: string]: any}[] {
   if (!dataProto.get('data')) { return [] }
   if (!dataProto.get('index')) { return [] }
   if (!dataProto.get('columns')) { return [] }
