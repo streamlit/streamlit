@@ -38,5 +38,5 @@ w8 = st.time('Set an alarm for', '12:00')
 st.write(w8)
 
 st.subheader('Date')
-w9 = st.date('A date to celebrate', '1994/04/06')
+w9 = st.date('A date to celebrate', '2019/06/24')
 st.write(w9)
