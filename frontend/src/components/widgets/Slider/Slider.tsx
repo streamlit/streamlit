@@ -52,7 +52,7 @@ class Slider extends PureStreamlitElement<Props, State> {
 
     return (
       <div className="Widget stSlider" style={style}>
-        <p className="label">{label}: {this.state.value.join(" ")}</p>
+        <p className="label">{label}: {this.state.value.join(' ')}</p>
         <UISlider
           min={min}
           max={max}

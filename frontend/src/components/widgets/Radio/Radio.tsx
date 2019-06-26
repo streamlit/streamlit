@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Radio as UIRadio, RadioGroup } from 'baseui/radio';
+import { Radio as UIRadio, RadioGroup } from 'baseui/radio'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -27,7 +27,7 @@ class Radio extends PureStreamlitElement<Props, State> {
     const value = this.props.element.get('value')
 
     this.state = { value }
-    if (value){
+    if (value) {
       this.props.widgetMgr.setStringValue(widgetId, value)
     }
   }

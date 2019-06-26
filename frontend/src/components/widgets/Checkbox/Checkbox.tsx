@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Checkbox as UICheckbox } from 'baseui/checkbox';
+import { Checkbox as UICheckbox } from 'baseui/checkbox'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'

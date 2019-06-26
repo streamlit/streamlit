@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Input as UIInput } from 'baseui/input';
+import { Input as UIInput } from 'baseui/input'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -28,7 +28,7 @@ class Input extends PureStreamlitElement<Props, State> {
 
     // TODO should we set the value to the state even if it's undefined?
     this.state = { value }
-    if (value){
+    if (value) {
       this.props.widgetMgr.setStringValue(widgetId, value)
     }
   }

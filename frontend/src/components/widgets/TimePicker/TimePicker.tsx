@@ -27,7 +27,7 @@ class TimePicker extends PureStreamlitElement<Props, State> {
     const value = this.props.element.get('value')
 
     this.state = {
-      value: this.stringToDate(value)
+      value: this.stringToDate(value),
     }
     this.props.widgetMgr.setStringValue(widgetId, value)
   }

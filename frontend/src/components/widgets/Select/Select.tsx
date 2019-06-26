@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Select as UISelect } from 'baseui/select';
+import { Select as UISelect } from 'baseui/select'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -28,16 +28,16 @@ class Select extends PureStreamlitElement<Props, State> {
 
     let value = null
     this.props.element.get('options').forEach((opt: ImmutableMap<string, any>) => {
-      if (opt.get('value') == valueId){
+      if (opt.get('value') == valueId) {
         value = [{
           'label': opt.get('label'),
-          'value': opt.get('value')
+          'value': opt.get('value'),
         }]
       }
     })
 
     this.state = { value }
-    if (value){
+    if (value) {
       this.props.widgetMgr.setStringValue(widgetId, valueId)
     }
   }
@@ -64,7 +64,7 @@ class Select extends PureStreamlitElement<Props, State> {
     options.forEach((opt: ImmutableMap<string, any>) => (
       selectOptions.push({
         'label': opt.get('label'),
-        'value': opt.get('value')
+        'value': opt.get('value'),
       })
     ))
 
@@ -72,8 +72,8 @@ class Select extends PureStreamlitElement<Props, State> {
       <div className="Widget row-widget stSelect" style={style}>
         <UISelect
           options={selectOptions}
-          labelKey='label'
-          valueKey='value'
+          labelKey="label"
+          valueKey="value"
           onChange={this.onChange}
           value={this.state.value}
         >
