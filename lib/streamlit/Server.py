@@ -518,7 +518,7 @@ def _convert_msg_to_exception_msg(msg, e):
     msg.Clear()
     msg.delta.id = delta_id
 
-    exception_proto.marshall(msg.delta.new_element, e)
+    exception_proto.marshall(msg.delta.new_element.exception, e)
 
 
 def _is_url_from_allowed_origins(url):
