@@ -32,9 +32,9 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 **Highlights:**
 
-* Greatly improved our support for named datasets in Vega-Lite and Altair
-* See the `server.folderWatchBlacklist` config option.
-* More robust against syntax errors on the user's script and imported modules
+* 📈 Greatly improved our support for named datasets in Vega-Lite and Altair
+* 🙄 See the `server.folderWatchBlacklist` config option.
+* ☔ More robust against syntax errors on the user's script and imported modules
 
 ## Version 0.40.0
 *Release date: June 10, 2019*
