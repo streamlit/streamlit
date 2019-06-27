@@ -28,7 +28,7 @@ class Select extends PureStreamlitElement<Props, State> {
 
     let value = null
     this.props.element.get('options').forEach((opt: ImmutableMap<string, any>) => {
-      if (opt.get('value') == valueId) {
+      if (opt.get('value') === valueId) {
         value = [{
           'label': opt.get('label'),
           'value': opt.get('value'),
@@ -46,9 +46,6 @@ class Select extends PureStreamlitElement<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = data['value']
     const valueId = value[0]['value']
-
-    console.log(value)
-    console.log(valueId)
 
     this.setState({ value })
     this.props.widgetMgr.setStringValue(widgetId, valueId)

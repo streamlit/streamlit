@@ -26,8 +26,6 @@ class Checkbox extends PureStreamlitElement<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    console.log(value)
-
     this.state = { value }
     this.props.widgetMgr.setBoolValue(widgetId, value)
   }
@@ -35,8 +33,6 @@ class Checkbox extends PureStreamlitElement<Props, State> {
   private handleChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
     const widgetId = this.props.element.get('id')
     const value = (e.target as HTMLInputElement).checked
-
-    console.log(value)
 
     this.setState({ value })
     this.props.widgetMgr.setBoolValue(widgetId, value)

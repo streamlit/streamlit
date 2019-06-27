@@ -26,7 +26,7 @@ class Input extends PureStreamlitElement<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    // TODO should we set the value to the state even if it's undefined?
+    // TODO: should we set the value to the state even if it's undefined?
     this.state = { value }
     if (value) {
       this.props.widgetMgr.setStringValue(widgetId, value)

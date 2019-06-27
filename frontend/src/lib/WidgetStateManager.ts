@@ -21,7 +21,6 @@ export class WidgetStateManager {
   }
 
   public setBoolValue(widgetId: string, value: boolean): void {
-    console.log(widgetId + ' ' + value)
     this.getOrCreateWidgetStateProto(widgetId).boolValue = value
   }
 

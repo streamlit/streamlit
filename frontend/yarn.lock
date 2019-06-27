@@ -1367,9 +1367,10 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
-"@types/baseui@^6.20.0":
-  version "6.20.0"
-  resolved "https://registry.yarnpkg.com/@types/baseui/-/baseui-6.20.0.tgz#8d9dd87ce50e74b20091268615fb41ada178f148"
+"@types/baseui@^7.3.0":
+  version "7.3.0"
+  resolved "https://registry.yarnpkg.com/@types/baseui/-/baseui-7.3.0.tgz#2cc3b5af00d750f0e0dcc762b39e4918e32fb35b"
+  integrity sha512-pietaiVQGoxU6ucQS7mQPfGy2rtjmOfjvKunMXSrdcUc9hCkUeryEZM2l5Id5JxO6claNB6133E7WrWdCUIf7w==
   dependencies:
     "@types/prop-types" "*"
     "@types/react" "*"
@@ -1731,12 +1732,14 @@
 "@types/styletron-engine-atomic@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@types/styletron-engine-atomic/-/styletron-engine-atomic-1.1.0.tgz#aea5f44e946aa4641e576b13048a78e0efebdfc3"
+  integrity sha512-wEU9lwW+sEZ7y8lRmPe2NLNeJzm7AgvK72CVE0iHoT1pyzS90O9APgxaN5E83p4h8ej7wOaS3swBZtvZ08B/LQ==
   dependencies:
     "@types/styletron-standard" "*"
 
-"@types/styletron-react@*", "@types/styletron-react@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@types/styletron-react/-/styletron-react-5.0.0.tgz#aa5fc72e383f6e526cf78a3d2e9d101dc69a2560"
+"@types/styletron-react@*", "@types/styletron-react@^5.0.1":
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/@types/styletron-react/-/styletron-react-5.0.1.tgz#2d0131bb1e498f4c8ec468b77bb0f6b2bcba59ea"
+  integrity sha512-rOgsOZwRiRKQfxxM6cguh1Tk3vyLzOFxCq3CoDgAPp79qg6oK5VlF0gc9hnk9Tl4UYv0fKJRkJ+oy/UJk5x5PA==
   dependencies:
     "@types/react" "*"
     "@types/styletron-standard" "*"
@@ -10867,10 +10870,6 @@ react-error-overlay@^5.1.6:
   version "5.1.6"
   resolved "https://registry.yarnpkg.com/react-error-overlay/-/react-error-overlay-5.1.6.tgz#0cd73407c5d141f9638ae1e0c63e7b2bf7e9929d"
 
-react-fast-compare@^2.0.3:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/react-fast-compare/-/react-fast-compare-2.0.4.tgz#e84b4d455b0fec113e0402c329352715196f81f9"
-
 react-feather@^1.1.6:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/react-feather/-/react-feather-1.1.6.tgz#2a547e3d5cd5e383d3da0128d593cbdb3c1b32f7"
@@ -14130,13 +14129,6 @@ which@1, which@^1.2.9, which@^1.3.0, which@^1.3.1:
   resolved "https://registry.yarnpkg.com/which/-/which-1.3.1.tgz#a45043d54f5805316da8d62f9f50918d3da70b0a"
   dependencies:
     isexe "^2.0.0"
-
-why-did-you-update@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/why-did-you-update/-/why-did-you-update-1.0.6.tgz#2e2c6a04291e715755ecdff1ac8272f721df6f04"
-  dependencies:
-    lodash "^4.17.11"
-    react-fast-compare "^2.0.3"
 
 wide-align@^1.1.0:
   version "1.1.3"
