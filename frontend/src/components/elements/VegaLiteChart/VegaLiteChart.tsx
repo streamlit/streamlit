@@ -317,13 +317,12 @@ function dataIsAnAppendOfPrev(
   const df0 = prevData.get('data')
   const df1 = data.get('data')
   const c = numCols - 1
-  const r0 = prevNumRows - 1
-  const r1 = numRows - 1
+  const r = prevNumRows - 1
 
   // Check if the new dataframe looks like it's a superset of the old one.
   // (this is a very light check, and not guaranteed to be right!)
   if (tableGet(df0, c, 0) !== tableGet(df1, c, 0) ||
-      tableGet(df0, c, r0) !== tableGet(df1, c, r1)) {
+      tableGet(df0, c, r) !== tableGet(df1, c, r)) {
     return false
   }
 
