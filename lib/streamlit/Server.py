@@ -291,9 +291,9 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
                 self._ctx.handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
                 self._ctx.handle_stop_script_request()
-            elif msg_type == 'widget_json':
+            elif msg_type == 'update_widgets':
                 self._ctx.handle_rerun_script_request(
-                    widget_state=json.loads(msg.widget_json))
+                    widget_state=msg.update_widgets)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 

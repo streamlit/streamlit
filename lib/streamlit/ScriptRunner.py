@@ -13,8 +13,10 @@ from streamlit import config
 from streamlit import magic
 from streamlit.ReportThread import ReportThread
 from streamlit.logger import get_logger
+from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 from streamlit.widgets import Widgets
+from streamlit.widgets import reset_widget_triggers
 
 LOGGER = get_logger(__name__)
 
@@ -142,7 +144,9 @@ class ScriptRunner(object):
         self._report = report
         self._event_queue = ScriptEventQueue()
         self._state = ScriptState.STOPPED
-        self._last_run_data = RerunData(argv=report.argv, widget_state={})
+        self._last_run_data = RerunData(
+            argv=report.argv,
+            widget_state=WidgetStates())
         self._widgets = Widgets()
 
         self.run_on_save = config.get_option('server.runOnSave')
@@ -219,7 +223,7 @@ class ScriptRunner(object):
         if self._state == new_state:
             return
 
-        LOGGER.debug('state: %s -> %s' % (self._state, new_state))
+        LOGGER.debug('Scriptrunner state: %s -> %s' % (self._state, new_state))
         self._state = new_state
         self.on_state_changed.send(self._state)
 
@@ -415,7 +419,8 @@ class ScriptRunner(object):
         argv = rerun_data.argv or self._last_run_data.argv
         widget_state = rerun_data.widget_state or \
                        self._last_run_data.widget_state
-        self._last_run_data = RerunData(argv, widget_state)
+        self._last_run_data = RerunData(
+            argv, reset_widget_triggers(widget_state))
 
         # Update the Widget singleton with the new widget_state
         self._ctx.widgets.set_state(widget_state)

@@ -21,6 +21,7 @@ import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
 import { StreamlitDialog } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { StatusWidget } from 'components/core/StatusWidget/'
@@ -37,7 +38,6 @@ import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 import 'assets/css/theme.scss'
 import './App.scss'
 
-
 class App extends PureComponent {
   constructor(props) {
     super(props)
@@ -53,7 +53,6 @@ class App extends PureComponent {
       showLoginBox: false,
       reportRunState: ReportRunState.NOT_RUNNING,
       connectionState: ConnectionState.INITIAL,
-      widgetState: {},
     }
 
     // Bind event handlers.
@@ -71,16 +70,15 @@ class App extends PureComponent {
     this.clearCache = this.clearCache.bind(this)
     this.saveReport = this.saveReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
+    this.settingsCallback = this.settingsCallback.bind(this)
+    this.aboutCallback = this.aboutCallback.bind(this)
 
     this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
-
-    // Widget-throttle bits. TODO: cleanup or remove!
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
+    this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
   }
 
   /**
@@ -127,17 +125,6 @@ class App extends PureComponent {
       },
     },
   }
-
-  getWidgetState = () => {
-    return this.state.widgetState
-  }
-
-  setWidgetState = (key, value) => {
-    let widgetState = this.getWidgetState()
-    widgetState[key] = value
-    this.setState({widgetState})
-  }
-
 
   componentDidMount() {
     // Initialize connection manager here, to avoid
@@ -543,45 +530,11 @@ class App extends PureComponent {
    */
   sendBackMsg = (msg) => {
     if (this.connectionManager) {
+      console.log(msg)
       this.connectionManager.sendMessage(msg)
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
-  }
-
-  /**
-   * A quick hack to throttle widget-related BackMsgs
-   * TODO: remove me post-May 2019 hackathon!
-   */
-  sendThrottledWidgetBackMsg = (msg) => {
-    const THROTTLE_MS = 400
-
-    this.latestWidgetBackMsg = msg
-
-    if (this.widgetThrottleTimer != null) {
-      // A timer is already running. It'll send this BackMsg when
-      // it wakes up
-      return
-    }
-
-    const delta = Date.now() - this.lastBackMsgTime
-    if (delta >= THROTTLE_MS) {
-      // We can send our message immediately
-      this.sendLatestWidgetBackMsg()
-    } else {
-      // Schedule our throttle timer
-      this.widgetThrottleTimer = window.setTimeout(
-        this.sendLatestWidgetBackMsg, THROTTLE_MS - delta)
-    }
-  }
-
-  sendLatestWidgetBackMsg = () => {
-    if (this.latestWidgetBackMsg != null) {
-      this.sendBackMsg(this.latestWidgetBackMsg)
-      this.lastBackMsgTime = Date.now()
-    }
-    this.latestWidgetBackMsg = null
-    this.widgetThrottleTimer = null
   }
 
   /**
@@ -598,6 +551,23 @@ class App extends PureComponent {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
       false
+  }
+
+  settingsCallback() {
+    this.openDialog({
+      type: 'settings',
+      isOpen: true,
+      isServerConnected: this.isServerConnected(),
+      settings: this.state.userSettings,
+      onSave: this.saveSettings,
+    })
+  }
+
+  aboutCallback() {
+    this.openDialog({
+      type: 'about',
+      onClose: this.closeDialog,
+    })
   }
 
   render() {
@@ -618,7 +588,7 @@ class App extends PureComponent {
     return (
       <div className={outerDivClass}>
         {/* The tabindex below is required for testing. */}
-        <header tabindex="-1">
+        <header tabIndex="-1">
           <div className="decoration"/>
           <div id="brand">
             <a href="//streamlit.io">Streamlit</a>
@@ -637,17 +607,8 @@ class App extends PureComponent {
             quickRerunCallback={this.rerunScript}
             rerunCallback={this.openRerunScriptDialog}
             clearCacheCallback={this.openClearCacheDialog}
-            settingsCallback={() => this.openDialog({
-              type: 'settings',
-              isOpen: true,
-              isServerConnected: this.isServerConnected(),
-              settings: this.state.userSettings,
-              onSave: this.saveSettings,
-            })}
-            aboutCallback={() => this.openDialog({
-              type: 'about',
-              onClose: this.closeDialog,
-            })}
+            settingsCallback={this.settingsCallback}
+            aboutCallback={this.aboutCallback}
           />
         </header>
 
@@ -666,9 +627,7 @@ class App extends PureComponent {
                   reportId={this.state.reportId}
                   reportRunState={this.state.reportRunState}
                   showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                  sendBackMsg={this.sendThrottledWidgetBackMsg}
-                  getWidgetState={this.getWidgetState}
-                  setWidgetState={this.setWidgetState}
+                  widgetMgr={this.widgetMgr}
                 />
               }
             </Col>

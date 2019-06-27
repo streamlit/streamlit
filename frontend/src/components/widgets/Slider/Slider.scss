@@ -5,22 +5,7 @@
 
 @import '../../../assets/css/variables';
 
-.Widget.row-widget {
-  label {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-}
-
 .Widget {
-  margin-bottom: -0.5rem;
-
-  input {
-    position: relative;
-    display: inline-block;
-  }
-
   input[type=range] {
     height: $font-size-base;
     -webkit-appearance: none;
@@ -62,44 +47,6 @@
   }
 
   input[type=range]:focus::-webkit-slider-thumb {
-    border-color: $primary;
-  }
-
-  input[type=checkbox] {
-    margin: 0 ($font-size-sm/2) 0 0;
-  }
-
-  textarea {
-    color: $black;
-    border: 2px solid $gray;
-  }
-
-  textarea:focus {
-    color: $black;
-    border-color: $primary;
-  }
-
-
-  label > .label {
-    font-size: $font-size-sm;
-    color: $gray-dark;
-  }
-}
-
-.Widget:hover {
-  input[type=range]::-webkit-slider-runnable-track {
-    background: $primary;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    border-color: $primary;
-  }
-
-  label > .label {
-    color: $primary;
-  }
-
-  textarea {
     border-color: $primary;
   }
 }

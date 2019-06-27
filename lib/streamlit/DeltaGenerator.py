@@ -5,6 +5,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import functools
@@ -20,8 +21,8 @@ from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
-LOGGER = get_logger(__name__)
 
+LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -70,9 +71,11 @@ def _clean_up_sig(method):
     function as above, the wrapped function will be called this way:
         dg.some_function(None, stuff)
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
+
     return wrapped_method
 
 
@@ -96,11 +99,13 @@ def _with_element(method):
         A new DeltaGenerator method with arguments (self, ...)
 
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def marshall_element(element):
                 return method(self, element, *args, **kwargs)
+
             return self._enqueue_new_element_delta(marshall_element)
         except Exception as e:
             # First, write the delta to stderr.
@@ -122,14 +127,16 @@ def _widget(f):
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
         ctx = get_report_ctx()
-
         widget_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
-        element.widget.id = widget_id
+
+        el = getattr(element, f.__name__)
+        el.id = widget_id
+
         ui_value = (
             ctx.widgets.get_widget_value(widget_id) if ctx else None
         )
-
         return f(dg, element, ui_value, *args, **kwargs)
+
     return wrapper
 
 
@@ -146,7 +153,7 @@ class DeltaGenerator(object):
             enqueued or False if not.
         id : int
             ID for deltas, or None to create the root DeltaGenerator (which
-            produces DeltaGenerators with incremeting IDs)
+            produces DeltaGenerators with incrementing IDs)
 
         """
         self._enqueue = enqueue
@@ -569,6 +576,7 @@ class DeltaGenerator(object):
 
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
+
         return self._enqueue_new_element_delta(set_data_frame)
 
     # TODO: Either remove this or make it public. This is only used in the
@@ -832,8 +840,8 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-            self, element, figure_or_data, width=0, height=0,
-            sharing='streamlit', **kwargs):
+        self, element, figure_or_data, width=0, height=0,
+        sharing='streamlit', **kwargs):
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -1028,8 +1036,8 @@ class DeltaGenerator(object):
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
-            self, element, image, caption=None, width=None,
-            use_column_width=False, clamp=False):
+        self, element, image, caption=None, width=None,
+        use_column_width=False, clamp=False):
         """Display an image or list of images.
 
         Parameters
@@ -1142,29 +1150,103 @@ class DeltaGenerator(object):
         element.video.format = format
 
     @_widget
-    def checkbox(self, element, ui_value, label, value=False):
-        """Checkbox doc string."""
-        element.widget.label = label
-        element.widget.checkbox.value = value
-        return ui_value if ui_value is not None else value
+    def button(self, element, ui_value, label):
+        """Button doc string."""
+        current_value = ui_value if ui_value is not None else False
+        element.button.label = label
+        element.button.value = False
+        return current_value
 
     @_widget
-    def slider(self, element, ui_value, label, value=0, min=0, max=100, step=1):
+    def checkbox(self, element, ui_value, label, value=False):
+        """Checkbox doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.checkbox.label = label
+        element.checkbox.value = current_value
+        return current_value
+
+    @_widget
+    def input(self, element, ui_value, label, value=''):
+        """Input doc string."""
+        # TODO int/float only?
+        current_value = ui_value if ui_value is not None else value
+        element.input.label = label
+        element.input.value = current_value
+        return current_value
+
+    @_widget
+    def radio(self, element, ui_value, label, value=None, options=None):
+        """Radio doc string."""
+        current_value = ui_value if ui_value is not None else value
+
+        element.radio.label = label
+        if current_value is not None:
+            element.radio.value = current_value
+
+        for option in options:
+            option_proto = element.radio.options.add()
+            option_proto.key = option[0]
+            option_proto.value = option[1]
+
+        return current_value
+
+    @_widget
+    def select(self, element, ui_value, label, value=None, options=None):
+        """Select doc string."""
+        element.select.label = label
+        current_value = ui_value if ui_value is not None else value
+
+        if current_value is not None:
+            item = next(iter(filter(lambda x: x[0] == current_value, options)), None)
+            element.select.value = item[0]
+
+        for option in options:
+            option_proto = element.select.options.add()
+            option_proto.value = option[0]
+            option_proto.label = option[1]
+
+        return current_value
+
+    @_widget
+    def slider(self, element, ui_value, label, value=0, min_value=0, max_value=100, step=1):
         """Slider doc string."""
-        # TODO: Support floats.
-        element.widget.label = label
-        element.widget.slider.min = min
-        element.widget.slider.max = max
-        element.widget.slider.step = step
-        element.widget.slider.value = value
-        return ui_value if ui_value is not None else value
+        current_value = ui_value if ui_value is not None else value
+        element.slider.label = label
+        if isinstance(current_value, list):
+            assert len(current_value) == 2
+        elif isinstance(current_value, (int, float)):
+            current_value = [current_value]
+        else:
+            current_value = getattr(current_value, 'value')
+        element.slider.value[:] = current_value
+        element.slider.min = min_value
+        element.slider.max = max_value
+        element.slider.step = step
+        return current_value
 
     @_widget
     def text_area(self, element, ui_value, label, value=''):
         """Text box doc string."""
-        element.widget.label = label
-        element.widget.text_area.value = value
-        return ui_value if ui_value is not None else value
+        current_value = ui_value if ui_value is not None else value
+        element.text_area.label = label
+        element.text_area.value = current_value
+        return current_value
+
+    @_widget
+    def time(self, element, ui_value, label, value=''):
+        """Time picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.time.label = label
+        element.time.value = current_value
+        return current_value
+
+    @_widget
+    def date(self, element, ui_value, label, value=''):
+        """Date picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.date.label = label
+        element.date.value = current_value
+        return current_value
 
     @_with_element
     def progress(self, element, value):

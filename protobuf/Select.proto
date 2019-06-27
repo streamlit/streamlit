@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+message Select {
+  string id = 1;
+  string label = 2;
+  string value = 3;
+
+  string type = 4;
+  string multi = 5;
+  string searchable = 6;
+  string creatable = 7;
+  string clearable = 8;
+
+  repeated SelectOption options = 9;
+}
+
+message SelectOption {
+  string label = 1;
+  string value = 2;
+}
