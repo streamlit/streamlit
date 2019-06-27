@@ -256,15 +256,16 @@ def open_browser(url):
         subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
 
-def is_type(obj, fqn_type_str):
+def is_type(obj, fqn_type_pattern):
     """Check type without importing expensive modules.
 
     Parameters
     ----------
     obj : any
         The object to type-check.
-    fqn_type_str : str
-        The fully-qualified type string.
+    fqn_type_pattern : str or regex
+        The fully-qualified type string or a regular expression.
+        Regexes should start with `^` and end with `$`.
 
     Example
     -------
@@ -278,7 +279,11 @@ def is_type(obj, fqn_type_str):
     the_type = type(obj)
     module = the_type.__module__
     name = the_type.__name__
-    return fqn_type_str == '%s.%s' % (module, name)
+    actual_fqn = '%s.%s' % (module, name)
+    if isinstance(fqn_type_pattern, string_types):
+        return fqn_type_pattern == actual_fqn
+    else:
+        return fqn_type_pattern.match(actual_fqn) is not None
 
 
 class Error(Exception):
@@ -298,9 +303,7 @@ def is_pex():
 
 def is_altair_chart(obj):
     """True if input looks like an Altair chart."""
-    return (
-        is_type(obj, 'altair.vegalite.v2.api.Chart') or
-        is_type(obj, 'altair.vegalite.v3.api.Chart'))
+    return is_type(obj, re.compile(r'^altair\.vegalite\.v\d+\.api\.\w*Chart$'))
 
 
 def is_keras_model(obj):
