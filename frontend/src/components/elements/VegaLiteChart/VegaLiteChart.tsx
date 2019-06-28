@@ -5,7 +5,6 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {StProps, StState, PureStreamlitElement} from 'components/shared/StreamlitElement/'
 import {tableGetRowsAndCols, indexGet, tableGet} from 'lib/dataFrameProto'
 import {logMessage} from 'lib/log'
 
@@ -34,12 +33,13 @@ const SUPPORTED_INDEX_TYPES = new Set([
   'uint_64Index',
 ])
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
 
-class VegaLiteChart extends PureStreamlitElement<Props, StState> {
+class VegaLiteChart extends React.PureComponent<Props> {
   /**
    * The Vega view object
    */
@@ -60,17 +60,17 @@ class VegaLiteChart extends PureStreamlitElement<Props, StState> {
    */
   private element: HTMLDivElement | null = null
 
-  public safeRender(): JSX.Element {
+  public render(): JSX.Element {
     return (
       // Create the container Vega draws inside.
       <div className="stVegaLiteChart" ref={c => this.element = c} />)
   }
 
-  public safeComponentDidMount(): void {
+  public componentDidMount(): void {
     this.createView()
   }
 
-  public safeComponentDidUpdate(prevProps: Props): void {
+  public componentDidUpdate(prevProps: Props): void {
     const prevElement = prevProps.element
     const element = this.props.element
 

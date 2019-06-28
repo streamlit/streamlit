@@ -9,7 +9,6 @@ import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {MultiGrid} from 'react-virtualized'
 import DataFrameCell from './DataFrameCell'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {SortDirection} from './SortDirection'
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from 'lib/dataFrameProto'
 import {toFormattedString} from 'lib/format'
@@ -35,11 +34,12 @@ const MAX_CELL_WIDTH_PX = 200
  */
 const MAX_LONELY_CELL_WIDTH_PX = 400
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
-interface State extends StState {
+interface State {
   /**
    * If true, then the user manually clicked on a column header to sort the
    * table.
@@ -96,7 +96,7 @@ interface CellRenderer {
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends PureStreamlitElement<Props, State> {
+class DataFrame extends React.PureComponent<Props, State> {
   private multiGridRef = React.createRef<MultiGrid>();
 
   public constructor(props: Props) {
@@ -257,7 +257,7 @@ class DataFrame extends PureStreamlitElement<Props, State> {
     }, 0)
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     // Get the properties.
     const {element} = this.props
 

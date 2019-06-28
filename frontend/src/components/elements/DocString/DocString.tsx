@@ -7,18 +7,18 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import './DocString.scss'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
 /**
  * Functional element representing formatted text.
  */
-class DocString extends PureStreamlitElement<Props, StState> {
-  public safeRender(): React.ReactNode {
+class DocString extends React.PureComponent<Props> {
+  public render(): React.ReactNode {
     const {element, width} = this.props
 
     const name = element.get('name')

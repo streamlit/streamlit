@@ -5,7 +5,6 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -26,7 +25,7 @@ const MAPBOX_ACCESS_TOKEN =
   'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ'
 
 
-class DeckGlChart extends PureStreamlitElement {
+class DeckGlChart extends React.PureComponent {
   constructor(props) {
     super(props)
 
@@ -59,7 +58,7 @@ class DeckGlChart extends PureStreamlitElement {
     this.setState({ initialized: true })
   }
 
-  safeRender() {
+  render() {
     return (
       <div
         className="deckglchart stDeckGlChart"

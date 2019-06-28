@@ -6,7 +6,6 @@
  */
 
 import React from 'react'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 import { Table as ReactTable }  from 'reactstrap'
 import { toFormattedString } from '../../../lib/format'
 
@@ -21,8 +20,8 @@ import './Table.scss'
  * Functional element representing a DataFrame.
  */
 
-class Table extends PureStreamlitElement {
-  safeRender() {
+class Table extends React.PureComponent {
+  render() {
     const { element } = this.props
     const { headerRows, rows, cols } = dataFrameGetDimensions(element)
 
