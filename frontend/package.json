@@ -47,9 +47,9 @@
     "reactstrap": "^8.0.0",
     "recharts": "^1.6.2",
     "typed-signals": "^1.0.5",
-    "vega": "^5.4.0",
+    "vega-embed": "^4.2.1",
     "vega-lite": "^3.3.0",
-    "vega-tooltip": "^0.17.0"
+    "vega": "^5.4.0"
   },
   "devDependencies": {
     "@craco/craco": "^5.2.1",

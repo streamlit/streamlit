@@ -8,9 +8,8 @@ import {Map as ImmutableMap} from 'immutable'
 import {tableGetRowsAndCols, indexGet, tableGet} from 'lib/dataFrameProto'
 import {logMessage} from 'lib/log'
 
+import embed from 'vega-embed'
 import * as vega from 'vega'
-import * as vl from 'vega-lite'
-import tooltip from 'vega-tooltip'
 
 import './VegaLiteChart.scss'
 
@@ -21,6 +20,11 @@ const MagicFields = {
 
 
 const DEFAULT_DATA_NAME = 'source'
+
+/**
+ * Horizontal space needed for the embed actions button.
+ */
+const EMBED_PADDING = 38
 
 
 /** Types of dataframe-indices that are supported as x axes. */
@@ -38,8 +42,11 @@ interface Props {
   element: ImmutableMap<string, any>;
 }
 
+interface State {
+  error?: Error;
+}
 
-class VegaLiteChart extends React.PureComponent<Props> {
+class VegaLiteChart extends React.PureComponent<Props, State> {
   /**
    * The Vega view object
    */
@@ -61,16 +68,24 @@ class VegaLiteChart extends React.PureComponent<Props> {
   private element: HTMLDivElement | null = null
 
   public render(): JSX.Element {
+    if (this.state.error) {
+      throw this.state.error
+    }
+
     return (
       // Create the container Vega draws inside.
       <div className="stVegaLiteChart" ref={c => this.element = c} />)
   }
 
-  public componentDidMount(): void {
-    this.createView()
+  public async componentDidMount(): Promise<void> {
+    try {
+      await this.createView()
+    } catch (error) {
+      this.setState({error})
+    } 
   }
 
-  public componentDidUpdate(prevProps: Props): void {
+  public async componentDidUpdate(prevProps: Props): Promise<void> {
     const prevElement = prevProps.element
     const element = this.props.element
 
@@ -79,12 +94,16 @@ class VegaLiteChart extends React.PureComponent<Props> {
 
     if (!this.vegaView || prevSpec !== spec) {
       logMessage('Vega spec changed.')
-      this.createView()
+      try {
+        await this.createView()
+      } catch (error) {
+        this.setState({error})
+      }
       return
     }
 
     if (prevProps.width !== this.props.width && this.specWidth === 0) {
-      this.vegaView.width(this.props.width)
+      this.vegaView.width(this.props.width - EMBED_PADDING)
     }
 
     const prevData = prevElement.get('data')
@@ -162,8 +181,12 @@ class VegaLiteChart extends React.PureComponent<Props> {
   /**
    * Create a new Vega view and add the data.
    */
-  private createView(): void {
+  private async createView(): Promise<void> {
     logMessage('Creating a new Vega view.')
+
+    if (!this.element) {
+      throw Error('Element missing.')
+    }
 
     if (this.vegaView) {
       // Finalize the previous view so it can be garbage collected.
@@ -178,9 +201,9 @@ class VegaLiteChart extends React.PureComponent<Props> {
       throw new Error('Datasets should not be passed as part of the spec')
     }
 
-    const datasets = getDataArrays(el)
+    const {vgSpec, view} = await embed(this.element, spec)
 
-    const vgSpec = vl.compile(spec).spec
+    const datasets = getDataArrays(el)
 
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
@@ -189,13 +212,6 @@ class VegaLiteChart extends React.PureComponent<Props> {
     } else if (datasetNames.length === 0 && vgSpec.data) {
       this.defaultDataName = DEFAULT_DATA_NAME
     }
-
-    const runtime = vega.parse(vgSpec)
-    const view = new vega.View(runtime, {
-      logLevel:  vega.Warn,
-      render: 'canvas',
-      container: this.element,
-    })
 
     const dataObj = getInlineData(el)
     if (dataObj) {
@@ -210,13 +226,11 @@ class VegaLiteChart extends React.PureComponent<Props> {
     this.specWidth = spec.width
 
     if (this.specWidth === 0) {
-      view.width(this.props.width)
+      view.width(this.props.width - EMBED_PADDING)
     }
 
-    tooltip(view)
-
     this.vegaView = view
-    view.runAsync()
+    await view.runAsync()
   }
 }
 
