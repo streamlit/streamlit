@@ -58,6 +58,8 @@ pillow = "!=5.1.0"
 protobuf = ">=3.6.0"
 psutil = "*"
 toml = "*"
-tornado = "<6.0"
+# 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+# 6.0 doesn't support Python 2
+tornado = ">=5.0<6.0"
 tzlocal = "*"
 watchdog = "*"

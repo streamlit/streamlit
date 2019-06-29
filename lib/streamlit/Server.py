@@ -406,9 +406,13 @@ class Server(object):
 
 
 class _StaticFileHandler(tornado.web.StaticFileHandler):
-    def set_extra_headers(self, path):
-        """Disable cache."""
-        self.set_header('Cache-Control', 'no-cache')
+    # Don't disable cache since Tornado sets the etag properly. This means the
+    # browser sends the hash of its cached file and Tornado only returns the
+    # actual file if the latest hash is different.
+    #
+    # def set_extra_headers(self, path):
+    #     """Disable cache."""
+    #     self.set_header('Cache-Control', 'no-cache')
 
     def check_origin(self, origin):
         """Set up CORS."""
