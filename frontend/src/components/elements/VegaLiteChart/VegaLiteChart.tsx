@@ -67,6 +67,14 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
    */
   private element: HTMLDivElement | null = null
 
+  constructor(props: Props) {
+    super(props)
+
+    this.state = {
+      error: undefined
+    }
+  }
+
   public render(): JSX.Element {
     if (this.state.error) {
       throw this.state.error
@@ -82,7 +90,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
       await this.createView()
     } catch (error) {
       this.setState({error})
-    } 
+    }
   }
 
   public async componentDidUpdate(prevProps: Props): Promise<void> {
