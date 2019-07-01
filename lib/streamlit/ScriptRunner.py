@@ -294,7 +294,7 @@ class ScriptRunner(object):
             self._shutdown_requested = True
             raise StopException()
         elif event == ScriptEvent.RERUN:
-            raise RerunException()
+            raise RerunException(event_data)
         else:
             raise RuntimeError('Unrecognized ScriptEvent: %s' % event)
 
@@ -352,10 +352,13 @@ class ScriptRunner(object):
         Used by maybe_handle_execution_control_request to ensure that
         we only handle requests while we're inside an exec() call
         """
-        prev_value = self._execing
+        if self._execing:
+            raise RuntimeError('Nested set_execing_flag call')
         self._execing = True
-        yield
-        self._execing = prev_value
+        try:
+            yield
+        finally:
+            self._execing = False
 
     def _run_script(self, rerun_data):
         """Run our script.
@@ -428,9 +431,9 @@ class ScriptRunner(object):
         if config.get_option('runner.installTracer'):
             self._install_tracer()
 
-        # This will be set to True if our execution is interrupted by a
-        # RerunException.
-        rerun_requested = False
+        # This will be set to a RerunData instance if our execution
+        # is interrupted by a RerunException.
+        rerun_with_data = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -458,8 +461,8 @@ class ScriptRunner(object):
             with modified_sys_path(self._report), self._set_execing_flag():
                 exec(code, module.__dict__)
 
-        except RerunException:
-            rerun_requested = True
+        except RerunException as e:
+            rerun_with_data = e.rerun_data
 
         except StopException:
             pass
@@ -476,8 +479,8 @@ class ScriptRunner(object):
         self._local_sources_watcher.update_watched_modules()
         _clean_problem_modules()
 
-        if rerun_requested:
-            self._run_script(RerunData(argv=None, widget_state=None))
+        if rerun_with_data is not None:
+            self._run_script(rerun_with_data)
 
 
 class ScriptControlException(BaseException):
@@ -492,7 +495,15 @@ class StopException(ScriptControlException):
 
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
-    pass
+    def __init__(self, rerun_data):
+        """Construct a RerunException
+
+        Parameters
+        ----------
+        rerun_data : RerunData
+            The RerunData that should be used to rerun the report
+        """
+        self.rerun_data = rerun_data
 
 
 def _clean_problem_modules():
