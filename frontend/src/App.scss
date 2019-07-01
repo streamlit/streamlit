@@ -37,7 +37,7 @@ header {
   right: 0;
   height: 3.5rem;
   padding: 0 1rem;
-  z-index: 100;
+  z-index: $z-index-header;
   display: flex;
   flex-direction: row;
   align-items: center;
