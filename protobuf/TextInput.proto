@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-message Input {
+message TextInput {
   string id = 1;
   string label = 2;
   string value = 3;

@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Input as UIInput } from 'baseui/input'
+import { Input } from 'baseui/input'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
@@ -19,7 +19,7 @@ interface State extends StState {
   value: any;
 }
 
-class Input extends PureStreamlitElement<Props, State> {
+class TextInput extends PureStreamlitElement<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -47,13 +47,12 @@ class Input extends PureStreamlitElement<Props, State> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget row-widget stInput" style={style}>
-        <UIInput onChange={this.onChange} value={this.state.value}>
-          {label}
-        </UIInput>
+      <div className="Widget row-widget stTextInput" style={style}>
+        <label>{label}</label>
+        <Input onChange={this.onChange} value={this.state.value}/>
       </div>
     )
   }
 }
 
-export default Input
+export default TextInput

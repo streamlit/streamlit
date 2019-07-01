@@ -46,7 +46,7 @@ class TextArea extends PureStreamlitElement<Props, State> {
 
     return (
       <div className="Widget stTextArea" style={style}>
-        <p className="label">{label}</p>
+        <label>{label}</label>
         <UITextArea
           value={this.state.value}
           onChange={this.handleChange}

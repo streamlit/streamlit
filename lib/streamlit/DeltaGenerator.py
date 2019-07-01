@@ -1177,15 +1177,6 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def input(self, element, ui_value, label, value=''):
-        """Input doc string."""
-        # TODO int/float only?
-        current_value = ui_value if ui_value is not None else value
-        element.input.label = label
-        element.input.value = current_value
-        return current_value
-
-    @_widget
     def radio(self, element, ui_value, label, value=None, options=None):
         """Radio doc string."""
         current_value = ui_value if ui_value is not None else value
@@ -1236,9 +1227,65 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def text_area(self, element, ui_value, label, value=''):
-        """Text box doc string."""
+    def text_input(self, element, ui_value, label, value=''):
+        """Display a single-line text input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : any
+            The text value of this widget when it first renders. This will be
+            cast to str internally.
+
+        Returns
+        -------
+        str
+            The current value of the text input widget.
+
+        Example
+        -------
+        >>> title = st.text_input('Movie title', 'Life of Brian')
+        >>> st.write('The current movie title is', title)
+
+        """
         current_value = ui_value if ui_value is not None else value
+        current_value = str(current_value)
+        element.text_input.label = label
+        element.text_input.value = current_value
+        return current_value
+
+    @_widget
+    def text_area(self, element, ui_value, label, value=''):
+        """Display a multi-line text input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : any
+            The text value of this widget when it first renders. This will be
+            cast to str internally.
+
+        Returns
+        -------
+        str
+            The current value of the text input widget.
+
+        Example
+        -------
+        >>> txt = st.text_area('Text to analyze', '''
+        ...     It was the best of times, it was the worst of times, it was
+        ...     the age of wisdom, it was the age of foolishness, it was
+        ...     the epoch of belief, it was the epoch of incredulity, it
+        ...     was the season of Light, it was the season of Darkness, it
+        ...     was the spring of hope, it was the winter of despair, (...)
+        ...     ''')
+        >>> st.write('Sentiment:', run_sentiment_analysis(txt))
+
+        """
+        current_value = ui_value if ui_value is not None else value
+        current_value = str(current_value)
         element.text_area.label = label
         element.text_area.value = current_value
         return current_value

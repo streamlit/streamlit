@@ -26,11 +26,11 @@ import Text from 'components/elements/Text'
 const Button = React.lazy(() => import('components/widgets/Button/'))
 const Checkbox = React.lazy(() => import('components/widgets/Checkbox/'))
 const DatePicker = React.lazy(() => import('components/widgets/DatePicker/'))
-const Input = React.lazy(() => import('components/widgets/Input/'))
 const Radio = React.lazy(() => import('components/widgets/Radio/'))
 const Select = React.lazy(() => import('components/widgets/Select/'))
 const Slider = React.lazy(() => import('components/widgets/Slider/'))
 const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
+const TextInput = React.lazy(() => import('components/widgets/TextInput/'))
 const TimePicker = React.lazy(() => import('components/widgets/TimePicker/'))
 
 // Lazy-load display elements.
@@ -180,7 +180,7 @@ export class ReportView extends PureComponent<Props> {
       button: (el: Element) => <Button element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       date: (el: Element) => <DatePicker element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      input: (el: Element) => <Input element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      textInput: (el: Element) => <TextInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       select: (el: Element) => <Select element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
