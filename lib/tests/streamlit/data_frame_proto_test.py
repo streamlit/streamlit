@@ -630,8 +630,8 @@ class DataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(ValueError) as e:
             data_frame_proto._get_dataset(chart.datasets, 'dataset 3')
-        err_msg = 'ValueError: No dataset found with name "dataset 3"'
-        self.assertTrue(err_msg in str(e))
+        err_msg = 'No dataset found with name "dataset 3"'
+        self.assertTrue(str(err_msg) in str(e.value))
 
     def test_index_len(self):
         """Test streamlit.data_frame_proto._index_len."""

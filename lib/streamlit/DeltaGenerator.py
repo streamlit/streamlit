@@ -14,7 +14,6 @@ import json
 import random
 import textwrap
 import traceback
-import uuid
 
 from streamlit import protobuf
 from streamlit import get_report_ctx
@@ -126,8 +125,20 @@ def _widget(f):
     @_wraps_with_cleaned_sig(f)
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
+        # All of this label-parsing code only exists so we can throw a pretty
+        # error to the user when she forgets to pass in a label. Otherwise we'd
+        # get a really cryptic error.
+        if 'label' in kwargs:
+            label = kwargs['label']
+            del kwargs['label']
+        elif len(args) > 0:
+            label = args[0]
+            args = args[1:]
+        else:
+            raise TypeError('%s must have a label' % f.__name__)
+
         ctx = get_report_ctx()
-        widget_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(f) + args[0]))
+        widget_id = str(label)
 
         el = getattr(element, f.__name__)
         el.id = widget_id
@@ -135,7 +146,7 @@ def _widget(f):
         ui_value = (
             ctx.widgets.get_widget_value(widget_id) if ctx else None
         )
-        return f(dg, element, ui_value, *args, **kwargs)
+        return f(dg, element, ui_value, label, *args, **kwargs)
 
     return wrapper
 
@@ -840,8 +851,8 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0,
-        sharing='streamlit', **kwargs):
+            self, element, figure_or_data, width=0, height=0,
+            sharing='streamlit', **kwargs):
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -1036,8 +1047,8 @@ class DeltaGenerator(object):
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
-        self, element, image, caption=None, width=None,
-        use_column_width=False, clamp=False):
+            self, element, image, caption=None, width=None,
+            use_column_width=False, clamp=False):
         """Display an image or list of images.
 
         Parameters
@@ -1275,12 +1286,14 @@ class DeltaGenerator(object):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
-                raise ValueError('Progress Value has invalid value [0.0, 1.0]: %f' % value)
+                raise ValueError(
+                    'Progress Value has invalid value [0.0, 1.0]: %f' % value)
         elif value_type == 'int':
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
-                raise ValueError('Progress Value has invalid value [0, 100]: %d' % value)
+                raise ValueError(
+                    'Progress Value has invalid value [0, 100]: %d' % value)
         else:
             raise TypeError('Progress Value has invalid type: %s' % value_type)
 
@@ -1335,7 +1348,8 @@ class DeltaGenerator(object):
         LAT_LON = ['lat', 'lon']
         if not set(data.columns) >= set(LAT_LON):
             raise Exception('Map data must contain "lat" and "lon" columns.')
-        if data['lon'].isnull().values.any() or data['lat'].isnull().values.any():
+        if (data['lon'].isnull().values.any() or
+                data['lat'].isnull().values.any()):
             raise Exception('Map data must be numeric.')
         data_frame_proto.marshall_data_frame(
             data[LAT_LON], element.map.points)
