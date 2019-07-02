@@ -16,13 +16,13 @@ describe('st.vega_lite_chart', () => {
 
   it('sets the correct chart width', () => {
     cy.get('.stVegaLiteChart canvas')
-      .eq(0).should('have.css', 'width', '610px')
+      .eq(0).should('have.css', 'width', '572px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(1).should('have.css', 'width', '610px')
+      .eq(1).should('have.css', 'width', '572px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(2).should('have.css', 'width', '293px')
+      .eq(2).should('have.css', 'width', '292px')
 
     cy.get('.stVegaLiteChart canvas')
       .eq(3).should('have.css', 'width', '500px')

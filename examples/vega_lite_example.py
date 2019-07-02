@@ -60,14 +60,14 @@ st.write(
     'Putting the `df` inside the spec, as inline `data` (different notation):')
 st.write('**This fails now, but not a big deal. It\'s a weird notation.**')
 
-st.vega_lite_chart({
-    'data': {'values': df},
-    'mark': 'bar',
-    'encoding': {
-      'x': {'field': 'a', 'type': 'ordinal'},
-      'y': {'field': 'b', 'type': 'quantitative'}
-    }
-  })
+# st.vega_lite_chart({
+#     'data': {'values': df},
+#     'mark': 'bar',
+#     'encoding': {
+#       'x': {'field': 'a', 'type': 'ordinal'},
+#       'y': {'field': 'b', 'type': 'quantitative'}
+#     }
+#   })
 
 
 # -

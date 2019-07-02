@@ -16,10 +16,10 @@ st.write('''
     cannot detect that configuration.
 ''')
 
-data = {
+data = pd.DataFrame({
     'a': [1, 2, 3, 4],
     'b': [1, 3, 2, 4],
-}
+})
 
 spec = {
     'mark': 'line',
