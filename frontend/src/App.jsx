@@ -6,7 +6,7 @@
 /*jshint loopfunc:false */
 
 import React, { PureComponent } from 'react'
-import { hotkeys } from 'react-keyboard-shortcuts'
+import { HotKeys } from 'react-hotkeys'
 import {
   Col,
   Container,
@@ -81,46 +81,15 @@ class App extends PureComponent {
   /**
    * Global keyboard shortcuts.
    */
-  hot_keys = {
+  keyHandlers = {
     // The r key reruns the script.
-    'r': {
-      priority: 1,
-      handler: () => this.rerunScript(),
-    },
-
-    // 'a' reruns the script, and sets "always rerun" to true,
-    // but only if the StatusWidget is currently prompting the
-    // user to rerun
-    'a': {
-      priority: 1,
-      handler: () => {
-        if (this.statusWidgetRef.current != null) {
-          this.statusWidgetRef.current.handleAlwaysRerunHotkeyPressed()
-        }
-      },
-    },
+    'r': () => this.rerunScript(),
 
     // The shift+r key opens the rerun script dialog.
-    'shift+r': {
-      priority: 1,
-      handler: () => this.openRerunScriptDialog(),
-    },
+    'shift+r': () => this.openRerunScriptDialog(),
 
-    // 'c' clears the cache
-    'c': {
-      priority: 1,
-      handler: () => this.openClearCacheDialog(),
-    },
-
-    // The enter key runs the "default action" of the dialog.
-    'enter': {
-      priority: 1,
-      handler: () => {
-        if (this.state.dialog && this.state.dialog.defaultAction) {
-          this.state.dialog.defaultAction()
-        }
-      },
-    },
+    // The c key clears the cache.
+    'c': () => this.openClearCacheDialog(),
   }
 
   componentDidMount() {
@@ -462,7 +431,9 @@ class App extends PureComponent {
 
     this.setState({reportRunState: ReportRunState.RERUN_REQUESTED})
 
-    if (alwaysRunOnSave) {
+    // Note: `rerunScript` is incorrectly called in some places.
+    // We can remove `=== true` after adding type information
+    if (alwaysRunOnSave === true) {
       // Update our run-on-save setting *before* calling rerunScript.
       // The rerunScript message currently blocks all BackMsgs from
       // being processed until the script has completed executing.
@@ -564,66 +535,72 @@ class App extends PureComponent {
       onClose: this.closeDialog,
     }
 
+    // Attach and focused props provide a way to handle Global Hot Keys
+    // https://github.com/greena13/react-hotkeys/issues/41
+    // attach: DOM element the keyboard listeners should attach to
+    // focused: A way to force focus behaviour
     return (
-      <div className={outerDivClass}>
-        {/* The tabindex below is required for testing. */}
-        <header tabIndex="-1">
-          <div className="decoration"/>
-          <div id="brand">
-            <a href="//streamlit.io">Streamlit</a>
-          </div>
-          <StatusWidget
-            ref={this.statusWidgetRef}
-            connectionState={this.state.connectionState}
-            sessionEventDispatcher={this.sessionEventDispatcher}
-            reportRunState={this.state.reportRunState}
-            rerunReport={this.rerunScript}
-            stopReport={this.stopReport}
-          />
-          <MainMenu
-            isServerConnected={this.isServerConnected}
-            saveCallback={this.saveReport}
-            quickRerunCallback={this.rerunScript}
-            rerunCallback={this.openRerunScriptDialog}
-            clearCacheCallback={this.openClearCacheDialog}
-            settingsCallback={() => this.openDialog({
-              type: 'settings',
-              isOpen: true,
-              isServerConnected: this.isServerConnected(),
-              settings: this.state.userSettings,
-              onSave: this.saveSettings,
-            })}
-            aboutCallback={() => this.openDialog({
-              type: 'about',
-              onClose: this.closeDialog,
-            })}
-          />
-        </header>
+      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+        <div className={outerDivClass}>
+          {/* The tabindex below is required for testing. */}
+          <header tabIndex="-1">
+            <div className="decoration"/>
+            <div id="brand">
+              <a href="//streamlit.io">Streamlit</a>
+            </div>
+            <StatusWidget
+              ref={this.statusWidgetRef}
+              connectionState={this.state.connectionState}
+              sessionEventDispatcher={this.sessionEventDispatcher}
+              reportRunState={this.state.reportRunState}
+              rerunReport={this.rerunScript}
+              stopReport={this.stopReport}
+            />
+            <MainMenu
+              isServerConnected={this.isServerConnected}
+              saveCallback={this.saveReport}
+              quickRerunCallback={this.rerunScript}
+              rerunCallback={this.openRerunScriptDialog}
+              clearCacheCallback={this.openClearCacheDialog}
+              settingsCallback={() => this.openDialog({
+                type: 'settings',
+                isOpen: true,
+                isServerConnected: this.isServerConnected(),
+                settings: this.state.userSettings,
+                onSave: this.saveSettings,
+              })}
+              aboutCallback={() => this.openDialog({
+                type: 'about',
+                onClose: this.closeDialog,
+              })}
+            />
+          </header>
 
-        <Container className="streamlit-container">
-          <Row className="justify-content-center">
-            <Col className={this.state.userSettings.wideMode ?
-              '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
-              {this.state.showLoginBox ?
-                <LoginBox
-                  onSuccess={this.onLogInSuccess}
-                  onFailure={this.onLogInError}
-                />
-                :
-                <ReportView
-                  elements={this.state.elements}
-                  reportId={this.state.reportId}
-                  reportRunState={this.state.reportRunState}
-                  showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                />
-              }
-            </Col>
-          </Row>
+          <Container className="streamlit-container">
+            <Row className="justify-content-center">
+              <Col className={this.state.userSettings.wideMode ?
+                '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
+                {this.state.showLoginBox ?
+                  <LoginBox
+                    onSuccess={this.onLogInSuccess}
+                    onFailure={this.onLogInError}
+                  />
+                  :
+                  <ReportView
+                    elements={this.state.elements}
+                    reportId={this.state.reportId}
+                    reportRunState={this.state.reportRunState}
+                    showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
+                  />
+                }
+              </Col>
+            </Row>
 
-          <StreamlitDialog {...dialogProps}/>
+            <StreamlitDialog {...dialogProps}/>
 
-        </Container>
-      </div>
+          </Container>
+        </div>
+      </HotKeys>
     )
   }
 
@@ -688,4 +665,4 @@ function makeElementWithInfoText(text) {
 }
 
 
-export default hotkeys(App)
+export default App
