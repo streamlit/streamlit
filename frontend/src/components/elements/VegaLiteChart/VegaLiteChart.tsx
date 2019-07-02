@@ -67,11 +67,11 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
    */
   private element: HTMLDivElement | null = null
 
-  constructor(props: Props) {
+  public constructor(props: Props) {
     super(props)
 
     this.state = {
-      error: undefined
+      error: undefined,
     }
   }
 
