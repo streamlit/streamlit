@@ -27,13 +27,22 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ conda update streamlit
 ```
 
+## Version 0.42.0
+*Release date: July 1, 2019*
+
+**Highlights:**
+
+* 💾 Ability to save Vega-Lite and Altair charts to SVG or PNG
+* 🐇 We now cache JS files in your browser for faster loading
+* ⛔ Improvements to error-handling inside Streamlit reports
+
 ## Version 0.41.0
 *Release date: June 24, 2019*
 
 **Highlights:**
 
 * 📈 Greatly improved our support for named datasets in Vega-Lite and Altair
-* 🙄 See the `server.folderWatchBlacklist` config option.
+* 🙄 Added ability to ignore certain folders when watching for file changes. See the `server.folderWatchBlacklist` config option.
 * ☔ More robust against syntax errors on the user's script and imported modules
 
 ## Version 0.40.0
