@@ -4,10 +4,10 @@
  */
 
 import React from 'react'
-import { Input } from 'baseui/input'
 import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
+import { Input as UIInput } from 'baseui/input'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -49,7 +49,7 @@ class TextInput extends PureStreamlitElement<Props, State> {
     return (
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
-        <Input onChange={this.onChange} value={this.state.value}/>
+        <UIInput onChange={this.onChange} value={this.state.value} />
       </div>
     )
   }
