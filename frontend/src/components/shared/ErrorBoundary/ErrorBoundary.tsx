@@ -38,15 +38,14 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const error = this.state.error
+    const {error} = this.state
 
     if (error) {
       return (
         <ErrorElement width={this.props.width} name={error.name} message={error.message} stack={error.stack}/>
       )
-    } else {
-      return this.props.children
     }
+    return this.props.children
   }
 }
 

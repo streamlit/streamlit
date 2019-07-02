@@ -52,3 +52,7 @@ $border-radius: 0.25rem;
 $border-radius-sm: 0.25rem;
 $border-radius-large: 0.75rem;
 $btn-border-radius: $border-radius-large;
+
+// Custom z-index values (not related to bootstrap)
+$z-index-popup-menu: 102;
+$z-index-header: 100;

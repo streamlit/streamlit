@@ -11,6 +11,6 @@ describe('st.deck_gl_chart', () => {
     els.should('have.length', 6)
 
     els.find('canvas')
-      .should('have.attr', 'height', '1000')
+      .should('have.css', 'height', '500px')
   })
 })

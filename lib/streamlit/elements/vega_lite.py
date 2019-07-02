@@ -36,13 +36,6 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
         # Clone the spec dict, since we may be mutating it.
         spec = dict(spec)
 
-    # TODO: Improve autosizing code. It doesn't work with some kinds of charts,
-    # like composed charts, for example.
-    if width >= 0 and 'width' not in spec:
-        spec['width'] = width
-        if 'autosize' not in spec:
-            spec['autosize'] = {'type': 'fit', 'contains': 'padding'}
-
     # Support passing in kwargs. Example:
     #   marshall(proto, {foo: 'bar'}, baz='boz')
     if len(kwargs):
@@ -50,8 +43,15 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
         # This only works for string keys, but kwarg keys are strings anyways.
         spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
 
-    if spec is None or len(spec) == 0:
+    if len(spec) == 0:
         raise ValueError('Vega-Lite charts require a non-empty spec dict.')
+
+    # TODO: Improve autosizing code. It doesn't work with some kinds of charts,
+    # like composed charts, for example.
+    if width >= 0 and 'width' not in spec:
+        spec['width'] = width
+        if 'autosize' not in spec:
+            spec['autosize'] = {'type': 'fit', 'contains': 'padding'}
 
     # Pull data out of spec dict when it's in a 'dataset' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})

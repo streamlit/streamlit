@@ -7,17 +7,17 @@
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
 import {dispatchOneOf} from 'lib/immutableProto'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import Plot from 'react-plotly.js'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
 const DEFAULT_HEIGHT = 500
 
-class PlotlyChart extends PureStreamlitElement<Props, StState> {
-  public safeRender(): React.ReactNode {
+class PlotlyChart extends React.PureComponent<Props> {
+  public render(): React.ReactNode {
     const el = this.props.element
 
     const height: number =

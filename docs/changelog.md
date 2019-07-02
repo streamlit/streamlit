@@ -27,6 +27,24 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ conda update streamlit
 ```
 
+## Version 0.42.0
+*Release date: July 1, 2019*
+
+**Highlights:**
+
+* 💾 Ability to save Vega-Lite and Altair charts to SVG or PNG
+* 🐇 We now cache JS files in your browser for faster loading
+* ⛔ Improvements to error-handling inside Streamlit reports
+
+## Version 0.41.0
+*Release date: June 24, 2019*
+
+**Highlights:**
+
+* 📈 Greatly improved our support for named datasets in Vega-Lite and Altair
+* 🙄 Added ability to ignore certain folders when watching for file changes. See the `server.folderWatchBlacklist` config option.
+* ☔ More robust against syntax errors on the user's script and imported modules
+
 ## Version 0.40.0
 *Release date: June 10, 2019*
 
@@ -51,7 +69,6 @@ If you run `$ python your_script.py` the script will execute from top to bottom,
 * Streamlit only works when used inside Python files, not interactively from the Python REPL.
 
 **What else do I need to know?**
-
 
 * The strings we print to the command line when **liveSave** is on have been cleaned up. You may need to adjust any RegEx that depends on those.
 * A number of config options have been renamed:

@@ -19,6 +19,7 @@ import DocString from '../../elements/DocString/'
 import ExceptionElement from '../../elements/ExceptionElement/'
 import Table from '../../elements/Table/'
 import Text from '../../elements/Text/'
+import ErrorBoundary from 'components/shared/ErrorBoundary'
 
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('../../elements/Audio/'))
@@ -110,7 +111,9 @@ export class ReportView extends PureComponent<Props> {
               width={width}
             />}
           >
-            {component}
+            <ErrorBoundary width={width}>
+              {component}
+            </ErrorBoundary>
           </React.Suspense>
         </div>
       )
