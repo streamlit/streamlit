@@ -5,8 +5,9 @@
  * @fileoverview Syntax-highlighted code block.
  */
 
-import React from 'react'
 import Prism from 'prismjs'
+import React from 'react'
+
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
 import 'prismjs/components/prism-jsx'
@@ -18,11 +19,11 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
-import { PureStreamlitElement, StProps, StState } from 'components/shared/StreamlitElement/'
 import CopyButton from './CopyButton'
 import './CodeBlock.scss'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   language?: string;
   value: string;
 }
@@ -30,8 +31,8 @@ interface Props extends StProps {
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends PureStreamlitElement<Props, StState> {
-  public safeRender(): React.ReactNode {
+class CodeBlock extends React.PureComponent<Props> {
+  public render(): React.ReactNode {
     if (this.props.language == null) {
       return (
         <pre>

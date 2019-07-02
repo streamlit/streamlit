@@ -27,6 +27,7 @@ bokeh = "*"
 graphviz = "*"
 pydot = "*"
 tensorflow = "*"
+seaborn = "*"
 # TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
 # When you update the packages here, you have to update
 # conda/streamlit/meta.yaml as well.
@@ -53,9 +54,13 @@ numpy = "*"
 pandas = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
 pillow = "!=5.1.0"
-protobuf = "*"
+# Set protobuf version based on the protoc version on the release machine (i.e.
+# Thiago's machine)
+protobuf = ">=3.6.0"
 psutil = "*"
 toml = "*"
-tornado = "<6.0"
+# 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+# 6.0 doesn't support Python 2
+tornado = ">=5.0<6.0"
 tzlocal = "*"
 watchdog = "*"

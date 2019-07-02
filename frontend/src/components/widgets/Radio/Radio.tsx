@@ -7,7 +7,6 @@ import React from 'react'
 import { Radio as UIRadio, RadioGroup } from 'baseui/radio'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -15,11 +14,11 @@ interface Props {
   width: number;
 }
 
-interface State extends StState {
+interface State {
   value: any;
 }
 
-class Radio extends PureStreamlitElement<Props, State> {
+class Radio extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -41,7 +40,7 @@ class Radio extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const options = this.props.element.get('options')
     const style = { width: this.props.width }

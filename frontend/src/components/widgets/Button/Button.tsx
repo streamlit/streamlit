@@ -7,7 +7,6 @@ import React from 'react'
 import { Button as UIButton } from 'baseui/button'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -15,7 +14,7 @@ interface Props {
   width: number;
 }
 
-class Button extends PureStreamlitElement<Props, StState> {
+class Button extends React.PureComponent<Props> {
   private handleClick = (e: React.SyntheticEvent<HTMLButtonElement>) => {
     const widgetId = this.props.element.get('id')
 
@@ -23,7 +22,7 @@ class Button extends PureStreamlitElement<Props, StState> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const widgetId = this.props.element.get('id')
     const style = { width: this.props.width }

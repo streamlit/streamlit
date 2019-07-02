@@ -2,7 +2,7 @@ version: '3.6'
 
 services:
   streamlit:
-    image: streamlit/streamlit:0.40.1
+    image: streamlit/streamlit:0.42.0
     build:
       context: .
       dockerfile: Dockerfile

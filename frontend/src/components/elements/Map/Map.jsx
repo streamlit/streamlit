@@ -17,14 +17,13 @@ import {
   tableGet,
   tableGetRowsAndCols,
 } from '../../../lib/dataFrameProto'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 import './Map.scss'
 
 /**
   * Functional element representing formatted text.
   */
-class Map extends PureStreamlitElement {
-  safeRender() {
+class Map extends React.PureComponent {
+  render() {
     const {element, width} = this.props
     const points = element.get('points')
 

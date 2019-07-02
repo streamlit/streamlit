@@ -24,20 +24,17 @@ export class ScriptChangedDialog extends PureComponent<Props> {
 
     this.keyHandlers = {
       'a': this.alwaysRerun,
-      'r': this.rerun,
+      // No handler for 'r' since it's handled by app.jsx and precedence
+      // isn't working when multiple components handle the same key
+      // 'r': this.rerun,
     }
   }
 
-  // TODO: this dialog uses react-hotkeys (and not react-keyboard-shortcuts, our
-  // current hotkey library) to handle its hotkeys. react-keyboard-shortcuts doesn't
-  // have type definitions, and so can't be used in this file; and it's deficient
-  // in a number of other ways.
-  // As part of a separate PR, I'd like to migrate the rest of the app away from
-  // react-keyboard-shortcuts as well (and remove this comment!)
-
   public render(): ReactNode {
+    // Not sure exactly why attach and focused are necessary on the
+    // HotKeys component here but its not working without them
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window}>
+      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <BasicDialog onClose={this.props.onClose}>
           <ModalHeader toggle={this.props.onClose}>Report changed</ModalHeader>
           <ModalBody>

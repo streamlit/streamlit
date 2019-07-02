@@ -2,10 +2,9 @@
 Adapted from https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
 """
 
+import streamlit as st
 import numpy as np
 import pandas as pd
-
-import streamlit as st
 
 
 def color_negative_red(val):

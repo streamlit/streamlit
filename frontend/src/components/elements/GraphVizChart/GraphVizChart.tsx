@@ -4,15 +4,14 @@
  */
 
 import React from 'react'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import {Map as ImmutableMap} from 'immutable'
-
 import { select } from 'd3'
 import { graphviz } from 'd3-graphviz'
-
 import {logError} from 'lib/log'
+import './GraphVizChart.scss'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
   id: number;
 }
@@ -23,7 +22,7 @@ const _dummy_graphviz = graphviz
 _dummy_graphviz  // eslint-disable-line no-unused-expressions
 
 
-class GraphVizChart extends PureStreamlitElement<Props, StState> {
+class GraphVizChart extends React.PureComponent<Props> {
   private chartId: string = 'graphviz-chart-' + this.props.id
   private originalHeight: number = 0
 
@@ -57,19 +56,19 @@ class GraphVizChart extends PureStreamlitElement<Props, StState> {
     }
   }
 
-  public safeComponentDidMount = () => {
+  public componentDidMount = () => {
     this.updateChart()
   }
 
-  public safeComponentDidUpdate = () => {
+  public componentDidUpdate = () => {
     this.updateChart()
   }
 
-  public safeRender = (): React.ReactNode => {
+  public render = (): React.ReactNode => {
     const width: number = this.props.element.get('width') || this.props.width
 
     return (
-      <div className="graphviz" id={this.chartId} style={{ width }} />
+      <div className="graphviz stGraphVizChart" id={this.chartId} style={{ width }} />
     )
   }
 }

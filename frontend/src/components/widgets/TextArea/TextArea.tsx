@@ -7,7 +7,6 @@ import React from 'react'
 import { Textarea as UITextArea } from 'baseui/textarea'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './TextArea.scss'
 
 interface Props {
@@ -16,11 +15,11 @@ interface Props {
   width: number;
 }
 
-interface State extends StState {
+interface State {
   value: string;
 }
 
-class TextArea extends PureStreamlitElement<Props, State> {
+class TextArea extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -40,7 +39,7 @@ class TextArea extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 

@@ -6,19 +6,14 @@
 import React from 'react'
 import { embed as BokehEmbed } from 'bokehjs'
 import { Map as ImmutableMap } from 'immutable'
-import {
-  PureStreamlitElement,
-  StProps,
-  StState,
-} from 'components/shared/StreamlitElement/'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
   id: number;
-  width: number;
 }
 
-class BokehChart extends PureStreamlitElement<Props, StState> {
+class BokehChart extends React.PureComponent<Props> {
   private chartId = 'bokeh-chart-' + this.props.id;
 
   private getChartData = () => {
@@ -40,17 +35,17 @@ class BokehChart extends PureStreamlitElement<Props, StState> {
     }
   }
 
-  public safeComponentDidMount = () => {
+  public componentDidMount = () => {
     const data = this.getChartData()
     this.updateChart(data)
   }
 
-  public safeComponentDidUpdate = () => {
+  public componentDidUpdate = () => {
     const data = this.getChartData()
     this.updateChart(data)
   }
 
-  public safeRender = (): React.ReactNode => (
+  public render = (): React.ReactNode => (
     <div
       id={this.chartId}
       className="stBokehChart"

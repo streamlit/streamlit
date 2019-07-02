@@ -6,7 +6,6 @@
 import React from 'react'
 import {Balloons as BalloonsProto} from 'autogen/protobuf'
 import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import BalloonEmoji from 'assets/img/emoji/emoji_u1f388.png'
 import HappyFaceEmoji from 'assets/img/emoji/emoji_u1f604.png'
 import StarFaceEmoji from 'assets/img/emoji/emoji_u1f929.png'
@@ -31,20 +30,21 @@ BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = HappyFaceEmoji
 BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = StarFaceEmoji
 BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = CoolFaceEmoji
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
-interface State extends StState {
+interface State {
   drawnId: boolean;
 }
 
-class Balloons extends PureStreamlitElement<Props, State> {
+class Balloons extends React.PureComponent<Props, State> {
   public readonly state: State = {
     drawnId: true,
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     if (this.state.drawnId === this.props.element.get('executionId')) {
       return ''
     }

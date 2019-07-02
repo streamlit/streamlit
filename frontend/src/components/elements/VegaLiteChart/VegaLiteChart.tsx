@@ -5,13 +5,11 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import { StreamlitElement, StProps, StState } from 'components/shared/StreamlitElement/'
-import { tableGetRowsAndCols, indexGet, tableGet } from 'lib/dataFrameProto'
-import { logMessage } from 'lib/log'
+import {tableGetRowsAndCols, indexGet, tableGet} from 'lib/dataFrameProto'
+import {logMessage} from 'lib/log'
 
+import embed from 'vega-embed'
 import * as vega from 'vega'
-import * as vl from 'vega-lite'
-import tooltip from 'vega-tooltip'
 
 import './VegaLiteChart.scss'
 
@@ -19,6 +17,14 @@ import './VegaLiteChart.scss'
 const MagicFields = {
   DATAFRAME_INDEX: '(index)',
 }
+
+
+const DEFAULT_DATA_NAME = 'source'
+
+/**
+ * Horizontal space needed for the embed actions button.
+ */
+const EMBED_PADDING = 38
 
 
 /** Types of dataframe-indices that are supported as x axes. */
@@ -31,115 +37,164 @@ const SUPPORTED_INDEX_TYPES = new Set([
   'uint_64Index',
 ])
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
+interface State {
+  error?: Error;
+}
 
-class VegaLiteChart extends StreamlitElement<Props, StState> {
+class VegaLiteChart extends React.PureComponent<Props, State> {
   /**
    * The Vega view object
    */
   private vegaView: vega.View | undefined
 
   /**
+   * The width from the parsed Vega-Lite spec.
+   */
+  private specWidth: number | undefined;
+
+  /**
    * The default data name to add to.
    */
-  private defaultDataName = 'source'
+  private defaultDataName = DEFAULT_DATA_NAME
 
   /**
    * The html element we attach the Vega view to.
    */
   private element: HTMLDivElement | null = null
 
+  public constructor(props: Props) {
+    super(props)
 
-  public safeRender(): JSX.Element {
+    this.state = {
+      error: undefined,
+    }
+  }
+
+  public render(): JSX.Element {
+    if (this.state.error) {
+      throw this.state.error
+    }
+
     return (
       // Create the container Vega draws inside.
       <div className="stVegaLiteChart" ref={c => this.element = c} />)
   }
 
-
-  public safeComponentDidMount(): void {
-    this.createView()
+  public async componentDidMount(): Promise<void> {
+    try {
+      await this.createView()
+    } catch (error) {
+      this.setState({error})
+    }
   }
 
+  public async componentDidUpdate(prevProps: Props): Promise<void> {
+    const prevElement = prevProps.element
+    const element = this.props.element
 
-  public safeComponentDidUpdate(): void {
-    this.createView()
-  }
+    const prevSpec = prevElement.get('spec')
+    const spec = element.get('spec')
 
-
-  /**
-   * Detect whether rows were appended to dataframe and, if so, pretend this
-   * component did not update and instead use Vega Views's own .insert() method,
-   * which is faster.
-   */
-  public safeShouldComponentUpdate(newProps: Props, newState: StState): boolean {
-    const data0 = this.props.element.get('data')
-    const data1 = newProps.element.get('data')
-
-    if (!data0 || !data1) { return true }
-    if (!data0.get('data') || !data1.get('data')) { return true }
-
-    const [numRows0, numCols0] = tableGetRowsAndCols(data0.get('data'))
-    const [numRows1, numCols1] = tableGetRowsAndCols(data1.get('data'))
-
-    const spec0 = this.props.element.get('spec')
-    const spec1 = newProps.element.get('spec')
-
-    const dataChanged = data0 !== data1
-    const specChanged = spec0 !== spec1
-
-    // If spec changed, doesn't matter whether data changed. Redraw
-    // whole chart.
-    if (specChanged) {
-      return true
+    if (!this.vegaView || prevSpec !== spec) {
+      logMessage('Vega spec changed.')
+      try {
+        await this.createView()
+      } catch (error) {
+        this.setState({error})
+      }
+      return
     }
 
-    // Just a small optimization: if spec and data are all the same,
-    // we know there's no need to redraw anything and can quit here.
-    if (!dataChanged) {
-      return false
+    if (prevProps.width !== this.props.width && this.specWidth === 0) {
+      this.vegaView.width(this.props.width - EMBED_PADDING)
     }
 
-    // Check if dataframes have same "shape" but the new one has more rows.
-    if (numCols0 === numCols1 && numRows0 <= numRows1 &&
-        // Check if the new dataframe looks like it's a superset of the old one.
-        // (this is a very light check, and not guaranteed to be right!)
-        data0[0] === data1[0] && data0[numRows0 - 1] === data1[numRows0 - 1]) {
+    const prevData = prevElement.get('data')
+    const data = element.get('data')
 
-      if (numRows0 < numRows1) {
-        this.addRows(data1, numRows0)
-        // Since we're handling the redraw using VegaLite's addRows(), tell
-        // React not to redraw the chart.
-        return false
+    if (prevData || data) {
+      this.updateData(this.defaultDataName, prevData, data)
+    }
+
+    const prevDataSets = getDataSets(prevElement) || {}
+    const dataSets = getDataSets(element) || {}
+
+    for (const [name, dataset] of Object.entries(dataSets)) {
+      const datasetName = name ? name : this.defaultDataName
+      const prevDataset = prevDataSets[datasetName]
+      this.updateData(datasetName, prevDataset, dataset)
+    }
+
+    // Remove all datasets that are in the previous but not the current datasets.
+    for (const name of Object.keys(prevDataSets)) {
+      if (!dataSets.hasOwnProperty(name) && name !== this.defaultDataName) {
+        this.updateData(name, null, null)
       }
     }
 
-    // Data changed and we did not use addRows() for it, so tell React to redraw
-    // the chart.
-    return true
+    this.vegaView.resize().runAsync()
   }
 
 
   /**
-   * Uses Vega View's insert() method to add more data to the chart.
-   * See https://vega.github.io/vega/docs/api/view/
+   * Update the dataset in the Vega view. This method tried to minimize changes
+   * by automatically creating and applying diffs.
+   *
+   * @param name The name of the dataset.
+   * @param prevData The dataset before the update.
+   * @param data The dataset at the current state.
    */
-  private addRows(data: any, startIndex: number): void {
+  private updateData(
+    name: string, prevData: ImmutableMap<string, any> | null,
+    data: ImmutableMap<string, any> | null): void {
+
     if (!this.vegaView) {
       throw new Error('Chart has not been drawn yet')
     }
-    const rows = getDataArray(data, startIndex)
-    // TODO: Support adding rows to datasets with different names.
-    this.vegaView.insert(this.defaultDataName, rows)
-    this.vegaView.run()
+
+    if (!data || !data.get('data')) {
+      const viewHasDataWithName = (this.vegaView as any)._runtime.data.hasOwnProperty(name)
+      if (viewHasDataWithName) {
+        this.vegaView.remove(name, vega.truthy)
+      }
+      return
+    }
+
+    if (!prevData || !prevData.get('data')) {
+      this.vegaView.insert(name, getDataArray(data))
+      return
+    }
+
+    const [prevNumRows, prevNumCols] = tableGetRowsAndCols(prevData.get('data'))
+    const [numRows, numCols] = tableGetRowsAndCols(data.get('data'))
+
+    // Check if dataframes have same "shape" but the new one has more rows.
+    if (dataIsAnAppendOfPrev(prevData, prevNumRows, prevNumCols, data, numRows, numCols)) {
+      if (prevNumRows < numRows) {
+        this.vegaView.insert(name, getDataArray(data, prevNumRows))
+      }
+    } else {
+      // Clean the dataset and insert from scratch.
+      const cs = vega.changeset().remove(vega.truthy).insert(getDataArray(data))
+      this.vegaView.change(name, cs)
+      logMessage(`Had to clear the ${name} dataset before inserting data through Vega view.`)
+    }
   }
 
+  /**
+   * Create a new Vega view and add the data.
+   */
+  private async createView(): Promise<void> {
+    logMessage('Creating a new Vega view.')
 
-  private createView(): void {
-    logMessage('Creating a new Vega view. We only should do this when the spec changes.')
+    if (!this.element) {
+      throw Error('Element missing.')
+    }
 
     if (this.vegaView) {
       // Finalize the previous view so it can be garbage collected.
@@ -154,42 +209,40 @@ class VegaLiteChart extends StreamlitElement<Props, StState> {
       throw new Error('Datasets should not be passed as part of the spec')
     }
 
-    const datasets = getDataSets(el)
+    const {vgSpec, view} = await embed(this.element, spec)
 
-    if (datasets) {
-      if (!spec.data) {
-        throw new Error(
-          'Must specify "data" field when using "dataset"')
-      }
-      spec.datasets = datasets
-    }
-
-    const vgSpec = vl.compile(spec).spec
+    const datasets = getDataArrays(el)
 
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
     if (datasetNames.length === 1) {
       this.defaultDataName = datasetNames[0]
     } else if (datasetNames.length === 0 && vgSpec.data) {
-      this.defaultDataName = vgSpec.data[0].name
+      this.defaultDataName = DEFAULT_DATA_NAME
     }
-
-    const runtime = vega.parse(vgSpec)
-    const view = new vega.View(runtime, {
-      logLevel:  vega.Warn,
-      render: 'canvas',
-      container: this.element,
-    })
 
     const dataObj = getInlineData(el)
     if (dataObj) {
       view.insert(this.defaultDataName, dataObj)
     }
+    if (datasets) {
+      for (const [name, data] of Object.entries(datasets)) {
+        view.insert(name, data)
+      }
+    }
 
-    tooltip(view)
+    this.specWidth = spec.width
+
+    if (this.specWidth === 0) {
+      view.width(this.props.width - EMBED_PADDING)
+    }
 
     this.vegaView = view
-    view.run()
+    await view.runAsync()
+
+    // Fix bug where the "..." menu button overlaps with charts where width is
+    // set to -1 on first load.
+    this.vegaView.resize().runAsync()
   }
 }
 
@@ -205,23 +258,41 @@ function getInlineData(el: ImmutableMap<string, any>): {[field: string]: any}[] 
 }
 
 
-function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: any[] } | null {
+function getDataArrays(el: ImmutableMap<string, any>): {[dataset: string]: any[] } | null {
+  const datasets = getDataSets(el)
+
+  if (datasets == null) {
+    return null
+  }
+
+  const datasetArrays: {[dataset: string]: any[]} = {}
+
+  for (const [name, dataset] of Object.entries(datasets)) {
+    datasetArrays[name] = getDataArray(dataset)
+  }
+
+  return datasetArrays
+}
+
+
+function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: ImmutableMap<string, any>} | null {
   if (!el.get('datasets') || el.get('datasets').isEmpty()) {
     return null
   }
 
-  const datasets: {[dataset: string]: any[]} = {}
+  const datasets: {[dataset: string]: any} = {}
 
   el.get('datasets').forEach((x: any, i: number) => {
     if (!x) { return }
-    datasets[x.get('name')] = getDataArray(x.get('data'))
+    const name = x.get('hasName') ? x.get('name') : null
+    datasets[name] = x.get('data')
   })
 
   return datasets
 }
 
 
-function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] {
+function getDataArray(dataProto: ImmutableMap<string, any>, startIndex = 0): {[field: string]: any}[] {
   if (!dataProto.get('data')) { return [] }
   if (!dataProto.get('index')) { return [] }
   if (!dataProto.get('columns')) { return [] }
@@ -249,6 +320,39 @@ function getDataArray(dataProto: any, startIndex = 0): {[field: string]: any}[] 
   }
 
   return dataArr
+}
+
+
+/**
+ * Checks if data looks like it's just prevData plus some appended rows.
+ */
+function dataIsAnAppendOfPrev(
+  prevData: ImmutableMap<string, number>, prevNumRows: number, prevNumCols: number,
+  data: ImmutableMap<string, number>, numRows: number, numCols: number,
+): boolean {
+  // Check whether dataframes have the same shape.
+
+  if (prevNumCols !== numCols) {
+    return false
+  }
+
+  if (prevNumRows > numRows) {
+    return false
+  }
+
+  const df0 = prevData.get('data')
+  const df1 = data.get('data')
+  const c = numCols - 1
+  const r = prevNumRows - 1
+
+  // Check if the new dataframe looks like it's a superset of the old one.
+  // (this is a very light check, and not guaranteed to be right!)
+  if (tableGet(df0, c, 0) !== tableGet(df1, c, 0) ||
+      tableGet(df0, c, r) !== tableGet(df1, c, r)) {
+    return false
+  }
+
+  return true
 }
 
 

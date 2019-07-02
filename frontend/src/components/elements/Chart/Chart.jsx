@@ -11,7 +11,6 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from '../../../lib/dataFrameProto'
 import { format, Duration } from '../../../lib/format'
-import { PureStreamlitElement } from 'components/shared/StreamlitElement/'
 
 import * as recharts from 'recharts'
 
@@ -93,8 +92,8 @@ const SUPPORTED_INDEX_TYPES = new Set([
   // TODO(tvst): Support other index types
 ])
 
-class Chart extends PureStreamlitElement {
-  safeRender() {
+class Chart extends React.PureComponent {
+  render() {
     const {element, width} = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
@@ -157,7 +156,7 @@ class Chart extends PureStreamlitElement {
 
     return (
       <div className="stChart" style={chartDims}>
-        <div style={{...chartDims, left: -chartXOffset, position: 'absolute'}}>
+        <div style={{...chartDims, left: -chartXOffset}}>
           {
             React.createElement(
               COMPONENTS[element.get('type')],

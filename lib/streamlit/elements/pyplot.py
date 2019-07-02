@@ -1,0 +1,47 @@
+# Copyright 2019 Streamlit Inc. All rights reserved.
+
+"""Streamlit support for Matplotlib PyPlot charts."""
+
+import io
+
+try:
+    import matplotlib  # noqa: F401
+    import matplotlib.pyplot as plt
+    plt.ioff()
+except ImportError:
+    raise ImportError('pyplot() command requires matplotlib')
+
+import streamlit.elements.image_proto as image_proto
+
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
+
+
+def marshall(new_element_proto, fig=None, **kwargs):
+    """Construct a matplotlib.pyplot figure.
+
+    See DeltaGenerator.vega_lite_chart for docs.
+    """
+    # You can call .savefig() on a Figure object or directly on the pyplot
+    # module, in which case you're doing it to the latest Figure.
+    if not fig:
+        fig = plt
+
+    # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
+    # So here we pick double of that to make things look good in a high
+    # DPI display.
+    options = {
+        'dpi': 200,
+        'format': 'png',
+    }
+
+    # If some of the options are passed in from kwargs then replace
+    # the values in options with the ones from kwargs
+    options = {a: kwargs.get(a, b) for a, b in options.items()}
+    # Merge options back into kwargs.
+    kwargs.update(options)
+
+    image = io.BytesIO()
+    fig.savefig(image, **kwargs)
+    image_proto.marshall_images(
+        image, None, -2, new_element_proto.imgs, False)

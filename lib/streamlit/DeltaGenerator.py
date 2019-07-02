@@ -9,7 +9,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import functools
-import io
 import json
 import random
 import textwrap
@@ -183,7 +182,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
         marshall_element : callable
-            Function which sets the fields for a protobuf.Delta.
+            Function which sets the fields for a protobuf.NewElement.
 
         Returns
         -------
@@ -695,7 +694,8 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, **kwargs):
+    def vega_lite_chart(
+            self, element, data=None, spec=None, width=0, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -709,6 +709,12 @@ class DeltaGenerator(object):
             The Vega-Lite spec for the chart. If the spec was already passed in
             the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
+
+        width : number
+            If 0 (default), stretch chart to the full document width. If -1,
+            use the default from Vega-Lite. If greater than 0, sets the width.
+            Note that if spec['width'] is defined, it takes precedence over
+            this argument.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -744,7 +750,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
         vega_lite.marshall(
-            element.vega_lite_chart, data, spec, **kwargs)
+            element.vega_lite_chart, data, spec, width, **kwargs)
 
     @_with_element
     def altair_chart(self, element, altair_chart):
@@ -971,36 +977,8 @@ class DeltaGenerator(object):
         For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
-        import streamlit.elements.image_proto as image_proto
-        try:
-            import matplotlib  # noqa: F401
-            import matplotlib.pyplot as plt
-            plt.ioff()
-        except ImportError:
-            raise ImportError('pyplot() command requires matplotlib')
-
-        # You can call .savefig() on a Figure object or directly on the pyplot
-        # module, in which case you're doing it to the latest Figure.
-        if not fig:
-            fig = plt
-
-        # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
-        # So here we pick double of that to make things look good in a high
-        # DPI display.
-        options = {
-            'dpi': 200,
-            'format': 'png',
-        }
-        # If some of the options are passed in from kwargs then replace
-        # the values in options with the ones from kwargs
-        options = {a: kwargs.get(a, b) for a, b in options.items()}
-        # Merge options back into kwargs.
-        kwargs.update(options)
-
-        image = io.BytesIO()
-        fig.savefig(image, **kwargs)
-        image_proto.marshall_images(
-            image, None, -2, element.imgs, False)
+        import streamlit.elements.pyplot as pyplot
+        pyplot.marshall(element, fig, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):

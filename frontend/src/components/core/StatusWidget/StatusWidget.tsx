@@ -9,6 +9,7 @@
 
 import {RERUN_PROMPT_MODAL_DIALOG} from 'lib/baseconsts'
 import React, {PureComponent, ReactNode} from 'react'
+import {HotKeys} from 'react-hotkeys'
 import {CSSTransition} from 'react-transition-group'
 import {Button, UncontrolledTooltip} from 'reactstrap'
 import {SignalConnection} from 'typed-signals'
@@ -91,6 +92,7 @@ export class StatusWidget extends PureComponent<Props, State> {
   private curView?: ReactNode
 
   private readonly minimizePromptTimer = new Timer()
+  private readonly keyHandlers: { [key: string]: (keyEvent?: KeyboardEvent) => void }
 
   public constructor(props: Props) {
     super(props)
@@ -100,6 +102,13 @@ export class StatusWidget extends PureComponent<Props, State> {
       promptMinimized: false,
       reportChangedOnDisk: false,
       promptHovered: false,
+    }
+
+    this.keyHandlers = {
+      'a': this.handleAlwaysRerunClick,
+      // No handler for 'r' since it's handled by app.jsx and precedence
+      // isn't working when multiple components handle the same key
+      // 'r': this.handleRerunClick,
     }
   }
 
@@ -132,17 +141,6 @@ export class StatusWidget extends PureComponent<Props, State> {
     this.minimizePromptTimer.cancel()
 
     window.removeEventListener('scroll', this.handleScroll)
-  }
-
-  /**
-   * Called by App when the 'a' hotkey is pressed.
-   * This simulates a click on the "Always Rerun" button, if that
-   * button is showing.
-   */
-  public handleAlwaysRerunHotkeyPressed = (): void => {
-    if (this.state.reportChangedOnDisk) {
-      this.handleAlwaysRerunClick()
-    }
   }
 
   private isConnected(): boolean {
@@ -292,34 +290,38 @@ export class StatusWidget extends PureComponent<Props, State> {
     const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
 
+    // Not sure exactly why attach and focused are necessary on the
+    // HotKeys component here but its not working without them
     return (
-      <div
-        onMouseEnter={this.onReportPromptHover}
-        onMouseLeave={this.onReportPromptUnhover}>
+      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <div
-          id="ReportStatus"
-          className={minimized ? 'rerun-prompt-minimized' : ''}>
-          <svg className="icon" viewBox="0 0 8 8">
-            <use href={openIconic + '#info'}/>
-          </svg>
+          onMouseEnter={this.onReportPromptHover}
+          onMouseLeave={this.onReportPromptUnhover}>
+          <div
+            id="ReportStatus"
+            className={minimized ? 'rerun-prompt-minimized' : ''}>
+            <svg className="icon" viewBox="0 0 8 8">
+              <use href={openIconic + '#info'}/>
+            </svg>
 
-          <label className="prompt">
-            Source file changed.
-          </label>
+            <label className="prompt">
+              Source file changed.
+            </label>
 
-          {StatusWidget.promptButton(
-            <div className="underlineFirstLetter">Rerun</div>,
-            rerunRequested,
-            this.handleRerunClick
-          )}
+            {StatusWidget.promptButton(
+              <div className="underlineFirstLetter">Rerun</div>,
+              rerunRequested,
+              this.handleRerunClick
+            )}
 
-          {StatusWidget.promptButton(
-            <div className="underlineFirstLetter">Always rerun</div>,
-            rerunRequested,
-            this.handleAlwaysRerunClick
-          )}
+            {StatusWidget.promptButton(
+              <div className="underlineFirstLetter">Always rerun</div>,
+              rerunRequested,
+              this.handleAlwaysRerunClick
+            )}
+          </div>
         </div>
-      </div>
+      </HotKeys>
     )
   }
 

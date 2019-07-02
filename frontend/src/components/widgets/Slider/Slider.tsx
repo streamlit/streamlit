@@ -7,7 +7,6 @@ import React from 'react'
 import { Slider as UISlider } from 'baseui/slider'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import './Slider.scss'
 
 interface Props {
@@ -16,7 +15,7 @@ interface Props {
   width: number;
 }
 
-interface State extends StState {
+interface State {
   value: number[];
 }
 
@@ -24,7 +23,7 @@ interface SliderValue {
   value: number[];
 }
 
-class Slider extends PureStreamlitElement<Props, State> {
+class Slider extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -43,7 +42,7 @@ class Slider extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const min = this.props.element.get('min')
     const max = this.props.element.get('max')

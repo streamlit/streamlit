@@ -54,7 +54,7 @@ class MainMenu extends PureComponent {
         <DropdownMenu right>
           <DropdownItem
             disabled={!this.props.isServerConnected()}
-            onClick={this.props.quickRerunCallback}>
+            onClick={() => this.props.quickRerunCallback()}>
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>

@@ -7,7 +7,6 @@ import React from 'react'
 import { Checkbox as UICheckbox } from 'baseui/checkbox'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -15,11 +14,11 @@ interface Props {
   width: number;
 }
 
-interface State extends StState {
+interface State {
   value: boolean;
 }
 
-class Checkbox extends PureStreamlitElement<Props, State> {
+class Checkbox extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -39,7 +38,7 @@ class Checkbox extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 

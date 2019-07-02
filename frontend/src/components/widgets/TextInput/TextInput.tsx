@@ -5,7 +5,6 @@
 
 import React from 'react'
 import { Map as ImmutableMap } from 'immutable'
-import { PureStreamlitElement, StState } from 'components/shared/StreamlitElement/'
 import { Input as UIInput } from 'baseui/input'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
@@ -15,11 +14,11 @@ interface Props {
   width: number;
 }
 
-interface State extends StState {
+interface State {
   value: any;
 }
 
-class TextInput extends PureStreamlitElement<Props, State> {
+class TextInput extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -42,7 +41,7 @@ class TextInput extends PureStreamlitElement<Props, State> {
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  public safeRender(): React.ReactNode {
+  public render(): React.ReactNode {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 

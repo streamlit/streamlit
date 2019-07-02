@@ -6,6 +6,7 @@
 import {ScriptChangedDialog, Props as ScriptChangedProps} from 'components/core/StreamlitDialog/ScriptChangedDialog'
 import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
+import {HotKeys} from 'react-hotkeys'
 import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
 
 import {Exception} from 'autogen/protobuf'
@@ -87,6 +88,9 @@ interface ClearCacheProps {
 
   /** callback to close the dialog */
   onClose: PlainEventHandler;
+
+  /** callback to run the default action */
+  defaultAction: () => void;
 }
 
 /**
@@ -96,18 +100,26 @@ interface ClearCacheProps {
  * onClose         - callback to close the dialog
  */
 function clearCacheDialog(props: ClearCacheProps): ReactElement {
+  const keyHandlers = {
+    'enter': () => props.defaultAction(),
+  }
+
   return (
-    <BasicDialog onClose={props.onClose}>
-      <ModalBody>
-        <div className="streamlit-container">
-          Are you sure you want to clear the <code>@st.cache</code> function cache?
-        </div>
-      </ModalBody>
-      <ModalFooter>
-        <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
-        <Button outline color="primary" onClick={props.confirmCallback}>Clear cache</Button>
-      </ModalFooter>
-    </BasicDialog>
+    // Not sure exactly why attach is necessary on the HotKeys
+    // component here but it's not working without it
+    <HotKeys handlers={keyHandlers} attach={window}>
+      <BasicDialog onClose={props.onClose}>
+        <ModalBody>
+          <div className="streamlit-container">
+            Are you sure you want to clear the <code>@st.cache</code> function cache?
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
+          <Button outline color="primary" onClick={props.confirmCallback}>Clear cache</Button>
+        </ModalFooter>
+      </BasicDialog>
+    </HotKeys>
   )
 }
 
@@ -125,30 +137,41 @@ interface RerunScriptProps {
 
   /** Callback to close the dialog */
   onClose: PlainEventHandler;
+
+  /** Callback to run the default action */
+  defaultAction: () => void;
 }
 
 /**
  * Dialog shown when the user wants to rerun a script.
  */
 function rerunScriptDialog(props: RerunScriptProps): ReactElement {
+  const keyHandlers = {
+    'enter': () => props.defaultAction(),
+  }
+
   return (
-    <BasicDialog onClose={props.onClose}>
-      <ModalBody>
-        <div className="rerun-header">Command line:</div>
-        <div>
-          <textarea
-            autoFocus
-            className="command-line"
-            value={props.getCommandLine()}
-            onChange={(event) => props.setCommandLine(event.target.value)}
-          />
-        </div>
-      </ModalBody>
-      <ModalFooter>
-        <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
-        <Button outline color="primary" onClick={props.rerunCallback}>Rerun</Button>
-      </ModalFooter>
-    </BasicDialog>
+    // Not sure exactly why attach is necessary on the HotKeys
+    // component here but it's not working without it
+    <HotKeys handlers={keyHandlers} attach={window}>
+      <BasicDialog onClose={props.onClose}>
+        <ModalBody>
+          <div className="rerun-header">Command line:</div>
+          <div>
+            <textarea
+              autoFocus
+              className="command-line"
+              value={props.getCommandLine()}
+              onChange={(event) => props.setCommandLine(event.target.value)}
+            />
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
+          <Button outline color="primary" onClick={() => props.rerunCallback()}>Rerun</Button>
+        </ModalFooter>
+      </BasicDialog>
+    </HotKeys>
   )
 }
 

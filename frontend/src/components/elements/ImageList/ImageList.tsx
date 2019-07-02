@@ -5,10 +5,10 @@
 
 import React from 'react'
 import {Map as ImmutableMap} from 'immutable'
-import {PureStreamlitElement, StProps, StState} from 'components/shared/StreamlitElement/'
 import './ImageList.scss'
 
-interface Props extends StProps {
+interface Props {
+  width: number;
   element: ImmutableMap<string, any>;
 }
 
@@ -32,8 +32,8 @@ function getImageSrcString(imgProto: ImmutableMap<string, any>): string {
 /**
  * Functional element for a horizontal list of images.
  */
-class ImageList extends PureStreamlitElement<Props, StState> {
-  public safeRender(): React.ReactNode {
+class ImageList extends React.PureComponent<Props> {
+  public render(): React.ReactNode {
     const {element, width} = this.props
     // The width field in the proto sets the image width, but has special
     // cases for -1 and -2.

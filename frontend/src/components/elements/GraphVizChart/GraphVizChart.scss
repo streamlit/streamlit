@@ -1,0 +1,18 @@
+/**
+ * @license
+ * Copyright 2018 Streamlit Inc. All rights reserved.
+ */
+
+@import 'src/assets/css/variables';
+
+
+.stGraphVizChart {
+  * {
+    font-family: $font-family-sans-serif;
+    // Font sizes inside the SVG element are getting huge for some reason.
+    // Hacking together a number by eyeballing it:
+    // 12px in the SVG looks like 1rem outside, so 9.6px ~= 0.8rem.
+    font-size: 9.6px;
+  }
+}
+
