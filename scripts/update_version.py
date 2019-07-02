@@ -43,9 +43,20 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # but the version number so we can throw any valid PEP440 version in
 # there.
 PYTHON = {
-    'lib/setup.py': r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
-    'docs/troubleshooting.md': r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
-    'conda/streamlit/meta.yaml': r'(?P<pre>.* version = ").*(?P<post>" %}$)',
+    'lib/setup.py':
+        r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
+    'docs/troubleshooting.md':
+        r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
+    'conda/streamlit/meta.yaml':
+        r'(?P<pre>.* version = ").*(?P<post>" %}$)',
+    'examples/Dockerfile':
+        r'(?P<pre>FROM streamlit/streamlit:).*(?P<post>$)',
+    'docker/aws/mnist/Dockerfile':
+        r'(?P<pre>FROM streamlit/streamlit:).*(?P<post>$)',
+    'docker/aws/Dockerfile':
+        r'(?P<pre>RUN pip install streamlit==).*(?P<post>$)',
+    'docker/aws/docker-compose.yml':
+        r'(?P<pre>image: streamlit/streamlit:)[0-9].*(?P<post>$)',
 }
 
 NODE = {
