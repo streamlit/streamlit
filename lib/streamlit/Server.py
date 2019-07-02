@@ -27,6 +27,11 @@ LOGGER = get_logger(__name__)
 MESSAGE_SIZE_LIMIT = 10466493
 
 
+# Dictionary key used to mark the script execution context that starts
+# up before the first browser connects.
+PREHEATED_REPORT_CONTEXT = 'PREHEATED_REPORT_CONTEXT'
+
+
 class State(object):
     INITIAL = 'INITIAL'
     WAITING_FOR_FIRST_BROWSER = 'WAITING_FOR_FIRST_BROWSER'
@@ -90,7 +95,8 @@ class Server(object):
             (r'/debugz', _DebugHandler, dict(server=self)),
         ]
 
-        if not config.get_option('global.developmentMode') or not config.get_option('global.useNode'):
+        if (not config.get_option('global.developmentMode')
+                or not config.get_option('global.useNode')):
             # If we're not using the node development server, then the proxy
             # will serve up the development pages.
             static_path = util.get_static_dir()
@@ -176,12 +182,21 @@ class Server(object):
         self._set_state(State.STOPPING)
         self._must_stop.set()
 
+    def add_preheated_report_context(self):
+        """Register a fake browser with the server and run the script.
+
+        This is used to start running the user's script even before the first
+        browser connects.
+        """
+        report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
+        report_ctx.handle_rerun_script_request()
+
     def _add_browser_connection(self, ws):
-        """Registers a connected browser to the server
+        """Register a connected browser with the server
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler
+        ws : _BrowserWebSocketHandler or PREHEATED_REPORT_CONTEXT
             The newly-connected websocket handler
 
         Returns
@@ -192,10 +207,18 @@ class Server(object):
         """
         if ws not in self._report_contexts:
             LOGGER.debug('Registering new browser connection')
-            self._report_contexts[ws] = ReportContext(
-                ioloop=self._ioloop,
-                script_path=self._script_path,
-                script_argv=self._script_argv)
+
+            if (len(self._report_contexts) == 1 and
+                    PREHEATED_REPORT_CONTEXT in self._report_contexts):
+                report_ctx = self._report_contexts[PREHEATED_REPORT_CONTEXT]
+                del self._report_contexts[PREHEATED_REPORT_CONTEXT]
+            else:
+                report_ctx = ReportContext(
+                    ioloop=self._ioloop,
+                    script_path=self._script_path,
+                    script_argv=self._script_argv)
+
+            self._report_contexts[ws] = report_ctx
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
         return self._report_contexts[ws]
@@ -248,7 +271,8 @@ class _DebugHandler(tornado.web.RequestHandler):
 
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
-        self.write('<code><pre>%s</pre><code>' %
+        self.write(
+            '<code><pre>%s</pre><code>' %
             json.dumps(
                 self._server.get_debug(),
                 indent=2,

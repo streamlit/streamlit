@@ -123,6 +123,8 @@ def run(script_path):
     server = Server(
         script_path, sys.argv, on_server_start_callback=_on_server_start)
 
+    server.add_preheated_report_context()
+
     ioloop = tornado.ioloop.IOLoop.current()
     ioloop.spawn_callback(server.loop_coroutine)
 
