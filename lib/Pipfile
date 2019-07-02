@@ -27,6 +27,7 @@ bokeh = "*"
 graphviz = "*"
 pydot = "*"
 tensorflow = "*"
+seaborn = "*"
 # TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
 # When you update the packages here, you have to update
 # conda/streamlit/meta.yaml as well.
