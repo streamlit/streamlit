@@ -16,6 +16,14 @@ export class WidgetStateManager {
     this.sendBackMsg = sendBackMsg
   }
 
+  /**
+   * True if our widget state dict is empty. This will be the case only when the browser
+   * initially connects to the server for the first time.
+   */
+  public get isEmpty(): boolean {
+    return this.widgetStates.size == 0
+  }
+
   public setTriggerValue(widgetId: string, value: boolean): void {
     this.getOrCreateWidgetStateProto(widgetId).triggerValue = value
   }

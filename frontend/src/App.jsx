@@ -31,7 +31,7 @@ import { ReportView } from 'components/core/ReportView/'
 import { Delta, Text as TextProto } from 'autogen/protobuf'
 import { addRows } from 'lib/dataFrameProto'
 import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
-import { logError } from 'lib/log'
+import { logError, logMessage } from 'lib/log'
 import {RERUN_PROMPT_MODAL_DIALOG, setInstallationId, setStreamlitVersion} from 'lib/baseconsts'
 import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
@@ -59,6 +59,7 @@ class App extends PureComponent {
     this.closeDialog = this.closeDialog.bind(this)
     this.getUserLogin = this.getUserLogin.bind(this)
     this.handleConnectionError = this.handleConnectionError.bind(this)
+    this.handleConnectionStateChanged = this.handleConnectionStateChanged.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
     this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
@@ -102,9 +103,7 @@ class App extends PureComponent {
       getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
-      connectionStateChanged: newState => {
-        this.setState({ connectionState: newState })
-      },
+      connectionStateChanged: this.handleConnectionStateChanged,
     })
 
     if (isEmbeddedInIFrame()) {
@@ -119,6 +118,22 @@ class App extends PureComponent {
       initRemoteTracker({
         gatherUsageStats: true,
       })
+    }
+  }
+
+  /**
+   * Called by ConnectionManager when our connection state changes
+   */
+  handleConnectionStateChanged(newState) {
+    this.setState({ connectionState: newState })
+
+    // If we've just connected and our WidgetManager is not empty, it means
+    // we're *reconnecting* to the server after having been disconnected.
+    // We resend our widget state so that the server immediately re-runs the
+    // report with the widget values that are currently displayed on the page.
+    if (newState === ConnectionState.CONNECTED && !this.widgetMgr.isEmpty) {
+      logMessage('Reconnected to server; sending previous widget state')
+      this.widgetMgr.sendUpdateWidgetsMessage()
     }
   }
 
