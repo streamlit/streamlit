@@ -15,7 +15,7 @@ interface Props {
 }
 
 interface State {
-  value: any;
+  value: string;
 }
 
 class Radio extends React.PureComponent<Props, State> {
@@ -25,10 +25,8 @@ class Radio extends React.PureComponent<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    this.state = { value }
-    if (value) {
-      this.props.widgetMgr.setStringValue(widgetId, value)
-    }
+    this.state = { value: value.toString() }
+    this.props.widgetMgr.setIntValue(widgetId, value)
   }
 
   private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -36,7 +34,7 @@ class Radio extends React.PureComponent<Props, State> {
     const widgetId = this.props.element.get('id')
 
     this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.props.widgetMgr.setIntValue(widgetId, parseInt(value, 10))
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -47,13 +45,13 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="Widget row-widget stRadio" style={style}>
+        <label>{label}</label>
         <RadioGroup
-          name={label}
           onChange={this.onChange}
           value={this.state.value}
         >
-          {options.map((opt: ImmutableMap<string, any>, idx: string) => (
-            <UIRadio key={idx} value={opt.get('key')}>{opt.get('value')}</UIRadio>
+          {options.map((option: string, idx: number) => (
+            <UIRadio key={idx} value={idx.toString()}>{option}</UIRadio>
           ))}
         </RadioGroup>
       </div>

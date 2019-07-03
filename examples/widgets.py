@@ -1,3 +1,5 @@
+import pandas as pd
+import numpy as np
 import streamlit as st
 
 st.title('Interactive Widgets')
@@ -5,6 +7,9 @@ st.title('Interactive Widgets')
 st.subheader('Checkbox')
 w1 = st.checkbox('I am human', True)
 st.write(w1)
+
+if w1:
+    st.write('Agreed')
 
 st.subheader('Slider')
 w2 = st.slider('Age', [32.5, 72.5], 0, 100, 0.5)
@@ -22,16 +27,18 @@ if w4:
     st.write('Hello, Interactive Streamlit!')
 
 st.subheader('Radio')
-w5 = st.radio('radio widget', '1', [('1', 'first'), ('2', 'second')])
-st.write(w5)
+options = ('female', 'male')
+w5 = st.radio('Gender', options, 1)
+st.write(options[w5])
 
 st.subheader('Text input')
 w6 = st.text_input('Text input widget', 'i iz input')
 st.write(w6)
 
-st.subheader('Select')
-w7 = st.select('select widget', '1', [('1', 'first'), ('2', 'second')])
-st.write(w7)
+st.subheader('Selectbox')
+options = ('first', 'second')
+w7 = st.selectbox('Options', options, 1)
+st.write(options[w7])
 
 st.subheader('Time')
 w8 = st.time('Set an alarm for', '12:00')

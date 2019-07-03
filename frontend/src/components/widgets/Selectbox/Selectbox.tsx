@@ -15,30 +15,23 @@ interface Props {
 }
 
 interface State {
-  value: any;
+  value: { value: string; label: string }[];
 }
 
-class Select extends React.PureComponent<Props, State> {
+class Selectbox extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
     const widgetId = this.props.element.get('id')
     const valueId = this.props.element.get('value')
 
-    let value = null
-    this.props.element.get('options').forEach((opt: ImmutableMap<string, any>) => {
-      if (opt.get('value') === valueId) {
-        value = [{
-          'label': opt.get('label'),
-          'value': opt.get('value'),
-        }]
-      }
-    })
+    const value = [{
+      'value': valueId.toString(),
+      'label': this.props.element.get('options')[valueId],
+    }]
 
     this.state = { value }
-    if (value) {
-      this.props.widgetMgr.setStringValue(widgetId, valueId)
-    }
+    this.props.widgetMgr.setIntValue(widgetId, valueId)
   }
 
   private onChange = (data: any) => {
@@ -47,7 +40,7 @@ class Select extends React.PureComponent<Props, State> {
     const valueId = value[0]['value']
 
     this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, valueId)
+    this.props.widgetMgr.setIntValue(widgetId, parseInt(valueId, 10))
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -56,28 +49,28 @@ class Select extends React.PureComponent<Props, State> {
     const options = this.props.element.get('options')
     const style = { width: this.props.width }
 
-    let selectOptions: any[] = []
-    options.forEach((opt: ImmutableMap<string, any>) => (
+    let selectOptions: { value: string; label: string }[] = []
+    options.forEach((option: string, idx: number) => (
       selectOptions.push({
-        'label': opt.get('label'),
-        'value': opt.get('value'),
+        'label': option,
+        'value': idx.toString(),
       })
     ))
 
     return (
-      <div className="Widget row-widget stSelect" style={style}>
+      <div className="Widget row-widget stSelectbox" style={style}>
+        <label>{label}</label>
         <UISelect
           options={selectOptions}
           labelKey="label"
           valueKey="value"
           onChange={this.onChange}
           value={this.state.value}
-        >
-          {label}
-        </UISelect>
+          clearable={false}
+        />
       </div>
     )
   }
 }
 
-export default Select
+export default Selectbox

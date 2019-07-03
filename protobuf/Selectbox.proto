@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-message Radio {
+message Selectbox {
   string id = 1;
   string label = 2;
   int32 value = 3;

@@ -1140,7 +1140,19 @@ class DeltaGenerator(object):
 
     @_widget
     def button(self, element, ui_value, label):
-        """Button doc string."""
+        """Display a button widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this button is for.
+
+        Returns
+        -------
+        bool
+            If the button was clicked on the last run of the report.
+
+        """
         current_value = ui_value if ui_value is not None else False
         element.button.label = label
         element.button.value = False
@@ -1148,43 +1160,92 @@ class DeltaGenerator(object):
 
     @_widget
     def checkbox(self, element, ui_value, label, value=False):
-        """Checkbox doc string."""
+        """Display a checkbox widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this checkbox is for.
+        value : bool
+            Preselect the checkbox when it first renders. This will be
+            cast to bool internally.
+
+        Returns
+        -------
+        bool
+            Whether or not the checkbox is checked.
+
+        """
         current_value = ui_value if ui_value is not None else value
+        current_value = bool(current_value)
         element.checkbox.label = label
         element.checkbox.value = current_value
         return current_value
 
     @_widget
-    def radio(self, element, ui_value, label, value=None, options=None):
-        """Radio doc string."""
+    def radio(self, element, ui_value, label, options, value=0):
+        """Display a radio button widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this radio group is for.
+        options : list of str, tuple of str, numpy.ndarray of str, or pandas.Series of str
+            Labels for the radio options. This will be cast to str internally.
+        value : int
+            The index of the preselected option on first render.
+
+        Returns
+        -------
+        int
+            The index of the selected option
+
+        """
+        if not isinstance(value, int):
+            raise TypeError(
+                'Radio Value has invalid type: %s' % type(value).__name__)
+        if not 0 <= value < len(options):
+            raise ValueError(
+                'Radio Value must be between 0 and length of options')
+
         current_value = ui_value if ui_value is not None else value
 
         element.radio.label = label
-        if current_value is not None:
-            element.radio.value = current_value
-
-        for option in options:
-            option_proto = element.radio.options.add()
-            option_proto.key = option[0]
-            option_proto.value = option[1]
-
+        element.radio.value = current_value
+        element.radio.options[:] = [str(opt) for opt in options]
         return current_value
 
     @_widget
-    def select(self, element, ui_value, label, value=None, options=None):
-        """Select doc string."""
-        element.select.label = label
+    def selectbox(self, element, ui_value, label, options, value=0):
+        """Display a select widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this select widget is for.
+        options : [str], (str,), numpy.ndarray, or pandas.Series
+            Labels for the select options. This will be cast to str internally.
+        value : type
+            The index of the preselected option on first render.
+
+        Returns
+        -------
+        int
+            The index of the selected option
+
+        """
+        if not isinstance(value, int):
+            raise TypeError(
+                'Selectbox Value has invalid type: %s' % type(value).__name__)
+        if not 0 <= value < len(options):
+            raise ValueError(
+                'Selectbox Value must be between 0 and length of options')
+
         current_value = ui_value if ui_value is not None else value
 
-        if current_value is not None:
-            item = next(iter(filter(lambda x: x[0] == current_value, options)), None)
-            element.select.value = item[0]
-
-        for option in options:
-            option_proto = element.select.options.add()
-            option_proto.value = option[0]
-            option_proto.label = option[1]
-
+        element.selectbox.label = label
+        element.selectbox.value = current_value
+        element.selectbox.options[:] = [str(opt) for opt in options]
         return current_value
 
     @_widget
