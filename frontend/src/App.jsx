@@ -516,7 +516,7 @@ class App extends PureComponent {
    */
   sendBackMsg = (msg) => {
     if (this.connectionManager) {
-      console.log(msg)
+      logMessage(msg)
       this.connectionManager.sendMessage(msg)
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
