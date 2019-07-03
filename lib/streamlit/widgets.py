@@ -4,6 +4,8 @@
 import copy
 from pprint import pprint
 
+from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+
 
 def reset_widget_triggers(widget_states):
     """Resets all widget trigger values to False.
@@ -24,6 +26,53 @@ def reset_widget_triggers(widget_states):
             wstate.trigger_value = False
 
     return widget_states
+
+
+def coalesce_widget_states(old_states, new_states):
+    """Coalesces an older WidgetStates into a newer one,
+    and returns a new WidgetState containing the result.
+
+    For most widget values, we just take the latest version.
+
+    However, any trigger_values (the state set by buttons)
+    that are True in the older WidgetStates will be set to
+    True in the coalesced result, so that button presses
+    don't go missing.
+
+
+    Parameters
+    ----------
+    old_states : WidgetStates
+        The older WidgetStates protobuf
+    new_states : WidgetStates
+        The newer WidgetStates protobuf
+
+    Returns
+    -------
+    WidgetStates
+        The resulting coalesced protobuf
+
+    """
+    states_by_id = {}
+    for new_state in new_states.widgets:
+        states_by_id[new_state.id] = new_state
+
+    for old_state in old_states.widgets:
+        if (old_state.WhichOneof('value') == 'trigger_value' and
+           old_state.trigger_value):
+
+            # Ensure the corresponding new_state is also a trigger;
+            # otherwise, a widget that was previously a button but no longer is
+            # could get a bad value.
+            new_state = states_by_id.get(old_state.id)
+            if new_state and new_state.WhichOneof('value') == 'trigger_value':
+                states_by_id[old_state.id] = old_state
+
+    coalesced = WidgetStates()
+    for state in states_by_id.values():
+        coalesced.widgets.append(state)
+
+    return coalesced
 
 
 class Widgets(object):

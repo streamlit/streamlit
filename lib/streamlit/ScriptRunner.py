@@ -16,6 +16,7 @@ from streamlit.logger import get_logger
 from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 from streamlit.widgets import Widgets
+from streamlit.widgets import coalesce_widget_states
 from streamlit.widgets import reset_widget_triggers
 
 LOGGER = get_logger(__name__)
@@ -42,7 +43,7 @@ RerunData = namedtuple('RerunData', [
     # the argv from the most recent run of the script will be used instead.
     'argv',
 
-    # Widget state dictionary to run the script with. If this is None, the
+    # WidgetStates protobuf to run the script with. If this is None, the
     # widget_state from the most recent run of the script will be used instead.
     'widget_state'
 ])
@@ -83,8 +84,15 @@ class ScriptEventQueue(object):
             elif event == ScriptEvent.RERUN:
                 index = _index_if(self._queue, lambda item: item[0] == event)
                 if index >= 0:
+                    _, old_data = self._queue[index]
+
                     # Overwrite existing rerun
-                    self._queue[index] = (event, data)
+                    coalesced_state = coalesce_widget_states(
+                        old_data.widget_state, data.widget_state)
+                    self._queue[index] = (
+                        event,
+                        RerunData(argv=data.argv, widget_state=coalesced_state)
+                    )
                 else:
                     self._queue.appendleft((event, data))
             else:
