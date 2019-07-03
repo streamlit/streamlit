@@ -86,13 +86,22 @@ class ScriptEventQueue(object):
                 if index >= 0:
                     _, old_data = self._queue[index]
 
-                    # Overwrite existing rerun
-                    coalesced_state = coalesce_widget_states(
-                        old_data.widget_state, data.widget_state)
-                    self._queue[index] = (
-                        event,
-                        RerunData(argv=data.argv, widget_state=coalesced_state)
-                    )
+                    if old_data.widget_state is None:
+                        # Null widget_state means "rerun with the previous
+                        # widget state." In this case, we simply overwrite
+                        # the existing rerun.
+                        self._queue[index] = (event, RerunData(
+                            argv=data.argv,
+                            widget_state=data.widget_state)
+                        )
+                    else:
+                        # Merge with existing rerun
+                        coalesced_state = coalesce_widget_states(
+                            old_data.widget_state, data.widget_state)
+                        self._queue[index] = (event, RerunData(
+                            argv=data.argv,
+                            widget_state=coalesced_state)
+                        )
                 else:
                     self._queue.appendleft((event, data))
             else:

@@ -96,3 +96,25 @@ class ScriptEventQueueTest(unittest.TestCase):
 
         # We should only have the one event
         self.assertEqual((None, None), queue.dequeue_nowait())
+
+        # Test that we can coalesce if previous widget state is None
+        queue.enqueue(ScriptEvent.RERUN,
+                      RerunData(argv=None, widget_state=None))
+        queue.enqueue(ScriptEvent.RERUN,
+                      RerunData(argv=None, widget_state=None))
+
+        states = WidgetStates()
+        _create_widget('int', states).int_value = 789
+
+        queue.enqueue(ScriptEvent.RERUN,
+                      RerunData(argv=None, widget_state=states))
+
+        event, data = queue.dequeue_nowait()
+        widgets = Widgets()
+        widgets.set_state(data.widget_state)
+
+        self.assertEqual(event, ScriptEvent.RERUN)
+        self.assertEqual(789, widgets.get_widget_value('int'))
+
+        # We should only have the one event
+        self.assertEqual((None, None), queue.dequeue_nowait())
