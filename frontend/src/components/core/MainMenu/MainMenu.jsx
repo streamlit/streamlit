@@ -6,7 +6,7 @@
  * Displays itself as an icon indicating the connection type.
  */
 
-import React, {Component} from 'react'
+import React, {PureComponent} from 'react'
 import {
   Dropdown,
   DropdownItem,
@@ -21,7 +21,7 @@ const ONLINE_DOCS_URL = '//streamlit.io/secret/docs'
 /**
  *
  */
-class MainMenu extends Component {
+class MainMenu extends PureComponent {
   /**
    * Constructor.
    */

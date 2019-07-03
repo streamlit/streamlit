@@ -19,7 +19,7 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-css'
 import 'prismjs/components/prism-c'
-
+import CopyButton from './CopyButton'
 import './CodeBlock.scss'
 
 interface Props {
@@ -35,7 +35,12 @@ class CodeBlock extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     if (this.props.language == null) {
       return (
-        <pre><code>{this.props.value}</code></pre>
+        <pre>
+          <div className="scrollable">
+            <code>{this.props.value}</code>
+          </div>
+          <CopyButton text={this.props.value} />
+        </pre>
       )
     }
 
@@ -46,12 +51,17 @@ class CodeBlock extends React.PureComponent<Props> {
       lang = Prism.languages.python
     }
 
-    const html = Prism.highlight(this.props.value, lang, '')
-    const cls = `language-${this.props.language}`
-
+    const safeHtml = Prism.highlight(this.props.value, lang, '')
+    const languageClassName = `language-${this.props.language}`
     return (
-      <pre className={cls}>
-        <code dangerouslySetInnerHTML={{ __html: html }} className={cls} />
+      <pre>
+        <div className="scrollable">
+          <code
+            className={languageClassName}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
+        </div>
+        <CopyButton text={this.props.value} />
       </pre>
     )
   }

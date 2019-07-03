@@ -5,21 +5,22 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import functools
 import json
 import random
-import sys
 import textwrap
 import traceback
 
 from streamlit import protobuf
+from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
-LOGGER = get_logger(__name__)
 
+LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -68,9 +69,11 @@ def _clean_up_sig(method):
     function as above, the wrapped function will be called this way:
         dg.some_function(None, stuff)
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
+
     return wrapped_method
 
 
@@ -94,11 +97,13 @@ def _with_element(method):
         A new DeltaGenerator method with arguments (self, ...)
 
     """
+
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
         try:
             def marshall_element(element):
-                method(self, element, *args, **kwargs)
+                return method(self, element, *args, **kwargs)
+
             return self._enqueue_new_element_delta(marshall_element)
         except Exception as e:
             # First, write the delta to stderr.
@@ -115,6 +120,36 @@ def _with_element(method):
     return wrapped_method
 
 
+def _widget(f):
+    @_wraps_with_cleaned_sig(f)
+    @_with_element
+    def wrapper(dg, element, *args, **kwargs):
+        # All of this label-parsing code only exists so we can throw a pretty
+        # error to the user when she forgets to pass in a label. Otherwise we'd
+        # get a really cryptic error.
+        if 'label' in kwargs:
+            label = kwargs['label']
+            del kwargs['label']
+        elif len(args) > 0:
+            label = args[0]
+            args = args[1:]
+        else:
+            raise TypeError('%s must have a label' % f.__name__)
+
+        ctx = get_report_ctx()
+        widget_id = str(label)
+
+        el = getattr(element, f.__name__)
+        el.id = widget_id
+
+        ui_value = (
+            ctx.widgets.get_widget_value(widget_id) if ctx else None
+        )
+        return f(dg, element, ui_value, label, *args, **kwargs)
+
+    return wrapper
+
+
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
@@ -128,7 +163,7 @@ class DeltaGenerator(object):
             enqueued or False if not.
         id : int
             ID for deltas, or None to create the root DeltaGenerator (which
-            produces DeltaGenerators with incremeting IDs)
+            produces DeltaGenerators with incrementing IDs)
 
         """
         self._enqueue = enqueue
@@ -156,13 +191,15 @@ class DeltaGenerator(object):
             element.
 
         """
+        rv = None
+        if marshall_element:
+            msg = protobuf.ForwardMsg()
+            rv = marshall_element(msg.delta.new_element)
+            msg.delta.id = self._id
+
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
-            return self
-
-        msg = protobuf.ForwardMsg()
-        marshall_element(msg.delta.new_element)
-        msg.delta.id = self._id
+            return rv if rv is not None else self
 
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
@@ -174,12 +211,12 @@ class DeltaGenerator(object):
         msg_was_enqueued = self._enqueue(msg)
 
         if not msg_was_enqueued:
-            return self
+            return rv if rv is not None else self
 
         if self._is_root:
             self._id += 1
 
-        return output_dg
+        return rv if rv is not None else output_dg
 
     @_with_element
     def balloons(self, element):
@@ -549,6 +586,7 @@ class DeltaGenerator(object):
 
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
+
         return self._enqueue_new_element_delta(set_data_frame)
 
     # TODO: Either remove this or make it public. This is only used in the
@@ -1100,6 +1138,213 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
+    @_widget
+    def button(self, element, ui_value, label):
+        """Display a button widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this button is for.
+
+        Returns
+        -------
+        bool
+            If the button was clicked on the last run of the report.
+
+        """
+        current_value = ui_value if ui_value is not None else False
+        element.button.label = label
+        element.button.value = False
+        return current_value
+
+    @_widget
+    def checkbox(self, element, ui_value, label, value=False):
+        """Display a checkbox widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this checkbox is for.
+        value : bool
+            Preselect the checkbox when it first renders. This will be
+            cast to bool internally.
+
+        Returns
+        -------
+        bool
+            Whether or not the checkbox is checked.
+
+        """
+        current_value = ui_value if ui_value is not None else value
+        current_value = bool(current_value)
+        element.checkbox.label = label
+        element.checkbox.value = current_value
+        return current_value
+
+    @_widget
+    def radio(self, element, ui_value, label, options, value=0):
+        """Display a radio button widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this radio group is for.
+        options : list of str, tuple of str, numpy.ndarray of str, or pandas.Series of str
+            Labels for the radio options. This will be cast to str internally.
+        value : int
+            The index of the preselected option on first render.
+
+        Returns
+        -------
+        int
+            The index of the selected option
+
+        """
+        if not isinstance(value, int):
+            raise TypeError(
+                'Radio Value has invalid type: %s' % type(value).__name__)
+        if not 0 <= value < len(options):
+            raise ValueError(
+                'Radio Value must be between 0 and length of options')
+
+        current_value = ui_value if ui_value is not None else value
+
+        element.radio.label = label
+        element.radio.value = current_value
+        element.radio.options[:] = [str(opt) for opt in options]
+        return current_value
+
+    @_widget
+    def selectbox(self, element, ui_value, label, options, value=0):
+        """Display a select widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this select widget is for.
+        options : [str], (str,), numpy.ndarray, or pandas.Series
+            Labels for the select options. This will be cast to str internally.
+        value : type
+            The index of the preselected option on first render.
+
+        Returns
+        -------
+        int
+            The index of the selected option
+
+        """
+        if not isinstance(value, int):
+            raise TypeError(
+                'Selectbox Value has invalid type: %s' % type(value).__name__)
+        if not 0 <= value < len(options):
+            raise ValueError(
+                'Selectbox Value must be between 0 and length of options')
+
+        current_value = ui_value if ui_value is not None else value
+
+        element.selectbox.label = label
+        element.selectbox.value = current_value
+        element.selectbox.options[:] = [str(opt) for opt in options]
+        return current_value
+
+    @_widget
+    def slider(self, element, ui_value, label, value=0, min_value=0, max_value=100, step=1):
+        """Slider doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.slider.label = label
+        if isinstance(current_value, list):
+            assert len(current_value) == 2
+        elif isinstance(current_value, (int, float)):
+            current_value = [current_value]
+        else:
+            current_value = getattr(current_value, 'value')
+        element.slider.value[:] = current_value
+        element.slider.min = min_value
+        element.slider.max = max_value
+        element.slider.step = step
+        return current_value
+
+    @_widget
+    def text_input(self, element, ui_value, label, value=''):
+        """Display a single-line text input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : any
+            The text value of this widget when it first renders. This will be
+            cast to str internally.
+
+        Returns
+        -------
+        str
+            The current value of the text input widget.
+
+        Example
+        -------
+        >>> title = st.text_input('Movie title', 'Life of Brian')
+        >>> st.write('The current movie title is', title)
+
+        """
+        current_value = ui_value if ui_value is not None else value
+        current_value = str(current_value)
+        element.text_input.label = label
+        element.text_input.value = current_value
+        return current_value
+
+    @_widget
+    def text_area(self, element, ui_value, label, value=''):
+        """Display a multi-line text input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : any
+            The text value of this widget when it first renders. This will be
+            cast to str internally.
+
+        Returns
+        -------
+        str
+            The current value of the text input widget.
+
+        Example
+        -------
+        >>> txt = st.text_area('Text to analyze', '''
+        ...     It was the best of times, it was the worst of times, it was
+        ...     the age of wisdom, it was the age of foolishness, it was
+        ...     the epoch of belief, it was the epoch of incredulity, it
+        ...     was the season of Light, it was the season of Darkness, it
+        ...     was the spring of hope, it was the winter of despair, (...)
+        ...     ''')
+        >>> st.write('Sentiment:', run_sentiment_analysis(txt))
+
+        """
+        current_value = ui_value if ui_value is not None else value
+        current_value = str(current_value)
+        element.text_area.label = label
+        element.text_area.value = current_value
+        return current_value
+
+    @_widget
+    def time(self, element, ui_value, label, value=''):
+        """Time picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.time.label = label
+        element.time.value = current_value
+        return current_value
+
+    @_widget
+    def date(self, element, ui_value, label, value=''):
+        """Date picker doc string."""
+        current_value = ui_value if ui_value is not None else value
+        element.date.label = label
+        element.date.value = current_value
+        return current_value
+
     @_with_element
     def progress(self, element, value):
         """Display a progress bar.
@@ -1127,12 +1372,14 @@ class DeltaGenerator(object):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
-                raise ValueError('Progress Value has invalid value [0.0, 1.0]: %f' % value)
+                raise ValueError(
+                    'Progress Value has invalid value [0.0, 1.0]: %f' % value)
         elif value_type == 'int':
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
-                raise ValueError('Progress Value has invalid value [0, 100]: %d' % value)
+                raise ValueError(
+                    'Progress Value has invalid value [0, 100]: %d' % value)
         else:
             raise TypeError('Progress Value has invalid type: %s' % value_type)
 
@@ -1187,7 +1434,8 @@ class DeltaGenerator(object):
         LAT_LON = ['lat', 'lon']
         if not set(data.columns) >= set(LAT_LON):
             raise Exception('Map data must contain "lat" and "lon" columns.')
-        if data['lon'].isnull().values.any() or data['lat'].isnull().values.any():
+        if (data['lon'].isnull().values.any() or
+                data['lat'].isnull().values.any()):
             raise Exception('Map data must be numeric.')
         data_frame_proto.marshall_data_frame(
             data[LAT_LON], element.map.points)

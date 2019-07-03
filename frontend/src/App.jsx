@@ -21,6 +21,7 @@ import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
 import { StreamlitDialog } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
+import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { StatusWidget } from 'components/core/StatusWidget/'
@@ -30,13 +31,12 @@ import { ReportView } from 'components/core/ReportView/'
 import { Delta, Text as TextProto } from 'autogen/protobuf'
 import { addRows } from 'lib/dataFrameProto'
 import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
-import { logError } from 'lib/log'
+import { logError, logMessage } from 'lib/log'
 import {RERUN_PROMPT_MODAL_DIALOG, setInstallationId, setStreamlitVersion} from 'lib/baseconsts'
 import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
 import './App.scss'
-
 
 class App extends PureComponent {
   constructor(props) {
@@ -59,6 +59,7 @@ class App extends PureComponent {
     this.closeDialog = this.closeDialog.bind(this)
     this.getUserLogin = this.getUserLogin.bind(this)
     this.handleConnectionError = this.handleConnectionError.bind(this)
+    this.handleConnectionStateChanged = this.handleConnectionStateChanged.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
     this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
@@ -70,12 +71,15 @@ class App extends PureComponent {
     this.clearCache = this.clearCache.bind(this)
     this.saveReport = this.saveReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
+    this.settingsCallback = this.settingsCallback.bind(this)
+    this.aboutCallback = this.aboutCallback.bind(this)
 
     this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef()
 
     this.connectionManager = null
+    this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
   }
 
   /**
@@ -99,9 +103,7 @@ class App extends PureComponent {
       getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
-      connectionStateChanged: newState => {
-        this.setState({ connectionState: newState })
-      },
+      connectionStateChanged: this.handleConnectionStateChanged,
     })
 
     if (isEmbeddedInIFrame()) {
@@ -116,6 +118,22 @@ class App extends PureComponent {
       initRemoteTracker({
         gatherUsageStats: true,
       })
+    }
+  }
+
+  /**
+   * Called by ConnectionManager when our connection state changes
+   */
+  handleConnectionStateChanged(newState) {
+    this.setState({ connectionState: newState })
+
+    // If we've just connected and our WidgetManager is not empty, it means
+    // we're *reconnecting* to the server after having been disconnected.
+    // We resend our widget state so that the server immediately re-runs the
+    // report with the widget values that are currently displayed on the page.
+    if (newState === ConnectionState.CONNECTED && !this.widgetMgr.isEmpty) {
+      logMessage('Reconnected to server; sending previous widget state')
+      this.widgetMgr.sendUpdateWidgetsMessage()
     }
   }
 
@@ -496,8 +514,9 @@ class App extends PureComponent {
   /**
    * Sends a message back to the server.
    */
-  sendBackMsg(msg) {
+  sendBackMsg = (msg) => {
     if (this.connectionManager) {
+      logMessage(msg)
       this.connectionManager.sendMessage(msg)
     } else {
       logError(`Not connected. Cannot send back message: ${msg}`)
@@ -518,6 +537,23 @@ class App extends PureComponent {
     return this.connectionManager ?
       this.connectionManager.isConnected() :
       false
+  }
+
+  settingsCallback() {
+    this.openDialog({
+      type: 'settings',
+      isOpen: true,
+      isServerConnected: this.isServerConnected(),
+      settings: this.state.userSettings,
+      onSave: this.saveSettings,
+    })
+  }
+
+  aboutCallback() {
+    this.openDialog({
+      type: 'about',
+      onClose: this.closeDialog,
+    })
   }
 
   render() {
@@ -562,17 +598,8 @@ class App extends PureComponent {
               quickRerunCallback={this.rerunScript}
               rerunCallback={this.openRerunScriptDialog}
               clearCacheCallback={this.openClearCacheDialog}
-              settingsCallback={() => this.openDialog({
-                type: 'settings',
-                isOpen: true,
-                isServerConnected: this.isServerConnected(),
-                settings: this.state.userSettings,
-                onSave: this.saveSettings,
-              })}
-              aboutCallback={() => this.openDialog({
-                type: 'about',
-                onClose: this.closeDialog,
-              })}
+              settingsCallback={this.settingsCallback}
+              aboutCallback={this.aboutCallback}
             />
           </header>
 
@@ -591,6 +618,7 @@ class App extends PureComponent {
                     reportId={this.state.reportId}
                     reportRunState={this.state.reportRunState}
                     showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
+                    widgetMgr={this.widgetMgr}
                   />
                 }
               </Col>

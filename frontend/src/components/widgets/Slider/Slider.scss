@@ -1,0 +1,52 @@
+/**
+ * @license
+ * Copyright 2019 Streamlit Inc. All rights reserved.
+ */
+
+@import '../../../assets/css/variables';
+
+.Widget {
+  input[type=range] {
+    height: $font-size-base;
+    -webkit-appearance: none;
+    width: 100%;
+    border: none;
+    margin: (-$font-size-base * 1 / 3) 0 (-$line-height-base * 4 / 3) 0;
+    margin: 0 0 -20px 0;
+    padding: 3px 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 2px;
+    margin: 0;
+    animate: 0.2s;
+    background: $gray;
+    border-radius: 3px;
+    border: none;
+    -webkit-appearance: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    height: $font-size-base;
+    width: $font-size-base;
+    border-radius: $font-size-base;
+    background: $white;
+    border: 2px solid $gray;
+    -webkit-appearance: none;
+    margin-top: -$font-size-base / 2 + 0.05rem;
+  }
+
+  input[type=range]:focus {
+    outline: none;
+    border: none;
+  }
+
+  input[type=range]:focus::-webkit-slider-runnable-track {
+    background: $primary;
+  }
+
+  input[type=range]:focus::-webkit-slider-thumb {
+    border-color: $primary;
+  }
+}

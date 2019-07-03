@@ -3,31 +3,152 @@
 
 import sys
 import threading
-import time
+from collections import deque
+from collections import namedtuple
+from contextlib import contextmanager
 
 from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
-from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
-
+from streamlit.ReportThread import ReportThread
 from streamlit.logger import get_logger
+from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
+from streamlit.widgets import Widgets
+from streamlit.widgets import coalesce_widget_states
+from streamlit.widgets import reset_widget_triggers
+
 LOGGER = get_logger(__name__)
 
 
-class State(object):
-    INITIAL = 'INITIAL'
-    STARTING_THREAD = 'STARTING_THREAD'
+class ScriptState(object):
     RUNNING = 'RUNNING'
-    STOP_REQUESTED = 'STOP_REQUESTED'
-    RERUN_REQUESTED = 'RERUN_REQUESTED'
-    PAUSE_REQUESTED = 'PAUSE_REQUESTED'
-    PAUSED = 'PAUSED'
     STOPPED = 'STOPPED'
+    IS_SHUTDOWN = 'IS_SHUTDOWN'
+
+
+class ScriptEvent(object):
+    # Stop the script, but don't shutdown the runner (data=None)
+    STOP = 'STOP'
+    # Rerun the script (data=RerunData)
+    RERUN = 'RERUN'
+    # Shut down the ScriptRunner, stopping any running script first (data=None)
+    SHUTDOWN = 'SHUTDOWN'
+
+
+# Data attached to RERUN events
+RerunData = namedtuple('RerunData', [
+    # The argv value to run the script with. If this is None,
+    # the argv from the most recent run of the script will be used instead.
+    'argv',
+
+    # WidgetStates protobuf to run the script with. If this is None, the
+    # widget_state from the most recent run of the script will be used instead.
+    'widget_state'
+])
+
+
+class ScriptEventQueue(object):
+    """A thread-safe queue of script-related events.
+
+    ScriptRunner publishes to this queue, and its run thread consumes from it.
+    """
+    def __init__(self):
+        self._cond = threading.Condition()
+        # deque, instead of list, because we push to the front and
+        # pop from the back
+        self._queue = deque()
+
+    def enqueue(self, event, data=None):
+        """Enqueue a new event to the end of the queue.
+
+        This event may be coalesced with an existing event if appropriate.
+        For example, multiple consecutive RERUN requests will be combined
+        so that there's only ever one pending RERUN request in the queue
+        at a time.
+
+        Parameters
+        ----------
+        event : ScriptEvent
+            The type of event
+
+        data : Any
+            Data associated with the event, if any
+        """
+        with self._cond:
+            if event == ScriptEvent.SHUTDOWN:
+                # If we get a shutdown request, it goes to the front of the
+                # queue to be processed immediately.
+                self._queue.append((event, data))
+            elif event == ScriptEvent.RERUN:
+                index = _index_if(self._queue, lambda item: item[0] == event)
+                if index >= 0:
+                    _, old_data = self._queue[index]
+
+                    if old_data.widget_state is None:
+                        # Null widget_state means "rerun with the previous
+                        # widget state." In this case, we simply overwrite
+                        # the existing rerun.
+                        self._queue[index] = (event, RerunData(
+                            argv=data.argv,
+                            widget_state=data.widget_state)
+                        )
+                    else:
+                        # Merge with existing rerun
+                        coalesced_state = coalesce_widget_states(
+                            old_data.widget_state, data.widget_state)
+                        self._queue[index] = (event, RerunData(
+                            argv=data.argv,
+                            widget_state=coalesced_state)
+                        )
+                else:
+                    self._queue.appendleft((event, data))
+            else:
+                self._queue.appendleft((event, data))
+
+            # Let any consumers know that we have new data
+            self._cond.notify()
+
+    def dequeue_nowait(self):
+        """Pops the front-most event from the queue and returns it.
+
+        If the queue is empty, None will be returned instead.
+
+        Returns
+        -------
+        A (ScriptEvent, Data) tuple, or (None, None) if the queue is empty.
+        """
+        return self.dequeue(wait=False)
+
+    def dequeue(self, wait=True):
+        """Pops the front-most event from the queue and returns it.
+
+        If the queue is empty, this function will block until there's
+        an event to be returned.
+
+        Parameters
+        ----------
+        wait : bool
+            If true, and the queue is empty, the function will block until
+            there's an event to be returned. Otherwise, an empty queue
+            will result in a return of (None, None)
+
+        Returns
+        -------
+        A (ScriptEvent, Data) tuple.
+        """
+        with self._cond:
+            while len(self._queue) == 0:
+                if not wait:
+                    # Early out if the queue is empty and wait=False
+                    return None, None
+                self._cond.wait()
+
+            return self._queue.pop()
 
 
 class ScriptRunner(object):
-
     def __init__(self, report):
         """Initialize.
 
@@ -38,10 +159,12 @@ class ScriptRunner(object):
 
         """
         self._report = report
-        self._state = None
-
-        self._main_thread_id = threading.current_thread().ident
-        self._state_change_requested = False
+        self._event_queue = ScriptEventQueue()
+        self._state = ScriptState.STOPPED
+        self._last_run_data = RerunData(
+            argv=report.argv,
+            widget_state=WidgetStates())
+        self._widgets = Widgets()
 
         self.run_on_save = config.get_option('server.runOnSave')
 
@@ -50,7 +173,7 @@ class ScriptRunner(object):
 
             Parameters
             ----------
-            state : State
+            state : ScriptState
             """)
 
         self.on_file_change_not_handled = Signal(
@@ -66,58 +189,167 @@ class ScriptRunner(object):
                 The exception that was thrown
             """)
 
-        self._set_state(State.INITIAL)
-
         self._local_sources_watcher = LocalSourcesWatcher(
-            self._report, self.maybe_handle_file_changed)
+            self._report, self._on_source_file_changed)
+
+        # Will be set to true when we process a SHUTDOWN event
+        self._shutdown_requested = False
+
+        self._script_thread = None
+        self._ctx = None
+
+        # Set to true while we're executing. Used by
+        # maybe_handle_execution_control_request.
+        self._execing = False
+
+    @property
+    def widgets(self):
+        """
+        Returns
+        -------
+        Widgets
+            Our widget state dictionary
+
+        """
+        return self._widgets
+
+    def start_run_loop(self, ctx):
+        """Starts the ScriptRunner's thread.
+
+        This must be called only once.
+
+        Parameters
+        ----------
+        ctx : ReportContext
+            The ReportContext that owns this ScriptRunner. This will be
+            attached to the ScriptRunner's runloop thread.
+
+        """
+
+        assert self._script_thread is None, 'Already started!'
+        self._ctx = ctx
+
+        # start our thread
+        self._script_thread = ReportThread(
+            ctx,
+            target=self._loop,
+            name='ScriptRunner.loop')
+        self._script_thread.start()
 
     def _set_state(self, new_state):
         if self._state == new_state:
             return
 
-        LOGGER.debug('ScriptRunner state: %s -> %s' % (self._state, new_state))
+        LOGGER.debug('Scriptrunner state: %s -> %s' % (self._state, new_state))
         self._state = new_state
         self.on_state_changed.send(self._state)
 
     def is_running(self):
-        return self._state == State.RUNNING
+        return self._state == ScriptState.RUNNING
 
-    def is_fully_stopped(self):
-        return self._state in (State.INITIAL, State.STOPPED)
+    def is_shutdown(self):
+        return self._state == ScriptState.IS_SHUTDOWN
 
-    def request_rerun(self):
-        """Signal that we're interested in running the script immediately.
+    def request_rerun(self, argv=None, widget_state=None):
+        """Signal that we're interested in running the script.
+
         If the script is not already running, it will be started immediately.
         Otherwise, a rerun will be requested.
+
+        Parameters
+        ----------
+        argv : dict | None
+            The new command line arguments to run the script with, or None
+            to use the argv from the previous run of the script.
+        widget_state : dict | None
+            The widget state dictionary to run the script with, or None
+            to use the widget state from the previous run of the script.
+
         """
-        if self._state == State.STARTING_THREAD:
-            # we're already starting up
+        if self.is_shutdown():
+            LOGGER.warning('Discarding RERUN event after shutdown')
             return
-        elif self.is_fully_stopped():
-            LOGGER.debug('Spawning script thread...')
-            self._set_state(State.STARTING_THREAD)
-
-            script_thread = threading.Thread(
-                target=self._run,
-                name='Streamlit script runner thread')
-
-            script_thread.start()
-        else:
-            self._set_state(State.RERUN_REQUESTED)
-            self._state_change_requested = True
+        self._event_queue.enqueue(ScriptEvent.RERUN,
+                                  RerunData(argv, widget_state))
 
     def request_stop(self):
-        if self.is_fully_stopped():
-            pass
-        else:
-            self._set_state(State.STOP_REQUESTED)
-            self._state_change_requested = True
+        if self.is_shutdown():
+            LOGGER.warning('Discarding STOP event after shutdown')
+            return
+        self._event_queue.enqueue(ScriptEvent.STOP)
 
-    def request_pause_unpause(self):
-        if self._state == State.PAUSED:
-            self._set_state(State.RUNNING)
+    def request_shutdown(self):
+        if self.is_shutdown():
+            LOGGER.warning('Discarding SHUTDOWN event after shutdown')
+            return
+        self._event_queue.enqueue(ScriptEvent.SHUTDOWN)
+
+    def maybe_handle_execution_control_request(self):
+        if self._script_thread != threading.current_thread():
+            # We can only handle execution_control_request if we're on the
+            # script execution thread. However, it's possible for deltas to
+            # be enqueued (and, therefore, for this function to be called)
+            # in separate threads, so we check for that here.
+            return
+
+        if not self._execing:
+            # If the _execing flag is not set, we're not actually inside
+            # an exec() call. This happens when our script exec() completes,
+            # we change our state to STOPPED, and a statechange-listener
+            # enqueues a new ForwardEvent
+            return
+
+        # Pop the next event from our queue. Don't block if there's no event
+        event, event_data = self._event_queue.dequeue_nowait()
+        if event is None:
+            return
+
+        LOGGER.debug('Received ScriptEvent: %s', event)
+        if event == ScriptEvent.STOP:
+            raise StopException()
+        elif event == ScriptEvent.SHUTDOWN:
+            self._shutdown_requested = True
+            raise StopException()
+        elif event == ScriptEvent.RERUN:
+            raise RerunException(event_data)
         else:
-            self._request_pause()
+            raise RuntimeError('Unrecognized ScriptEvent: %s' % event)
+
+    def _on_source_file_changed(self):
+        """One of our source files changed. Schedule a rerun if appropriate."""
+        if self.run_on_save:
+            self._event_queue.enqueue(ScriptEvent.RERUN,
+                                      RerunData(argv=None, widget_state=None))
+        else:
+            self.on_file_change_not_handled.send()
+
+    def _loop(self):
+        """Our run loop.
+
+        Continually pops events from the event_queue. Ends when we receive
+        a SHUTDOWN event.
+
+        """
+        while not self._shutdown_requested:
+            assert self._state == ScriptState.STOPPED
+
+            # Dequeue our next event. If the event queue is empty, the thread
+            # will go to sleep, and awake when there's a new event.
+            event, event_data = self._event_queue.dequeue()
+            if event == ScriptEvent.STOP:
+                LOGGER.debug('Ignoring STOP event while not running')
+            elif event == ScriptEvent.SHUTDOWN:
+                LOGGER.debug('Shutting down')
+                self._shutdown_requested = True
+            elif event == ScriptEvent.RERUN:
+                self._run_script(event_data)
+            else:
+                raise RuntimeError('Unrecognized ScriptEvent: %s' % event)
+
+        # Release resources
+        self._local_sources_watcher.close()
+
+        self._set_state(ScriptState.IS_SHUTDOWN)
 
     def _install_tracer(self):
         """Install function that runs before each line of the script."""
@@ -130,22 +362,37 @@ class ScriptRunner(object):
         if hasattr(sys, 'settrace'):
             sys.settrace(trace_calls)
 
-    def _run(self):
-        # This method should only be called from the script thread.
-        _script_thread_id = threading.current_thread().ident
-        assert _script_thread_id != self._main_thread_id
+    @contextmanager
+    def _set_execing_flag(self):
+        """A context for setting the ScriptRunner._execing flag.
 
-        cur_state = self._state
-        if cur_state != State.STARTING_THREAD:
-            # TODO: Fix self._state-related race conditions
-            raise RuntimeError('Bad state (expected=%s, saw=%s)' % (State.STARTING_THREAD, cur_state))
+        Used by maybe_handle_execution_control_request to ensure that
+        we only handle requests while we're inside an exec() call
+        """
+        if self._execing:
+            raise RuntimeError('Nested set_execing_flag call')
+        self._execing = True
+        try:
+            yield
+        finally:
+            self._execing = False
+
+    def _run_script(self, rerun_data):
+        """Run our script.
+
+        Parameters
+        ----------
+        rerun_data: RerunData
+            The RerunData to use.
+
+        """
+        assert self._state == ScriptState.STOPPED
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st
         st._reset()
 
-        self._state_change_requested = False
-        self._set_state(State.RUNNING)
+        self._set_state(ScriptState.RUNNING)
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog, and won't result in their
@@ -179,17 +426,31 @@ class ScriptRunner(object):
             # as a SessionEvent and bail immediately.
             LOGGER.debug('Fatal script error: %s' % e)
             self.on_script_compile_error.send(e)
-            self._set_state(State.STOPPED)
+            self._set_state(ScriptState.STOPPED)
             return
 
         # If we get here, we've successfully compiled our script. The next step
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
+        # Get our argv and widget_state for this run, defaulting to
+        # self._last_run_data for missing values.
+        # Also update self._last_run_data for the next run.
+        argv = rerun_data.argv or self._last_run_data.argv
+        widget_state = rerun_data.widget_state or \
+                       self._last_run_data.widget_state
+        self._last_run_data = RerunData(
+            argv, reset_widget_triggers(widget_state))
+
+        # Update the Widget singleton with the new widget_state
+        self._ctx.widgets.set_state(widget_state)
+
         if config.get_option('runner.installTracer'):
             self._install_tracer()
 
-        rerun_requested = False
+        # This will be set to a RerunData instance if our execution
+        # is interrupted by a RerunException.
+        rerun_with_data = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -207,18 +468,18 @@ class ScriptRunner(object):
             # asked them to be via the GUI.
             # IMPORTANT: This means we can't count on sys.argv in our code ---
             # but we already knew it from the argv surgery in cli.py.
-            # TODO: Remove this feature when we implement interativity! This is
-            # not robust in a multi-user environment.
-            sys.argv = self._report.argv
+            # TODO: Remove this feature when we implement interactivity!
+            #  This is not robust in a multi-user environment.
+            sys.argv = argv
 
-            # Add special variables to the module's dict.
+            # Add special variables to the module's globals dict.
             module.__dict__['__file__'] = self._report.script_path
 
-            with modified_sys_path(self._report):
+            with modified_sys_path(self._report), self._set_execing_flag():
                 exec(code, module.__dict__)
 
-        except RerunException:
-            rerun_requested = True
+        except RerunException as e:
+            rerun_with_data = e.rerun_data
 
         except StopException:
             pass
@@ -231,47 +492,15 @@ class ScriptRunner(object):
             # ScriptRunner.
 
         finally:
-            self._set_state(State.STOPPED)
+            self._set_state(ScriptState.STOPPED)
 
-        # Use _log_if_error() make sure we never ever ever stop running the
+        # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
         _log_if_error(self._local_sources_watcher.update_watched_modules)
         _log_if_error(_clean_problem_modules)
 
-        if rerun_requested:
-            self._run()
-
-    def _pause(self):
-        self._set_state(State.PAUSED)
-
-        while self._state == State.PAUSED:
-            time.sleep(0.1)
-
-    def _request_pause(self):
-        if self.is_fully_stopped():
-            pass
-        else:
-            self._set_state(State.PAUSE_REQUESTED)
-            self._state_change_requested = True
-
-    # This method gets called from inside the script's execution context.
-    def maybe_handle_execution_control_request(self):
-        if self._state_change_requested:
-            LOGGER.debug('Received execution control request: %s', self._state)
-
-            if self._state == State.STOP_REQUESTED:
-                raise StopException()
-            elif self._state == State.RERUN_REQUESTED:
-                raise RerunException()
-            elif self._state == State.PAUSE_REQUESTED:
-                self._pause()
-                return
-
-    def maybe_handle_file_changed(self):
-        if self.run_on_save:
-            self.request_rerun()
-        else:
-            self.on_file_change_not_handled.send()
+        if rerun_with_data is not None:
+            self._run_script(rerun_with_data)
 
 
 class ScriptControlException(BaseException):
@@ -286,7 +515,15 @@ class StopException(ScriptControlException):
 
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
-    pass
+    def __init__(self, rerun_data):
+        """Construct a RerunException
+
+        Parameters
+        ----------
+        rerun_data : RerunData
+            The RerunData that should be used to rerun the report
+        """
+        self.rerun_data = rerun_data
 
 
 def _clean_problem_modules():
@@ -316,6 +553,17 @@ def _new_module(name):
 
     import imp
     return imp.new_module(name)
+
+
+def _index_if(collection, pred):
+    """Find the index of the first item in a collection for which a predicate is true.
+
+    Returns the index, or -1 if no such item exists.
+    """
+    for index, element in enumerate(collection):
+        if pred(element):
+            return index
+    return -1
 
 
 # Code modified from IPython (BSD license)

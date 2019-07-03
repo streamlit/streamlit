@@ -31,13 +31,13 @@
 }
 
 .streamlit-container .markdown-text-container pre {
-  padding: 1rem;
-  margin: 0 0 1rem 0;
-  border-radius: $border-radius;
   background: $gray-faint;
+  border-radius: $border-radius;
+  margin: 0 0 1rem 0;
+  padding: 1rem;
 }
 
-.streamlit-container .markdown-text-container pre > code {
+.streamlit-container .markdown-text-container pre code {
   background: transparent;
   border: 0;
   display: inline;
@@ -51,6 +51,15 @@
   word-wrap: normal;
   overflow-x: auto;
   color: $black;
+}
+
+.streamlit-container .markdown-text-container .scrollable {
+  margin-right: 40px;
+  overflow: hidden;
+}
+
+.streamlit-container .markdown-text-container .scrollable:hover {
+  overflow: auto;
 }
 
 .streamlit-container .markdown-text-container tr {
