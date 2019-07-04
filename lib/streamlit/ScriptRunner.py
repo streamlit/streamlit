@@ -6,6 +6,7 @@ import threading
 from collections import deque
 from collections import namedtuple
 from contextlib import contextmanager
+from enum import Enum
 
 from blinker import Signal
 
@@ -22,13 +23,13 @@ from streamlit.widgets import reset_widget_triggers
 LOGGER = get_logger(__name__)
 
 
-class ScriptState(object):
+class ScriptState(Enum):
     RUNNING = 'RUNNING'
     STOPPED = 'STOPPED'
     IS_SHUTDOWN = 'IS_SHUTDOWN'
 
 
-class ScriptEvent(object):
+class ScriptEvent(Enum):
     # Stop the script, but don't shutdown the runner (data=None)
     STOP = 'STOP'
     # Rerun the script (data=RerunData)
@@ -87,15 +88,23 @@ class ScriptEventQueue(object):
                     _, old_data = self._queue[index]
 
                     if old_data.widget_state is None:
-                        # Null widget_state means "rerun with the previous
-                        # widget state." In this case, we simply overwrite
-                        # the existing rerun.
+                        # The existing request's widget_state is None, which
+                        # means it wants to rerun with whatever the most
+                        # recent script execution's widget state was.
+                        # We have no meaningful state to merge with, and
+                        # so we simply overwrite the existing request.
                         self._queue[index] = (event, RerunData(
                             argv=data.argv,
                             widget_state=data.widget_state)
                         )
+                    elif data.widget_state is None:
+                        # If this request's widget_state is None, and the
+                        # existing request's widget_state was not, this
+                        # new request is entirely redundant and can be dropped.
+                        pass
                     else:
-                        # Merge with existing rerun
+                        # Both the existing and the new request have
+                        # non-null widget_states. Merge them together.
                         coalesced_state = coalesce_widget_states(
                             old_data.widget_state, data.widget_state)
                         self._queue[index] = (event, RerunData(

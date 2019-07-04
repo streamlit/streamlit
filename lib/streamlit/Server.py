@@ -5,6 +5,7 @@ import json
 import logging
 import threading
 import urllib
+from enum import Enum
 
 import tornado.concurrent
 import tornado.gen
@@ -32,7 +33,7 @@ MESSAGE_SIZE_LIMIT = 10466493
 PREHEATED_REPORT_CONTEXT = 'PREHEATED_REPORT_CONTEXT'
 
 
-class State(object):
+class State(Enum):
     INITIAL = 'INITIAL'
     WAITING_FOR_FIRST_BROWSER = 'WAITING_FOR_FIRST_BROWSER'
     ONE_OR_MORE_BROWSERS_CONNECTED = 'ONE_OR_MORE_BROWSERS_CONNECTED'

@@ -94,8 +94,9 @@ class ScriptEventQueueTest(unittest.TestCase):
         # Other widgets should have their newest value
         self.assertEqual(456, widgets.get_widget_value('int'))
 
-        # We should only have the one event
-        self.assertEqual((None, None), queue.dequeue_nowait())
+        # We should have no more events
+        self.assertEqual((None, None), queue.dequeue_nowait(),
+                         'Expected empty event queue')
 
         # Test that we can coalesce if previous widget state is None
         queue.enqueue(ScriptEvent.RERUN,
@@ -116,5 +117,30 @@ class ScriptEventQueueTest(unittest.TestCase):
         self.assertEqual(event, ScriptEvent.RERUN)
         self.assertEqual(789, widgets.get_widget_value('int'))
 
-        # We should only have the one event
-        self.assertEqual((None, None), queue.dequeue_nowait())
+        # We should have no more events
+        self.assertEqual((None, None), queue.dequeue_nowait(),
+                         'Expected empty event queue')
+
+        # Test that we can coalesce if our *new* widget state is None
+        states = WidgetStates()
+        _create_widget('int', states).int_value = 101112
+
+        queue.enqueue(ScriptEvent.RERUN,
+                      RerunData(argv=None, widget_state=states))
+
+        queue.enqueue(ScriptEvent.RERUN,
+                      RerunData(argv=None, widget_state=None))
+
+        event, data = queue.dequeue_nowait()
+        widgets = Widgets()
+        widgets.set_state(data.widget_state)
+
+        self.assertEqual(event, ScriptEvent.RERUN)
+        self.assertEqual(101112, widgets.get_widget_value('int'))
+
+        # We should have no more events
+        self.assertEqual((None, None), queue.dequeue_nowait(),
+                         'Expected empty event queue')
+
+
+
