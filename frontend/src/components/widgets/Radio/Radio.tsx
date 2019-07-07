@@ -7,6 +7,7 @@ import React from 'react'
 import { Radio as UIRadio, RadioGroup } from 'baseui/radio'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
+import { radioOverrides } from 'lib/widgetTheme'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -49,6 +50,7 @@ class Radio extends React.PureComponent<Props, State> {
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value}
+          overrides={radioOverrides}
         >
           {options.map((option: string, idx: number) => (
             <UIRadio key={idx} value={idx.toString()}>{option}</UIRadio>

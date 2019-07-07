@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc. All rights reserved.
  */
 
 @import 'src/assets/css/variables';
@@ -28,46 +28,6 @@ a:hover,
 a:active {
   color: $primary;
   text-decoration: underline;
-}
-
-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3.5rem;
-  padding: 0 1rem;
-  z-index: $z-index-header;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.streamlit-wide header {
-  background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
-}
-
-header .decoration {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 2px;
-  background-image: linear-gradient(90deg, #F63366, #FFFD80);
-}
-
-#brand {
-  font-weight: 700;
-  line-height: 1.5;
-  flex: 1 0;
-}
-
-#brand a {
-  color: $black;
-}
-
-#brand a:hover {
-  color: $primary;
 }
 
 iframe {

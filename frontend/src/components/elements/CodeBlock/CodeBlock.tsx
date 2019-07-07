@@ -36,9 +36,7 @@ class CodeBlock extends React.PureComponent<Props> {
     if (this.props.language == null) {
       return (
         <pre>
-          <div className="scrollable">
-            <code>{this.props.value}</code>
-          </div>
+          <code>{this.props.value}</code>
           <CopyButton text={this.props.value} />
         </pre>
       )
@@ -55,12 +53,10 @@ class CodeBlock extends React.PureComponent<Props> {
     const languageClassName = `language-${this.props.language}`
     return (
       <pre>
-        <div className="scrollable">
-          <code
-            className={languageClassName}
-            dangerouslySetInnerHTML={{ __html: safeHtml }}
-          />
-        </div>
+        <code
+          className={languageClassName}
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
+        />
         <CopyButton text={this.props.value} />
       </pre>
     )

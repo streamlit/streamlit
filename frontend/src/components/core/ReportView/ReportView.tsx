@@ -5,15 +5,15 @@
 
 import {WidgetStateManager} from 'lib/WidgetStateManager'
 import React, {PureComponent, ReactNode} from 'react'
+import {widgetTheme} from 'lib/widgetTheme'
 import {AutoSizer} from 'react-virtualized'
+import {Progress} from 'reactstrap'
+import {ReportRunState} from 'lib/ReportRunState'
+import {Text as TextProto} from 'autogen/protobuf'
+import {ThemeProvider} from 'baseui'
+import {dispatchOneOf} from 'lib/immutableProto'
 // @ts-ignore
 import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
-import {Progress} from 'reactstrap'
-import {dispatchOneOf} from 'lib/immutableProto'
-import {Text as TextProto} from 'autogen/protobuf'
-import {ReportRunState} from 'lib/ReportRunState'
-import './ReportView.scss'
-import './Widget.scss'
 
 // Load (non-lazy) core elements.
 import Chart from 'components/elements/Chart'
@@ -22,6 +22,9 @@ import ExceptionElement from 'components/elements/ExceptionElement'
 import Table from 'components/elements/Table'
 import Text from 'components/elements/Text'
 import ErrorBoundary from 'components/shared/ErrorBoundary'
+
+import './ReportView.scss'
+import './Widget.scss'
 
 // Lazy-load display widgets.
 const Button = React.lazy(() => import('components/widgets/Button/'))
@@ -78,9 +81,11 @@ export class ReportView extends PureComponent<Props> {
 
   public render(): ReactNode {
     return (
-      <AutoSizer className="main" disableHeight={true}>
-        {({width}) => this.renderElements(width)}
-      </AutoSizer>
+      <ThemeProvider theme={widgetTheme}>
+        <AutoSizer className="main" disableHeight={true}>
+          {({width}) => this.renderElements(width)}
+        </AutoSizer>
+      </ThemeProvider>
     )
   }
 
@@ -119,7 +124,7 @@ export class ReportView extends PureComponent<Props> {
       const className = showStaleState ? 'element-container stale-element' : 'element-container'
 
       out.push(
-        <div className={className} key={index}>
+        <div className={className} key={index} style={{width}}>
           <React.Suspense
             fallback={<Text
               element={makeElementWithInfoText('Loading...').get('text')}

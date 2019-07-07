@@ -53,15 +53,6 @@
   color: $black;
 }
 
-.streamlit-container .markdown-text-container .scrollable {
-  margin-right: 40px;
-  overflow: hidden;
-}
-
-.streamlit-container .markdown-text-container .scrollable:hover {
-  overflow: auto;
-}
-
 .streamlit-container .markdown-text-container tr {
   border-top: 1px solid $gray-lighter;
   background: $white;

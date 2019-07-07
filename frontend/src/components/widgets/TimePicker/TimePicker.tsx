@@ -59,7 +59,7 @@ class TimePicker extends React.PureComponent<Props, State> {
 
     return (
       <div className="Widget stTime" style={style}>
-        <p className="label">{label}</p>
+        <label>{label}</label>
         <UITimePicker
           format="24"
           value={this.state.value}

@@ -8,6 +8,7 @@ import { Datepicker as UIDatePicker } from 'baseui/datepicker'
 import { Map as ImmutableMap } from 'immutable'
 import moment from 'moment'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
+import { datePickerOverrides } from 'lib/widgetTheme'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -50,11 +51,12 @@ class DatePicker extends React.PureComponent<Props, State> {
 
     return (
       <div className="Widget stDate" style={style}>
-        <p className="label">{label}</p>
+        <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           value={this.state.value}
           onChange={this.handleChange}
+          overrides={datePickerOverrides}
         />
       </div>
     )

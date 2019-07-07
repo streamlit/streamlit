@@ -37,6 +37,7 @@ import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
 import './App.scss'
+import 'assets/css/header.scss'
 
 class App extends PureComponent {
   constructor(props) {
@@ -580,27 +581,29 @@ class App extends PureComponent {
         <div className={outerDivClass}>
           {/* The tabindex below is required for testing. */}
           <header tabIndex="-1">
-            <div className="decoration"/>
-            <div id="brand">
+            <div className="decoration" />
+            <nav>
               <a href="//streamlit.io">Streamlit</a>
+            </nav>
+            <div className="toolbar">
+              <StatusWidget
+                ref={this.statusWidgetRef}
+                connectionState={this.state.connectionState}
+                sessionEventDispatcher={this.sessionEventDispatcher}
+                reportRunState={this.state.reportRunState}
+                rerunReport={this.rerunScript}
+                stopReport={this.stopReport}
+              />
+              <MainMenu
+                isServerConnected={this.isServerConnected}
+                saveCallback={this.saveReport}
+                quickRerunCallback={this.rerunScript}
+                rerunCallback={this.openRerunScriptDialog}
+                clearCacheCallback={this.openClearCacheDialog}
+                settingsCallback={this.settingsCallback}
+                aboutCallback={this.aboutCallback}
+              />
             </div>
-            <StatusWidget
-              ref={this.statusWidgetRef}
-              connectionState={this.state.connectionState}
-              sessionEventDispatcher={this.sessionEventDispatcher}
-              reportRunState={this.state.reportRunState}
-              rerunReport={this.rerunScript}
-              stopReport={this.stopReport}
-            />
-            <MainMenu
-              isServerConnected={this.isServerConnected}
-              saveCallback={this.saveReport}
-              quickRerunCallback={this.rerunScript}
-              rerunCallback={this.openRerunScriptDialog}
-              clearCacheCallback={this.openClearCacheDialog}
-              settingsCallback={this.settingsCallback}
-              aboutCallback={this.aboutCallback}
-            />
           </header>
 
           <Container className="streamlit-container">

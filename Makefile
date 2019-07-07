@@ -109,6 +109,7 @@ clean:
 	rm -rf frontend/public/vendor
 	rm -f frontend/src/autogen/protobuf.js
 	rm -f frontend/src/autogen/protobuf.d.ts
+	rm -f frontend/src/autogen/scssVariables.ts
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true

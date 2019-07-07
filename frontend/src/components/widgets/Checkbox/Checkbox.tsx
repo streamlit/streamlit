@@ -7,6 +7,7 @@ import React from 'react'
 import { Checkbox as UICheckbox } from 'baseui/checkbox'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
+import { checkboxOverrides } from 'lib/widgetTheme'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -44,7 +45,11 @@ class Checkbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="Widget row-widget stCheckbox" style={style}>
-        <UICheckbox checked={this.state.value} onChange={this.handleChange}>
+        <UICheckbox
+          checked={this.state.value}
+          onChange={this.handleChange}
+          overrides={checkboxOverrides}
+        >
           {label}
         </UICheckbox>
       </div>

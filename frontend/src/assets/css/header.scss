@@ -1,0 +1,65 @@
+/**
+ * @license
+ * Copyright 2018-2019 Streamlit Inc. All rights reserved.
+ */
+
+@import 'src/assets/css/variables';
+
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: $z-index-header;
+}
+
+.streamlit-wide header {
+  background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
+}
+
+header .decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background-image: linear-gradient(90deg, #F63366, #FFFD80);
+  z-index: $z-index-header;
+}
+
+header > nav {
+  position: absolute;
+  top: 0;
+  left: 1rem;
+  height: 3.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+header > nav {
+  a,
+  a:visited {
+    color: $black;
+  }
+
+  a:active,
+  a:hover {
+    color: $primary;
+    text-decoration: none;
+  }
+}
+
+header > .toolbar {
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  height: 3.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}

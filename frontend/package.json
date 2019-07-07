@@ -5,11 +5,12 @@
   "homepage": ".",
   "scripts": {
     "start": "craco start",
-    "build": "./scripts/preload.sh && craco build",
+    "build": "./scripts/preload.sh && yarn scssvars && craco build",
     "test": "craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open",
     "cy:run": "unset NODE_OPTIONS && cypress run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "scssvars": "echo \"export const SCSS_VARS = \" > src/autogen/scssVariables.ts && scss-to-json src/assets/css/variables.scss >> src/autogen/scssVariables.ts"
   },
   "dependencies": {
     "aws-sdk": "^2.473.0",
@@ -52,9 +53,9 @@
     "styletron-engine-atomic": "^1.4.0",
     "styletron-react": "^5.2.0",
     "typed-signals": "^1.0.5",
+    "vega": "^5.4.0",
     "vega-embed": "^4.2.1",
-    "vega-lite": "^3.3.0",
-    "vega": "^5.4.0"
+    "vega-lite": "^3.3.0"
   },
   "devDependencies": {
     "@craco/craco": "^5.2.1",
@@ -88,6 +89,7 @@
     "eslint-plugin-jsx-a11y": "^6.2.1",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-relay": "^1.0.0",
+    "scss-to-json": "^2.0.0",
     "typescript": "^3.5.1"
   },
   "browserslist": [

@@ -7,7 +7,7 @@ import React from 'react'
 import { Slider as UISlider } from 'baseui/slider'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import './Slider.scss'
+import { sliderOverrides } from 'lib/widgetTheme'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -51,13 +51,14 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div className="Widget stSlider" style={style}>
-        <p className="label">{label}: {this.state.value.join(' ')}</p>
+        <label>{label}</label>
         <UISlider
           min={min}
           max={max}
           step={step}
           value={this.state.value}
           onChange={this.handleChange}
+          overrides={sliderOverrides}
         />
       </div>
     )

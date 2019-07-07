@@ -21,7 +21,7 @@ export class WidgetStateManager {
    * initially connects to the server for the first time.
    */
   public get isEmpty(): boolean {
-    return this.widgetStates.size == 0
+    return this.widgetStates.size === 0
   }
 
   public setTriggerValue(widgetId: string, value: boolean): void {

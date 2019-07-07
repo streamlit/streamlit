@@ -48,7 +48,10 @@ class TextInput extends React.PureComponent<Props, State> {
     return (
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
-        <UIInput onChange={this.onChange} value={this.state.value} />
+        <UIInput
+          onChange={this.onChange}
+          value={this.state.value}
+        />
       </div>
     )
   }

@@ -7,7 +7,6 @@ import React from 'react'
 import { Textarea as UITextArea } from 'baseui/textarea'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import './TextArea.scss'
 
 interface Props {
   element: ImmutableMap<string, any>;
