@@ -3,7 +3,6 @@
 """text_area unit test."""
 
 import re
-import unittest
 
 from tests import testutil
 import streamlit as st

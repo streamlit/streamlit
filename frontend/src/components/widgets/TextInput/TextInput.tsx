@@ -8,6 +8,7 @@ import { Input as UIInput } from 'baseui/input'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
+
 interface Props {
   disabled: boolean;
   element: ImmutableMap<string, any>;
@@ -16,7 +17,8 @@ interface Props {
 }
 
 interface State {
-  value: any;
+  dirty: boolean;
+  value: string;
 }
 
 class TextInput extends React.PureComponent<Props, State> {
@@ -26,10 +28,25 @@ class TextInput extends React.PureComponent<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    // TODO: should we set the value to the state even if it's undefined?
-    this.state = { value }
-    if (value) {
-      this.props.widgetMgr.setStringValue(widgetId, value)
+    this.state = {
+      value,
+      dirty: false,
+    }
+
+    this.props.widgetMgr.setStringValue(widgetId, value)
+  }
+
+  private onKeyPress = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' && this.state.dirty) {
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+      this.setState({ dirty: false })
+    }
+  }
+
+  private onBlur = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    if (this.state.dirty) {
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+      this.setState({ dirty: false })
     }
   }
 
@@ -37,9 +54,12 @@ class TextInput extends React.PureComponent<Props, State> {
     const value = (e.target as HTMLInputElement).value
     const widgetId = this.props.element.get('id')
 
-    this.setState({ value })
+    this.setState({
+      value,
+      dirty: true,
+    })
+
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public render(): React.ReactNode {
@@ -50,9 +70,11 @@ class TextInput extends React.PureComponent<Props, State> {
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
         <UIInput
-          onChange={this.onChange}
           value={this.state.value}
           disabled={this.props.disabled}
+          onChange={this.onChange}
+          onKeyPress={this.onKeyPress}
+          onBlur={this.onBlur}
         />
       </div>
     )

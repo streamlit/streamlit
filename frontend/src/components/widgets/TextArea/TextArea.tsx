@@ -16,6 +16,7 @@ interface Props {
 }
 
 interface State {
+  dirty: boolean;
   value: string;
 }
 
@@ -26,17 +27,40 @@ class TextArea extends React.PureComponent<Props, State> {
     const widgetId = this.props.element.get('id')
     const value = this.props.element.get('value')
 
-    this.state = { value }
+    this.state = {
+      value,
+      dirty: false,
+    }
+
     this.props.widgetMgr.setStringValue(widgetId, value)
   }
 
-  private handleChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    const widgetId = this.props.element.get('id')
-    const value = (e.target as HTMLTextAreaElement).value
+  private onKeyPress = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const event = e as React.KeyboardEvent<HTMLTextAreaElement>
 
-    this.setState({ value })
+    if (event.key === 'Enter' && event.ctrlKey && this.state.dirty) {
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+      this.setState({ dirty: false })
+    }
+  }
+
+  private onBlur = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    if (this.state.dirty) {
+      this.props.widgetMgr.sendUpdateWidgetsMessage()
+      this.setState({ dirty: false })
+    }
+  }
+
+  private onChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const value = (e.target as HTMLTextAreaElement).value
+    const widgetId = this.props.element.get('id')
+
+    this.setState({
+      value,
+      dirty: true,
+    })
+
     this.props.widgetMgr.setStringValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public render(): React.ReactNode {
@@ -48,8 +72,10 @@ class TextArea extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UITextArea
           value={this.state.value}
-          onChange={this.handleChange}
           disabled={this.props.disabled}
+          onChange={this.onChange}
+          onKeyPress={this.onKeyPress}
+          onBlur={this.onBlur}
         />
       </div>
     )
