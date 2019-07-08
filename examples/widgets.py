@@ -1,6 +1,6 @@
-import pandas as pd
-import numpy as np
 import streamlit as st
+from datetime import time
+from datetime import date
 
 st.title('Interactive Widgets')
 
@@ -12,7 +12,7 @@ if w1:
     st.write('Agreed')
 
 st.subheader('Slider')
-w2 = st.slider('Age', [32.5, 72.5], 0, 100, 0.5)
+w2 = st.slider('Age', (32.5, 72.5), 0.0, 100.0, 0.5)
 st.write(w2)
 
 st.subheader('Textarea')
@@ -40,10 +40,10 @@ options = ('first', 'second')
 w7 = st.selectbox('Options', options, 1)
 st.write(options[w7])
 
-st.subheader('Time')
-w8 = st.time('Set an alarm for', '12:00')
+st.subheader('Time Input')
+w8 = st.time_input('Set an alarm for', time(8, 45))
 st.write(w8)
 
-st.subheader('Date')
-w9 = st.date('A date to celebrate', '2019/06/24')
+st.subheader('Date Input')
+w9 = st.date_input('A date to celebrate', date(2019, 7, 6))
 st.write(w9)

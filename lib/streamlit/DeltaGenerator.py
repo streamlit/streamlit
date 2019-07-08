@@ -13,6 +13,9 @@ import json
 import random
 import textwrap
 import traceback
+from datetime import datetime
+from datetime import date
+from datetime import time
 
 from streamlit import protobuf
 from streamlit import get_report_ctx
@@ -694,8 +697,7 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(
-            self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -856,9 +858,8 @@ class DeltaGenerator(object):
                                 width=width, height=height)
 
     @_with_element
-    def plotly_chart(
-            self, element, figure_or_data, width=0, height=0,
-            sharing='streamlit', **kwargs):
+    def plotly_chart(self, element, figure_or_data, width=0, height=0,
+                     sharing='streamlit', **kwargs):
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -1024,9 +1025,8 @@ class DeltaGenerator(object):
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
-    def image(
-            self, element, image, caption=None, width=None,
-            use_column_width=False, clamp=False):
+    def image(self, element, image, caption=None, width=None,
+              use_column_width=False, clamp=False):
         """Display an image or list of images.
 
         Parameters
@@ -1249,21 +1249,96 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def slider(self, element, ui_value, label, value=0, min_value=0, max_value=100, step=1):
-        """Slider doc string."""
+    def slider(self, element, ui_value, label, value=None,
+               min_value=None, max_value=None, step=None):
+        """Display a slider widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this slider is for.
+        value : int/float or a tuple/list of int/float
+            The value of this widget when it first renders. In case the value
+            is passed as a tuple/list a range slider will be used.
+            Default: 0
+        min_value : int/float
+            The minimum permitted value.
+            Default: 0 if the value is int, 0.0 otherwise.
+        max_value : int/float
+            The maximum permitted value.
+            Default: 100 if the value is int, 1.0 otherwise.
+        step : int/float
+            The stepping interval.
+            Default: 1 if the value is int, 0.01 otherwise.
+
+        Returns
+        -------
+        int/float or a tuple of int/float
+            The current value of the slider widget. The return type follows
+            the type of the value argument.
+
+        Example
+        -------
+        >>> age = st.slider('Age', 25, 0, 100, 1)
+        >>> st.write("I'm ", age)
+
+        >>> values = st.slider('A range of values', (25.0, 75.0), 0.0, 100.0, 1.0)
+        >>> st.write("Values:", values)
+
+        """
+        # Set value default.
+        if value is None:
+            value = 0
+
+        # Ensure that the value is either a single value or a range of values.
+        single_value = isinstance(value, (int, float))
+        range_value = isinstance(value, (list, tuple)) and len(value) == 2
+        if not single_value and not range_value:
+            raise ValueError("The value should either be an int/float or a list/tuple of int/float")
+
+        # Ensure that the value is either an int/float or a list/tuple of ints/floats.
+        int_value = isinstance(value, int) if single_value else all(map(lambda v: isinstance(v, int), value))
+        float_value = isinstance(value, float) if single_value else all(map(lambda v: isinstance(v, float), value))
+        if not int_value and not float_value:
+            raise TypeError("Tuple/list components must be of the same type.")
+
+        # Set corresponding defaults.
+        if min_value is None:
+            min_value = 0 if int_value else 0.0
+        if max_value is None:
+            max_value = 100 if int_value else 1.0
+        if step is None:
+            step = 1 if int_value else 0.01
+
+        # Ensure that all arguments are of the same type.
+        args = [min_value, max_value, step]
+        int_args = all(map(lambda a: isinstance(a, int), args))
+        float_args = all(map(lambda a: isinstance(a, float), args))
+        if not int_args and not float_args:
+            raise TypeError("All arguments must be of the same type.")
+
+        # Ensure that the value matches arguments' types.
+        all_ints = int_value and int_args
+        all_floats = float_value and float_args
+        if not all_ints and not all_floats:
+            raise TypeError("Both value and arguments must be of the same type.")
+
+        # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
+        # Cast ui_value to the same type as the input arguments
+        if ui_value is not None:
+            current_value = getattr(ui_value, 'value')
+            # Convert float array into int array if the rest of the arguments are ints
+            current_value = list(map(int, current_value)) if all_ints else current_value
+            # If there is only one value in the array destructure it into a single variable
+            current_value = current_value[0] if single_value else current_value
+
         element.slider.label = label
-        if isinstance(current_value, list):
-            assert len(current_value) == 2
-        elif isinstance(current_value, (int, float)):
-            current_value = [current_value]
-        else:
-            current_value = getattr(current_value, 'value')
-        element.slider.value[:] = current_value
+        element.slider.value[:] = [current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
-        return current_value
+        return current_value if single_value else tuple(current_value)
 
     @_widget
     def text_input(self, element, ui_value, label, value=''):
@@ -1330,19 +1405,85 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def time(self, element, ui_value, label, value=''):
-        """Time picker doc string."""
-        current_value = ui_value if ui_value is not None else value
-        element.time.label = label
-        element.time.value = current_value
+    def time_input(self, element, ui_value, label, value=None):
+        """Display a time input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this time input is for.
+        value : datetime.time/datetime.datetime
+            The value of this widget when it first renders. This will be
+            cast to str internally.
+            Default: NOW
+
+        Returns
+        -------
+        datetime.time
+            The current value of the time input widget.
+
+        Example
+        -------
+        >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
+        >>> st.write('Alarm is set for', t)
+
+        """
+        # Set value default.
+        if value is None:
+            value = datetime.now().time()
+
+        # Ensure that the value is either datetime/time
+        if not isinstance(value, datetime) and not isinstance(value, time):
+            raise TypeError("The type of the value should be either datetime or time.")
+
+        # Convert datetime to time
+        if isinstance(value, datetime):
+            value = value.time()
+
+        current_value = datetime.strptime(ui_value, '%H:%M').time() if ui_value is not None else value
+        element.time_input.label = label
+        element.time_input.value = time.strftime(current_value, '%H:%M')
         return current_value
 
     @_widget
-    def date(self, element, ui_value, label, value=''):
-        """Date picker doc string."""
-        current_value = ui_value if ui_value is not None else value
-        element.date.label = label
-        element.date.value = current_value
+    def date_input(self, element, ui_value, label, value=None):
+        """Display a date input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this date input is for.
+        value : datetime.date/datetime.datetime
+            The value of this widget when it first renders. This will be
+            cast to str internally.
+            Default: TODAY
+
+        Returns
+        -------
+        datetime.date
+            The current value of the date input widget.
+
+        Example
+        -------
+        >>> d = st.date_input('A date to celebrate', datetime.date(2019, 7, 6))
+        >>> st.write('The date', d)
+
+        """
+        # Set value default.
+        if value is None:
+            value = datetime.now().date()
+
+        # Ensure that the value is either datetime/time
+        if not isinstance(value, datetime) and not isinstance(value, date):
+            raise TypeError("The type of the value should be either datetime or date.")
+
+        # Convert datetime to date
+        if isinstance(value, datetime):
+            value = value.date()
+
+        current_value = datetime.strptime(ui_value, '%Y/%m/%d').date() if ui_value is not None else value
+        element.date_input.label = label
+        element.date_input.value = date.strftime(current_value, '%Y/%m/%d')
         return current_value
 
     @_with_element
@@ -1435,7 +1576,7 @@ class DeltaGenerator(object):
         if not set(data.columns) >= set(LAT_LON):
             raise Exception('Map data must contain "lat" and "lon" columns.')
         if (data['lon'].isnull().values.any() or
-                data['lat'].isnull().values.any()):
+            data['lat'].isnull().values.any()):
             raise Exception('Map data must be numeric.')
         data_frame_proto.marshall_data_frame(
             data[LAT_LON], element.map.points)

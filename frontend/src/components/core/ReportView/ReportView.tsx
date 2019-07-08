@@ -29,13 +29,13 @@ import './Widget.scss'
 // Lazy-load display widgets.
 const Button = React.lazy(() => import('components/widgets/Button/'))
 const Checkbox = React.lazy(() => import('components/widgets/Checkbox/'))
-const DatePicker = React.lazy(() => import('components/widgets/DatePicker/'))
+const DateInput = React.lazy(() => import('components/widgets/DateInput'))
 const Radio = React.lazy(() => import('components/widgets/Radio/'))
 const Selectbox = React.lazy(() => import('components/widgets/Selectbox/'))
 const Slider = React.lazy(() => import('components/widgets/Slider/'))
 const TextArea = React.lazy(() => import('components/widgets/TextArea/'))
 const TextInput = React.lazy(() => import('components/widgets/TextInput/'))
-const TimePicker = React.lazy(() => import('components/widgets/TimePicker/'))
+const TimeInput = React.lazy(() => import('components/widgets/TimeInput'))
 
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('components/elements/Audio/'))
@@ -180,13 +180,13 @@ export class ReportView extends PureComponent<Props> {
       video: (el: Element) => <Video element={el} width={width} />,
       button: (el: Element) => <Button element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      date: (el: Element) => <DatePicker element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      dateInput: (el: Element) => <DateInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       textInput: (el: Element) => <TextInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       selectbox: (el: Element) => <Selectbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
       textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      time: (el: Element) => <TimePicker element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      timeInput: (el: Element) => <TimeInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
     })
   }
 }

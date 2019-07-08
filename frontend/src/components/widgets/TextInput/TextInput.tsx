@@ -4,8 +4,8 @@
  */
 
 import React from 'react'
-import { Map as ImmutableMap } from 'immutable'
 import { Input as UIInput } from 'baseui/input'
+import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {

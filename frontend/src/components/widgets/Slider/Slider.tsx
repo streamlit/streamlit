@@ -27,11 +27,11 @@ class Slider extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value').toArray()
+    const widgetId = props.element.get('id')
+    const value = props.element.get('value').toArray()
 
     this.state = { value }
-    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
+    props.widgetMgr.setFloatArrayValue(widgetId, value)
   }
 
   private handleChange = ({ value }: SliderValue) => {

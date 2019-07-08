@@ -49,7 +49,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendThrottledBackMsg(BackMsg.create({updateWidgets: this.createWigetStatesMsg()}))
+    this.sendThrottledBackMsg(BackMsg.create({ updateWidgets: this.createWigetStatesMsg() }))
   }
 
   private createWigetStatesMsg(): WidgetStates {

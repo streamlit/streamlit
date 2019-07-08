@@ -4,11 +4,9 @@
  */
 
 import React from 'react'
-import { Datepicker as UIDatePicker } from 'baseui/datepicker'
+import { TimePicker as UITimePicker } from 'baseui/datepicker'
 import { Map as ImmutableMap } from 'immutable'
-import moment from 'moment'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { datePickerOverrides } from 'lib/widgetTheme'
 
 interface Props {
   element: ImmutableMap<string, any>;
@@ -20,7 +18,7 @@ interface State {
   value: Date;
 }
 
-class DatePicker extends React.PureComponent<Props, State> {
+class TimeInput extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
@@ -28,20 +26,30 @@ class DatePicker extends React.PureComponent<Props, State> {
     const value = this.props.element.get('value')
 
     this.state = {
-      value: moment(value, 'YYYY/MM/DD').toDate(),
+      value: this.stringToDate(value),
     }
     this.props.widgetMgr.setStringValue(widgetId, value)
   }
 
-  private dateToString = (date: Date): string => {
-    return moment(date).format('YYYY/MM/DD')
+  private stringToDate = (value: string): Date => {
+    const [hours, minutes] = value.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours)
+    date.setMinutes(minutes)
+    return date
   }
 
-  private handleChange = (e: any): void => {
+  private dateToString = (value: Date): string => {
+    const hours = value.getHours().toString().padStart(2, '0')
+    const minutes = value.getMinutes().toString().padStart(2, '0')
+    return hours + ':' + minutes
+  }
+
+  private handleChange = (value: Date): void => {
     const widgetId = this.props.element.get('id')
 
-    this.setState({ value: e.date })
-    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(e.date))
+    this.setState({ value })
+    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(value))
     this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -50,17 +58,16 @@ class DatePicker extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
 
     return (
-      <div className="Widget stDate" style={style}>
+      <div className="Widget stTimeInput" style={style}>
         <label>{label}</label>
-        <UIDatePicker
-          formatString="yyyy/MM/dd"
+        <UITimePicker
+          format="24"
           value={this.state.value}
           onChange={this.handleChange}
-          overrides={datePickerOverrides}
         />
       </div>
     )
   }
 }
 
-export default DatePicker
+export default TimeInput

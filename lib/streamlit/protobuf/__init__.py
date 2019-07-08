@@ -18,7 +18,7 @@ import sys
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-from BackMsg_pb2 import BackMsg
+from BackMsg_pb2 import BackMsg, FloatArray
 from Balloons_pb2 import Balloons
 from Chart_pb2 import Chart
 from DataFrame_pb2 import DataFrame, Index, Table, AnyArray, CellStyle, CSSStyle
