@@ -622,6 +622,7 @@ class App extends PureComponent {
                     reportRunState={this.state.reportRunState}
                     showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
                     widgetMgr={this.widgetMgr}
+                    widgetsDisabled={this.state.connectionState !== ConnectionState.CONNECTED}
                   />
                 }
               </Col>

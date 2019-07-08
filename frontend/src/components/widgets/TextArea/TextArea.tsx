@@ -9,6 +9,7 @@ import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -48,6 +49,7 @@ class TextArea extends React.PureComponent<Props, State> {
         <UITextArea
           value={this.state.value}
           onChange={this.handleChange}
+          disabled={this.props.disabled}
         />
       </div>
     )

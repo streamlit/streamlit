@@ -10,6 +10,7 @@ import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { checkboxOverrides } from 'lib/widgetTheme'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -48,6 +49,7 @@ class Checkbox extends React.PureComponent<Props, State> {
         <UICheckbox
           checked={this.state.value}
           onChange={this.handleChange}
+          disabled={this.props.disabled}
           overrides={checkboxOverrides}
         >
           {label}

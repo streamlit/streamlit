@@ -11,6 +11,7 @@ import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { datePickerOverrides } from 'lib/widgetTheme'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -56,6 +57,7 @@ class DateInput extends React.PureComponent<Props, State> {
           formatString="yyyy/MM/dd"
           value={this.state.value}
           onChange={this.handleChange}
+          disabled={this.props.disabled}
           overrides={datePickerOverrides}
         />
       </div>

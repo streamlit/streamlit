@@ -3,12 +3,13 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import {WidgetStateManager} from 'lib/WidgetStateManager'
 import React, {PureComponent, ReactNode} from 'react'
 import {widgetTheme} from 'lib/widgetTheme'
 import {AutoSizer} from 'react-virtualized'
 import {Progress} from 'reactstrap'
+
 import {ReportRunState} from 'lib/ReportRunState'
+import {WidgetStateManager} from 'lib/WidgetStateManager'
 import {Text as TextProto} from 'autogen/protobuf'
 import {ThemeProvider} from 'baseui'
 import {dispatchOneOf} from 'lib/immutableProto'
@@ -71,6 +72,9 @@ interface Props {
   showStaleElementIndicator: boolean;
 
   widgetMgr: WidgetStateManager;
+
+  /** Disable the widgets when not connected to the server. */
+  widgetsDisabled: boolean;
 }
 
 /**
@@ -159,6 +163,11 @@ export class ReportView extends PureComponent<Props> {
       throw new Error('Transmission error.')
     }
 
+    const widgetProps = {
+      widgetMgr: this.props.widgetMgr,
+      disabled: this.props.widgetsDisabled,
+    }
+
     return dispatchOneOf(element, 'type', {
       audio: (el: Element) => <Audio element={el} width={width} />,
       balloons: (el: Element) => <Balloons element={el} width={width} />,
@@ -178,15 +187,15 @@ export class ReportView extends PureComponent<Props> {
       text: (el: Element) => <Text element={el} width={width} />,
       vegaLiteChart: (el: Element) => <VegaLiteChart element={el} width={width} />,
       video: (el: Element) => <Video element={el} width={width} />,
-      button: (el: Element) => <Button element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      checkbox: (el: Element) => <Checkbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      dateInput: (el: Element) => <DateInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      textInput: (el: Element) => <TextInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      radio: (el: Element) => <Radio element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      selectbox: (el: Element) => <Selectbox element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      slider: (el: Element) => <Slider element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      textArea: (el: Element) => <TextArea element={el} width={width} widgetMgr={this.props.widgetMgr} />,
-      timeInput: (el: Element) => <TimeInput element={el} width={width} widgetMgr={this.props.widgetMgr} />,
+      button: (el: Element) => <Button element={el} width={width} {...widgetProps} />,
+      checkbox: (el: Element) => <Checkbox element={el} width={width} {...widgetProps} />,
+      dateInput: (el: Element) => <DateInput element={el} width={width} {...widgetProps} />,
+      textInput: (el: Element) => <TextInput element={el} width={width} {...widgetProps} />,
+      radio: (el: Element) => <Radio element={el} width={width} {...widgetProps} />,
+      selectbox: (el: Element) => <Selectbox element={el} width={width} {...widgetProps} />,
+      slider: (el: Element) => <Slider element={el} width={width} {...widgetProps} />,
+      textArea: (el: Element) => <TextArea element={el} width={width} {...widgetProps} />,
+      timeInput: (el: Element) => <TimeInput element={el} width={width} {...widgetProps} />,
     })
   }
 }

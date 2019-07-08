@@ -10,6 +10,7 @@ import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { buttonOverrides } from 'lib/widgetTheme'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -34,6 +35,7 @@ class Button extends React.PureComponent<Props> {
       <div className="Widget row-widget stButton" style={style}>
         <UIButton
           onClick={this.handleClick}
+          disabled={this.props.disabled}
           overrides={buttonOverrides}
         >
           {label}

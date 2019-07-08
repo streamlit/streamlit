@@ -10,6 +10,7 @@ import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { radioOverrides } from 'lib/widgetTheme'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -50,6 +51,7 @@ class Radio extends React.PureComponent<Props, State> {
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value}
+          disabled={this.props.disabled}
           overrides={radioOverrides}
         >
           {options.map((option: string, idx: number) => (

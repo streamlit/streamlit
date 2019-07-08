@@ -9,6 +9,7 @@ import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -57,6 +58,14 @@ class TimeInput extends React.PureComponent<Props, State> {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 
+    const selectOverride = {
+      Select: {
+        props: {
+          disabled: this.props.disabled,
+        },
+      },
+    }
+
     return (
       <div className="Widget stTimeInput" style={style}>
         <label>{label}</label>
@@ -64,6 +73,7 @@ class TimeInput extends React.PureComponent<Props, State> {
           format="24"
           value={this.state.value}
           onChange={this.handleChange}
+          overrides={selectOverride}
         />
       </div>
     )

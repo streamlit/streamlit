@@ -10,6 +10,7 @@ import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { sliderOverrides } from 'lib/widgetTheme'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -58,6 +59,7 @@ class Slider extends React.PureComponent<Props, State> {
           step={step}
           value={this.state.value}
           onChange={this.handleChange}
+          disabled={this.props.disabled}
           overrides={sliderOverrides}
         />
       </div>

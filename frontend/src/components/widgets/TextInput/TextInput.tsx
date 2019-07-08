@@ -9,6 +9,7 @@ import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -51,6 +52,7 @@ class TextInput extends React.PureComponent<Props, State> {
         <UIInput
           onChange={this.onChange}
           value={this.state.value}
+          disabled={this.props.disabled}
         />
       </div>
     )

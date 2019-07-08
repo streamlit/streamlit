@@ -9,6 +9,7 @@ import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
 interface Props {
+  disabled: boolean;
   element: ImmutableMap<string, any>;
   widgetMgr: WidgetStateManager;
   width: number;
@@ -67,6 +68,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.state.value}
           clearable={false}
+          disabled={this.props.disabled}
         />
       </div>
     )
