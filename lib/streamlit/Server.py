@@ -305,7 +305,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         try:
             msg.ParseFromString(payload)
-            LOGGER.debug('Received the following backend message: %s', msg)
+            LOGGER.debug('Received the following back message: %s', msg)
 
             msg_type = msg.WhichOneof('type')
 
