@@ -8,6 +8,7 @@ setup_2_3_shims(globals())
 import streamlit as st
 from streamlit import config
 from streamlit.elements.Chart import Chart
+from streamlit.ReportThread import get_report_ctx
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -83,7 +84,10 @@ class MyCallback(keras.callbacks.Callback):
         getattr(epoch_chart, type)(type='monotone', data_key='acc',
             stroke='#82ca9d', fill='#82ca9d',
             dot="false", y_axis_id='acc_axis')
-        return st._delta_generator._native_chart(epoch_chart)
+        # HACK: Use get_report_ctx() to grab root delta generator in an i9e
+        # world.
+        # TODO: Make this file not need _native_chart
+        return get_report_ctx().root_dg._native_chart(epoch_chart)
 
 st.title('MNIST CNN')
 
@@ -132,4 +136,4 @@ model.fit(x_train, y_train, validation_data=(x_test, y_test),
 
 st.success('Finished training!')
 
-    # model.save("convnet.h5")
+# model.save("convnet.h5")
