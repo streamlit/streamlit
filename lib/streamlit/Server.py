@@ -157,7 +157,8 @@ class Server(object):
                 ws_ctx_pairs = list(self._report_contexts.items())
 
                 for ws, report_ctx in ws_ctx_pairs:
-                    assert ws != PREHEATED_REPORT_CONTEXT
+                    if ws is PREHEATED_REPORT_CONTEXT:
+                        continue
                     if ws is None:
                         continue
                     msg_list = report_ctx.flush_browser_queue()
