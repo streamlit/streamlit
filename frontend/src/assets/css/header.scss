@@ -42,7 +42,15 @@ header > nav {
 }
 
 header > nav {
-  a,
+  a {
+    color: $black;
+    background: $white;
+    border-radius: $border-radius-large;
+    padding: 0 $m1-2-font-size-base;
+    margin: 0 -$m1-2-font-size-base;
+    border: 1px solid transparent;
+  }
+
   a:visited {
     color: $black;
   }
@@ -51,6 +59,12 @@ header > nav {
   a:hover {
     color: $primary;
     text-decoration: none;
+  }
+
+  a:focus {
+    border: 1px solid $primary;
+    box-shadow: 0 0 0 0.2rem $primary-a50;
+    outline: none;
   }
 }
 
@@ -62,4 +76,16 @@ header > .toolbar {
   display: flex;
   flex-direction: row;
   align-items: center;
+}
+
+.streamlit-embedded header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  header,
+  .streamlit-wide header {
+    position: absolute;
+    background: unset;
+  }
 }

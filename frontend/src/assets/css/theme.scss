@@ -19,22 +19,27 @@
   color: $black;
 }
 
-.btn-outline-primary:hover,
-.btn-outline-secondary:hover {
-  background-color: transparent;
-  border-color: $primary;
-  color: $primary;
-}
-
 .btn-outline-info {
+  background-color: $white;
   border-color: $gray-lighter;
   color: $gray-dark;
 }
 
-.btn-outline-info:hover {
-  background-color: $primary;
+.btn-outline-primary:not(:disabled):not(.disabled):hover,
+.btn-outline-secondary:not(:disabled):not(.disabled):hover,
+.btn-outline-info:not(:disabled):not(.disabled):hover,
+.btn-outline-primary:not(:disabled):not(.disabled):focus,
+.btn-outline-secondary:not(:disabled):not(.disabled):focus,
+.btn-outline-info:not(:disabled):not(.disabled):focus {
+  background-color: $white;
   border-color: $primary;
-  color: $white;
+  color: $primary;
+}
+
+.btn-outline-primary:not(:disabled):not(.disabled):focus,
+.btn-outline-secondary:not(:disabled):not(.disabled):focus,
+.btn-outline-info:not(:disabled):not(.disabled):focus {
+  box-shadow: 0 0 0 0.2rem $primary-a50;
 }
 
 .btn-outline-primary:not(:disabled):not(.disabled).active,
