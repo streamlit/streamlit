@@ -89,6 +89,11 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           onBlur={this.onBlur}
         />
+        {
+          this.state.dirty ?
+            <div className="instructions">Press Enter to apply</div> :
+            null
+        }
       </div>
     )
   }
