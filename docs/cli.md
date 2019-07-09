@@ -57,4 +57,4 @@ Shows all config options for Streamlit, as well as their current values.
 ```bash
 $ streamlit cache clear
 ```
-Clears the [Streamlit cache](/api/optimization).
+Clears the [Streamlit cache](/api/index.md#optimize-performance).

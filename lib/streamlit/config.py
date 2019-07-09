@@ -48,8 +48,7 @@ _on_config_parsed = Signal(doc='Emitted when the config file is parsed.')
 def set_option(key, value):
     """Set config option.
 
-    Note that some config parameters depend on others, so changing one parameter
-    may affect others in unexpected ways.
+    Run `streamlit config show` in the terminal to see all available options.
 
     Parameters
     ----------
@@ -66,6 +65,8 @@ def set_option(key, value):
 
 def get_option(key):
     """Return the current value of a given Streamlit config option.
+
+    Run `streamlit config show` in the terminal to see all available options.
 
     Parameters
     ----------

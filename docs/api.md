@@ -1,0 +1,234 @@
+# API reference
+
+Streamlit makes it easy for you to visualize, mutate, and share data. The API
+reference is organized by activity type, like displaying data or optimizing
+performance. Each section includes methods associated with the activity type,
+including examples.
+
+Know what you're looking for? Use these links or the left nav to move through
+this API reference.
+
+```eval_rst
+.. contents::
+    :local:
+    :depth: 1
+```
+
+## Display text
+
+Streamlit reports usually start with a call to `st.title` to set the
+report's title. After that, there are 2 heading levels you can use:
+`st.header` and `st.subheader`.
+
+Pure text is entered with `st.text`, and Markdown with
+`st.markdown`.
+
+We also offer a "swiss-army knife" command called `st.write`, which accepts
+multiple arguments, and multiple data types.
+
+```eval_rst
+.. autofunction:: streamlit.text
+.. autofunction:: streamlit.markdown
+.. autofunction:: streamlit.write
+.. autofunction:: streamlit.title
+.. autofunction:: streamlit.header
+.. autofunction:: streamlit.subheader
+.. autofunction:: streamlit.code
+```
+
+## Display data
+
+When you're working with data, it is extremely valuable to visualize that
+data quickly, interactively, and from multiple different angles. That's what
+Streamlit is actually built and optimized for.
+
+You can display data via [charts](#display-charts), and you can display it in
+raw form. These are the Streamlit commands you can use to display raw data.
+
+```eval_rst
+.. autofunction:: streamlit.dataframe
+.. autofunction:: streamlit.table
+.. autofunction:: streamlit.json
+```
+
+## Display charts
+
+Streamlit supports several different charting libraries, and our goal is to
+continually add support for more. Right now, the most basic library in our
+arsenal is [Matplotlib](https://matplotlib.org/). Then there are also
+interactive charting libraries like [Vega
+Lite](https://vega.github.io/vega-lite/) (2D charts) and
+[deck.gl](https://github.com/uber/deck.gl) (maps and 3D charts). And
+finally we also provide a few chart types that are "native" to Streamlit,
+like `st.line_chart` and `st.area_chart`.
+
+```eval_rst
+.. autofunction:: streamlit.pyplot
+.. autofunction:: streamlit.altair_chart
+.. autofunction:: streamlit.vega_lite_chart
+.. autofunction:: streamlit.plotly_chart
+.. autofunction:: streamlit.bokeh_chart
+.. autofunction:: streamlit.deck_gl_chart
+.. autofunction:: streamlit.graphviz_chart
+.. autofunction:: streamlit.line_chart
+.. autofunction:: streamlit.area_chart
+.. autofunction:: streamlit.bar_chart
+.. autofunction:: streamlit.map
+.. autofunction:: streamlit.image
+.. autofunction:: streamlit.audio
+.. autofunction:: streamlit.video
+```
+
+## Display interactive widgets
+
+With widgets, Streamlit allows you to bake interactivity directly into your reports with buttons, sliders, text inputs, and more.
+
+```eval_rst
+.. autofunction:: streamlit.button
+.. autofunction:: streamlit.checkbox
+.. autofunction:: streamlit.radio
+.. autofunction:: streamlit.selectbox
+.. autofunction:: streamlit.slider
+.. autofunction:: streamlit.text_input
+.. autofunction:: streamlit.text_area
+.. autofunction:: streamlit.date_input
+.. autofunction:: streamlit.time_input
+```
+
+## Display code
+
+Sometimes you want your Streamlit report to contain _both_ your usual
+Streamlit graphic elements _and_ the code that generated those elements.
+That's where `st.echo()` comes in.
+
+```eval_rst
+.. autofunction:: streamlit.echo
+```
+
+Ok so let's say you have the following file, and you want to make its
+report a little bit more self-explanatory by making that middle section
+visible in the Streamlit report:
+
+```python
+import streamlit as st
+
+def get_user_name():
+    return 'John'
+
+# ------------------------------------------------
+# Want people to see this part of the code...
+
+def get_punctuation():
+    return '!!!'
+
+greeting = "Hi there, "
+user_name = get_user_name()
+punctuation = get_punctuation()
+
+st.write(greeting, user_name, punctuation)
+
+# ...up to here
+# ------------------------------------------------
+
+foo = 'bar'
+st.write('Done!')
+```
+
+The file above creates a Streamlit report containing the words "Hi there,
+`John`", and then "Done!".
+
+Now let's use `st.echo()` to make that middle section of the code visible
+in the report:
+
+```python
+import streamlit as st
+
+def get_user_name():
+    return 'John'
+
+with st.echo():
+    # Everything inside this block will be both printed to the screen
+    # and executed.
+
+    def get_punctuation():
+        return '!!!'
+
+    greeting = "Hi there, "
+    value = get_user_name()
+    punctuation = get_punctuation()
+
+    st.write(greeting, value, punctuation)
+
+# And now we're back to _not_ printing to the screen
+foo = 'bar'
+st.write('Done!')
+```
+
+It's _that_ simple!
+
+```eval_rst
+.. note:: You can have multiple `st.echo()` blocks in the same file.
+  Use it as often as you wish!
+```
+
+## Display progress and status
+
+Streamlit provides a few methods that allow you to add animation to your
+reports. These animations include progress bars, status messages (like
+warnings), and celebratory balloons.
+
+```eval_rst
+.. autofunction:: streamlit.progress
+.. autofunction:: streamlit.spinner
+.. autofunction:: streamlit.balloons
+.. autofunction:: streamlit.error
+.. autofunction:: streamlit.warning
+.. autofunction:: streamlit.info
+.. autofunction:: streamlit.success
+.. autofunction:: streamlit.exception
+```
+
+## Placeholders, help, and options
+
+There are a handful of methods that allow you to create placeholders in your
+report, provide help using doc strings, and get and modify configuration options.
+
+```eval_rst
+.. autofunction:: streamlit.empty
+.. autofunction:: streamlit.help
+.. autofunction:: streamlit.get_option
+.. autofunction:: streamlit.set_option
+```
+
+## Mutate data
+
+With Streamlit you can modify the data within an existing element (chart,
+table, dataframe).
+
+```eval_rst
+.. automethod:: streamlit.DeltaGenerator.DeltaGenerator.add_rows
+```
+
+## Optimize performance
+
+When you mark a function with Streamlit’s cache annotation, it tells Streamlit
+that whenever the function is called it should check three things:
+
+1. The name of the function
+2. The actual code that makes up the body of the function
+3. The input parameters that you called the function with
+
+If this is the first time Streamlit has seen those three items, with those exact
+values, and in that exact combination, it runs the function and stores the
+result in a local cache.
+
+Then, next time the function is called, if those three values have not changed
+Streamlit knows it can skip executing the function altogether. Instead, it just
+reads the output from the local cache and passes it on to the caller.
+
+The main limitation is that Streamlit’s cache feature doesn’t know about
+changes that take place outside the body of the annotated function.
+
+```eval_rst
+.. autofunction:: streamlit.cache
+```

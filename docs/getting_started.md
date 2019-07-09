@@ -1,7 +1,3 @@
-```eval_rst
-:tocdepth: 1
-```
-
 # Get started
 
 If you've made it this far, you probably have an idea of what you can do with Streamlit (if you don't, watch [this video](https://streamlit.io/secret/demo/)). In this guide, we'll introduce you to Streamlit's core features and how they are used to create a report.
@@ -312,4 +308,4 @@ my_slot2.line_chart(numpy.random.randn(20, 2))
 
 ## What's next?
 
-* [Learn how to speed up your reports with caching](api/optimization.md)
+* [Learn how to speed up your reports with caching](api/index.md#optimize-performance)

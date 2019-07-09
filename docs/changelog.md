@@ -27,6 +27,13 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ conda update streamlit
 ```
 
+## Version 0.43.0
+*Release date: July 9, 2019*
+
+**Highlights:**
+
+* ⚡ Support for interactive widgets! 🎈🎉
+
 ## Version 0.42.0
 *Release date: July 1, 2019*
 
