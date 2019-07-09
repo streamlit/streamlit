@@ -276,10 +276,9 @@ class ReportContext(object):
             to use its previous widget states.
 
         """
-        argv = None
         if command_line is not None:
-            argv = self._report.parse_argv_from_command_line(command_line)
-        self._scriptrunner.request_rerun(argv, widget_state)
+            self._report.parse_argv_from_command_line(command_line)
+        self._scriptrunner.request_rerun(self._report.argv, widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""
