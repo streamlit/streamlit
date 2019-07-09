@@ -17,6 +17,7 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 
+from streamlit import metrics
 from streamlit import protobuf
 from streamlit import get_report_ctx
 
@@ -211,6 +212,9 @@ class DeltaGenerator(object):
         else:
             output_dg = self
 
+        kind = msg.delta.new_element.WhichOneof('type')
+        m = metrics.Client.get('streamlit_enqueue_deltas_total')
+        m.labels(kind).inc()
         msg_was_enqueued = self._enqueue(msg)
 
         if not msg_was_enqueued:

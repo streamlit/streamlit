@@ -231,6 +231,13 @@ _create_option(
     default_val=True)
 
 
+_create_option(
+    'global.metrics',
+    description='Whether to serve prometheus metrics from /metrics.',
+    visibility='hidden',
+    default_val=False)
+
+
 # Config Section: Client #
 
 _create_section('client', 'Settings for scripts that use Streamlit.')

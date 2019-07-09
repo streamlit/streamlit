@@ -253,6 +253,7 @@ class ConfigTest(unittest.TestCase):
             u'client.waitForProxySecs',
             u'global.developmentMode',
             u'global.logLevel',
+            u'global.metrics',
             u'global.sharingMode',
             u'global.showWarningOnDirectExecution',
             u'global.unitTest',

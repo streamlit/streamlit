@@ -14,9 +14,11 @@ import tornado.websocket
 import tornado.ioloop
 
 from streamlit import config
+from streamlit import metrics
 from streamlit import protobuf
 from streamlit import util
 from streamlit.ReportContext import ReportContext
+
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -94,6 +96,7 @@ class Server(object):
             (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
             (r'/healthz', _HealthHandler, dict(server=self)),
             (r'/debugz', _DebugHandler, dict(server=self)),
+            (r'/metrics', _MetricsHandler, dict(server=self)),
         ]
 
         if (not config.get_option('global.developmentMode')
@@ -275,6 +278,23 @@ class _HealthHandler(tornado.web.RequestHandler):
             self.set_status(503)
             self.write('unavailable')
 
+
+class _MetricsHandler(tornado.web.RequestHandler):
+    def initialize(self, server):
+        self._server = server
+
+    def check_origin(self, origin):
+        """Set up CORS."""
+        return _is_url_from_allowed_origins(origin)
+
+    def get(self):
+        if config.get_option('global.metrics'):
+            self.add_header('Cache-Control', 'no-cache')
+            self.set_header('Content-Type', 'text/plain')
+            self.write(metrics.Client.get_current().generate_latest())
+        else:
+            self.set_status(404)
+            raise tornado.web.Finish()
 
 class _DebugHandler(tornado.web.RequestHandler):
     def initialize(self, server):
