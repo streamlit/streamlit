@@ -396,6 +396,7 @@ class ScriptRunner(object):
 
         """
         assert self._state == ScriptState.STOPPED
+        LOGGER.debug('Running script %s', rerun_data)
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st

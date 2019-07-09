@@ -36,6 +36,8 @@ $secondary:  $gray;
 $light:      $gray-100;
 $dark:       $gray;
 
+$primary-a50: change-color($primary, $alpha: 0.5);
+
 // Overwrite some theme fonts settings.
 $font-family-sans-serif: 'IBM Plex Sans', sans-serif;
 $font-family-monospace:  'IBM Plex Mono', monospace;
@@ -58,5 +60,6 @@ $z-index-popup-menu: 102;
 $z-index-header: 100;
 
 // Custom values for our own use.
-$m1-2-font-size-sm: 0.8rem / 2;  // m1-2 = multiply by 1/2
-$m2-3-font-size-sm: 0.8rem * 2 / 3;  // m2-3 = multiply by 2/3
+$m1-2-font-size-sm: $font-size-sm / 2;  // m1-2 = multiply by 1/2
+$m2-3-font-size-sm: $font-size-sm * 2 / 3;  // m2-3 = multiply by 2/3
+$m1-2-font-size-base: $font-size-base / 2;  // m1-2 = multiply by 1/2

@@ -50,10 +50,10 @@ def create_image(r=0,g=0,b=0,a=0):
 if True:
     st.header(datetime.datetime.now().isoformat())
 
-    r_color = st.slider('red', 0, 0, 100, 1)
-    g_color = st.slider('green', 0, 0, 100, 1)
-    b_color = st.slider('blue', 0, 0, 100, 1)
-    alpha_pct = st.slider('alpha', 50, 0, 100, 1)
+    r_color = st.slider('red background', 0, 0, 100, 1)
+    g_color = st.slider('green background', 0, 0, 100, 1)
+    b_color = st.slider('blue background', 0, 0, 100, 1)
+    alpha_pct = st.slider('alpha background', 50, 0, 100, 1)
 
     image = create_image(r_color, g_color, b_color, alpha_pct)
     r = image[:, :, 0]

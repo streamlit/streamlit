@@ -53,10 +53,6 @@ iframe {
   padding-right: 0px;
 }
 
-.streamlit-embedded header {
-  display: none;
-}
-
 .progress {
   background-color: $gray-lightest;
 }
@@ -68,14 +64,6 @@ iframe {
 .icon {
   width: 0.9rem;
   height: 0.9rem;
-}
-
-@media (max-width: 768px) {
-  header,
-  .streamlit-wide header {
-    position: absolute;
-    background: unset;
-  }
 }
 
 // Utility class for underlining first letter in a text

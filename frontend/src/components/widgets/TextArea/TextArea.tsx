@@ -90,6 +90,11 @@ class TextArea extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           onBlur={this.onBlur}
         />
+        {
+          this.state.dirty ?
+            <div className="instructions">Press Ctrl+Enter to apply</div> :
+            null
+        }
       </div>
     )
   }

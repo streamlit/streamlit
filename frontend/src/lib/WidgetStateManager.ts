@@ -1,4 +1,4 @@
-import {IBackMsg, BackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/protobuf'
+import {IBackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/protobuf'
 
 /**
  * Manages widget values, and sends widget update messages back to the server.
@@ -105,7 +105,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendBackMsg(BackMsg.create({ updateWidgets: this.createWigetStatesMsg() }))
+    this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
   }
 
   private createWigetStatesMsg(): WidgetStates {

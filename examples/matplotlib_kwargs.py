@@ -51,7 +51,7 @@ def main():
     fakefile = io.BytesIO()
 
     kwargs = {
-        'dpi': 1200,
+        'dpi': 200,
         'bbox_extra_artists': (txt,),
         'bbox_inches': 'tight',
         'format': 'png',  # Required for some Matplotlib backends.

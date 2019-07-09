@@ -3,29 +3,16 @@
  * Copyright 2018 Streamlit Inc. All rights reserved.
  */
 
-.streamlit-container .image-container {
-  display: inline-block;
-  margin-right: 10px;
-}
+@import 'src/assets/css/variables';
 
-.streamlit-container .image-container img {
-  border: 1px solid #E6E9EE;
+.streamlit-container .image-container {
+  display: inline-flex;
+  flex-direction: column;
+  margin-right: $font-size-sm;
 }
 
 .streamlit-container .caption {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
+  font-family: $font-family-monospace;
+  font-size: $font-size-sm;
   text-align: center;
-  margin-top: 5px;
 }
-
-/* <div style={{width}} className="image-list-container">
-  {imgs.imgs.map((img, indx) => (
-    <span key={indx}>
-      <img
-        style={{width: imgs.width ? imgs.width : undefined}}
-        src={`data:image/png;base64,${img.base_64Png}`}
-        alt={indx}
-      />
-      <div class="caption"> {img.caption} </div>
-    </span> */

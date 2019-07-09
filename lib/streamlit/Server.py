@@ -133,7 +133,12 @@ class Server(object):
 
     @tornado.gen.coroutine
     def loop_coroutine(self):
-        self._set_state(State.WAITING_FOR_FIRST_BROWSER)
+        if self._state == State.INITIAL:
+            self._set_state(State.WAITING_FOR_FIRST_BROWSER)
+        elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+            pass
+        else:
+            raise RuntimeError('Bad server state at start: %s' % self._state)
 
         self._on_server_start_callback(self)
 
@@ -149,6 +154,7 @@ class Server(object):
                 ws_ctx_pairs = list(self._report_contexts.items())
 
                 for ws, report_ctx in ws_ctx_pairs:
+                    assert ws != PREHEATED_REPORT_CONTEXT
                     if ws is None:
                         continue
                     msg_list = report_ctx.flush_browser_queue()
@@ -207,20 +213,24 @@ class Server(object):
 
         """
         if ws not in self._report_contexts:
-            LOGGER.debug('Registering new browser connection')
 
             if (len(self._report_contexts) == 1 and
                     PREHEATED_REPORT_CONTEXT in self._report_contexts):
+                LOGGER.debug('Reusing preheated context for ws %s', ws)
                 report_ctx = self._report_contexts[PREHEATED_REPORT_CONTEXT]
                 del self._report_contexts[PREHEATED_REPORT_CONTEXT]
             else:
+                LOGGER.debug('Creating new context for ws %s', ws)
                 report_ctx = ReportContext(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv)
+                    script_argv=self._script_argv,
+                    is_preheat=ws is PREHEATED_REPORT_CONTEXT)
 
             self._report_contexts[ws] = report_ctx
-            self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+
+            if ws is not PREHEATED_REPORT_CONTEXT:
+                self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
         return self._report_contexts[ws]
 
@@ -305,7 +315,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         try:
             msg.ParseFromString(payload)
-            LOGGER.debug('Received the following backend message: %s', msg)
+            LOGGER.debug('Received the following back message:\n%s', msg)
 
             msg_type = msg.WhichOneof('type')
 

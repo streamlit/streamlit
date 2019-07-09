@@ -5,14 +5,19 @@ import streamlit as st
 import time
 
 # Test add_rows for everything that supports it.
-# We test twice: once with coalescing in Python, and once in JS.
+# We test three times:
+# * once with coalescing in Python
+# * once with coalescing in JS.
+# * once where we clear all elements at the end
 # What to expect, visually:
 # * 1 table
 # * 1 dataframe
 # * 1 line chart
 # * 4 vega-lite charts
 # * And then all of the above once again.
-# * Also, all of the above should have 3 rows or datapoints.
+# (Also, all of the above should have 3 rows or datapoints.)
+# * Then all of the above but with no data.
+# * Then a 1-row dataframe and an error
 
 num_rows = 3
 
