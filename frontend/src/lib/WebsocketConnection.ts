@@ -6,7 +6,7 @@
  *
  *   INITIAL
  *     │
- *     │:on conn att    on conn succeed
+ *     │                on conn succeed
  *     v                :
  *   INITIAL_CONNECTING ──────> CONNECTED
  *     │                          │  ^
@@ -28,8 +28,8 @@
  *
  */
 
-import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/protobuf'
 import {ConnectionState} from './ConnectionState'
+import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/protobuf'
 import {logMessage, logError} from './log'
 
 
@@ -48,14 +48,20 @@ const REMOTE_CONNECTION_MAX_RETRIES = 5
 /**
  * Wait this long before trying to reconnect.
  * This must be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC / 2.
+ * IMPORTANT: This number and CONNECTION_ATTEMPT_TIMEOUT_MS are finicky! The
+ * WebSocket doesn't seem to close immediately when you tell it to. If you
+ * change this, please do *a metric ton* of tests.
  */
-const RECONNECT_WAIT_TIME_MS = 200
+const RECONNECT_WAIT_TIME_MS = 500
 
 
 /**
  * Timeout when attempting to connect to a websocket, in millis.
+ * IMPORTANT: This number and RECONNECT_WAIT_TIME_MS are finicky! The WebSocket
+ * doesn't seem to close immediately when you tell it to. If you change this,
+ * please do *a metric ton* of tests.
  */
-const CONNECTION_ATTEMPT_TIMEOUT_MS = 2000
+const CONNECTION_ATTEMPT_TIMEOUT_MS = 5000
 
 
 type OnMessage = (ForwardMsg: any) => void
@@ -94,6 +100,7 @@ interface MessageQueue {
 type Event =
   'CONNECTION_CLOSED'
   | 'CONNECTION_ERROR'
+  | 'CONNECTION_WTF'
   | 'CONNECTION_SUCCEEDED'
   | 'CONNECTION_TIMED_OUT'
   | 'RETRIES_EXHAUSTED'
@@ -401,7 +408,7 @@ export class WebsocketConnection {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
-        this.stepStateMachine('CONNECTION_ERROR')
+        this.stepStateMachine('CONNECTION_WTF')
         return
       }
 

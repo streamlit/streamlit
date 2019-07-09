@@ -126,14 +126,12 @@ class App extends PureComponent {
    * Called by ConnectionManager when our connection state changes
    */
   handleConnectionStateChanged(newState) {
+    logMessage(`Connection state changed from ${this.state.connectionState} to ${newState}`)
+
     this.setState({ connectionState: newState })
 
-    // If we've just connected and our WidgetManager is not empty, it means
-    // we're *reconnecting* to the server after having been disconnected.
-    // We resend our widget state so that the server immediately re-runs the
-    // report with the widget values that are currently displayed on the page.
-    if (newState === ConnectionState.CONNECTED && !this.widgetMgr.isEmpty) {
-      logMessage('Reconnected to server; sending previous widget state')
+    if (newState === ConnectionState.CONNECTED) {
+      logMessage('Reconnected to server; Requesting a run (which may be preheated)')
       this.widgetMgr.sendUpdateWidgetsMessage()
     }
   }

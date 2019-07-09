@@ -1,6 +1,8 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
+from enum import Enum
+
 import tornado.gen
 import tornado.ioloop
 
@@ -36,7 +38,7 @@ class ReportContext(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, script_path, script_argv, is_preheat):
         """Initialize the ReportContext.
 
         Parameters
@@ -49,6 +51,9 @@ class ReportContext(object):
 
         script_argv : list of str
             Command-line arguments to run the script with.
+
+        is_preheat: boolean
+            True if this is a "preheat" context.
 
         """
         # Each ReportContext gets a unique ID
@@ -72,10 +77,14 @@ class ReportContext(object):
         self._scriptrunner.on_script_compile_error.connect(
             self._on_script_compile_error)
 
-        # Kick off the scriptrunner's run loop, and request our
-        # initial report run.
+        # Kick off the scriptrunner's run loop, but don't run the script
+        # itself.
         self._scriptrunner.start_run_loop(self)
-        self._scriptrunner.request_rerun()
+
+        self._preheat_state = None
+        if is_preheat:
+            self._preheat_state = PreheatState.MUST_PREHEAT
+            self._scriptrunner.request_rerun()
 
         LOGGER.debug('ReportContext initialized (id=%s)', self.id)
 
@@ -276,12 +285,31 @@ class ReportContext(object):
             to use its previous widget states.
 
         """
+        old_argv = self._report.argv
+
         if command_line is not None:
             self._report.parse_argv_from_command_line(command_line)
+
+        if self._preheat_state == PreheatState.MUST_PREHEAT:
+            self._preheat_state = PreheatState.PREHEAT_VALID
+
+        elif self._preheat_state == PreheatState.PREHEAT_VALID:
+            has_widget_state = (
+                widget_state is not None and len(widget_state.widgets) > 0)
+            has_new_argv = old_argv != self._report.argv
+
+            if not has_widget_state and not has_new_argv:
+                LOGGER.debug(
+                    'Skipping rerun since the preheated run is the same')
+                return
+
+            self._preheat_state = PreheatState.PREHEAT_EXPIRED
+
         self._scriptrunner.request_rerun(self._report.argv, widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""
+        self._preheat_state = None
         self._scriptrunner.request_stop()
 
     def handle_clear_cache_request(self):
@@ -373,3 +401,9 @@ class ReportContext(object):
         if self._storage is None:
             self._storage = Storage()
         return self._storage
+
+
+class PreheatState(Enum):
+    MUST_PREHEAT = 'MUST_PREHEAT'
+    PREHEAT_VALID = 'PREHEAT_VALID'
+    PREHEAT_EXPIRED = 'PREHEAT_EXPIRED'
