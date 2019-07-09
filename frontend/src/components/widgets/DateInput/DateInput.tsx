@@ -18,32 +18,33 @@ interface Props {
 }
 
 interface State {
-  value: Date;
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: string;
 }
 
 class DateInput extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {}
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value')
-
-    this.state = {
-      value: moment(value, 'YYYY/MM/DD').toDate(),
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): Date {
+    if (this.state.value === undefined) {
+      return stringToDate(this.props.element.get('value') as string)
+    } else {
+      return stringToDate(this.state.value)
     }
-    this.props.widgetMgr.setStringValue(widgetId, value)
-  }
-
-  private dateToString = (date: Date): string => {
-    return moment(date).format('YYYY/MM/DD')
   }
 
   private handleChange = (e: any): void => {
     const widgetId = this.props.element.get('id')
 
     this.setState({ value: e.date })
-    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(e.date))
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    this.props.widgetMgr.setStringValue(widgetId, dateToString(e.date))
   }
 
   public render(): React.ReactNode {
@@ -55,7 +56,7 @@ class DateInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          value={this.state.value}
+          value={this.valueOrDefault}
           onChange={this.handleChange}
           disabled={this.props.disabled}
           overrides={datePickerOverrides}
@@ -63,6 +64,14 @@ class DateInput extends React.PureComponent<Props, State> {
       </div>
     )
   }
+}
+
+function dateToString(date: Date): string {
+  return moment(date).format('YYYY/MM/DD')
+}
+
+function stringToDate(value: string): Date {
+  return moment(value, 'YYYY/MM/DD').toDate()
 }
 
 export default DateInput

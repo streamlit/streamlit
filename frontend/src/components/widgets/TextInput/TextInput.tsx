@@ -17,49 +17,62 @@ interface Props {
 }
 
 interface State {
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: string;
+
+  /**
+   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
+   */
   dirty: boolean;
-  value: string;
 }
 
 class TextInput extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {
+    dirty: false,
+  }
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value')
-
-    this.state = {
-      value,
-      dirty: false,
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): string {
+    if (this.state.value === undefined) {
+      return this.props.element.get('value') as string
+    } else {
+      return this.state.value
     }
-
-    this.props.widgetMgr.setStringValue(widgetId, value)
   }
 
   private onKeyPress = (e: React.SyntheticEvent<HTMLInputElement>) => {
     if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' && this.state.dirty) {
-      this.props.widgetMgr.sendUpdateWidgetsMessage()
-      this.setState({ dirty: false })
+      this.setWidgetValue()
     }
   }
 
   private onBlur = (e: React.SyntheticEvent<HTMLInputElement>) => {
     if (this.state.dirty) {
-      this.props.widgetMgr.sendUpdateWidgetsMessage()
-      this.setState({ dirty: false })
+      this.setWidgetValue()
     }
   }
 
   private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
     const value = (e.target as HTMLInputElement).value
-    const widgetId = this.props.element.get('id')
-
     this.setState({
       value,
       dirty: true,
     })
+  }
 
-    this.props.widgetMgr.setStringValue(widgetId, value)
+  private setWidgetValue(): void {
+    if (this.state.value === undefined) {
+      throw new Error('Assertion error: value is undefined')
+    }
+    const widgetId = this.props.element.get('id')
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.setState({ dirty: false })
   }
 
   public render(): React.ReactNode {
@@ -70,7 +83,7 @@ class TextInput extends React.PureComponent<Props, State> {
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
         <UIInput
-          value={this.state.value}
+          value={this.valueOrDefault}
           disabled={this.props.disabled}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}

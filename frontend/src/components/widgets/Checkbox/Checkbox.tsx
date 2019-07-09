@@ -17,18 +17,26 @@ interface Props {
 }
 
 interface State {
-  value: boolean;
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: boolean;
 }
 
 class Checkbox extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {}
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value')
-
-    this.state = { value }
-    this.props.widgetMgr.setBoolValue(widgetId, value)
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): boolean {
+    if (this.state.value === undefined) {
+      return this.props.element.get('value') as boolean
+    } else {
+      return this.state.value
+    }
   }
 
   private handleChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -37,7 +45,6 @@ class Checkbox extends React.PureComponent<Props, State> {
 
     this.setState({ value })
     this.props.widgetMgr.setBoolValue(widgetId, value)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   public render(): React.ReactNode {
@@ -47,7 +54,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     return (
       <div className="Widget row-widget stCheckbox" style={style}>
         <UICheckbox
-          checked={this.state.value}
+          checked={this.valueOrDefault}
           onChange={this.handleChange}
           disabled={this.props.disabled}
           overrides={checkboxOverrides}

@@ -18,7 +18,11 @@ interface Props {
 }
 
 interface State {
-  value: number[];
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: number[];
 }
 
 interface SliderValue {
@@ -26,28 +30,38 @@ interface SliderValue {
 }
 
 class Slider extends React.PureComponent<Props, State> {
+  public state: State = {}
   private sendUpdateWidgetsMessage: any
+  private setWidgetValue: () => void
 
   public constructor(props: Props) {
     super(props)
+    this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
+  }
 
-    const { element, widgetMgr } = props
-    const widgetId = element.get('id')
-    const value = element.get('value').toArray()
-
-    this.sendUpdateWidgetsMessage = debounce(200,
-      widgetMgr.sendUpdateWidgetsMessage.bind(widgetMgr))
-
-    this.state = { value }
-    widgetMgr.setFloatArrayValue(widgetId, value)
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): number[] {
+    if (this.state.value === undefined) {
+      return this.props.element.get('value').toArray()
+    } else {
+      return this.state.value
+    }
   }
 
   private handleChange = ({ value }: SliderValue) => {
-    const widgetId = this.props.element.get('id')
-
     this.setState({ value })
-    this.props.widgetMgr.setFloatArrayValue(widgetId, value)
-    this.sendUpdateWidgetsMessage()
+    this.setWidgetValue()
+  }
+
+  private setWidgetValueRaw(): void {
+    if (!this.state.value) {
+      throw new Error('Assert error: value is undefined')
+    }
+    const widgetId = this.props.element.get('id')
+    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
   public render(): React.ReactNode {
@@ -66,7 +80,7 @@ class Slider extends React.PureComponent<Props, State> {
           min={min}
           max={max}
           step={step}
-          value={this.state.value}
+          value={this.valueOrDefault}
           onChange={this.handleChange}
           disabled={this.props.disabled}
           overrides={sliderOverrides}

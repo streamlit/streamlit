@@ -285,7 +285,7 @@ export const widgetTheme = createTheme(
       font450: { ...fontStyles },  // Radio
       font460: { ...fontStyles },  // Calendar header buttons
       font470: { ...fontStyles },  // Button
-      font500: {},
+      font500: { ...fontStyles },  // Selected items in selectbox
       font600: {},
     },
 

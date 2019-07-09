@@ -3,6 +3,7 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import {logWarning} from 'lib/log'
 import React from 'react'
 import { Select as UISelect } from 'baseui/select'
 import { Map as ImmutableMap } from 'immutable'
@@ -16,33 +17,46 @@ interface Props {
 }
 
 interface State {
-  value: { value: string; label: string }[];
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: number;
+}
+
+interface SelectOption {
+  label: string;
+  value: string;
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {}
 
-    const widgetId = this.props.element.get('id')
-    const valueId = this.props.element.get('value')
+  private get valueOrDefault(): SelectOption[] | undefined {
+    const value = this.state.value === undefined ?
+      this.props.element.get('value') as number :
+      this.state.value
 
-    const value = [{
-      'value': valueId.toString(),
-      'label': this.props.element.get('options')[valueId],
+    return [{
+      'value': value.toString(),
+      'label': this.props.element.get('options')[value],
     }]
-
-    this.state = { value }
-    this.props.widgetMgr.setIntValue(widgetId, valueId)
   }
 
   private onChange = (data: any) => {
     const widgetId = this.props.element.get('id')
-    const value = data['value']
-    const valueId = value[0]['value']
+    const selectedValue: SelectOption[] = data['value']
 
-    this.setState({ value })
-    this.props.widgetMgr.setIntValue(widgetId, parseInt(valueId, 10))
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    if (selectedValue.length === 0) {
+      logWarning('No value selected!')
+      return
+    }
+
+    const valueId = selectedValue[0].value
+    const index = parseInt(valueId, 10)
+
+    this.setState({ value: index })
+    this.props.widgetMgr.setIntValue(widgetId, index)
   }
 
   public render(): React.ReactNode {
@@ -50,7 +64,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     const options = this.props.element.get('options')
     const style = { width: this.props.width }
 
-    let selectOptions: { value: string; label: string }[] = []
+    let selectOptions: SelectOption[] = []
     options.forEach((option: string, idx: number) => (
       selectOptions.push({
         'label': option,
@@ -66,7 +80,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           labelKey="label"
           valueKey="value"
           onChange={this.onChange}
-          value={this.state.value}
+          value={this.valueOrDefault}
           clearable={false}
           disabled={this.props.disabled}
         />

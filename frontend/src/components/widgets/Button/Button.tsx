@@ -17,19 +17,14 @@ interface Props {
 }
 
 class Button extends React.PureComponent<Props> {
-  private handleClick = (e: React.SyntheticEvent<HTMLButtonElement>) => {
+  private handleClick = () => {
     const widgetId = this.props.element.get('id')
-
-    this.props.widgetMgr.setTriggerValue(widgetId, true)
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    this.props.widgetMgr.setTriggerValue(widgetId)
   }
 
   public render(): React.ReactNode {
     const label = this.props.element.get('label')
-    const widgetId = this.props.element.get('id')
     const style = { width: this.props.width }
-
-    this.props.widgetMgr.setTriggerValue(widgetId, false)
 
     return (
       <div className="Widget row-widget stButton" style={style}>

@@ -16,42 +16,34 @@ interface Props {
 }
 
 interface State {
-  value: Date;
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: string;
 }
 
 class TimeInput extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {}
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value')
-
-    this.state = {
-      value: this.stringToDate(value),
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): Date {
+    if (this.state.value === undefined) {
+      return stringToDate(this.props.element.get('value') as string)
+    } else {
+      return stringToDate(this.state.value)
     }
-    this.props.widgetMgr.setStringValue(widgetId, value)
   }
 
-  private stringToDate = (value: string): Date => {
-    const [hours, minutes] = value.split(':').map(Number)
-    const date = new Date()
-    date.setHours(hours)
-    date.setMinutes(minutes)
-    return date
-  }
-
-  private dateToString = (value: Date): string => {
-    const hours = value.getHours().toString().padStart(2, '0')
-    const minutes = value.getMinutes().toString().padStart(2, '0')
-    return hours + ':' + minutes
-  }
-
-  private handleChange = (value: Date): void => {
+  private handleChange = (newDate: Date): void => {
     const widgetId = this.props.element.get('id')
 
+    const value = dateToString(newDate)
     this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, this.dateToString(value))
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    this.props.widgetMgr.setStringValue(widgetId, value)
   }
 
   public render(): React.ReactNode {
@@ -71,13 +63,27 @@ class TimeInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UITimePicker
           format="24"
-          value={this.state.value}
+          value={this.valueOrDefault}
           onChange={this.handleChange}
           overrides={selectOverride}
         />
       </div>
     )
   }
+}
+
+function stringToDate(value: string): Date {
+  const [hours, minutes] = value.split(':').map(Number)
+  const date = new Date()
+  date.setHours(hours)
+  date.setMinutes(minutes)
+  return date
+}
+
+function dateToString(value: Date): string {
+  const hours = value.getHours().toString().padStart(2, '0')
+  const minutes = value.getMinutes().toString().padStart(2, '0')
+  return hours + ':' + minutes
 }
 
 export default TimeInput

@@ -17,27 +17,36 @@ interface Props {
 }
 
 interface State {
-  value: string;
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, it's undefined.
+   */
+  value?: number;
 }
 
 class Radio extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
+  public state: State = {}
 
-    const widgetId = this.props.element.get('id')
-    const value = this.props.element.get('value')
-
-    this.state = { value: value.toString() }
-    this.props.widgetMgr.setIntValue(widgetId, value)
+  /**
+   * Return the user-entered value, or the widget's default value
+   * if the user hasn't interacted with it yet.
+   */
+  private get valueOrDefault(): number {
+    if (this.state.value === undefined) {
+      return this.props.element.get('value') as number
+    } else {
+      return this.state.value
+    }
   }
 
   private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
-    const value = (e.target as HTMLInputElement).value
+    const stringValue = (e.target as HTMLInputElement).value
+    const value = parseInt(stringValue, 10)
+
     const widgetId = this.props.element.get('id')
 
     this.setState({ value })
-    this.props.widgetMgr.setIntValue(widgetId, parseInt(value, 10))
-    this.props.widgetMgr.sendUpdateWidgetsMessage()
+    this.props.widgetMgr.setIntValue(widgetId, value)
   }
 
   public render(): React.ReactNode {
@@ -50,7 +59,7 @@ class Radio extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <RadioGroup
           onChange={this.onChange}
-          value={this.state.value}
+          value={this.valueOrDefault.toString()}
           disabled={this.props.disabled}
           overrides={radioOverrides}
         >
