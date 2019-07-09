@@ -400,6 +400,7 @@ def spinner(text='In progress...'):
     >>> st.success('Done!')
 
     """
+    display_message_lock = None
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
         # flickering if this spinner runs too quickly.
@@ -418,8 +419,9 @@ def spinner(text='In progress...'):
         # Yield control back to the context.
         yield
     finally:
-        with display_message_lock:
-            display_message = False
+        if display_message_lock:
+            with display_message_lock:
+                display_message = False
         message.empty()
 
 
