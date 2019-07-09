@@ -4,18 +4,14 @@
 import os
 import signal
 import sys
-import urllib
 
 import click
 import tornado.ioloop
 
 from streamlit import config
 from streamlit import util
-from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
-from streamlit.ScriptRunner import ScriptRunner
 from streamlit.Server import Server
-import streamlit as st
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -27,22 +23,12 @@ LOGGER = get_logger(__name__)
 BROWSER_WAIT_TIMEOUT_SEC = 1
 
 
-def _set_up_signal_handler(scriptrunner):
+def _set_up_signal_handler():
     LOGGER.debug('Setting up signal handler')
 
     def signal_handler(signal_number, stack_frame):
-        script_was_running = scriptrunner.is_running()
-        scriptrunner.request_stop()
-
-        # If the script is running, users can use Ctrl-C to stop it, and then
-        # another Ctrl-C to stop the server. If not running, Ctrl-C just stops
-        # the server.
-        if script_was_running:
-            click.secho(
-                'Script successfully stopped. '
-                'Press Ctrl-C again to stop Streamlit server.')
-        else:
-            tornado.ioloop.IOLoop.current().stop()
+        # The server will shut down its threads and stop the ioloop
+        Server.get_current().stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -58,8 +44,8 @@ def _fix_sys_path(script_path):
     sys.path.insert(0, os.path.dirname(script_path))
 
 
-def _on_server_start(server, report):
-    _print_url(report)
+def _on_server_start(server):
+    _print_url()
 
     def maybe_open_browser():
         if config.get_option('server.headless'):
@@ -77,7 +63,7 @@ def _on_server_start(server, report):
         else:
             addr = 'localhost'
 
-        util.open_browser(report.get_url(addr))
+        util.open_browser(Report.get_url(addr))
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.
@@ -85,26 +71,26 @@ def _on_server_start(server, report):
     ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
-def _print_url(report):
+def _print_url():
     title_message = 'You can now view your Streamlit report in your browser.'
     named_urls = []
 
     if config.is_manually_set('browser.serverAddress'):
         named_urls = [
             ('URL',
-                report.get_url(config.get_option('browser.serverAddress'))),
+                Report.get_url(config.get_option('browser.serverAddress'))),
         ]
 
     elif config.get_option('server.headless'):
         named_urls = [
-            ('Network URL', report.get_url(util.get_internal_ip())),
-            ('External URL', report.get_url(util.get_external_ip())),
+            ('Network URL', Report.get_url(util.get_internal_ip())),
+            ('External URL', Report.get_url(util.get_external_ip())),
         ]
 
     else:
         named_urls = [
-            ('Local URL', report.get_url('localhost')),
-            ('Network URL', report.get_url(util.get_internal_ip())),
+            ('Local URL', Report.get_url('localhost')),
+            ('Network URL', Report.get_url(util.get_internal_ip())),
         ]
 
     click.secho('')
@@ -129,30 +115,17 @@ def run(script_path):
     """
     _fix_sys_path(script_path)
 
-    ioloop = tornado.ioloop.IOLoop.current()
-    report = Report(script_path, sys.argv)
-    scriptrunner = ScriptRunner(report)
-
-    _set_up_signal_handler(scriptrunner)
+    # Install a signal handler that will shut down the ioloop
+    # and close all our threads
+    _set_up_signal_handler()
 
     # Schedule the server to start using the IO Loop on the main thread.
     server = Server(
-        report, scriptrunner, on_server_start_callback=_on_server_start)
+        script_path, sys.argv, on_server_start_callback=_on_server_start)
+
+    server.add_preheated_report_context()
+
+    ioloop = tornado.ioloop.IOLoop.current()
     ioloop.spawn_callback(server.loop_coroutine)
-
-    def maybe_enqueue(msg):
-        scriptrunner.maybe_handle_execution_control_request()
-        if not config.get_option('client.displayEnabled'):
-            return False
-        server.enqueue(msg)
-        return True
-
-    # Somewhat hacky: create the root DeltaGenerator, and put it in the
-    # Streamlit module.
-    st._delta_generator = DeltaGenerator(maybe_enqueue)
-
-    # Start the script in a separate thread, but do it from the ioloop so it
-    # happens after the server starts.
-    ioloop.spawn_callback(scriptrunner.request_rerun)
 
     ioloop.start()

@@ -89,7 +89,8 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
 
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
+        wrapped_function = (
+            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text))
         wrapped = wrapped_function.keywords.get('wrapped')
 
         # Check meta data.
@@ -111,7 +112,8 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_dataframe)
-        self.assertEqual(str(sig), '(self, element, arg0, data=None)', str(sig))
+        self.assertEqual(
+            str(sig), '(self, element, arg0, data=None)', str(sig))
 
         # Check cleaned signature.
         # On python2 it looks like: '(self, *args, **kwargs)'
@@ -140,7 +142,13 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         dg = FakeDeltaGenerator()
         data = 'some_text'
         wrapped(dg, data)
-        self.assertEqual(dg._exception_msg, 'Exception in fake_text_raise_exception')
+        self.assertEqual(
+            dg._exception_msg, 'Exception in fake_text_raise_exception')
+
+    def set_widget_requires_args(self):
+        st.text_input()
+        c = self.get_delta_from_queue().new_element.exception
+        self.assertEqual(c.type, 'TypeError')
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):

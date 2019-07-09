@@ -1,0 +1,24 @@
+/**
+ * @license
+ * Copyright 2019 Streamlit Inc. All rights reserved.
+ */
+
+@import '../../../assets/css/variables';
+
+
+.Widget > label {
+  font-size: $font-size-sm;
+  color: $black;
+  margin-bottom: $m1-2-font-size-sm;
+}
+
+.Widget > .instructions {
+  font-size: $font-size-sm;
+  color: $gray;
+  margin: 0;
+  text-align: right;
+  position: absolute;
+  margin: 0;
+  bottom: 0;
+  right: $m1-2-font-size-sm;
+}

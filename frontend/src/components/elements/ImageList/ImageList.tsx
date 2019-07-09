@@ -55,7 +55,7 @@ class ImageList extends React.PureComponent<Props> {
     return (
       <div style={{width}}>
         {element.get('imgs').map((img: ImmutableMap<string, any>, indx: string) => (
-          <div className="image-container stImage" key={indx}>
+          <div className="image-container stImage" key={indx} style={{width: imgWidth}}>
             <img
               style={{width: imgWidth}}
               src={getImageSrcString(img)}

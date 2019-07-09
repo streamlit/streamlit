@@ -1,0 +1,303 @@
+/**
+ * @license
+ * Copyright 2019 Streamlit Inc. All rights reserved.
+ */
+
+// @ts-ignore
+import {createTheme, lightThemePrimitives} from 'baseui'
+import {SCSS_VARS} from 'autogen/scssVariables'
+import {logMessage} from 'lib/log'
+
+const black           = SCSS_VARS['$black']
+const borderRadius    = SCSS_VARS['$border-radius']
+const fontFamilyMono  = SCSS_VARS['$font-family-monospace']
+const fontFamilySans  = SCSS_VARS['$font-family-sans-serif']
+const fontSizeBase    = SCSS_VARS['$font-size-base']
+const gray            = SCSS_VARS['$gray']
+const grayLighter     = SCSS_VARS['$gray-lighter']
+const grayLightest    = SCSS_VARS['$gray-lightest']
+const labelFontSize   = SCSS_VARS['$font-size-sm']
+const lineHeightBase  = SCSS_VARS['$line-height-base']
+const primary         = SCSS_VARS['$primary']
+const smallTextMargin = SCSS_VARS['$m2-3-font-size-sm']
+const textMargin      = SCSS_VARS['$font-size-sm']
+const tinyTextMargin  = SCSS_VARS['$m1-2-font-size-sm']
+const white           = SCSS_VARS['$white']
+
+const fontStyles = {
+  fontFamily: fontFamilySans,
+  fontSize: fontSizeBase,
+  fontWeight: 'normal',
+  lineHeight: lineHeightBase,
+}
+
+export const sliderOverrides = {
+  Root: {
+    style: {
+      paddingTop: smallTextMargin,
+    },
+  },
+  Thumb: {
+    style: ({$disabled}: any) => ({
+      backgroundColor: $disabled ? gray : primary,
+      borderTopLeftRadius: '100%',
+      borderTopRightRadius: '100%',
+      borderBottomLeftRadius: '100%',
+      borderBottomRightRadius: '100%',
+      borderStyle: 'none',
+      boxShadow: 'none',
+      height: SCSS_VARS['$border-radius-large'],
+      width: SCSS_VARS['$border-radius-large'],
+    }),
+  },
+  InnerThumb: {
+    style: {
+      display: 'none',
+    },
+  },
+  Tick: {
+    style: {
+      fontFamily: fontFamilyMono,
+      fontSize: labelFontSize,
+    },
+  },
+  ThumbValue: {
+    style: ({$disabled}: any) => ({
+      fontFamily: fontFamilyMono,
+      fontSize: labelFontSize,
+      paddingBottom: smallTextMargin,
+      color: $disabled ? gray : primary,
+    }),
+  },
+  TickBar: {
+    style: {
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: smallTextMargin,
+    },
+  },
+  Track: {
+    style: {
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: smallTextMargin,
+    },
+  },
+  InnerTrack: {
+    style: ({$disabled}: any) => (
+      $disabled ? { background: grayLighter } : {}
+    ),
+  },
+}
+
+export const datePickerOverrides = {
+  CalendarHeader: {
+    style: {
+      // Make header look nicer.
+      backgroundColor: gray,
+    },
+  },
+  MonthHeader: {
+    style: {
+      // Make header look nicer.
+      backgroundColor: gray,
+    },
+  },
+  Day: {
+    style: {
+      // The hover effect is very slow for this widget. Let's just turn it off.
+      ':hover': {
+        backgroundColor: 'transparent',
+      },
+    },
+  },
+  PrevButton: {
+    style: {
+      // Align icon to the center of the button.
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // Remove primary-color click effect.
+      ':active': {
+        backgroundColor: 'transparent',
+      },
+      ':focus': {
+        backgroundColor: 'transparent',
+      },
+    },
+  },
+  NextButton: {
+    style: {
+      // Align icon to the center of the button.
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // Remove primary-color click effect.
+      ':active': {
+        backgroundColor: 'transparent',
+      },
+      ':focus': {
+        backgroundColor: 'transparent',
+      },
+    },
+  },
+}
+
+export const buttonOverrides = {
+  BaseButton: {
+    style: {
+      paddingTop: tinyTextMargin,
+      paddingBottom: tinyTextMargin,
+      paddingLeft: textMargin,
+      paddingRight: textMargin,
+      backgroundColor: white,
+      borderBottomColor: primary,
+      borderBottomStyle: 'solid',
+      borderBottomWidth: '1px',
+      borderLeftColor: primary,
+      borderLeftStyle: 'solid',
+      borderLeftWidth: '1px',
+      borderRightColor: primary,
+      borderRightStyle: 'solid',
+      borderRightWidth: '1px',
+      borderTopColor: primary,
+      borderTopStyle: 'solid',
+      borderTopWidth: '1px',
+      color: primary,
+      ':hover': {
+        color: white,
+      },
+      ':focus': {
+        borderBottomColor: 'transparent',
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: 'transparent',
+        color: white,
+        backgroundColor: gray,
+        outline: 'none',
+      },
+      ':active': {
+        color: white,
+      },
+      ':disabled': {
+        borderBottomColor: 'transparent',
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: 'transparent',
+        backgroundColor: grayLighter,
+        color: gray,
+      },
+      ':hover:disabled': {
+        borderBottomColor: 'transparent',
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: 'transparent',
+        backgroundColor: grayLighter,
+        color: gray,
+      },
+    },
+  },
+}
+
+export const radioOverrides = {
+  Root: {
+    style: ({$isFocused}: any) => ({
+      marginBottom: 0,
+      marginTop: 0,
+      paddingRight: smallTextMargin,
+      backgroundColor: $isFocused ? grayLightest : '',
+      borderTopLeftRadius: borderRadius,
+      borderTopRightRadius: borderRadius,
+      borderBottomLeftRadius: borderRadius,
+      borderBottomRightRadius: borderRadius,
+    }),
+  },
+
+}
+
+export const checkboxOverrides = radioOverrides
+
+export const widgetTheme = createTheme(
+  // Theme primitives. See lightThemePrimitives for what's available. These are
+  // used to create a large JSON-style structure with theme values for all
+  // widgets.
+  // - See node_modules/baseui/themes/light-theme-primitives.js for an example
+  // of primitives we can use here.
+  // - See node_modules/baseui/themes/creator.js for the mapping of values from
+  // this file to output values.
+  {
+    ...lightThemePrimitives,
+
+    primaryFontFamily : SCSS_VARS['$font-family-sans-serif'],
+
+    primary50         : primary,
+    primary100        : primary,
+    primary200        : primary,
+    primary300        : primary,
+    primary400        : primary,
+    primary500        : primary,
+    primary600        : primary,
+    primary700        : primary,
+
+    // Override gray values based on what is actually used in BaseWeb, and the
+    // way we want it to match our Bootstrap theme.
+    mono100           : white,  // Popup menu
+    mono200           : grayLightest,  // Text input, text area, selectbox
+    mono300           : grayLighter,  // Disabled widget background
+    mono400           : grayLighter,  // Slider track
+    mono500           : gray,  // Clicked checkbox and radio
+    mono600           : gray,  // Disabled widget text
+    mono700           : gray,  // Unselected checkbox and radio
+    mono800           : gray,  // Selectbox text
+    mono900           : gray,  // Not used, but just in case.
+    mono1000          : black,
+
+    rating200         : '#FFE1A5',
+    rating400         : '#FFC043',
+  },
+
+  // Theme overrides.
+  // NOTE: A lot of the properties we can override here don't seem to actually
+  // be used anywhere in BaseWeb's source. Will report a bug about it.
+  {
+    borders: {
+      radius100 : borderRadius,
+      radius200 : borderRadius,
+      radius300 : borderRadius,
+      radius400 : borderRadius,
+      buttonBorderRadius  : borderRadius,
+      inputBorderRadius   : borderRadius,
+      popoverBorderRadius : borderRadius,
+      surfaceBorderRadius : borderRadius,
+    },
+
+    typography: {
+      // Here we override some fonts that are used in widgets. We don't care
+      // about the ones that are not used.
+      font100: {},
+      font200: {},
+      font250: {},
+      font300: { ...fontStyles },  // Popup menus
+      font350: { ...fontStyles },  // Checkbox
+      font400: { ...fontStyles },  // Textinput, textarea, selectboxes
+      font450: { ...fontStyles },  // Radio
+      font460: { ...fontStyles },  // Calendar header buttons
+      font470: { ...fontStyles },  // Button
+      font500: { ...fontStyles },  // Selected items in selectbox
+      font600: {},
+    },
+
+    colors: {
+      white : white,
+      black : black,
+      tickMarkFillDisabled : grayLighter,
+      tickFillDisabled : gray,
+    },
+  },
+)
+
+
+// Log the widget theme just for debug purposes.
+logMessage('widgetTheme', widgetTheme)

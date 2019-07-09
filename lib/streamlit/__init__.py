@@ -71,6 +71,7 @@ import types as _types
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
+from streamlit.ReportThread import get_report_ctx, add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
@@ -79,10 +80,6 @@ from streamlit.caching import cache  # noqa: F401
 
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
-
-# Root delta generator for this Streamlit report.
-# This gets overwritten in bootstrap.py and in tests.
-_delta_generator = _NULL_DELTA_GENERATOR
 
 
 def _set_log_level():
@@ -99,10 +96,9 @@ _config.on_config_parsed(_set_log_level)
 def _with_dg(method):
     @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        if _delta_generator is _NULL_DELTA_GENERATOR:
-            _maybe_print_repl_warning()
-
-        return method(_delta_generator, *args, **kwargs)
+        ctx = get_report_ctx()
+        dg = ctx.root_dg if ctx is not None else _NULL_DELTA_GENERATOR
+        return method(dg, *args, **kwargs)
     return wrapped_method
 
 
@@ -114,8 +110,11 @@ audio           = _with_dg(_DeltaGenerator.audio)  # noqa: E221
 balloons        = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
 bar_chart       = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
 bokeh_chart     = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
+button          = _with_dg(_DeltaGenerator.button)  # noqa: E221
+checkbox        = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
 code            = _with_dg(_DeltaGenerator.code)  # noqa: E221
 dataframe       = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
+date_input      = _with_dg(_DeltaGenerator.date_input)  # noqa: E221
 deck_gl_chart   = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty           = _with_dg(_DeltaGenerator.empty)  # noqa: E221
 error           = _with_dg(_DeltaGenerator.error)  # noqa: E221
@@ -132,10 +131,16 @@ markdown        = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
 plotly_chart    = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress        = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot          = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
+radio           = _with_dg(_DeltaGenerator.radio)  # noqa: E221
+selectbox       = _with_dg(_DeltaGenerator.selectbox)  # noqa: E221
+slider          = _with_dg(_DeltaGenerator.slider)  # noqa: E221
 subheader       = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
 success         = _with_dg(_DeltaGenerator.success)  # noqa: E221
 table           = _with_dg(_DeltaGenerator.table)  # noqa: E221
 text            = _with_dg(_DeltaGenerator.text)  # noqa: E221
+text_area       = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
+text_input      = _with_dg(_DeltaGenerator.text_input)  # noqa: E221
+time_input      = _with_dg(_DeltaGenerator.time_input)  # noqa: E221
 title           = _with_dg(_DeltaGenerator.title)  # noqa: E221
 vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video           = _with_dg(_DeltaGenerator.video)  # noqa: E221
@@ -395,6 +400,7 @@ def spinner(text='In progress...'):
     >>> st.success('Done!')
 
     """
+    display_message_lock = None
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
         # flickering if this spinner runs too quickly.
@@ -408,13 +414,14 @@ def spinner(text='In progress...'):
                 if display_message:
                     message.warning(str(text))
 
-        _threading.Timer(DELAY_SECS, set_message).start()
+        add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
     finally:
-        with display_message_lock:
-            display_message = False
+        if display_message_lock:
+            with display_message_lock:
+                display_message = False
         message.empty()
 
 

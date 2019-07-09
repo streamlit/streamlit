@@ -10,6 +10,9 @@
   .element-container {
     display: block;
     margin-bottom: 1rem;
+    // Allows to have absolutely-positioned nodes inside report elements, like
+    // floating buttons.
+    position: relative;
   }
 
   .stale-element {

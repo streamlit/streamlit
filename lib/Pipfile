@@ -27,6 +27,7 @@ bokeh = "*"
 graphviz = "*"
 pydot = "*"
 tensorflow = "*"
+seaborn = "*"
 # TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
 # When you update the packages here, you have to update
 # conda/streamlit/meta.yaml as well.
@@ -60,6 +61,6 @@ psutil = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
 # 6.0 doesn't support Python 2
-tornado = ">=5.0<6.0"
+tornado = ">=5.0,<6.0"
 tzlocal = "*"
 watchdog = "*"

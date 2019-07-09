@@ -6,7 +6,6 @@ import copy
 import json
 import os
 import uuid
-import urllib
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
@@ -17,6 +16,33 @@ LOGGER = get_logger(__name__)
 
 
 class Report(object):
+    """
+    Contains parameters related to running a report, and also houses
+    the two ReportQueues (master_queue and browser_queue) that are used
+    to deliver messages to a connected browser, and to serialize the
+    running report.
+    """
+
+    @classmethod
+    def get_url(cls, host_ip):
+        """Get the URL for any report served at the given host_ip.
+
+        Parameters
+        ----------
+        host_ip : str
+            The IP address of the machine that is running the Streamlit Server.
+
+        Returns
+        -------
+        str
+            The URL.
+        """
+        port = _get_browser_address_bar_port()
+        return ('http://%(host_ip)s:%(port)s' % {
+            'host_ip': host_ip,
+            'port': port,
+        })
+
     def __init__(self, script_path, argv):
         """Constructor.
 
@@ -36,11 +62,15 @@ class Report(object):
         self.argv = argv
         self.name = os.path.splitext(basename)[0]
 
-        # Keep the master queue private because the way we clear the master
-        # queue is different from how we clear each browser-queue. The master
-        # queue needs to keep the initialization message even when you clear
-        # it.
+        # The master queue contains all messages that comprise the report.
+        # If the user chooses to share a saved version of the report,
+        # we serialize the contents of the master queue.
         self._master_queue = ReportQueue()
+
+        # The browser queue contains messages that haven't yet been
+        # delivered to the browser. Periodically, the server flushes
+        # this queue and delivers its contents to the browser.
+        self._browser_queue = ReportQueue()
 
         self.report_id = None
         self.generate_new_id()
@@ -50,7 +80,20 @@ class Report(object):
             'master queue': self._master_queue.get_debug(),
         }
 
-    def set_argv(self, cmd_line_str):
+    def parse_argv_from_command_line(self, cmd_line_str):
+        """Parses an argv dict for this script from a command line string.
+
+        Parameters
+        ----------
+        cmd_line_str : str
+            The string to parse.
+
+        Returns
+        -------
+        dict
+            An argv dict, suitable for executing this Report with.
+
+        """
         import shlex
 
         cmd_line_list = shlex.split(cmd_line_str)
@@ -65,42 +108,40 @@ class Report(object):
 
     def enqueue(self, msg):
         self._master_queue.enqueue(msg)
+        self._browser_queue.enqueue(msg)
 
     def clear(self):
+        # Master_queue retains its initial message; browser_queue is
+        # completely cleared.
         initial_msg = self._master_queue.get_initial_msg()
-
         self._master_queue.clear()
-
         if initial_msg:
             self._master_queue.enqueue(initial_msg)
 
-    def clone_queue(self):
-        return self._master_queue.clone()
+        self._browser_queue.clear()
+
+    def flush_browser_queue(self):
+        """Clears our browser queue and returns the messages it contained.
+
+        The Server calls this periodically to deliver new messages
+        to the browser connected to this report.
+
+        This doesn't affect the master_queue.
+
+        Returns
+        -------
+        list[ForwardMsg]
+            The messages that were removed from the queue and should
+            be delivered to the browser.
+
+        """
+        return self._browser_queue.flush()
 
     def generate_new_id(self):
         """Randomly generate an ID representing this report's execution."""
         # Convert to str for Python2
         self.report_id = str(
             base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
-
-    def get_url(self, host_ip):
-        """Get this report's live URL.
-
-        Parameters
-        ----------
-        host_ip : str
-            The IP address of the machine that is running the Streamlit Server.
-
-        Returns
-        -------
-        str
-            The URL.
-        """
-        port = _get_browser_address_bar_port()
-        return ('http://%(host_ip)s:%(port)s' % {
-            'host_ip': host_ip,
-            'port': port,
-        })
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
