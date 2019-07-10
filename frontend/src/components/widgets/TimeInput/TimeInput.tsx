@@ -66,6 +66,7 @@ class TimeInput extends React.PureComponent<Props, State> {
           value={this.valueOrDefault}
           onChange={this.handleChange}
           overrides={selectOverride}
+          creatable
         />
       </div>
     )

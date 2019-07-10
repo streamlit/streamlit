@@ -22,4 +22,21 @@ describe('st.time_input', () => {
         'Value 2: 21:15:00'
       )
   })
+
+  it('allows creatable values', () => {
+    cy.get('.stTimeInput input')
+      .first()
+      .type('1:11')
+
+    cy.get('li')
+      .first()
+      .click()
+
+    cy.get('.stText')
+      .first()
+      .should(
+        'have.text',
+        'Value 1: 01:11:00'
+      )
+  })
 })
