@@ -196,8 +196,10 @@ class Server(object):
         This is used to start running the user's script even before the first
         browser connects.
         """
-        report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
-        report_ctx.handle_rerun_script_request()
+        # report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
+        # report_ctx.handle_rerun_script_request()
+        # TODO: Re-enable this when preheating is fixed
+        pass
 
     def _add_browser_connection(self, ws):
         """Register a connected browser with the server

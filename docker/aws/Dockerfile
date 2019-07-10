@@ -9,6 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
-RUN pip install streamlit==0.43.1
+RUN pip install streamlit==0.43.2
 
 ENTRYPOINT ["streamlit", "run"]
