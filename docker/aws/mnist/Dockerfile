@@ -1,4 +1,4 @@
-FROM streamlit/streamlit:0.43.1
+FROM streamlit/streamlit:0.43.2
 
 RUN pip install keras tensorflow
 
