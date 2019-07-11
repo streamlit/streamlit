@@ -61,10 +61,13 @@ class Radio extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.valueOrDefault.toString()}
           disabled={this.props.disabled}
-          overrides={radioOverrides}
         >
           {options.map((option: string, idx: number) => (
-            <UIRadio key={idx} value={idx.toString()}>{option}</UIRadio>
+            <UIRadio
+              key={idx}
+              value={idx.toString()}
+              overrides={radioOverrides}
+            >{option}</UIRadio>
           ))}
         </RadioGroup>
       </div>

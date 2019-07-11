@@ -19,6 +19,7 @@ const grayLightest    = SCSS_VARS['$gray-lightest']
 const labelFontSize   = SCSS_VARS['$font-size-sm']
 const lineHeightBase  = SCSS_VARS['$line-height-base']
 const primary         = SCSS_VARS['$primary']
+const primaryA50      = SCSS_VARS['$primary-a50']
 const smallTextMargin = SCSS_VARS['$m2-3-font-size-sm']
 const textMargin      = SCSS_VARS['$font-size-sm']
 const tinyTextMargin  = SCSS_VARS['$m1-2-font-size-sm']
@@ -153,48 +154,35 @@ export const buttonOverrides = {
       paddingLeft: textMargin,
       paddingRight: textMargin,
       backgroundColor: white,
-      borderBottomColor: primary,
-      borderBottomStyle: 'solid',
-      borderBottomWidth: '1px',
-      borderLeftColor: primary,
-      borderLeftStyle: 'solid',
-      borderLeftWidth: '1px',
-      borderRightColor: primary,
-      borderRightStyle: 'solid',
-      borderRightWidth: '1px',
-      borderTopColor: primary,
-      borderTopStyle: 'solid',
-      borderTopWidth: '1px',
-      color: primary,
+      // We shouldn't mix shorthand properties with longhand -- which usually
+      // means we should use longhand for everything. But BaseUI's Button
+      // actually uses the shorthand "border" property, so that's what I'm
+      // using here too.
+      border: `1px solid ${grayLighter}`,
+      color: black,
       ':hover': {
-        color: white,
+        backgroundColor: 'transparent',
+        borderColor: primary,
+        color: primary,
       },
       ':focus': {
-        borderBottomColor: 'transparent',
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        borderTopColor: 'transparent',
-        color: white,
-        backgroundColor: gray,
+        backgroundColor: white,
+        borderColor: primary,
+        boxShadow: `0 0 0 0.2rem ${primaryA50}`,
+        color: primary,
         outline: 'none',
       },
       ':active': {
         color: white,
       },
       ':disabled': {
-        borderBottomColor: 'transparent',
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        borderTopColor: 'transparent',
         backgroundColor: grayLighter,
+        borderColor: 'transparent',
         color: gray,
       },
       ':hover:disabled': {
-        borderBottomColor: 'transparent',
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        borderTopColor: 'transparent',
         backgroundColor: grayLighter,
+        borderColor: 'transparent',
         color: gray,
       },
     },
@@ -214,7 +202,6 @@ export const radioOverrides = {
       borderBottomRightRadius: borderRadius,
     }),
   },
-
 }
 
 export const checkboxOverrides = radioOverrides
