@@ -28,6 +28,9 @@ message BackMsg {
     // string widget_json = 8;
 
     WidgetStates update_widgets = 9;
+
+    // Set to true to ask the proxy to close the connection
+    bool close_connection = 10;
   }
 }
 

@@ -356,6 +356,13 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == 'update_widgets':
                 self._ctx.handle_rerun_script_request(
                     widget_state=msg.update_widgets)
+            elif msg_type == 'close_connection':
+                if config.get_option('global.developmentMode'):
+                    Server.get_current().stop()
+                else:
+                    LOGGER.warning(
+                        'Client tried to close connection when '
+                        'not in development mode')
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 

@@ -81,6 +81,9 @@ class App extends PureComponent {
 
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
+
+    window.streamlitDebug = {}
+    window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
   }
 
   /**
@@ -373,6 +376,18 @@ class App extends PureComponent {
     this.setState(({ elements, reportId }) => ({
       elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
     }))
+  }
+
+  /**
+   * Used by e2e tests to test disabling widgets
+   */
+  closeConnection() {
+    if (this.isServerConnected()) {
+      this.sendBackMsg({
+        type: 'closeConnection',
+        closeConnection: true,
+      })
+    }
   }
 
   /**
