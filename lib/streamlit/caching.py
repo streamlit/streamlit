@@ -77,8 +77,8 @@ def write_to_disk_cache(key, rv):
     try:
         with util.streamlit_write(path, binary=True) as output:
             pickle.dump(rv, output, pickle.HIGHEST_PROTOCOL)
-    # In python 2, its pickle struct error.
-    # In python 3, its an open error in util.
+    # In python 2, it's pickle struct error.
+    # In python 3, it's an open error in util.
     except (util.Error, struct.error) as e:
         LOGGER.debug(e)
         # Cleanup file so we don't leave zero byte files.
