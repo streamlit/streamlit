@@ -38,7 +38,7 @@ class ReportContext(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, script_argv, is_preheat):
+    def __init__(self, ioloop, script_path, script_argv):
         """Initialize the ReportContext.
 
         Parameters
@@ -51,9 +51,6 @@ class ReportContext(object):
 
         script_argv : list of str
             Command-line arguments to run the script with.
-
-        is_preheat: boolean
-            True if this is a "preheat" context.
 
         """
         # Each ReportContext gets a unique ID
@@ -68,6 +65,7 @@ class ReportContext(object):
         self._sent_initialize_message = False
         self._is_shutdown = False
         self._storage = None
+        self._maybe_reuse_previous_run = False
 
         # ScriptRunner event handlers
         self._scriptrunner.on_state_changed.connect(
@@ -80,11 +78,6 @@ class ReportContext(object):
         # Kick off the scriptrunner's run loop, but don't run the script
         # itself.
         self._scriptrunner.start_run_loop(self)
-
-        self._preheat_state = None
-        if is_preheat:
-            self._preheat_state = PreheatState.MUST_PREHEAT
-            self._scriptrunner.request_rerun()
 
         LOGGER.debug('ReportContext initialized (id=%s)', self.id)
 
@@ -272,7 +265,8 @@ class ReportContext(object):
         msg.report_finished = True
         self.enqueue(msg)
 
-    def handle_rerun_script_request(self, command_line=None, widget_state=None):
+    def handle_rerun_script_request(
+            self, command_line=None, widget_state=None, is_preheat=False):
         """Tells the ScriptRunner to re-run its report.
 
         Parameters
@@ -283,6 +277,10 @@ class ReportContext(object):
         widget_state : WidgetStates | None
             The WidgetStates protobuf to run the script with, or None
             to use its previous widget states.
+        is_preheat: boolean
+            True if this ReportContext should run the script immediately, and
+            then ignore the next rerun request if it matches the already-ran
+            argv and widget state.
 
         """
         old_argv = self._report.argv
@@ -290,10 +288,15 @@ class ReportContext(object):
         if command_line is not None:
             self._report.parse_argv_from_command_line(command_line)
 
-        if self._preheat_state == PreheatState.MUST_PREHEAT:
-            self._preheat_state = PreheatState.PREHEAT_VALID
+        if is_preheat:
+            self._maybe_reuse_previous_run = True  # For next time.
 
-        elif self._preheat_state == PreheatState.PREHEAT_VALID:
+        elif self._maybe_reuse_previous_run:
+            # If this is a "preheated" ReportContext, reuse the previous run if
+            # the argv and widget state matches. But only do this one time
+            # ever.
+            self._maybe_reuse_previous_run = False
+
             has_widget_state = (
                 widget_state is not None and len(widget_state.widgets) > 0)
             has_new_argv = old_argv != self._report.argv
@@ -303,13 +306,10 @@ class ReportContext(object):
                     'Skipping rerun since the preheated run is the same')
                 return
 
-            self._preheat_state = PreheatState.PREHEAT_EXPIRED
-
         self._scriptrunner.request_rerun(self._report.argv, widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""
-        self._preheat_state = None
         self._scriptrunner.request_stop()
 
     def handle_clear_cache_request(self):
@@ -401,9 +401,3 @@ class ReportContext(object):
         if self._storage is None:
             self._storage = Storage()
         return self._storage
-
-
-class PreheatState(Enum):
-    MUST_PREHEAT = 'MUST_PREHEAT'
-    PREHEAT_VALID = 'PREHEAT_VALID'
-    PREHEAT_EXPIRED = 'PREHEAT_EXPIRED'

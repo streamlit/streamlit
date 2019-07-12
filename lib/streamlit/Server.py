@@ -199,10 +199,8 @@ class Server(object):
         This is used to start running the user's script even before the first
         browser connects.
         """
-        # report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
-        # report_ctx.handle_rerun_script_request()
-        # TODO: Re-enable this when preheating is fixed
-        pass
+        report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
+        report_ctx.handle_rerun_script_request(is_preheat=True)
 
     def _add_browser_connection(self, ws):
         """Register a connected browser with the server
@@ -220,8 +218,8 @@ class Server(object):
         """
         if ws not in self._report_contexts:
 
-            if (len(self._report_contexts) == 1 and
-                    PREHEATED_REPORT_CONTEXT in self._report_contexts):
+            if PREHEATED_REPORT_CONTEXT in self._report_contexts:
+                assert len(self._report_contexts) == 1
                 LOGGER.debug('Reusing preheated context for ws %s', ws)
                 report_ctx = self._report_contexts[PREHEATED_REPORT_CONTEXT]
                 del self._report_contexts[PREHEATED_REPORT_CONTEXT]
@@ -230,8 +228,7 @@ class Server(object):
                 report_ctx = ReportContext(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv,
-                    is_preheat=ws is PREHEATED_REPORT_CONTEXT)
+                    script_argv=self._script_argv)
 
             self._report_contexts[ws] = report_ctx
 
