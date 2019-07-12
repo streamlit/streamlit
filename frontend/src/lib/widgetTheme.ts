@@ -49,6 +49,10 @@ export const sliderOverrides = {
       boxShadow: 'none',
       height: SCSS_VARS['$border-radius-large'],
       width: SCSS_VARS['$border-radius-large'],
+      ':focus': {
+        boxShadow: `0 0 0 0.2rem ${primaryA50}`,
+        outline: 'none',
+      },
     }),
   },
   InnerThumb: {
