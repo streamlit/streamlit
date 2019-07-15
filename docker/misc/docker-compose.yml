@@ -10,5 +10,22 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: -H unix:///var/run/docker.sock --no-auth
 
+  # nvidia-dcgm-exporter:
+  #   image: nvidia/dcgm-exporter
+  #   runtime: nvidia
+  #   volumes:
+  #     - /run/prometheus:/run/prometheus
+  #   command: -d 100
+
+  #  node-exporter:
+  #   image: quay.io/prometheus/node-exporter
+  #   ports:
+  #     - 9100:9100
+  #   volumes_from:
+  #     - nvidia-dcgm-exporter:ro
+  #   pid: "host"
+  #   network_mode: "host"
+  #   command: --collector.textfile.directory="/run/prometheus"
+
 volumes:
   portainer_data:

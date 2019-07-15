@@ -20,6 +20,7 @@ import math
 import numpy as np
 import pandas as pd
 import sys
+import time
 
 
 class MyCallback(keras.callbacks.Callback):
@@ -33,6 +34,7 @@ class MyCallback(keras.callbacks.Callback):
         st.header('Training Log')
 
     def on_epoch_begin(self, epoch, logs=None):
+        self._ts = time.time()
         self._epoch = epoch
         st.subheader('Epoch %s' % epoch)
         self._epoch_chart = self._create_chart('line')
@@ -49,10 +51,12 @@ class MyCallback(keras.callbacks.Callback):
         percent_complete = logs['batch'] * logs['size'] /\
             self.params['samples']
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
+        ts = time.time() - self._ts
         self._epoch_summary.text(
-            'loss: %(loss)7.5f | acc: %(acc)7.5f' % {
+            'loss: %(loss)7.5f | acc: %(acc)7.5f | ts: %(ts)d' % {
                 'loss': logs['loss'],
                 'acc': logs['acc'],
+                'ts': ts,
             })
 
     def on_epoch_end(self, epoch, logs=None):

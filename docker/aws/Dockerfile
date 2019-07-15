@@ -9,6 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
-RUN pip install streamlit==0.43.2
+RUN pip3 install setuptools wheel
+
+# Install Streamlit
+ARG STREAMLIT_VERSION
+RUN pip3 install streamlit==${STREAMLIT_VERSION}
+
+COPY credentials.toml config.toml /root/.streamlit/
 
 ENTRYPOINT ["streamlit", "run"]

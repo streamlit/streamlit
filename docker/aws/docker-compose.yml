@@ -1,11 +1,22 @@
-version: '3.6'
+# Has to be 2.3 in order o to use runtime: nvidia
+version: '2.3'
 
 services:
   streamlit:
-    image: streamlit/streamlit:0.43.2
+    image: streamlit/streamlit:${STREAMLIT_VERSION}
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
+
+  streamlit-gpu:
+    image: streamlit/streamlit:${STREAMLIT_VERSION}-gpu
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
 
   # Copy wheel to wheel/ directory, uncomment streamlit-wheel, run these commands
   #   (cd docker/aws; docker-compose build streamlit-wheel)
@@ -18,33 +29,42 @@ services:
   #    dockerfile: Dockerfile
 
   streamlit-examples:
-    image: streamlit/streamlit:examples
+    image: streamlit/streamlit:examples-${STREAMLIT_VERSION}
     build:
       context: ../../examples
       dockerfile: Dockerfile
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
 
   streamlit-examples-images:
-    image: streamlit/streamlit:examples
-    build:
-      context: ../../examples
-      dockerfile: Dockerfile
+    image: streamlit/streamlit:examples-${STREAMLIT_VERSION}
     command: /examples/images.py
     ports:
       - 5600:8501
 
   streamlit-examples-reference:
-    image: streamlit/streamlit:examples
-    build:
-      context: ../../examples
-      dockerfile: Dockerfile
+    image: streamlit/streamlit:examples-${STREAMLIT_VERSION}
     command: /examples/reference.py
     ports:
       - 5601:8501
 
   streamlit-examples-mnist:
-    image: streamlit/streamlit:mnist
+    image: streamlit/streamlit:mnist-${STREAMLIT_VERSION}
     build:
-      context: mnist
-      dockerfile: Dockerfile
+      context: ../../examples
+      dockerfile: Dockerfile.mnist
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
     ports:
       - 5602:8501
+
+  streamlit-examples-mnist-gpu:
+    image: streamlit/streamlit:mnist-${STREAMLIT_VERSION}-gpu
+    runtime: nvidia
+    build:
+      context: ../../examples
+      dockerfile: Dockerfile.mnist.gpu
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
+    ports:
+      - 5652:8501

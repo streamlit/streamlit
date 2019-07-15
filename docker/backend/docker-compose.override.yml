@@ -4,7 +4,7 @@ services:
   streamlit:
     volumes:
       - ../../lib:/streamlit
-      - ../credentials.toml:/root/.streamlit/credentials.toml
-      - ../config.toml:/root/.streamlit/config.toml
+      - ../aws/credentials.toml:/root/.streamlit/credentials.toml
+      - ../aws/config.toml:/root/.streamlit/config.toml
       - ../../examples:/examples
     command: /examples/images.py

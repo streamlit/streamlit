@@ -303,7 +303,21 @@ to setup an EC2 instance and magically install docker on it.
 
 ### Create docker ec2 instance
 ```
-docker-machine create --driver amazonec2 --amazonec2-vpc-id vpc-04993f38a83626700  --amazonec2-private-address-only --amazonec2-instance-type t3a.xlarge --amazonec2-region us-west-2 --amazonec2-zone a --amazonec2-subnet-id subnet-0e23cdaae8b358487 aws01
+docker-machine create --driver amazonec2 --amazonec2-vpc-id vpc-04993f38a83626700  --amazonec2-private-address-only --amazonec2-instance-type p2.xlarge --amazonec2-region us-west-2 --amazonec2-zone a --amazonec2-subnet-id subnet-0e23cdaae8b358487 --amazonec2-ami ami-07b4f3c02c7f83d59 --amazonec2-root-size 100 --amazonec2-security-group streamlit_prod_private aws01
+```
+
+### GPU Setup (only for swarm nodes that have a gpu)
+
+Unsorted notes.
+```
+https://github.com/NVIDIA/nvidia-docker
+nvidia-384
+https://marmelab.com/blog/2018/03/21/using-nvidia-gpu-within-docker-container.html
+https://github.com/NVIDIA/nvidia-docker
+https://github.com/NVIDIA/nvidia-docker/wiki/CUDA
+https://hub.docker.com/r/nvidia/cuda/
+https://github.com/nvidia/nvidia-docker/wiki/Installation-(version-2.0)
+https://www.nvidia.com/object/linux-amd64-display-archive.html
 ```
 
 ### Add other people's SSH key

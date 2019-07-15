@@ -49,14 +49,8 @@ PYTHON = {
         r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
     'conda/streamlit/meta.yaml':
         r'(?P<pre>.* version = ").*(?P<post>" %}$)',
-    'examples/Dockerfile':
-        r'(?P<pre>FROM streamlit/streamlit:).*(?P<post>$)',
-    'docker/aws/mnist/Dockerfile':
-        r'(?P<pre>FROM streamlit/streamlit:).*(?P<post>$)',
-    'docker/aws/Dockerfile':
-        r'(?P<pre>RUN pip install streamlit==).*(?P<post>$)',
-    'docker/aws/docker-compose.yml':
-        r'(?P<pre>image: streamlit/streamlit:)[0-9].*(?P<post>$)',
+    'docker/Makefile':
+        r'(?P<pre>STREAMLIT_VERSION := ).*(?P<post>$)',
 }
 
 NODE = {

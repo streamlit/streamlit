@@ -1,0 +1,8 @@
+ARG STREAMLIT_VERSION
+
+FROM streamlit/streamlit:${STREAMLIT_VERSION}-gpu
+
+RUN pip3 install keras tensorflow-gpu
+
+COPY mnist-cnn.py /mnist-cnn.py
+ENTRYPOINT ["streamlit", "run", "/mnist-cnn.py"]

@@ -1,0 +1,7 @@
+ARG STREAMLIT_VERSION
+FROM streamlit/streamlit:${STREAMLIT_VERSION}
+
+RUN pip3 install keras tensorflow
+
+COPY mnist-cnn.py /mnist-cnn.py
+ENTRYPOINT ["streamlit", "run", "/mnist-cnn.py"]
