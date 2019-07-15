@@ -39,7 +39,7 @@ all-devel: clean init install develop
 	@echo ""
 
 .PHONY: init
-init: setup pipenv react-init protobuf # react-build release
+init: setup pipenv react-init scssvars protobuf # react-build release
 
 .PHONY: build
 build: react-build
@@ -187,6 +187,14 @@ react-build:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
+
+.PHONY: scssvars
+scssvars: react-init
+	@# Generate scssVariables.ts
+	cd frontend ; ( \
+		echo "export const SCSS_VARS = " ; \
+		yarn run --silent scss-to-json src/assets/css/variables.scss \
+	) > src/autogen/scssVariables.ts
 
 .PHONY: jslint
 jslint:

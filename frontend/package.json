@@ -5,12 +5,11 @@
   "homepage": ".",
   "scripts": {
     "start": "craco start",
-    "build": "./scripts/preload.sh && yarn scssvars && craco build",
+    "build": "./scripts/preload.sh && craco build",
     "test": "craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open",
     "cy:run": "unset NODE_OPTIONS && cypress run",
-    "typecheck": "tsc --noEmit",
-    "scssvars": "echo \"export const SCSS_VARS = \" > src/autogen/scssVariables.ts && scss-to-json src/assets/css/variables.scss >> src/autogen/scssVariables.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "aws-sdk": "^2.473.0",
