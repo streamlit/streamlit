@@ -10,6 +10,9 @@ docker.
 $ brew install openvpn
 ```
 
+### Getting VPN Access
+See [#add-vpn-user](#add-vpn-user)
+
 ### Connect via OpenVPN
 ```
 $ sudo /usr/local/sbin/openvpn --config /path/to/user.ovpn
@@ -28,17 +31,20 @@ doesn't work then ask [Google](https://www.google.com/search?q=what+is+my+ip+add
 #### Verify Networking goes through VPN
 
 Go the portainer page.
-[http://demo.streamlit.io:9000](http://demo.streamlit.io:9000)
+[http://aws02.streamlit.io:9000](http://aws02.streamlit.io:9000)
 
 
 ## Launch on AWS
 
+### Get SSH access to run the commands
+[#add-other-peoples-ssh-key](#add-other-peoples-ssh-key)
+
 ### Create SSH Tunnel
 Foreground
-* `ssh ubuntu@demo.streamlit.io -L127.0.0.1:2374:/var/run/docker.sock`
+* `ssh ubuntu@aws02.streamlit.io -L127.0.0.1:2374:/var/run/docker.sock`
 
 Background
-* `ssh ubuntu@demo.streamlit.io -L127.0.0.1:2374:/var/run/docker.sock -fN`
+* `ssh ubuntu@aws02.streamlit.io -L127.0.0.1:2374:/var/run/docker.sock -fN`
 
 ### Login to dockerhub
 ```
@@ -63,12 +69,12 @@ $ (cd docker; make aws)
 ```
 
 You should see them here
-[http://demo.streamlit.io:9000/#/containers](http://demo.streamlit.io:9000/#/containers)
+[http://aws02.streamlit.io:9000/#/containers](http://aws02.streamlit.io:9000/#/containers)
 
 Here are some examples:
-* [images](http://demo.streamlit.io:5600/)
-* [reference](http://demo.streamlit.io:5601/)
-* [mnist](http://demo.streamlit.io:5602/)
+* [images](http://aws02.streamlit.io:5600/)
+* [reference](http://aws02.streamlit.io:5601/)
+* [mnist](http://aws02.streamlit.io:5602/)
 
 # ONLY FOR SETUP
 Only read this if you want to know how the magic was setup.
@@ -232,8 +238,17 @@ Certificate for client client revoked!
 ### Manually Add UDP 1194 to streamlit_prod_public security group
 
 ### Add VPN User.
+@aaj-st, @tvst, @treuille have access via `ec2-user@vpn.streamlit.io:~/.ssh/authorized_keys` and they're the ones that need to run this command.
+
 ```
-$ sudo /usr/local/bin/vpn.sh
+$ ssh ec2-user@vpn.streamlit.io
+Last login: Wed Jul 10 22:27:24 2019 from c-76-126-140-41.hsd1.ca.comcast.net
+
+       __|  __|_  )
+       _|  (     /   Amazon Linux AMI
+      ___|\___|___|
+
+[ec2-user@ip-172-19-250-12 ~]$ sudo /usr/local/bin/vpn.sh
 
 Looks like OpenVPN is already installed.
 
@@ -280,6 +295,8 @@ $ scp ec2-user@vpn.streamlit.io:/root/armando.ovpn ~/Downloads/
 armando.ovpn                                         100% 4994   124.0KB/s   00:00
 ```
 
+Now via slack or email, send this that file to the user.
+
 ## Setup Docker on an EC2 Instance.
 This assumes you VPN'd in and uses the built in docker-machine command
 to setup an EC2 instance and magically install docker on it.
@@ -296,6 +313,17 @@ persons computer which makes other people connecting to this machine
 difficult.  So after create, its up to the person who created that
 machine to add his/her SSH key and others to that machine manually so
 other people can SSH in ie add key to ~/.ssh/authorized_keys.
+
+user who wants access
+```
+$ cat ~/.ssh/id_rsa.pub | pbcopy
+```
+Send key via cut and paste to @aaj-st, @tvst, @treuille via slack/email
+
+admin
+```
+echo '<PASTE>'  >> ~ubuntu/.ssh/authorized_ke
+```
 
 
 ### Add user ubuntu to docker
