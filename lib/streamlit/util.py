@@ -383,6 +383,14 @@ def is_repl():
     return False
 
 
+_function_type = type(lambda: 0)
+
+
+def is_function(x):
+    """Return True if x is a function."""
+    return type(x) == _function_type
+
+
 def get_streamlit_file_path(*filepath):
     """Return the full path to a filepath in ~/.streamlit.
 
@@ -406,3 +414,14 @@ def print_url(title, url):
     """Pretty-print a URL on the terminal."""
     click.secho('  %s: ' % title, nl=False)
     click.secho(url, bold=True)
+
+
+def get_hostname(url):
+    """Return the hostname of a URL (with or without protocol)."""
+    # Just so urllib can parse the URL, make sure there's a protocol.
+    # (The actual protocol doesn't matter to us)
+    if '://' not in url:
+        url = 'http://%s' % url
+
+    parsed = urllib.parse.urlparse(url)
+    return parsed.hostname

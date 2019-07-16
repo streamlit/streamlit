@@ -4,7 +4,6 @@
 import json
 import logging
 import threading
-import urllib
 from enum import Enum
 
 import tornado.concurrent
@@ -423,27 +422,41 @@ def _is_url_from_allowed_origins(url):
         # Allow everything when CORS is disabled.
         return True
 
-    hostname = urllib.parse.urlparse(url).hostname
+    hostname = util.get_hostname(url)
 
-    # Allow connections from bucket.
-    if hostname == config.get_option('s3.bucket'):
-        return True
-
-    # Allow connections from watcher's machine or localhost.
     allowed_domains = [
+        # Check localhost first.
         'localhost',
+        '0.0.0.0',
         '127.0.0.1',
-        util.get_internal_ip(),
-        util.get_external_ip(),
+        # Try to avoid making unecessary HTTP requests by checking if the user
+        # manually specified a server address.
+        _get_server_address_if_manually_set,
+        _get_s3_url_host_if_manually_set,
+        # Then try the options that depend on HTTP requests or opening sockets.
+        util.get_internal_ip,
+        util.get_external_ip,
+        lambda: config.get_option('s3.bucket'),
     ]
 
-    s3_url = config.get_option('s3.url')
+    for allowed_domain in allowed_domains:
+        if util.is_function(allowed_domain):
+            allowed_domain = allowed_domain()
 
-    if s3_url is not None:
-        parsed = urllib.parse.urlparse(s3_url)
-        allowed_domains.append(parsed.hostname)
+        if allowed_domain is None:
+            continue
 
+        if hostname == allowed_domain:
+            return True
+
+    return False
+
+
+def _get_server_address_if_manually_set():
     if config.is_manually_set('browser.serverAddress'):
-        allowed_domains.append(config.get_option('browser.serverAddress'))
+        return util.get_hostname(config.get_option('browser.serverAddress'))
 
-    return any(hostname == d for d in allowed_domains)
+
+def _get_s3_url_host_if_manually_set():
+    if config.is_manually_set('s3.url'):
+        return util.get_hostname(config.get_option('s3.url'))
