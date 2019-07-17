@@ -1,0 +1,23 @@
+version: '2.3'
+
+services:
+  benchmark:
+    image: streamlit/streamlit:benchmark-${STREAMLIT_VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
+    ports:
+      - 5699:8501
+
+  benchmark-gpu:
+    image: streamlit/streamlit:benchmark-gpu-${STREAMLIT_VERSION}
+    runtime: nvidia
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+      args:
+        STREAMLIT_VERSION: ${STREAMLIT_VERSION}
+    ports:
+      - 5698:8501
