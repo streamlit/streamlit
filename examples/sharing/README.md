@@ -17,20 +17,20 @@ make push
 ## Push to production
 
 ### VPN in.
-[../..//docs/aws.md#use-vpn](../..//docs/aws.md#use-vpn])
+[https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#use-vpn](https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#use-vpn])
 ```
 $ sudo /usr/local/sbin/openvpn --config /path/to/user.ovpn
 ```
 
 ### Setup SSH tunnel
-[../../docs/aws.md#create-ssh-tunnel](../../docs/aws.md#create-ssh-tunnel)
+[https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#create-ssh-tunnel](https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#create-ssh-tunnel)
 ```
 $ ssh ubuntu@aws02.streamlit.io -L127.0.0.1:2374:/var/run/docker.sock -fN
 ```
 
 
 ### Set DOCKER_HOST
-[../../docs/aws.md#run-containers-in-aws](../../docs/aws.md#run-containers-in-aws)
+[https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#run-containers-in-aws](https://github.com/streamlit/streamlit/wiki/Running-Streamlit-on-Docker-on-EC2#run-containers-in-aws)
 ```
 $ exporrt DOCKER_HOST=tcp://127.0.0.1:2374
 ```
