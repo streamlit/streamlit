@@ -9,15 +9,12 @@ from threading import Thread, Lock
 from streamlit.ScriptRunner import RerunData
 from streamlit.ScriptRunner import ScriptEvent
 from streamlit.ScriptRunner import ScriptEventQueue
-from streamlit.protobuf.BackMsg_pb2 import WidgetState
 from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 
 
 def _create_widget(id, states):
-    widget = WidgetState()
-    widget.id = id
-    states.widgets.append(widget)
+    states.widgets.add().id = id
     return states.widgets[-1]
 
 

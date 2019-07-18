@@ -69,8 +69,7 @@ def coalesce_widget_states(old_states, new_states):
                 states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
-    for state in states_by_id.values():
-        coalesced.widgets.append(state)
+    coalesced.widgets.extend(states_by_id.values())
 
     return coalesced
 

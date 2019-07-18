@@ -4,7 +4,6 @@
 
 import unittest
 
-from streamlit.protobuf.BackMsg_pb2 import WidgetState
 from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 from streamlit.widgets import coalesce_widget_states
@@ -12,9 +11,7 @@ from streamlit.widgets import reset_widget_triggers
 
 
 def _create_widget(id, states):
-    widget = WidgetState()
-    widget.id = id
-    states.widgets.append(widget)
+    states.widgets.add().id = id
     return states.widgets[-1]
 
 
