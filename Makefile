@@ -12,9 +12,10 @@ endif
 help:
 	@echo "Streamlit Make Commands:"
 	@echo " all          - Cleans and rebuilds lib and frontend."
-	@echo " all-devel    - Cleans and rebuilds lib. Doesn't rebuild the frontend."
+	@echo " all-devel    - Rebuilds lib, and syncs pipenv and node_modules. "
 	@echo " init         - Run once to install python and js dependencies."
 	@echo " build        - build the static version of Streamlit (without Node)"
+	@echo " pipenv-lock  - Re-generates Pipfile.lock. This should be run when you update the Pipfile."
 	@echo " protobuf     - Recompile Protobufs for Python and Javascript."
 	@echo " develop      - Install streamlit pointing to local workspace."
 	@echo " install      - Install streamlit pointing to PYTHONPATH."
@@ -32,14 +33,14 @@ help:
 all: clean init install build develop
 
 .PHONY: all-devel
-all-devel: clean init install develop
+all-devel: init install develop
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt, so shared reports won't work."
 	@echo "    If you need to test report sharing, run 'make build' first!"
 	@echo ""
 
 .PHONY: init
-init: setup pipenv react-init scssvars protobuf # react-build release
+init: setup pipenv-install react-init scssvars protobuf # react-build release
 
 .PHONY: build
 build: react-build
@@ -47,7 +48,12 @@ build: react-build
 setup:
 	pip install pip-tools pipenv
 
-pipenv: lib/Pipfile
+pipenv-install: lib/Pipfile
+	@# Runs pipenv install; doesn't update the Pipfile.lock.
+	cd lib; pipenv install --dev
+
+pipenv-lock: lib/Pipfile
+	@# Regenerates Pipfile.lock and rebuilds the virtualenv. This is rather slow.
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
 ifndef CIRCLECI
 	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
