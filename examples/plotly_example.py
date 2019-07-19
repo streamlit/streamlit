@@ -1,5 +1,4 @@
 import streamlit as st
-import plotly.plotly as py
 import plotly.graph_objs as go
 import numpy as np
 
@@ -69,7 +68,6 @@ st.write(fig)
 
 st.header('Fancy density plot')
 
-import plotly.plotly as py
 import plotly.figure_factory as ff
 
 import numpy as np

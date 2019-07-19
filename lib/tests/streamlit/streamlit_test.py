@@ -546,7 +546,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         data = [trace0]
 
-        with patch('plotly.plotly.plot') as plot_patch:
+        with patch('streamlit.elements.plotly_chart.ply.plot') as plot_patch:
             plot_patch.return_value = 'the_url'
             st.plotly_chart(data, sharing='public')
 

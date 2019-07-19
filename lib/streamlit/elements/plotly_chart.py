@@ -5,7 +5,12 @@
 import json
 import urllib.parse
 
-import plotly.plotly
+try:
+    # Plotly 4 changed its main package.
+    import chart_studio.plotly as ply
+except ImportError:
+    import plotly.plotly as ply
+
 import plotly.tools
 import plotly.utils
 from six import string_types
@@ -79,7 +84,7 @@ def _plot_to_url_or_load_cached_url(*args, **kwargs):
     This is so we don't unecessarily upload data to Plotly's SASS if nothing
     changed since the previous upload.
     """
-    return plotly.plotly.plot(*args, **kwargs)
+    return ply.plot(*args, **kwargs)
 
 
 def _get_embed_url(url):

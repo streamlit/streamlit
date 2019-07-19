@@ -5,7 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
-funcsigs = {version = "*", markers = "python_version < '3.0'"}
+funcsigs = {version = "*",markers = "python_version < '3.0'"}
 mock = "*"
 parameterized = "*"
 pipenv = "*"
@@ -20,9 +20,10 @@ sphinx-rtd-theme = "*"
 recommonmark = "*"
 # Packages used in unit tests:
 altair = "*"
-matplotlib = {version = "*", markers = "python_version > '3.0'"}
+matplotlib = {version = "*",markers = "python_version > '3.0'"}
 scipy = "*"
 plotly = "*"
+chart-studio = "*"
 bokeh = "*"
 graphviz = "*"
 pydot = "*"
@@ -41,7 +42,7 @@ prometheus-client = "*"
 [packages]
 base58 = "*"
 # backport of collections.abc
-backports-abc = {version = "*", markers = "python_version < '3.0'"}
+backports-abc = {version = "*",markers = "python_version < '3.0'"}
 blinker = "*"
 botocore = "*"
 boto3 = "*"
@@ -51,7 +52,7 @@ enum-compat = "*"
 # python3 code backported to python2
 future = "*"
 # specifically concurrent.futures in python2
-futures = {version = "*", markers = "python_version < '3.0'"}
+futures = {version = "*",markers = "python_version < '3.0'"}
 numpy = "*"
 pandas = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
