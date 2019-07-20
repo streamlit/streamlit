@@ -175,18 +175,18 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run:
-          name: Run make pipenv and create virtualenv if necessary.
+          name: Run make pipenv-lock and create virtualenv if necessary.
           command: |
             if echo ${CIRCLE_JOB} | egrep -qi conda ; then
               echo 'In conda, not creating virtualenv'
               if pip freeze | grep -qi pipenv ; then
-                echo 'skipping make setup and make pipenv'
+                echo 'skipping make setup and make pipenv-lock'
               else
                 # pip install psutil requires gcc.
                 apt-get update -y
                 apt-get install -y build-essential
                 make setup
-                make pipenv
+                make pipenv-lock
               fi
               mkdir -p venv
             else
@@ -200,7 +200,7 @@ jobs:
                 fi
                 source venv/bin/activate
                 make setup
-                make pipenv
+                make pipenv-lock
                 deactivate
               else
                 echo 'Virtualenv already exists, not creating'

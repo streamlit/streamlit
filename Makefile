@@ -197,6 +197,7 @@ react-build:
 .PHONY: scssvars
 scssvars: react-init
 	@# Generate scssVariables.ts
+	mkdir -p frontend/src/autogen
 	cd frontend ; ( \
 		echo "export const SCSS_VARS = " ; \
 		yarn run --silent scss-to-json src/assets/css/variables.scss \

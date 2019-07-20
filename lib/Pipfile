@@ -41,13 +41,10 @@ prometheus-client = "*"
 
 [packages]
 base58 = "*"
-# backport of collections.abc
-backports-abc = {version = "*",markers = "python_version < '3.0'"}
 blinker = "*"
 botocore = "*"
 boto3 = "*"
 click = ">=7.0"
-docutils = "*"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
@@ -60,7 +57,6 @@ pillow = "!=5.1.0"
 # Set protobuf version based on the protoc version on the release machine (i.e.
 # Thiago's machine)
 protobuf = ">=3.6.0"
-psutil = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
 # 6.0 doesn't support Python 2
