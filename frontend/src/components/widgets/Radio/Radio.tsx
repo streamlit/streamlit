@@ -39,11 +39,10 @@ class Radio extends React.PureComponent<Props, State> {
     }
   }
 
-  private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+  private onChange = (e: any) => {
+    const widgetId = this.props.element.get('id')
     const stringValue = (e.target as HTMLInputElement).value
     const value = parseInt(stringValue, 10)
-
-    const widgetId = this.props.element.get('id')
 
     this.setState({ value })
     this.props.widgetMgr.setIntValue(widgetId, value)

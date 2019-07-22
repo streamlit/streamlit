@@ -39,7 +39,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     }
   }
 
-  private handleChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+  private handleChange = (e: any) => {
     const widgetId = this.props.element.get('id')
     const value = (e.target as HTMLInputElement).checked
 

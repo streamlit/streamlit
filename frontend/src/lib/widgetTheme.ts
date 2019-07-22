@@ -3,7 +3,6 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-// @ts-ignore
 import {createTheme, lightThemePrimitives} from 'baseui'
 import {SCSS_VARS} from 'autogen/scssVariables'
 import {logMessage} from 'lib/log'

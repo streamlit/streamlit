@@ -104,9 +104,9 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     'enter': () => props.defaultAction(),
   }
 
+  // Not sure exactly why attach is necessary on the HotKeys
+  // component here but it's not working without it
   return (
-    // Not sure exactly why attach is necessary on the HotKeys
-    // component here but it's not working without it
     <HotKeys handlers={keyHandlers} attach={window}>
       <BasicDialog onClose={props.onClose}>
         <ModalBody>
@@ -150,9 +150,9 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
     'enter': () => props.defaultAction(),
   }
 
+  // Not sure exactly why attach is necessary on the HotKeys
+  // component here but it's not working without it
   return (
-    // Not sure exactly why attach is necessary on the HotKeys
-    // component here but it's not working without it
     <HotKeys handlers={keyHandlers} attach={window}>
       <BasicDialog onClose={props.onClose}>
         <ModalBody>

@@ -46,19 +46,20 @@ class TextInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private onKeyPress = (e: React.SyntheticEvent<HTMLInputElement>) => {
-    if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' && this.state.dirty) {
+  private onKeyPress = (e: any) => {
+    const event = e as React.KeyboardEvent<HTMLInputElement>
+    if (event.key === 'Enter' && this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
-  private onBlur = (e: React.SyntheticEvent<HTMLInputElement>) => {
+  private onBlur = () => {
     if (this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
-  private onChange = (e: React.SyntheticEvent<HTMLInputElement>) => {
+  private onChange = (e: any) => {
     const value = (e.target as HTMLInputElement).value
     this.setState({
       value,
@@ -71,6 +72,7 @@ class TextInput extends React.PureComponent<Props, State> {
       throw new Error('Assertion error: value is undefined')
     }
     const widgetId = this.props.element.get('id')
+
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
     this.setState({ dirty: false })
   }
@@ -85,14 +87,14 @@ class TextInput extends React.PureComponent<Props, State> {
         <UIInput
           value={this.valueOrDefault}
           disabled={this.props.disabled}
+          onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
-          onBlur={this.onBlur}
         />
         {
-          this.state.dirty ?
-            <div className="instructions">Press Enter to apply</div> :
-            null
+          this.state.dirty
+            ? <div className="instructions">Press Enter to apply</div>
+            : null
         }
       </div>
     )
