@@ -25,6 +25,13 @@ describe('st.button', () => {
       .should('have.text', 'value: True')
   })
 
+  it('doesn\'t reset the value when user clicks again', () => {
+    cy.get('.stButton button').click().click()
+
+    cy.get('.stText')
+      .should('have.text', 'value: True')
+  })
+
   it('is reset when user changes another widget', () => {
     cy.get('.stButton button').click()
     cy.get('.stText').should('have.text', 'value: True')
