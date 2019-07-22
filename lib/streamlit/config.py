@@ -833,7 +833,7 @@ def show_config():
 
             append_setting(toml_setting)
 
-    print('\n'.join(out))
+    click.echo('\n'.join(out))
 
 # Load Config Files #
 
