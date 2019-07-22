@@ -3476,9 +3476,9 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-"canvas2svg@https://github.com/bokeh/canvas2svg#v1.0.21":
+"canvas2svg@git+https://github.com/bokeh/canvas2svg.git#v1.0.21":
   version "1.0.21"
-  resolved "https://github.com/bokeh/canvas2svg#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
+  resolved "git+https://github.com/bokeh/canvas2svg.git#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -7218,9 +7218,9 @@ globule@^1.0.0:
     lodash "~4.17.10"
     minimatch "~3.0.2"
 
-"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
+"gloo2@git+https://github.com/bokeh/gloo2.git#b41bd5d":
   version "0.0.1"
-  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
+  resolved "git+https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
 
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
@@ -10560,9 +10560,9 @@ number-is-nan@^1.0.0:
   resolved "https://registry.yarnpkg.com/number-is-nan/-/number-is-nan-1.0.1.tgz#097b602b53422a522c1afb8790318336941a011d"
   integrity sha1-CXtgK1NCKlIsGvuHkDGDNpQaAR0=
 
-"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
+"numbro@git+https://github.com/bokeh/numbro.git#e1b6c52":
   version "1.6.2"
-  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
+  resolved "git+https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeral@^2.0.6:
   version "2.0.6"
@@ -11169,9 +11169,9 @@ pify@^4.0.1:
   resolved "https://registry.yarnpkg.com/pify/-/pify-4.0.1.tgz#4b2cd25c50d598735c50292224fd8c6df41e3231"
   integrity sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==
 
-"pikaday@https://github.com/bokeh/pikaday.git#6b7258e":
+"pikaday@git+https://github.com/bokeh/pikaday.git#6b7258e":
   version "1.8.0"
-  resolved "https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
+  resolved "git+https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
 
 pinkie-promise@^2.0.0:
   version "2.0.1"
@@ -12088,9 +12088,9 @@ pretty-format@^24.8.0:
     react-is "^16.8.4"
 
 prismjs@^1.15.0:
-  version "1.16.0"
-  resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.16.0.tgz#406eb2c8aacb0f5f0f1167930cb83835d10a4308"
-  integrity sha512-OA4MKxjFZHSvZcisLGe14THYsug/nF6O1f0pAJc0KN0wTyAcLqmsbE+lTGKSpyh+9pEW57+k6pg2AfYR+coyHA==
+  version "1.17.1"
+  resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.17.1.tgz#e669fcbd4cdd873c35102881c33b14d0d68519be"
+  integrity sha512-PrEDJAFdUGbOP6xK/UsfkC5ghJsPJviKgnQOoxaDbBjwc8op68Quupwt1DeAFoG8GImPhiKXAvvsH7wDSLsu1Q==
   optionalDependencies:
     clipboard "^2.0.0"
 
@@ -13947,9 +13947,9 @@ slice-ansi@^2.1.0:
     astral-regex "^1.0.0"
     is-fullwidth-code-point "^2.0.0"
 
-"slickgrid@https://github.com/bokeh/SlickGrid.git#2189476":
+"slickgrid@git+https://github.com/bokeh/SlickGrid.git#2189476":
   version "2.3.23"
-  resolved "https://github.com/bokeh/SlickGrid.git#218947651624d0a85fb279185bba81b65639fe53"
+  resolved "git+https://github.com/bokeh/SlickGrid.git#218947651624d0a85fb279185bba81b65639fe53"
   dependencies:
     jquery ">=3.4.0"
     jquery-ui ">=1.8.0"

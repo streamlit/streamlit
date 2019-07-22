@@ -31,7 +31,6 @@ interface SliderValue {
 
 class Slider extends React.PureComponent<Props, State> {
   public state: State = {}
-  private sendUpdateWidgetsMessage: any
   private setWidgetValue: () => void
 
   public constructor(props: Props) {

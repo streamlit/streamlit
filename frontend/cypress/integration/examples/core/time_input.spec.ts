@@ -23,6 +23,22 @@ describe('st.time_input', () => {
       )
   })
 
+  it('handles value changes', () => {
+    // open time picker
+    cy.get('.stTimeInput')
+      .first()
+      .click()
+
+    // select '00:00'
+    cy.get('[data-baseweb="menu"] [role="option"]')
+      .first()
+      .click()
+
+    cy.get('.stText')
+      .first()
+      .should('have.text', 'Value 1: 00:00:00')
+  })
+
   it('allows creatable values', () => {
     cy.get('.stTimeInput input')
       .first()
@@ -34,9 +50,6 @@ describe('st.time_input', () => {
 
     cy.get('.stText')
       .first()
-      .should(
-        'have.text',
-        'Value 1: 01:11:00'
-      )
+      .should('have.text', 'Value 1: 01:11:00')
   })
 })

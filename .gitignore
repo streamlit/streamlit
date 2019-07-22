@@ -60,6 +60,9 @@ lib/streamlit/static
 streamlit-storage
 docs/_build
 
+# 3rd party libraries
+frontend/public/vendor
+
 # Data Files
 **/uber-raw-data-sep14.csv
 
