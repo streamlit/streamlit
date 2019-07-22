@@ -10,10 +10,19 @@ import url from 'url'
 import {ConnectionState} from './ConnectionState'
 import {ForwardMsg} from 'autogen/protobuf'
 import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
+import {ReactNode} from 'react'
 import {StaticConnection} from './StaticConnection'
 import {WebsocketConnection} from './WebsocketConnection'
 import {configureCredentials, getObject} from './s3helper'
 import {logError} from './log'
+
+
+/**
+ * When the websocket connection retries this many times, we show a dialog
+ * letting the user know we're having problems connecting.
+ */
+const RETRY_COUNT_FOR_WARNING = 30  // around 15s
+
 
 interface Props {
   /**
@@ -30,7 +39,7 @@ interface Props {
   /**
    * Function to be called when the connection errors out.
    */
-  onConnectionError: (errorMessage: string) => void;
+  onConnectionError: (errNode: ReactNode) => void;
 
   /**
    * Called when our ConnectionState is changed.
@@ -83,6 +92,7 @@ export class ConnectionManager {
         this.connection = await this.connectToRunningServer()
       }
     } catch (err) {
+      logError(err.message)
       this.setConnectionState(
         ConnectionState.DISCONNECTED_FOREVER, err.message)
     }
@@ -94,8 +104,14 @@ export class ConnectionManager {
       this.props.connectionStateChanged(connectionState)
     }
 
-    if (connectionState === ConnectionState.DISCONNECTED_FOREVER) {
+    if (errMsg || connectionState === ConnectionState.DISCONNECTED_FOREVER) {
       this.props.onConnectionError(errMsg || 'unknown')
+    }
+  }
+
+  private showRetryError = (totalRetries: number, latestError: ReactNode): void => {
+    if (totalRetries === RETRY_COUNT_FOR_WARNING) {
+      this.props.onConnectionError(latestError)
     }
   }
 
@@ -103,19 +119,15 @@ export class ConnectionManager {
     // If dev, always connect to 8501, since window.location.port is the Node
     // server's port 3000.
     // If changed, also change config.py
-    const hostname = window.location.hostname
-    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : +window.location.port
-    const uri = getWsUrl(hostname, port)
+    const host = window.location.hostname
+    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port)
+    const baseUriParts = { host, port }
 
     return new WebsocketConnection({
-      uriList: [
-        //getWsUrl('1.1.1.1', '9999', 'bad'),  // Uncomment to test timeout.
-        //getWsUrl('1.1.1.1', '9999', 'bad2'),  // Uncomment to test timeout.
-        uri,
-      ],
+      baseUriPartsList: [baseUriParts],
       onMessage: this.props.onMessage,
-      onConnectionStateChange: this.setConnectionState,
-      isLocal: hostname === 'localhost',
+      onConnectionStateChange: s => this.setConnectionState(s),
+      onRetry: this.showRetryError,
     })
   }
 
@@ -136,18 +148,18 @@ export class ConnectionManager {
       configuredServerAddress, internalServerIP, externalServerIP, serverPort,
     } = manifest
 
-    const uriList = configuredServerAddress ?
-      [getWsUrl(configuredServerAddress, serverPort)] :
+    const baseUriPartsList = configuredServerAddress ?
+      [{ host: configuredServerAddress, port: serverPort }] :
       [
-        getWsUrl(externalServerIP, serverPort),
-        getWsUrl(internalServerIP, serverPort),
+        { host: externalServerIP, port: serverPort },
+        { host: internalServerIP, port: serverPort },
       ]
 
     return new WebsocketConnection({
-      uriList,
+      baseUriPartsList,
       onMessage: this.props.onMessage,
-      onConnectionStateChange: this.setConnectionState,
-      isLocal: false,
+      onConnectionStateChange: s => this.setConnectionState(s),
+      onRetry: this.showRetryError,
     })
   }
 
@@ -156,7 +168,7 @@ export class ConnectionManager {
       manifest,
       reportId,
       onMessage: this.props.onMessage,
-      onConnectionStateChange: this.setConnectionState,
+      onConnectionStateChange: s => this.setConnectionState(s),
     })
   }
 
@@ -206,8 +218,4 @@ async function fetchManifest(reportId: string): Promise<any> {
   const manifestKey = `${version}/reports/${reportId}/manifest.json`
   const data = await getObject({Bucket: bucket, Key: manifestKey})
   return data.json()
-}
-
-function getWsUrl(host: string, port: number): string {
-  return `ws://${host}:${port}/stream`
 }

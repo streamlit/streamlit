@@ -46,7 +46,7 @@ class App extends PureComponent {
     this.state = {
       reportId: '<null>',
       reportName: null,
-      elements: fromJS([makeElementWithInfoText('Connecting...')]),
+      elements: fromJS([makeElementWithInfoText('Please wait...')]),
       userSettings: {
         wideMode: false,
         runOnSave: false,
@@ -136,33 +136,17 @@ class App extends PureComponent {
     if (newState === ConnectionState.CONNECTED) {
       logMessage('Reconnected to server; Requesting a run (which may be preheated)')
       this.widgetMgr.sendUpdateWidgetsMessage()
+      this.setState({ dialog: null })
     }
   }
 
-  showError(error, info) {
-    logError(error, info)
+  showError(errorNode) {
+    logError(errorNode)
 
-    const errorStr = info == null ?
-      `${error}` :
-      `${error}.\n${info}`
-
-    this.showSingleTextElement(errorStr, TextProto.Format.ERROR)
-  }
-
-  /**
-   * Resets the state of client to an empty report containing a single
-   * element which is an alert of the given type.
-   *
-   * body   - The message to display
-   * format - One of the accepted formats from Text.proto.
-   */
-  showSingleTextElement(body, format) {
-    this.setState({
-      reportId: '<null>',
-      elements: fromJS([{
-        type: 'text',
-        text: { format, body },
-      }]),
+    this.openDialog({
+      type: 'warning',
+      title: 'Connection error',
+      msg: errorNode,
     })
   }
 
@@ -404,13 +388,18 @@ class App extends PureComponent {
       } else {
         this.openDialog({
           type: 'warning',
+          title: 'Error sharing report',
           msg: (
-            <div>
-              You do not have sharing configured.
-              Please contact&nbsp;
-              <a href="mailto:hello@streamlit.io">Streamlit Support</a>
-              &nbsp;to setup sharing.
-            </div>
+            <React.Fragment>
+              <div>
+                You do not have sharing configured.
+              </div>
+              <div>
+                Please contact{' '}
+                <a href="mailto:hello@streamlit.io">Streamlit Support</a>
+                {' '}to setup sharing.
+              </div>
+            </React.Fragment>
           ),
         })
       }
@@ -540,8 +529,8 @@ class App extends PureComponent {
   /**
    * Updates the report body when there's a connection error.
    */
-  handleConnectionError(errMsg) {
-    this.showError(`Connection error: ${errMsg}`)
+  handleConnectionError(errNode) {
+    this.showError(errNode)
   }
 
   /**

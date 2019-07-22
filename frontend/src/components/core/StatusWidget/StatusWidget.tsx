@@ -357,20 +357,12 @@ export class StatusWidget extends PureComponent<Props, State> {
   private static getConnectionStateUI(state: ConnectionState): ConnectionStateUI | undefined {
     switch (state) {
       case ConnectionState.INITIAL:
-      case ConnectionState.INITIAL_CONNECTING:
+      case ConnectionState.PINGING_SERVER:
+      case ConnectionState.CONNECTING:
         return {
           icon: <use href={openIconic + '#ellipses'}/>,
-          label: 'Waiting',
-          tooltip: 'Waiting for connection',
-        }
-
-      case ConnectionState.DISCONNECTED:
-      case ConnectionState.RECONNECTING:
-      case ConnectionState.WAITING:
-        return {
-          icon: <use href={openIconic + '#circle-x'}/>,
-          label: 'Disconnected',
-          tooltip: 'Disconnected from live data feed',
+          label: 'Connecting',
+          tooltip: 'Connecting to Streamlit server',
         }
 
       case ConnectionState.CONNECTED:
@@ -382,7 +374,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         return {
           icon: <use href={openIconic + '#warning'}/>,
           label: 'Error',
-          tooltip: 'Unable to connect',
+          tooltip: 'Unable to connect to Streamlit server',
         }
     }
   }

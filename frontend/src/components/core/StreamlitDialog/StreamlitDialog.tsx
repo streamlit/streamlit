@@ -270,6 +270,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
 
 interface WarningProps {
   type: 'warning';
+  title: string;
   msg: ReactNode;
   onClose: PlainEventHandler;
 }
@@ -280,6 +281,7 @@ interface WarningProps {
 function warningDialog(props: WarningProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
+      <ModalHeader>{props.title}</ModalHeader>
       <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
         <Button outline onClick={props.onClose}>Done</Button>

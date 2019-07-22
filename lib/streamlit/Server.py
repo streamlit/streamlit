@@ -24,9 +24,17 @@ LOGGER = get_logger(__name__)
 
 
 # Largest message that can be sent via the WebSocket connection.
-# (Limit was picked by trial and error)
+# (Limit was picked arbitrarily)
 # TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 10466493
+MESSAGE_SIZE_LIMIT = 5 * 10e7  # 50MB
+
+
+TORNADO_SETTINGS = {
+    'compress_response': True,  # Gzip HTTP responses.
+    'websocket_ping_interval': 20,  # Ping every 20s to keep WS alive.
+    'websocket_ping_timeout': 30,  # Pings should be responded to within 30s.
+    'websocket_max_message_size': MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+}
 
 
 # Dictionary key used to mark the script execution context that starts
@@ -80,7 +88,7 @@ class Server(object):
         self._ioloop = tornado.ioloop.IOLoop.current()
 
         port = config.get_option('server.port')
-        app = tornado.web.Application(self._get_routes())
+        app = tornado.web.Application(self._get_routes(), **TORNADO_SETTINGS)
         app.listen(port)
 
         LOGGER.debug('Server started on port %s', port)
@@ -106,9 +114,10 @@ class Server(object):
             LOGGER.debug('Serving static content from %s', static_path)
 
             routes.extend([
-                (r"/()$", _StaticFileHandler,
+                (r"/()$", tornado.web.StaticFileHandler,
                     {'path': '%s/index.html' % static_path}),
-                (r"/(.*)", _StaticFileHandler, {'path': '%s/' % static_path}),
+                (r"/(.*)", tornado.web.StaticFileHandler,
+                    {'path': '%s/' % static_path}),
             ])
         else:
             LOGGER.debug(
@@ -246,46 +255,34 @@ class Server(object):
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
-class _StaticFileHandler(tornado.web.StaticFileHandler):
-    # Don't disable cache since Tornado sets the etag properly. This means the
-    # browser sends the hash of its cached file and Tornado only returns the
-    # actual file if the latest hash is different.
-    #
-    # def set_extra_headers(self, path):
-    #     """Disable cache."""
-    #     self.set_header('Cache-Control', 'no-cache')
+class _SpecialRequestHandler(tornado.web.RequestHandler):
+    """Superclass for "special" endpoints, like /healthz."""
 
-    def check_origin(self, origin):
-        """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
-
-
-class _HealthHandler(tornado.web.RequestHandler):
     def initialize(self, server):
         self._server = server
 
-    def check_origin(self, origin):
-        """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
+    def set_default_headers(self):
+        self.set_header('Cache-Control', 'no-cache')
+        # Only allow cross-origin requests when using the Node server. This is
+        # only needed when using the Node server anyway, since in that case we
+        # have a dev port and the prod port, which count as two origins.
+        if (not config.get_option('server.enableCORS') or
+                config.get_option('global.useNode')):
+            self.set_header('Access-Control-Allow-Origin', '*')
 
+
+class _HealthHandler(_SpecialRequestHandler):
     def get(self):
-        self.add_header('Cache-Control', 'no-cache')
         if self._server.is_ready_for_browser_connection:
             self.write('ok')
+            self.set_status(200)
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
             self.write('unavailable')
 
 
-class _MetricsHandler(tornado.web.RequestHandler):
-    def initialize(self, server):
-        self._server = server
-
-    def check_origin(self, origin):
-        """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
-
+class _MetricsHandler(_SpecialRequestHandler):
     def get(self):
         if config.get_option('global.metrics'):
             self.add_header('Cache-Control', 'no-cache')
@@ -295,14 +292,8 @@ class _MetricsHandler(tornado.web.RequestHandler):
             self.set_status(404)
             raise tornado.web.Finish()
 
-class _DebugHandler(tornado.web.RequestHandler):
-    def initialize(self, server):
-        self._server = server
 
-    def check_origin(self, origin):
-        """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
-
+class _DebugHandler(_SpecialRequestHandler):
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
         self.write(

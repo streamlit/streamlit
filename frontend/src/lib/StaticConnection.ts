@@ -31,9 +31,8 @@ interface Props {
 
   /**
    * Function called when our ConnectionState changes.
-   * If the new ConnectionState is ERROR, errMsg will be defined.
    */
-  onConnectionStateChange: (connectionState: ConnectionState, errMsg?: string) => void;
+  onConnectionStateChange: (connectionState: ConnectionState) => void;
 }
 
 /**
