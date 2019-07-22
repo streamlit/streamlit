@@ -30,12 +30,31 @@ interface SliderValue {
 }
 
 class Slider extends React.PureComponent<Props, State> {
-  public state: State = {}
+  private sliderRef = React.createRef<HTMLDivElement>()
   private setWidgetValue: () => void
+  public state: State = {}
 
   public constructor(props: Props) {
     super(props)
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
+  }
+
+  public componentDidMount = () => {
+    // Attach click event listener to slider knobs.
+    if (this.sliderRef.current) {
+      const knobSelector = '[role="slider"]'
+      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
+      knobs.forEach(knob => knob.addEventListener('click', this.handleClick))
+    }
+  }
+
+  public componentWillUnmount = () => {
+    // Remove click event listener from slider knobs.
+    if (this.sliderRef.current) {
+      const knobSelector = '[role="slider"]'
+      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
+      knobs.forEach(knob => knob.removeEventListener('click', this.handleClick))
+    }
   }
 
   /**
@@ -43,14 +62,40 @@ class Slider extends React.PureComponent<Props, State> {
    * if the user hasn't interacted with it yet.
    */
   private get valueOrDefault(): number[] {
-    if (this.state.value === undefined) {
-      return this.props.element.get('value').toArray()
-    } else {
-      return this.state.value
+    const min = this.props.element.get('min')
+    const max = this.props.element.get('max')
+    const value = this.state.value === undefined
+      ? this.props.element.get('value').toArray()
+      : this.state.value
+
+    let start = value[0]
+    let end = value.length > 1 ? value[1] : value[0]
+
+    // Adjust the value if it's out of bounds.
+    if (start > end) {
+      start = end
     }
+    if (start < min) {
+      start = min
+    }
+    if (start > max) {
+      start = max
+    }
+    if (end < min) {
+      end = min
+    }
+    if (end > max) {
+      end = max
+    }
+
+    return value.length > 1 ? [start, end] : [start]
   }
 
-  private handleChange = ({ value }: SliderValue) => {
+  private handleClick = (e: Event): void => {
+    (e.target as HTMLElement).focus()
+  }
+
+  private handleChange = ({ value }: SliderValue): void => {
     this.setState({ value })
     this.setWidgetValue()
   }
@@ -65,7 +110,6 @@ class Slider extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, width } = this.props
-
     const label = element.get('label')
     const min = element.get('min')
     const max = element.get('max')
@@ -73,7 +117,7 @@ class Slider extends React.PureComponent<Props, State> {
     const style = { width }
 
     return (
-      <div className="Widget stSlider" style={style}>
+      <div ref={this.sliderRef} className="Widget stSlider" style={style}>
         <label>{label}</label>
         <UISlider
           min={min}

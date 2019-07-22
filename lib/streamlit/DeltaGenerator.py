@@ -1326,6 +1326,15 @@ class DeltaGenerator(object):
         if not all_ints and not all_floats:
             raise TypeError("Both value and arguments must be of the same type.")
 
+        # Ensure that min <= value <= max.
+        if single_value:
+            if not min_value <= value <= max_value:
+                raise ValueError("The value and/or arguments are out of range.")
+        else:
+            start, end = value
+            if not min_value <= start <= end <= max_value:
+                raise ValueError("The value and/or arguments are out of range.")
+
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
         # Cast ui_value to the same type as the input arguments
