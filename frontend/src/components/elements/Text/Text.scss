@@ -6,80 +6,87 @@
 @import 'src/assets/css/variables';
 
 
-.streamlit-container .fixed-width {
-  font-family: $font-family-monospace;
-  white-space: pre;
-  font-size: $font-size-sm;
-  overflow-x: auto;
-}
+.streamlit-container {
+  .fixed-width {
+    font-family: $font-family-monospace;
+    white-space: pre;
+    font-size: $font-size-sm;
+    overflow-x: auto;
+  }
 
-.streamlit-container .markdown-text-container {
-  font-family: $font-family-sans-serif;
-  margin-bottom: -1rem;
-}
+  .markdown-text-container {
+    font-family: $font-family-sans-serif;
+    margin-bottom: -1rem;
 
-.streamlit-container .markdown-text-container a {
-  color: $blue;
-}
+    a {
+      color: $blue;
+    }
 
-.streamlit-container .markdown-text-container code {
-  padding: 0.2em 0.4em;
-  margin: 0;
-  border-radius: $border-radius;
-  background: $gray-faint;
-  color: $green;
-}
+    code {
+      padding: 0.2em 0.4em;
+      margin: 0;
+      border-radius: $border-radius;
+      background: $gray-faint;
+      color: $green;
+    }
 
-.streamlit-container .markdown-text-container pre {
-  background: $gray-faint;
-  border-radius: $border-radius;
-  margin: 0 0 1rem 0;
-  padding: 1rem;
-}
+    pre {
+      background: $gray-faint;
+      border-radius: $border-radius;
+      margin: 0 0 1rem 0;
+      padding: 1rem;
 
-.streamlit-container .markdown-text-container pre code {
-  background: transparent;
-  border: 0;
-  display: inline;
-  font-size: $font-size-sm;
-  line-height: inherit;
-  margin: 0;
-  max-width: auto;
-  padding: 0;
-  white-space: pre;
-  word-break: normal;
-  word-wrap: normal;
-  overflow-x: auto;
-  color: $black;
-}
+      code {
+        background: transparent;
+        border: 0;
+        display: inline;
+        font-size: $font-size-sm;
+        line-height: inherit;
+        margin: 0;
+        max-width: auto;
+        padding: 0;
+        white-space: pre;
+        word-break: normal;
+        word-wrap: normal;
+        overflow-x: auto;
+        color: $black;
+      }
+    }
 
-.streamlit-container .markdown-text-container tr {
-  border-top: 1px solid $gray-lighter;
-  background: $white;
-}
+    tr {
+      border-top: 1px solid $gray-lighter;
+      background: $white;
+    }
+    
+    th, td {
+      padding: 6px 13px;
+      border: 1px solid $gray-lighter;
+    } 
+  }
 
-.streamlit-container .markdown-text-container th, td {
-  padding: 6px 13px;
-  border: 1px solid $gray-lighter;
-}
+  .markdown-text-container table tr:nth-child(2n) {
+    background: $gray-faint;
+  }
+  
+  pre.error {
+    padding: $border-radius;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: inherit;
+    font-size: $font-size-sm;
+  }
+  
+  .react-json-view {
+    font-family: $font-family-monospace;
+    font-size: $font-size-sm;
+  }
+  
+  .alert {
+    margin: 0;
 
-.streamlit-container .markdown-text-container table tr:nth-child(2n) {
-  background: $gray-faint;
-}
-
-.streamlit-container pre.error {
-  padding: $border-radius;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  color: inherit;
-  font-size: $font-size-sm;
-}
-
-.streamlit-container .react-json-view {
-  font-family: $font-family-monospace;
-  font-size: $font-size-sm;
-}
-
-.streamlit-container .alert {
-  margin: 0;
+    code {
+      background: rgba(255, 255, 255, 0.5);
+      color: inherit;
+    }
+  }
 }
