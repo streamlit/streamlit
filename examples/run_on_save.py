@@ -18,9 +18,9 @@ How to test this:
 
 st.write('This should change every ', secs_to_wait, ' seconds: ', random())
 
-# Sleep for 10s (rather than, say, 1s) because on the first run we need to
-# make sure Streamlit and its proxy are fully initialized before the timer
-# below expires. This can take several seconds.
+# Sleep for 5s (rather than, say, 1s) because on the first run we need to make
+# sure Streamlit is fully initialized before the timer below expires. This can
+# take several seconds.
 status = st.empty()
 for i in range(secs_to_wait, 0, -1):
     time.sleep(1)

@@ -154,12 +154,6 @@ def _delete_option(key):
         pass
 
 
-PROXY_DEPRECATION_TEXT = '''This configuration option does not do anything
-anymore, since Streamlit no longer has a proxy. Please remove it from your
-config file.'''
-PROXY_DEPRECATION_EXPIRATION = '2019-06-30'
-
-
 # Config Section: Global #
 
 _create_section('global', 'Global options that apply across all of Streamlit.')
@@ -254,147 +248,6 @@ _create_option(
         Streamlit report.''',
     default_val=True)
 
-_create_option(
-    'client.waitForProxySecs',
-    description='How long to wait for the proxy server to start up.',
-    default_val=3.0,
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'client.throttleSecs',
-    description='How long to wait between draining the client queue.',
-    default_val=0.01,
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'client.tryToOutliveProxy',
-    description='''
-        If true, waits for the proxy to close before exiting the client script.
-        And if the proxy takes too long (10s), just exits the script.
-
-        This is useful when running a Streamlit script in a container, to allow
-        the proxy to shut itself down cleanly.
-        ''',
-    default_val=False,
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'client.proxyAddress',
-    description='''
-        Internet address of the proxy server that the client should connect
-        to. Can be IP address or DNS name.''',
-    default_val='localhost',
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-
-@_create_option(
-    'client.proxyPort',
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-def _client_proxy_port():
-    """Port that the client should use to connect to the proxy.
-
-    Default: whatever value is set in proxy.port.
-    """
-    return get_option('proxy.port')
-
-
-# Config Section: Proxy #
-
-_create_section('proxy', 'Configuration of the proxy server.')
-
-_create_option(
-    'proxy.autoCloseDelaySecs',
-    description='''
-        How long the proxy should stay open when there are no connections.
-
-        Can be set to inf for "infinity".
-
-        Note: this delay only starts counting after the reportExpirationSecs
-        delay transpires.
-        ''',
-    default_val=0,
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.reportExpirationSecs',
-    description=(
-        'How long reports should be stored in memory for when the '
-        'script is done and there are no viewers. '
-        'For best results make sure this is >= 3.'),
-    default_val=60,
-    deprecated=True,
-    deprecation_text=PROXY_DEPRECATION_TEXT,
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.isRemote',
-    description='''Is the proxy running remotely.
-
-        Default: false unless we are on a Linux box where DISPLAY is unset.
-        ''',
-    replaced_by='server.headless',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.liveSave',
-    description='''
-        Immediately share the report in such a way that enables live
-        monitoring, and post-run analysis.
-
-        Default: whatever value is set in server.liveSave.
-        ''',
-    replaced_by='server.liveSave',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.runOnSave',
-    description='''
-        Watch for filesystem changes and rerun reports.
-
-        Default: whatever value is set in server.runOnSave.
-        ''',
-    replaced_by='server.runOnSave',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.watchFileSystem',
-    description='Watch for filesystem changes and rerun reports.',
-    replaced_by='server.runOnSave',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.enableCORS',
-    description='''
-        Enables support for Cross-Origin Request Sharing, for added security.
-
-        Default: whatever value is set in server.enableCORS.
-        ''',
-    replaced_by='server.enableCORS',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
-_create_option(
-    'proxy.port',
-    description='''
-        The port where the proxy will listen for client and browser
-        connections.
-
-        Default: whatever value is set in server.port.
-        ''',
-    replaced_by='server.port',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 # Config Section: Runner #
 
@@ -441,10 +294,7 @@ def _server_headless():
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) server.liveSave is set.
     """
-    if is_manually_set('proxy.isRemote'):
-        return get_option('proxy.isRemote')
-
-    is_live_save_on = get_option('proxy.liveSave')
+    is_live_save_on = get_option('server.liveSave')
     is_linux = (platform.system() == 'Linux')
     has_display_env = (not os.getenv('DISPLAY'))
     is_running_in_editor_plugin = (
@@ -463,8 +313,6 @@ def _server_live_save():
 
     Default: false
     """
-    if is_manually_set('proxy.liveSave'):
-        return get_option('proxy.liveSave')
     return False
 
 
@@ -474,10 +322,6 @@ def _server_run_on_save():
 
     Default: false
     """
-    if is_manually_set('proxy.runOnSave'):
-        return get_option('proxy.runOnSave')
-    if is_manually_set('proxy.watchFileSystem'):
-        return get_option('proxy.watchFileSystem')
     return False
 
 
@@ -488,8 +332,6 @@ def _server_port():
 
     Default: 8501
     """
-    if is_manually_set('proxy.port'):
-        return get_option('proxy.port')
     return 8501
 
 
@@ -499,36 +341,12 @@ def _server_enable_cors():
 
     Default: true
     """
-    if is_manually_set('proxy.enableCORS'):
-        return get_option('proxy.enableCORS')
     return True
 
 
 # Config Section: Browser #
 
 _create_section('browser', 'Configuration of browser front-end.')
-
-_create_option(
-    'browser.remotelyTrackUsage',
-    description='''
-        Whether to send usage statistics to Streamlit.
-
-        Default: whatever is set in browser.gatherUsageStats.
-        ''',
-    replaced_by='browser.gatherUsageStats',
-    expiration_date='2019-06-28')
-
-_create_option(
-    'browser.proxyAddress',
-    description='''
-        Internet address of the proxy server that the browser should connect
-        to. Can be IP address or DNS name.
-
-        Default: whatever value is set in browser.serverAddress.
-        ''',
-    replaced_by='browser.serverAddress',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
-
 
 @_create_option('browser.serverAddress')
 def _browser_server_address():
@@ -537,8 +355,6 @@ def _browser_server_address():
 
     Default: 'localhost'
     """
-    if is_manually_set('browser.proxyAddress'):
-        return get_option('browser.proxyAddress')
     return 'localhost'
 
 
@@ -548,21 +364,7 @@ def _gather_usage_stats():
 
     Default: true
     """
-    if is_manually_set('browser.remotelyTrackUsage'):
-        return get_option('browser.remotelyTrackUsage')
     return True
-
-
-_create_option(
-    'browser.proxyPort',
-    description='''
-        Port that the browser should use to connect to the server.
-
-        Default: whatever value is set in browser.serverPort.
-    ''',
-    deprecation_text='Use browser.serverPort instead.',
-    replaced_by='browser.serverPort',
-    expiration_date=PROXY_DEPRECATION_EXPIRATION)
 
 
 @_create_option('browser.serverPort')
@@ -572,8 +374,6 @@ def _browser_server_port():
 
     Default: whatever value is set in server.port.
     """
-    if is_manually_set('browser.proxyPort'):
-        return get_option('browser.proxyPort')
     return get_option('server.port')
 
 
@@ -674,7 +474,7 @@ _create_option(
 
 # TODO: Don't memoize! Otherwise, if the internet is down momentarily when this
 # function is first called then we'll have no credentials forever while the
-# proxy is up.
+# server is up.
 @util.memoize
 def _get_public_credentials():
     STREAMLIT_CREDENTIALS_URL = 'https://streamlit.io/tmp/st_pub_write.json'
@@ -975,18 +775,14 @@ def _check_conflicts():
     # hard-coded in JS). Otherwise, the browser would decide what port to
     # connect to based on either:
     #   1. window.location.port, which in dev is going to be (3000)
-    #   2. the proxyPort value in manifest.json, which would work, but only
-    #   exists with proxy.liveSave.
+    #   2. the serverPort value in manifest.json, which would work, but only
+    #   exists with server.liveSave.
 
     if get_option('global.developmentMode'):
-        assert (
-            _is_unset('server.port') and
-            _is_unset('proxy.port')), (
+        assert _is_unset('server.port'), (
             'server.port does not work when global.developmentMode is true.')
 
-        assert (
-            _is_unset('browser.serverPort') and
-            _is_unset('browser.proxyPort')), (
+        assert _is_unset('browser.serverPort'), (
             'browser.serverPort does not work when global.developmentMode is '
             'true.')
 

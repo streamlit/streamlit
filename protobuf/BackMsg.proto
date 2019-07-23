@@ -3,16 +3,16 @@ syntax = "proto3";
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
-    // Set to true to ask the proxy to display the inline help.
+    // Set to true to ask the server to display the inline help.
     // bool help = 1;  DEPRECATED
 
-    // Set to true to ask the proxy to upload the report.
+    // Set to true to ask the server to upload the report.
     bool cloud_upload = 2;
 
-    // Asks the proxy to run the script with this given command line.
+    // Asks the server to run the script with this given command line.
     string rerun_script = 3;
 
-    // DEPRECATED - Asks the proxy to run the script with this object
+    // DEPRECATED - Asks the server to run the script with this object
     // ReRun rerun = 4;
 
     // Requests that the report's @st_cache be cleared
@@ -29,7 +29,7 @@ message BackMsg {
 
     WidgetStates update_widgets = 9;
 
-    // Set to true to ask the proxy to close the connection
+    // Set to true to ask the server to close the connection
     bool close_connection = 10;
   }
 }

@@ -228,7 +228,6 @@ class ConfigTest(unittest.TestCase):
             u'browser',
             u'client',
             u'global',
-            u'proxy',
             u'runner',
             u's3',
             u'server',
@@ -239,18 +238,10 @@ class ConfigTest(unittest.TestCase):
     def test_config_option_keys(self):
         config_options = [
             u'browser.gatherUsageStats',
-            u'browser.proxyAddress',
-            u'browser.proxyPort',
-            u'browser.remotelyTrackUsage',
             u'browser.serverAddress',
             u'browser.serverPort',
             u'client.caching',
             u'client.displayEnabled',
-            u'client.proxyAddress',
-            u'client.proxyPort',
-            u'client.throttleSecs',
-            u'client.tryToOutliveProxy',
-            u'client.waitForProxySecs',
             u'global.developmentMode',
             u'global.logLevel',
             u'global.metrics',
@@ -258,14 +249,6 @@ class ConfigTest(unittest.TestCase):
             u'global.showWarningOnDirectExecution',
             u'global.unitTest',
             u'global.useNode',
-            u'proxy.autoCloseDelaySecs',
-            u'proxy.enableCORS',
-            u'proxy.isRemote',
-            u'proxy.liveSave',
-            u'proxy.port',
-            u'proxy.reportExpirationSecs',
-            u'proxy.runOnSave',
-            u'proxy.watchFileSystem',
             u'runner.installTracer',
             u'runner.magicEnabled',
             u's3.accessKeyId',
@@ -444,18 +427,25 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(True, config.get_option('server.headless'))
 
     def test_server_headless_via_atom_plugin(self):
-        config.set_option('server.liveSave', False)
         os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN'] = 'True'
+
+        config.set_option('server.liveSave', False)
         self.assertEqual(True, config.get_option('server.headless'))
 
+        del os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN']
+
     def test_server_headless(self):
+        orig_display = None
         if 'DISPLAY' in os.environ.keys():
+            orig_display = os.environ['DISPLAY']
             del os.environ['DISPLAY']
-        if 'IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN' in os.environ.keys():
-            del os.environ['IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN']
+
         with patch('streamlit.config.platform.system') as p:
             p.return_value = 'Linux'
             self.assertEqual(True, config.get_option('server.headless'))
+
+        if orig_display:
+            os.environ['DISPLAY'] = orig_display
 
     def test_global_dev_mode(self):
         config.set_option('global.developmentMode', True)

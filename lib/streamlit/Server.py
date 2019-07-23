@@ -106,10 +106,10 @@ class Server(object):
             (r'/metrics', _MetricsHandler, dict(server=self)),
         ]
 
-        if (not config.get_option('global.developmentMode')
-                or not config.get_option('global.useNode')):
-            # If we're not using the node development server, then the proxy
-            # will serve up the development pages.
+        if (config.get_option('global.developmentMode') and
+                config.get_option('global.useNode')):
+            LOGGER.debug('Serving static content from the Node dev server')
+        else:
             static_path = util.get_static_dir()
             LOGGER.debug('Serving static content from %s', static_path)
 
@@ -119,10 +119,6 @@ class Server(object):
                 (r"/(.*)", tornado.web.StaticFileHandler,
                     {'path': '%s/' % static_path}),
             ])
-        else:
-            LOGGER.debug(
-                'developmentMode == True, '
-                'not serving static content from python.')
 
         return routes
 
