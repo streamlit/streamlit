@@ -6,13 +6,19 @@ describe('kill server', () => {
   })
 
   it('disconnects the client', () => {
+    cy.get('#ConnectionStatus')
+      .should('not.exist')
+
     cy.window().then((win) => {
       win.streamlitDebug.closeConnection()
 
       cy.get('#ConnectionStatus label')
         .should(
           'have.text',
-          'Disconnected')
+          'Connecting')
+
+      cy.get('#ConnectionStatus')
+        .matchImageSnapshot('disconnected')
     })
   })
 })
