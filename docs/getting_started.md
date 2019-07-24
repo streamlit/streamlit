@@ -68,12 +68,12 @@ A good report isn't just charts and data visualizations, it needs clear and deta
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our `API reference <https://streamlit.io/secret/docs/api/text.html>`_ for a full list of features.
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our `API reference <api.html#display-text>`_ for a full list of features.
 ```
 
 ### Start with a title
 
-Most reports start with a title. With Streamlit, you'll use [`streamlit.title`](https://streamlit.io/secret/docs/api/text.html#streamlit.title) to add a title to your report.
+Most reports start with a title. With Streamlit, you'll use [`streamlit.title`](api.html#streamlit.title) to add a title to your report.
 
 ```eval_rst
 .. tip::
@@ -88,7 +88,7 @@ streamlit.title("My first report")
 
 ### Organize with headers
 
-To help you organize the content of your report, there are two methods that allow you to create headers: [`streamlit.header()`](https://streamlit.io/secret/docs/api/text.html#streamlit.header) and [`streamlit.subheader()`](https://streamlit.io/secret/docs/api/text.html#streamlit.subheader).
+To help you organize the content of your report, there are two methods that allow you to create headers: [`streamlit.header()`](api.html#streamlit.header) and [`streamlit.subheader()`](api.html#streamlit.subheader).
 
 ```python
 streamlit.header("I'm a large heading")
@@ -99,21 +99,21 @@ streamlit.subheader("I'm not a large heading")
 
 There's more than one way to add text to your reports. Whether you're working with plain text, markdown, or want the flexibility to use both, Streamlit's got you covered. Let's take a look at each method and when you should use it. Don't forget, you need to save after adding a method to your report so that it'll show up in the browser.
 
-If you want to add some simple fixed-width text to your report use [`streamlit.text()`](https://streamlit.io/secret/docs/api/text.html#streamlit.text).
+If you want to add some simple fixed-width text to your report use [`streamlit.text()`](api.html#streamlit.text).
 
 ```python
 streamlit.text("Welcome to Streamlit.")
 ```
 
-There are times when you need more than plain text. With [`streamlit.markdown`](https://streamlit.io/secret/docs/api/text.html#streamlit.text) you can write content for your report in [Github-flavored markdown](https://github.github.com/gfm/). This method is perfect for when you need to emphasize text with bold or italics, or add a link to related documentation.
+There are times when you need more than plain text. With [`streamlit.markdown`](api.html#streamlit.text) you can write content for your report in [Github-flavored markdown](https://github.github.com/gfm/). This method is perfect for when you need to emphasize text with bold or italics, or add a link to related documentation.
 
 ```python
 streamlit.markdown("**NOTE:** Markdown is perfect for when you want to *empahsize* elements in your report.")
 ```
 
-There's one more method we're going to cover that allows you to add text to a report. [`streamlit.write()`](https://streamlit.io/secret/docs/api/text.html#streamlit.write) is the only text method that accepts multiple arguments and data types. We consider it the "Swiss Army knife" of Streamlit commands.
+There's one more method we're going to cover that allows you to add text to a report. [`streamlit.write()`](api.html##streamlit.write) is the only text method that accepts multiple arguments and data types. We consider it the "Swiss Army knife" of Streamlit commands.
 
-You can pass almost anything to `streamlit.write()`: text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit will figure it our and render it the right way. While powerful, there are limitations, so we encourage you to review the [API reference](https://streamlit.io/secret/docs/api/text.html#streamlit.write).
+You can pass almost anything to `streamlit.write()`: text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit will figure it our and render it the right way. While powerful, there are limitations, so we encourage you to review the [API reference](api.html#streamlit.write).
 
 Let's take a look at how you can use `streamlit.write()` to display text and a Pandas data frame:
 
@@ -136,14 +136,14 @@ Text is great, but Streamlit's strength is the ability to quickly manipulate dat
 
 ```eval_rst
 .. tip::
-   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for `data <https://streamlit.io/secret/docs/api/data.html>`_ and `charts <https://streamlit.io/secret/docs/api/charts.html>`_.
+   This guide focuses on Streamlit's core features. We're adding new functionality all the time, so make sure that you check out our API reference for `data <api.html#display-data>`_ and `charts <api.html#display-charts>`_.
 ```
 
 ### Display data and tables
 
 There are a few ways to display data (tables, arrays, data frames) in Streamlit reports. In the previous section, you were introduced to `streamlit.write()`, which can be used to write anything from text to tables. Now let's take a look at methods designed specifically for visualizing data. You might be asking yourself, "why wouldn't I always you `streamlit.write()`?" The main reason is that you can't reuse the slot in the report created by `streamlit.write()`. Put simply, you can't update any elements created with `streamlit.write()`.
 
-Let's create a data frame. In this sample, you'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](https://streamlit.io/secret/docs/api/data.html#streamlit.dataframe) method to draw the interactive table.
+Let's create a data frame. In this sample, you'll use Numpy to generate a random sample, and the [`streamlit.dataframe()`](api.html#streamlit.dataframe) method to draw the interactive table.
 
 ```eval_rst
 .. note::
@@ -170,7 +170,7 @@ dataframe = pandas.DataFrame(
 streamlit.dataframe(dataframe.style.highlight_max(axis=0))
 ```
 
-Streamlit also has a method for static table generation: [`streamlit.table()`](https://streamlit.io/secret/docs/api/data.html#streamlit.table).
+Streamlit also has a method for static table generation: [`streamlit.table()`](api.html#streamlit.table).
 
 ```Python
 dataframe = pandas.DataFrame(
@@ -181,9 +181,9 @@ streamlit.table(dataframe)
 
 ### Draw bar charts, line charts, and maps
 
-Streamlit supports sereral popular data charting libraries that allow you to add different types of charts and data representations to your reports, like Matplotlib, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](https://streamlit.io/secret/docs/api/charts.html).
+Streamlit supports several popular data charting libraries that allow you to add different types of charts and data representations to your reports, like Matplotlib, Altair, Deck.Gl, and more. In this section, you'll add a bar chart, line chart, and a map to your report. If you'd like to see a full list of supported charts and libraries, see [API reference](api.html#display-charts).
 
-The [`streamlit.bar_chart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
+The [`streamlit.bar_chart()`](api.html#streamlit.bar_chart) allows you to add bar charts to your report. This example uses a Pandas data frame with three columns as the data source.
 
 ```Python
 chart_data = pandas.DataFrame(
@@ -193,7 +193,7 @@ chart_data = pandas.DataFrame(
 streamlit.bar_chart(chart_data)
 ```
 
-Drawing a line chart is just as easy as drawing a bar chart with [`streamlit.line_chart()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.line_chart). The only difference is that we're going to generate a random sample using Numpy.
+Drawing a line chart is just as easy as drawing a bar chart with [`streamlit.line_chart()`](api.html#streamlit.line_chart). The only difference is that we're going to generate a random sample using Numpy.
 
 ```Python
 chart_data = pandas.DataFrame(
@@ -203,7 +203,7 @@ chart_data = pandas.DataFrame(
 streamlit.line_chart(chart_data)
 ```
 
-With [`streamlit.map()`](https://streamlit.io/secret/docs/api/charts.html#streamlit.map) you can display data points on a map. Let's use Numpy to generate some sample data and plot it on San Francisco.
+With [`streamlit.map()`](api.html#streamlit.map) you can display data points on a map. Let's use Numpy to generate some sample data and plot it on San Francisco.
 
 ```Python
 map_data = pandas.DataFrame(
@@ -279,7 +279,7 @@ chart.add_rows(data2)
 
 ## Order the elements of a report
 
-So far you've learned how to use the methods exposed by Streamlit to add new elements to a report. These have all been additive, with the assumption that you already know what you want to add to the report. What if you're unsure of the structure, or need to add a placeholder for content that isn't quite ready? That's where [`streamlit.empty()`](https://streamlit.io/secret/docs/api/other.html#streamlit.empty) comes in handy. It allows you to add an empty slot to your report that you can update at any time.
+So far you've learned how to use the methods exposed by Streamlit to add new elements to a report. These have all been additive, with the assumption that you already know what you want to add to the report. What if you're unsure of the structure, or need to add a placeholder for content that isn't quite ready? That's where [`streamlit.empty()`](api.html#streamlit.empty) comes in handy. It allows you to add an empty slot to your report that you can update at any time.
 
 Let's take a look at how you can use `streamlit.empty` to add structure to a report.
 

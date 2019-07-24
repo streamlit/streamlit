@@ -2,7 +2,7 @@
 
 Working with Streamlit is simple: first you sprinkle a few _Streamlit
 commands_ into a normal Python script, and then you run the script
-normally.
+with `streamlit run your_script.py [script args]`.
 
 This causes a new tab to pop up in your default web browser, connected to a
 special Streamlit server that automatically launched behind the scenes.
@@ -13,11 +13,11 @@ reports, send someone a link, and have them open the link on any browser.
 
 What exactly gets drawn in the report is up to you. Each command draws a
 different element in the report. For example the
-[`st.text`](api/text.html#streamlit_text)
+[`st.text`](api.html#streamlit.text)
 command writes pure text to the report, and
-[`st.line_chart`](api/charts.html#streamlit_line_chart) draws — you guessed it
+[`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it
 — a line chart.  The swiss army knife of Streamlit commands is
-[`st.write`](api/text.html#write), which we'll get to later.
+[`st.write`](api.html#streamlit.cache), which we'll get to later.
 
 ## Updating the report
 
@@ -30,7 +30,7 @@ re-executes the entire Python script normally, from top to bottom. And
 then it does a bunch of computer-sciencey magic to make sure the report
 gets updated in an optimal way. (Skipping ahead a bit, if you're interested
 in this kind of stuff, take a look at the
-[`st.cache`](api/optimization.html#streamlit.cache) command for additional ways to
+[`st.cache`](api.html#streamlit.cache) command for additional ways to
 optimize your reports.)
 
 In sum, Streamlit allows you to work in a fast interactive loop: that is, you
@@ -73,8 +73,8 @@ my_element.text('Hello world')
 ```
 
 You can also replace one element with another of a completely different
-type. For instance, in the snippet below an [`st.text`](api/text.html#text)
-element gets replaced with an [`st.dataframe`](api/data.html#dataframe).
+type. For instance, in the snippet below an [`st.text`](api.html#text)
+element gets replaced with an [`st.dataframe`](api.html#dataframe).
 
 ```python
 data_element = st.text('Loading data...')
@@ -91,7 +91,7 @@ Streamlit as explained in the _Animating elements_ section, below.
 
 ## Inserting elements out of order
 
-You can use the [`st.empty`](api/other.html#streamlit.empty) command so you can
+You can use the [`st.empty`](api.html#streamlit.empty) command so you can
 "save" a slot in your report for use later on.
 
 ```python

@@ -8,5 +8,6 @@
 
    tutorial_first_steps
    tutorial_caching
+   tutorial_create_an_interactive_report
    tutorial_remote_usage
 ```
