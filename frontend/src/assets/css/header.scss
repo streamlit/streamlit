@@ -89,3 +89,9 @@ header > .toolbar {
     background: unset;
   }
 }
+
+@media print {
+  header {
+    display: none;
+  }
+}
