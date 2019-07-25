@@ -22,6 +22,17 @@ import pandas as pd
 import sys
 import time
 
+# https://kobkrit.com/using-allow-growth-memory-option-in-tensorflow-and-keras-dc8c8081bc96
+from keras.backend.tensorflow_backend import set_session
+import tensorflow as tf
+
+tf_config = tf.ConfigProto()
+# dynamically grow the memory used on the GPU
+# this option is fine on non gpus as well.
+tf_config.gpu_options.allow_growth = True
+tf_config.log_device_placement = True
+set_session(tf.Session(config=tf_config))
+
 
 class MyCallback(keras.callbacks.Callback):
     def __init__(self, x_test):
