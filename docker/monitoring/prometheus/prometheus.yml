@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 1s  # Set the scrape interval to every second. Default is every 1 minute.
+  evaluation_interval: 1s  # Evaluate rules every second. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "rules/process.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'nvidia-gpu'
+    dns_sd_configs:
+      - names:
+          - 'nvidia-gpu'
+        type: 'A'
+        port: 9445

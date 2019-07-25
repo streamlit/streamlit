@@ -1,0 +1,30 @@
+version: '2.3'
+
+services:
+  prometheus:
+    build:
+      context: prometheus
+      dockerfile: Dockerfile
+    ports:
+      - 9090:9090
+    volumes:
+      - prometheus_data:/prometheus
+
+  grafana:
+    build:
+      context: grafana
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  nvidia-gpu:
+    image: mindprince/nvidia_gpu_prometheus_exporter:0.1
+    runtime: nvidia
+    ports:
+      - 9445:9445
+
+volumes:
+  grafana_data:
+  prometheus_data:
