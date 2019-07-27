@@ -7,8 +7,8 @@ describe('st.image', () => {
 
   it('displays an image', () => {
     cy.get('.element-container .stImage img')
-      .should('have.css', 'height', '102px')
-      .should('have.css', 'width', '102px')
+      .should('have.css', 'height', '100px')
+      .should('have.css', 'width', '100px')
   })
 
   it('displays a caption', () => {
