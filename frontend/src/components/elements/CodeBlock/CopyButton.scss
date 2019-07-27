@@ -5,31 +5,40 @@
 
 @import 'src/assets/css/variables';
 
+.element-container {
+  .code-block {
+    position: relative;
+  
+    .copyBtn {
+      background: transparent;
+      border: none;
+      padding: $m1-2-font-size-sm/2 $m1-2-font-size-sm;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transition: opacity 300ms;
+      opacity: 0;
 
-.copyBtn {
-  background: transparent;
-  border: none;
-  padding: 0 $m1-2-font-size-sm;
-  position: absolute;
-  right: -2 * $font-size-base;
-  top: 0;
-  transition: opacity 300ms;
-  opacity: 0;
-}
-
-.element-container:hover {
-  .copyBtn {
-    opacity: 0.25;
+      &:active,
+      &:focus {
+        background: $gray-200;
+        outline: none;
+        opacity: 1.0;
+      }
+    }
+    
+    &:hover {
+      .copyBtn {
+        &:hover {
+          opacity: 1.0;
+        }
+      }
+    }
   }
 
-  .copyBtn:hover {
-    opacity: 1.0;
-  }
-
-  .copyBtn:active,
-  .copyBtn:focus {
-    box-shadow: 0 0 0 0.2rem rgba(118, 128, 150, 0.5);
-    outline: none;
-    opacity: 1.0;
+  &:hover {
+    .copyBtn {
+      opacity: 0.25;
+    }
   }
 }

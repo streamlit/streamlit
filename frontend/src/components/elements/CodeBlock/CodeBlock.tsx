@@ -35,7 +35,7 @@ class CodeBlock extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     if (this.props.language == null) {
       return (
-        <pre>
+        <pre className={'code-block'}>
           <code>{this.props.value}</code>
           <CopyButton text={this.props.value} />
         </pre>
@@ -52,7 +52,7 @@ class CodeBlock extends React.PureComponent<Props> {
     const safeHtml = Prism.highlight(this.props.value, lang, '')
     const languageClassName = `language-${this.props.language}`
     return (
-      <pre>
+      <pre className={'code-block'}>
         <code
           className={languageClassName}
           dangerouslySetInnerHTML={{ __html: safeHtml }}
