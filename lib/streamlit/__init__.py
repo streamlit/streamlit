@@ -313,7 +313,7 @@ def write(*args):
                 flush_buffer()
                 json(arg)
             else:
-                string_buffer.append('`%s`' % _util.escape_markdown(str(arg)))
+                string_buffer.append('`%s`' % str(arg).replace('`', '\\`'))
 
         flush_buffer()
 

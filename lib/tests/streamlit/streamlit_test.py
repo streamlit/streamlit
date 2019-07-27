@@ -793,12 +793,12 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with default clause ie some object."""
         class SomeObject(object):
             def __str__(self):
-                return '1 * 2 - 3 = 4 !'
+                return '1 * 2 - 3 = 4 `ok` !'
 
         with patch('streamlit.markdown') as p:
             st.write(SomeObject())
 
-            p.assert_called_once_with(u'`1 \\* 2 \\- 3 \\= 4 \\!`')
+            p.assert_called_once_with(u'`1 * 2 - 3 = 4 \\`ok\\` !`')
 
     def test_exception(self):
         """Test st.write that raises an exception."""
