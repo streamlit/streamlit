@@ -1,6 +1,6 @@
 .PHONY: build push aws
 
-STREAMLIT_VERSION := 0.43.2
+STREAMLIT_VERSION := 0.44.0
 
 #######################################################################
 # Build
