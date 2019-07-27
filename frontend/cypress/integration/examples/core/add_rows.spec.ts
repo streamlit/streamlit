@@ -6,7 +6,10 @@ describe('st.add_rows', () => {
     cy.visit('http://localhost:3000/')
 
     // Rerun the script because we want to test that JS-side coalescing works.
-    cy.get('.stApp > header').type('r')
+    cy.get('.stApp .decoration').trigger('keypress', {
+      keyCode: 82,  // "r"
+      which: 82,  // "r"
+    })
 
     // Wait for 'stale-element' class to go away, so the snapshot looks right.
     cy.get('.element-container')

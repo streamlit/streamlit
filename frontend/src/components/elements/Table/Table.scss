@@ -12,15 +12,14 @@
 }
 
 .streamlit-container .streamlit-table th {
-  border-bottom: none;
   border-bottom: 1px solid #dee2e6;
   vertical-align: middle;
 }
 
 .streamlit-container .streamlit-table td {
-  border-left: none;
-  border-right: none;
   vertical-align: middle;
+  border-top: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .streamlit-container .streamlit-table .empty-table td {
@@ -28,4 +27,5 @@
   font-style: italic;
   font-size: 0.8rem;
   text-align: center;
+  border-bottom: 1px solid #dee2e6;
 }

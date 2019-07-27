@@ -1,5 +1,5 @@
 {% set name = "streamlit" %}
-{% set version = "0.43.2" %}
+{% set version = "0.44.0" %}
 
 package:
   name: "{{ name|lower }}"

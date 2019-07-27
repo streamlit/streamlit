@@ -1,20 +1,9 @@
 #!/usr/bin/env python
 """Runs all the scripts in the examples folder (except this one)."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, \
-    absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
-
 import os
 import sys
-import streamlit as st
-from streamlit import compatibility
-
-# This is how we get user input
-if not compatibility.is_running_py3():
-    input = raw_input  # noqa: F821
+import click
 
 # True means we run through all tests automatically.
 auto_run = False
@@ -35,11 +24,8 @@ EXCLUDED_FILENAMES = (
 def run_commands(section_header, commands, skip_last_input=False,
                  comment=None):
     """Run a list of commands, displaying them within the given section."""
-    global auto_run, status
+    global auto_run
 
-    st.header(section_header)
-    if comment:
-        st.write(comment)
     for i, command in enumerate(commands):
         # Display the status.
         vars = {
@@ -48,39 +34,31 @@ def run_commands(section_header, commands, skip_last_input=False,
             'command': command,
             'v': i + 1,
         }
-        status.warning(
-            'Running %(section_header)s %(v)s/%(total)s : %(command)s' % vars)
-        st.subheader('%(v)s/%(total)s : %(command)s' % vars)
-        print('Running `%s`...' % command)
+        click.secho(
+            '\nRunning %(section_header)s %(v)s/%(total)s : %(command)s' % vars,
+            bold=True)
+        click.secho(
+            '\n%(v)s/%(total)s : %(command)s' % vars,
+            fg='yellow', bold=True)
+
+        if comment:
+            click.secho(comment)
 
         # Run the command.
-        exit_code = os.system(command)
-        if exit_code == 0:
-            st.success('Exit Code: 0')
-        else:
-            st.error('Exit Code: %s' % exit_code)
+        os.system(command)
 
-        #
         last_command = (i + 1 == len(commands))
         if not (auto_run or (last_command and skip_last_input)):
-            sys.stdout.write(
-                'Press [enter] to continue or [a] to continue on auto:\n> ')
-            status.info('Waiting for input.')
-            response = input()
+            click.secho(
+                'Press [enter] to continue or [a] to continue on auto:\n> ',
+                nl=False)
+            response = click.getchar()
             if response == 'a':
                 print('Turning on auto run.')
                 auto_run = True
 
 
 def main():
-    global status
-
-    st.title('Running All Examples')
-
-    st.header('Status')
-
-    status = st.warning('Initializing...')
-
     # First run the 'streamlit commands'
     run_commands('Basic Commands', [
         'streamlit version',
@@ -113,8 +91,7 @@ def main():
         'MNIST', ['streamlit run %s/mnist-cnn.py' % EXAMPLE_DIR],
         skip_last_input=True)
 
-    status.success('Completed all tests!')
-    st.balloons()
+    click.secho('\n\nCompleted all tests!', bold=True)
 
 
 if __name__ == '__main__':

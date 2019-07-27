@@ -12,7 +12,7 @@ def readme():
 
 setuptools.setup(
     name='streamlit',
-    version='0.43.2',  # PEP-440
+    version='0.44.0',  # PEP-440
     description='Streaming Data Science',
     long_description=readme(),
     url='https://streamlit.io',

@@ -15,7 +15,10 @@ describe('st.pyplot', () => {
 
   it('clears the figure on rerun', () => {
     // Rerun the script
-    cy.get('.stApp > header').type('r')
+    cy.get('.stApp .decoration').trigger('keypress', {
+      keyCode: 82,  // "r"
+      which: 82,  // "r"
+    })
 
     // Wait for 'stale-element' class to go away, so the snapshot looks right.
     cy.get('.element-container')

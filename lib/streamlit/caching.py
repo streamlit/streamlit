@@ -9,6 +9,7 @@ setup_2_3_shims(globals())
 
 import copy
 import hashlib
+import inspect
 import os
 import re
 import shutil
@@ -166,12 +167,7 @@ def cache(func=None, on_disk=False):
             LOGGER.debug('Hashing %i bytes. %s',
                 len(arg_string), func.__name__)
             hasher.update(arg_string)
-            # hash the bytecode
-            hasher.update(func.__code__.co_code)
-            # hash constants that are referenced by the bytecode
-            hasher.update(pickle.dumps(func.__code__.co_consts, pickle.HIGHEST_PROTOCOL))
-            # hash non-local names referenced by the bytecode
-            hasher.update(pickle.dumps(func.__code__.co_names, pickle.HIGHEST_PROTOCOL))
+            hasher.update(inspect.getsource(func).encode('utf-8'))
             key = hasher.hexdigest()
             LOGGER.debug('Cache key: %s', key)
 
