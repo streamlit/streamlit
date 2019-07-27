@@ -34,7 +34,6 @@ def _modify_ast_subtree(tree, body_attr='body', is_root=False):
     body = getattr(tree, body_attr)
 
     for i, node in enumerate(body):
-        new_value = None
         node_type = type(node)
 
         # Parse the contents of functions and With statements
