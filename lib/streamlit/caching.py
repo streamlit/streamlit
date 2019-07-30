@@ -353,9 +353,10 @@ def _clear_mem_cache():
     mem_cache = {}
 
 
+unchecked_mem_cache = {}
+
 class Cache(dict):
     def __init__(self):
-        self.__hash = None
         dict.__init__(self)
 
     def __bool__(self):
@@ -376,12 +377,11 @@ class Cache(dict):
 
         code_hash = textwrap.dedent(lines)
 
-        if self.__hash:
-            hash_changed = self.__hash != code_hash
-            self.__hash = code_hash
-            return hash_changed
+        if code_hash in unchecked_mem_cache:
+            self.update(unchecked_mem_cache[code_hash])
+            return False
         else:
-            self.__hash = code_hash
+            unchecked_mem_cache[code_hash] = self
             return True
 
     # Python 2 doesn't have __bool__
@@ -392,17 +392,11 @@ class Cache(dict):
         return self.__getitem__(key)
 
     def __setattr__(self, key, value):
-        if key.startswith('_Cache'):
-            super(Cache, self).__setattr__(key, value)
-        else:
-            dict.__setitem__(self, key, value)
-
-
-cache_obj = Cache()
+        dict.__setitem__(self, key, value)
 
 
 def run_once():
-    """Storage object to cache execution.
+    """Storage for data that survives reruns.
 
     Parameters
     ----------
@@ -416,12 +410,13 @@ def run_once():
     ...
     >>> # c.data will always be defined but the code block only runs the first time
 
-    In Python 3.8 and above, you can fuse the assignment and if-check.
+    In Python 3.8 and above, you can combine the assignment and if-check with an
+    assignment expression (`:=`).
 
-    >>> if c :=  st.run_once():
+    >>> if c := st.run_once():
     ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
     ...     c.data = ...
 
 
     """
-    return cache_obj
+    return Cache()
