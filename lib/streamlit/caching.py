@@ -13,6 +13,7 @@ import inspect
 import os
 import shutil
 import struct
+import textwrap
 from collections import namedtuple
 from functools import wraps
 
@@ -329,7 +330,7 @@ def clear_cache():
         True if the disk cache was cleared. False otherwise (e.g. cache file
         doesn't exist on disk).
     """
-    _clear__mem_cache()
+    _clear_mem_cache()
     return _clear_disk_cache()
 
 
@@ -347,6 +348,80 @@ def _clear_disk_cache():
     return False
 
 
-def _clear__mem_cache():
-    global _mem_cache
-    _mem_cache = {}
+def _clear_mem_cache():
+    global mem_cache
+    mem_cache = {}
+
+
+class Cache(dict):
+    def __init__(self):
+        self.__hash = None
+        dict.__init__(self)
+
+    def __bool__(self):
+        caller_frame = inspect.currentframe().f_back
+        frameinfo = inspect.getframeinfo(caller_frame)
+        filename, caller_lineno, code_context, _, _ = frameinfo
+
+        indent_if = len(code_context) - len(code_context.lstrip())
+
+        lines = ''
+        with open(filename, 'r') as f:
+            for line in f.readlines()[caller_lineno:]:
+                indent = len(line) - len(line.lstrip())
+                if indent <= indent_if:
+                    break
+                if line.strip() and not line.lstrip().startswith("#"):
+                    lines += line
+
+        code_hash = textwrap.dedent(lines)
+
+        if self.__hash:
+            hash_changed = self.__hash != code_hash
+            self.__hash = code_hash
+            return hash_changed
+        else:
+            self.__hash = code_hash
+            return True
+
+    # Python 2 doesn't have __bool__
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __getattr__(self, key):
+        return self.__getitem__(key)
+
+    def __setattr__(self, key, value):
+        if key.startswith('_Cache'):
+            super(Cache, self).__setattr__(key, value)
+        else:
+            dict.__setitem__(self, key, value)
+
+
+cache_obj = Cache()
+
+
+def run_once():
+    """Storage object to cache execution.
+
+    Parameters
+    ----------
+
+    Example
+    -------
+    >>> c = st.run_once()
+    ... if c:
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+    ...
+    >>> # c.data will always be defined but the code block only runs the first time
+
+    In Python 3.8 and above, you can fuse the assignment and if-check.
+
+    >>> if c :=  st.run_once():
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+
+
+    """
+    return cache_obj
