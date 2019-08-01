@@ -1,3 +1,4 @@
+import copy
 import os
 import pandas as pd
 import streamlit as st
@@ -12,13 +13,13 @@ st.write('''
     * A 3D hexagonal histogram plot of bike-sharing rentals (origin locations).
 ''')
 
-@st.cache(on_disk=True)
+@st.cache(persist=True)
 def from_data_file(filename):
     dirname = os.path.dirname(__file__)
     return pd.read_json(os.path.join(dirname, 'data', filename))
 
 # Grab some data
-bart_stop_stats = from_data_file('bart_stop_stats.json')
+bart_stop_stats = copy.deepcopy(from_data_file('bart_stop_stats.json'))
 bart_path_stats = from_data_file('bart_path_stats.json')
 bike_rental_stats = from_data_file('bike_rental_stats.json')
 
