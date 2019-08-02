@@ -447,10 +447,11 @@ def echo():
         else:
             filename, start_line = frame[:2]
         yield
+        frame = _traceback.extract_stack()[-3]
         if _is_running_py3():
-            end_line = _traceback.extract_stack()[-3].lineno
+            end_line = frame.lineno
         else:
-            end_line = _traceback.extract_stack()[-3][1]
+            end_line = frame[1]
         lines_to_display = []
         with open(filename) as source_file:
             source_lines = source_file.readlines()
