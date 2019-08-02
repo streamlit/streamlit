@@ -141,7 +141,12 @@ def _widget(f):
             raise TypeError('%s must have a label' % f.__name__)
 
         ctx = get_report_ctx()
-        widget_id = str(label)
+        # The widget ID is the widget type (i.e. the name "foo" of the
+        # st.foo function for the widget) followed by the label.
+        # This allows widgets of different types to have the same label,
+        # and solves a bug where changing the widget type but keeping
+        # the label could break things.
+        widget_id = '%s-%s' % (f.__name__, label)
 
         el = getattr(element, f.__name__)
         el.id = widget_id
