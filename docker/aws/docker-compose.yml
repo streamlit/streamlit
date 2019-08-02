@@ -68,3 +68,15 @@ services:
         STREAMLIT_VERSION: ${STREAMLIT_VERSION}
     ports:
       - 5652:8501
+
+  streamlit-demo-hongshan-tree-detector:
+    image: streamlit/private-demos:HongshanLi-TreeDetector-b7d9d7b-0
+    runtime: nvidia
+    ports:
+      - 5603:8501
+
+  streamlit-demo-dannynguyen-eyewash:
+    image: streamlit/private-demos:DannyNguyen-EyeWash-dcc49d1-1
+    runtime: nvidia
+    ports:
+      - 5604:8501
