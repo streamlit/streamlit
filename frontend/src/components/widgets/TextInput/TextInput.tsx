@@ -8,7 +8,6 @@ import { Input as UIInput } from 'baseui/input'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 
-
 interface Props {
   disabled: boolean;
   element: ImmutableMap<string, any>;
@@ -21,7 +20,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: string;
+  value: string;
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -32,60 +31,52 @@ interface State {
 class TextInput extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
+    value: this.props.element.get('value'),
   }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): string {
-    if (this.state.value === undefined) {
-      return this.props.element.get('value') as string
-    } else {
-      return this.state.value
+  componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget's state when the default value changes
+    const oldDefaultValue: string = prevProps.element.get('default')
+    const newDefaultValue: string = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
   }
 
-  private onKeyPress = (e: any) => {
-    const event = e as React.KeyboardEvent<HTMLInputElement>
-    if (event.key === 'Enter' && this.state.dirty) {
+  private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter' && this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
-  private onBlur = () => {
+  private onBlur = (): void => {
     if (this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
-  private onChange = (e: any) => {
-    const value = (e.target as HTMLInputElement).value
+  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      value,
       dirty: true,
+      value: e.target.value,
     })
   }
 
   private setWidgetValue(): void {
-    if (this.state.value === undefined) {
-      throw new Error('Assertion error: value is undefined')
-    }
-    const widgetId = this.props.element.get('id')
-
+    const widgetId: string = this.props.element.get('id')
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
     this.setState({ dirty: false })
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+    const label: string = this.props.element.get('label')
     const style = { width: this.props.width }
 
     return (
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
         <UIInput
-          value={this.valueOrDefault}
+          value={this.state.value}
           disabled={this.props.disabled}
           onBlur={this.onBlur}
           onChange={this.onChange}

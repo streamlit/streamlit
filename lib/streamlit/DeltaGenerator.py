@@ -115,8 +115,9 @@ def _with_element(method):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, file=sys.stderr)
 
-            # Now write the delta to the report. (To avoid infinite recursion,
-            # we make sure that the exception didn't occur *within* st.exception
+            # Now write the delta to the report.
+            # (To avoid infinite recursion, we make sure that
+            # the exception didn't occur *within* st.exception
             # itself!)
             if method.__name__ != 'exception':
                 self.exception(e)
@@ -129,8 +130,8 @@ def _widget(f):
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
         # All of this label-parsing code only exists so we can throw a pretty
-        # error to the user when she forgets to pass in a label. Otherwise we'd
-        # get a really cryptic error.
+        # error to the user when she forgets to pass in a label. Otherwise
+        # we'd get a really cryptic error.
         if 'label' in kwargs:
             label = kwargs['label']
             del kwargs['label']
@@ -1375,10 +1376,12 @@ class DeltaGenerator(object):
         >>> st.write('The current movie title is', title)
 
         """
+        # TODO: compare the default value with the current value
         current_value = ui_value if ui_value is not None else value
         current_value = str(current_value)
         element.text_input.label = label
         element.text_input.value = current_value
+        element.text_input.default = value
         return current_value
 
     @_widget
