@@ -9,13 +9,13 @@ workflows:
     jobs:
       - python-2.7.16:
           requires:
-            - python-3.7.3
-      - python-3.7.3
+            - python-3.7.4
+      - python-3.7.4
 
 jobs:
-  python-3.7.3: &job-template
+  python-3.7.4: &job-template
     docker:
-      - image: circleci/python:3.7.3-stretch
+      - image: circleci/python:3.7.4-stretch
 
     working_directory: ~/repo
 
