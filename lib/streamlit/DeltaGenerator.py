@@ -1191,22 +1191,26 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def radio(self, element, ui_value, label, options, value=0):
+    def radio(self, element, ui_value, label, options, value=0,
+              format_func=str):
         """Display a radio button widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : list of str, tuple of str, numpy.ndarray of str, or pandas.Series of str
-            Labels for the radio options. This will be cast to str internally.
+        options : list, tuple, numpy.ndarray, or pandas.Series
+            Labels for the radio options. This will be cast to str internally by default.
         value : int
             The index of the preselected option on first render.
+        format_func : function
+            Function to modify the display of the labels. It receives the option as an argument
+            and its output will be cast to str.
 
         Returns
         -------
-        int
-            The index of the selected option
+        any
+            The selected option.
 
         """
         if not isinstance(value, int):
@@ -1220,26 +1224,30 @@ class DeltaGenerator(object):
 
         element.radio.label = label
         element.radio.value = current_value
-        element.radio.options[:] = [str(opt) for opt in options]
-        return current_value
+        element.radio.options[:] = [str(format_func(opt)) for opt in options]
+        return options[current_value]
 
     @_widget
-    def selectbox(self, element, ui_value, label, options, value=0):
+    def selectbox(self, element, ui_value, label, options, value=0,
+                  format_func=str):
         """Display a select widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : [str], (str,), numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally.
+        options : list, tuple, numpy.ndarray, or pandas.Series
+            Labels for the select options. This will be cast to str internally by default.
         value : type
             The index of the preselected option on first render.
+        format_func : function
+            Function to modify the display of the labels. It receives the option as an argument
+            and its output will be cast to str.
 
         Returns
         -------
-        int
-            The index of the selected option
+        any
+            The selected option
 
         """
         if not isinstance(value, int):
@@ -1253,8 +1261,8 @@ class DeltaGenerator(object):
 
         element.selectbox.label = label
         element.selectbox.value = current_value
-        element.selectbox.options[:] = [str(opt) for opt in options]
-        return current_value
+        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+        return options[current_value]
 
     @_widget
     def slider(self, element, ui_value, label, value=None,

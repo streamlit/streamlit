@@ -19,9 +19,17 @@ describe('st.radio', () => {
     cy.get('.stText')
       .should(
         'have.text',
-        'value 1: 1' +
-          'value 2: 0' +
-          'value 3: 0')
+        'value 1: male' +
+          'value 2: female' +
+          'value 3: female')
+  })
+
+  it('formats display values', () => {
+    cy.get('.stRadio [role="radiogroup"]')
+      .eq(1)
+      .should(
+        'have.text',
+        'FemaleMale')
   })
 
   it('sets value correctly when user clicks', () => {
@@ -33,8 +41,8 @@ describe('st.radio', () => {
     cy.get('.stText')
       .should(
         'have.text',
-        'value 1: 1' +
-          'value 2: 1' +
-          'value 3: 1')
+        'value 1: male' +
+          'value 2: male' +
+          'value 3: male')
   })
 })

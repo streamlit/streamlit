@@ -19,9 +19,17 @@ describe('st.selectbox', () => {
     cy.get('.stText')
       .should(
         'have.text',
-        'value 1: 1' +
-          'value 2: 0' +
-          'value 3: 0')
+        'value 1: female' +
+          'value 2: male' +
+          'value 3: male')
+  })
+
+  it('formats display values', () => {
+    cy.get('.stSelectbox span')
+      .eq(1)
+      .should(
+        'have.text',
+        'Male')
   })
 
   it('sets value correctly when user clicks', () => {
@@ -38,8 +46,8 @@ describe('st.selectbox', () => {
     cy.get('.stText')
       .should(
         'have.text',
-        'value 1: 1' +
-          'value 2: 1' +
-          'value 3: 1')
+        'value 1: female' +
+          'value 2: female' +
+          'value 3: female')
   })
 })
