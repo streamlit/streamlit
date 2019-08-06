@@ -7,7 +7,6 @@ import unittest
 from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 from streamlit.widgets import coalesce_widget_states
-from streamlit.widgets import reset_widget_triggers
 
 
 def _create_widget(id, states):
@@ -45,9 +44,9 @@ class WidgetTest(unittest.TestCase):
         self.assertEqual(True, widgets.get_widget_value('trigger'))
         self.assertEqual(123, widgets.get_widget_value('int'))
 
-        widgets.set_state(reset_widget_triggers(states))
+        widgets.reset_triggers()
 
-        self.assertEqual(False, widgets.get_widget_value('trigger'))
+        self.assertEqual(None, widgets.get_widget_value('trigger'))
         self.assertEqual(123, widgets.get_widget_value('int'))
 
     def test_coalesce_widget_states(self):

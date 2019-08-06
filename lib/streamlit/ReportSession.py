@@ -1,6 +1,5 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
-
 from enum import Enum
 
 import tornado.gen
@@ -15,31 +14,41 @@ from streamlit import protobuf
 from streamlit import util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
+from streamlit.ScriptRequestQueue import RerunData
+from streamlit.ScriptRequestQueue import ScriptRequest
+from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
-from streamlit.ScriptRunner import ScriptState
+from streamlit.ScriptRunner import ScriptRunnerEvent
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
+from streamlit.protobuf.BackMsg_pb2 import WidgetStates
 from streamlit.storage.S3Storage import S3Storage as Storage
-from streamlit.widgets import Widgets
+from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 
 
-class ReportContext(object):
+class ReportSessionState(Enum):
+    REPORT_NOT_RUNNING = 'REPORT_NOT_RUNNING'
+    REPORT_IS_RUNNING = 'REPORT_IS_RUNNING'
+    SHUTDOWN_REQUESTED = 'SHUTDOWN_REQUESTED'
+
+
+class ReportSession(object):
     """
     Contains session data for a single "user" of an active report
     (that is, a connected browser tab).
 
-    Each ReportContext has its own Report, root DeltaGenerator, ScriptRunner,
+    Each ReportSession has its own Report, root DeltaGenerator, ScriptRunner,
     and widget state.
 
-    A ReportContext is attached to each thread involved in running its Report.
+    A ReportSession is attached to each thread involved in running its Report.
     """
 
     _next_id = 0
 
     def __init__(self, ioloop, script_path, script_argv):
-        """Initialize the ReportContext.
+        """Initialize the ReportSession.
 
         Parameters
         ----------
@@ -53,55 +62,30 @@ class ReportContext(object):
             Command-line arguments to run the script with.
 
         """
-        # Each ReportContext gets a unique ID
-        self.id = ReportContext._next_id
-        ReportContext._next_id += 1
+        # Each ReportSession gets a unique ID
+        self.id = ReportSession._next_id
+        ReportSession._next_id += 1
 
         self._ioloop = ioloop
         self._report = Report(script_path, script_argv)
 
+        self._state = ReportSessionState.REPORT_NOT_RUNNING
         self._root_dg = DeltaGenerator(self.enqueue)
-        self._scriptrunner = ScriptRunner(self._report)
+        self._widget_states = WidgetStates()
+        self._local_sources_watcher = LocalSourcesWatcher(
+            self._report, self._on_source_file_changed)
         self._sent_initialize_message = False
-        self._is_shutdown = False
         self._storage = None
         self._maybe_reuse_previous_run = False
+        self._run_on_save = config.get_option('server.runOnSave')
 
-        # ScriptRunner event handlers
-        self._scriptrunner.on_state_changed.connect(
-            self._enqueue_script_state_changed_message)
-        self._scriptrunner.on_file_change_not_handled.connect(
-            self._enqueue_file_change_message)
-        self._scriptrunner.on_script_compile_error.connect(
-            self._on_script_compile_error)
+        # The ScriptRequestQueue is the means by which we communicate
+        # with the active ScriptRunner.
+        self._script_request_queue = ScriptRequestQueue()
 
-        # Kick off the scriptrunner's run loop, but don't run the script
-        # itself.
-        self._scriptrunner.start_run_loop(self)
+        self._scriptrunner = None
 
-        LOGGER.debug('ReportContext initialized (id=%s)', self.id)
-
-    @property
-    def root_dg(self):
-        """
-        Returns
-        -------
-        DeltaGenerator
-            The report's root DeltaGenerator
-
-        """
-        return self._root_dg
-
-    @property
-    def widgets(self):
-        """
-        Returns
-        -------
-        Widgets
-            Our ScriptRunner's widget state dictionary
-
-        """
-        return self._scriptrunner.widgets
+        LOGGER.debug('ReportSession initialized (id=%s)', self.id)
 
     def flush_browser_queue(self):
         """Clears the report queue and returns the messages it contained.
@@ -119,18 +103,28 @@ class ReportContext(object):
         return self._report.flush_browser_queue()
 
     def shutdown(self):
-        """Shuts down the ReportContext.
+        """Shuts down the ReportSession.
 
-        It's an error to use a ReportContext after it's been shut down.
+        It's an error to use a ReportSession after it's been shut down.
 
         """
-        if not self._is_shutdown:
+        if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug('Shutting down (id=%s)', self.id)
-            self._is_shutdown = True
-            self._scriptrunner.request_shutdown()
+
+            # Shut down the ScriptRunner, if one is active.
+            # self._state must not be set to SHUTDOWN_REQUESTED until
+            # after this is called.
+            if self._scriptrunner is not None:
+                self._enqueue_script_request(ScriptRequest.SHUTDOWN)
+
+            self._state = ReportSessionState.SHUTDOWN_REQUESTED
+            self._local_sources_watcher.close()
 
     def enqueue(self, msg):
         """Enqueues a new ForwardMsg to our browser queue.
+
+        This can be called on both the main thread and a ScriptRunner
+        run thread.
 
         Parameters
         ----------
@@ -146,7 +140,15 @@ class ReportContext(object):
         """
         if not config.get_option('client.displayEnabled'):
             return False
-        self._scriptrunner.maybe_handle_execution_control_request()
+
+        # If we have an active ScriptRunner, signal that it can handle
+        # an execution control request. (Copy the scriptrunner reference
+        # to avoid it being unset from underneath us, as this function can
+        # be called outside the main thread.)
+        scriptrunner = self._scriptrunner
+        if scriptrunner is not None:
+            scriptrunner.maybe_handle_execution_control_request()
+
         self._report.enqueue(msg)
         return True
 
@@ -163,9 +165,9 @@ class ReportContext(object):
         # 2) Marks the current report as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._enqueue_script_state_changed_message(ScriptState.STOPPED)
-        self._enqueue_script_state_changed_message(ScriptState.RUNNING)
-        self._enqueue_script_state_changed_message(ScriptState.STOPPED)
+        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = protobuf.ForwardMsg()
         msg.delta.id = 0
@@ -173,53 +175,134 @@ class ReportContext(object):
 
         self.enqueue(msg)
 
+    def request_rerun(self, argv=None, widget_state=None):
+        """Signal that we're interested in running the script.
+
+        If the script is not already running, it will be started immediately.
+        Otherwise, a rerun will be requested.
+
+        Parameters
+        ----------
+        argv : dict | None
+            The new command line arguments to run the script with, or None
+            to use the argv from the previous run of the script.
+        widget_state : dict | None
+            The widget state dictionary to run the script with, or None
+            to use the widget state from the previous run of the script.
+
+        """
+        self._enqueue_script_request(ScriptRequest.RERUN,
+                                     RerunData(argv, widget_state))
+
+    def _on_source_file_changed(self):
+        """One of our source files changed. Schedule a rerun if appropriate."""
+        if self._run_on_save:
+            self.request_rerun()
+        else:
+            self._enqueue_file_change_message()
+
     def _clear_queue(self):
         self._report.clear()
 
-    def _enqueue_script_state_changed_message(self, new_script_state):
-        if new_script_state == ScriptState.RUNNING:
+    def _on_scriptrunner_event(self, event, exception=None,
+                               widget_states=None):
+        """Called when our ScriptRunner emits an event.
+
+        This is *not* called on the main thread.
+
+        Parameters
+        ----------
+        event : ScriptRunnerEvent
+
+        exception : BaseException | None
+            An exception thrown during compilation. Set only for the
+            SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
+
+        widget_states : streamlit.protobuf.BackMsg_pb2.WidgetStates | None
+            The ScriptRunner's final WidgetStates. Set only for the
+            SHUTDOWN event.
+
+        """
+        LOGGER.debug('OnScriptRunnerEvent: %s', event)
+
+        prev_state = self._state
+
+        if event == ScriptRunnerEvent.SCRIPT_STARTED:
+            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
+                self._state = ReportSessionState.REPORT_IS_RUNNING
+
             if config.get_option('server.liveSave'):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_running_report)
+
             self._clear_queue()
             self._maybe_enqueue_initialize_message()
             self._enqueue_new_report_message()
 
-        self._enqueue_session_state_changed_message()
+        elif (event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS or
+              event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR):
 
-        if new_script_state == ScriptState.STOPPED:
+            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
+                self._state = ReportSessionState.REPORT_NOT_RUNNING
+
             self._enqueue_report_finished_message()
+
             if config.get_option('server.liveSave'):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_final_report_and_quit)
 
+            script_succeeded = \
+                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+            if script_succeeded:
+                # When a script completes successfully, we update our
+                # LocalSourcesWatcher to account for any source code changes
+                # that change which modules should be watched. (This is run on
+                # the main thread, because LocalSourcesWatcher is not
+                # thread safe.)
+                self._ioloop.spawn_callback(
+                    self._local_sources_watcher.update_watched_modules)
+            else:
+                # When a script fails to compile, we send along the exception.
+                from streamlit.elements import exception_proto
+                msg = protobuf.ForwardMsg()
+                exception_proto.marshall(
+                    msg.session_event.script_compilation_exception, exception)
+                self.enqueue(msg)
+
+        elif event == ScriptRunnerEvent.SHUTDOWN:
+            # When ScriptRunner shuts down, update our local reference to it,
+            # and check to see if we need to spawn a new one. (This is run on
+            # the main thread.)
+            def on_shutdown():
+                self._widget_states = widget_states
+                self._scriptrunner = None
+                # Because a new ScriptEvent could have been enqueued while the
+                # scriptrunner was shutting down, we check to see if we should
+                # create a new one. (Otherwise, a newly-enqueued ScriptEvent
+                # won't be processed until another event is enqueued.)
+                self._maybe_create_scriptrunner()
+            self._ioloop.spawn_callback(on_shutdown)
+
+        # Send a message if our run state changed
+        report_was_running = prev_state == ReportSessionState.REPORT_IS_RUNNING
+        report_is_running = self._state == ReportSessionState.REPORT_IS_RUNNING
+        if report_is_running != report_was_running:
+            self._enqueue_session_state_changed_message()
+
     def _enqueue_session_state_changed_message(self):
         msg = protobuf.ForwardMsg()
-        msg.session_state_changed.run_on_save = self._scriptrunner.run_on_save
+        msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.report_is_running = \
-            self._scriptrunner.is_running()
+            self._state == ReportSessionState.REPORT_IS_RUNNING
         self.enqueue(msg)
 
-    def _enqueue_file_change_message(self, _):
+    def _enqueue_file_change_message(self):
         LOGGER.debug('Enqueuing report_changed message (id=%s)', self.id)
         msg = protobuf.ForwardMsg()
         msg.session_event.report_changed_on_disk = True
-        self.enqueue(msg)
-
-    def _on_script_compile_error(self, exc):
-        """Handles exceptions caught by ScriptRunner during script compilation.
-
-        We deliver these exceptions to the client via SessionEvent messages.
-        "Normal" exceptions that are thrown during script execution show up as
-        inline elements in the report, but compilation exceptions are handled
-        specially, so that the frontend can leave the previous report up.
-        """
-        from streamlit.elements import exception_proto
-        msg = protobuf.ForwardMsg()
-        exception_proto.marshall(
-            msg.session_event.script_compilation_exception, exc)
         self.enqueue(msg)
 
     def _maybe_enqueue_initialize_message(self):
@@ -244,8 +327,9 @@ class ReportContext(object):
             msg.initialize.gather_usage_stats)
 
         imsg.streamlit_version = __version__
-        imsg.session_state.run_on_save = self._scriptrunner.run_on_save
-        imsg.session_state.report_is_running = self._scriptrunner.is_running()
+        imsg.session_state.run_on_save = self._run_on_save
+        imsg.session_state.report_is_running = \
+            self._state == ReportSessionState.REPORT_IS_RUNNING
 
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email
@@ -278,7 +362,7 @@ class ReportContext(object):
             The WidgetStates protobuf to run the script with, or None
             to use its previous widget states.
         is_preheat: boolean
-            True if this ReportContext should run the script immediately, and
+            True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
             argv and widget state.
 
@@ -292,7 +376,7 @@ class ReportContext(object):
             self._maybe_reuse_previous_run = True  # For next time.
 
         elif self._maybe_reuse_previous_run:
-            # If this is a "preheated" ReportContext, reuse the previous run if
+            # If this is a "preheated" ReportSession, reuse the previous run if
             # the argv and widget state matches. But only do this one time
             # ever.
             self._maybe_reuse_previous_run = False
@@ -306,11 +390,11 @@ class ReportContext(object):
                     'Skipping rerun since the preheated run is the same')
                 return
 
-        self._scriptrunner.request_rerun(self._report.argv, widget_state)
+        self.request_rerun(self._report.argv, widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""
-        self._scriptrunner.request_stop()
+        self._enqueue_script_request(ScriptRequest.STOP)
 
     def handle_clear_cache_request(self):
         """Clears this report's cache.
@@ -325,7 +409,7 @@ class ReportContext(object):
         caching.clear_cache()
 
     def handle_set_run_on_save_request(self, new_value):
-        """Changes ScriptRunner's run_on_save flag to the given value.
+        """Changes our run_on_save flag to the given value.
 
         The browser will be notified of the change.
 
@@ -335,8 +419,56 @@ class ReportContext(object):
             New run_on_save value
 
         """
-        self._scriptrunner.run_on_save = new_value
+        self._run_on_save = new_value
         self._enqueue_session_state_changed_message()
+
+    def _enqueue_script_request(self, request, data=None):
+        """Enqueue a ScriptEvent into our ScriptEventQueue.
+
+        If a script thread is not already running, one will be created
+        to handle the event.
+
+        Parameters
+        ----------
+        request : ScriptRequest
+            The type of request.
+
+        data : Any
+            Data associated with the request, if any.
+
+        """
+        if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+            LOGGER.warning('Discarding %s request after shutdown' % request)
+            return
+
+        self._script_request_queue.enqueue(request, data)
+        self._maybe_create_scriptrunner()
+
+    def _maybe_create_scriptrunner(self):
+        """Create a new ScriptRunner if we have unprocessed script requests.
+
+        This is called every time a ScriptRequest is enqueued, and also
+        after a ScriptRunner shuts down, in case new requests were enqueued
+        during its termination.
+
+        This function should only be called on the main thread.
+
+        """
+        if (
+            self._state == ReportSessionState.SHUTDOWN_REQUESTED or
+            self._scriptrunner is not None or
+            not self._script_request_queue.has_request
+        ):
+            return
+
+        # Create the ScriptRunner, attach event handlers, and start it
+        self._scriptrunner = ScriptRunner(
+            report=self._report,
+            root_dg=self._root_dg,
+            widget_states=self._widget_states,
+            request_queue=self._script_request_queue)
+        self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
+        self._scriptrunner.start()
 
     @tornado.gen.coroutine
     def handle_save_request(self, ws):

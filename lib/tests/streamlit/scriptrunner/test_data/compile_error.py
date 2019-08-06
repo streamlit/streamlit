@@ -1,0 +1,7 @@
+"""A script that won't compile, for ScriptRunnerTest."""
+
+import streamlit as st
+
+placeholder = st.text('this will never run!')
+
+because i am a compile error!

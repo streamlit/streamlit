@@ -8,6 +8,7 @@ from streamlit import config
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportThread import REPORT_CONTEXT_ATTR_NAME
+from streamlit.ReportThread import ReportContext
 from streamlit.widgets import Widgets
 
 
@@ -33,13 +34,6 @@ def build_mock_config_is_manually_set(overrides_dict):
     return mock_config_is_manually_set
 
 
-class MockReportContext(object):
-    """An object that masquerades as a ReportContext"""
-    def __init__(self, delta_generator):
-        self.root_dg = delta_generator
-        self.widgets = Widgets()
-
-
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self, override_root=True):
         self.report_queue = ReportQueue()
@@ -48,7 +42,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             dg = self.new_delta_generator()
             setattr(threading.current_thread(),
                     REPORT_CONTEXT_ATTR_NAME,
-                    MockReportContext(dg))
+                    ReportContext(root_dg=dg, widgets=Widgets()))
 
     def tearDown(self):
         self.report_queue._clear()

@@ -15,7 +15,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
     exception_proto : Exception.proto
         The Exception protobuf to fill out
 
-    exception : Exception
+    exception : BaseException
         The exception whose data we're extracting
 
     exception_traceback : Exception Traceback or None

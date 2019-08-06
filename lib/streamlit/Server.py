@@ -16,7 +16,7 @@ from streamlit import config
 from streamlit import metrics
 from streamlit import protobuf
 from streamlit import util
-from streamlit.ReportContext import ReportContext
+from streamlit.ReportSession import ReportSession
 
 from streamlit.logger import get_logger
 
@@ -39,7 +39,7 @@ TORNADO_SETTINGS = {
 
 # Dictionary key used to mark the script execution context that starts
 # up before the first browser connects.
-PREHEATED_REPORT_CONTEXT = 'PREHEATED_REPORT_CONTEXT'
+PREHEATED_REPORT_SESSION = 'PREHEATED_REPORT_SESSION'
 
 
 class State(Enum):
@@ -79,8 +79,8 @@ class Server(object):
         self._script_argv = script_argv
         self._on_server_start_callback = on_server_start_callback
 
-        # Mapping of WebSocket->ReportContext.
-        self._report_contexts = {}
+        # Mapping of WebSocket->ReportSession.
+        self._report_sessions = {}
 
         self._must_stop = threading.Event()
         self._state = None
@@ -155,17 +155,17 @@ class Server(object):
 
             elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
 
-                # Shallow-clone _report_contexts into a list, so we can iterate
+                # Shallow-clone our sessions into a list, so we can iterate
                 # over it and not worry about whether it's being changed
                 # outside this coroutine.
-                ws_ctx_pairs = list(self._report_contexts.items())
+                ws_session_pairs = list(self._report_sessions.items())
 
-                for ws, report_ctx in ws_ctx_pairs:
-                    if ws is PREHEATED_REPORT_CONTEXT:
+                for ws, session in ws_session_pairs:
+                    if ws is PREHEATED_REPORT_SESSION:
                         continue
                     if ws is None:
                         continue
-                    msg_list = report_ctx.flush_browser_queue()
+                    msg_list = session.flush_browser_queue()
                     for msg in msg_list:
                         msg_str = _serialize(msg)
                         try:
@@ -184,9 +184,9 @@ class Server(object):
 
             yield tornado.gen.sleep(0.01)
 
-        # Shut down all ReportContexts
-        for report_ctx in list(self._report_contexts.values()):
-            report_ctx.shutdown()
+        # Shut down all ReportSessions
+        for session in list(self._report_sessions.values()):
+            session.shutdown()
 
         self._set_state(State.STOPPED)
 
@@ -197,14 +197,14 @@ class Server(object):
         self._set_state(State.STOPPING)
         self._must_stop.set()
 
-    def add_preheated_report_context(self):
+    def add_preheated_report_session(self):
         """Register a fake browser with the server and run the script.
 
         This is used to start running the user's script even before the first
         browser connects.
         """
-        report_ctx = self._add_browser_connection(PREHEATED_REPORT_CONTEXT)
-        report_ctx.handle_rerun_script_request(is_preheat=True)
+        session = self._add_browser_connection(PREHEATED_REPORT_SESSION)
+        session.handle_rerun_script_request(is_preheat=True)
 
     def _add_browser_connection(self, ws):
         """Register a connected browser with the server
@@ -216,38 +216,38 @@ class Server(object):
 
         Returns
         -------
-        ReportContext
-            The ReportContext associated with this browser connection
+        ReportSession
+            The ReportSession associated with this browser connection
 
         """
-        if ws not in self._report_contexts:
+        if ws not in self._report_sessions:
 
-            if PREHEATED_REPORT_CONTEXT in self._report_contexts:
-                assert len(self._report_contexts) == 1
+            if PREHEATED_REPORT_SESSION in self._report_sessions:
+                assert len(self._report_sessions) == 1
                 LOGGER.debug('Reusing preheated context for ws %s', ws)
-                report_ctx = self._report_contexts[PREHEATED_REPORT_CONTEXT]
-                del self._report_contexts[PREHEATED_REPORT_CONTEXT]
+                session = self._report_sessions[PREHEATED_REPORT_SESSION]
+                del self._report_sessions[PREHEATED_REPORT_SESSION]
             else:
                 LOGGER.debug('Creating new context for ws %s', ws)
-                report_ctx = ReportContext(
+                session = ReportSession(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
                     script_argv=self._script_argv)
 
-            self._report_contexts[ws] = report_ctx
+            self._report_sessions[ws] = session
 
-            if ws is not PREHEATED_REPORT_CONTEXT:
+            if ws is not PREHEATED_REPORT_SESSION:
                 self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
-        return self._report_contexts[ws]
+        return self._report_sessions[ws]
 
     def _remove_browser_connection(self, ws):
-        if ws in self._report_contexts:
-            ctx = self._report_contexts[ws]
-            del self._report_contexts[ws]
-            ctx.shutdown()
+        if ws in self._report_sessions:
+            session = self._report_sessions[ws]
+            del self._report_sessions[ws]
+            session.shutdown()
 
-        if len(self._report_contexts) == 0:
+        if len(self._report_sessions) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
@@ -310,7 +310,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         return _is_url_from_allowed_origins(origin)
 
     def open(self):
-        self._ctx = self._server._add_browser_connection(self)
+        self._session = self._server._add_browser_connection(self)
 
     def on_close(self):
         self._server._remove_browser_connection(self)
@@ -326,18 +326,18 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             msg_type = msg.WhichOneof('type')
 
             if msg_type == 'cloud_upload':
-                yield self._ctx.handle_save_request(self)
+                yield self._session.handle_save_request(self)
             elif msg_type == 'rerun_script':
-                self._ctx.handle_rerun_script_request(
+                self._session.handle_rerun_script_request(
                     command_line=msg.rerun_script)
             elif msg_type == 'clear_cache':
-                self._ctx.handle_clear_cache_request()
+                self._session.handle_clear_cache_request()
             elif msg_type == 'set_run_on_save':
-                self._ctx.handle_set_run_on_save_request(msg.set_run_on_save)
+                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == 'stop_report':
-                self._ctx.handle_stop_script_request()
+                self._session.handle_stop_script_request()
             elif msg_type == 'update_widgets':
-                self._ctx.handle_rerun_script_request(
+                self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets)
             elif msg_type == 'close_connection':
                 if config.get_option('global.developmentMode'):
@@ -351,7 +351,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         except BaseException as e:
             LOGGER.error(e)
-            self._ctx.enqueue_exception(e)
+            self._session.enqueue_exception(e)
 
 
 def _set_tornado_log_levels():
