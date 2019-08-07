@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import streamlit.elements.vega_lite as vega_lite
 
 
-def marshall(vega_lite_chart, altair_chart):
+def marshall(vega_lite_chart, altair_chart, width=0):
     import altair as alt
 
     # Normally altair_chart.to_dict() would transform the dataframe used by the
@@ -36,4 +36,4 @@ def marshall(vega_lite_chart, altair_chart):
         # transformed.
         chart_dict['datasets'] = datasets
 
-        vega_lite.marshall(vega_lite_chart, chart_dict)
+        vega_lite.marshall(vega_lite_chart, chart_dict, width=width)

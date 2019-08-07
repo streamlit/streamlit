@@ -764,13 +764,19 @@ class DeltaGenerator(object):
             element.vega_lite_chart, data, spec, width, **kwargs)
 
     @_with_element
-    def altair_chart(self, element, altair_chart):
+    def altair_chart(self, element, altair_chart, width=0):
         """Display a chart using the Altair library.
 
         Parameters
         ----------
         altair_chart : altair.vegalite.v2.api.Chart
             The Altair chart object to display.
+
+        width : number
+            If 0 (default), stretch chart to the full document width. If -1,
+            use the default from Altair. If greater than 0, sets the width.
+            Note that if the top-level width  is defined, it takes precedence
+            over this argument.
 
         Example
         -------
@@ -786,7 +792,7 @@ class DeltaGenerator(object):
         >>> c = alt.Chart(df).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c')
         >>>
-        >>> st.altair_chart(c)
+        >>> st.altair_chart(c, width=-1)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
@@ -797,7 +803,7 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
-        altair.marshall(element.vega_lite_chart, altair_chart)
+        altair.marshall(element.vega_lite_chart, altair_chart, width)
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
