@@ -114,9 +114,9 @@ class Server(object):
             LOGGER.debug('Serving static content from %s', static_path)
 
             routes.extend([
-                (r"/()$", tornado.web.StaticFileHandler,
+                (r"/()$", _StaticFileHandler,
                     {'path': '%s/index.html' % static_path}),
-                (r"/(.*)", tornado.web.StaticFileHandler,
+                (r"/(.*)", _StaticFileHandler,
                     {'path': '%s/' % static_path}),
             ])
 
@@ -249,6 +249,21 @@ class Server(object):
 
         if len(self._report_sessions) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
+
+
+class _StaticFileHandler(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        """Disable cache for HTML files.
+
+        Other assets like JS and CSS are suffixed with their hash, so they can
+        be cached indefinitely.
+        """
+        is_index_url = len(path) == 0
+
+        if is_index_url or path.endswith('.html'):
+            self.set_header('Cache-Control', 'no-cache')
+        else:
+            self.set_header('Cache-Control', 'public')
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
