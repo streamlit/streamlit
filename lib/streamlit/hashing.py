@@ -47,10 +47,10 @@ def _get_context(func):
     return Context(globals=func.__globals__, closure=closure, varnames=varnames)
 
 
-def get_hash(f):
-    """Quick utility to compute a hash."""
+def get_hash(f, context=None):
+    """Quick utility function that computes a hash of an arbitrary object."""
     hasher = CodeHasher('md5')
-    hasher.update(f)
+    hasher.update(f, context)
     return hasher.digest()
 
 

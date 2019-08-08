@@ -22,7 +22,7 @@ import astor
 import streamlit as st
 from streamlit import config, util
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.hashing import CodeHasher, get_hash
+from streamlit.hashing import CodeHasher, Context, get_hash
 from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
@@ -94,7 +94,7 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _build_caching_error_message(persisted, func, caller_frame):
+def _build_caching_func_error_message(persisted, func, caller_frame):
     name = func.__name__
 
     frameinfo = inspect.getframeinfo(caller_frame)
@@ -120,7 +120,7 @@ def _build_caching_error_message(persisted, func, caller_frame):
 
         'Or add `ignore_hash=True` to the `streamlit.cache` decorator for `{name}`.\n\n'
 
-        'Learn more about caching and copying  in the '
+        'Learn more about caching and copying in the '
         '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
     )
 
@@ -132,6 +132,28 @@ def _build_caching_error_message(persisted, func, caller_frame):
         caller_file_name=os.path.relpath(caller_file_name),
         caller_lineno=caller_lineno,
         copy_code=copy_code
+    )
+
+
+def _build_caching_block_error_message(persisted, code):
+    load_or_rerun = 'load the value from disk' if persisted else 'rerun the code'
+
+    message = (
+        '### ⚠️ Your Code Mutated a Computed Value\n'
+        'Since your program subsequently mutated the value of a cached block, '
+        'Streamlit has to {load_or_rerun} in `{file_name}` line {lineno}.\n\n'
+        'To dismiss this warning, you could copy the computed value. '
+
+        'Or add `ignore_hash=True` to the `streamlit.run_once`.\n\n'
+
+        'Learn more about caching and copying in the '
+        '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
+    )
+
+    return message.format(
+        load_or_rerun=load_or_rerun,
+        file_name=os.path.relpath(code.co_filename),
+        lineno=code.co_firstlineno
     )
 
 
@@ -190,7 +212,7 @@ def _write_to_disk_cache(key, value):
         raise CacheError('Unable to write to cache: %s' % e)
 
 
-def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
+def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -201,7 +223,12 @@ def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
         return _read_from__mem_cache(key, ignore_hash)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
-            message = _build_caching_error_message(persisted, func, caller_frame)
+            if inspect.isroutine(func_or_code):
+                message = _build_caching_func_error_message(
+                    persisted, func_or_code, caller_frame)
+            else:
+                message = _build_caching_block_error_message(
+                    persisted, func_or_code)
             st.warning(message)
 
         if persisted:
@@ -321,6 +348,95 @@ def cache(func=None, persist=False, ignore_hash=False):
     return wrapped_func
 
 
+class Cache(dict):
+    def __init__(self, persist, ignore_hash):
+        self._persist = persist
+        self._ignore_hash = ignore_hash
+
+        dict.__init__(self)
+
+    def __bool__(self):
+        caller_frame = inspect.currentframe().f_back
+        frameinfo = inspect.getframeinfo(caller_frame)
+        filename, caller_lineno, _, code_context, _ = frameinfo
+
+        code_context = code_context[0]
+
+        indent_if = len(code_context) - len(code_context.lstrip())
+
+        lines = ''
+        with open(filename, 'r') as f:
+            for line in f.readlines()[caller_lineno:]:
+                if line.strip == '':
+                    continue
+                indent = len(line) - len(line.lstrip())
+                if indent <= indent_if:
+                    break
+                if line.strip() and not line.lstrip().startswith("#"):
+                    lines += line
+
+        program = textwrap.dedent(lines)
+
+        code = compile(program, filename, 'exec')
+        context = Context(caller_frame.f_globals, None, {})
+
+        code_hasher = CodeHasher('md5')
+        code_hasher.update(code, context)
+        LOGGER.debug('Hashing block in %i bytes.', code_hasher.size)
+
+        key = code_hasher.hexdigest()
+        LOGGER.debug('Cache key: %s', key)
+
+        try:
+            self.update(_read_from_cache(
+                key, self._persist, self._ignore_hash, code, caller_frame))
+        except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+            exec(code, caller_frame.f_globals, caller_frame.f_locals)
+            _write_to_cache(key, self, self._persist, self._ignore_hash)
+
+        # Always return False so that we have control over the execution.
+        return False
+
+    # Python 2 doesn't have __bool__
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __getattr__(self, key):
+        if key not in self:
+            raise AttributeError('Cache has no atribute %s' % key)
+        return self.__getitem__(key)
+
+    def __setattr__(self, key, value):
+        dict.__setitem__(self, key, value)
+
+
+def run_once(persist=False, ignore_hash=False):
+    """Storage for data that survives reruns.
+
+    Parameters
+    ----------
+
+    Example
+    -------
+    >>> c = st.run_once()
+    ... if c:
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+    ...
+    >>> # c.data will always be defined but the code block only runs the first time
+
+    In Python 3.8 and above, you can combine the assignment and if-check with an
+    assignment expression (`:=`).
+
+    >>> if c := st.run_once():
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+
+
+    """
+    return Cache(persist, ignore_hash)
+
+
 def clear_cache():
     """Clear the memoization cache.
 
@@ -351,72 +467,3 @@ def _clear_disk_cache():
 def _clear_mem_cache():
     global mem_cache
     mem_cache = {}
-
-
-unchecked_mem_cache = {}
-
-class Cache(dict):
-    def __init__(self):
-        dict.__init__(self)
-
-    def __bool__(self):
-        caller_frame = inspect.currentframe().f_back
-        frameinfo = inspect.getframeinfo(caller_frame)
-        filename, caller_lineno, code_context, _, _ = frameinfo
-
-        indent_if = len(code_context) - len(code_context.lstrip())
-
-        lines = ''
-        with open(filename, 'r') as f:
-            for line in f.readlines()[caller_lineno:]:
-                indent = len(line) - len(line.lstrip())
-                if indent <= indent_if:
-                    break
-                if line.strip() and not line.lstrip().startswith("#"):
-                    lines += line
-
-        code_hash = textwrap.dedent(lines)
-
-        if code_hash in unchecked_mem_cache:
-            self.update(unchecked_mem_cache[code_hash])
-            return False
-        else:
-            unchecked_mem_cache[code_hash] = self
-            return True
-
-    # Python 2 doesn't have __bool__
-    def __nonzero__(self):
-        return self.__bool__()
-
-    def __getattr__(self, key):
-        return self.__getitem__(key)
-
-    def __setattr__(self, key, value):
-        dict.__setitem__(self, key, value)
-
-
-def run_once():
-    """Storage for data that survives reruns.
-
-    Parameters
-    ----------
-
-    Example
-    -------
-    >>> c = st.run_once()
-    ... if c:
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-    ...
-    >>> # c.data will always be defined but the code block only runs the first time
-
-    In Python 3.8 and above, you can combine the assignment and if-check with an
-    assignment expression (`:=`).
-
-    >>> if c := st.run_once():
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-
-
-    """
-    return Cache()
