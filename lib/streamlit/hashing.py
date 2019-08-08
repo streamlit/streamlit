@@ -19,6 +19,9 @@ import streamlit as st
 from streamlit import util
 from streamlit.compatibility import setup_2_3_shims
 
+if sys.version_info >= (3, 0):
+    from streamlit.hashing_py3 import get_referenced_objects
+
 setup_2_3_shims(globals())
 
 
@@ -240,55 +243,8 @@ class CodeHasher():
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
-            tos = None  # top of the stack
-
-            def set_tos(t):
-                nonlocal tos
-                if tos is not None:
-                    # hash tos so we support reading multiple objects
-                    self._u(h, tos, context)
-                tos = t
-
-            # Our goal is to find referenced objects. The problem is that co_names
-            # does not have full qualified names in it. So if you access `foo.bar`,
-            # co_names has `foo` and `bar` in it but it doesn't tell us that the
-            # code reads `bar` of `foo`. We are going over the bytecode to resolve
-            # from which object an attribute is requested.
-            # Read more about bytecode at https://docs.python.org/3/library/dis.html
-
-            for op in dis.get_instructions(code):
-                if op.opname in ['LOAD_GLOBAL', 'LOAD_NAME']:
-                    if op.argval in context.globals:
-                        set_tos(context.globals[op.argval])
-                    else:
-                        set_tos(op.argval)
-                elif op.opname in ['LOAD_DEREF', 'LOAD_CLOSURE']:
-                    set_tos(context.closure[op.arg])
-                elif op.opname == 'IMPORT_NAME':
-                    try:
-                        set_tos(importlib.import_module(op.argval))
-                    except ImportError:
-                        set_tos(op.argval)
-                elif op.opname in ['LOAD_METHOD', 'LOAD_ATTR', 'IMPORT_FROM']:
-                    if tos is None:
-                        self._u(h, op.argval, context)
-                    elif isinstance(tos, str):
-                        tos += '.' + op.argval
-                    else:
-                        tos = getattr(tos, op.argval)
-                elif op.opname == 'DELETE_FAST' and tos:
-                    del context.varnames[op.argval]
-                    tos = None
-                elif op.opname == 'STORE_FAST' and tos:
-                    context.varnames[op.argval] = tos
-                    tos = None
-                elif op.opname == 'LOAD_FAST' and op.argval in context.varnames:
-                    set_tos(context.varnames[op.argval])
-                else:
-                    # For all other instructions, hash the current TOS.
-                    if tos is not None:
-                        self._u(h, tos, context)
-                        tos = None
+            for ref in get_referenced_objects(code, context):
+                self._u(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
