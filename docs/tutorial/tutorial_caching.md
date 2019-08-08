@@ -123,8 +123,8 @@ works.
 When you mark a function with Streamlit's cache annotation, it tells Streamlit
 that whenever the function is called it should check three things:
 
-1. The name of the function
-1. The actual code that makes up the body of the function
+1. The actual bytecode that makes up the body of the function
+1. Code, variables, and files that the function depends on
 1. The input parameters that you called the function with
 
 If this is the first time Streamlit has seen those three items, with those
@@ -140,19 +140,16 @@ Bam! Like magic.
 "But, wait a second," you're thinking, "this sounds too good. What are the
 limitations of all this awesomesauce?"
 
-The main limitation is related to item #2, above. That is, Streamlit's cache
-feature doesn't know about changes that take place outside the body of the
-annotated function.
+Streamlit will only check for changes within the current working directory.
+For example, Streamlit won't check for changes in your libraries.
 
-For example, the `load_data` function above depends on a couple of global
-variables. If we change those variables, Streamlit will have no knowledge of
-that and will keep returning the cached output as if they never changed to
-begin with.
+Another limitation is that Streamlit does not check for changes to dataset
+from a URL. So if the remote dataset is time-varying, Streamlit will not
+automatically rerun your code. 
 
-Similarly, if the annotated function depends on code that lives outside of it,
-and that outside code changes, the cache mechanism will be none-the-wiser. Same
-if the function reads a dataset from a URL, and the remote dataset is
-time-varying.
+And lastly, you will get the full magic of detecting changes in dependent code
+in Python 3.4 and later. In particular, if you call `foo.bar`, only in these
+Python versions Streamlit will detect changes to the object `bar`.
 
 These limitations are important to keep in mind, but tend not to be an issue
 a surprising amount of times. Those times, this cache is really

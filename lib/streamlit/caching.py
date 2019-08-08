@@ -4,38 +4,36 @@
 """A library of caching utilities."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import ast
-import astor
 import hashlib
 import inspect
 import os
-import re
 import shutil
 import struct
 from collections import namedtuple
+from functools import wraps
+
+import astor
+
+import streamlit as st
+from streamlit import config, util
+from streamlit.compatibility import setup_2_3_shims
+from streamlit.hashing import CodeHasher, get_hash
+from streamlit.logger import get_logger
+
+setup_2_3_shims(globals())
+
 
 try:
     # cPickle, if available, is much faster than pickle.
     # Source: https://pymotw.com/2/pickle/
-    #
-    # In many situations it's even faster than deepcopy (used for the in-memory
-    # cache), but deepcopy is more general.
-    # Source: https://stackoverflow.com/a/1411229
-    #
     import cPickle as pickle
 except ImportError:
     import pickle
 
-from functools import wraps
-
-import streamlit as st
-from streamlit import config
-from streamlit import util
-from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -43,8 +41,10 @@ LOGGER = get_logger(__name__)
 class CacheError(Exception):
     pass
 
+
 class CacheKeyNotFoundError(Exception):
     pass
+
 
 class CachedObjectWasMutatedError(ValueError):
     pass
@@ -61,7 +61,7 @@ class _AddCopy(ast.NodeTransformer):
     """
     An AST transformer that wraps function calls with copy.deepcopy.
     Use this transformer if you will convert the AST back to code.
-    The code won't work without importing copy. 
+    The code won't work without importing copy.
     """
 
     def __init__(self, func_name):
@@ -69,7 +69,7 @@ class _AddCopy(ast.NodeTransformer):
 
     def visit_Call(self, node):
         if (hasattr(node.func, 'func') and hasattr(node.func.func, 'value') and
-            node.func.func.value.id == 'st' and node.func.func.attr == 'cache'):
+                node.func.func.value.id == 'st' and node.func.func.attr == 'cache'):
             # Wrap st.cache(func(...))().
             return ast.copy_location(ast.Call(
                 func=ast.Attribute(
@@ -137,8 +137,8 @@ def _build_caching_error_message(persisted, func, caller_frame):
 def _read_from__mem_cache(key, ignore_hash):
     if key in _mem_cache:
         entry = _mem_cache[key]
-        
-        if ignore_hash or _get_hash(entry.value) == entry.hash:
+
+        if ignore_hash or get_hash(entry.value) == entry.hash:
             LOGGER.debug('Memory cache HIT: %s', type(entry.value))
             return entry.value
         else:
@@ -152,7 +152,7 @@ def _read_from__mem_cache(key, ignore_hash):
 def _write_to_mem_cache(key, value, ignore_hash):
     _mem_cache[key] = CacheEntry(
         value=value,
-        hash=None if ignore_hash else _get_hash(value)
+        hash=None if ignore_hash else get_hash(value)
     )
 
 
@@ -216,56 +216,15 @@ def _write_to_cache(key, value, persist, ignore_hash):
         _write_to_disk_cache(key, value)
 
 
-def _get_hash(o):
-    hasher = hashlib.new('md5')
-    _hash_object(o, hasher)
-    return hasher.digest()
-
-
-def _hash_object(o, hasher, context=None):
-    if isinstance(o, bytes) or isinstance(o, bytearray):
-        hasher.update(o)
-    elif isinstance(o, str):
-        hasher.update(o.encode())
-    elif isinstance(o, float):
-        _hash_object(hash(o), hasher)
-    elif isinstance(o, int):
-        if hasattr(o, 'to_byte'):
-            hasher.update(o.to_bytes(16, 'little', signed=True))
-        else:
-            # Python 2
-            _hash_object(str(o), hasher)
-    elif isinstance(o, list) or isinstance(o, tuple):
-        for e in o:
-            _hash_object(e, hasher, context)
-    elif o is None:
-        hasher.update(b'_N')  # special string since hashes change between sessions
-    elif o is True:
-        hasher.update(b'_T')
-    elif o is False:
-        hasher.update(b'_F')
-    elif util.is_type(o, 'pandas.DataFrame'):
-        import pandas as pd
-        hasher.update(pd.util.hash_pandas_object(o).sum())
-    else:
-        # As a last resort, we pickle the object to hash it.
-        # Note that we don't use Python's `hash` since hashes are not consistent across runs.
-        hasher.update(pickle.dumps(o, pickle.HIGHEST_PROTOCOL))
-
-
-def _hash_code(code, hasher):
-    code_string = inspect.getsource(code).encode('utf-8')
-    LOGGER.debug('Hashing code of %i bytes.', len(code_string))
-    hasher.update(code_string)
-
-
 def cache(func=None, persist=False, ignore_hash=False):
     """Function decorator to memoize input function, saving to disk.
 
     Parameters
     ----------
     func : callable
-        The function to cache.
+        The function to cache. Streamlit hashes the function and dependent code.
+        Streamlit can only hash nested objects (e.g. `bar` in `foo.bar`) in
+        Python 3.4+.
 
     persist : boolean
         Whether to persist the cache on disk.
@@ -331,9 +290,14 @@ def cache(func=None, persist=False, ignore_hash=False):
             hasher = hashlib.new('md5')
             arg_string = pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL)
             LOGGER.debug('Hashing arguments to %s of %i bytes.',
-                name, len(arg_string))
+                         name, len(arg_string))
             hasher.update(arg_string)
-            _hash_code(func.__code__, hasher)
+
+            code_hasher = CodeHasher('md5', hasher)
+            code_hasher.update(func)
+            LOGGER.debug('Hashing function %s in %i bytes.',
+                         name, code_hasher.size)
+
             key = hasher.hexdigest()
             LOGGER.debug('Cache key: %s', key)
 
