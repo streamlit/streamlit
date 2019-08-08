@@ -357,6 +357,16 @@ class Cache(dict):
 
     def __bool__(self):
         caller_frame = inspect.currentframe().f_back
+
+
+        # import dis
+        # dis.dis(caller_frame.f_code)
+        # print('starts', list(dis.findlinestarts(caller_frame.f_code)))
+        # print('line', caller_frame.f_lineno)
+
+        # raise Exception()
+
+
         frameinfo = inspect.getframeinfo(caller_frame)
         filename, caller_lineno, _, code_context, _ = frameinfo
 
