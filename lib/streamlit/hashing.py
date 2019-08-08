@@ -197,6 +197,7 @@ class CodeHasher():
             return h.digest()
         elif inspect.isroutine(obj):
             h = hashlib.new(self.name)
+            # TODO: This may be too restrictive for libraries in development.
             if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
                 context = _get_context(obj)
                 if obj.__defaults__:
@@ -239,13 +240,14 @@ class CodeHasher():
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
-            tos = [None]  # top of the stack (list so that we can mutate it in set_tos)
+            tos = None  # top of the stack
 
             def set_tos(t):
-                if tos[0] is not None:
+                nonlocal tos
+                if tos is not None:
                     # hash tos so we support reading multiple objects
-                    self._u(h, tos[0], context)
-                tos[0] = t
+                    self._u(h, tos, context)
+                tos = t
 
             # Our goal is to find referenced objects. The problem is that co_names
             # does not have full qualified names in it. So if you access `foo.bar`,
@@ -268,25 +270,25 @@ class CodeHasher():
                     except ImportError:
                         set_tos(op.argval)
                 elif op.opname in ['LOAD_METHOD', 'LOAD_ATTR', 'IMPORT_FROM']:
-                    if tos[0] is None:
+                    if tos is None:
                         self._u(h, op.argval, context)
                     elif isinstance(tos, str):
-                        tos[0] += '.' + op.argval
+                        tos += '.' + op.argval
                     else:
-                        tos[0] = getattr(tos[0], op.argval)
-                elif op.opname == 'DELETE_FAST' and tos[0]:
+                        tos = getattr(tos, op.argval)
+                elif op.opname == 'DELETE_FAST' and tos:
                     del context.varnames[op.argval]
-                    tos[0] = None
-                elif op.opname == 'STORE_FAST' and tos[0]:
-                    context.varnames[op.argval] = tos[0]
-                    tos[0] = None
+                    tos = None
+                elif op.opname == 'STORE_FAST' and tos:
+                    context.varnames[op.argval] = tos
+                    tos = None
                 elif op.opname == 'LOAD_FAST' and op.argval in context.varnames:
                     set_tos(context.varnames[op.argval])
                 else:
                     # For all other instructions, hash the current TOS.
-                    if tos[0] is not None:
-                        self._u(h, tos[0], context)
-                        tos[0] = None
+                    if tos is not None:
+                        self._u(h, tos, context)
+                        tos = None
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
