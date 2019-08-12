@@ -185,7 +185,7 @@ protobuf:
 
 .PHONY: react-init
 react-init:
-	cd frontend/ ; yarn install
+	cd frontend/ ; yarn install --frozen-lockfile
 
 .PHONY: react-build
 react-build:
