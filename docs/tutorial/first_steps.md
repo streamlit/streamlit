@@ -191,7 +191,7 @@ click the *Documentation* item in Streamlit's top-right menu.
 **Next up,** we'll run through a more concrete example of how you could use
 Streamlit on your day-to-day --- and we'll introduce you to some more advanced
 Streamlit commands. Click here for [part 2 of the
-tutorial](/tutorial/tutorial_caching).
+tutorial](/tutorial/caching_mapping_more).
 
 ## Appendix: the final script
 

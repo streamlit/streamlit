@@ -120,7 +120,7 @@ def _build_caching_error_message(persisted, func, caller_frame):
         'Or add `ignore_hash=True` to the `streamlit.cache` decorator for `{name}`.\n\n'
 
         'Learn more about caching and copying  in the '
-        '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
+        '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
     )
 
     return message.format(
