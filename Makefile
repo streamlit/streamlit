@@ -11,7 +11,7 @@ endif
 
 help:
 	@echo "Streamlit Make Commands:"
-	@echo " all          - Cleans and rebuilds lib and frontend."
+	@echo " all          - Rebuilds lib and frontend."
 	@echo " all-devel    - Rebuilds lib, and syncs pipenv and node_modules. "
 	@echo " init         - Run once to install python and js dependencies."
 	@echo " build        - build the static version of Streamlit (without Node)"
@@ -30,7 +30,7 @@ help:
 	@echo " e2etest      - Run E2E tests"
 
 .PHONY: all
-all: clean init install build develop
+all: init install build develop
 
 .PHONY: all-devel
 all-devel: init install develop

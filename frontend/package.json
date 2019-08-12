@@ -23,7 +23,6 @@
     "deck.gl": "^7.1.10",
     "immutable": "^4.0.0-rc.12",
     "leaflet": "^1.3.4",
-    "lodash": "^4.17.15",
     "mapbox-gl": "^1.1.1",
     "mixpanel-browser": "^2.29.0",
     "moment": "^2.22.2",
@@ -50,7 +49,6 @@
     "react-virtualized": "^9.21.0",
     "reactstrap": "^8.0.1",
     "recharts": "^1.6.2",
-    "static-eval": "^2.0.2",
     "styletron-engine-atomic": "^1.4.0",
     "styletron-react": "^5.2.0",
     "typed-signals": "^1.0.5",
@@ -89,6 +87,7 @@
     "eslint-plugin-jsx-a11y": "^6.2.3",
     "eslint-plugin-react": "^7.14.2",
     "eslint-plugin-relay": "^1.3.5",
+    "hard-source-webpack-plugin": "^0.13.1",
     "scss-to-json": "^2.0.0",
     "typescript": "^3.5.3"
   },
