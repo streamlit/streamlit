@@ -19,6 +19,9 @@ import streamlit as st
 from streamlit import util
 from streamlit.compatibility import setup_2_3_shims
 
+if sys.version_info >= (3, 0):
+    from streamlit.hashing_py3 import get_referenced_objects
+
 setup_2_3_shims(globals())
 
 
@@ -116,10 +119,9 @@ class CodeHasher():
         else:
             self.hasher = hashlib.new(name)
 
-    def update(self, o, context=None):
-        """Add bytes to hash."""
-        b = self.to_bytes(o, context)
-        self.hasher.update(b)
+    def update(self, obj, context=None):
+        """Update the hash with the provided object."""
+        self._update(self.hasher, obj, context)
 
     def digest(self):
         return self.hasher.digest()
@@ -148,7 +150,7 @@ class CodeHasher():
 
         return b
 
-    def _u(self, hasher, obj, context=None):
+    def _update(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
@@ -169,9 +171,9 @@ class CodeHasher():
         elif isinstance(obj, list) or isinstance(obj, tuple):
             h = hashlib.new(self.name)
             # add type to distingush x from [x]
-            self._u(h, type(obj).__name__.encode() + b':')
+            self._update(h, type(obj).__name__.encode() + b':')
             for e in obj:
-                self._u(h, e, context)
+                self._update(h, e, context)
             return h.digest()
         elif obj is None:
             # Special string since hashes change between sessions.
@@ -191,21 +193,22 @@ class CodeHasher():
                 isinstance(obj, io.IOBase) or os.path.exists(obj.name)):
             # Hash files as name + last modification date + offset.
             h = hashlib.new(self.name)
-            self._u(h, obj.name)
-            self._u(h, os.path.getmtime(obj.name))
-            self._u(h, obj.tell())
+            self._update(h, obj.name)
+            self._update(h, os.path.getmtime(obj.name))
+            self._update(h, obj.tell())
             return h.digest()
         elif inspect.isroutine(obj):
             h = hashlib.new(self.name)
+            # TODO: This may be too restrictive for libraries in development.
             if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
                 context = _get_context(obj)
                 if obj.__defaults__:
-                    self._u(h, obj.__defaults__, context)
+                    self._update(h, obj.__defaults__, context)
                 h.update(self._code_to_bytes(obj.__code__, context))
             else:
                 # Don't hash code that is not in the current working directory.
-                self._u(h, obj.__module__)
-                self._u(h, obj.__name__)
+                self._update(h, obj.__module__)
+                self._update(h, obj.__name__)
             return h.digest()
         elif inspect.iscode(obj):
             return self._code_to_bytes(obj, context)
@@ -230,82 +233,36 @@ class CodeHasher():
         h = hashlib.new(self.name)
 
         # Hash the bytecode.
-        self._u(h, code.co_code)
+        self._update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
         consts = [n for n in code.co_consts if
                   not isinstance(n, string_types) or not n.endswith('.<lambda>')]
-        self._u(h, consts, context)
+        self._update(h, consts, context)
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
-            tos = [None]  # top of the stack (list so that we can mutate it in set_tos)
-
-            def set_tos(t):
-                if tos[0] is not None:
-                    # hash tos so we support reading multiple objects
-                    self._u(h, tos[0], context)
-                tos[0] = t
-
-            # Our goal is to find referenced objects. The problem is that co_names
-            # does not have full qualified names in it. So if you access `foo.bar`,
-            # co_names has `foo` and `bar` in it but it doesn't tell us that the
-            # code reads `bar` of `foo`. We are going over the bytecode to resolve
-            # from which object an attribute is requested.
-            # Read more about bytecode at https://docs.python.org/3/library/dis.html
-
-            for op in dis.get_instructions(code):
-                if op.opname in ['LOAD_GLOBAL', 'LOAD_NAME']:
-                    if op.argval in context.globals:
-                        set_tos(context.globals[op.argval])
-                    else:
-                        set_tos(op.argval)
-                elif op.opname in ['LOAD_DEREF', 'LOAD_CLOSURE']:
-                    set_tos(context.closure[op.arg])
-                elif op.opname == 'IMPORT_NAME':
-                    try:
-                        set_tos(importlib.import_module(op.argval))
-                    except ImportError:
-                        set_tos(op.argval)
-                elif op.opname in ['LOAD_METHOD', 'LOAD_ATTR', 'IMPORT_FROM']:
-                    if tos[0] is None:
-                        self._u(h, op.argval, context)
-                    elif isinstance(tos, str):
-                        tos[0] += '.' + op.argval
-                    else:
-                        tos[0] = getattr(tos[0], op.argval)
-                elif op.opname == 'DELETE_FAST' and tos[0]:
-                    del context.varnames[op.argval]
-                    tos[0] = None
-                elif op.opname == 'STORE_FAST' and tos[0]:
-                    context.varnames[op.argval] = tos[0]
-                    tos[0] = None
-                elif op.opname == 'LOAD_FAST' and op.argval in context.varnames:
-                    set_tos(context.varnames[op.argval])
-                else:
-                    # For all other instructions, hash the current TOS.
-                    if tos[0] is not None:
-                        self._u(h, tos[0], context)
-                        tos[0] = None
+            for ref in get_referenced_objects(code, context):
+                self._update(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
                 if name in context.globals:
                     try:
-                        self._u(h, context.globals[name], context)
+                        self._update(h, context.globals[name], context)
                     except Exception:
-                        self._u(h, name)
+                        self._update(h, name)
                 else:
                     try:
                         module = importlib.import_module(name)
-                        self._u(h, module, context)
+                        self._update(h, module, context)
                     except ImportError:
-                        self._u(h, name, context)
+                        self._update(h, name, context)
 
             for i, name in enumerate(code.co_freevars):
                 try:
-                    self._u(h, context.closure[i], context)
+                    self._update(h, context.closure[i], context)
                 except Exception:
-                    self._u(h, name)
+                    self._update(h, name)
 
         return h.digest()

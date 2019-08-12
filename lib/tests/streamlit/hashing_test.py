@@ -3,7 +3,6 @@
 
 """st.hashing unit tests."""
 
-import hashlib
 import sys
 import unittest
 
@@ -12,7 +11,6 @@ import pandas as pd
 import pytest
 
 import tempfile
-import streamlit as st
 from streamlit.hashing import get_hash
 
 
@@ -26,13 +24,13 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(10), get_hash(11))
 
     def test_list(self):
-        self.assertEqual([1,2], [1,2])
-        self.assertNotEqual([1,2], [2,2])
+        self.assertEqual([1, 2], [1, 2])
+        self.assertNotEqual([1, 2], [2, 2])
         self.assertNotEqual([1], 1)
 
     def test_tuple(self):
-        self.assertEqual((1,2), (1,2))
-        self.assertNotEqual((1,2), (2,2))
+        self.assertEqual((1, 2), (1, 2))
+        self.assertNotEqual((1, 2), (2, 2))
         self.assertNotEqual((1,), 1)
         self.assertNotEqual((1,), [1])
 
@@ -56,7 +54,7 @@ class HashTest(unittest.TestCase):
         df1 = pd.DataFrame({'foo': [12]})
         df2 = pd.DataFrame({'foo': [42]})
         df3 = pd.DataFrame({'foo': [12]})
-        
+
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
@@ -74,7 +72,6 @@ class HashTest(unittest.TestCase):
 
             self.assertNotEqual(get_hash(f), get_hash(temp1))
 
-        
         self.assertEqual(get_hash(temp1), get_hash(temp1))
         self.assertNotEqual(get_hash(temp1), get_hash(temp2))
 
@@ -209,18 +206,21 @@ class CodeHashTest(unittest.TestCase):
 
         def hash_prog_1():
             df = pd.DataFrame({'foo': [12]})
+
             def f():
                 return df
             return get_hash(f)
 
         def hash_prog_2():
             df = pd.DataFrame({'foo': [42]})
+
             def f():
                 return df
             return get_hash(f)
 
         def hash_prog_3():
             df = pd.DataFrame({'foo': [12]})
+
             def f():
                 return df
             return get_hash(f)
@@ -331,7 +331,7 @@ class CodeHashTest(unittest.TestCase):
 
         def hash_prog_2():
             o = Foo()
-            
+
             def f():
                 return o.get_y()
 
@@ -339,7 +339,7 @@ class CodeHashTest(unittest.TestCase):
 
         def hash_prog_3():
             o = Foo()
-            
+
             def f():
                 return o.get_x()
 
@@ -347,7 +347,7 @@ class CodeHashTest(unittest.TestCase):
 
         self.assertNotEqual(hash_prog_1(), hash_prog_2())
         self.assertEqual(hash_prog_1(), hash_prog_3())
-    
+
     @pytest.mark.skipif(sys.version_info < (3,), reason="Requires Python 3.")
     def test_class_referenced(self):
         """Test hash for classes with methods that reference values."""
@@ -358,7 +358,7 @@ class CodeHashTest(unittest.TestCase):
 
                 def get_x(self):
                     return self.x
-                    
+
             o = Foo()
 
             def f():
@@ -374,7 +374,7 @@ class CodeHashTest(unittest.TestCase):
                     return self.x
 
             o = Foo()
-            
+
             def f():
                 return o.get_x()
 
