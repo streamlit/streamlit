@@ -28,25 +28,37 @@ type DialogProps =
   UploadedProps |
   WarningProps;
 
+export enum DialogType {
+  ABOUT = 'about',
+  CLEAR_CACHE = 'clearCache',
+  RERUN_SCRIPT = 'rerunScript',
+  SETTINGS = 'settings',
+  SCRIPT_CHANGED = 'scriptChanged',
+  SCRIPT_COMPILE_ERROR = 'scriptCompileError',
+  UPLOAD_PROGRESS = 'uploadProgress',
+  UPLOADED = 'uploaded',
+  WARNING = 'warning',
+}
+
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
-    case 'about':
+    case DialogType.ABOUT:
       return aboutDialog(dialogProps)
-    case 'clearCache':
+    case DialogType.CLEAR_CACHE:
       return clearCacheDialog(dialogProps)
-    case 'rerunScript':
+    case DialogType.RERUN_SCRIPT:
       return rerunScriptDialog(dialogProps)
-    case 'settings':
+    case DialogType.SETTINGS:
       return settingsDialog(dialogProps)
-    case 'scriptChanged':
+    case DialogType.SCRIPT_CHANGED:
       return <ScriptChangedDialog {...dialogProps}/>
-    case 'scriptCompileError':
+    case DialogType.SCRIPT_COMPILE_ERROR:
       return scriptCompileErrorDialog(dialogProps)
-    case 'uploadProgress':
+    case DialogType.UPLOAD_PROGRESS:
       return uploadProgressDialog(dialogProps)
-    case 'uploaded':
+    case DialogType.UPLOADED:
       return uploadedDialog(dialogProps)
-    case 'warning':
+    case DialogType.WARNING:
       return warningDialog(dialogProps)
     case undefined:
       return noDialog(dialogProps)
@@ -56,7 +68,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 }
 
 interface AboutProps {
-  type: 'about';
+  type: DialogType.ABOUT;
 
   /** Callback to close the dialog */
   onClose: PlainEventHandler;
@@ -82,7 +94,7 @@ function aboutDialog(props: AboutProps): ReactElement {
 }
 
 interface ClearCacheProps {
-  type: 'clearCache';
+  type: DialogType.CLEAR_CACHE;
   /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void;
 
@@ -124,7 +136,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
 }
 
 interface RerunScriptProps {
-  type: 'rerunScript';
+  type: DialogType.RERUN_SCRIPT;
 
   /** Callback to get the script's command line */
   getCommandLine: () => string | string[];
@@ -176,35 +188,29 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
 }
 
 interface ScriptCompileErrorProps {
-  type: 'scriptCompileError';
+  type: DialogType.SCRIPT_COMPILE_ERROR;
   exception: Exception;
   onClose: PlainEventHandler;
-  onRerun: PlainEventHandler;
 }
 
 function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
-  let message = props.exception.message
-  if (message) {
-    message = `: ${message}`
-  }
-
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <strong>{props.exception.type}</strong>{message}
+          <code className="compile-error-text">{props.exception.message}</code>
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button outline color="primary" onClick={props.onRerun}>Rerun</Button>
+        <Button outline color="primary" onClick={props.onClose}>Close</Button>
       </ModalFooter>
     </BasicDialog>
   )
 }
 
 interface SettingsProps extends SettingsDialogProps {
-  type: 'settings';
+  type: DialogType.SETTINGS;
 }
 
 /**
@@ -217,7 +223,7 @@ function settingsDialog(props: SettingsProps): ReactElement {
 }
 
 interface UploadProgressProps {
-  type: 'uploadProgress';
+  type: DialogType.UPLOAD_PROGRESS;
   progress?: string | number;
   onClose: PlainEventHandler;
 }
@@ -241,7 +247,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
 }
 
 interface UploadedProps {
-  type: 'uploaded';
+  type: DialogType.UPLOADED;
   url: string;
   onClose: PlainEventHandler;
 }
@@ -269,7 +275,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
 }
 
 interface WarningProps {
-  type: 'warning';
+  type: DialogType.WARNING;
   title: string;
   msg: ReactNode;
   onClose: PlainEventHandler;

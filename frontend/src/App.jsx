@@ -19,7 +19,7 @@ import url from 'url'
 import LoginBox from 'components/core/LoginBox/'
 import MainMenu from 'components/core/MainMenu/'
 import Resolver from 'lib/Resolver'
-import { StreamlitDialog } from 'components/core/StreamlitDialog/'
+import { StreamlitDialog, DialogType } from 'components/core/StreamlitDialog/'
 import { ConnectionManager } from 'lib/ConnectionManager'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
@@ -174,8 +174,9 @@ class App extends PureComponent {
         delta: deltaMsg => this.applyDelta(toImmutableProto(Delta, deltaMsg)),
         reportFinished: () => this.handleReportFinished(),
         uploadReportProgress: progress =>
-          this.openDialog({ progress, type: 'uploadProgress' }),
-        reportUploaded: url => this.openDialog({ url, type: 'uploaded' }),
+          this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
+        reportUploaded: url =>
+          this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
       this.showError(err)
@@ -214,6 +215,7 @@ class App extends PureComponent {
 
       // Determine our new ReportRunState
       let reportRunState = prevState.reportRunState
+      let dialog = prevState.dialog
 
       if (stateChangeProto.reportIsRunning &&
         prevState.reportRunState !== ReportRunState.STOP_REQUESTED) {
@@ -221,6 +223,12 @@ class App extends PureComponent {
         // If the report is running, we change our ReportRunState only
         // if we don't have a pending stop request
         reportRunState = ReportRunState.RUNNING
+
+        // If the scriptCompileError dialog is open and the report starts
+        // running, close it.
+        if (dialog != null && dialog.type === DialogType.SCRIPT_COMPILE_ERROR) {
+          dialog = undefined
+        }
 
       } else if (!stateChangeProto.reportIsRunning &&
         prevState.reportRunState !== ReportRunState.RERUN_REQUESTED &&
@@ -237,6 +245,7 @@ class App extends PureComponent {
           ...prevState.userSettings,
           runOnSave: stateChangeProto.runOnSave,
         },
+        dialog,
         reportRunState,
       })
     })
@@ -251,13 +260,12 @@ class App extends PureComponent {
     if (sessionEvent.type === 'scriptCompilationException') {
       this.setState({ reportRunState: ReportRunState.COMPILATION_ERROR })
       this.openDialog({
-        type: 'scriptCompileError',
+        type: DialogType.SCRIPT_COMPILE_ERROR,
         exception: sessionEvent.scriptCompilationException,
-        onRerun: this.rerunScript,
       })
     } else if (RERUN_PROMPT_MODAL_DIALOG && sessionEvent.type === 'reportChangedOnDisk') {
       this.openDialog({
-        type: 'scriptChanged',
+        type: DialogType.SCRIPT_CHANGED,
         onRerun: this.rerunScript,
       })
     }
@@ -414,7 +422,7 @@ class App extends PureComponent {
   openRerunScriptDialog() {
     if (this.isServerConnected()) {
       this.openDialog({
-        type: 'rerunScript',
+        type: DialogType.RERUN_SCRIPT,
         getCommandLine: () => this.state.commandLine,
         setCommandLine: commandLine => this.setState({ commandLine }),
         rerunCallback: this.rerunScript,
@@ -490,7 +498,7 @@ class App extends PureComponent {
   openClearCacheDialog() {
     if (this.isServerConnected()) {
       this.openDialog({
-        type: 'clearCache',
+        type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
 
         // This will be called if enter is pressed.
@@ -544,7 +552,7 @@ class App extends PureComponent {
 
   settingsCallback() {
     this.openDialog({
-      type: 'settings',
+      type: DialogType.SETTINGS,
       isOpen: true,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
@@ -554,7 +562,7 @@ class App extends PureComponent {
 
   aboutCallback() {
     this.openDialog({
-      type: 'about',
+      type: DialogType.ABOUT,
       onClose: this.closeDialog,
     })
   }

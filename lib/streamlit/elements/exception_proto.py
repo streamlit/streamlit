@@ -7,6 +7,39 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
+def _format_syntax_error_message(exception):
+    """Returns a nicely formatted SyntaxError message that emulates
+    what the Python interpreter outputs, e.g.:
+
+    > File "raven.py", line 3
+    >   st.write('Hello world!!'))
+    >                            ^
+    > SyntaxError: invalid syntax
+
+    Parameters
+    ----------
+    exception : SyntaxError
+
+    Returns
+    -------
+    str
+
+    """
+    return (
+        'File "%(filename)s", line %(lineno)d\n'
+        '  %(text)s\n'
+        '  %(caret_indent)s^\n'
+        '%(errname)s: %(msg)s' %
+        {
+            'filename': exception.filename,
+            'lineno': exception.lineno,
+            'text': exception.text.rstrip(),
+            'caret_indent': ' ' * max(exception.offset - 1, 0),
+            'errname': type(exception).__name__,
+            'msg': exception.msg,
+        })
+
+
 def marshall(exception_proto, exception, exception_traceback=None):
     """Marshalls an Exception.proto message.
 
@@ -29,7 +62,13 @@ def marshall(exception_proto, exception, exception_traceback=None):
     exception_proto.stack_trace.extend(stack_trace)
 
     try:
-        exception_proto.message = str(exception)
+        if isinstance(exception, SyntaxError):
+            # SyntaxErrors have additional fields (filename, text, lineno,
+            # offset) that we can use for a nicely-formatted message telling
+            # the user what to fix.
+            exception_proto.message = _format_syntax_error_message(exception)
+        else:
+            exception_proto.message = str(exception)
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
