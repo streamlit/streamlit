@@ -288,10 +288,11 @@ def cache(func=None, persist=False, ignore_hash=False):
             message = 'Running %s(...).' % name
         with st.spinner(message):
             hasher = hashlib.new('md5')
-            arg_string = pickle.dumps([argc, argv], pickle.HIGHEST_PROTOCOL)
+
+            args_hasher = CodeHasher('md5', hasher)
+            args_hasher.update([argc, argv])
             LOGGER.debug('Hashing arguments to %s of %i bytes.',
-                         name, len(arg_string))
-            hasher.update(arg_string)
+                         name, args_hasher.size)
 
             code_hasher = CodeHasher('md5', hasher)
             code_hasher.update(func)
