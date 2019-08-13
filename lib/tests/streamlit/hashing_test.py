@@ -11,6 +11,7 @@ import unittest
 import altair as alt
 import pandas as pd
 import pytest
+from mock import MagicMock
 
 import streamlit as st
 from streamlit.hashing import get_hash
@@ -88,6 +89,12 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_magic_mock(self):
+        """Test that MagicMocks never hash to the same thing."""
+        # (This also tests that MagicMock can hash at all, without blowing the
+        # stack due to an infinite recursion.)
+        self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
 
 class CodeHashTest(unittest.TestCase):

@@ -36,6 +36,13 @@ except ImportError:
 Context = namedtuple('Context', ['globals', 'closure', 'varnames'])
 
 
+def _is_magicmock(obj):
+    return (
+        util.is_type(obj, 'unittest.mock.MagicMock') or
+        util.is_type(obj, 'mock.mock.MagicMock')
+    )
+
+
 def _get_context(func):
     closure = (
         [cell.cell_contents for cell in func.__closure__]
@@ -161,7 +168,11 @@ class CodeHasher():
         Python's built in `hash` does not produce consistent results across
         runs."""
 
-        if isinstance(obj, bytes) or isinstance(obj, bytearray):
+        if _is_magicmock(obj):
+            # MagicMock can result in objects that appear to be infinitely
+            # deep, so we don't try to hash them at all.
+            return self.to_bytes(id(obj))
+        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
         elif isinstance(obj, string_types):
             return obj.encode()
