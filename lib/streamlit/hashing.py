@@ -199,6 +199,10 @@ class CodeHasher():
             self._update(h, obj.tell())
             return h.digest()
         elif inspect.isroutine(obj):
+            if hasattr(obj, '__wrapped__'):
+                # Ignore the wrapper of wrapped functions
+                return self.to_bytes(obj.__wrapped__)
+
             h = hashlib.new(self.name)
             # TODO: This may be too restrictive for libraries in development.
             if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):

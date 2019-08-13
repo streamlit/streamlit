@@ -3,14 +3,16 @@
 
 """st.hashing unit tests."""
 
+import functools
 import sys
+import tempfile
 import unittest
 
 import altair as alt
 import pandas as pd
 import pytest
 
-import tempfile
+import streamlit as st
 from streamlit.hashing import get_hash
 
 
@@ -415,6 +417,47 @@ class CodeHashTest(unittest.TestCase):
 
         def h():
             return x + z
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_decorated(self):
+        """Test decorated functions."""
+
+        def do(func):
+            @functools.wraps(func)
+            def wrapper_do(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper_do
+
+        @do
+        def f():
+            return 42
+
+        @do
+        def g():
+            return 12
+
+        @do
+        def h():
+            return 42
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_cached(self):
+        """Test decorated functions."""
+        @st.cache
+        def f():
+            return 42
+
+        @st.cache
+        def g():
+            return 12
+
+        @st.cache
+        def h():
+            return 42
 
         self.assertNotEqual(get_hash(f), get_hash(g))
         self.assertEqual(get_hash(f), get_hash(h))
