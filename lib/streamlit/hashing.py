@@ -59,7 +59,8 @@ def get_hash(f):
 
 def _int_to_bytes(i):
     if hasattr(i, 'to_bytes'):
-        return i.to_bytes((i.bit_length() + 7) // 8, 'little', signed=True)
+        num_bytes = (i.bit_length() + 8) // 8
+        return i.to_bytes(num_bytes, 'little', signed=True)
     else:
         # For Python 2
         return b'int:' + str(i).encode()
