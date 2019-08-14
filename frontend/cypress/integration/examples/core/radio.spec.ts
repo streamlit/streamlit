@@ -21,7 +21,7 @@ describe('st.radio', () => {
         'have.text',
         'value 1: male' +
           'value 2: female' +
-          'value 3: female')
+          'value 3: None')
   })
 
   it('formats display values', () => {
@@ -30,6 +30,19 @@ describe('st.radio', () => {
       .should(
         'have.text',
         'FemaleMale')
+  })
+
+  it('handles no options', () => {
+    cy.get('.stRadio [role="radiogroup"]')
+      .eq(2)
+      .should(
+        'have.text',
+        'No options to select.')
+
+    cy.get('.stRadio [role="radiogroup"]')
+      .eq(2)
+      .get('input')
+      .should('be.disabled')
   })
 
   it('sets value correctly when user clicks', () => {
@@ -43,6 +56,6 @@ describe('st.radio', () => {
         'have.text',
         'value 1: male' +
           'value 2: male' +
-          'value 3: male')
+          'value 3: None')
   })
 })

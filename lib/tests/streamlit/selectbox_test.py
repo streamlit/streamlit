@@ -70,6 +70,21 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
+    @parameterized.expand([
+        ((),),
+        ([],),
+        (np.array([]),),
+        (pd.Series(np.array([])),),
+    ])
+    def test_no_options(self, options):
+        """Test that it handles no options."""
+        st.selectbox('the label', [])
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.value, 0)
+        self.assertEqual(c.options, [])
+
     def test_invalid_value(self):
         """Test that value must be an int."""
         st.selectbox('the label', ('m', 'f'), '1')

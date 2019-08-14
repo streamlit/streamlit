@@ -159,6 +159,14 @@ def _widget(f):
     return wrapper
 
 
+class NoValue(object):
+    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
+    call to return None. This is needed because `_enqueue_new_element_delta`
+    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
+    """
+    pass
+
+
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
@@ -200,6 +208,17 @@ class DeltaGenerator(object):
             element.
 
         """
+        def value_or_dg(value, dg):
+            """Widgets have return values unlike other elements and may want to
+            return `None`. We create a special `NoValue` class for this scenario
+            since `None` return values get replaced with a DeltaGenerator.
+            """
+            if value is NoValue:
+                return None
+            if value is None:
+                return dg
+            return value
+
         rv = None
         if marshall_element:
             msg = protobuf.ForwardMsg()
@@ -208,7 +227,7 @@ class DeltaGenerator(object):
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
-            return rv if rv is not None else self
+            return value_or_dg(rv, self)
 
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
@@ -223,12 +242,12 @@ class DeltaGenerator(object):
         msg_was_enqueued = self._enqueue(msg)
 
         if not msg_was_enqueued:
-            return rv if rv is not None else self
+            return value_or_dg(rv, self)
 
         if self._is_root:
             self._id += 1
 
-        return rv if rv is not None else output_dg
+        return value_or_dg(rv, output_dg)
 
     @_with_element
     def balloons(self, element):
@@ -1211,7 +1230,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def radio(self, element, ui_value, label, options, value=0,
+    def radio(self, element, ui_value, label, options, index=0,
               format_func=str):
         """Display a radio button widget.
 
@@ -1221,7 +1240,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this radio group is for.
         options : list, tuple, numpy.ndarray, or pandas.Series
             Labels for the radio options. This will be cast to str internally by default.
-        value : int
+        index : int
             The index of the preselected option on first render.
         format_func : function
             Function to modify the display of the labels. It receives the option as an argument
@@ -1242,22 +1261,23 @@ class DeltaGenerator(object):
         ...         st.write('You didn\'t select comedy.')
 
         """
-        if not isinstance(value, int):
+        if not isinstance(index, int):
             raise TypeError(
-                'Radio Value has invalid type: %s' % type(value).__name__)
-        if not 0 <= value < len(options):
-            raise ValueError(
-                'Radio Value must be between 0 and length of options')
+                'Radio Value has invalid type: %s' % type(index).__name__)
 
-        current_value = ui_value if ui_value is not None else value
+        if len(options) and not 0 <= index < len(options):
+            raise ValueError(
+                'Radio index must be between 0 and length of options')
+
+        current_value = ui_value if ui_value is not None else index
 
         element.radio.label = label
         element.radio.value = current_value
         element.radio.options[:] = [str(format_func(opt)) for opt in options]
-        return options[current_value]
+        return options[current_value] if len(options) else NoValue
 
     @_widget
-    def selectbox(self, element, ui_value, label, options, value=0,
+    def selectbox(self, element, ui_value, label, options, index=0,
                   format_func=str):
         """Display a select widget.
 
@@ -1267,7 +1287,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this select widget is for.
         options : list, tuple, numpy.ndarray, or pandas.Series
             Labels for the select options. This will be cast to str internally by default.
-        value : type
+        index : int
             The index of the preselected option on first render.
         format_func : function
             Function to modify the display of the labels. It receives the option as an argument
@@ -1285,19 +1305,20 @@ class DeltaGenerator(object):
         ...     st.write(options)
 
         """
-        if not isinstance(value, int):
+        if not isinstance(index, int):
             raise TypeError(
-                'Selectbox Value has invalid type: %s' % type(value).__name__)
-        if not 0 <= value < len(options):
-            raise ValueError(
-                'Selectbox Value must be between 0 and length of options')
+                'Selectbox Value has invalid type: %s' % type(index).__name__)
 
-        current_value = ui_value if ui_value is not None else value
+        if len(options) and not 0 <= index < len(options):
+            raise ValueError(
+                'Selectbox index must be between 0 and length of options')
+
+        current_value = ui_value if ui_value is not None else index
 
         element.selectbox.label = label
         element.selectbox.value = current_value
         element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
-        return options[current_value]
+        return options[current_value] if len(options) else NoValue
 
     @_widget
     def slider(self, element, ui_value, label, value=None,

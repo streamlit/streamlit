@@ -49,9 +49,17 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
-    const options = this.props.element.get('options')
-    const style = { width: this.props.width }
+    const { element, width } = this.props
+
+    const style = { width }
+    const label = element.get('label')
+    let options = element.get('options')
+    let disabled = this.props.disabled
+
+    if (options.size == 0) {
+      options = ['No options to select.']
+      disabled = true
+    }
 
     return (
       <div className="Widget row-widget stRadio" style={style}>
@@ -59,7 +67,7 @@ class Radio extends React.PureComponent<Props, State> {
         <RadioGroup
           onChange={this.onChange}
           value={this.valueOrDefault.toString()}
-          disabled={this.props.disabled}
+          disabled={disabled}
         >
           {options.map((option: string, idx: number) => (
             <UIRadio
