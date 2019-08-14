@@ -59,7 +59,7 @@ class Server(object):
     def get_current(cls):
         """Return the singleton instance."""
         if cls._singleton is None:
-            Server()
+            raise RuntimeError('Server has not been initialized yet')
 
         return Server._singleton
 
