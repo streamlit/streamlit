@@ -104,7 +104,7 @@ class Server(object):
             (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
             (r'/healthz', HealthHandler, dict(server=self)),
             (r'/debugz', DebugHandler, dict(server=self)),
-            (r'/metrics', MetricsHandler, dict(server=self)),
+            (r'/metrics', MetricsHandler),
         ]
 
         if (config.get_option('global.developmentMode') and

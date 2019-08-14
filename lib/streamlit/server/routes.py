@@ -26,10 +26,6 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
-
-    def initialize(self, server):
-        self._server = server
-
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-cache')
         # Only allow cross-origin requests when using the Node server. This is
@@ -41,6 +37,9 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 
 class HealthHandler(_SpecialRequestHandler):
+    def initialize(self, server):
+        self._server = server
+
     def get(self):
         if self._server.is_ready_for_browser_connection:
             self.write('ok')
@@ -63,6 +62,9 @@ class MetricsHandler(_SpecialRequestHandler):
 
 
 class DebugHandler(_SpecialRequestHandler):
+    def initialize(self, server):
+        self._server = server
+
     def get(self):
         self.add_header('Cache-Control', 'no-cache')
         self.write(
