@@ -55,7 +55,7 @@ class MessageCache(object):
         self._entries = {}
 
     def add_message(self, msg, session):
-        """Adds a ForwardMsg to the cache.
+        """Add a ForwardMsg to the cache.
 
         Parameters
         ----------
@@ -72,7 +72,7 @@ class MessageCache(object):
             entry.add_ref(session)
 
     def get_message(self, id):
-        """Returns the message with the given ID if it exists in the cache.
+        """Return the message with the given ID if it exists in the cache.
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class MessageCache(object):
             return entry.msg if entry else None
 
     def has_message_reference(self, msg, session):
-        """Returns True if a session has a reference to a message.
+        """Return True if a session has a reference to a message.
 
         Parameters
         ----------
@@ -105,3 +105,8 @@ class MessageCache(object):
         with self._lock:
             entry = self._entries.get(id, None)
             return entry is not None and session in entry.sessions
+
+    def clear(self):
+        """Remove all entries from the cache"""
+        with self._lock:
+            self._entries.clear()

@@ -50,3 +50,17 @@ class MessageCacheTest(unittest.TestCase):
 
         cache.add_message(msg, session)
         self.assertEqual(msg, cache.get_message(msg_id))
+
+    def test_clear(self):
+        """Test MessageCache.clear"""
+        cache = MessageCache()
+        session = MagicMock()
+        msg = _create_dataframe_msg([1, 2, 3])
+
+        msg_id = ensure_id(msg)
+
+        cache.add_message(msg, session)
+        self.assertEqual(msg, cache.get_message(msg_id))
+
+        cache.clear()
+        self.assertEqual(None, cache.get_message(msg_id))

@@ -14,10 +14,12 @@ import tornado.websocket
 from streamlit import config
 from streamlit import protobuf
 from streamlit import util
+from streamlit.MessageCache import MessageCache
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
@@ -84,6 +86,7 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._ioloop = tornado.ioloop.IOLoop.current()
+        self._message_cache = MessageCache()
 
         port = config.get_option('server.port')
         app = tornado.web.Application(self._get_routes(), **TORNADO_SETTINGS)
@@ -103,6 +106,7 @@ class Server(object):
                 health_check=lambda: self.is_ready_for_browser_connection)),
             (r'/debugz', DebugHandler, dict(server=self)),
             (r'/metrics', MetricsHandler),
+            (r'/message', MessageCacheHandler, dict(cache=self._message_cache))
         ]
 
         if (config.get_option('global.developmentMode') and

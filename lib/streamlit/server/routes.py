@@ -7,6 +7,10 @@ import tornado.web
 
 from streamlit import config
 from streamlit import metrics
+from streamlit.logger import get_logger
+from streamlit.server.server_util import serialize_forward_msg
+
+LOGGER = get_logger(__name__)
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
@@ -81,3 +85,36 @@ class DebugHandler(_SpecialRequestHandler):
                 self._server.get_debug(),
                 indent=2,
             ))
+
+
+class MessageCacheHandler(_SpecialRequestHandler):
+    """Returns ForwardMsgs from our MessageCache"""
+    def initialize(self, cache):
+        """Initializes the handler.
+
+        Parameters
+        ----------
+        cache : MessageCache
+
+        """
+        self._cache = cache
+
+    def get(self):
+        msg_id = self.get_argument('id', None)
+        if msg_id is None:
+            # ID is missing
+            LOGGER.warning('MessageCacheHandler.get: missing ID')
+            self.set_status(404)
+            raise tornado.web.Finish()
+
+        message = self._cache.get_message(msg_id)
+        if message is None:
+            # Message not in our cache
+            LOGGER.debug('MessageCache MISS [id=%s]' % msg_id)
+            self.set_status(404)
+            raise tornado.web.Finish()
+
+        LOGGER.debug('MessageCache HIT [id=%s]' % msg_id)
+        msg_str = serialize_forward_msg(message)
+        self.write(msg_str)
+        self.set_status(200)

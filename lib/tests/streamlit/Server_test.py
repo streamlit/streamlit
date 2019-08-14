@@ -5,13 +5,27 @@ import unittest
 
 import tornado.testing
 import tornado.web
+from mock import MagicMock
 from mock import patch
 
 from streamlit import config
+from streamlit.MessageCache import MessageCache
+from streamlit.MessageCache import ensure_id
+from streamlit.elements import data_frame_proto
+from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import serialize_forward_msg
+
+
+def _create_dataframe_msg(df):
+    msg = ForwardMsg()
+    msg.delta.id = 1
+    data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
+    return msg
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -101,3 +115,28 @@ class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_debug(self):
         # TODO - debugz is currently broken
         pass
+
+
+class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        self._cache = MessageCache()
+        return tornado.web.Application([
+            (r'/message', MessageCacheHandler, dict(cache=self._cache)),
+        ])
+
+    def test_message_cache(self):
+        # Create a new ForwardMsg and cache it
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg_id = ensure_id(msg)
+        self._cache.add_message(msg, MagicMock())
+
+        # Cache hit
+        response = self.fetch('/message?id=%s' % msg_id)
+        self.assertEqual(200, response.code)
+        self.assertEqual(serialize_forward_msg(msg), response.body)
+
+        # Cache misses
+        self.assertEqual(404, self.fetch('/message').code)
+        self.assertEqual(404, self.fetch('/message?id=non_existent').code)
+
+
