@@ -67,6 +67,10 @@ Follow these steps and you'll have a sample report running in less than 5 minute
 
 The next step is to build your first Streamlit report from scratch with our [get started guide](getting_started.md). When you're finished, you'll know how to structure a Streamlit report, visualize data, and add headings and text to organize your observations and conclusions.
 
+## Learn common patterns
+
+Now that you've put together a simple report with our Getting Started guide, learn about [Streamlit's core mechanics](core_mechanics.md). Here you'll learn more about different ways to add elements to a report, how to create animations, and techniques to speed up calculations.
+
 ## Some helpful links
 
 The left-hand navigation is the best way to move around our docs site, but we think these articles are important enough to list more than once:
