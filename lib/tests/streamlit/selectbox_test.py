@@ -87,14 +87,10 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        st.selectbox('the label', ('m', 'f'), '1')
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'TypeError')
+        with self.assertRaises(TypeError):
+            st.selectbox('the label', ('m', 'f'), '1')
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        st.selectbox('the label', ('m', 'f'), 2)
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'ValueError')
+        with self.assertRaises(ValueError):
+            st.selectbox('the label', ('m', 'f'), 2)

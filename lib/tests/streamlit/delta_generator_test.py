@@ -141,9 +141,11 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
         dg = FakeDeltaGenerator()
         data = 'some_text'
-        wrapped(dg, data)
-        self.assertEqual(
-            dg._exception_msg, 'Exception in fake_text_raise_exception')
+        with self.assertRaises(Exception) as ctx:
+            wrapped(dg, data)
+
+        self.assertTrue(
+            'Exception in fake_text_raise_exception' in str(ctx.exception))
 
     def set_widget_requires_args(self):
         st.text_input()
@@ -347,15 +349,11 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
         """Test protobuf.Progress with bad values."""
         values = [-1, 101, -0.01, 1.01]
         for value in values:
-            st.progress(value)
+            with self.assertRaises(ValueError):
+                st.progress(value)
 
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(element.exception.type, 'ValueError')
-
-        st.progress('some string')
-
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.exception.type, 'TypeError')
+        with self.assertRaises(TypeError):
+            st.progress('some string')
 
 
 class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
@@ -426,8 +424,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         url = 'https://streamlit.io/an_image.png'
         caption = 'ahoy!'
 
-        st.image([url] * 5, caption=[caption] * 2)
-
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.exception.message,
-                         'Cannot pair 2 captions with 5 images.')
+        with self.assertRaises(Exception) as ctx:
+            st.image([url] * 5, caption=[caption] * 2)
+        self.assertTrue(
+            'Cannot pair 2 captions with 5 images.' in str(ctx.exception))

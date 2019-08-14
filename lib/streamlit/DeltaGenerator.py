@@ -104,22 +104,9 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
-        try:
-            def marshall_element(element):
-                return method(self, element, *args, **kwargs)
-
-            return self._enqueue_new_element_delta(marshall_element)
-        except Exception as e:
-            # First, write the delta to stderr.
-            import sys
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback, file=sys.stderr)
-
-            # Now write the delta to the report. (To avoid infinite recursion,
-            # we make sure that the exception didn't occur *within* st.exception
-            # itself!)
-            if method.__name__ != 'exception':
-                self.exception(e)
+        def marshall_element(element):
+            return method(self, element, *args, **kwargs)
+        return self._enqueue_new_element_delta(marshall_element)
 
     return wrapped_method
 

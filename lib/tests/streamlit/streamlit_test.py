@@ -341,16 +341,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_image_bad_width(self):
         """Test st.image with bad width."""
-        st.image('does/not/exist', width=-1234)
+        with self.assertRaises(RuntimeError) as ctx:
+            st.image('does/not/exist', width=-1234)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, 'RuntimeError')
-        self.assertEqual(
-            el.exception.message,
-            'Image width must be positive.')
-        self.assertTrue(
-            'RuntimeError(\'Image width must be positive.\')'
-                in ''.join(el.exception.stack_trace))
+        self.assertTrue('Image width must be positive.' in str(ctx.exception))
 
     def test_st_info(self):
         """Test st.info."""
@@ -402,28 +396,18 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_map_missing_column(self):
         """Test st.map with wrong column label."""
         df = pd.DataFrame({'notlat': [1, 2, 3], 'lon': [11, 12, 13]})
-        st.map(df)
+        with self.assertRaises(Exception) as ctx:
+            st.map(df)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, 'Exception')
-        self.assertEqual(
-            el.exception.message,
-            'Map data must contain "lat" and "lon" columns.')
-        self.assertTrue(
-            'Exception(\'Map data must contain "lat" and "lon" columns.\')'
-                in ''.join(el.exception.stack_trace))
+        self.assertTrue('Map data must contain "lat" and "lon" columns.' in str(ctx.exception))
 
     def test_st_map_nan_exception(self):
         """Test st.map with NaN in data."""
         df = pd.DataFrame({'lat': [1, 2, np.nan], 'lon': [11, 12, 13]})
-        st.map(df)
+        with self.assertRaises(Exception) as ctx:
+            st.map(df)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, 'Exception')
-        self.assertEqual(el.exception.message, 'Map data must be numeric.')
-        self.assertTrue(
-            'raise Exception(\'Map data must be numeric.\')'
-                in ''.join(el.exception.stack_trace))
+        self.assertTrue('Map data must be numeric.' in str(ctx.exception))
 
     def test_st_markdown(self):
         """Test st.markdown."""
