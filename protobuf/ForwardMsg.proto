@@ -5,6 +5,9 @@ import "Exception.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
+  // An ID that uniquely identifies this ForwardMsg, for caching.
+  string id = 9;
+
   oneof type {
     ////
     // Report Lifetime
@@ -34,6 +37,16 @@ message ForwardMsg {
 
     // A SessionEvent was emitted.
     SessionEvent session_event = 8;
+
+    ///
+    // Other
+    ///
+
+    // A reference to a ForwardMsg that has already been delivered.
+    // The client should substitute the message with the given ID
+    // for this one. If the client does not have the referenced message in
+    // its cache, it can retrieve it from the server.
+    string id_reference = 10;
   }
 }
 
