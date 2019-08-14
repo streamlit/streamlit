@@ -9,6 +9,7 @@ from tornado.testing import AsyncHTTPTestCase
 
 from streamlit import config
 from streamlit.server import Server
+from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MetricsHandler
 
@@ -88,3 +89,15 @@ class MetricsHandlerTest(AsyncHTTPTestCase):
         config.set_option('global.metrics', True)
         response = self.fetch('/metrics')
         self.assertEqual(200, response.code)
+
+
+class DebugHandlerTest(AsyncHTTPTestCase):
+    """Tests the /debugz endpoint"""
+    def get_app(self):
+        return tornado.web.Application([
+            (r'/debugz', DebugHandler),
+        ])
+
+    def test_debug(self):
+        # TODO - debugz is currently broken
+        pass
