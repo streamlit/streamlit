@@ -102,7 +102,8 @@ class Server(object):
     def _get_routes(self):
         routes = [
             (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
-            (r'/healthz', HealthHandler, dict(server=self)),
+            (r'/healthz', HealthHandler, dict(
+                health_check=lambda: self.is_ready_for_browser_connection)),
             (r'/debugz', DebugHandler, dict(server=self)),
             (r'/metrics', MetricsHandler),
         ]

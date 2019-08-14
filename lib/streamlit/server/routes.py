@@ -37,11 +37,19 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 
 class HealthHandler(_SpecialRequestHandler):
-    def initialize(self, server):
-        self._server = server
+    def initialize(self, health_check):
+        """Initialize the handler
+
+        Parameters
+        ----------
+        health_check : callable
+            A function that returns True if the server is healthy
+
+        """
+        self._health_check = health_check
 
     def get(self):
-        if self._server.is_ready_for_browser_connection:
+        if self._health_check():
             self.write('ok')
             self.set_status(200)
         else:

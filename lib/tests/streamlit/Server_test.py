@@ -1,7 +1,14 @@
-from mock import patch
+# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+
 import unittest
 
+import tornado.web
+from mock import patch
+from tornado.testing import AsyncHTTPTestCase
+
 from streamlit.server import Server
+from streamlit.server.routes import HealthHandler
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -38,3 +45,28 @@ class ServerUtilsTest(unittest.TestCase):
                       side_effect=[True, 's3.amazon.com']):
             self.assertTrue(
                 Server._is_url_from_allowed_origins('s3.amazon.com'))
+
+
+class HealthHandlerTest(AsyncHTTPTestCase):
+    """Tests the /healthz endpoint"""
+    def setUp(self):
+        super(HealthHandlerTest, self).setUp()
+        self._is_healthy = True
+
+    def is_healthy(self):
+        return self._is_healthy
+
+    def get_app(self):
+        return tornado.web.Application([
+            (r'/healthz', HealthHandler, dict(health_check=self.is_healthy)),
+        ])
+
+    def test_healthz(self):
+        """Test that a healthy server returns OK"""
+        response = self.fetch('/healthz')
+        self.assertEqual(200, response.code)
+        self.assertEqual(b'ok', response.body)
+
+        self._is_healthy = False
+        response = self.fetch('/healthz')
+        self.assertEqual(503, response.code)
