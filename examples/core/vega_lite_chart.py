@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from dateutil.parser import parse
 
+np.random.seed(0)
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=['a', 'b', 'c'])
 spec = {
