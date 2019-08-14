@@ -3,9 +3,9 @@
 
 import unittest
 
+import tornado.testing
 import tornado.web
 from mock import patch
-from tornado.testing import AsyncHTTPTestCase
 
 from streamlit import config
 from streamlit.server import Server
@@ -50,7 +50,7 @@ class ServerUtilsTest(unittest.TestCase):
                 Server._is_url_from_allowed_origins('s3.amazon.com'))
 
 
-class HealthHandlerTest(AsyncHTTPTestCase):
+class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /healthz endpoint"""
     def setUp(self):
         super(HealthHandlerTest, self).setUp()
@@ -74,7 +74,7 @@ class HealthHandlerTest(AsyncHTTPTestCase):
         self.assertEqual(503, response.code)
 
 
-class MetricsHandlerTest(AsyncHTTPTestCase):
+class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /metrics endpoint"""
     def get_app(self):
         return tornado.web.Application([
@@ -91,7 +91,7 @@ class MetricsHandlerTest(AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
 
 
-class DebugHandlerTest(AsyncHTTPTestCase):
+class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /debugz endpoint"""
     def get_app(self):
         return tornado.web.Application([
