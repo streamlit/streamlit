@@ -1166,6 +1166,13 @@ class DeltaGenerator(object):
         bool
             If the button was clicked on the last run of the report.
 
+        Example
+        -------
+        >>> with st.echo():
+        ...    say_hello = st.button('Click me')
+        ...    if say_hello:
+        ...        st.write('Why hello there')
+
         """
         current_value = ui_value if ui_value is not None else False
         element.button.label = label
@@ -1188,6 +1195,13 @@ class DeltaGenerator(object):
         -------
         bool
             Whether or not the checkbox is checked.
+
+        Example
+        -------
+        >>> with st.echo():
+        ...    agree = st.checkbox('I agree', False)
+        ...    if agree:
+        ...        st.write('Great!')
 
         """
         current_value = ui_value if ui_value is not None else value
@@ -1217,6 +1231,15 @@ class DeltaGenerator(object):
         -------
         any
             The selected option.
+
+        Example
+        -------
+        >>> with st.echo():
+        ...     genre = st.radio('What\'s your favorite movie genre', ('Comedy', 'Drama', 'Documentary'))
+        ...     if genre == 0:
+        ...         st.write('You selected comedy.')
+        ...     else:
+        ...         st.write('You didn\'t select comedy.')
 
         """
         if not isinstance(value, int):
@@ -1254,6 +1277,12 @@ class DeltaGenerator(object):
         -------
         any
             The selected option
+
+        Example
+        -------
+        >>> with st.echo():
+        ...     options = st.selectbox('How would you like to be contacted?', ('Email', 'Home phone', 'Mobile phone'), 0)
+        ...     st.write(options)
 
         """
         if not isinstance(value, int):
@@ -1301,10 +1330,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> age = st.slider('Age', 25, 0, 100, 1)
+        >>> age = st.slider('How old are you?', 25, 0, 130)
         >>> st.write("I'm ", age)
 
-        >>> values = st.slider('A range of values', (25.0, 75.0), 0.0, 100.0, 1.0)
+        >>> values = st.slider('Select a range of values', (25.0, 75.0), 0.0, 100.0, 1.0)
         >>> st.write("Values:", values)
 
         """
@@ -1494,8 +1523,8 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> d = st.date_input('A date to celebrate', datetime.date(2019, 7, 6))
-        >>> st.write('The date', d)
+        >>> d = st.date_input('When\'s your birthday', datetime.date(2019, 7, 6))
+        >>> st.write('Your birthday is:', d)
 
         """
         # Set value default.

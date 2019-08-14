@@ -1,5 +1,6 @@
 import streamlit as st
 
-w = st.checkbox('I agree', True)
-if w:
-    print(agreed)
+with st.echo():
+    agree = st.checkbox('I agree', False)
+    if agree:
+      st.write('Great!')
