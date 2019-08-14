@@ -15,6 +15,8 @@ from streamlit import config
 from streamlit import protobuf
 from streamlit import util
 from streamlit.MessageCache import MessageCache
+from streamlit.MessageCache import create_reference_msg
+from streamlit.MessageCache import ensure_id
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.server.routes import DebugHandler
@@ -25,6 +27,7 @@ from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import should_cache_msg
 
 LOGGER = get_logger(__name__)
 
@@ -170,9 +173,8 @@ class Server(object):
                         continue
                     msg_list = session.flush_browser_queue()
                     for msg in msg_list:
-                        msg_str = serialize_forward_msg(msg)
                         try:
-                            ws.write_message(msg_str, binary=True)
+                            self._send_message(ws, session, msg)
                         except tornado.websocket.WebSocketClosedError:
                             self._remove_browser_connection(ws)
                         yield
@@ -195,6 +197,39 @@ class Server(object):
 
         # Stop the ioloop. This will end our process.
         self._ioloop.stop()
+
+    def _send_message(self, ws, session, msg):
+        """Send a message to a client.
+
+        If the client is likely to have already cached the message, we may
+        instead send a "reference" message that contains only the hash of the
+        message.
+
+        Parameters
+        ----------
+        ws : _BrowserWebSocketHandler
+            The socket connected to the client
+        session : ReportSession
+            The session associated with websocket
+        msg : ForwardMsg
+            The message to send to the client
+
+        """
+        if should_cache_msg(msg):
+            ensure_id(msg)
+
+            if self._message_cache.has_message_reference(msg, session):
+                # This session has probably cached this message. Send
+                # a reference instead.
+                ref_msg = create_reference_msg(msg)
+                ws.write_message(serialize_forward_msg(ref_msg), binary=True)
+                return
+
+            # Cache the message so it can be referenced in the future.
+            self._message_cache.add_message(msg, session)
+
+        # Ship it off!
+        ws.write_message(serialize_forward_msg(msg), binary=True)
 
     def stop(self):
         self._set_state(State.STOPPING)
