@@ -66,18 +66,18 @@ class ScriptRunner(object):
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
-            
+
             This signal is *not* emitted on the same thread that the
             ScriptRunner was created on.
 
             Parameters
             ----------
             event : ScriptRunnerEvent
-            
+
             exception : BaseException | None
-                Our compile error. Set only for the 
+                Our compile error. Set only for the
                 SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
-                
+
             widget_states : streamlit.protobuf.BackMsg_pb2.WidgetStates | None
                 The ScriptRunner's final WidgetStates. Set only for the
                 SHUTDOWN event.

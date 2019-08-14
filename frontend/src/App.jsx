@@ -12,8 +12,8 @@ import {
   Container,
   Row,
 } from 'reactstrap'
-import { fromJS } from 'immutable'
 import url from 'url'
+import { fromJS } from 'immutable'
 
 // Other local imports.
 import LoginBox from 'components/core/LoginBox/'
@@ -29,15 +29,18 @@ import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
 import { ReportView } from 'components/core/ReportView/'
 
 import { Delta, Text as TextProto } from 'autogen/protobuf'
+import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
+import { SessionInfo } from 'lib/SessionInfo'
 import { addRows } from 'lib/dataFrameProto'
-import { initRemoteTracker, trackEventRemotely } from 'lib/remotetracking'
+import { hashString } from 'lib/util'
 import { logError, logMessage } from 'lib/log'
-import {RERUN_PROMPT_MODAL_DIALOG, setInstallationId, setStreamlitVersion} from 'lib/baseconsts'
+import { MetricsManager } from 'lib/MetricsManager'
 import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
 
 import 'assets/css/theme.scss'
 import './App.scss'
 import 'assets/css/header.scss'
+
 
 class App extends PureComponent {
   constructor(props) {
@@ -114,15 +117,7 @@ class App extends PureComponent {
       document.body.classList.add('embedded')
     }
 
-    trackEventRemotely('viewReport')
-
-    // When a user is viewing a shared report we will actually receive no
-    // 'newReport' message, so we initialize the tracker here instead.
-    if (this.connectionManager.isStaticConnection()) {
-      initRemoteTracker({
-        gatherUsageStats: true,
-      })
-    }
+    MetricsManager.current.enqueue('viewReport')
   }
 
   /**
@@ -179,7 +174,7 @@ class App extends PureComponent {
           this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
-      this.showError(err)
+      this.showError(err.message)
     }
   }
 
@@ -188,15 +183,17 @@ class App extends PureComponent {
    * @param initializeMsg an Initialize protobuf
    */
   handleInitialize(initializeMsg) {
-    setStreamlitVersion(initializeMsg.streamlitVersion)
-    setInstallationId(initializeMsg.userInfo.installationId)
-
-    initRemoteTracker({
-      gatherUsageStats: initializeMsg.gatherUsageStats,
-      email: initializeMsg.userInfo.email,
+    SessionInfo.current = new SessionInfo({
+      streamlitVersion: initializeMsg.streamlitVersion,
+      installationId: initializeMsg.userInfo.installationId,
+      authorEmail: initializeMsg.userInfo.email,
     })
 
-    trackEventRemotely('createReport')
+    MetricsManager.current.initialize({
+      gatherUsageStats: initializeMsg.gatherUsageStats,
+    })
+
+    MetricsManager.current.enqueue('createReport')
 
     this.setState({
       sharingEnabled: initializeMsg.sharingEnabled,
@@ -238,6 +235,9 @@ class App extends PureComponent {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         reportRunState = ReportRunState.NOT_RUNNING
+
+        MetricsManager.current.enqueue(
+          'deltaStats', MetricsManager.current.getDeltaCounter())
       }
 
       return ({
@@ -276,10 +276,20 @@ class App extends PureComponent {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto) {
-    trackEventRemotely('updateReport')
-
     const name = newReportProto.name
+    const scriptPath = newReportProto.scriptPath
+
     document.title = `${name} · Streamlit`
+
+    MetricsManager.current.clearDeltaCounter()
+
+    MetricsManager.current.enqueue('updateReport', {
+      // Create a hash that uniquely identifies this "project" so we can tell
+      // how many projects are being created with Streamlit while still keeping
+      // possibly-sensitive info like the scriptPath outside of our metrics
+      // services.
+      reportHash: hashString(SessionInfo.current.installationId + scriptPath),
+    })
 
     this.setState({
       reportId: newReportProto.id,
@@ -354,9 +364,9 @@ class App extends PureComponent {
       elements: elements.update(delta.get('id'), element =>
         dispatchOneOf(delta, 'type', {
           newElement: newElement =>
-            handleNewElementMessage(newElement, reportId),
+            this.handleNewElementMessage(newElement, reportId),
           addRows: namedDataSet =>
-            handleAddRowsMessage(element, namedDataSet),
+            this.handleAddRowsMessage(element, namedDataSet),
         })),
     }))
   }
@@ -388,7 +398,7 @@ class App extends PureComponent {
   saveReport() {
     if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
-        trackEventRemotely('shareReport')
+        MetricsManager.current.enqueue('shareReport')
         this.sendBackMsg({
           type: 'cloudUpload',
           cloudUpload: true,
@@ -456,7 +466,7 @@ class App extends PureComponent {
       return
     }
 
-    trackEventRemotely('rerunScript')
+    MetricsManager.current.enqueue('rerunScript')
 
     this.setState({reportRunState: ReportRunState.RERUN_REQUESTED})
 
@@ -515,7 +525,7 @@ class App extends PureComponent {
   clearCache() {
     this.closeDialog()
     if (this.isServerConnected()) {
-      trackEventRemotely('clearCache')
+      MetricsManager.current.enqueue('clearCache')
       this.sendBackMsg({type: 'clearCache', clearCache: true})
     } else {
       logError('Cannot clear cache: disconnected from server')
@@ -665,25 +675,18 @@ class App extends PureComponent {
   onLogInError(msg) {
     this.userLoginResolver.reject(`Error signing in. ${msg}`)
   }
-}
 
+  handleNewElementMessage(element, reportId) {
+    MetricsManager.current.incrementDeltaCounter(element.get('type'))
+    // Set reportId on elements so we can clear old elements when the report
+    // script is re-executed.
+    return element.set('reportId', reportId)
+  }
 
-function handleNewElementMessage(element, reportId) {
-  // TODO: Readd this when #652 is fixed.
-  // trackEventRemotely('visualElementUpdated', {
-  //   elementType: element.get('type'),
-  // })
-
-  // Set reportId on elements so we can clear old elements when the report
-  // script is re-executed.
-  return element.set('reportId', reportId)
-}
-
-
-function handleAddRowsMessage(element, namedDataSet) {
-  // TODO: Readd this when #652 is fixed.
-  // trackEventRemotely('dataMutated')
-  return addRows(element, namedDataSet)
+  handleAddRowsMessage(element, namedDataSet) {
+    MetricsManager.current.incrementDeltaCounter('addRows')
+    return addRows(element, namedDataSet)
+  }
 }
 
 

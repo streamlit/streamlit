@@ -6,6 +6,8 @@
  */
 
 
+import xxhash from 'xxhashjs'
+
 /**
  * Wraps a function to allow it to be called, at most, once per interval
  * (specified in milliseconds). If the wrapper function is called N times
@@ -26,4 +28,10 @@ export function debounce(delay: number, fn: any): any {
       timerId = null
     }, delay)
   }
+}
+
+
+
+export function hashString(str: string): string {
+  return xxhash.h32(str, 0xDEADBEEF).toString(16)
 }

@@ -26,6 +26,7 @@ help:
 	@echo " devel-docs   - Builds docs and starts a local server."
 	@echo " publish-docs - Builds docs and pushes the documentation to prod."
 	@echo " pytest       - Runs python unit tests."
+	@echo " jstest       - Runs JS unit tests."
 	@echo " jslint       - Lints the frontend."
 	@echo " e2etest      - Run E2E tests"
 
@@ -208,17 +209,20 @@ jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .ts --ext .tsx --ignore-pattern 'src/autogen/*' --max-warnings 0 ./src
 
-js-test:
+.PHONY: jstest
+jstest:
 	cd frontend; yarn run test
 	cd frontend; yarn run coverage
 
 # Counts the number of lines of code in the project
+.PHONY: loc
 loc:
 	find . -iname '*.py' -or -iname '*.js'  | \
 		egrep -v "(node_modules)|(_pb2)|(lib\/protobuf)|(dist\/)" | \
 		xargs wc
 
 # Distributes the package to PyPi
+.PHONY: distribute
 distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)

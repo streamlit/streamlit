@@ -3,15 +3,15 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import {ScriptChangedDialog, Props as ScriptChangedProps} from 'components/core/StreamlitDialog/ScriptChangedDialog'
-import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
-import {HotKeys} from 'react-hotkeys'
-import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
+import React, { ReactElement, ReactNode} from 'react'
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress } from 'reactstrap'
+import { HotKeys } from 'react-hotkeys'
 
-import {Exception} from 'autogen/protobuf'
-import {Props as SettingsDialogProps, SettingsDialog} from './SettingsDialog'
-import {STREAMLIT_VERSION} from 'lib/baseconsts'
+import { ScriptChangedDialog, Props as ScriptChangedProps } from 'components/core/StreamlitDialog/ScriptChangedDialog'
+import { Exception } from 'autogen/protobuf'
+import { Props as SettingsDialogProps, SettingsDialog } from './SettingsDialog'
+import { SessionInfo } from 'lib/SessionInfo'
 
 import './StreamlitDialog.scss'
 
@@ -81,7 +81,7 @@ function aboutDialog(props: AboutProps): ReactElement {
       <ModalHeader toggle={props.onClose}>About</ModalHeader>
       <ModalBody>
         <div>
-          Streamlit v{STREAMLIT_VERSION}<br/>
+          Streamlit v{SessionInfo.current.streamlitVersion}<br/>
           <a href="https://streamlit.io">https://streamlit.io</a><br/>
           Copyright 2019 Streamlit Inc. All rights reserved.
         </div>

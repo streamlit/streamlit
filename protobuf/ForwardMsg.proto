@@ -68,6 +68,10 @@ message NewReport {
 
   // The basename of the script that launched this report. Example: "foo.py"
   string name = 3;
+
+  // The full path of the script that launched this report. Example:
+  // "/foo/bar/foo.py"
+  string script_path = 4;
 }
 
 // State for a session. Sent as part of the Initialize message, and also

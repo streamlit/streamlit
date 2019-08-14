@@ -342,6 +342,7 @@ class ReportSession(object):
         msg.new_report.id = self._report.report_id
         msg.new_report.command_line.extend(self._report.argv)
         msg.new_report.name = self._report.name
+        msg.new_report.script_path = self._report.script_path
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self):

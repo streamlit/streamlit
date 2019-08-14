@@ -9,7 +9,7 @@ import url from 'url'
 
 import {ConnectionState} from './ConnectionState'
 import {ForwardMsg} from 'autogen/protobuf'
-import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
+import {IS_DEV_ENV, IS_SHARED_REPORT, WEBSOCKET_PORT_DEV} from './baseconsts'
 import {ReactNode} from 'react'
 import {StaticConnection} from './StaticConnection'
 import {WebsocketConnection} from './WebsocketConnection'
@@ -81,11 +81,10 @@ export class ConnectionManager {
   }
 
   private async connect(): Promise<void> {
-    const {query} = url.parse(window.location.href, true)
-    const reportId = query.id as string
-
     try {
-      if (reportId !== undefined) {
+      if (IS_SHARED_REPORT) {
+        const {query} = url.parse(window.location.href, true)
+        const reportId = query.id as string
         this.connection = await this.connectBasedOnManifest(reportId)
 
       } else {
