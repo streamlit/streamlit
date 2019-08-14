@@ -13,12 +13,14 @@ from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import ensure_id
 from streamlit.elements import data_frame_proto
 from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
+from streamlit.server import server_util
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import should_cache_msg
 
 
 def _create_dataframe_msg(df):
@@ -62,6 +64,14 @@ class ServerUtilsTest(unittest.TestCase):
                       side_effect=[True, 's3.amazon.com']):
             self.assertTrue(
                 is_url_from_allowed_origins('s3.amazon.com'))
+
+    def test_should_cache_msg(self):
+        """Test server_util.should_cache_msg"""
+        server_util.CACHED_MESSAGE_SIZE_MIN = 1
+        self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+
+        server_util.CACHED_MESSAGE_SIZE_MIN = 1000
+        self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
