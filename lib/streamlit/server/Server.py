@@ -20,14 +20,11 @@ from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
+from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
+from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import serialize_forward_msg
 
 LOGGER = get_logger(__name__)
-
-
-# Largest message that can be sent via the WebSocket connection.
-# (Limit was picked arbitrarily)
-# TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 5 * 10e7  # 50MB
 
 
 TORNADO_SETTINGS = {
@@ -169,7 +166,7 @@ class Server(object):
                         continue
                     msg_list = session.flush_browser_queue()
                     for msg in msg_list:
-                        msg_str = _serialize(msg)
+                        msg_str = serialize_forward_msg(msg)
                         try:
                             ws.write_message(msg_str, binary=True)
                         except tornado.websocket.WebSocketClosedError:
@@ -260,7 +257,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
+        return is_url_from_allowed_origins(origin)
 
     def open(self):
         self._session = self._server._add_browser_connection(self)
@@ -314,89 +311,3 @@ def _set_tornado_log_levels():
         logging.getLogger('tornado.access').setLevel(logging.ERROR)
         logging.getLogger('tornado.application').setLevel(logging.ERROR)
         logging.getLogger('tornado.general').setLevel(logging.ERROR)
-
-
-def _serialize(msg):
-    msg_str = msg.SerializeToString()
-
-    if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        _convert_msg_to_exception_msg(msg, RuntimeError('Data too large'))
-        msg_str = msg.SerializeToString()
-
-    return msg_str
-
-
-def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception_proto as exception_proto
-
-    delta_id = msg.delta.id
-    msg.Clear()
-    msg.delta.id = delta_id
-
-    exception_proto.marshall(msg.delta.new_element.exception, e)
-
-
-def _is_url_from_allowed_origins(url):
-    """Return True if URL is from allowed origins (for CORS purpose).
-
-    Allowed origins:
-    1. localhost
-    2. The internal and external IP addresses of the machine where this
-       function was called from.
-    3. The cloud storage domain configured in `s3.bucket`.
-
-    If `server.enableCORS` is False, this allows all origins.
-
-    Parameters
-    ----------
-    url : str
-        The URL to check
-
-    Returns
-    -------
-    bool
-        True if URL is accepted. False otherwise.
-
-    """
-    if not config.get_option('server.enableCORS'):
-        # Allow everything when CORS is disabled.
-        return True
-
-    hostname = util.get_hostname(url)
-
-    allowed_domains = [
-        # Check localhost first.
-        'localhost',
-        '0.0.0.0',
-        '127.0.0.1',
-        # Try to avoid making unecessary HTTP requests by checking if the user
-        # manually specified a server address.
-        _get_server_address_if_manually_set,
-        _get_s3_url_host_if_manually_set,
-        # Then try the options that depend on HTTP requests or opening sockets.
-        util.get_internal_ip,
-        util.get_external_ip,
-        lambda: config.get_option('s3.bucket'),
-    ]
-
-    for allowed_domain in allowed_domains:
-        if util.is_function(allowed_domain):
-            allowed_domain = allowed_domain()
-
-        if allowed_domain is None:
-            continue
-
-        if hostname == allowed_domain:
-            return True
-
-    return False
-
-
-def _get_server_address_if_manually_set():
-    if config.is_manually_set('browser.serverAddress'):
-        return util.get_hostname(config.get_option('browser.serverAddress'))
-
-
-def _get_s3_url_host_if_manually_set():
-    if config.is_manually_set('s3.url'):
-        return util.get_hostname(config.get_option('s3.url'))
