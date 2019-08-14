@@ -1,10 +1,11 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
+import hashlib
 import threading
 from weakref import WeakKeyDictionary
 
-import hashlib
+from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
 
 
 def ensure_id(msg):
@@ -29,6 +30,26 @@ def ensure_id(msg):
     return msg.id
 
 
+def create_reference_msg(msg):
+    """Create a new ForwardMsg that contains just the ID of the given message.
+
+    Parameters
+    ----------
+    msg : ForwardMsg
+        The ForwardMsg to create the reference to.
+
+    Returns
+    -------
+    ForwardMsg
+        A new ForwardMsg that "points" to the original message via the
+        id_reference field.
+
+    """
+    ref_msg = ForwardMsg()
+    ref_msg.id_reference = ensure_id(msg)
+    return ref_msg
+
+
 class MessageCache(object):
     """A thread-safe cache of ForwardMsgs.
 
@@ -51,8 +72,7 @@ class MessageCache(object):
 
     def __init__(self):
         self._lock = threading.RLock()
-        # hash -> Entry
-        self._entries = {}
+        self._entries = {}  # Map: hash -> Entry
 
     def add_message(self, msg, session):
         """Add a ForwardMsg to the cache.

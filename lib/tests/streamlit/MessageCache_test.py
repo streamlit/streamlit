@@ -8,6 +8,7 @@ import unittest
 from mock import MagicMock
 
 from streamlit.MessageCache import MessageCache
+from streamlit.MessageCache import create_reference_msg
 from streamlit.MessageCache import ensure_id
 from streamlit.elements import data_frame_proto
 from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
@@ -29,6 +30,12 @@ class MessageCacheTest(unittest.TestCase):
 
         msg3 = _create_dataframe_msg([2, 3, 4])
         self.assertNotEqual(ensure_id(msg1), ensure_id(msg3))
+
+    def test_reference_msg(self):
+        """Test creation of 'reference' ForwardMsgs"""
+        msg = _create_dataframe_msg([1, 2, 3])
+        ref_msg = create_reference_msg(msg)
+        self.assertEqual(ensure_id(msg), ref_msg.id_reference)
 
     def test_add_message(self):
         """Test MessageCache.add_message"""
