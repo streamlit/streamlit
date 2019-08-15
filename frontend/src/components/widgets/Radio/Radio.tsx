@@ -56,7 +56,7 @@ class Radio extends React.PureComponent<Props, State> {
     let options = element.get('options')
     let disabled = this.props.disabled
 
-    if (options.size == 0) {
+    if (options.size === 0) {
       options = ['No options to select.']
       disabled = true
     }

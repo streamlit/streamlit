@@ -68,8 +68,9 @@ class _AddCopy(ast.NodeTransformer):
         self.func_name = func_name
 
     def visit_Call(self, node):
-        if (hasattr(node.func, 'func') and hasattr(node.func.func, 'value') and
-                node.func.func.value.id == 'st' and node.func.func.attr == 'cache'):
+        if (hasattr(node.func, 'func') and hasattr(node.func.func, 'value')
+                and node.func.func.value.id == 'st'
+                and node.func.func.attr == 'cache'):
             # Wrap st.cache(func(...))().
             return ast.copy_location(ast.Call(
                 func=ast.Attribute(
@@ -100,26 +101,32 @@ def _build_caching_error_message(persisted, func, caller_frame):
     caller_file_name, caller_lineno, _, lines, _ = frameinfo
 
     try:
-        parsed_context = ast.parse(lines[0])  # only works if calling code is a single line
+        # only works if calling code is a single line
+        parsed_context = ast.parse(lines[0])
         parsed_context = _AddCopy(name).visit(parsed_context)
         copy_code = astor.to_source(parsed_context)
     except SyntaxError:
         LOGGER.debug('Could not parse calling code `%s`.', lines[0])
         copy_code = '... = copy.deepcopy(%s(...))' % name
 
-    load_or_rerun = 'load the value from disk' if persisted else 'rerun the function'
+    if persisted:
+        load_or_rerun = 'load the value from disk'
+    else:
+        load_or_rerun = 'rerun the function'
 
     message = (
         '### ⚠️ Your Code Mutated a Return Value\n'
-        'Since your program subsequently mutated the return value of the cached function `{name}`, '
-        'Streamlit has to {load_or_rerun} in `{file_name}` line {lineno}.\n\n'
+        'Since your program subsequently mutated the return value of the '
+        'cached function `{name}`, Streamlit has to {load_or_rerun} in '
+        '`{file_name}` line {lineno}.\n\n'
         'To dismiss this warning, you could copy the return value. '
         'For example by changing `{caller_file_name}` line {caller_lineno} to:'
         '\n```python\nimport copy\n{copy_code}\n```\n\n'
 
-        'Or add `ignore_hash=True` to the `streamlit.cache` decorator for `{name}`.\n\n'
+        'Or add `ignore_hash=True` to the `streamlit.cache` decorator for '
+        '`{name}`.\n\n'
 
-        'Learn more about caching and copying  in the '
+        'Learn more about caching and copying in the '
         '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
     )
 
@@ -200,7 +207,8 @@ def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
         return _read_from__mem_cache(key, ignore_hash)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
-            message = _build_caching_error_message(persisted, func, caller_frame)
+            message = _build_caching_error_message(
+                persisted, func, caller_frame)
             st.warning(message)
 
         if persisted:
@@ -304,7 +312,8 @@ def cache(func=None, persist=False, ignore_hash=False):
 
             caller_frame = inspect.currentframe().f_back
             try:
-                return_value = _read_from_cache(key, persist, ignore_hash, func, caller_frame)
+                return_value = _read_from_cache(
+                    key, persist, ignore_hash, func, caller_frame)
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 return_value = func(*argc, **argv)
                 _write_to_cache(key, return_value, persist, ignore_hash)

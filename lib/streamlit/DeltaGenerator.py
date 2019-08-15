@@ -1226,12 +1226,13 @@ class DeltaGenerator(object):
         label : str
             A short label explaining to the user what this radio group is for.
         options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the radio options. This will be cast to str internally by default.
+            Labels for the radio options. This will be cast to str internally
+            by default.
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of the labels. It receives the option as an argument
-            and its output will be cast to str.
+            Function to modify the display of the labels. It receives the option
+            as an argument and its output will be cast to str.
 
         Returns
         -------
@@ -1241,7 +1242,9 @@ class DeltaGenerator(object):
         Example
         -------
         >>> with st.echo():
-        ...     genre = st.radio('What\'s your favorite movie genre', ('Comedy', 'Drama', 'Documentary'))
+        ...     genre = st.radio(
+        ...         'What\'s your favorite movie genre',
+        ...         ('Comedy', 'Drama', 'Documentary'))
         ...     if genre == 0:
         ...         st.write('You selected comedy.')
         ...     else:
@@ -1273,12 +1276,13 @@ class DeltaGenerator(object):
         label : str
             A short label explaining to the user what this select widget is for.
         options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally by default.
+            Labels for the select options. This will be cast to str internally
+            by default.
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of the labels. It receives the option as an argument
-            and its output will be cast to str.
+            Function to modify the display of the labels. It receives the option
+            as an argument and its output will be cast to str.
 
         Returns
         -------
@@ -1288,7 +1292,9 @@ class DeltaGenerator(object):
         Example
         -------
         >>> with st.echo():
-        ...     options = st.selectbox('How would you like to be contacted?', ('Email', 'Home phone', 'Mobile phone'), 0)
+        ...     options = st.selectbox(
+        ...         'How would you like to be contacted?',
+        ...         ('Email', 'Home phone', 'Mobile phone'), 0)
         ...     st.write(options)
 
         """
@@ -1304,7 +1310,8 @@ class DeltaGenerator(object):
 
         element.selectbox.label = label
         element.selectbox.value = current_value
-        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+        element.selectbox.options[:] = [
+            str(format_func(opt)) for opt in options]
         return options[current_value] if len(options) else NoValue
 
     @_widget
@@ -1341,7 +1348,9 @@ class DeltaGenerator(object):
         >>> age = st.slider('How old are you?', 25, 0, 130)
         >>> st.write("I'm ", age)
 
-        >>> values = st.slider('Select a range of values', (25.0, 75.0), 0.0, 100.0, 1.0)
+        >>> values = st.slider(
+        ...     'Select a range of values',
+        ...     (25.0, 75.0), 0.0, 100.0, 1.0)
         >>> st.write("Values:", values)
 
         """
@@ -1356,8 +1365,13 @@ class DeltaGenerator(object):
             raise ValueError("The value should either be an int/float or a list/tuple of int/float")
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
-        int_value = isinstance(value, int) if single_value else all(map(lambda v: isinstance(v, int), value))
-        float_value = isinstance(value, float) if single_value else all(map(lambda v: isinstance(v, float), value))
+        if single_value:
+            int_value = isinstance(value, int)
+            float_value = isinstance(value, float)
+        else:
+            int_value = all(map(lambda v: isinstance(v, int), value))
+            float_value = all(map(lambda v: isinstance(v, float), value))
+
         if not int_value and not float_value:
             raise TypeError("Tuple/list components must be of the same type.")
 
@@ -1396,13 +1410,19 @@ class DeltaGenerator(object):
         # Cast ui_value to the same type as the input arguments
         if ui_value is not None:
             current_value = getattr(ui_value, 'value')
-            # Convert float array into int array if the rest of the arguments are ints
-            current_value = list(map(int, current_value)) if all_ints else current_value
-            # If there is only one value in the array destructure it into a single variable
+            # Convert float array into int array if the rest of the arguments
+            # are ints
+            if all_ints:
+                current_value = list(map(int, current_value))
+            # If there is only one value in the array destructure it into a
+            # single variable
             current_value = current_value[0] if single_value else current_value
 
+        if single_value:
+            current_value = [current_value]
+
         element.slider.label = label
-        element.slider.value[:] = [current_value] if single_value else current_value
+        element.slider.value[:] = current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
@@ -1501,13 +1521,18 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError("The type of the value should be either datetime or time.")
+            raise TypeError(
+                'The type of the value should be either datetime or time.')
 
         # Convert datetime to time
         if isinstance(value, datetime):
             value = value.time()
 
-        current_value = datetime.strptime(ui_value, '%H:%M').time() if ui_value is not None else value
+        if ui_value is None:
+            current_value = value
+        else:
+            current_value = datetime.strptime(ui_value, '%H:%M').time()
+
         element.time_input.label = label
         element.time_input.value = time.strftime(current_value, '%H:%M')
         return current_value
@@ -1531,7 +1556,9 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> d = st.date_input('When\'s your birthday', datetime.date(2019, 7, 6))
+        >>> d = st.date_input(
+        ...     'When\'s your birthday',
+        ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
         """
@@ -1541,13 +1568,18 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError("The type of the value should be either datetime or date.")
+            raise TypeError(
+                'The type of the value should be either datetime or date.')
 
         # Convert datetime to date
         if isinstance(value, datetime):
             value = value.date()
 
-        current_value = datetime.strptime(ui_value, '%Y/%m/%d').date() if ui_value is not None else value
+        if ui_value is None:
+            current_value = value
+        else:
+            current_value = datetime.strptime(ui_value, '%Y/%m/%d').date()
+
         element.date_input.label = label
         element.date_input.value = date.strftime(current_value, '%Y/%m/%d')
         return current_value
