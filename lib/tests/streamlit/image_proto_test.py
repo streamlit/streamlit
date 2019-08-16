@@ -1,6 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
 """Unit test for image_proto."""
+
 import pytest
 from PIL import Image, ImageDraw
 from parameterized import parameterized

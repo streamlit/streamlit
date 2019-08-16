@@ -309,7 +309,7 @@ def write(*args):
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif type(arg) in dict_types:  # noqa: F821
+            elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
             else:
