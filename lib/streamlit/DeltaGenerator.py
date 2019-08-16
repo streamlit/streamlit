@@ -1364,7 +1364,7 @@ class DeltaGenerator(object):
         single_value = isinstance(value, (int, float))
         range_value = isinstance(value, (list, tuple)) and len(value) == 2
         if not single_value and not range_value:
-            raise ValueError("The value should either be an int/float or a list/tuple of int/float")
+            raise ValueError('The value should either be an int/float or a list/tuple of int/float')
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
         if single_value:
@@ -1375,7 +1375,7 @@ class DeltaGenerator(object):
             float_value = all(map(lambda v: isinstance(v, float), value))
 
         if not int_value and not float_value:
-            raise TypeError("Tuple/list components must be of the same type.")
+            raise TypeError('Tuple/list components must be of the same type.')
 
         # Set corresponding defaults.
         if min_value is None:
@@ -1390,22 +1390,48 @@ class DeltaGenerator(object):
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
         if not int_args and not float_args:
-            raise TypeError("All arguments must be of the same type.")
+            raise TypeError(
+                'All arguments must be of the same type.'
+                '\n`value` has %(value_type)s type.'
+                '\n`min_value` has %(min_type)s type.'
+                '\n`max_value` has %(max_type)s type.' % {
+                    'value_type': type(value).__name__,
+                    'min_type': type(min_value).__name__,
+                    'max_type': type(max_value).__name__,
+                }
+            )
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
         all_floats = float_value and float_args
         if not all_ints and not all_floats:
-            raise TypeError("Both value and arguments must be of the same type.")
+            raise TypeError(
+                'Both value and arguments must be of the same type.'
+                '\n`value` has %(value_type)s type.'
+                '\n`min_value` has %(min_type)s type.'
+                '\n`max_value` has %(max_type)s type.' % {
+                    'value_type': type(value).__name__,
+                    'min_type': type(min_value).__name__,
+                    'max_type': type(max_value).__name__,
+                }
+            )
 
         # Ensure that min <= value <= max.
         if single_value:
             if not min_value <= value <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise ValueError(
+                    'The default `value` of %(value)s '
+                    'must lie between the `min_value` of %(min)s '
+                    'and the `max_value` of %(max)s, inclusively.' % {
+                        'value': value,
+                        'min': min_value,
+                        'max': max_value,
+                    }
+                )
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise ValueError('The value and/or arguments are out of range.')
 
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
