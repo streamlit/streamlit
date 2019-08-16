@@ -10,7 +10,7 @@ import {Progress} from 'reactstrap'
 
 import {ReportRunState} from 'lib/ReportRunState'
 import {WidgetStateManager} from 'lib/WidgetStateManager'
-import {Text as TextProto} from 'autogen/protobuf'
+import {Text as TextProto} from 'autogen/proto'
 import {ThemeProvider} from 'baseui'
 import {dispatchOneOf} from 'lib/immutableProto'
 // @ts-ignore

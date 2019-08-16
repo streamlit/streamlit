@@ -21,11 +21,11 @@ WORKDIR /frontend
 # Install packages
 RUN yarn install
 
-# Create protobuf.js
-COPY --from=protobuf /protobuf/. /protobuf/
+# Create proto.js
+COPY --from=protobuf /proto/. /proto/
 RUN mkdir -p src/autogen
-RUN ./node_modules/protobufjs/bin/pbjs ../protobuf/*.proto -t static-module --es6 > ./src/autogen/protobuf.js
-RUN ./node_modules/protobufjs/bin/pbts ./src/autogen/protobuf.js> ./src/autogen/protobuf.d.ts
+RUN ./node_modules/protobufjs/bin/pbjs ../proto/streamlit/proto/*.proto -t static-module --es6 > ./src/autogen/proto.js
+RUN ./node_modules/protobufjs/bin/pbts ./src/autogen/proto.js> ./src/autogen/proto.d.ts
 
 # Copy source files
 COPY public/. public/

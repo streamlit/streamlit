@@ -4,7 +4,7 @@
  */
 
 /**
- * Utilities to get information out of a protobuf.DataFrame.
+ * Utilities to get information out of a proto.DataFrame.
  */
 
 import camelcase from 'camelcase'
@@ -351,7 +351,7 @@ function anyArrayGet(anyArray, i) {
 }
 
 /**
- * Returns the data array of an protobuf.AnyArray.
+ * Returns the data array of an proto.AnyArray.
  */
 function anyArrayData(anyArray) {
   const getData = (obj) => obj.get('data')

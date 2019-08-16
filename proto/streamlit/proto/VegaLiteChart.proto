@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-import "DataFrame.proto";
-import "DataTransform.proto";
-import "NamedDataSet.proto";
+import "streamlit/proto/DataFrame.proto";
+import "streamlit/proto/DataTransform.proto";
+import "streamlit/proto/NamedDataSet.proto";
 
 message VegaLiteChart {
   // The a JSON-formatted string with the Vega-Lite spec.

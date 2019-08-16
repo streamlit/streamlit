@@ -3,7 +3,7 @@ version: '3.6'
 services:
   protobuf:
     build:
-      context: ../../protobuf
+      context: ../../proto
       dockerfile: Dockerfile
 
   frontend:

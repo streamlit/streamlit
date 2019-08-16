@@ -28,7 +28,7 @@ import { StatusWidget } from 'components/core/StatusWidget/'
 import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
 import { ReportView } from 'components/core/ReportView/'
 
-import { Delta, Text as TextProto } from 'autogen/protobuf'
+import { Delta, Text as TextProto } from 'autogen/proto'
 import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
 import { SessionInfo } from 'lib/SessionInfo'
 import { addRows } from 'lib/dataFrameProto'

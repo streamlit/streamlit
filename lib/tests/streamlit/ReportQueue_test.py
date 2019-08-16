@@ -6,27 +6,27 @@ import unittest
 
 from streamlit.ReportQueue import ReportQueue
 from streamlit.elements import data_frame_proto
-import streamlit.protobuf as protobuf
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.
 
-INIT_MSG = protobuf.ForwardMsg()
+INIT_MSG = ForwardMsg()
 INIT_MSG.initialize.sharing_enabled = True
 
-TEXT_DELTA_MSG1 = protobuf.ForwardMsg()
+TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = 'text1'
 
-TEXT_DELTA_MSG2 = protobuf.ForwardMsg()
+TEXT_DELTA_MSG2 = ForwardMsg()
 TEXT_DELTA_MSG2.delta.new_element.text.body = 'text2'
 
-DF_DELTA_MSG = protobuf.ForwardMsg()
+DF_DELTA_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
     {'col1': [0, 1, 2], 'col2': [10, 11, 12]},
     DF_DELTA_MSG.delta.new_element.data_frame)
 
-ADD_ROWS_MSG = protobuf.ForwardMsg()
+ADD_ROWS_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
     {'col1': [3, 4, 5], 'col2': [13, 14, 15]},
     ADD_ROWS_MSG.delta.add_rows.data)

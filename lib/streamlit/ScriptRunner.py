@@ -48,7 +48,7 @@ class ScriptRunner(object):
         root_dg : DeltaGenerator
             The ReportSession's root DeltaGenerator.
 
-        widget_states : streamlit.protobuf.BackMsg_pb2.WidgetStates
+        widget_states : streamlit.proto.Widget_pb2.WidgetStates
             The ReportSession's current widget states
 
         request_queue : ScriptRequestQueue
@@ -78,7 +78,7 @@ class ScriptRunner(object):
                 Our compile error. Set only for the
                 SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
-            widget_states : streamlit.protobuf.BackMsg_pb2.WidgetStates | None
+            widget_states : streamlit.proto.Widget_pb2.WidgetStates | None
                 The ScriptRunner's final WidgetStates. Set only for the
                 SHUTDOWN event.
             """)

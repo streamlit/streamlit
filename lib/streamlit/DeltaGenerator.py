@@ -18,7 +18,9 @@ from datetime import date
 from datetime import time
 
 from streamlit import metrics
-from streamlit import protobuf
+from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto import Balloons_pb2
+from streamlit.proto import Text_pb2
 from streamlit import get_report_ctx
 
 # setup logging
@@ -186,7 +188,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
         marshall_element : callable
-            Function which sets the fields for a protobuf.NewElement.
+            Function which sets the fields for a NewElement protobuf.
 
         Returns
         -------
@@ -208,7 +210,7 @@ class DeltaGenerator(object):
 
         rv = None
         if marshall_element:
-            msg = protobuf.ForwardMsg()
+            msg = ForwardMsg_pb2.ForwardMsg()
             rv = marshall_element(msg.delta.new_element)
             msg.delta.id = self._id
 
@@ -247,7 +249,7 @@ class DeltaGenerator(object):
         ...then watch your report and get ready for a celebration!
 
         """
-        element.balloons.type = protobuf.Balloons.DEFAULT
+        element.balloons.type = Balloons_pb2.Balloons.DEFAULT
         element.balloons.execution_id = random.randrange(0xFFFFFFFF)
 
     @_with_element
@@ -269,7 +271,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.PLAIN
+        element.text.format = Text_pb2.Text.PLAIN
 
     @_with_element
     def markdown(self, element, body):
@@ -291,7 +293,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.MARKDOWN
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def code(self, element, body, language='python'):
@@ -322,7 +324,7 @@ class DeltaGenerator(object):
         markdown = '```%(language)s\n%(body)s\n```' % \
                    {'language': language or '', 'body': body}
         element.text.body = _clean_text(markdown)
-        element.text.format = protobuf.Text.MARKDOWN
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def json(self, element, body):
@@ -356,7 +358,7 @@ class DeltaGenerator(object):
         element.text.body = (
             body if isinstance(body, string_types)  # noqa: F821
             else json.dumps(body, default=lambda o: str(type(o))))
-        element.text.format = protobuf.Text.JSON
+        element.text.format = Text_pb2.Text.JSON
 
     @_with_element
     def title(self, element, body):
@@ -380,7 +382,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = '# %s' % _clean_text(body)
-        element.text.format = protobuf.Text.MARKDOWN
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def header(self, element, body):
@@ -401,7 +403,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = '## %s' % _clean_text(body)
-        element.text.format = protobuf.Text.MARKDOWN
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def subheader(self, element, body):
@@ -422,7 +424,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = '### %s' % _clean_text(body)
-        element.text.format = protobuf.Text.MARKDOWN
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def error(self, element, body):
@@ -439,7 +441,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.ERROR
+        element.text.format = Text_pb2.Text.ERROR
 
     @_with_element
     def warning(self, element, body):
@@ -456,7 +458,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.WARNING
+        element.text.format = Text_pb2.Text.WARNING
 
     @_with_element
     def info(self, element, body):
@@ -473,7 +475,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.INFO
+        element.text.format = Text_pb2.Text.INFO
 
     @_with_element
     def success(self, element, body):
@@ -490,7 +492,7 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = protobuf.Text.SUCCESS
+        element.text.format = Text_pb2.Text.SUCCESS
 
     @_with_element
     def help(self, element, obj):
@@ -1898,7 +1900,7 @@ class DeltaGenerator(object):
                 'Wrong number of arguments to add_rows().'
                 'Method requires exactly one dataset')
 
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg_pb2.ForwardMsg()
         msg.delta.id = self._id
 
         data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)

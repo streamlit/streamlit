@@ -9,7 +9,7 @@ import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress } from 're
 import { HotKeys } from 'react-hotkeys'
 
 import { ScriptChangedDialog, Props as ScriptChangedProps } from 'components/core/StreamlitDialog/ScriptChangedDialog'
-import { Exception } from 'autogen/protobuf'
+import { Exception } from 'autogen/proto'
 import { Props as SettingsDialogProps, SettingsDialog } from './SettingsDialog'
 import { SessionInfo } from 'lib/SessionInfo'
 

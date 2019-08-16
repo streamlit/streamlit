@@ -82,7 +82,7 @@ jobs:
           # cache key.
           name: Create checksum for all protobufs
           command: |
-            md5sum protobuf/*.proto $(which python) > ~/protobuf.md5
+            md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
 
       #################################################################
       # Restore from cache
@@ -225,8 +225,8 @@ jobs:
             # There's a chance this file could be a cached version when
             # the protobuf cache is restored, so checkout from github to
             # make sure.
-            git checkout -- lib/streamlit/protobuf/__init__.py
-            if [ ! -e frontend/src/autogen/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+            git checkout -- lib/streamlit/proto/__init__.py
+            if [ ! -e frontend/src/autogen/proto.js -o ! -e lib/streamlit/proto/DataFrame_pb2.py ] ; then
               # install protobuf v3
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y gnupg
@@ -279,8 +279,8 @@ jobs:
           name: Save generated protobufs to cache
           key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
-            - frontend/src/autogen/protobuf.js
-            - lib/streamlit/protobuf
+            - frontend/src/autogen/proto.js
+            - lib/streamlit/proto
 
   python-2.7.16:
     <<: *job-template

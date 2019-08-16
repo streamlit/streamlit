@@ -1,4 +1,4 @@
-import {IBackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/protobuf'
+import {IBackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/proto'
 
 /**
  * Manages widget values, and sends widget update messages back to the server.

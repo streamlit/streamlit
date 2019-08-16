@@ -15,8 +15,9 @@ import numpy as np
 import pandas as pd
 
 from streamlit import __version__
-from streamlit import protobuf
 from streamlit.elements.Chart import Chart
+from streamlit.proto.Balloons_pb2 import Balloons
+from streamlit.proto.Text_pb2 import Text
 from tests import testutil
 import streamlit as st
 
@@ -122,7 +123,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             dg = st.balloons()
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.balloons.type, protobuf.Balloons.DEFAULT)
+        self.assertEqual(el.balloons.type, Balloons.DEFAULT)
         self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
 
     def test_st_bar_chart(self):
@@ -154,7 +155,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, expected.strip())
-        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(el.text.format, Text.MARKDOWN)
 
     def test_st_dataframe(self):
         """Test st.dataframe."""
@@ -219,7 +220,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some error')
-        self.assertEqual(el.text.format, protobuf.Text.ERROR)
+        self.assertEqual(el.text.format, Text.ERROR)
 
     def test_st_exception(self):
         """Test st.exception."""
@@ -245,7 +246,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '## some header')
-        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(el.text.format, Text.MARKDOWN)
 
     def test_st_help(self):
         """Test st.help."""
@@ -352,7 +353,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some info')
-        self.assertEqual(el.text.format, protobuf.Text.INFO)
+        self.assertEqual(el.text.format, Text.INFO)
 
     def test_st_json(self):
         """Test st.json."""
@@ -360,7 +361,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '{"some": "json"}')
-        self.assertEqual(el.text.format, protobuf.Text.JSON)
+        self.assertEqual(el.text.format, Text.JSON)
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
@@ -415,7 +416,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some markdown')
-        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(el.text.format, Text.MARKDOWN)
 
     def test_st_progress(self):
         """Test st.progress."""
@@ -546,7 +547,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '### some subheader')
-        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(el.text.format, Text.MARKDOWN)
 
     def test_st_success(self):
         """Test st.success."""
@@ -554,7 +555,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some success')
-        self.assertEqual(el.text.format, protobuf.Text.SUCCESS)
+        self.assertEqual(el.text.format, Text.SUCCESS)
 
     def test_st_table(self):
         """Test st.table."""
@@ -573,7 +574,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some text')
-        self.assertEqual(el.text.format, protobuf.Text.PLAIN)
+        self.assertEqual(el.text.format, Text.PLAIN)
 
     def test_st_title(self):
         """Test st.title."""
@@ -581,7 +582,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '# some title')
-        self.assertEqual(el.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(el.text.format, Text.MARKDOWN)
 
     def test_st_vega_lite_chart(self):
         """Test st.vega_lite_chart."""
@@ -607,7 +608,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some warning')
-        self.assertEqual(el.text.format, protobuf.Text.WARNING)
+        self.assertEqual(el.text.format, Text.WARNING)
 
     def test_st_native_chart(self):
         """Test st._native_chart."""

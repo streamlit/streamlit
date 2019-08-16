@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+import "streamlit/proto/Delta.proto";
+import "streamlit/proto/Initialize.proto";
+import "streamlit/proto/NewReport.proto";
+import "streamlit/proto/SessionEvent.proto";
+import "streamlit/proto/SessionState.proto";
+
+// A message sent from Proxy to the browser
+message ForwardMsg {
+  oneof type {
+    // Report lifecycle messages.
+
+    Initialize initialize = 1;
+    NewReport new_report = 2;
+    Delta delta = 3;
+    bool report_finished = 4;
+
+    // Upload progress messages.
+
+    // Indicates the % progress of a report upload.
+    uint32 upload_report_progress = 5;
+
+    // Indicates that the upload is complete and gives the URL.
+    string report_uploaded = 6;
+
+    // State change and event messages.
+
+    // ReportSession state changed. This is the new state.
+    SessionState session_state_changed = 7;
+
+    // A SessionEvent was emitted.
+    SessionEvent session_event = 8;
+  }
+}

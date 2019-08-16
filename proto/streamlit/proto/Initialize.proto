@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "streamlit/proto/SessionState.proto";
+
+// This is the first message that is sent when the connection is opened.
+// It contains streamlit configuration data, and the session state
+// that existed at the time of connection.
+message Initialize {
+  // True if saving is properly configured.
+  bool sharing_enabled = 1;
+
+  // If true, tells Streamlit to log datpoints for our own stats when the user
+  // performs certain actions.
+  bool gather_usage_stats = 2;
+
+  // Python streamlit version.
+  string streamlit_version = 3;
+
+  // The session state at the time the connection
+  // was established
+  SessionState session_state = 5;
+
+  UserInfo user_info = 6;
+}
+
+message UserInfo {
+  string installation_id = 1;
+  string email = 2;
+}

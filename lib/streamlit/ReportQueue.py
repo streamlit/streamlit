@@ -9,7 +9,7 @@ import collections
 import copy
 import threading
 
-from streamlit import protobuf
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
@@ -51,7 +51,7 @@ class ReportQueue(object):
 
         Parameters
         ----------
-        msg : protobuf.ForwardMsg
+        msg : ForwardMsg
         """
         with self._lock:
             if not msg.HasField('delta'):
@@ -62,7 +62,7 @@ class ReportQueue(object):
                 index = self._delta_id_map[msg.delta.id]
                 old_msg = self._queue[index]
                 composed_delta = compose_deltas(old_msg.delta, msg.delta)
-                new_msg = protobuf.ForwardMsg()
+                new_msg = ForwardMsg()
                 new_msg.delta.CopyFrom(composed_delta)
                 self._queue[index] = new_msg
 

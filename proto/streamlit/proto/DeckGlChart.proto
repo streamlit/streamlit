@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "DataFrame.proto";
+import "streamlit/proto/DataFrame.proto";
 
 message DeckGlChart {
   // The dataframe that will be used as the chart's main data source.

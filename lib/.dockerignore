@@ -1,4 +1,4 @@
-streamlit/protobuf/*_pb2.py
+streamlit/proto/*_pb2.py
 streamlit/static
 Dockerfile
 entrypoint.sh
