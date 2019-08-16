@@ -86,7 +86,10 @@ def _clip_image(image, clamp):
     return data
 
 
-def marshall_images(image, caption, width, proto_imgs, clamp):
+def marshall_images(image, caption, width, proto_imgs, clamp,
+                    channels='RGB'):
+    channels = channels.upper()
+
     # Turn single image and caption into one element list.
     if type(image) is list:
         images = image
@@ -136,6 +139,15 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
         elif type(image) is np.ndarray:
             data = _verify_np_shape(image)
             data = _clip_image(data, clamp)
+
+            if channels == 'BGR':
+                if len(data.shape) == 3:
+                    data = data[:, :, [2, 1, 0]]
+                else:
+                    raise RuntimeError(
+                        'When using `channels="BGR"`, the input image should '
+                        'have exactly 3 color channels')
+
             data = _np_array_to_png_bytes(data)
 
         # Strings

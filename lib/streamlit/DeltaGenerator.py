@@ -1048,7 +1048,7 @@ class DeltaGenerator(object):
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(self, element, image, caption=None, width=None,
-              use_column_width=False, clamp=False):
+              use_column_width=False, clamp=False, channels='RGB'):
         """Display an image or list of images.
 
         Parameters
@@ -1072,6 +1072,12 @@ class DeltaGenerator(object):
             This is only meaningful for byte array images; the parameter is
             ignored for image URLs. If this is not set, and an image has an
             out-of-range value, an error will be thrown.
+        format : 'RGB' or 'BGR'
+            If image is an nd.array, this parameter denotes the format used to
+            represent color information. Defaults to 'RGB', meaning
+            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+            `image[:, :, 2]` is blue. For images coming from libraries like
+            OpenCV you should set this to 'BGR', instead.
 
         Example
         -------
@@ -1094,7 +1100,7 @@ class DeltaGenerator(object):
         elif width <= 0:
             raise RuntimeError('Image width must be positive.')
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp)
+            image, caption, width, element.imgs, clamp, channels)
 
     @_with_element
     def audio(self, element, data, format='audio/wav'):
