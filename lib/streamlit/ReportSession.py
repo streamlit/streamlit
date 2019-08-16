@@ -1,6 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 from enum import Enum
+import sys
 
 import tornado.gen
 import tornado.ioloop
@@ -314,22 +315,25 @@ class ReportSession(object):
         msg = ForwardMsg()
         imsg = msg.initialize
 
-        imsg.sharing_enabled = (
+        imsg.config.sharing_enabled = (
             config.get_option('global.sharingMode') != 'off')
         LOGGER.debug(
             'New browser connection: sharing_enabled=%s',
-            msg.initialize.sharing_enabled)
+            imsg.config.sharing_enabled)
 
-        imsg.gather_usage_stats = (
+        imsg.config.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
         LOGGER.debug(
             'New browser connection: gather_usage_stats=%s',
-            msg.initialize.gather_usage_stats)
+            imsg.config.gather_usage_stats)
 
-        imsg.streamlit_version = __version__
+        imsg.environment_info.streamlit_version = __version__
+        imsg.environment_info.python_version = (
+            '.'.join(map(str, sys.version_info)))
+
         imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.report_is_running = \
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+        imsg.session_state.report_is_running = (
+            self._state == ReportSessionState.REPORT_IS_RUNNING)
 
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email

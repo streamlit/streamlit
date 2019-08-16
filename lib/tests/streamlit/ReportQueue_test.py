@@ -13,7 +13,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 # their general type.
 
 INIT_MSG = ForwardMsg()
-INIT_MSG.initialize.sharing_enabled = True
+INIT_MSG.initialize.config.sharing_enabled = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = 'text1'
@@ -44,7 +44,7 @@ class ReportQueueTest(unittest.TestCase):
         queue = rq.flush()
         self.assertTrue(rq.is_empty())
         self.assertEqual(len(queue), 1)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
 
     def test_enqueue_two(self):
         rq = ReportQueue()
@@ -57,7 +57,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].delta.id, 0)
         self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
 
@@ -75,7 +75,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].delta.id, 0)
         self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
         self.assertEqual(queue[2].delta.id, 1)
@@ -95,7 +95,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].delta.id, 0)
         self.assertEqual(queue[1].delta.new_element.text.body, 'text2')
 
@@ -116,7 +116,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].delta.id, 0)
         self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
         self.assertEqual(queue[2].delta.id, 1)
@@ -144,7 +144,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].delta.id, 0)
         self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
         self.assertEqual(queue[2].delta.id, 1)

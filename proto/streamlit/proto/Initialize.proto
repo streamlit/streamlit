@@ -6,24 +6,29 @@ import "streamlit/proto/SessionState.proto";
 // It contains streamlit configuration data, and the session state
 // that existed at the time of connection.
 message Initialize {
+  UserInfo user_info = 1;
+  Config config = 2;
+  EnvironmentInfo environment_info = 3;
+
+  // The session state at the time the connection was established
+  SessionState session_state = 4;
+}
+
+message Config {
   // True if saving is properly configured.
   bool sharing_enabled = 1;
 
-  // If true, tells Streamlit to log datpoints for our own stats when the user
-  // performs certain actions.
+  // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
 
-  // Python streamlit version.
-  string streamlit_version = 3;
-
-  // The session state at the time the connection
-  // was established
-  SessionState session_state = 5;
-
-  UserInfo user_info = 6;
 }
 
 message UserInfo {
   string installation_id = 1;
   string email = 2;
+}
+
+message EnvironmentInfo {
+  string streamlit_version = 1;
+  string python_version = 2;
 }

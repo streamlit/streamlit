@@ -106,7 +106,6 @@ wheel:
 	# cd lib ; python setup.py bdist_wheel sdist
 
 clean:
-	@echo FIXME: This needs to be fixed!
 	cd lib; rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
