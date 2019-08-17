@@ -20,7 +20,7 @@
 import React from 'react'
 import Resolver from 'lib/Resolver'
 import {ConnectionState} from 'lib/ConnectionState'
-import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/protobuf'
+import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/proto'
 import {logMessage, logWarning, logError} from 'lib/log'
 
 

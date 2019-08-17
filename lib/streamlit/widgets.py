@@ -3,7 +3,7 @@
 
 from pprint import pprint
 
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates
 
 
 def coalesce_widget_states(old_states, new_states):

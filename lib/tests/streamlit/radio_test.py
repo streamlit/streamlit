@@ -70,16 +70,27 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
+    @parameterized.expand([
+        ((),),
+        ([],),
+        (np.array([]),),
+        (pd.Series(np.array([])),)
+    ])
+    def test_no_options(self, options):
+        """Test that it handles no options."""
+        st.radio('the label', options)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.value, 0)
+        self.assertEqual(c.options, [])
+
     def test_invalid_value(self):
         """Test that value must be an int."""
-        st.radio('the label', ('m', 'f'), '1')
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'TypeError')
+        with self.assertRaises(TypeError):
+            st.radio('the label', ('m', 'f'), '1')
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        st.radio('the label', ('m', 'f'), 2)
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'ValueError')
+        with self.assertRaises(ValueError):
+            st.radio('the label', ('m', 'f'), 2)

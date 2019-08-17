@@ -1,5 +1,8 @@
 import streamlit as st
 
-w = st.radio('Gender', ('female', 'male'))
-if w == 0:
-    print('female')
+with st.echo():
+    genre = st.radio('What\'s your favorite movie genre', ('Comedy', 'Drama', 'Documentary'))
+    if genre == 0:
+        st.write('You selected comedy.')
+    else:
+        st.write('You didn\'t select comedy.')

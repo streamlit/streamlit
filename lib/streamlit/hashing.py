@@ -36,6 +36,13 @@ except ImportError:
 Context = namedtuple('Context', ['globals', 'closure', 'varnames'])
 
 
+def _is_magicmock(obj):
+    return (
+        util.is_type(obj, 'unittest.mock.MagicMock') or
+        util.is_type(obj, 'mock.mock.MagicMock')
+    )
+
+
 def _get_context(func):
     closure = (
         [cell.cell_contents for cell in func.__closure__]
@@ -59,7 +66,8 @@ def get_hash(f, context=None):
 
 def _int_to_bytes(i):
     if hasattr(i, 'to_bytes'):
-        return i.to_bytes((i.bit_length() + 7) // 8, 'little', signed=True)
+        num_bytes = (i.bit_length() + 8) // 8
+        return i.to_bytes(num_bytes, 'little', signed=True)
     else:
         # For Python 2
         return b'int:' + str(i).encode()
@@ -119,10 +127,9 @@ class CodeHasher():
         else:
             self.hasher = hashlib.new(name)
 
-    def update(self, o, context=None):
-        """Add bytes to hash."""
-        b = self.to_bytes(o, context)
-        self.hasher.update(b)
+    def update(self, obj, context=None):
+        """Update the hash with the provided object."""
+        self._update(self.hasher, obj, context)
 
     def digest(self):
         return self.hasher.digest()
@@ -151,7 +158,7 @@ class CodeHasher():
 
         return b
 
-    def _u(self, hasher, obj, context=None):
+    def _update(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
@@ -161,7 +168,11 @@ class CodeHasher():
         Python's built in `hash` does not produce consistent results across
         runs."""
 
-        if isinstance(obj, bytes) or isinstance(obj, bytearray):
+        if _is_magicmock(obj):
+            # MagicMock can result in objects that appear to be infinitely
+            # deep, so we don't try to hash them at all.
+            return self.to_bytes(id(obj))
+        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
         elif isinstance(obj, string_types):
             return obj.encode()
@@ -172,9 +183,9 @@ class CodeHasher():
         elif isinstance(obj, list) or isinstance(obj, tuple):
             h = hashlib.new(self.name)
             # add type to distingush x from [x]
-            self._u(h, type(obj).__name__.encode() + b':')
+            self._update(h, type(obj).__name__.encode() + b':')
             for e in obj:
-                self._u(h, e, context)
+                self._update(h, e, context)
             return h.digest()
         elif obj is None:
             # Special string since hashes change between sessions.
@@ -194,22 +205,26 @@ class CodeHasher():
                 isinstance(obj, io.IOBase) or os.path.exists(obj.name)):
             # Hash files as name + last modification date + offset.
             h = hashlib.new(self.name)
-            self._u(h, obj.name)
-            self._u(h, os.path.getmtime(obj.name))
-            self._u(h, obj.tell())
+            self._update(h, obj.name)
+            self._update(h, os.path.getmtime(obj.name))
+            self._update(h, obj.tell())
             return h.digest()
         elif inspect.isroutine(obj):
+            if hasattr(obj, '__wrapped__'):
+                # Ignore the wrapper of wrapped functions
+                return self.to_bytes(obj.__wrapped__)
+
             h = hashlib.new(self.name)
             # TODO: This may be too restrictive for libraries in development.
             if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
                 context = _get_context(obj)
                 if obj.__defaults__:
-                    self._u(h, obj.__defaults__, context)
+                    self._update(h, obj.__defaults__, context)
                 h.update(self._code_to_bytes(obj.__code__, context))
             else:
                 # Don't hash code that is not in the current working directory.
-                self._u(h, obj.__module__)
-                self._u(h, obj.__name__)
+                self._update(h, obj.__module__)
+                self._update(h, obj.__name__)
             return h.digest()
         elif inspect.iscode(obj):
             return self._code_to_bytes(obj, context)
@@ -234,36 +249,36 @@ class CodeHasher():
         h = hashlib.new(self.name)
 
         # Hash the bytecode.
-        self._u(h, code.co_code)
+        self._update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
         consts = [n for n in code.co_consts if
                   not isinstance(n, string_types) or not n.endswith('.<lambda>')]
-        self._u(h, consts, context)
+        self._update(h, consts, context)
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):
-                self._u(h, ref, context)
+                self._update(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
                 if name in context.globals:
                     try:
-                        self._u(h, context.globals[name], context)
+                        self._update(h, context.globals[name], context)
                     except Exception:
-                        self._u(h, name)
+                        self._update(h, name)
                 else:
                     try:
                         module = importlib.import_module(name)
-                        self._u(h, module, context)
+                        self._update(h, module, context)
                     except ImportError:
-                        self._u(h, name, context)
+                        self._update(h, name, context)
 
             for i, name in enumerate(code.co_freevars):
                 try:
-                    self._u(h, context.closure[i], context)
+                    self._update(h, context.closure[i], context)
                 except Exception:
-                    self._u(h, name)
+                    self._update(h, name)
 
         return h.digest()

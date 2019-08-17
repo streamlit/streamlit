@@ -1,6 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 from enum import Enum
+import sys
 
 import tornado.gen
 import tornado.ioloop
@@ -10,7 +11,6 @@ from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
-from streamlit import protobuf
 from streamlit import util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
@@ -21,7 +21,8 @@ from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
@@ -169,7 +170,7 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         msg.delta.id = 0
         exception_proto.marshall(msg.delta.new_element.exception, e)
 
@@ -218,7 +219,7 @@ class ReportSession(object):
             An exception thrown during compilation. Set only for the
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
-        widget_states : streamlit.protobuf.BackMsg_pb2.WidgetStates | None
+        widget_states : streamlit.proto.Widget_pb2.WidgetStates | None
             The ScriptRunner's final WidgetStates. Set only for the
             SHUTDOWN event.
 
@@ -267,7 +268,7 @@ class ReportSession(object):
             else:
                 # When a script fails to compile, we send along the exception.
                 from streamlit.elements import exception_proto
-                msg = protobuf.ForwardMsg()
+                msg = ForwardMsg()
                 exception_proto.marshall(
                     msg.session_event.script_compilation_exception, exception)
                 self.enqueue(msg)
@@ -293,7 +294,7 @@ class ReportSession(object):
             self._enqueue_session_state_changed_message()
 
     def _enqueue_session_state_changed_message(self):
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.report_is_running = \
             self._state == ReportSessionState.REPORT_IS_RUNNING
@@ -301,7 +302,7 @@ class ReportSession(object):
 
     def _enqueue_file_change_message(self):
         LOGGER.debug('Enqueuing report_changed message (id=%s)', self.id)
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
@@ -311,25 +312,28 @@ class ReportSession(object):
 
         self._sent_initialize_message = True
 
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         imsg = msg.initialize
 
-        imsg.sharing_enabled = (
+        imsg.config.sharing_enabled = (
             config.get_option('global.sharingMode') != 'off')
         LOGGER.debug(
             'New browser connection: sharing_enabled=%s',
-            msg.initialize.sharing_enabled)
+            imsg.config.sharing_enabled)
 
-        imsg.gather_usage_stats = (
+        imsg.config.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
         LOGGER.debug(
             'New browser connection: gather_usage_stats=%s',
-            msg.initialize.gather_usage_stats)
+            imsg.config.gather_usage_stats)
 
-        imsg.streamlit_version = __version__
+        imsg.environment_info.streamlit_version = __version__
+        imsg.environment_info.python_version = (
+            '.'.join(map(str, sys.version_info)))
+
         imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.report_is_running = \
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+        imsg.session_state.report_is_running = (
+            self._state == ReportSessionState.REPORT_IS_RUNNING)
 
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email
@@ -338,14 +342,15 @@ class ReportSession(object):
 
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         msg.new_report.id = self._report.report_id
         msg.new_report.command_line.extend(self._report.argv)
         msg.new_report.name = self._report.name
+        msg.new_report.script_path = self._report.script_path
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self):
-        msg = protobuf.ForwardMsg()
+        msg = ForwardMsg()
         msg.report_finished = True
         self.enqueue(msg)
 
@@ -475,7 +480,7 @@ class ReportSession(object):
         """Save serialized version of report deltas to the cloud."""
         @tornado.gen.coroutine
         def progress(percent):
-            progress_msg = protobuf.ForwardMsg()
+            progress_msg = ForwardMsg()
             progress_msg.upload_report_progress = percent
             yield ws.write_message(
                 progress_msg.SerializeToString(), binary=True)
@@ -487,7 +492,7 @@ class ReportSession(object):
             url = yield self._save_final_report(progress)
 
             # Indicate that the save is done.
-            progress_msg = protobuf.ForwardMsg()
+            progress_msg = ForwardMsg()
             progress_msg.report_uploaded = url
             yield ws.write_message(
                 progress_msg.SerializeToString(), binary=True)
@@ -496,7 +501,7 @@ class ReportSession(object):
             # Horrible hack to show something if something breaks.
             err_msg = '%s: %s' % (
                 type(e).__name__, str(e) or 'No further details.')
-            progress_msg = protobuf.ForwardMsg()
+            progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
             yield ws.write_message(
                 progress_msg.SerializeToString(), binary=True)

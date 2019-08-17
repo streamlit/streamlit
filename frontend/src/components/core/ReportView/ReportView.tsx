@@ -10,14 +10,13 @@ import {Progress} from 'reactstrap'
 
 import {ReportRunState} from 'lib/ReportRunState'
 import {WidgetStateManager} from 'lib/WidgetStateManager'
-import {Text as TextProto} from 'autogen/protobuf'
+import {Text as TextProto} from 'autogen/proto'
 import {ThemeProvider} from 'baseui'
 import {dispatchOneOf} from 'lib/immutableProto'
 // @ts-ignore
 import {fromJS, Iterable, List, Map as ImmutableMap} from 'immutable'
 
 // Load (non-lazy) core elements.
-import Chart from 'components/elements/Chart'
 import DocString from 'components/elements/DocString'
 import ExceptionElement from 'components/elements/ExceptionElement'
 import Table from 'components/elements/Table'
@@ -41,6 +40,7 @@ const TimeInput = React.lazy(() => import('components/widgets/TimeInput'))
 // Lazy-load display elements.
 const Audio = React.lazy(() => import('components/elements/Audio/'))
 const Balloons = React.lazy(() => import('components/elements/Balloons/'))
+const Chart = React.lazy(() => import('components/elements/Chart/'))
 const DataFrame = React.lazy(() => import('components/elements/DataFrame/'))
 const ImageList = React.lazy(() => import('components/elements/ImageList/'))
 const MapElement = React.lazy(() => import('components/elements/Map/'))
@@ -49,7 +49,7 @@ const BokehChart = React.lazy(() => import('components/elements/BokehChart/'))
 const GraphVizChart = React.lazy(() => import('components/elements/GraphVizChart/'))
 const PlotlyChart = React.lazy(() => import('components/elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('components/elements/VegaLiteChart/'))
-const Video = React.lazy(() => import('components/elements/Video'))
+const Video = React.lazy(() => import('components/elements/Video/'))
 
 type Element = ImmutableMap<string, any>; // a report Element
 

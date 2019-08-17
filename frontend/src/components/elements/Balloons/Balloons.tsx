@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import {Balloons as BalloonsProto} from 'autogen/protobuf'
+import {Balloons as BalloonsProto} from 'autogen/proto'
 import {Map as ImmutableMap} from 'immutable'
 import BalloonEmoji from 'assets/img/emoji/emoji_u1f388.png'
 import HappyFaceEmoji from 'assets/img/emoji/emoji_u1f604.png'

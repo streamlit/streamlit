@@ -21,7 +21,7 @@ describe('st.selectbox', () => {
         'have.text',
         'value 1: female' +
           'value 2: male' +
-          'value 3: male')
+          'value 3: None')
   })
 
   it('formats display values', () => {
@@ -32,9 +32,22 @@ describe('st.selectbox', () => {
         'Male')
   })
 
+  it('handles no options', () => {
+    cy.get('.stSelectbox span')
+      .eq(2)
+      .should(
+        'have.text',
+        'No options to select.')
+
+    cy.get('.stSelectbox input')
+      .eq(2)
+      .should('be.disabled')
+  })
+
   it('sets value correctly when user clicks', () => {
     cy.get('.stSelectbox')
-      .each((el, idx) => {
+      .eq(1)
+      .then((el) => {
         cy.wrap(el)
           .find('input')
           .click()
@@ -48,6 +61,6 @@ describe('st.selectbox', () => {
         'have.text',
         'value 1: female' +
           'value 2: female' +
-          'value 3: female')
+          'value 3: None')
   })
 })

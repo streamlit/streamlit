@@ -14,14 +14,14 @@ from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates
 
 
 def _create_widget(id, states):
     """
     Returns
     -------
-    streamlit.protobuf.BackMsg_pb2.WidgetState
+    streamlit.proto.Widget_pb2.WidgetState
 
     """
     states.widgets.add().id = id

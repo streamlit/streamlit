@@ -14,7 +14,7 @@ import tornado.ioloop
 
 from streamlit import config
 from streamlit import metrics
-from streamlit import protobuf
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
 from streamlit.ReportSession import ReportSession
 
@@ -332,7 +332,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, payload):
-        msg = protobuf.BackMsg()
+        msg = BackMsg()
 
         try:
             msg.ParseFromString(payload)

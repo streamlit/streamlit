@@ -1,4 +1,5 @@
 import streamlit as st
 
-w = st.text_input('First name', ‘hello’)
-print(w)  # hello
+with st.echo():
+    title = st.text_input('Movie title', 'Life of Brian')
+    st.write('The current movie title is', title)

@@ -1,6 +1,7 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 
-"""A hashing utility for code."""
+"""A hashing utility for code that uses Python 3 specific code so it needs to be
+conditionally imported."""
 
 import dis
 import importlib

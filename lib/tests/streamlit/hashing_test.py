@@ -3,14 +3,17 @@
 
 """st.hashing unit tests."""
 
+import functools
 import sys
+import tempfile
 import unittest
 
 import altair as alt
 import pandas as pd
 import pytest
+from mock import MagicMock
 
-import tempfile
+import streamlit as st
 from streamlit.hashing import get_hash
 
 
@@ -22,6 +25,9 @@ class HashTest(unittest.TestCase):
     def test_int(self):
         self.assertEqual(get_hash(145757624235), get_hash(145757624235))
         self.assertNotEqual(get_hash(10), get_hash(11))
+        self.assertNotEqual(get_hash(-1), get_hash(1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2**7-1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2**7+1))
 
     def test_list(self):
         self.assertEqual([1, 2], [1, 2])
@@ -83,6 +89,12 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_magic_mock(self):
+        """Test that MagicMocks never hash to the same thing."""
+        # (This also tests that MagicMock can hash at all, without blowing the
+        # stack due to an infinite recursion.)
+        self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
 
 class CodeHashTest(unittest.TestCase):
@@ -412,6 +424,47 @@ class CodeHashTest(unittest.TestCase):
 
         def h():
             return x + z
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_decorated(self):
+        """Test decorated functions."""
+
+        def do(func):
+            @functools.wraps(func)
+            def wrapper_do(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper_do
+
+        @do
+        def f():
+            return 42
+
+        @do
+        def g():
+            return 12
+
+        @do
+        def h():
+            return 42
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_cached(self):
+        """Test decorated functions."""
+        @st.cache
+        def f():
+            return 42
+
+        @st.cache
+        def g():
+            return 12
+
+        @st.cache
+        def h():
+            return 42
 
         self.assertNotEqual(get_hash(f), get_hash(g))
         self.assertEqual(get_hash(f), get_hash(h))

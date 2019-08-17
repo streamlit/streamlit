@@ -7,6 +7,8 @@ describe('st.pyplot with kwargs', () => {
   })
 
   it('draws long text strings correctly', () => {
+    cy.wait(20000)
+
     cy.get('.stImage')
       .find('img')
       .should('have.attr', 'src')

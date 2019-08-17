@@ -4,8 +4,8 @@
  */
 
 import {createTheme, lightThemePrimitives} from 'baseui'
-import {SCSS_VARS} from 'autogen/scssVariables'
 import {logMessage} from 'lib/log'
+import {SCSS_VARS} from 'autogen/scssVariables'
 
 const black           = SCSS_VARS['$black']
 const borderRadius    = SCSS_VARS['$border-radius']
