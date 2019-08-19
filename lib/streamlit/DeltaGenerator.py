@@ -1455,11 +1455,10 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
 
-        if single_value:
-            current_value = [current_value]
-
         element.slider.label = label
-        element.slider.value[:] = current_value
+        element.slider.value[:] = (
+            [current_value] if single_value
+            else current_value)
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
