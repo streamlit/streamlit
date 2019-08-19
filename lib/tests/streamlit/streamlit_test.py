@@ -275,7 +275,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         dg = st.image(
             img,
             caption='some caption',
-            width=100)
+            width=100, format='PNG')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
@@ -301,7 +301,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             caption=['some caption'] * 3,
             width=200,
             use_column_width=True,
-            clamp=True)
+            clamp=True, format='PNG')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)

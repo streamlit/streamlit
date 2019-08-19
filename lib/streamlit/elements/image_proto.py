@@ -15,9 +15,10 @@ from urllib.parse import urlparse
 LOGGER = get_logger(__name__)
 
 
-def _PIL_to_png_bytes(image):
+def _PIL_to_bytes(image, format='JPEG'):
+    format = format.upper()
     tmp = io.BytesIO()
-    image.save(tmp, format='PNG')
+    image.save(tmp, format=format)
     return tmp.getvalue()
 
 
@@ -51,17 +52,27 @@ def _verify_np_shape(array):
     return array
 
 
-def _bytes_to_b64(data, width):
+def _bytes_to_b64(data, width, format):
+    format = format.lower()
     ext = imghdr.what(None, data)
-    mime_type = mimetypes.guess_type('image.%s' % ext)[0]
+
+    if format is None:
+        mime_type = mimetypes.guess_type('image.%s' % ext)[0]
+    else:
+        mime_type = 'image/' + format
 
     if width > 0:
         image = Image.open(io.BytesIO(data))
         w, h = image.size
         if w > width:
             image = image.resize((width, int(1.0 * h * width / w)))
-            data = _PIL_to_png_bytes(image)
-            mime_type = 'image/png'
+            data = _PIL_to_bytes(image, format)
+
+            if format is None:
+                mime_type = 'image/png'
+            else:
+                mime_type = 'image/' + format
+
     b64 = base64.b64encode(data).decode('utf-8')
     return (b64, mime_type)
 
@@ -87,7 +98,8 @@ def _clip_image(image, clamp):
 
 
 def marshall_images(image, caption, width, proto_imgs, clamp,
-                    channels='RGB'):
+                    channels='RGB', format='JPEG'):
+
     channels = channels.upper()
 
     # Turn single image and caption into one element list.
@@ -129,7 +141,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
         # PIL Images
         if isinstance(image, ImageFile.ImageFile) or isinstance(
                 image, Image.Image):
-            data = _PIL_to_png_bytes(image)
+            data = _PIL_to_bytes(image, format)
 
         # BytesIO
         elif type(image) is io.BytesIO:
@@ -175,7 +187,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
         else:
             data = image
 
-        (b64, mime_type) = _bytes_to_b64(data, width)
+        (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
         proto_img.data.mime_type = mime_type

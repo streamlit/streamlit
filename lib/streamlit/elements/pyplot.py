@@ -44,4 +44,5 @@ def marshall(new_element_proto, fig=None, **kwargs):
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_proto.marshall_images(
-        image, None, -2, new_element_proto.imgs, False)
+        image, None, -2, new_element_proto.imgs, False,
+        channels='RGB', format='PNG')

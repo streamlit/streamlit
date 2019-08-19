@@ -82,10 +82,13 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image_proto."""
 
     @parameterized.expand([
-        (IMAGES['img_32_32_3_rgb']['np'], IMAGES['img_32_32_3_rgb']['base64']),
-        (IMAGES['img_32_32_3_bgr']['np'], IMAGES['img_32_32_3_bgr']['base64']),
+        (IMAGES['img_32_32_3_rgb']['np'], IMAGES['img_32_32_3_rgb']['base64'],
+         'jpg'
+         ),
+        (IMAGES['img_32_32_3_bgr']['np'], IMAGES['img_32_32_3_bgr']['base64'],
+         'png'),
     ])
-    def test_marshall_images(self, data_in, base64_out):
+    def test_marshall_images(self, data_in, base64_out, format):
         """Test streamlit.image_proto.marshall_images.
         Need to test the following:
         * if list
@@ -99,10 +102,11 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        st.image(data_in)
+        st.image(data_in, format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
         self.assertEqual(imglist.imgs[0].data.base64, base64_out)
+        self.assertEqual(imglist.imgs[0].data.mime_type, 'image/'+format)
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""
