@@ -5,7 +5,7 @@ import hashlib
 import threading
 from weakref import WeakKeyDictionary
 
-from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 def ensure_id(msg):

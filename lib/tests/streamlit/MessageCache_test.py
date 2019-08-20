@@ -11,7 +11,7 @@ from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
 from streamlit.MessageCache import ensure_id
 from streamlit.elements import data_frame_proto
-from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 def _create_dataframe_msg(df):
