@@ -8,16 +8,17 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import ast
+import dis
 import hashlib
 import inspect
 import os
 import shutil
 import struct
+import sys
 import textwrap
 from collections import namedtuple
 from functools import wraps
-
-import astor
+from types import CodeType
 
 import streamlit as st
 from streamlit import config, util
@@ -34,6 +35,9 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+
+NOP = dis.opmap['NOP']
 
 
 LOGGER = get_logger(__name__)
@@ -252,7 +256,7 @@ def _write_to_cache(key, value, persist, ignore_hash):
 
 
 def cache(func=None, persist=False, ignore_hash=False):
-    """Function decorator to memoize input function, saving to disk.
+    """Function decorator to memoize function executions.
 
     Parameters
     ----------
@@ -366,38 +370,52 @@ class Cache(dict):
 
     def __bool__(self):
         caller_frame = inspect.currentframe().f_back
+        all_code = caller_frame.f_code
 
+        # Get the byte offset of the first line.
+        start_byte = [b for (b, l) in dis.findlinestarts(all_code) if l == caller_frame.f_lineno][0]
+        # Get the jump target.
+        end_byte = all_code.co_code[start_byte+3]
 
-        # import dis
-        # dis.dis(caller_frame.f_code)
-        # print('starts', list(dis.findlinestarts(caller_frame.f_code)))
-        # print('line', caller_frame.f_lineno)
+        # Remove all code that is not in the if block.
+        code_block = bytearray(all_code.co_code)
+        for i in range(start_byte + 4):
+            code_block[i] = NOP
+        code_block = code_block[:end_byte]
 
-        # raise Exception()
+        # Create a new code object with modified bytecode
+        args = [
+            all_code.co_argcount,
+            all_code.co_nlocals,
+            all_code.co_stacksize,
+            all_code.co_flags,
+            bytes(code_block),
+            all_code.co_consts,
+            all_code.co_names,
+            all_code.co_varnames,
+            all_code.co_filename,
+            all_code.co_name,
+            all_code.co_firstlineno,
+            all_code.co_lnotab,
+            all_code.co_freevars,
+            all_code.co_cellvars
+        ]
 
+        if sys.version_info >= (3, 0):
+            args.insert(1, all_code.co_kwonlyargcount)
 
-        frameinfo = inspect.getframeinfo(caller_frame)
-        filename, caller_lineno, _, code_context, _ = frameinfo
+        code = CodeType(*args)
 
-        code_context = code_context[0]
+        # import io
+        # f = io.StringIO()
+        # dis.dis(code, file=f)
+        # d1 = list(f.getvalue().split('\n'))
 
-        indent_if = len(code_context) - len(code_context.lstrip())
+        # f = io.StringIO()
+        # dis.dis(all_code, file=f)
+        # d2 = list(f.getvalue().split('\n'))
 
-        lines = ''
-        with open(filename, 'r') as f:
-            for line in f.readlines()[caller_lineno:]:
-                if line.strip == '':
-                    continue
-                indent = len(line) - len(line.lstrip())
-                if indent <= indent_if:
-                    break
-                if line.strip() and not line.lstrip().startswith("#"):
-                    lines += line
-
-        program = textwrap.dedent(lines)
-
-        code = compile(program, filename, 'exec')
-        context = Context(caller_frame.f_globals, None, {})
+        context = Context(caller_frame.f_globals, None, caller_frame.f_locals)
 
         code_hasher = CodeHasher('md5')
         code_hasher.update(code, context)
@@ -408,7 +426,7 @@ class Cache(dict):
 
         try:
             self.update(_read_from_cache(
-                key, self._persist, self._ignore_hash, code, caller_frame))
+                key, self._persist, self._ignore_hash, all_code, caller_frame))
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(key, self, self._persist, self._ignore_hash)
@@ -430,7 +448,7 @@ class Cache(dict):
 
 
 def run_once(persist=False, ignore_hash=False):
-    """Storage for data that survives reruns.
+    """Cache object to persist data across reruns.
 
     Parameters
     ----------
@@ -443,6 +461,9 @@ def run_once(persist=False, ignore_hash=False):
     ...     c.data = ...
     ...
     >>> # c.data will always be defined but the code block only runs the first time
+
+    The only valid side effect inside the if code block are changes to c. Any
+    other side effect has undefined behavior.
 
     In Python 3.8 and above, you can combine the assignment and if-check with an
     assignment expression (`:=`).
