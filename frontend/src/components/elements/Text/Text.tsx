@@ -10,7 +10,7 @@ import ReactJson from 'react-json-view'
 import ReactMarkdown from 'react-markdown'
 import {Map as ImmutableMap} from 'immutable'
 import CodeBlock from '../CodeBlock'
-import {Text as TextProto} from 'autogen/protobuf'
+import {Text as TextProto} from 'autogen/proto'
 import './Text.scss'
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {

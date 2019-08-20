@@ -15,7 +15,8 @@ from parameterized import parameterized
 
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
-from streamlit import protobuf
+from streamlit.proto.DataFrame_pb2 import CellStyle
+from streamlit.proto.DataFrame_pb2 import CSSStyle
 
 
 class DataFrameStylingTest(unittest.TestCase):
@@ -191,18 +192,18 @@ def get_cell_style(proto_df, col, row):
     if no style for the given cell exists
     """
     if col >= len(proto_df.style.cols):
-        return protobuf.CellStyle()
+        return CellStyle()
 
     col_style = proto_df.style.cols[col]
     if row >= len(col_style.styles):
-        return protobuf.CellStyle()
+        return CellStyle()
 
     return col_style.styles[row]
 
 
 def make_cssstyle_proto(property, value):
-    """Creates a protobuf.CSSStyle with the given values"""
-    css_style = protobuf.CSSStyle()
+    """Creates a CSSStyle with the given values"""
+    css_style = CSSStyle()
     css_style.property = property
     css_style.value = value
     return css_style

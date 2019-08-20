@@ -304,12 +304,12 @@ def write(*args):
             elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
-            elif util.is_keras_model(arg):
+            elif _util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif type(arg) in dict_types:  # noqa: F821
+            elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
             else:

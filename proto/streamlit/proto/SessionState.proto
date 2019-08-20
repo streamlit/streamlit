@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// State for a session. Sent as part of the Initialize message, and also
+// on ReportSession state change events.
+message SessionState {
+  // If true, streamlit will re-run the report if it detects that the report
+  // has been changed. This value comes from the server.runOnSave config.
+  // The browser can change this option; it's sent here so that the browser
+  // shows the correct initial value in its Settings dialog.
+  bool run_on_save = 1;
+
+  // True if the report is being run by a client right now.
+  bool report_is_running = 2;
+}

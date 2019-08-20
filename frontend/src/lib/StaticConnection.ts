@@ -9,7 +9,7 @@
 
 import url from 'url'
 import {ConnectionState} from './ConnectionState'
-import {ForwardMsg, Text as TextProto} from 'autogen/protobuf'
+import {ForwardMsg, Text as TextProto} from 'autogen/proto'
 import {getObject} from './s3helper'
 import {logError} from './log'
 

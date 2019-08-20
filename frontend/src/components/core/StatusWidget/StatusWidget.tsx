@@ -15,7 +15,7 @@ import {Button, UncontrolledTooltip} from 'reactstrap'
 import {SignalConnection} from 'typed-signals'
 
 import {ConnectionState} from 'lib/ConnectionState'
-import {SessionEvent} from 'autogen/protobuf'
+import {SessionEvent} from 'autogen/proto'
 import {SessionEventDispatcher} from 'lib/SessionEventDispatcher'
 import {ReportRunState} from 'lib/ReportRunState'
 import {Timer} from 'lib/Timer'

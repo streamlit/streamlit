@@ -18,3 +18,21 @@ import './commands'
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
+
+// Thiago has anti-aliasing setup on his machine so we match it in the tests
+const isStyleLoaded = head => head.find('#st-font-antialiased').length > 0
+
+beforeEach(() => {
+  const head = Cypress.$(parent.window.document.head)
+
+  if (isStyleLoaded(head)) {
+    return
+  }
+
+  const css = `
+    body {
+      -webkit-font-smoothing: antialiased;
+    }
+  `
+  head.append(`<style type="text/css" id="st-font-antialiased">\n${css}</style>`)
+})

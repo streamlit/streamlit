@@ -4,7 +4,7 @@
 
 import unittest
 
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 from streamlit.widgets import coalesce_widget_states
 

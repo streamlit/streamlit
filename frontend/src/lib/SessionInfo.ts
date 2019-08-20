@@ -6,6 +6,7 @@
 
 interface Args {
   streamlitVersion: string;
+  pythonVersion: string;
   installationId: string;
   authorEmail: string;
 }
@@ -13,6 +14,7 @@ interface Args {
 
 export class SessionInfo {
   public readonly streamlitVersion: string;
+  public readonly pythonVersion: string;
   public readonly installationId: string;
   public readonly authorEmail: string;
 
@@ -36,8 +38,11 @@ export class SessionInfo {
     SessionInfo.singleton = sm
   }
 
-  public constructor({streamlitVersion, installationId, authorEmail}: Args) {
+  public constructor({
+    streamlitVersion, pythonVersion, installationId, authorEmail,
+  }: Args) {
     this.streamlitVersion = streamlitVersion
+    this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
   }

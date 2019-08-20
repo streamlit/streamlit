@@ -49,7 +49,7 @@ Chrome/Firefox.
 with a brand new cache. For that, add this to `~/.streamlit/config.toml`:
 
 ```ini
-[proxy]
+[server]
 port=8765
 ```
 

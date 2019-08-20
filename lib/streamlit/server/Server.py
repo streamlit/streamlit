@@ -12,7 +12,7 @@ import tornado.web
 import tornado.websocket
 
 from streamlit import config
-from streamlit import protobuf
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
@@ -306,7 +306,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, payload):
-        msg = protobuf.BackMsg()
+        msg = BackMsg()
 
         try:
             msg.ParseFromString(payload)

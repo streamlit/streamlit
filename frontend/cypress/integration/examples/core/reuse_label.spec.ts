@@ -37,7 +37,7 @@ describe('reuse widget label', () => {
       .first()
       .should(
         'have.text',
-        'value 1: 1'
+        'value 1: f'
       )
 
   })

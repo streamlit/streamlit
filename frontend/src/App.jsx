@@ -28,7 +28,7 @@ import { StatusWidget } from 'components/core/StatusWidget/'
 import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
 import { ReportView } from 'components/core/ReportView/'
 
-import { Delta, Text as TextProto } from 'autogen/protobuf'
+import { Delta, Text as TextProto } from 'autogen/proto'
 import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
 import { SessionInfo } from 'lib/SessionInfo'
 import { addRows } from 'lib/dataFrameProto'
@@ -184,19 +184,22 @@ class App extends PureComponent {
    */
   handleInitialize(initializeMsg) {
     SessionInfo.current = new SessionInfo({
-      streamlitVersion: initializeMsg.streamlitVersion,
+      streamlitVersion: initializeMsg.environmentInfo.streamlitVersion,
+      pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
     })
 
     MetricsManager.current.initialize({
-      gatherUsageStats: initializeMsg.gatherUsageStats,
+      gatherUsageStats: initializeMsg.config.gatherUsageStats,
     })
 
-    MetricsManager.current.enqueue('createReport')
+    MetricsManager.current.enqueue('createReport', {
+      pythonVersion: SessionInfo.current.pythonVersion,
+    })
 
     this.setState({
-      sharingEnabled: initializeMsg.sharingEnabled,
+      sharingEnabled: initializeMsg.config.sharingEnabled,
     })
 
     const initialState = initializeMsg.sessionState

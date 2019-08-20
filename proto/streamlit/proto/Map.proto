@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "DataFrame.proto";
+import "streamlit/proto/DataFrame.proto";
 
 // A map which can be displayed using Leaflet.
 message Map {

@@ -12,7 +12,7 @@ from streamlit import config
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import ensure_id
 from streamlit.elements import data_frame_proto
-from streamlit.protobuf.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server import server_util
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -148,5 +148,3 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Cache misses
         self.assertEqual(404, self.fetch('/message').code)
         self.assertEqual(404, self.fetch('/message?id=non_existent').code)
-
-

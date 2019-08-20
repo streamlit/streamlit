@@ -6,14 +6,15 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from collections import namedtuple
 import dis
+import functools
 import hashlib
 import importlib
 import inspect
 import io
 import os
 import sys
-from collections import namedtuple
 
 import streamlit as st
 from streamlit import util
@@ -238,6 +239,15 @@ class CodeHasher():
             st.warning(('Streamlit does not support hashing classes. '
                         'We do not hash %s.') % obj.__name__)
             return self.to_bytes(obj.__name__)
+        elif isinstance(obj, functools.partial):
+            # The return value of functools.partial is not a plain function:
+            # it's a callable object that remembers the original function plus
+            # the values you pickled into it. So here we need to special-case it.
+            h = hashlib.new(self.name)
+            self._update(h, obj.args)
+            self._update(h, obj.func)
+            self._update(h, obj.keywords)
+            return h.digest()
         else:
             try:
                 # As a last resort, we pickle the object to hash it.

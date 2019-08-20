@@ -1,4 +1,4 @@
-"""Helper functions to marshall a pandas.DataFrame into a protobuf.Dataframe.
+"""Helper functions to marshall a pandas.DataFrame into a proto.Dataframe.
 
 Copyright 2019 Streamlit Inc. All rights reserved.
 """
@@ -16,14 +16,14 @@ CSSStyle = namedtuple('CSSStyle', ['property', 'value'])
 
 
 def marshall_data_frame(data, proto_df):
-    """Convert a pandas.DataFrame into a protobuf.DataFrame.
+    """Convert a pandas.DataFrame into a proto.DataFrame.
 
     Parameters
     ----------
     data : pandas.DataFrame, numpy.ndarray, Iterable, dict, DataFrame, Styler, or None
         Something that is or can be converted to a dataframe.
 
-    proto_df : protobuf.DataFrame
+    proto_df : proto.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
     """
     df = convert_anything_to_df(data)
@@ -75,11 +75,11 @@ def _is_pandas_styler(obj):
 
 
 def _marshall_styles(proto_table_style, df, styler=None):
-    """Adds pandas.Styler styling data to a protobuf.DataFrame
+    """Adds pandas.Styler styling data to a proto.DataFrame
 
     Parameters
     ----------
-    proto_table_style : protobuf.TableStyle
+    proto_table_style : proto.TableStyle
     df : pandas.DataFrame
     styler : pandas.Styler holding styling data for the data frame, or
         None if there's no style data to marshall
@@ -221,10 +221,10 @@ def _get_custom_display_values(df, translated_style):
 
 
 def _marshall_index(pandas_index, proto_index):
-    """Convert an pandas.Index into a protobuf.Index.
+    """Convert an pandas.Index into a proto.Index.
 
     pandas_index - Panda.Index or related (input)
-    proto_index  - Protobuf.Index (output)
+    proto_index  - proto.Index (output)
     """
     import pandas as pd
     import numpy as np
@@ -268,20 +268,20 @@ def _marshall_index(pandas_index, proto_index):
 
 
 def _marshall_table(pandas_table, proto_table):
-    """Convert a sequence of 1D arrays into protobuf.Table.
+    """Convert a sequence of 1D arrays into proto.Table.
 
     pandas_table - Sequence of 1D arrays which are AnyArray compatible (input).
-    proto_table  - Protobuf.Table (output)
+    proto_table  - proto.Table (output)
     """
     for pandas_array in pandas_table:
         _marshall_any_array(pandas_array, proto_table.cols.add())
 
 
 def _marshall_any_array(pandas_array, proto_array):
-    """Convert a 1D numpy.Array into a protobuf.AnyArray.
+    """Convert a 1D numpy.Array into a proto.AnyArray.
 
     pandas_array - 1D arrays which is AnyArray compatible (input).
-    proto_array  - Protobuf.AnyArray (output)
+    proto_array  - proto.AnyArray (output)
     """
     import numpy as np
     # Convert to np.array as necessary.

@@ -4,7 +4,7 @@
  */
 
 import {Signal} from 'typed-signals'
-import {SessionEvent} from '../autogen/protobuf'
+import {SessionEvent} from '../autogen/proto'
 
 /** Redispatches SessionEvent messages received from the server. */
 export class SessionEventDispatcher {

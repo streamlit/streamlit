@@ -8,7 +8,7 @@
 import url from 'url'
 
 import {ConnectionState} from './ConnectionState'
-import {ForwardMsg} from 'autogen/protobuf'
+import {ForwardMsg} from 'autogen/proto'
 import {IS_DEV_ENV, IS_SHARED_REPORT, WEBSOCKET_PORT_DEV} from './baseconsts'
 import {ReactNode} from 'react'
 import {StaticConnection} from './StaticConnection'
