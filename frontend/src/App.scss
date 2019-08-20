@@ -53,6 +53,37 @@ iframe {
   padding-right: 0px;
 }
 
+code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  border-radius: $border-radius;
+  background: $gray-faint;
+  color: $green;
+}
+
+pre {
+  background: $gray-faint;
+  border-radius: $border-radius;
+  margin: 0 0 1rem 0;
+  padding: 1rem;
+
+  code {
+    background: transparent;
+    border: 0;
+    display: inline;
+    font-size: $font-size-sm;
+    line-height: inherit;
+    margin: 0;
+    max-width: auto;
+    padding: 0;
+    white-space: pre;
+    word-break: normal;
+    word-wrap: normal;
+    overflow-x: auto;
+    color: $green;
+  }
+}
+
 .progress {
   background-color: $gray-lightest;
 }

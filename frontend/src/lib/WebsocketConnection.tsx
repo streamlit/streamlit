@@ -17,11 +17,12 @@
  *
  */
 
-import React from 'react'
+import React, { Fragment } from 'react'
 import Resolver from 'lib/Resolver'
-import {ConnectionState} from 'lib/ConnectionState'
-import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/proto'
-import {logMessage, logWarning, logError} from 'lib/log'
+import { SessionInfo } from 'lib/SessionInfo'
+import { ConnectionState } from 'lib/ConnectionState'
+import { ForwardMsg, BackMsg, IBackMsg } from 'autogen/proto'
+import { logMessage, logWarning, logError } from 'lib/log'
 
 
 /**
@@ -464,17 +465,31 @@ function doHealthPing(
       if (xhr.readyState === /* DONE */ 4) {
         if (xhr.responseText === 'ok') {
           resolver.resolve(uriNumber)
+
         } else if (xhr.status === /* NO RESPONSE */ 0) {
           if (uri.startsWith('//localhost:')) {
+
+            const scriptname =
+              SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
+                SessionInfo.current.commandLine[0] : 'yourscript.py'
+
             retry(
-              <React.Fragment>
-                <strong>Is Streamlit running?</strong>{' '}
-                Try calling <code>streamlit run yourscript.py</code> on a terminal.
-              </React.Fragment>
+              <Fragment>
+                <p>
+                  Is Streamlit still running? If you accidentally stopped
+                  Streamlit, just restart it in your terminal:
+                </p>
+                <pre>
+                  <code>
+                    $ streamlit run {scriptname}
+                  </code>
+                </pre>
+              </Fragment>
             )
           } else {
             retry('Connection failed with status 0.')
           }
+
         } else {
           retry(
             `Connection failed with status ${xhr.status}, ` +

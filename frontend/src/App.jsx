@@ -294,6 +294,8 @@ class App extends PureComponent {
       reportHash: hashString(SessionInfo.current.installationId + scriptPath),
     })
 
+    SessionInfo.current.commandLine = newReportProto.commandLine
+
     this.setState({
       reportId: newReportProto.id,
       commandLine: newReportProto.commandLine.join(' '),
