@@ -397,6 +397,12 @@ class Cache(dict):
 
     def __bool__(self):
         caller_frame = inspect.currentframe().f_back
+
+        if caller_frame.f_code.co_name == '__nonzero__':
+            # This can only happen in Python 2 since it doesn't have __bool__.
+            caller_frame = caller_frame.f_back
+
+
         frameinfo = inspect.getframeinfo(caller_frame)
         filename, caller_lineno, _, code_context, _ = frameinfo
 
@@ -407,12 +413,12 @@ class Cache(dict):
         lines = ''
         with open(filename, 'r') as f:
             for line in f.readlines()[caller_lineno:]:
-                if line.strip == '':
+                if line.strip() == '':
                     continue
                 indent = len(line) - len(line.lstrip())
                 if indent <= indent_if:
                     break
-                if line.strip() and not line.lstrip().startswith("#"):
+                if line.strip() and not line.lstrip().startswith('#'):
                     lines += line
 
         program = textwrap.dedent(lines)
