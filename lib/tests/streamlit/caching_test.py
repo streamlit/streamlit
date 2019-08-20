@@ -44,7 +44,7 @@ class RunOnceTest(unittest.TestCase):
         val = 42
 
         for _ in range(2):
-            c = st.run_once()
+            c = st.Cache()
             if c:
                 c.value = val
 

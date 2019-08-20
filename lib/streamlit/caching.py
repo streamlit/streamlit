@@ -155,7 +155,7 @@ def _build_caching_block_error_message(persisted, code):
         'Streamlit has to {load_or_rerun} in `{file_name}` line {lineno}.\n\n'
         'To dismiss this warning, you could copy the computed value. '
 
-        'Or add `ignore_hash=True` to the `streamlit.run_once`.\n\n'
+        'Or add `ignore_hash=True` to the constructor of `streamlit.Cache`.\n\n'
 
         'Learn more about caching and copying in the '
         '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
@@ -362,7 +362,34 @@ def cache(func=None, persist=False, ignore_hash=False):
 
 
 class Cache(dict):
-    def __init__(self, persist, ignore_hash):
+    """Cache object to persist data across reruns.
+
+    Parameters
+    ----------
+
+    Example
+    -------
+    >>> c = st.Cache()
+    ... if c:
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+    ...
+    >>> # c.data will always be defined but the code block only runs the first time
+
+    The only valid side effect inside the if code block are changes to c. Any
+    other side effect has undefined behavior.
+
+    In Python 3.8 and above, you can combine the assignment and if-check with an
+    assignment expression (`:=`).
+
+    >>> if c := st.Cache():
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+
+
+    """
+
+    def __init__(self, persist=False, ignore_hash=False):
         self._persist = persist
         self._ignore_hash = ignore_hash
 
@@ -422,36 +449,6 @@ class Cache(dict):
 
     def __setattr__(self, key, value):
         dict.__setitem__(self, key, value)
-
-
-def run_once(persist=False, ignore_hash=False):
-    """Cache object to persist data across reruns.
-
-    Parameters
-    ----------
-
-    Example
-    -------
-    >>> c = st.run_once()
-    ... if c:
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-    ...
-    >>> # c.data will always be defined but the code block only runs the first time
-
-    The only valid side effect inside the if code block are changes to c. Any
-    other side effect has undefined behavior.
-
-    In Python 3.8 and above, you can combine the assignment and if-check with an
-    assignment expression (`:=`).
-
-    >>> if c := st.run_once():
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-
-
-    """
-    return Cache(persist, ignore_hash)
 
 
 def clear_cache():
