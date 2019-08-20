@@ -68,6 +68,7 @@ import textwrap as _textwrap
 import threading as _threading
 import traceback as _traceback
 import types as _types
+import json as _json
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
@@ -312,6 +313,9 @@ def write(*args):
             elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
+            elif _util.is_namedtuple(arg):
+                flush_buffer()
+                json(_json.dumps(arg._asdict()))
             else:
                 string_buffer.append('`%s`' % str(arg).replace('`', '\\`'))
 
