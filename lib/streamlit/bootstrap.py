@@ -11,9 +11,9 @@ import tornado.ioloop
 from streamlit import config
 from streamlit import util
 from streamlit.Report import Report
-from streamlit.Server import Server
-
 from streamlit.logger import get_logger
+from streamlit.server.Server import Server
+
 LOGGER = get_logger(__name__)
 
 

@@ -1,32 +1,30 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
-import json
 import logging
 import threading
 from enum import Enum
 
 import tornado.concurrent
 import tornado.gen
+import tornado.ioloop
 import tornado.web
 import tornado.websocket
-import tornado.ioloop
 
 from streamlit import config
-from streamlit import metrics
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
 from streamlit.ReportSession import ReportSession
-
 from streamlit.logger import get_logger
+from streamlit.server.routes import DebugHandler
+from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MetricsHandler
+from streamlit.server.routes import StaticFileHandler
+from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
+from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import serialize_forward_msg
 
 LOGGER = get_logger(__name__)
-
-
-# Largest message that can be sent via the WebSocket connection.
-# (Limit was picked arbitrarily)
-# TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 5 * 10e7  # 50MB
 
 
 TORNADO_SETTINGS = {
@@ -59,7 +57,7 @@ class Server(object):
     def get_current(cls):
         """Return the singleton instance."""
         if cls._singleton is None:
-            Server()
+            raise RuntimeError('Server has not been initialized yet')
 
         return Server._singleton
 
@@ -101,9 +99,10 @@ class Server(object):
     def _get_routes(self):
         routes = [
             (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
-            (r'/healthz', _HealthHandler, dict(server=self)),
-            (r'/debugz', _DebugHandler, dict(server=self)),
-            (r'/metrics', _MetricsHandler, dict(server=self)),
+            (r'/healthz', HealthHandler, dict(
+                health_check=lambda: self.is_ready_for_browser_connection)),
+            (r'/debugz', DebugHandler, dict(server=self)),
+            (r'/metrics', MetricsHandler),
         ]
 
         if (config.get_option('global.developmentMode') and
@@ -114,9 +113,9 @@ class Server(object):
             LOGGER.debug('Serving static content from %s', static_path)
 
             routes.extend([
-                (r"/()$", _StaticFileHandler,
+                (r"/()$", StaticFileHandler,
                     {'path': '%s/index.html' % static_path}),
-                (r"/(.*)", _StaticFileHandler,
+                (r"/(.*)", StaticFileHandler,
                     {'path': '%s/' % static_path}),
             ])
 
@@ -167,7 +166,7 @@ class Server(object):
                         continue
                     msg_list = session.flush_browser_queue()
                     for msg in msg_list:
-                        msg_str = _serialize(msg)
+                        msg_str = serialize_forward_msg(msg)
                         try:
                             ws.write_message(msg_str, binary=True)
                         except tornado.websocket.WebSocketClosedError:
@@ -251,70 +250,6 @@ class Server(object):
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
-class _StaticFileHandler(tornado.web.StaticFileHandler):
-    def set_extra_headers(self, path):
-        """Disable cache for HTML files.
-
-        Other assets like JS and CSS are suffixed with their hash, so they can
-        be cached indefinitely.
-        """
-        is_index_url = len(path) == 0
-
-        if is_index_url or path.endswith('.html'):
-            self.set_header('Cache-Control', 'no-cache')
-        else:
-            self.set_header('Cache-Control', 'public')
-
-
-class _SpecialRequestHandler(tornado.web.RequestHandler):
-    """Superclass for "special" endpoints, like /healthz."""
-
-    def initialize(self, server):
-        self._server = server
-
-    def set_default_headers(self):
-        self.set_header('Cache-Control', 'no-cache')
-        # Only allow cross-origin requests when using the Node server. This is
-        # only needed when using the Node server anyway, since in that case we
-        # have a dev port and the prod port, which count as two origins.
-        if (not config.get_option('server.enableCORS') or
-                config.get_option('global.useNode')):
-            self.set_header('Access-Control-Allow-Origin', '*')
-
-
-class _HealthHandler(_SpecialRequestHandler):
-    def get(self):
-        if self._server.is_ready_for_browser_connection:
-            self.write('ok')
-            self.set_status(200)
-        else:
-            # 503 = SERVICE_UNAVAILABLE
-            self.set_status(503)
-            self.write('unavailable')
-
-
-class _MetricsHandler(_SpecialRequestHandler):
-    def get(self):
-        if config.get_option('global.metrics'):
-            self.add_header('Cache-Control', 'no-cache')
-            self.set_header('Content-Type', 'text/plain')
-            self.write(metrics.Client.get_current().generate_latest())
-        else:
-            self.set_status(404)
-            raise tornado.web.Finish()
-
-
-class _DebugHandler(_SpecialRequestHandler):
-    def get(self):
-        self.add_header('Cache-Control', 'no-cache')
-        self.write(
-            '<code><pre>%s</pre><code>' %
-            json.dumps(
-                self._server.get_debug(),
-                indent=2,
-            ))
-
-
 class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     """Handles a WebSocket connection from the browser"""
     def initialize(self, server):
@@ -322,7 +257,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return _is_url_from_allowed_origins(origin)
+        return is_url_from_allowed_origins(origin)
 
     def open(self):
         self._session = self._server._add_browser_connection(self)
@@ -376,89 +311,3 @@ def _set_tornado_log_levels():
         logging.getLogger('tornado.access').setLevel(logging.ERROR)
         logging.getLogger('tornado.application').setLevel(logging.ERROR)
         logging.getLogger('tornado.general').setLevel(logging.ERROR)
-
-
-def _serialize(msg):
-    msg_str = msg.SerializeToString()
-
-    if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        _convert_msg_to_exception_msg(msg, RuntimeError('Data too large'))
-        msg_str = msg.SerializeToString()
-
-    return msg_str
-
-
-def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception_proto as exception_proto
-
-    delta_id = msg.delta.id
-    msg.Clear()
-    msg.delta.id = delta_id
-
-    exception_proto.marshall(msg.delta.new_element.exception, e)
-
-
-def _is_url_from_allowed_origins(url):
-    """Return True if URL is from allowed origins (for CORS purpose).
-
-    Allowed origins:
-    1. localhost
-    2. The internal and external IP addresses of the machine where this
-       function was called from.
-    3. The cloud storage domain configured in `s3.bucket`.
-
-    If `server.enableCORS` is False, this allows all origins.
-
-    Parameters
-    ----------
-    url : str
-        The URL to check
-
-    Returns
-    -------
-    bool
-        True if URL is accepted. False otherwise.
-
-    """
-    if not config.get_option('server.enableCORS'):
-        # Allow everything when CORS is disabled.
-        return True
-
-    hostname = util.get_hostname(url)
-
-    allowed_domains = [
-        # Check localhost first.
-        'localhost',
-        '0.0.0.0',
-        '127.0.0.1',
-        # Try to avoid making unecessary HTTP requests by checking if the user
-        # manually specified a server address.
-        _get_server_address_if_manually_set,
-        _get_s3_url_host_if_manually_set,
-        # Then try the options that depend on HTTP requests or opening sockets.
-        util.get_internal_ip,
-        util.get_external_ip,
-        lambda: config.get_option('s3.bucket'),
-    ]
-
-    for allowed_domain in allowed_domains:
-        if util.is_function(allowed_domain):
-            allowed_domain = allowed_domain()
-
-        if allowed_domain is None:
-            continue
-
-        if hostname == allowed_domain:
-            return True
-
-    return False
-
-
-def _get_server_address_if_manually_set():
-    if config.is_manually_set('browser.serverAddress'):
-        return util.get_hostname(config.get_option('browser.serverAddress'))
-
-
-def _get_s3_url_host_if_manually_set():
-    if config.is_manually_set('s3.url'):
-        return util.get_hostname(config.get_option('s3.url'))
