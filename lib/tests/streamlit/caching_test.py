@@ -39,13 +39,23 @@ class CacheTest(unittest.TestCase):
         self.assertTrue(called[0])
 
 
-class RunOnceTest(unittest.TestCase):
+class CachingObjectTest(unittest.TestCase):
     def test_simple(self):
         val = 42
 
         for _ in range(2):
             c = st.Cache()
             if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_has_changes(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c.has_changes():
                 c.value = val
 
             self.assertEqual(c.value, val)

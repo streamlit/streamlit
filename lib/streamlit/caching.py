@@ -391,13 +391,12 @@ class Cache(dict):
 
         dict.__init__(self)
 
-    def __bool__(self):
+    def has_changes(self):
         caller_frame = inspect.currentframe().f_back
 
-        if caller_frame.f_code.co_name == '__nonzero__':
-            # This can only happen in Python 2 since it doesn't have __bool__.
+        caller_name = caller_frame.f_code.co_name
+        if caller_name == '__nonzero__' or caller_name == '__bool__':
             caller_frame = caller_frame.f_back
-
 
         frameinfo = inspect.getframeinfo(caller_frame)
         filename, caller_lineno, _, code_context, _ = frameinfo
@@ -439,6 +438,9 @@ class Cache(dict):
 
         # Always return False so that we have control over the execution.
         return False
+
+    def __bool__(self):
+        return self.has_changes()
 
     # Python 2 doesn't have __bool__
     def __nonzero__(self):
