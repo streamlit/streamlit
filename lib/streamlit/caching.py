@@ -8,17 +8,16 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import ast
-import dis
 import hashlib
 import inspect
 import os
 import shutil
 import struct
-import sys
 import textwrap
 from collections import namedtuple
 from functools import wraps
-from types import CodeType
+
+import astor
 
 import streamlit as st
 from streamlit import config, util
@@ -35,9 +34,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
-
-NOP = dis.opmap['NOP']
 
 
 LOGGER = get_logger(__name__)
