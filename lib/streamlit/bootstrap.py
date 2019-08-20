@@ -119,13 +119,13 @@ def run(script_path):
     # and close all our threads
     _set_up_signal_handler()
 
-    # Schedule the server to start using the IO Loop on the main thread.
-    server = Server(
-        script_path, sys.argv, on_server_start_callback=_on_server_start)
-
-    server.add_preheated_report_session()
-
     ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.spawn_callback(server.loop_coroutine)
 
+    # Create and start the server.
+    server = Server(ioloop, script_path, sys.argv)
+    server.add_preheated_report_session()
+    server.start(_on_server_start)
+
+    # Start the ioloop. This function will not return until the
+    # server is shut down.
     ioloop.start()
