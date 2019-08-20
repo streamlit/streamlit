@@ -141,7 +141,7 @@ def _build_caching_error_message(persisted, func, caller_frame):
     )
 
 
-def _read_from__mem_cache(key, ignore_hash):
+def _read_from_mem_cache(key, ignore_hash):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
@@ -204,7 +204,7 @@ def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
     or rerun the code.
     """
     try:
-        return _read_from__mem_cache(key, ignore_hash)
+        return _read_from_mem_cache(key, ignore_hash)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
             message = _build_caching_error_message(
@@ -339,7 +339,7 @@ def clear_cache():
         True if the disk cache was cleared. False otherwise (e.g. cache file
         doesn't exist on disk).
     """
-    _clear__mem_cache()
+    _clear_mem_cache()
     return _clear_disk_cache()
 
 
@@ -357,6 +357,6 @@ def _clear_disk_cache():
     return False
 
 
-def _clear__mem_cache():
+def _clear_mem_cache():
     global _mem_cache
     _mem_cache = {}
