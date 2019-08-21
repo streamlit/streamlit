@@ -8,8 +8,8 @@ from weakref import WeakKeyDictionary
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
-def ensure_id(msg):
-    """Assigns a unique ID to a ForwardMsg, if it doesn't already have one.
+def ensure_hash(msg):
+    """Assigns a unique hash to a ForwardMsg, if it doesn't already have one.
 
     Parameters
     ----------
@@ -18,16 +18,16 @@ def ensure_id(msg):
     Returns
     -------
     string
-        The message's ID
+        The message's hash
 
     """
-    if msg.id == '':
+    if msg.hash == '':
         # SHA1 is good enough for what we need, which is uniqueness.
         hasher = hashlib.sha1()
         hasher.update(msg.SerializeToString())
-        msg.id = hasher.hexdigest()
+        msg.hash = hasher.hexdigest()
 
-    return msg.id
+    return msg.hash
 
 
 def create_reference_msg(msg):
@@ -42,11 +42,11 @@ def create_reference_msg(msg):
     -------
     ForwardMsg
         A new ForwardMsg that "points" to the original message via the
-        id_reference field.
+        hash_reference field.
 
     """
     ref_msg = ForwardMsg()
-    ref_msg.id_reference = ensure_id(msg)
+    ref_msg.hash_reference = ensure_hash(msg)
     return ref_msg
 
 
@@ -83,20 +83,20 @@ class MessageCache(object):
         session : ReportSession
 
         """
-        id = ensure_id(msg)
+        hash = ensure_hash(msg)
         with self._lock:
-            entry = self._entries.get(id, None)
+            entry = self._entries.get(hash, None)
             if entry is None:
                 entry = MessageCache.Entry(msg)
-                self._entries[id] = entry
+                self._entries[hash] = entry
             entry.add_ref(session)
 
-    def get_message(self, id):
+    def get_message(self, hash):
         """Return the message with the given ID if it exists in the cache.
 
         Parameters
         ----------
-        id : string
+        hash : string
             The id of the message to retrieve.
 
         Returns
@@ -105,7 +105,7 @@ class MessageCache(object):
 
         """
         with self._lock:
-            entry = self._entries.get(id, None)
+            entry = self._entries.get(hash, None)
             return entry.msg if entry else None
 
     def has_message_reference(self, msg, session):
@@ -121,7 +121,7 @@ class MessageCache(object):
         bool
 
         """
-        id = ensure_id(msg)
+        id = ensure_hash(msg)
         with self._lock:
             entry = self._entries.get(id, None)
             return entry is not None and session in entry.sessions

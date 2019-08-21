@@ -16,7 +16,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
-from streamlit.MessageCache import ensure_id
+from streamlit.MessageCache import ensure_hash
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.server.routes import DebugHandler
@@ -243,7 +243,7 @@ class Server(object):
 
         """
         if should_cache_msg(msg):
-            ensure_id(msg)
+            ensure_hash(msg)
 
             if self._message_cache.has_message_reference(msg, session):
                 # This session has probably cached this message. Send

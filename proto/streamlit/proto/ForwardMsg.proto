@@ -8,8 +8,8 @@ import "streamlit/proto/SessionState.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
-  // An ID that uniquely identifies this ForwardMsg, for caching.
-  string id = 9;
+  // A hash that uniquely identifies this ForwardMsg, for caching.
+  string hash = 9;
 
   oneof type {
     // Report lifecycle messages.
@@ -38,9 +38,9 @@ message ForwardMsg {
     // Other messages.
 
     // A reference to a ForwardMsg that has already been delivered.
-    // The client should substitute the message with the given ID
+    // The client should substitute the message with the given hash
     // for this one. If the client does not have the referenced message in
     // its cache, it can retrieve it from the server.
-    string id_reference = 10;
+    string hash_reference = 10;
   }
 }

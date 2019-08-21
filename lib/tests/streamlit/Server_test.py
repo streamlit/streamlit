@@ -15,7 +15,7 @@ from tornado import gen
 
 from streamlit import config
 from streamlit.MessageCache import MessageCache
-from streamlit.MessageCache import ensure_id
+from streamlit.MessageCache import ensure_hash
 from streamlit.elements import data_frame_proto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
@@ -88,15 +88,15 @@ class ServerTest(ServerTestCase):
             self.server._send_message(ws, session, msg)
             uncached = yield self.read_forward_msg(ws_client)
             self.assertEqual('delta', uncached.WhichOneof('type'))
-            msg_id = uncached.id
+            msg_hash = uncached.hash
 
             # Send the same message again. This time, it should have
-            # been cached, and an "id_reference" message should be
+            # been cached, and an "hash_reference" message should be
             # received instead.
             self.server._send_message(ws, session, msg)
             cached = yield self.read_forward_msg(ws_client)
-            self.assertEqual('id_reference', cached.WhichOneof('type'))
-            self.assertEqual(msg_id, cached.id_reference)
+            self.assertEqual('hash_reference', cached.WhichOneof('type'))
+            self.assertEqual(msg_hash, cached.hash_reference)
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -206,11 +206,11 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_message_cache(self):
         # Create a new ForwardMsg and cache it
         msg = _create_dataframe_msg([1, 2, 3])
-        msg_id = ensure_id(msg)
+        msg_hash = ensure_hash(msg)
         self._cache.add_message(msg, MagicMock())
 
         # Cache hit
-        response = self.fetch('/message?id=%s' % msg_id)
+        response = self.fetch('/message?hash=%s' % msg_hash)
         self.assertEqual(200, response.code)
         self.assertEqual(serialize_forward_msg(msg), response.body)
 

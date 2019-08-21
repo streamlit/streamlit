@@ -27,20 +27,20 @@ export class ForwardMsgCache {
   public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
     this.maybeCacheMessage(msg)
 
-    if (msg.type !== 'idReference') {
+    if (msg.type !== 'hashReference') {
       return msg
     }
 
-    const cached = this.messages.get(msg.idReference)
+    const cached = this.messages.get(msg.hashReference)
     if (cached != null) {
-      logMessage(`Cached ForwardMsg HIT [id=${msg.idReference}]`)
+      logMessage(`Cached ForwardMsg HIT [hash=${msg.hashReference}]`)
       return cached
     }
 
     // Cache miss: fetch from the server
-    logMessage(`Cached ForwardMsg MISS [id=${msg.idReference}]`)
+    logMessage(`Cached ForwardMsg MISS [hash=${msg.hashReference}]`)
 
-    const rsp = await fetch(`/message?id=${msg.idReference}`)
+    const rsp = await fetch(`/message?hash=${msg.hashReference}`)
     const data = await rsp.arrayBuffer()
     msg = ForwardMsg.decode(new Uint8Array(data))
     this.maybeCacheMessage(msg)
@@ -49,19 +49,19 @@ export class ForwardMsgCache {
   }
 
   private maybeCacheMessage(msg: ForwardMsg): void {
-    if (msg.type === 'idReference') {
+    if (msg.type === 'hashReference') {
       // We never cache reference messages
       return
     }
 
-    if (this.messages.has(msg.id)) {
+    if (this.messages.has(msg.hash)) {
       // Already cached
       return
     }
 
     if (getMessageSize(msg) >= CACHED_MESSAGE_SIZE_MIN) {
-      logMessage(`Caching ForwardMsg [id=${msg.id}]`)
-      this.messages.set(msg.id, msg)
+      logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
+      this.messages.set(msg.hash, msg)
     }
   }
 }
