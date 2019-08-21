@@ -6,7 +6,6 @@
 import unittest
 
 import mock
-import requests
 import tornado.testing
 import tornado.web
 import tornado.websocket
@@ -14,58 +13,48 @@ from mock import patch
 from tornado import gen
 
 from streamlit import config
-from streamlit.server.Server import Server
+from streamlit.server.Server import State
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
+from tests.streamlit.ServerTestCase import ServerTestCase
 
 
-class ServerTest(tornado.testing.AsyncHTTPTestCase):
-    def get_app(self):
-        ioloop = self.get_new_ioloop()
-        self._server = Server(ioloop, '/not/a/script.py', [])
-        app = self._server._create_app()
-        return app
+# Stub out the Server's ReportSession import. We don't want
+# actual sessions to be instantiated, or scripts to be run.
+# Test methods must take an additional parameter (mock.patch
+# will pass the mocked stub to each test function.)
+@mock.patch('streamlit.server.Server.ReportSession', autospec=True)
+class ServerTest(ServerTestCase):
+    @tornado.testing.gen_test
+    def test_start_stop(self, _):
+        """Test that we can start and stop the server."""
+        yield self.start_server_loop()
+        self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
-    def get_ws_url(self, path):
-        """Return a ws:// URL with the given path for our test server."""
-        # get_url() gives us a result with the 'http' scheme;
-        # we swap it out for 'ws'.
-        url = self.get_url(path)
-        parts = list(requests.utils.urlparse(url))
-        parts[0] = 'ws'
-        return requests.utils.urlunparse(tuple(parts))
+        self.server.stop()
+        self.assertEqual(State.STOPPING, self.server._state)
 
-    def ws_connect(self):
-        """Open a websocket connection to the server.
-
-        Returns
-        -------
-        A Future that resolves with the connected websocket client.
-        You need to yield on this value from within a
-        'tornado.testing.gen_test' coroutine.
-
-        """
-        return tornado.websocket.websocket_connect(self.get_ws_url('/stream'))
+        yield gen.sleep(0.1)
+        self.assertEqual(State.STOPPED, self.server._state)
 
     @tornado.testing.gen_test
-    def test_websocket_connect(self):
+    def test_websocket_connect(self, _):
         """Test that we can connect to the server via websocket."""
-        # Stub out the Server's ReportSession import. We don't want
-        # actual sessions to be instantiated, or scripts to be run.
-        with mock.patch('streamlit.server.Server.ReportSession', autospec=True):
-            self.assertFalse(self._server.browser_is_connected)
+        yield self.start_server_loop()
 
-            # Open a websocket connection
-            ws_client = yield self.ws_connect()
-            self.assertTrue(self._server.browser_is_connected)
+        self.assertFalse(self.server.browser_is_connected)
 
-            # Close the connection, give the server a moment to step
-            # its runloop, and assert we're no longer connected.
-            ws_client.close()
-            yield gen.sleep(0.1)
-            self.assertFalse(self._server.browser_is_connected)
+        # Open a websocket connection
+        ws_client = yield self.ws_connect()
+        self.assertTrue(self.server.browser_is_connected)
+
+        # Close the connection, give the server a moment to step
+        # its runloop, and assert we're no longer connected.
+        ws_client.close()
+        yield gen.sleep(0.1)
+        self.assertFalse(self.server.browser_is_connected)
 
 
 class ServerUtilsTest(unittest.TestCase):

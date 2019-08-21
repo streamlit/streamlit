@@ -217,12 +217,20 @@ class Server(object):
 
         self._set_state(State.STOPPED)
 
-        # Stop the ioloop. This will end our process.
-        self._ioloop.stop()
+        self._on_stopped()
 
     def stop(self):
         self._set_state(State.STOPPING)
         self._must_stop.set()
+
+    def _on_stopped(self):
+        """Called when our runloop is exiting, to shut down the ioloop.
+        This will end our process.
+
+        (Tests can patch this method out, to prevent the test's ioloop
+        from being shutdown.)
+        """
+        self._ioloop.stop()
 
     def add_preheated_report_session(self):
         """Register a fake browser with the server and run the script.
