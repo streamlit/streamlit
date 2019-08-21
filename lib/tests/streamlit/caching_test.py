@@ -9,6 +9,14 @@ import streamlit as st
 
 
 class CacheTest(unittest.TestCase):
+    def test_simple(self):
+        @st.cache
+        def foo():
+            return 42
+
+        self.assertEqual(foo(), 42)
+        self.assertEqual(foo(), 42)
+
     def test_args(self):
         called = [False]
 
@@ -29,3 +37,25 @@ class CacheTest(unittest.TestCase):
 
         f(1)
         self.assertTrue(called[0])
+
+
+class CachingObjectTest(unittest.TestCase):
+    def test_simple(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_has_changes(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c.has_changes():
+                c.value = val
+
+            self.assertEqual(c.value, val)
