@@ -1,17 +1,71 @@
 # Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
 
+"""Server.py unit tests"""
+
 import unittest
 
+import mock
+import requests
 import tornado.testing
 import tornado.web
+import tornado.websocket
 from mock import patch
+from tornado import gen
 
 from streamlit import config
+from streamlit.server.Server import Server
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
+
+
+class ServerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        ioloop = self.get_new_ioloop()
+        self._server = Server(ioloop, '/not/a/script.py', [])
+        app = self._server._create_app()
+        return app
+
+    def get_ws_url(self, path):
+        """Return a ws:// URL with the given path for our test server."""
+        # get_url() gives us a result with the 'http' scheme;
+        # we swap it out for 'ws'.
+        url = self.get_url(path)
+        parts = list(requests.utils.urlparse(url))
+        parts[0] = 'ws'
+        return requests.utils.urlunparse(tuple(parts))
+
+    def ws_connect(self):
+        """Open a websocket connection to the server.
+
+        Returns
+        -------
+        A Future that resolves with the connected websocket client.
+        You need to yield on this value from within a
+        'tornado.testing.gen_test' coroutine.
+
+        """
+        return tornado.websocket.websocket_connect(self.get_ws_url('/stream'))
+
+    @tornado.testing.gen_test
+    def test_websocket_connect(self):
+        """Test that we can connect to the server via websocket."""
+        # Stub out the Server's ReportSession import. We don't want
+        # actual sessions to be instantiated, or scripts to be run.
+        with mock.patch('streamlit.server.Server.ReportSession', autospec=True):
+            self.assertFalse(self._server.browser_is_connected)
+
+            # Open a websocket connection
+            ws_client = yield self.ws_connect()
+            self.assertTrue(self._server.browser_is_connected)
+
+            # Close the connection, give the server a moment to step
+            # its runloop, and assert we're no longer connected.
+            ws_client.close()
+            yield gen.sleep(0.1)
+            self.assertFalse(self._server.browser_is_connected)
 
 
 class ServerUtilsTest(unittest.TestCase):
