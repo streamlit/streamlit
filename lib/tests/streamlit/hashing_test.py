@@ -6,15 +6,17 @@
 import functools
 import sys
 import tempfile
+import timeit
 import unittest
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import get_hash
+from streamlit.hashing import HASHING_FRACTION, PANDAS_ROWS_LARGE, get_hash
 
 
 class HashTest(unittest.TestCase):
@@ -63,6 +65,33 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
+
+    def test_pandas_sample(self):
+        """Test the performance of hashing a large dataframe or a sample of said
+        dataframe."""
+
+        df = pd.DataFrame(
+            np.random.randn(PANDAS_ROWS_LARGE, 4), columns=list('ABCD'))
+        
+        def full():
+            return pd.util.hash_pandas_object(df).sum()
+
+        def sample():
+            return pd.util.hash_pandas_object(
+                df.sample(frac=HASHING_FRACTION, random_state=0)).sum()
+
+        t_full = timeit.Timer(full).timeit(number=10)
+        t_sample = timeit.Timer(sample).timeit(number=10)
+
+        self.assertGreater(t_full, t_sample)
+
+    def test_numpy(self):
+        np1 = np.zeros(10)
+        np2 = np.zeros(11)
+        np3 = np.zeros(10)
+
+        self.assertEqual(get_hash(np1), get_hash(np3))
+        self.assertNotEqual(get_hash(np1), get_hash(np2))
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)

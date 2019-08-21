@@ -34,6 +34,11 @@ except ImportError:
     import pickle
 
 
+# If a dataframe has more than this many rows, we consider it large and hash a sample.
+PANDAS_ROWS_LARGE = 1000000
+HASHING_FRACTION = 0.1
+
+
 Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
 
 
@@ -109,7 +114,8 @@ def _key(obj, context):
         if all(map(is_simple, obj)):
             return ('__l', tuple(obj))
 
-    if (util.is_type(obj, 'pandas.core.frame.DataFrame') or inspect.isbuiltin(obj) or
+    if (util.is_type(obj, 'pandas.core.frame.DataFrame')
+            or util.is_type(obj, 'numpy.ndarray') or inspect.isbuiltin(obj) or
             inspect.isroutine(obj) or inspect.iscode(obj)):
         return id(obj)
 
@@ -206,7 +212,11 @@ class CodeHasher():
             return b'bool:0'
         elif util.is_type(obj, 'pandas.core.frame.DataFrame'):
             import pandas as pd
+            if len(obj) > PANDAS_ROWS_LARGE:
+                obj = obj.sample(frac=HASHING_FRACTION, random_state=0)
             return pd.util.hash_pandas_object(obj).sum()
+        elif util.is_type(obj, 'numpy.ndarray'):
+            return obj.tobytes()
         elif inspect.isbuiltin(obj):
             return self.to_bytes(obj.__name__)
         elif hasattr(obj, 'name') and (
