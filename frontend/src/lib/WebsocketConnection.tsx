@@ -442,65 +442,69 @@ function doHealthPing(
     window.setTimeout(retryImmediately, retryTimeout)
   }
 
-  connect = () => {
-    // Using XHR because it supports timeouts.
-    const xhr = new XMLHttpRequest()
+  // Using XHR because it supports timeouts.
+  // The location of this declaration matters, as XMLHttpRequests can lead to a
+  // memory leak when initialized inside a callback. See
+  // https://stackoverflow.com/a/40532229 for more info.
+  const xhr = new XMLHttpRequest()
 
-    const uri = uriList[uriNumber]
-    xhr.open('GET', uri, true)
-    logMessage(LOG, `Attempting to connect to ${uri}.`)
+  xhr.timeout = timeoutMs
 
-    xhr.timeout = timeoutMs
-    tryTimestamp = Date.now()
+  xhr.onload = () => {
+    if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+      resolver.resolve(uriNumber)
+    } else {
+      retry('Connected, but response is not "ok" or has bad status.')
+    }
+  }
 
-    xhr.onload = () => {
-      if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+  xhr.onreadystatechange = () => {
+    if (xhr.readyState === /* DONE */ 4) {
+      if (xhr.responseText === 'ok') {
         resolver.resolve(uriNumber)
-      } else {
-        retry('Connected, but response is not "ok" or has bad status.')
-      }
-    }
 
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === /* DONE */ 4) {
-        if (xhr.responseText === 'ok') {
-          resolver.resolve(uriNumber)
+      } else if (xhr.status === /* NO RESPONSE */ 0) {
+        const uri = uriList[uriNumber]
+        if (uri.startsWith('//localhost:')) {
 
-        } else if (xhr.status === /* NO RESPONSE */ 0) {
-          if (uri.startsWith('//localhost:')) {
+          const scriptname =
+            SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
+              SessionInfo.current.commandLine[0] : 'yourscript.py'
 
-            const scriptname =
-              SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
-                SessionInfo.current.commandLine[0] : 'yourscript.py'
-
-            retry(
-              <Fragment>
-                <p>
-                  Is Streamlit still running? If you accidentally stopped
-                  Streamlit, just restart it in your terminal:
-                </p>
-                <pre>
-                  <code>
-                    $ streamlit run {scriptname}
-                  </code>
-                </pre>
-              </Fragment>
-            )
-          } else {
-            retry('Connection failed with status 0.')
-          }
-
-        } else {
           retry(
-            `Connection failed with status ${xhr.status}, ` +
-            `and response "${xhr.responseText}".`)
+            <Fragment>
+              <p>
+                Is Streamlit still running? If you accidentally stopped
+                Streamlit, just restart it in your terminal:
+              </p>
+              <pre>
+                <code>
+                  $ streamlit run {scriptname}
+                </code>
+              </pre>
+            </Fragment>
+          )
+        } else {
+          retry('Connection failed with status 0.')
         }
+
+      } else {
+        retry(
+          `Connection failed with status ${xhr.status}, ` +
+          `and response "${xhr.responseText}".`)
       }
     }
+  }
 
-    xhr.ontimeout = (e) => {
-      retry('Connection timed out.')
-    }
+  xhr.ontimeout = (e) => {
+    retry('Connection timed out.')
+  }
+
+  connect = () => {
+    const uri = uriList[uriNumber]
+    logMessage(LOG, `Attempting to connect to ${uri}.`)
+    tryTimestamp = Date.now()
+    xhr.open('GET', uri, true)
 
     if (uriNumber === 0) {
       totalTries++
