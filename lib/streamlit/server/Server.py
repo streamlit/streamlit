@@ -61,10 +61,16 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, script_path, script_argv, on_server_start_callback):
-        """Initialize server."""
-        LOGGER.debug('Initializing server...')
+    def __init__(self, ioloop, script_path, script_argv):
+        """Create the server. It won't be started yet.
 
+        Parameters
+        ----------
+        ioloop : tornado.ioloop.IOLoop
+        script_path : str
+        script_argv : List[str]
+
+        """
         if Server._singleton is not None:
             raise RuntimeError(
                 'Server already initialized. Use .get_current() instead')
@@ -73,9 +79,9 @@ class Server(object):
 
         _set_tornado_log_levels()
 
+        self._ioloop = ioloop
         self._script_path = script_path
         self._script_argv = script_argv
-        self._on_server_start_callback = on_server_start_callback
 
         # Mapping of WebSocket->ReportSession.
         self._report_sessions = {}
@@ -83,20 +89,41 @@ class Server(object):
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
-        self._ioloop = tornado.ioloop.IOLoop.current()
 
+    def start(self, on_started):
+        """Start the server.
+
+        Parameters
+        ----------
+        on_started : callable
+            A callback that will be called when the server's run-loop
+            has started, and the server is ready to begin receiving clients.
+
+        """
+        if self._state != State.INITIAL:
+            raise RuntimeError('Server has already been started')
+
+        LOGGER.debug('Starting server...')
+        app = self._create_app()
         port = config.get_option('server.port')
-        app = tornado.web.Application(self._get_routes(), **TORNADO_SETTINGS)
         app.listen(port)
-
         LOGGER.debug('Server started on port %s', port)
+
+        self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
     def get_debug(self):
         return {
             'report': self._report.get_debug(),
         }
 
-    def _get_routes(self):
+    def _create_app(self):
+        """Create our tornado web app.
+
+        Returns
+        -------
+        tornado.web.Application
+
+        """
         routes = [
             (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
             (r'/healthz', HealthHandler, dict(
@@ -119,7 +146,7 @@ class Server(object):
                     {'path': '%s/' % static_path}),
             ])
 
-        return routes
+        return tornado.web.Application(routes, **TORNADO_SETTINGS)
 
     def _set_state(self, new_state):
         LOGGER.debug('Server state: %s -> %s' % (self._state, new_state))
@@ -138,7 +165,7 @@ class Server(object):
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
 
     @tornado.gen.coroutine
-    def loop_coroutine(self):
+    def _loop_coroutine(self, on_started=None):
         if self._state == State.INITIAL:
             self._set_state(State.WAITING_FOR_FIRST_BROWSER)
         elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
@@ -146,7 +173,8 @@ class Server(object):
         else:
             raise RuntimeError('Bad server state at start: %s' % self._state)
 
-        self._on_server_start_callback(self)
+        if on_started is not None:
+            on_started(self)
 
         while not self._must_stop.is_set():
             if self._state == State.WAITING_FOR_FIRST_BROWSER:
@@ -189,12 +217,20 @@ class Server(object):
 
         self._set_state(State.STOPPED)
 
-        # Stop the ioloop. This will end our process.
-        self._ioloop.stop()
+        self._on_stopped()
 
     def stop(self):
         self._set_state(State.STOPPING)
         self._must_stop.set()
+
+    def _on_stopped(self):
+        """Called when our runloop is exiting, to shut down the ioloop.
+        This will end our process.
+
+        (Tests can patch this method out, to prevent the test's ioloop
+        from being shutdown.)
+        """
+        self._ioloop.stop()
 
     def add_preheated_report_session(self):
         """Register a fake browser with the server and run the script.
