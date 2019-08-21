@@ -18,7 +18,6 @@ from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import ensure_id
 from streamlit.elements import data_frame_proto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server import server_util
 from streamlit.server.Server import State
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -72,6 +71,33 @@ class ServerTest(ServerTestCase):
         yield gen.sleep(0.1)
         self.assertFalse(self.server.browser_is_connected)
 
+    @tornado.testing.gen_test
+    def test_duplicate_forwardmsg_caching(self, _):
+        """Test that duplicate ForwardMsgs are sent only once."""
+        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 0):
+            yield self.start_server_loop()
+            ws_client = yield self.ws_connect()
+
+            # Get the server's socket and session for this client
+            ws, session = list(self.server._report_sessions.items())[0]
+
+            msg = _create_dataframe_msg([1, 2, 3])
+
+            # Send the message, and read it back. It will
+            # not have been cached.
+            self.server._send_message(ws, session, msg)
+            uncached = yield self.read_forward_msg(ws_client)
+            self.assertEqual('delta', uncached.WhichOneof('type'))
+            msg_id = uncached.id
+
+            # Send the same message again. This time, it should have
+            # been cached, and an "id_reference" message should be
+            # received instead.
+            self.server._send_message(ws, session, msg)
+            cached = yield self.read_forward_msg(ws_client)
+            self.assertEqual('id_reference', cached.WhichOneof('type'))
+            self.assertEqual(msg_id, cached.id_reference)
+
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
@@ -110,11 +136,11 @@ class ServerUtilsTest(unittest.TestCase):
 
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""
-        server_util.CACHED_MESSAGE_SIZE_MIN = 1
-        self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 0):
+            self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
 
-        server_util.CACHED_MESSAGE_SIZE_MIN = 1000
-        self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 1000):
+            self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
