@@ -17,6 +17,7 @@
  *
  */
 
+import {ForwardMsgCache} from 'lib/ForwardMessageCache'
 import React from 'react'
 import Resolver from 'lib/Resolver'
 import {ConnectionState} from 'lib/ConnectionState'
@@ -108,6 +109,7 @@ type Event =
  */
 export class WebsocketConnection {
   private readonly args: Args;
+  private readonly cache = new ForwardMsgCache()
 
   /**
    * Index to the URI in uriList that we're going to try to connect to.
@@ -377,7 +379,8 @@ export class WebsocketConnection {
     }
 
     const resultArray = new Uint8Array(result)
-    this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray)
+    const msg = ForwardMsg.decode(resultArray)
+    this.messageQueue[messageIndex] = await this.cache.processMessage(msg)
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
