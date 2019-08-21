@@ -3,6 +3,8 @@
 """Streamlit Unit test."""
 
 from mock import call, patch, Mock
+from collections import namedtuple
+
 import time
 import unittest
 
@@ -120,6 +122,15 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with list."""
         with patch('streamlit.json') as p:
             st.write([1,2,3])
+
+            p.assert_called_once()
+
+    def test_namedtuple(self):
+        """Test st.write with list."""
+        with patch('streamlit.json') as p:
+            Boy = namedtuple('Boy', ('name', 'age'))
+            John = Boy('John', 29)
+            st.write(John)
 
             p.assert_called_once()
 

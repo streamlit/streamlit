@@ -10,6 +10,7 @@ setup_2_3_shims(globals())
 import errno
 import random
 import unittest
+from collections import namedtuple
 
 import pytest
 
@@ -167,4 +168,11 @@ class UtilTest(unittest.TestCase):
             fig = go.Figure(data=[trace1])
 
         res = util.is_plotly_chart(fig)
+        self.assertTrue(res)
+
+    def test_is_namedtuple(self):
+        Boy = namedtuple('Boy', ('name', 'age'))
+        John = Boy('John', '29')
+
+        res = util.is_namedtuple(John)
         self.assertTrue(res)

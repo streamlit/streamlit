@@ -43,6 +43,14 @@ def _fix_sys_path(script_path):
     """
     sys.path.insert(0, os.path.dirname(script_path))
 
+def _fix_matplotlib_crash():
+    """
+    The default Matplotlib backend crashes Python for most MacOS users.
+    So here we set a safer backend as a fix. Users can always disable this
+    behavior by setting the config runner.fixMatplotlib = false.
+    """
+    if config.get_option('runner.fixMatplotlib'):
+        os.environ['MPLBACKEND'] = 'Agg'
 
 def _on_server_start(server):
     _print_url()
@@ -114,6 +122,7 @@ def run(script_path):
 
     """
     _fix_sys_path(script_path)
+    _fix_matplotlib_crash()
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

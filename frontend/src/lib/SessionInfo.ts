@@ -9,14 +9,19 @@ interface Args {
   pythonVersion: string;
   installationId: string;
   authorEmail: string;
+  commandLine: string[];
 }
 
 
 export class SessionInfo {
+  // Fields that don't change during the lifetime of a session (i.e. a browser tab).
   public readonly streamlitVersion: string;
   public readonly pythonVersion: string;
   public readonly installationId: string;
   public readonly authorEmail: string;
+
+  // Fields that can change during the lifetime of a session.
+  public commandLine: string[] = [];
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -36,6 +41,10 @@ export class SessionInfo {
 
   public static set current(sm: SessionInfo) {
     SessionInfo.singleton = sm
+  }
+
+  public static isSet(): boolean {
+    return SessionInfo.singleton != null
   }
 
   public constructor({

@@ -68,6 +68,8 @@ import textwrap as _textwrap
 import threading as _threading
 import traceback as _traceback
 import types as _types
+import json as _json
+import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
@@ -282,7 +284,10 @@ def write(*args):
                 string_buffer.append(arg)
             elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
                 flush_buffer()
-                dataframe(arg)  # noqa: F821
+                if len(_np.shape(arg)) > 2:
+                    text(arg)
+                else:
+                    dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
                 flush_buffer()
                 exception(arg)  # noqa: F821
@@ -312,6 +317,9 @@ def write(*args):
             elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
+            elif _util.is_namedtuple(arg):
+                flush_buffer()
+                json(_json.dumps(arg._asdict()))
             else:
                 string_buffer.append('`%s`' % str(arg).replace('`', '\\`'))
 

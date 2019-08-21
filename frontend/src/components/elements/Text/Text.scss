@@ -22,52 +22,26 @@
       color: $blue;
     }
 
-    code {
-      padding: 0.2em 0.4em;
-      margin: 0;
-      border-radius: $border-radius;
-      background: $gray-faint;
-      color: $green;
-    }
-
-    pre {
-      background: $gray-faint;
-      border-radius: $border-radius;
-      margin: 0 0 1rem 0;
-      padding: 1rem;
-
-      code {
-        background: transparent;
-        border: 0;
-        display: inline;
-        font-size: $font-size-sm;
-        line-height: inherit;
-        margin: 0;
-        max-width: auto;
-        padding: 0;
-        white-space: pre;
-        word-break: normal;
-        word-wrap: normal;
-        overflow-x: auto;
-        color: $black;
-      }
+    pre code {
+      // Default color for syntax hilighting.
+      color: $black;
     }
 
     tr {
       border-top: 1px solid $gray-lighter;
       background: $white;
     }
-    
+
     th, td {
       padding: 6px 13px;
       border: 1px solid $gray-lighter;
-    } 
+    }
   }
 
   .markdown-text-container table tr:nth-child(2n) {
     background: $gray-faint;
   }
-  
+
   pre.error {
     padding: $border-radius;
     white-space: pre-wrap;
@@ -75,12 +49,12 @@
     color: inherit;
     font-size: $font-size-sm;
   }
-  
+
   .react-json-view {
     font-family: $font-family-monospace;
     font-size: $font-size-sm;
   }
-  
+
   .alert {
     margin: 0;
 
