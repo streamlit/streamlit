@@ -6,5 +6,6 @@
     "html": false,
     "json": true
   },
-  "trashAssetsBeforeRuns": false
+  "trashAssetsBeforeRuns": false,
+  "projectId": "fa9nep"
 }

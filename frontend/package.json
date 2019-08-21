@@ -8,7 +8,7 @@
     "build": "./scripts/preload.sh && craco build",
     "test": "craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open",
-    "cy:run": "unset NODE_OPTIONS && cypress run",
+    "cy:run": "unset NODE_OPTIONS && cypress run --record",
     "cy:run-all": "../scripts/e2e.sh -a true -c ..",
     "cy:serve-and-run-all": "NODE_OPTIONS=--max_old_space_size=4096 start-server-and-test start http://localhost:3000 cy:run-all",
     "typecheck": "tsc --noEmit"
