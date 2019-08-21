@@ -74,6 +74,26 @@ IMAGES = {
             'RVzAK+ZeLsAcESLEGbNA45Iq0ZMI4EuErUd5RVXw/eHHwNA1H9Ijr89JlKdQ0RTKQ'
             'hkJf7aYK53AXPIzuT+DYDYgrxCSI4BdyY4xAEsQvoOcoqiCNDN6ip2QDGkhkrdjjL'
             'bQAAAABJRU5ErkJggg=='),
+    },
+    'img_64_64_rgb': {
+        'pil': Image.new('RGB', (64, 64), color = 'red'),
+        'np': np.array(Image.new('RGB', (64, 64), color = 'red')),
+        'base64': (
+            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSE'
+            'w8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQ'
+            'wLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI'
+            'yMjIyMjIyMjIyMjL/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAA'
+            'AAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE'
+            '1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRk'
+            'dISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKW'
+            'mp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3'
+            '+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDB'
+            'AcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNO'
+            'El8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl'
+            '6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU'
+            '1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDi6KKK+ZP3EKKKK'
+            'ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA'
+            'CiiigAooooA//Z'),
     }
 }
 
@@ -82,10 +102,15 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image_proto."""
 
     @parameterized.expand([
-        (IMAGES['img_32_32_3_rgb']['np'], IMAGES['img_32_32_3_rgb']['base64']),
-        (IMAGES['img_32_32_3_bgr']['np'], IMAGES['img_32_32_3_bgr']['base64']),
+        (IMAGES['img_32_32_3_rgb']['np'], IMAGES['img_32_32_3_rgb']['base64'],
+         'png'
+         ),
+        (IMAGES['img_32_32_3_bgr']['np'], IMAGES['img_32_32_3_bgr']['base64'],
+         'png'),
+        (IMAGES['img_64_64_rgb']['np'], IMAGES['img_64_64_rgb']['base64'],
+         'jpeg'),
     ])
-    def test_marshall_images(self, data_in, base64_out):
+    def test_marshall_images(self, data_in, base64_out, format):
         """Test streamlit.image_proto.marshall_images.
         Need to test the following:
         * if list
@@ -99,10 +124,11 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        st.image(data_in)
+        st.image(data_in, format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
         self.assertEqual(imglist.imgs[0].data.base64, base64_out)
+        self.assertEqual(imglist.imgs[0].data.mime_type, 'image/'+format)
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""

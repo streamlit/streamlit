@@ -3,8 +3,10 @@
 """A bunch of useful utilities."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 # flake8: noqa
@@ -17,8 +19,8 @@ import re
 import socket
 import subprocess
 import sys
-import threading
 import urllib
+
 try:
     import urllib.request  # for Python3
 except ImportError:
@@ -27,8 +29,8 @@ except ImportError:
 import click
 
 from streamlit.logger import get_logger
-LOGGER = get_logger(__name__)
 
+LOGGER = get_logger(__name__)
 
 STREAMLIT_ROOT_DIRECTORY = '.streamlit'
 
@@ -37,10 +39,8 @@ STREAMLIT_ROOT_DIRECTORY = '.streamlit'
 EXCEPTHOOK_IDENTIFIER_STR = (
     'Streamlit has caught the following unhandled exception...')
 
-
 # URL for checking the current machine's external IP address.
 _AWS_CHECK_IP = 'http://checkip.amazonaws.com'
-
 
 # URL of Streamlit's help page.
 HELP_DOC = 'https://streamlit.io/secret/docs/'
@@ -139,11 +139,13 @@ def get_static_dir():
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
     result = []
+
     @functools.wraps(func)
     def wrapped_func():
         if not result:
             result.append(func())
         return result[0]
+
     return wrapped_func
 
 
@@ -425,3 +427,12 @@ def get_hostname(url):
 
     parsed = urllib.parse.urlparse(url)
     return parsed.hostname
+
+
+def is_namedtuple(x):
+    t = type(x)
+    b = t.__bases__
+    if len(b) != 1 or b[0] != tuple: return False
+    f = getattr(t, '_fields', None)
+    if not isinstance(f, tuple): return False
+    return all(type(n).__name__ == 'str' for n in f)

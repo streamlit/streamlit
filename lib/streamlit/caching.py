@@ -164,7 +164,7 @@ def _build_caching_block_error_message(persisted, code):
     )
 
 
-def _read_from__mem_cache(key, ignore_hash):
+def _read_from_mem_cache(key, ignore_hash):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
@@ -227,7 +227,7 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
     or rerun the code.
     """
     try:
-        return _read_from__mem_cache(key, ignore_hash)
+        return _read_from_mem_cache(key, ignore_hash)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
             if inspect.isroutine(func_or_code):
@@ -483,5 +483,5 @@ def _clear_disk_cache():
 
 
 def _clear_mem_cache():
-    global mem_cache
-    mem_cache = {}
+    global _mem_cache
+    _mem_cache = {}

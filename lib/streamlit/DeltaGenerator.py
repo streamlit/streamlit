@@ -1048,7 +1048,8 @@ class DeltaGenerator(object):
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(self, element, image, caption=None, width=None,
-              use_column_width=False, clamp=False, channels='RGB'):
+              use_column_width=False, clamp=False,
+              channels='RGB', format='JPEG'):
         """Display an image or list of images.
 
         Parameters
@@ -1072,12 +1073,14 @@ class DeltaGenerator(object):
             This is only meaningful for byte array images; the parameter is
             ignored for image URLs. If this is not set, and an image has an
             out-of-range value, an error will be thrown.
-        format : 'RGB' or 'BGR'
+        channels : 'RGB' or 'BGR'
             If image is an nd.array, this parameter denotes the format used to
             represent color information. Defaults to 'RGB', meaning
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
+        format : 'JPEG' or 'PNG'
+            This parameter specifies the image format. Defaults to 'JPEG'.
 
         Example
         -------
@@ -1100,7 +1103,7 @@ class DeltaGenerator(object):
         elif width <= 0:
             raise RuntimeError('Image width must be positive.')
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels)
+            image, caption, width, element.imgs, clamp, channels, format)
 
     @_with_element
     def audio(self, element, data, format='audio/wav'):
@@ -1452,11 +1455,10 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
 
-        if single_value:
-            current_value = [current_value]
-
         element.slider.label = label
-        element.slider.value[:] = current_value
+        element.slider.value[:] = (
+            [current_value] if single_value
+            else current_value)
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step

@@ -64,6 +64,14 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
+    def test_partial(self):
+        p1 = functools.partial(int, base=2)
+        p2 = functools.partial(int, base=3)
+        p3 = functools.partial(int, base=2)
+
+        self.assertEqual(get_hash(p1), get_hash(p3))
+        self.assertNotEqual(get_hash(p1), get_hash(p2))
+
     def test_lambdas(self):
         # self.assertEqual(get_hash(lambda x: x.lower()), get_hash(lambda x: x.lower()))
         self.assertNotEqual(get_hash(lambda x: x.lower()), get_hash(lambda x: x.upper()))

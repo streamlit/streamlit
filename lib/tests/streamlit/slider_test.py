@@ -20,16 +20,18 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.value, [0.0])
 
     @parameterized.expand([
-        (0, [0.0]),
-        (0.0, [0.0]),
-        ((0, 1), [0.0, 1.0]),
-        ([0, 1], [0.0, 1.0]),
-        ((0.0, 1.0), [0.0, 1.0]),
-        ([0.0, 1.0], [0.0, 1.0])
+        (0, [0.0], 0),
+        (0.0, [0.0], 0.0),
+        ((0, 1), [0.0, 1.0], (0, 1)),
+        ([0, 1], [0.0, 1.0], (0, 1)),
+        ((0.0, 1.0), [0.0, 1.0], (0.0, 1.0)),
+        ([0.0, 1.0], [0.0, 1.0], (0.0, 1.0))
     ])
-    def test_value_types(self, arg_value, proto_value):
+    def test_value_types(self, arg_value, proto_value, return_value):
         """Test that it supports different types of values."""
-        st.slider('the label', arg_value)
+        ret = st.slider('the label', arg_value)
+
+        self.assertEqual(ret, return_value)
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, 'the label')
