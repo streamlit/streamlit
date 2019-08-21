@@ -476,3 +476,40 @@ class CodeHashTest(unittest.TestCase):
 
         self.assertNotEqual(get_hash(f), get_hash(g))
         self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_streamlit(self):
+        """Test hashing streamlit functions."""
+        def f():
+            st.write("Hello")
+
+        def g():
+            st.write("World")
+
+        def h():
+            st.write("Hello")
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_higher_order(self):
+        """Test hashing higher order functions."""
+
+        def f(x):
+            def func(v):
+                return v**x
+            return func
+
+        def g(x):
+            def func(v):
+                return v*x
+            return func
+
+        def h(x):
+            def func(v):
+                return v**x
+            return func
+
+        self.assertNotEqual(get_hash(f), get_hash(g))
+        # TODO: Enable test. f and h are not the same since the co_consts
+        # contains the name of the function in the closure.
+        # self.assertEqual(get_hash(f), get_hash(h))

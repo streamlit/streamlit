@@ -34,7 +34,7 @@ except ImportError:
     import pickle
 
 
-Context = namedtuple('Context', ['globals', 'closure', 'varnames'])
+Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
 
 
 def _is_magicmock(obj):
@@ -45,17 +45,24 @@ def _is_magicmock(obj):
 
 
 def _get_context(func):
-    closure = (
-        [cell.cell_contents for cell in func.__closure__]
-        if func.__closure__ is not None
-        else None
-    )
+    code = func.__code__
+    # Mapping from variable name to the value if we can resolve it.
+    # Otherwise map to the name.
+    cells = {}
+    for var in code.co_cellvars:
+        cells[var] = var  # Instead of value, we use the name.
+    if code.co_freevars:
+        assert len(code.co_freevars) == len(func.__closure__)
+        cells.update(zip(
+            code.co_freevars,
+            map(lambda c: c.cell_contents, func.__closure__)
+        ))
 
     varnames = {}
     if inspect.ismethod(func):
         varnames = {'self': func.__self__}
 
-    return Context(globals=func.__globals__, closure=closure, varnames=varnames)
+    return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
 def get_hash(f):
@@ -212,8 +219,13 @@ class CodeHasher():
             return h.digest()
         elif inspect.isroutine(obj):
             if hasattr(obj, '__wrapped__'):
-                # Ignore the wrapper of wrapped functions
+                # Ignore the wrapper of wrapped functions.
                 return self.to_bytes(obj.__wrapped__)
+
+            if obj.__module__.startswith('streamlit'):
+                # Ignore streamlit modules even if they are in the CWD
+                # (e.g. during development).
+                return self.to_bytes('%s.%s' % (obj.__module__, obj.__name__))
 
             h = hashlib.new(self.name)
             # TODO: This may be too restrictive for libraries in development.
@@ -232,12 +244,12 @@ class CodeHasher():
         elif inspect.ismodule(obj):
             # TODO: Hash more than just the name for internal modules.
             st.warning(('Streamlit does not support hashing modules. '
-                        'We do not hash %s.') % obj.__name__)
+                        'We did not hash %s.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
             # TODO: Hash more than just the name of classes.
             st.warning(('Streamlit does not support hashing classes. '
-                        'We do not hash %s.') % obj.__name__)
+                        'We did not hash %s.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):
             # The return value of functools.partial is not a plain function:
@@ -285,9 +297,9 @@ class CodeHasher():
                     except ImportError:
                         self._update(h, name, context)
 
-            for i, name in enumerate(code.co_freevars):
+            for name, value in context.cells.items():
                 try:
-                    self._update(h, context.closure[i], context)
+                    self._update(h, value, context)
                 except Exception:
                     self._update(h, name)
 
