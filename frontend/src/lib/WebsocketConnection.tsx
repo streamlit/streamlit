@@ -359,34 +359,35 @@ export class WebsocketConnection {
     this.websocket.send(buffer)
   }
 
-  private handleMessage(data: any): void {
+  private async handleMessage(data: any): Promise<void> {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex
     this.nextMessageIndex += 1
 
     // Read in the message data.
-    const reader = new FileReader()
-    reader.readAsArrayBuffer(data)
-    reader.onloadend = () => {
-      if (this.messageQueue == null) {
-        logError(LOG, 'No message queue.')
-        return
-      }
+    const result = await readFileAsync(data)
+    if (this.messageQueue == null) {
+      logError(LOG, 'No message queue.')
+      return
+    }
 
-      const result = reader.result
-      if (result == null || typeof result === 'string') {
-        logError(LOG, `Unexpected result from FileReader: ${result}.`)
-        return
-      }
+    if (result == null || typeof result === 'string') {
+      logError(LOG, `Unexpected result from FileReader: ${result}.`)
+      return
+    }
 
-      const resultArray = new Uint8Array(result)
-      this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray)
-      while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
-        const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-        this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-        delete this.messageQueue[dispatchMessageIndex]
-        this.lastDispatchedMessageIndex = dispatchMessageIndex
-      }
+    const resultArray = new Uint8Array(result)
+    this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray)
+
+    // Dispatch any pending messages in the queue. This may *not* result
+    // in our just-decoded message being dispatched: if there are other
+    // messages that were received earlier than this one but are being
+    // downloaded, our message won't be sent until they're done.
+    while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
+      const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
+      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
+      delete this.messageQueue[dispatchMessageIndex]
+      this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
   }
 }
@@ -497,4 +498,16 @@ function doHealthPing(
   connect()
 
   return resolver.promise
+}
+
+/**
+ * Wraps FileReader.readAsArrayBuffer in a Promise
+ */
+function readFileAsync(data: any): Promise<string | ArrayBuffer | null> {
+  return new Promise<any>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsArrayBuffer(data)
+  })
 }
