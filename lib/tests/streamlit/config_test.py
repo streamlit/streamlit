@@ -236,7 +236,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(sections, keys)
 
     def test_config_option_keys(self):
-        config_options = [
+        config_options = sorted([
             u'browser.gatherUsageStats',
             u'browser.serverAddress',
             u'browser.serverPort',
@@ -249,8 +249,9 @@ class ConfigTest(unittest.TestCase):
             u'global.showWarningOnDirectExecution',
             u'global.unitTest',
             u'global.useNode',
-            u'runner.installTracer',
             u'runner.magicEnabled',
+            u'runner.installTracer',
+            u'runner.fixMatplotlib',
             u's3.accessKeyId',
             u's3.bucket',
             u's3.keyPrefix',
@@ -265,7 +266,7 @@ class ConfigTest(unittest.TestCase):
             u'server.liveSave',
             u'server.port',
             u'server.runOnSave',
-        ]
+        ])
         keys = sorted(config._config_options.keys())
         self.assertEqual(config_options, keys)
 

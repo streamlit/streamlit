@@ -270,6 +270,13 @@ _create_option(
         ''',
     default_val=False)
 
+_create_option(
+    'runner.fixMatplotlib',
+    description='''
+        Sets the MPLBACKEND environment variable to Agg inside Streamlit to
+        prevent Python crashing.
+        ''',
+    default_val=True)
 
 # Config Section: Server #
 
