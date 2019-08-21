@@ -18,7 +18,7 @@ from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
-from tests.streamlit.ServerTestCase import ServerTestCase
+from tests.ServerTestCase import ServerTestCase
 
 
 # Stub out the Server's ReportSession import. We don't want
