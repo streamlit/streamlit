@@ -17,9 +17,11 @@ describe('Dataframes', () => {
   })
 
   it('have consistent empty list visuals', () => {
-    cy.get('code').first().each(el => {
-      cy.wrap(el).matchImageSnapshot()
-    })
+    cy.get('.element-container')
+      .eq(1)
+      .each(el => {
+        cy.wrap(el).matchImageSnapshot()
+      })
   })
 
   it('have consistent empty visuals', () => {
