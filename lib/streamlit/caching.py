@@ -1,5 +1,4 @@
 # Copyright 2018 Streamlit Inc. All rights reserved.
-# -*- coding: utf-8 -*-
 
 """A library of caching utilities."""
 
@@ -111,24 +110,31 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         copy_code = '... = copy.deepcopy(%s(...))' % name
 
     if persisted:
-        load_or_rerun = 'load the value from disk'
+        load_or_rerun = 'loading the value back from the disk cache'
     else:
-        load_or_rerun = 'rerun the function'
+        load_or_rerun = 'rerunning the function'
 
     message = (
-        '### ⚠️ Your Code Mutated a Return Value\n'
-        'Since your program subsequently mutated the return value of the '
-        'cached function `{name}`, Streamlit has to {load_or_rerun} in '
-        '`{file_name}` line {lineno}.\n\n'
-        'To dismiss this warning, you could copy the return value. '
-        'For example by changing `{caller_file_name}` line {caller_lineno} to:'
-        '\n```python\nimport copy\n{copy_code}\n```\n\n'
+        '**You code mutated a cached return value**\n\n'
 
-        'Or add `ignore_hash=True` to the `streamlit.cache` decorator for '
-        '`{name}`.\n\n'
+        'Streamlit detected the mutation of a return value of `{func_name}`, which is '
+        'a cached function. This happened in `{file_name}` line {lineno}. Since '
+        '`persist` is `{persisted}`, Streamlit will make up for this by '
+        '{load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
-        'Learn more about caching and copying in the '
-        '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
+        'To dismiss this warning, try one of the following:\n'
+
+        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        'this is to copy the cached value to a new variable, which you are allowed to '
+        'mutate. For example, try changing `{caller_file_name}` line {caller_lineno} to:\n'
+
+        '```python\nimport copy\n{copy_code}\n```\n'
+
+        '2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. '
+        'This is an escape hatch for advanced users who really know what they\'re doing.\n\n'
+
+        'Learn more about caching and copying in the [Streamlit documentation]'
+        '(https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
     )
 
     return message.format(
@@ -136,6 +142,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         load_or_rerun=load_or_rerun,
         file_name=os.path.relpath(func.__code__.co_filename),
         lineno=func.__code__.co_firstlineno,
+        persisted=persisted,
         caller_file_name=os.path.relpath(caller_file_name),
         caller_lineno=caller_lineno,
         copy_code=copy_code
@@ -143,24 +150,35 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
 
 
 def _build_caching_block_error_message(persisted, code):
-    load_or_rerun = 'load the value from disk' if persisted else 'rerun the code'
+    if persisted:
+        load_or_rerun = 'loading the value back from the disk cache'
+    else:
+        load_or_rerun = 'rerunning the code'
 
     message = (
-        '### ⚠️ Your Code Mutated a Computed Value\n'
-        'Since your program subsequently mutated the value of a cached block, '
-        'Streamlit has to {load_or_rerun} in `{file_name}` line {lineno}.\n\n'
-        'To dismiss this warning, you could copy the computed value. '
+        '**Your code mutated a cached value**\n\n'
 
-        'Or add `ignore_hash=True` to the constructor of `streamlit.Cache`.\n\n'
+        'Streamlit detected the mutation of a cached value in `{file_name}` line '
+        '{lineno}. Since `persist` is `{persisted}`, Streamlit will make up for this '
+        'by {load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
-        'Learn more about caching and copying in the '
-        '[Streamlit documentation](https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
+        'To dismiss this warning, try one of the following:\n\n'
+
+        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        'this is to copy the cached value to a new variable, which you are allowed to mutate.\n'
+
+        '2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an '
+        'escape hatch for advanced users who really know what they\'re doing.\n\n'
+
+        'Learn more about caching and copying in the [Streamlit documentation]'
+        '(https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
     )
 
     return message.format(
         load_or_rerun=load_or_rerun,
         file_name=os.path.relpath(code.co_filename),
-        lineno=code.co_firstlineno
+        lineno=code.co_firstlineno,
+        persisted=persisted
     )
 
 
@@ -395,7 +413,8 @@ class Cache(dict):
         caller_frame = inspect.currentframe().f_back
 
         caller_name = caller_frame.f_code.co_name
-        if caller_name == '__nonzero__' or caller_name == '__bool__':
+        real_caller_is_parent_frame = caller_name in ('__nonzero__', '__bool__')
+        if real_caller_is_parent_frame:
             caller_frame = caller_frame.f_back
 
         frameinfo = inspect.getframeinfo(caller_frame)
@@ -403,15 +422,17 @@ class Cache(dict):
 
         code_context = code_context[0]
 
-        indent_if = len(code_context) - len(code_context.lstrip())
+        context_indent = len(code_context) - len(code_context.lstrip())
 
         lines = ''
+        # TODO: Memoize open(filename, 'r') in a way that clears the memoized version with each
+        # run of the user's script. Then use the memoized text here, in st.echo, and other places.
         with open(filename, 'r') as f:
             for line in f.readlines()[caller_lineno:]:
                 if line.strip() == '':
                     continue
                 indent = len(line) - len(line.lstrip())
-                if indent <= indent_if:
+                if indent <= context_indent:
                     break
                 if line.strip() and not line.lstrip().startswith('#'):
                     lines += line
@@ -419,7 +440,7 @@ class Cache(dict):
         program = textwrap.dedent(lines)
 
         context = Context(
-            dict(caller_frame.f_globals, **caller_frame.f_locals),None, {})
+            dict(caller_frame.f_globals, **caller_frame.f_locals), None, {})
         code = compile(program, filename, 'exec')
 
         code_hasher = CodeHasher('md5')
@@ -435,6 +456,10 @@ class Cache(dict):
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(key, self, self._persist, self._ignore_hash)
+
+        # TODO: if we are not hashing the return value (ignore hash) then we can
+        # just return true if we need to rerun since it will make sure that the
+        # line numbers are still correct
 
         # Always return False so that we have control over the execution.
         return False
