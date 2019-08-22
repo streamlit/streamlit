@@ -442,8 +442,8 @@ class Cache(dict):
     def has_changes(self):
         caller_frame = inspect.currentframe().f_back
 
-        caller_name = caller_frame.f_code.co_name
-        real_caller_is_parent_frame = caller_name in ('__nonzero__', '__bool__')
+        caller_file = caller_frame.f_code.co_filename
+        real_caller_is_parent_frame = caller_file == __file__
         if real_caller_is_parent_frame:
             caller_frame = caller_frame.f_back
 
@@ -500,7 +500,7 @@ class Cache(dict):
 
     # Python 2 doesn't have __bool__
     def __nonzero__(self):
-        return self.__bool__()
+        return self.has_changes()
 
     def __getattr__(self, key):
         if key not in self:
