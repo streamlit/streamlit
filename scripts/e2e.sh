@@ -10,12 +10,17 @@ always_continue=false
 # Records if any test fails so we can return appropriately after all run
 any_failed=false
 
+# Flag to record test results in the cypress dashboard
+record_results=
+
 # Handle command line named arguments, passed as `-c .. -a true`
-while getopts ":c:a:" opt; do
+while getopts ":c:a:r" opt; do
   case $opt in
     c) cwd="$OPTARG"
     ;;
     a) always_continue="$OPTARG"
+    ;;
+    r) record_results="--record"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -42,13 +47,14 @@ cd "$cwd"
 
 # Generate report on exit
 generate_report() {
-  npx -q mochawesome-merge --reportDir frontend/cypress/results > frontend/mochawesome.json
-  npx -q mochawesome-report-generator frontend/mochawesome.json
+  cd frontend
+  npx -q mochawesome-merge --reportDir cypress/mochawesome > mochawesome.json
+  npx -q mochawesome-report-generator mochawesome.json
 }
 trap generate_report EXIT
 
 # Clear old results
-rm frontend/cypress/results/* || true
+rm frontend/cypress/mochawesome/* || true
 rm frontend/mochawesome.json || true
 
 # Test core streamlit elements
@@ -56,7 +62,7 @@ for file in examples/core/*.py
 do
   # Run next test
   streamlit run $file &
-  yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts"
+  yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts" $record_results
 
   EXITCODE="$?"
 

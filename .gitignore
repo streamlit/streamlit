@@ -80,6 +80,8 @@ lib/Pipfile.lock
 frontend/cypress/videos
 __diff_output__
 cypress.env.json
+mochawesome-report
+mochawesome
 
 ########################################################################
 # VSCode
