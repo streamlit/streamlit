@@ -180,6 +180,7 @@ def _build_caching_block_error_message(persisted, code):
         file_name=os.path.relpath(code.co_filename),
         lineno=code.co_firstlineno,
         persisted=persisted
+    )
 
 
 def _build_args_mutated_message(func):
@@ -480,11 +481,12 @@ class Cache(dict):
         LOGGER.debug('Cache key: %s', key)
 
         try:
-            self.update(_read_from_cache(
-                key, self._persist, self._ignore_hash, code, caller_frame))
+            value, _ = _read_from_cache(
+                key, self._persist, self._ignore_hash, code, caller_frame)
+            self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(key, self, self._persist, self._ignore_hash)
+            _write_to_cache(key, self, self._persist, self._ignore_hash, None)
 
         # TODO: if we are not hashing the return value (ignore hash) then we can
         # just return true if we need to rerun since it will make sure that the
