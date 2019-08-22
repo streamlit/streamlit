@@ -2,7 +2,6 @@
 
 describe('st.pyplot with kwargs', () => {
   before(() => {
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
   })
 

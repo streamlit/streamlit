@@ -2,8 +2,6 @@
 
 describe('st.vega_lite_chart', () => {
   before(() => {
-    // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
 
     // Force our header to scroll with the page, rather than

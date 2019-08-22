@@ -6,7 +6,6 @@ describe('Dataframes', () => {
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
 
     cy.wait(1000)

@@ -4,5 +4,7 @@
     "configFile": "reporter-config.json"
   },
   "trashAssetsBeforeRuns": false,
-  "projectId": "fa9nep"
+  "projectId": "fa9nep",
+  "viewportWidth": 1366,
+  "viewportHeight": 768
 }
