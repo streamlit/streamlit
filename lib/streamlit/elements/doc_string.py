@@ -58,6 +58,17 @@ def marshall(proto, obj):
 
     doc_string = inspect.getdoc(obj)
 
+    # Sometimes an object has no docstring, but the object's type does.
+    # If that's the case here, use the type's docstring.
+    # For objects where type is type we do not print the docs.
+    # We also do not print the docs for functions and methods if
+    # the docstring is empty.
+    if (doc_string is None and
+            obj_type is not type and
+            not inspect.isfunction(obj) and
+            not inspect.ismethod(obj)):
+        doc_string = inspect.getdoc(obj_type)
+
     if doc_string is None:
         doc_string = 'No docs available.'
 

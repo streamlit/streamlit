@@ -11,6 +11,7 @@ import sys
 
 from tests import testutil
 import streamlit as st
+import numpy as np
 
 is_python_2 = sys.version_info[0] == 2
 
@@ -139,3 +140,32 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(ds.type, '<class \'int\'>')
         self.assertEqual(ds.signature, '')
         self.assertTrue(len(ds.doc_string) > 0)
+
+    def test_doc_defined_for_type(self):
+        """When the docs are defined for the type on an object, but not
+        the object, we expect the docs of the type. This is the case
+        of ndarray generated as follow.
+        """
+
+        array = np.arange(1)
+
+        st.help(array)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual(ds.name, '')
+        self.assertTrue('ndarray' in ds.doc_string)
+
+    def test_doc_type_is_type(self):
+        """When the type of the object is type and no docs are defined,
+        we expect docs are not available"""
+
+        class MyClass(object):
+            pass
+
+        st.help(MyClass)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual(type(MyClass), type)
+        self.assertEqual(ds.name, 'MyClass')
+        self.assertEqual(ds.module, 'help_test')
+        self.assertEqual(ds.doc_string, 'No docs available.')
