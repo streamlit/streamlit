@@ -245,6 +245,10 @@ jobs:
           command: |
             make jslint
 
+      - store_test_results:
+          path: frontend/test-reports
+          when: always
+
       #################################################################
       # Run make pycoverage
       #################################################################
@@ -252,6 +256,10 @@ jobs:
           name: Run python tests.
           command: |
             make pycoverage
+
+      - store_test_results:
+          path: lib/test-reports
+          when: always
 
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
@@ -363,8 +371,6 @@ jobs:
           command: |
             ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2
 
-      # TODO add cypress dashboard key in package.json
-      # or to env export CYPRESS_RECORD_KEY=<record key>
       - run:
           name: Cypress
           command: |
@@ -375,7 +381,8 @@ jobs:
             yarn run cy:serve-and-run-all
 
       - store_test_results:
-          path: frontend/cypress/results
+          path: frontend/test-reports
+          when: always
 
       - store_artifacts:
           path: mochawesome-report

@@ -33,7 +33,7 @@ def get_referenced_objects(code, context):
             else:
                 set_tos(op.argval)
         elif op.opname in ['LOAD_DEREF', 'LOAD_CLOSURE']:
-            set_tos(context.closure[op.arg])
+            set_tos(context.cells[op.argval])
         elif op.opname == 'IMPORT_NAME':
             try:
                 set_tos(importlib.import_module(op.argval))

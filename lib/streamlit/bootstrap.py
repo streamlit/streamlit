@@ -43,6 +43,14 @@ def _fix_sys_path(script_path):
     """
     sys.path.insert(0, os.path.dirname(script_path))
 
+def _fix_matplotlib_crash():
+    """
+    The default Matplotlib backend crashes Python for most MacOS users.
+    So here we set a safer backend as a fix. Users can always disable this
+    behavior by setting the config runner.fixMatplotlib = false.
+    """
+    if config.get_option('runner.fixMatplotlib'):
+        os.environ['MPLBACKEND'] = 'Agg'
 
 def _on_server_start(server):
     _print_url()
@@ -114,18 +122,19 @@ def run(script_path):
 
     """
     _fix_sys_path(script_path)
+    _fix_matplotlib_crash()
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads
     _set_up_signal_handler()
 
-    # Schedule the server to start using the IO Loop on the main thread.
-    server = Server(
-        script_path, sys.argv, on_server_start_callback=_on_server_start)
-
-    server.add_preheated_report_session()
-
     ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.spawn_callback(server.loop_coroutine)
 
+    # Create and start the server.
+    server = Server(ioloop, script_path, sys.argv)
+    server.add_preheated_report_session()
+    server.start(_on_server_start)
+
+    # Start the ioloop. This function will not return until the
+    # server is shut down.
     ioloop.start()

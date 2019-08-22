@@ -76,11 +76,22 @@ pylint:
 
 pytest:
 	# Just testing. No code coverage.
-	cd lib; PYTHONPATH=. pytest -v -l tests/ $(modules)
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			-l tests/ \
+			$(modules)
 
 pycoverage:
 	# testing + code coverage
-	cd lib; PYTHONPATH=. pytest -v -l $(foreach dir,$(modules),--cov=$(dir)) --cov-report=term-missing tests/ $(modules)
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			-l $(foreach dir,$(modules),--cov=$(dir)) \
+			--cov-report=term-missing tests/ \
+			$(modules)
 
 .PHONY: user-tests
 user-tests:
@@ -209,7 +220,17 @@ scssvars: react-init
 .PHONY: jslint
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	cd frontend; ./node_modules/.bin/eslint --ext .js --ext .jsx --ext .ts --ext .tsx --ignore-pattern 'src/autogen/*' --max-warnings 0 ./src
+	cd frontend; \
+		./node_modules/.bin/eslint \
+			--ext .js \
+			--ext .jsx \
+			--ext .ts \
+			--ext .tsx \
+			--ignore-pattern 'src/autogen/*' \
+			--max-warnings 0 \
+			--format junit \
+			--output-file test-reports/eslint/eslint.xml \
+			./src
 
 .PHONY: jstest
 jstest:

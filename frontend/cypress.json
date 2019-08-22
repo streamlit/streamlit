@@ -1,10 +1,8 @@
 {
-  "reporter": "mochawesome",
+  "reporter": "mocha-multi-reporters",
   "reporterOptions": {
-    "reportDir": "cypress/results",
-    "overwrite": false,
-    "html": false,
-    "json": true
+    "configFile": "reporter-config.json"
   },
-  "trashAssetsBeforeRuns": false
+  "trashAssetsBeforeRuns": false,
+  "projectId": "fa9nep"
 }

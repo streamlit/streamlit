@@ -18,6 +18,7 @@ eggs/
 .coverage
 .coverage\.*
 .pytest_cache/
+test-reports
 
 # Pyenv Stuff
 .python-version
