@@ -4,12 +4,12 @@
   "private": true,
   "homepage": ".",
   "scripts": {
-    "start": "craco start",
-    "build": "./scripts/preload.sh && craco build",
-    "test": "craco test --env=jsdom",
+    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
+    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco build",
+    "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open",
-    "cy:run": "unset NODE_OPTIONS && cypress run --record",
-    "cy:run-all": "../scripts/e2e.sh -a true -c ..",
+    "cy:run": "unset NODE_OPTIONS && cypress run",
+    "cy:run-all": "../scripts/e2e.sh -a true -c .. -r",
     "cy:serve-and-run-all": "NODE_OPTIONS=--max_old_space_size=4096 start-server-and-test start http://localhost:3000 cy:run-all",
     "typecheck": "tsc --noEmit"
   },

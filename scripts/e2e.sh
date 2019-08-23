@@ -1,5 +1,19 @@
 #!/bin/sh
-## Used to run end-to-end tests
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs end-to-end tests.
 
 # Change working directory so script is run as ./scripts/e2e.sh
 cwd=.
@@ -10,12 +24,17 @@ always_continue=false
 # Records if any test fails so we can return appropriately after all run
 any_failed=false
 
+# Flag to record test results in the cypress dashboard
+record_results=
+
 # Handle command line named arguments, passed as `-c .. -a true`
-while getopts ":c:a:" opt; do
+while getopts ":c:a:r" opt; do
   case $opt in
     c) cwd="$OPTARG"
     ;;
     a) always_continue="$OPTARG"
+    ;;
+    r) record_results="--record"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -42,13 +61,14 @@ cd "$cwd"
 
 # Generate report on exit
 generate_report() {
-  npx -q mochawesome-merge --reportDir frontend/cypress/results > frontend/mochawesome.json
-  npx -q mochawesome-report-generator frontend/mochawesome.json
+  cd frontend
+  npx -q mochawesome-merge --reportDir cypress/mochawesome > mochawesome.json
+  npx -q mochawesome-report-generator mochawesome.json
 }
 trap generate_report EXIT
 
 # Clear old results
-rm frontend/cypress/results/* || true
+rm frontend/cypress/mochawesome/* || true
 rm frontend/mochawesome.json || true
 
 # Test core streamlit elements
@@ -56,7 +76,7 @@ for file in examples/core/*.py
 do
   # Run next test
   streamlit run $file &
-  yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts"
+  yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts" $record_results
 
   EXITCODE="$?"
 

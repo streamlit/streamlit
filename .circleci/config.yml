@@ -385,13 +385,10 @@ jobs:
           when: always
 
       - store_artifacts:
-          path: mochawesome-report
+          path: frontend/mochawesome-report
 
       - store_artifacts:
           path: frontend/cypress/videos
-
-      - store_artifacts:
-          path: frontend/cypress/screenshots
 
       - store_artifacts:
           path: frontend/cypress/snapshots

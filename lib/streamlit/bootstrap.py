@@ -1,5 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import signal
@@ -128,13 +140,13 @@ def run(script_path):
     # and close all our threads
     _set_up_signal_handler()
 
-    # Schedule the server to start using the IO Loop on the main thread.
-    server = Server(
-        script_path, sys.argv, on_server_start_callback=_on_server_start)
-
-    server.add_preheated_report_session()
-
     ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.spawn_callback(server.loop_coroutine)
 
+    # Create and start the server.
+    server = Server(ioloop, script_path, sys.argv)
+    server.add_preheated_report_session()
+    server.start(_on_server_start)
+
+    # Start the ioloop. This function will not return until the
+    # server is shut down.
     ioloop.start()
