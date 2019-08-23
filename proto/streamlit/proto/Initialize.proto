@@ -1,0 +1,50 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/SessionState.proto";
+
+// This is the first message that is sent when the connection is opened.
+// It contains streamlit configuration data, and the session state
+// that existed at the time of connection.
+message Initialize {
+  UserInfo user_info = 1;
+  Config config = 2;
+  EnvironmentInfo environment_info = 3;
+
+  // The session state at the time the connection was established
+  SessionState session_state = 4;
+}
+
+message Config {
+  // True if saving is properly configured.
+  bool sharing_enabled = 1;
+
+  // See config option "browser.gatherUsageStats".
+  bool gather_usage_stats = 2;
+
+}
+
+message UserInfo {
+  string installation_id = 1;
+  string email = 2;
+}
+
+message EnvironmentInfo {
+  string streamlit_version = 1;
+  string python_version = 2;
+}

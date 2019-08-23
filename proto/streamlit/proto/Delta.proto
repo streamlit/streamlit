@@ -1,0 +1,45 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/BlockPath.proto";
+import "streamlit/proto/Element.proto";
+import "streamlit/proto/NamedDataSet.proto";
+
+// A change to an element.
+message Delta {
+  // Each delta applies to a particular ID.
+  uint32 id = 1;
+
+  // Path to parent block.
+  BlockPath parent_block = 2;
+
+  // There are two kinds of supported deltas.
+  oneof type {
+    // Append a new element to the report.
+    Element new_element = 3;
+
+    // Append a new block to the report.
+    bool new_block = 4;
+
+    // Append data to a DataFrame in for current element. The element to add to
+    // is identified by the ID field, above. The dataframe is identified either
+    // by NamedDataSet.name or by setting NamedDataSet.has_name to false.
+    // All elements that contain a DataFrame should support add_rows.
+    NamedDataSet add_rows = 5;
+  }
+}

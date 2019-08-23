@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """st.help unit test."""
 
@@ -11,6 +24,7 @@ import sys
 
 from tests import testutil
 import streamlit as st
+import numpy as np
 
 is_python_2 = sys.version_info[0] == 2
 
@@ -94,7 +108,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(ds.type, '<type \'function\'>')
         else:
             self.assertEqual(ds.type, '<class \'function\'>')
-        self.assertEqual(ds.signature, '(func=None, on_disk=False)')
+        self.assertEqual(ds.signature, '(func=None, persist=False, ignore_hash=False)')
         self.assertTrue(ds.doc_string.startswith('Function decorator to'))
 
     def test_st_write(self):
@@ -139,3 +153,32 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(ds.type, '<class \'int\'>')
         self.assertEqual(ds.signature, '')
         self.assertTrue(len(ds.doc_string) > 0)
+
+    def test_doc_defined_for_type(self):
+        """When the docs are defined for the type on an object, but not
+        the object, we expect the docs of the type. This is the case
+        of ndarray generated as follow.
+        """
+
+        array = np.arange(1)
+
+        st.help(array)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual(ds.name, '')
+        self.assertTrue('ndarray' in ds.doc_string)
+
+    def test_doc_type_is_type(self):
+        """When the type of the object is type and no docs are defined,
+        we expect docs are not available"""
+
+        class MyClass(object):
+            pass
+
+        st.help(MyClass)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual(type(MyClass), type)
+        self.assertEqual(ds.name, 'MyClass')
+        self.assertEqual(ds.module, 'help_test')
+        self.assertEqual(ds.doc_string, 'No docs available.')

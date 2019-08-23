@@ -30,11 +30,13 @@ import path from 'path'
 import {addMatchImageSnapshotCommand} from 'cypress-image-snapshot/command'
 
 /**
- * Returns an OS-specific snapshot folder, e.g. <rootDir>/cypress/snapshots/darwin
- * (We use per-OS snapshots to account for rendering differences in fonts and UI widgets.)
+ * Returns an OS and device-pixel-ratio specific snapshot folder, e.g. <rootDir>/cypress/snapshots/darwin/2x
+ * We use per-OS snapshots to account for rendering differences in fonts and UI widgets.
+ * We use per-DPR snapshots to account for rendering differences in image dimensions.
  */
 function getSnapshotFolder() {
-  return path.join('cypress', 'snapshots', Cypress.platform)
+  const devicePixelRatio = Cypress.env('devicePixelRatio') || 2
+  return path.join('cypress', 'snapshots', Cypress.platform, devicePixelRatio + 'x')
 }
 
 addMatchImageSnapshotCommand({

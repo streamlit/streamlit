@@ -1,0 +1,53 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/Widget.proto";
+
+// A message from the browser to the server.
+message BackMsg {
+  oneof type {
+    // Set to true to ask the server to display the inline help.
+    // bool help = 1;  DEPRECATED
+
+    // Set to true to ask the server to upload the report.
+    bool cloud_upload = 2;
+
+    // Asks the server to run the script with this given command line.
+    string rerun_script = 3;
+
+    // DEPRECATED - Asks the server to run the script with this object
+    // ReRun rerun = 4;
+
+    // Requests that the report's @st_cache be cleared
+    bool clear_cache = 5;
+
+    // Requests that the runOnSave behavior for this report be set
+    // to the given value
+    bool set_run_on_save = 6;
+
+    // Requests that the report's execution be stopped
+    bool stop_report = 7;
+
+    // string widget_json = 8;
+
+    WidgetStates update_widgets = 9;
+
+    // Set to true to ask the server to close the connection
+    bool close_connection = 10;
+  }
+}

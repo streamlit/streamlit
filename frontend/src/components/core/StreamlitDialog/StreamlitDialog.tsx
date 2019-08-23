@@ -1,17 +1,29 @@
 /**
  * @license
- * Copyright 2019 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-import {ScriptChangedDialog, Props as ScriptChangedProps} from 'components/core/StreamlitDialog/ScriptChangedDialog'
-import React, {ReactElement, ReactNode} from 'react'
 import CopyToClipboard from 'react-copy-to-clipboard'
-import {HotKeys} from 'react-hotkeys'
-import {Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress} from 'reactstrap'
+import React, { ReactElement, ReactNode} from 'react'
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress } from 'reactstrap'
+import { HotKeys } from 'react-hotkeys'
 
-import {Exception} from 'autogen/protobuf'
-import {Props as SettingsDialogProps, SettingsDialog} from './SettingsDialog'
-import {STREAMLIT_VERSION} from 'lib/baseconsts'
+import { ScriptChangedDialog, Props as ScriptChangedProps } from 'components/core/StreamlitDialog/ScriptChangedDialog'
+import { Exception } from 'autogen/proto'
+import { Props as SettingsDialogProps, SettingsDialog } from './SettingsDialog'
+import { SessionInfo } from 'lib/SessionInfo'
 
 import './StreamlitDialog.scss'
 
@@ -28,25 +40,37 @@ type DialogProps =
   UploadedProps |
   WarningProps;
 
+export enum DialogType {
+  ABOUT = 'about',
+  CLEAR_CACHE = 'clearCache',
+  RERUN_SCRIPT = 'rerunScript',
+  SETTINGS = 'settings',
+  SCRIPT_CHANGED = 'scriptChanged',
+  SCRIPT_COMPILE_ERROR = 'scriptCompileError',
+  UPLOAD_PROGRESS = 'uploadProgress',
+  UPLOADED = 'uploaded',
+  WARNING = 'warning',
+}
+
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
-    case 'about':
+    case DialogType.ABOUT:
       return aboutDialog(dialogProps)
-    case 'clearCache':
+    case DialogType.CLEAR_CACHE:
       return clearCacheDialog(dialogProps)
-    case 'rerunScript':
+    case DialogType.RERUN_SCRIPT:
       return rerunScriptDialog(dialogProps)
-    case 'settings':
+    case DialogType.SETTINGS:
       return settingsDialog(dialogProps)
-    case 'scriptChanged':
+    case DialogType.SCRIPT_CHANGED:
       return <ScriptChangedDialog {...dialogProps}/>
-    case 'scriptCompileError':
+    case DialogType.SCRIPT_COMPILE_ERROR:
       return scriptCompileErrorDialog(dialogProps)
-    case 'uploadProgress':
+    case DialogType.UPLOAD_PROGRESS:
       return uploadProgressDialog(dialogProps)
-    case 'uploaded':
+    case DialogType.UPLOADED:
       return uploadedDialog(dialogProps)
-    case 'warning':
+    case DialogType.WARNING:
       return warningDialog(dialogProps)
     case undefined:
       return noDialog(dialogProps)
@@ -56,7 +80,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 }
 
 interface AboutProps {
-  type: 'about';
+  type: DialogType.ABOUT;
 
   /** Callback to close the dialog */
   onClose: PlainEventHandler;
@@ -69,7 +93,7 @@ function aboutDialog(props: AboutProps): ReactElement {
       <ModalHeader toggle={props.onClose}>About</ModalHeader>
       <ModalBody>
         <div>
-          Streamlit v{STREAMLIT_VERSION}<br/>
+          Streamlit v{SessionInfo.current.streamlitVersion}<br/>
           <a href="https://streamlit.io">https://streamlit.io</a><br/>
           Copyright 2019 Streamlit Inc. All rights reserved.
         </div>
@@ -82,7 +106,7 @@ function aboutDialog(props: AboutProps): ReactElement {
 }
 
 interface ClearCacheProps {
-  type: 'clearCache';
+  type: DialogType.CLEAR_CACHE;
   /** callback to send the clear_cache request to the Proxy */
   confirmCallback: () => void;
 
@@ -124,7 +148,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
 }
 
 interface RerunScriptProps {
-  type: 'rerunScript';
+  type: DialogType.RERUN_SCRIPT;
 
   /** Callback to get the script's command line */
   getCommandLine: () => string | string[];
@@ -176,35 +200,29 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
 }
 
 interface ScriptCompileErrorProps {
-  type: 'scriptCompileError';
+  type: DialogType.SCRIPT_COMPILE_ERROR;
   exception: Exception;
   onClose: PlainEventHandler;
-  onRerun: PlainEventHandler;
 }
 
 function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
-  let message = props.exception.message
-  if (message) {
-    message = `: ${message}`
-  }
-
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <strong>{props.exception.type}</strong>{message}
+          <code className="compile-error-text">{props.exception.message}</code>
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button outline color="primary" onClick={props.onRerun}>Rerun</Button>
+        <Button outline color="primary" onClick={props.onClose}>Close</Button>
       </ModalFooter>
     </BasicDialog>
   )
 }
 
 interface SettingsProps extends SettingsDialogProps {
-  type: 'settings';
+  type: DialogType.SETTINGS;
 }
 
 /**
@@ -217,7 +235,7 @@ function settingsDialog(props: SettingsProps): ReactElement {
 }
 
 interface UploadProgressProps {
-  type: 'uploadProgress';
+  type: DialogType.UPLOAD_PROGRESS;
   progress?: string | number;
   onClose: PlainEventHandler;
 }
@@ -241,7 +259,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
 }
 
 interface UploadedProps {
-  type: 'uploaded';
+  type: DialogType.UPLOADED;
   url: string;
   onClose: PlainEventHandler;
 }
@@ -269,7 +287,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
 }
 
 interface WarningProps {
-  type: 'warning';
+  type: DialogType.WARNING;
   title: string;
   msg: ReactNode;
   onClose: PlainEventHandler;

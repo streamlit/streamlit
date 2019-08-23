@@ -1,10 +1,18 @@
 /**
  * @license
- * Copyright 2018 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc.
  *
- * @fileoverview Displays various report- and connection-related
- * info: our WebSocket connection status, the run-state of our
- * report, and transient report-related events.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import {RERUN_PROMPT_MODAL_DIALOG} from 'lib/baseconsts'
@@ -15,7 +23,7 @@ import {Button, UncontrolledTooltip} from 'reactstrap'
 import {SignalConnection} from 'typed-signals'
 
 import {ConnectionState} from 'lib/ConnectionState'
-import {SessionEvent} from 'autogen/protobuf'
+import {SessionEvent} from 'autogen/proto'
 import {SessionEventDispatcher} from 'lib/SessionEventDispatcher'
 import {ReportRunState} from 'lib/ReportRunState'
 import {Timer} from 'lib/Timer'
@@ -86,6 +94,11 @@ const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
 // and then unhovered on it.
 const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
+/**
+ * Displays various report- and connection-related info: our WebSocket
+ * connection status, the run-state of our report, and transient report-related
+ * events.
+ */
 export class StatusWidget extends PureComponent<Props, State> {
   /** onSessionEvent signal connection */
   private sessionEventConn?: SignalConnection

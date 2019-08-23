@@ -1,19 +1,43 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import threading
+from collections import namedtuple
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+ReportContext = namedtuple('ReportContext', [
+    # The main DeltaGenerator for the report
+    'main_dg',
+
+    # The sidebar DeltaGenerator for the report
+    'sidebar_dg',
+
+    # The Widgets state object for the report
+    'widgets',
+])
 
 REPORT_CONTEXT_ATTR_NAME = 'streamlit_report_ctx'
 
 
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
-    def __init__(self, report_ctx, target=None, name=None):
+    def __init__(self, main_dg, sidebar_dg, widgets, target=None, name=None):
         super(ReportThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = report_ctx
+        self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets)
 
 
 def add_report_ctx(thread):

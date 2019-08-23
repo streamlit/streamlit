@@ -1,0 +1,165 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+// Represents a pandas DataFrame.
+message DataFrame {
+  // The data in the array.
+  Table data = 1;
+
+  // List of row names. (Multiple implies a multi-index.)
+  Index index = 2;
+
+  // List of column names. (Multiple implies a multi-index.)
+  Index columns = 3;
+
+  // Cell style and formatting data. Optional.
+  TableStyle style = 4;
+}
+
+// An index in the dataFrame
+message Index {
+  oneof type {
+    PlainIndex plain_index = 1;
+    RangeIndex range_index = 2;
+    // CategoricalIndex categorical_index = 3;
+    MultiIndex multi_index = 4;
+    // IntervalIndex interval_index = 5;
+    DatetimeIndex datetime_index = 6;
+    TimedeltaIndex timedelta_index = 7;
+    // PeriodIndex period_index = 8;
+    Int64Index int_64_index = 9;
+    // UInt64Index uint_64_index = 10;
+    Float64Index float_64_index = 11;
+  }
+}
+
+// Basic, 1D index.
+message PlainIndex {
+  AnyArray data = 1;
+
+  //// Not yet implemented:
+  // DType dtype = 2;
+  // bool copy = 3;
+  // string name = 4;
+  // bool tupleize_cols = 5;
+}
+
+// Range index. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.RangeIndex.html
+message RangeIndex {
+  int64 start = 1;
+  int64 stop = 2;
+
+  //// Not yet implemented:
+  // string name = 4;
+  // bool copy = 5;
+}
+
+// A multi-level, or hierarchical, Index. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.MultiIndex.html
+message MultiIndex {
+  repeated Index levels = 1;
+  repeated Int32Array labels = 2;
+
+  //// Not yet implemented:
+  // int sort_order = 3;
+  // StringArray names = 4;
+  // bool copy = 5;
+  // bool verify_integrity = 6;
+}
+
+// A date represented internally as nano second epoch int64. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
+message DatetimeIndex {
+  Int64Array data = 1;
+}
+
+// A time interval represented internally as nano second epoch int64. See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.TimedeltaIndex.html
+message TimedeltaIndex {
+  Int64Array data = 1;
+}
+
+// See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
+message Int64Index {
+  Int64Array data = 1;
+}
+
+// See:
+// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
+message Float64Index {
+  DoubleArray data = 1;
+}
+
+message StringArray {
+  repeated string data = 1;
+}
+
+message DoubleArray {
+  repeated double data = 1;
+}
+
+message Int32Array {
+  repeated int32 data = 1;
+}
+
+message Int64Array {
+  repeated int64 data = 1;
+}
+
+message UInt32Array {
+  repeated uint32 data = 1;
+}
+
+message CSSStyle {
+  string property = 1;
+  string value = 2;
+}
+
+message CellStyle {
+  repeated CSSStyle css = 1;
+  string display_value = 2;       // e.g. '21.96%'
+
+  // The default value for a string field in proto3 is '', so we need
+  // this extra bool to indicate the presence of a user-specified
+  // display_value, which itself could be ''.
+  bool has_display_value = 3;
+}
+
+message CellStyleArray {
+  repeated CellStyle styles = 1;
+}
+
+message AnyArray {
+  oneof type {
+    StringArray strings = 1;
+    DoubleArray doubles = 2;
+    Int64Array int64s = 3;
+    Int64Array datetimes = 4;
+    Int64Array timedeltas = 5;
+  }
+}
+
+message Table {
+  repeated AnyArray cols = 1;
+}
+
+message TableStyle {
+  repeated CellStyleArray cols = 1;
+}

@@ -1,15 +1,25 @@
 /**
  * @license
- * Copyright 2018 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc.
  *
- * @fileoverview Manages our connection to the Server.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import url from 'url'
 
 import {ConnectionState} from './ConnectionState'
-import {ForwardMsg} from 'autogen/protobuf'
-import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from './baseconsts'
+import {ForwardMsg} from 'autogen/proto'
+import {IS_DEV_ENV, IS_SHARED_REPORT, WEBSOCKET_PORT_DEV} from './baseconsts'
 import {ReactNode} from 'react'
 import {StaticConnection} from './StaticConnection'
 import {WebsocketConnection} from './WebsocketConnection'
@@ -47,6 +57,9 @@ interface Props {
   connectionStateChanged: (connectionState: ConnectionState) => void;
 }
 
+/**
+ * Manages our connection to the Server.
+ */
 export class ConnectionManager {
   private readonly props: Props;
   private connection?: WebsocketConnection | StaticConnection;
@@ -66,6 +79,7 @@ export class ConnectionManager {
     return this.connectionState === ConnectionState.CONNECTED
   }
 
+  // A "static" connection is the one that runs in S3
   public isStaticConnection(): boolean {
     return this.connectionState === ConnectionState.STATIC
   }
@@ -81,11 +95,10 @@ export class ConnectionManager {
   }
 
   private async connect(): Promise<void> {
-    const {query} = url.parse(window.location.href, true)
-    const reportId = query.id as string
-
     try {
-      if (reportId !== undefined) {
+      if (IS_SHARED_REPORT) {
+        const {query} = url.parse(window.location.href, true)
+        const reportId = query.id as string
         this.connection = await this.connectBasedOnManifest(reportId)
 
       } else {

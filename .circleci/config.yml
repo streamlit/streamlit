@@ -7,15 +7,22 @@ workflows:
   version: 2
   circleci:
     jobs:
+      - python-3.7.4
       - python-2.7.16:
           requires:
-            - python-3.7.3
-      - python-3.7.3
+            - python-3.7.4
+      - cypress-approval:
+          type: approval
+          requires:
+            - python-3.7.4
+      - cypress:
+          requires:
+            - cypress-approval
 
 jobs:
-  python-3.7.3: &job-template
+  python-3.7.4: &job-template
     docker:
-      - image: circleci/python:3.7.3-stretch
+      - image: circleci/python:3.7.4-stretch
 
     working_directory: ~/repo
 
@@ -26,7 +33,7 @@ jobs:
       #################################################################
       # Pre Cache Steps
       #################################################################
-      - run:
+      - run: &set_env_vars
           name: set environment variables if in conda.
           command: |
             if conda info; then
@@ -42,7 +49,7 @@ jobs:
               md5sum make.bin > ~/make.md5
             fi
 
-      - run:
+      - run: &install_graphviz
           name: install graphviz ie dot
           command: |
             echo 'export SUDO="sudo"' >> $BASH_ENV
@@ -64,11 +71,10 @@ jobs:
             md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
             md5sum $(which python) >> ~/python_version.md5
 
-      - run:
-          name: Create node_modules cache key.
+      - run: &create_yarn_cache_key
+          name: Create yarn cache key.
           command: |
             md5sum frontend/yarn.lock > ~/yarn.lock.md5
-            md5sum $(which python) >> ~/yarn.lock.md5
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
@@ -76,7 +82,7 @@ jobs:
           # cache key.
           name: Create checksum for all protobufs
           command: |
-            md5sum protobuf/*.proto $(which python) > ~/protobuf.md5
+            md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
 
       #################################################################
       # Restore from cache
@@ -86,12 +92,12 @@ jobs:
           keys:
           - v12-opt-conda-{{ checksum "~/python_version.md5" }}
 
-      - restore_cache:
+      - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
           - v12-python-venv-{{ checksum "~/python_version.md5" }}
 
-      - restore_cache:
+      - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
           - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
@@ -101,12 +107,12 @@ jobs:
           keys:
           - v12-protobuf-{{ checksum "~/protobuf.md5" }}
 
-      - restore_cache:
+      - restore_cache: &restore_make
           name: Restore make from cache
           keys:
           - v12_make.bin-{{ checksum "~/make.md5" }}
 
-      - restore_cache:
+      - restore_cache: &restore_dot
           name: Restore dot from cache
           keys:
           - v12_dot.bin-{{ checksum "~/dot.md5" }}
@@ -114,7 +120,7 @@ jobs:
       #################################################################
       # Pre Make commands
       #################################################################
-      - run:
+      - run: &install_make
           name: install make
           command: |
             if [ -s make.bin ] ; then
@@ -133,7 +139,7 @@ jobs:
           paths:
             - make.bin
 
-      - run:
+      - run: &install_dot
           name: install dot
           command: |
             if [ -s dot.bin ] ; then
@@ -156,7 +162,7 @@ jobs:
       #################################################################
       # Run 'make init'
       #################################################################
-      - run:
+      - run: &install_nvm
           name: Install NVM ie nodejs
           command: |
             if [ ! -d ~/.nvm ] ; then
@@ -174,7 +180,7 @@ jobs:
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
-      - run:
+      - run: &activate_virtualenv
           name: Run make pipenv-lock and create virtualenv if necessary.
           command: |
             if echo ${CIRCLE_JOB} | egrep -qi conda ; then
@@ -208,19 +214,19 @@ jobs:
               echo 'source venv/bin/activate' >> $BASH_ENV
             fi
 
-      - run:
+      - run: &make_develop
           name: Run make develop
           command: |
             make develop
 
-      - run:
+      - run: &generate_protobufs
           name: Generate protobufs
           command: |
             # There's a chance this file could be a cached version when
             # the protobuf cache is restored, so checkout from github to
             # make sure.
-            git checkout -- lib/streamlit/protobuf/__init__.py
-            if [ ! -e frontend/src/autogen/protobuf.js -o ! -e lib/streamlit/protobuf/DataFrame_pb2.py ] ; then
+            git checkout -- lib/streamlit/proto/__init__.py
+            if [ ! -e frontend/src/autogen/proto.js -o ! -e lib/streamlit/proto/DataFrame_pb2.py ] ; then
               # install protobuf v3
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y gnupg
@@ -239,6 +245,10 @@ jobs:
           command: |
             make jslint
 
+      - store_test_results:
+          path: frontend/test-reports
+          when: always
+
       #################################################################
       # Run make pycoverage
       #################################################################
@@ -246,6 +256,10 @@ jobs:
           name: Run python tests.
           command: |
             make pycoverage
+
+      - store_test_results:
+          path: lib/test-reports
+          when: always
 
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
@@ -266,17 +280,115 @@ jobs:
           name: Save nvm and node_modules to cache
           key: v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
-            - frontend/node_modules
             - ~/.nvm
+            - ~/.cache
 
       - save_cache:
           name: Save generated protobufs to cache
           key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
-            - frontend/src/autogen/protobuf.js
-            - lib/streamlit/protobuf
+            - frontend/src/autogen/proto.js
+            - lib/streamlit/proto
 
   python-2.7.16:
     <<: *job-template
     docker:
       - image: circleci/python:2.7.16-stretch
+
+  cypress:
+    docker:
+      - image: circleci/python:3.7.4-stretch
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
+      - run:
+          <<: *set_env_vars
+
+      - run:
+          <<: *install_graphviz
+
+      - run:
+          name: Create python cache key.
+          command: |
+            md5sum lib/Pipfile.locks/python-3.7.4 > ~/python_version.md5
+            md5sum $(which python) >> ~/python_version.md5
+
+      - run:
+          <<: *create_yarn_cache_key
+
+      #################################################################
+      # Restore from cache
+      #################################################################
+      - restore_cache:
+          <<: *restore_virtualenv
+
+      - restore_cache:
+          <<: *restore_nvm
+
+      - restore_cache:
+          <<: *restore_make
+
+      - restore_cache:
+          <<: *restore_dot
+
+      #################################################################
+      # Pre Make commands
+      #################################################################
+      - run:
+          <<: *install_make
+
+      - run:
+          <<: *install_dot
+
+      - run:
+          <<: *install_nvm
+
+      - run:
+          <<: *activate_virtualenv
+
+      - run:
+          <<: *make_develop
+
+      # NOTE restore protobuf from cache wasn't
+      # working so generating protobufs instead.
+      - run:
+          <<: *generate_protobufs
+
+      - run:
+          name: Make SCSS vars
+          command: |
+            make scssvars
+
+      - run:
+          name: Install Cypress dependencies
+          command: |
+            ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2
+
+      - run:
+          name: Cypress
+          command: |
+            mkdir ~/.streamlit
+            echo '[general]' >  ~/.streamlit/credentials.toml
+            echo 'email = "jonathan@streamlit.io"' >> ~/.streamlit/credentials.toml
+            cd frontend
+            yarn run cy:serve-and-run-all
+
+      - store_test_results:
+          path: frontend/test-reports
+          when: always
+
+      - store_artifacts:
+          path: frontend/mochawesome-report
+
+      - store_artifacts:
+          path: frontend/cypress/videos
+
+      - store_artifacts:
+          path: frontend/cypress/snapshots

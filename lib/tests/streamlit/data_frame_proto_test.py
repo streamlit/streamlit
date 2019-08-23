@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Unit test for data_frame_proto."""
 
@@ -13,15 +26,21 @@ import streamlit.elements.data_frame_proto as data_frame_proto
 
 from google.protobuf import json_format
 from mock import patch
-from streamlit import protobuf
-from streamlit.protobuf.DataFrame_pb2 import Int32Array, CellStyleArray, \
-    CellStyle
-from streamlit.protobuf.VegaLiteChart_pb2 import VegaLiteChart
-from streamlit.protobuf.NamedDataSet_pb2 import NamedDataSet
+from streamlit.proto.DataFrame_pb2 import AnyArray
+from streamlit.proto.DataFrame_pb2 import CSSStyle
+from streamlit.proto.DataFrame_pb2 import CellStyle
+from streamlit.proto.DataFrame_pb2 import CellStyleArray
+from streamlit.proto.DataFrame_pb2 import DataFrame
+from streamlit.proto.DataFrame_pb2 import Index
+from streamlit.proto.DataFrame_pb2 import Int32Array
+from streamlit.proto.DataFrame_pb2 import Table
+from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart
+from streamlit.proto.NamedDataSet_pb2 import NamedDataSet
 
 
 def _css_style(prop, value):
-    css_pb = protobuf.CSSStyle()
+    css_pb = CSSStyle()
     css_pb.property = prop
     css_pb.value = value
     return css_pb
@@ -97,19 +116,19 @@ class DataFrameProtoTest(unittest.TestCase):
         df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
 
         # Plain Index
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df.columns, proto)
         self.assertEqual(['col1', 'col2'], proto.plain_index.data.strings.data)
 
         # Range Index
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df.index, proto)
         self.assertEqual(0, proto.range_index.start)
         self.assertEqual(2, proto.range_index.stop)
 
         # Range Index with NaNs
         df_nan = pd.DataFrame(data={'col1': [], 'col2': []})
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df_nan.index, proto)
         self.assertEqual(0, proto.range_index.start)
         self.assertEqual(0, proto.range_index.stop)
@@ -117,7 +136,7 @@ class DataFrameProtoTest(unittest.TestCase):
         # multi index
         df_multi = pd.MultiIndex.from_arrays([[1, 2], [3, 4]],
                                              names=['one', 'two'])
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df_multi, proto)
         self.assertEqual([1, 2],
                          proto.multi_index.levels[0].int_64_index.data.data)
@@ -128,7 +147,7 @@ class DataFrameProtoTest(unittest.TestCase):
         df_dt = pd.date_range(start='2019/04/01 10:00',
                               end='2019/04/01 12:00',
                               freq='H')
-        proto = protobuf.Index()
+        proto = Index()
         obj_to_patch = (
             'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
         with patch(obj_to_patch) as p:
@@ -138,19 +157,19 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # timedeltaindex
         df_td = pd.to_timedelta(np.arange(1, 5), unit='ns')
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df_td, proto)
         self.assertEqual([1, 2, 3, 4], proto.timedelta_index.data.data)
 
         # int64index
         df_int64 = pd.Int64Index(np.arange(1, 5))
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df_int64, proto)
         self.assertEqual([1, 2, 3, 4], proto.int_64_index.data.data)
 
         # float64index
         df_float64 = pd.Float64Index(np.arange(1, 5))
-        proto = protobuf.Index()
+        proto = Index()
         data_frame_proto._marshall_index(df_float64, proto)
         self.assertEqual([1, 2, 3, 4], proto.float_64_index.data.data)
 
@@ -158,7 +177,7 @@ class DataFrameProtoTest(unittest.TestCase):
         df_period = pd.period_range(start='2005-12-21 08:45 ',
                                     end='2005-12-21 11:55',
                                     freq='H')
-        proto = protobuf.Index()
+        proto = Index()
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_index(df_period, proto)
         err_msg = (
@@ -168,7 +187,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
     def test_marshall_table(self):
         """Test streamlit.data_frame_proto._marshall_table."""
-        proto = protobuf.Table()
+        proto = Table()
         data_frame_proto._marshall_table([[1, 2], [3, 4]], proto)
         ret = json.loads(json_format.MessageToJson(proto))
         ret = [x['int64s']['data'] for x in ret['cols']]
@@ -179,7 +198,7 @@ class DataFrameProtoTest(unittest.TestCase):
         """Test streamlit.data_frame_proto._marshall_any_array."""
         # list
         list_data = [1, 2]
-        list_proto = protobuf.AnyArray()
+        list_proto = AnyArray()
 
         data_frame_proto._marshall_any_array(list_data, list_proto)
         self.assertEqual(list_proto.int64s.data, list_data)
@@ -187,41 +206,41 @@ class DataFrameProtoTest(unittest.TestCase):
         # wrong shape
         with pytest.raises(ValueError) as e:
             data_frame_proto._marshall_any_array([[1, 2], [3, 4]],
-                                                 protobuf.AnyArray())
+                                                 AnyArray())
         err_msg = 'Array must be 1D.'
         self.assertEqual(err_msg, str(e.value))
 
         # float
         float_data = pd.Series(np.array([1.0, 2.0]), dtype=np.floating)
-        float_proto = protobuf.AnyArray()
+        float_proto = AnyArray()
 
         data_frame_proto._marshall_any_array(float_data, float_proto)
         self.assertEqual(float_proto.doubles.data, float_data.tolist())
 
         # timedelta64
         td_data = np.array([1, 2], dtype=np.timedelta64)
-        td_proto = protobuf.AnyArray()
+        td_proto = AnyArray()
 
         data_frame_proto._marshall_any_array(td_data, td_proto)
         self.assertEqual(td_proto.timedeltas.data, td_data.tolist())
 
         # int
         int_data = np.array([1, 2], dtype=np.integer)
-        int_proto = protobuf.AnyArray()
+        int_proto = AnyArray()
 
         data_frame_proto._marshall_any_array(int_data, int_proto)
         self.assertEqual(int_proto.int64s.data, int_data.tolist())
 
         # bool
         bool_data = np.array([True, False], dtype=np.bool)
-        bool_proto = protobuf.AnyArray()
+        bool_proto = AnyArray()
 
         data_frame_proto._marshall_any_array(bool_data, bool_proto)
         self.assertEqual(bool_proto.int64s.data, bool_data.tolist())
 
         # object
         obj_data = np.array([json.dumps, json.dumps], dtype=np.object)
-        obj_proto = protobuf.AnyArray()
+        obj_proto = AnyArray()
         truth = [str(json.dumps), str(json.dumps)]
 
         data_frame_proto._marshall_any_array(obj_data, obj_proto)
@@ -229,7 +248,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # No timezone
         dt_data = pd.Series([np.datetime64('2019-04-09T12:34:56')])
-        dt_proto = protobuf.AnyArray()
+        dt_proto = AnyArray()
 
         obj_to_patch = (
             'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
@@ -247,7 +266,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # string
         str_data = np.array(['random', 'string'])
-        str_proto = protobuf.AnyArray()
+        str_proto = AnyArray()
 
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_any_array(str_data, str_proto)
@@ -260,7 +279,7 @@ class DataFrameProtoTest(unittest.TestCase):
     def test_add_rows(self):
         """Test streamlit.data_frame_proto._add_rows."""
         # Generic Data
-        aa = protobuf.AnyArray()
+        aa = AnyArray()
         aa.int64s.data.extend([1, 2])
 
         cell_style = CellStyle()
@@ -270,7 +289,7 @@ class DataFrameProtoTest(unittest.TestCase):
         style.styles.extend([cell_style])
 
         # Delta DataFrame
-        dt1 = protobuf.Delta()
+        dt1 = Delta()
         dt1.new_element.data_frame.data.cols.extend([aa])
         dt1.new_element.data_frame.index.plain_index.data.int64s.data.extend(
             [3, 4])
@@ -278,7 +297,7 @@ class DataFrameProtoTest(unittest.TestCase):
             [5, 6])
         dt1.new_element.data_frame.style.cols.extend([style])
 
-        dt2 = protobuf.Delta()
+        dt2 = Delta()
         dt2.new_element.data_frame.data.cols.extend([aa])
         dt2.new_element.data_frame.index.plain_index.data.int64s.data.extend(
             [3, 4])
@@ -286,8 +305,8 @@ class DataFrameProtoTest(unittest.TestCase):
             [5, 6])
         dt2.new_element.data_frame.style.cols.extend([style])
 
-        combined = protobuf.Delta()
-        aa_combined = protobuf.AnyArray()
+        combined = Delta()
+        aa_combined = AnyArray()
         aa_combined.int64s.data.extend([1, 2, 1, 2])
 
         style_combined = CellStyleArray()
@@ -305,27 +324,27 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(dt1, combined)
 
         # Test one empty
-        dt0 = protobuf.Delta()
+        dt0 = Delta()
         dt0.new_element.data_frame.data.cols.extend([])
 
         data_frame_proto.add_rows(dt0, dt1)
         self.assertEqual(str(dt0), str(dt1))
 
         # Test both empty
-        empty0 = protobuf.Delta()
+        empty0 = Delta()
         empty0.new_element.data_frame.data.cols.extend([])
 
-        empty1 = protobuf.Delta()
+        empty1 = Delta()
         empty1.new_element.data_frame.data.cols.extend([])
 
         data_frame_proto.add_rows(empty0, empty1)
         self.assertEqual(str(empty0), str(empty1))
 
         # Test different data shapes
-        diff0 = protobuf.Delta()
+        diff0 = Delta()
         diff0.new_element.data_frame.data.cols.extend([aa, aa])
 
-        diff1 = protobuf.Delta()
+        diff1 = Delta()
         diff1.new_element.data_frame.data.cols.extend([aa])
 
         with pytest.raises(ValueError) as e:
@@ -337,17 +356,17 @@ class DataFrameProtoTest(unittest.TestCase):
     def test_concat_index(self):
         """Test streamlit.data_frame_proto._concat_index."""
         # Empty
-        idx0 = protobuf.Index()
+        idx0 = Index()
         idx0.plain_index.data.int64s.data.extend([])
 
-        idx1 = protobuf.Index()
+        idx1 = Index()
         idx1.plain_index.data.int64s.data.extend([1, 2])
 
         data_frame_proto._concat_index(idx0, idx1)
         self.assertEqual(idx0, idx1)
 
         # type mismatch
-        idx2 = protobuf.Index()
+        idx2 = Index()
         idx2.plain_index.data.doubles.data.extend([3.0, 4.0])
 
         with pytest.raises(ValueError) as e:
@@ -357,25 +376,25 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(err_msg, str(e.value))
 
         # plain index
-        idx3 = protobuf.Index()
+        idx3 = Index()
         idx3.plain_index.data.int64s.data.extend([5, 6])
 
-        idx4 = protobuf.Index()
+        idx4 = Index()
         idx4.plain_index.data.int64s.data.extend([1, 2, 5, 6])
 
         data_frame_proto._concat_index(idx1, idx3)
         self.assertEqual(idx1, idx4)
 
         # range index
-        r_idx1 = protobuf.Index()
+        r_idx1 = Index()
         r_idx1.range_index.start = 2
         r_idx1.range_index.stop = 10
 
-        r_idx2 = protobuf.Index()
+        r_idx2 = Index()
         r_idx2.range_index.start = 10
         r_idx2.range_index.stop = 20
 
-        r_combined = protobuf.Index()
+        r_combined = Index()
         r_combined.range_index.start = 2
         r_combined.range_index.stop = 20
 
@@ -386,10 +405,10 @@ class DataFrameProtoTest(unittest.TestCase):
         int32_array = Int32Array()
         int32_array.data.extend([4, 5])
 
-        m_idx1 = protobuf.Index()
+        m_idx1 = Index()
         m_idx1.multi_index.labels.extend([int32_array])
 
-        m_idx2 = protobuf.Index()
+        m_idx2 = Index()
         m_idx2.multi_index.labels.extend([int32_array])
 
         with pytest.raises(NotImplementedError) as e:
@@ -399,49 +418,49 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(err_msg, str(e.value))
 
         # int_64_index
-        i_idx1 = protobuf.Index()
+        i_idx1 = Index()
         i_idx1.int_64_index.data.data.extend([1, 2])
 
-        i_idx2 = protobuf.Index()
+        i_idx2 = Index()
         i_idx2.int_64_index.data.data.extend([3, 4])
 
-        i_combined = protobuf.Index()
+        i_combined = Index()
         i_combined.int_64_index.data.data.extend([1, 2, 3, 4])
 
         data_frame_proto._concat_index(i_idx1, i_idx2)
         self.assertEqual(i_idx1, i_combined)
 
         # datetime_index
-        dt_idx1 = protobuf.Index()
+        dt_idx1 = Index()
         dt_idx1.datetime_index.data.data.extend([1, 2])
 
-        dt_idx2 = protobuf.Index()
+        dt_idx2 = Index()
         dt_idx2.datetime_index.data.data.extend([3, 4])
 
-        dt_combined = protobuf.Index()
+        dt_combined = Index()
         dt_combined.datetime_index.data.data.extend([1, 2, 3, 4])
 
         data_frame_proto._concat_index(dt_idx1, dt_idx2)
         self.assertEqual(dt_idx1, dt_combined)
 
         # timedelta_index
-        td_idx1 = protobuf.Index()
+        td_idx1 = Index()
         td_idx1.timedelta_index.data.data.extend([1, 2])
 
-        td_idx2 = protobuf.Index()
+        td_idx2 = Index()
         td_idx2.timedelta_index.data.data.extend([3, 4])
 
-        td_combined = protobuf.Index()
+        td_combined = Index()
         td_combined.timedelta_index.data.data.extend([1, 2, 3, 4])
 
         data_frame_proto._concat_index(td_idx1, td_idx2)
         self.assertEqual(td_idx1, td_combined)
 
         # Not implemented
-        f_idx1 = protobuf.Index()
+        f_idx1 = Index()
         f_idx1.float_64_index.data.data.extend([1.0, 2.0])
 
-        f_idx2 = protobuf.Index()
+        f_idx2 = Index()
         f_idx2.float_64_index.data.data.extend([3.0, 4.0])
 
         with pytest.raises(NotImplementedError) as e:
@@ -452,19 +471,19 @@ class DataFrameProtoTest(unittest.TestCase):
 
     def test_concat_any_array(self):
         """Test streamlit.data_frame_proto._concat_any_array."""
-        aa0 = protobuf.AnyArray()
+        aa0 = AnyArray()
         aa0.int64s.data.extend([])
 
-        aa1 = protobuf.AnyArray()
+        aa1 = AnyArray()
         aa1.int64s.data.extend([1, 2])
 
-        aa2 = protobuf.AnyArray()
+        aa2 = AnyArray()
         aa2.int64s.data.extend([3, 4])
 
-        aa3 = protobuf.AnyArray()
+        aa3 = AnyArray()
         aa3.doubles.data.extend([5.0, 6.0])
 
-        combined = protobuf.AnyArray()
+        combined = AnyArray()
         combined.int64s.data.extend([1, 2, 3, 4])
 
         # both not empty
@@ -514,7 +533,7 @@ class DataFrameProtoTest(unittest.TestCase):
         """Test streamlit.data_frame_proto._get_data_frame."""
         # Test delta not new_element or add_rows
         with pytest.raises(ValueError) as e:
-            delta = protobuf.Delta()
+            delta = Delta()
             data_frame_proto._get_data_frame(delta)
 
         err_msg = 'Cannot extract DataFrame from None.'
@@ -522,7 +541,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # Test delta = new_element, a name is used and type is chart, df, table
         with pytest.raises(ValueError) as e:
-            delta = protobuf.Delta()
+            delta = Delta()
             # TODO(armando): test df and table
             delta.new_element.chart.type = 'some chart'
             data_frame_proto._get_data_frame(delta, name='some name')
@@ -531,35 +550,35 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(err_msg, str(e.value))
 
         # Generic Data
-        aa = protobuf.AnyArray()
+        aa = AnyArray()
         aa.int64s.data.extend([1, 2, 3])
 
         # Delta DataFrame
-        delta_df = protobuf.Delta()
+        delta_df = Delta()
         delta_df.new_element.data_frame.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_df)
         self.assertEqual(df, delta_df.new_element.data_frame)
 
         # Delta Table
-        delta_table = protobuf.Delta()
+        delta_table = Delta()
         delta_table.new_element.table.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_table)
         self.assertEqual(df, delta_table.new_element.table)
 
         # Delta Chart
-        delta_chart = protobuf.Delta()
+        delta_chart = Delta()
         delta_chart.new_element.chart.data.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_chart)
         self.assertEqual(df, delta_chart.new_element.chart.data)
 
         # Vega-Lite Chart
-        delta_vega = protobuf.Delta()
+        delta_vega = Delta()
         delta_vega.new_element.vega_lite_chart.data.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_vega)
         self.assertEqual(df, delta_vega.new_element.vega_lite_chart.data)
 
         # Vega-Lite Chart w/ named dataset
-        delta_vega_dataset = protobuf.Delta()
+        delta_vega_dataset = Delta()
 
         ds1 = NamedDataSet()
         ds1.name = 'dataset 1'
@@ -574,7 +593,7 @@ class DataFrameProtoTest(unittest.TestCase):
             delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data)
 
         # Vega-Lite Chart w/ unnamed dataset
-        delta_vega_unnamed_dataset = protobuf.Delta()
+        delta_vega_unnamed_dataset = Delta()
 
         ds2 = NamedDataSet()
         ds2.has_name = False
@@ -589,7 +608,7 @@ class DataFrameProtoTest(unittest.TestCase):
             datasets[0].data)
 
         # add_rows w/ name
-        delta_add_rows = protobuf.Delta()
+        delta_add_rows = Delta()
         delta_add_rows.add_rows.name = 'named dataset'
         delta_add_rows.add_rows.has_name = True
         delta_add_rows.add_rows.data.data.cols.extend([aa])
@@ -598,7 +617,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # add_rows w/out name
         with pytest.raises(ValueError) as e:
-            delta_add_rows_noname = protobuf.Delta()
+            delta_add_rows_noname = Delta()
             delta_add_rows_noname.add_rows.name = 'named dataset'
             delta_add_rows_noname.add_rows.has_name = True
             delta_add_rows_noname.add_rows.data.data.cols.extend([aa])
@@ -615,7 +634,7 @@ class DataFrameProtoTest(unittest.TestCase):
         ds1.name = 'dataset 1'
         ds1.has_name = True
 
-        aa = protobuf.AnyArray()
+        aa = AnyArray()
         aa.int64s.data.extend([1, 2, 3])
         ds1.data.data.cols.extend([aa])
 
@@ -632,18 +651,18 @@ class DataFrameProtoTest(unittest.TestCase):
     def test_index_len(self):
         """Test streamlit.data_frame_proto._index_len."""
         # Plain
-        plain_idx = protobuf.Index()
+        plain_idx = Index()
         plain_idx.plain_index.data.int64s.data.extend([1, 2, 3])
         self.assertEqual(3, data_frame_proto._index_len(plain_idx))
 
         # Range
-        range_idx = protobuf.Index()
+        range_idx = Index()
         range_idx.range_index.start = 2
         range_idx.range_index.stop = 10
         self.assertEqual(8, data_frame_proto._index_len(range_idx))
 
         # Multi with no labels
-        multi_idx = protobuf.Index()
+        multi_idx = Index()
         multi_idx.multi_index.levels.extend([plain_idx, range_idx])
         self.assertEqual(0, data_frame_proto._index_len(multi_idx))
 
@@ -654,22 +673,22 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(2, data_frame_proto._index_len(multi_idx))
 
         # Datetime
-        dt_idx = protobuf.Index()
+        dt_idx = Index()
         dt_idx.datetime_index.data.data.extend([1, 2, 3])
         self.assertEqual(3, data_frame_proto._index_len(dt_idx))
 
         # TimeDelta
-        td_idx = protobuf.Index()
+        td_idx = Index()
         td_idx.timedelta_index.data.data.extend([1, 2, 3, 4])
         self.assertEqual(4, data_frame_proto._index_len(td_idx))
 
         # Ine64
-        i64_idx = protobuf.Index()
+        i64_idx = Index()
         i64_idx.int_64_index.data.data.extend([1, 2, 3, 4, 5])
         self.assertEqual(5, data_frame_proto._index_len(i64_idx))
 
         # Float64
-        f64_idx = protobuf.Index()
+        f64_idx = Index()
         f64_idx.float_64_index.data.data.extend([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
         self.assertEqual(6, data_frame_proto._index_len(f64_idx))
 
@@ -686,7 +705,7 @@ class DataFrameProtoTest(unittest.TestCase):
         ]
 
         for kind, length, array in data:
-            aa = protobuf.AnyArray()
+            aa = AnyArray()
             pb = getattr(aa, kind)
             pb.data.extend(array)
             self.assertEqual(length, data_frame_proto._any_array_len(aa))

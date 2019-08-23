@@ -6,8 +6,8 @@
    :titlesonly:
    :glob:
 
-   tutorial_first_steps
-   tutorial_caching
-   tutorial_create_an_interactive_report
-   tutorial_remote_usage
+   first_steps
+   caching_mapping_more
+   create_interactive_report
+   run_streamlit_remotely
 ```

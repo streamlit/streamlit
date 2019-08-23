@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-message Selectbox {
-  string id = 1;
-  string label = 2;
-  int32 value = 3;
-  repeated string options = 4;
-}

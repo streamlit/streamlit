@@ -1,13 +1,25 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Tests widget-related functionality"""
 
 import unittest
 
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 from streamlit.widgets import coalesce_widget_states
-from streamlit.widgets import reset_widget_triggers
 
 
 def _create_widget(id, states):
@@ -45,9 +57,9 @@ class WidgetTest(unittest.TestCase):
         self.assertEqual(True, widgets.get_widget_value('trigger'))
         self.assertEqual(123, widgets.get_widget_value('int'))
 
-        widgets.set_state(reset_widget_triggers(states))
+        widgets.reset_triggers()
 
-        self.assertEqual(False, widgets.get_widget_value('trigger'))
+        self.assertEqual(None, widgets.get_widget_value('trigger'))
         self.assertEqual(123, widgets.get_widget_value('int'))
 
     def test_coalesce_widget_states(self):

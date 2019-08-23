@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-// Specifies any transformation that was/should be applied to the data.
-enum DataTransform {
-  UNKNOWN = 0;
-  NONE = 1;
-  STACK = 2;
-}

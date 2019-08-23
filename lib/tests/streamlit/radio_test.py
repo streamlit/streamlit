@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """radio unit tests."""
 
@@ -56,16 +69,41 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
+    def test_format_function(self):
+        """Test that it formats options."""
+        arg_options = [{'name': 'john', 'height': 180},
+                       {'name': 'lisa', 'height': 200}]
+        proto_options = ['john', 'lisa']
+
+        st.radio('the label', arg_options,
+                 format_func=lambda x: x['name'])
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.value, 0)
+        self.assertEqual(c.options, proto_options)
+
+    @parameterized.expand([
+        ((),),
+        ([],),
+        (np.array([]),),
+        (pd.Series(np.array([])),)
+    ])
+    def test_no_options(self, options):
+        """Test that it handles no options."""
+        st.radio('the label', options)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.value, 0)
+        self.assertEqual(c.options, [])
+
     def test_invalid_value(self):
         """Test that value must be an int."""
-        st.radio('the label', ('m', 'f'), '1')
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'TypeError')
+        with self.assertRaises(TypeError):
+            st.radio('the label', ('m', 'f'), '1')
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        st.radio('the label', ('m', 'f'), 2)
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'ValueError')
+        with self.assertRaises(ValueError):
+            st.radio('the label', ('m', 'f'), 2)

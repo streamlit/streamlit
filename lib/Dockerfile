@@ -21,8 +21,12 @@ WORKDIR /streamlit
 RUN pipenv install --ignore-pipfile --system --dev
 
 # Generate protobufs
-COPY --from=protobuf protobuf/. /protobuf/
-RUN mkdir -p /streamlit/streamlit/protobuf && protoc --proto_path=/protobuf /protobuf/*.proto --python_out=/streamlit/streamlit/protobuf
+COPY --from=protobuf proto/. /proto/
+RUN mkdir -p /streamlit/streamlit/proto && \
+  protoc \
+    --proto_path=/proto \
+    --python_out=/streamlit \
+    /proto/*.proto
 
 # Copy the frontend static content from the frontend image.
 COPY --from=frontend frontend/. /streamlit/streamlit/static/

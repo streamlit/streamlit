@@ -1,5 +1,17 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Streamlit. Data Science, reimagined.
 
@@ -38,11 +50,13 @@ For more detailed info, see https://streamlit.io/secret/docs.
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims as _setup_2_3_shims, is_running_py3 as _is_running_py3
+
 _setup_2_3_shims(globals())
 
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
+
 _LOGGER = _logger.get_logger('root')
 
 # Give the package a version.
@@ -56,9 +70,11 @@ __version__ = _pkg_resources.get_distribution('streamlit').version
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
+    __installation_id__ = str(
+        _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
 except UnicodeDecodeError:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode('utf-8')))
+    __installation_id__ = str(
+        _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode('utf-8')))
 
 import contextlib as _contextlib
 import functools as _functools
@@ -68,6 +84,8 @@ import textwrap as _textwrap
 import threading as _threading
 import traceback as _traceback
 import types as _types
+import json as _json
+import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
@@ -76,7 +94,6 @@ from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
-
 
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
@@ -89,7 +106,7 @@ def _set_log_level():
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
-# in an alternatve config.
+# in an alternative config.
 _config.on_config_parsed(_set_log_level)
 
 
@@ -97,10 +114,21 @@ def _with_dg(method):
     @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
         ctx = get_report_ctx()
-        dg = ctx.root_dg if ctx is not None else _NULL_DELTA_GENERATOR
+        dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
         return method(dg, *args, **kwargs)
+
     return wrapped_method
 
+
+def _reset(main_dg, sidebar_dg):
+    main_dg._reset()
+    sidebar_dg._reset()
+    global sidebar
+    sidebar = sidebar_dg
+
+
+# Sidebar
+sidebar = _NULL_DELTA_GENERATOR
 
 # DeltaGenerator methods:
 
@@ -148,12 +176,10 @@ warning         = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 _native_chart   = _with_dg(_DeltaGenerator._native_chart)  # noqa: E221
 _text_exception = _with_dg(_DeltaGenerator._text_exception)  # noqa: E221
-_reset          = _with_dg(_DeltaGenerator._reset)  # noqa: E221
 
 # Config
 set_option = _config.set_option
 get_option = _config.get_option
-
 
 # Special methods:
 
@@ -172,7 +198,6 @@ _HELP_TYPES = (
     _types.MethodType,
     _types.ModuleType,
 )
-
 
 if not _is_running_py3():
     _HELP_TYPES = list(_HELP_TYPES)
@@ -282,7 +307,10 @@ def write(*args):
                 string_buffer.append(arg)
             elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
                 flush_buffer()
-                dataframe(arg)  # noqa: F821
+                if len(_np.shape(arg)) > 2:
+                    text(arg)
+                else:
+                    dataframe(arg)  # noqa: F821
             elif isinstance(arg, Exception):
                 flush_buffer()
                 exception(arg)  # noqa: F821
@@ -304,14 +332,17 @@ def write(*args):
             elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
-            elif util.is_keras_model(arg):
+            elif _util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif type(arg) in dict_types:  # noqa: F821
+            elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
+            elif _util.is_namedtuple(arg):
+                flush_buffer()
+                json(_json.dumps(arg._asdict()))
             else:
                 string_buffer.append('`%s`' % str(arg).replace('`', '\\`'))
 
@@ -447,10 +478,11 @@ def echo():
         else:
             filename, start_line = frame[:2]
         yield
+        frame = _traceback.extract_stack()[-3]
         if _is_running_py3():
-            end_line = _traceback.extract_stack()[-3].lineno
+            end_line = frame.lineno
         else:
-            end_line = _traceback.extract_stack()[-3][1]
+            end_line = frame[1]
         lines_to_display = []
         with open(filename) as source_file:
             source_lines = source_file.readlines()

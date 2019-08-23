@@ -1,0 +1,81 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/Audio.proto";
+import "streamlit/proto/Balloons.proto";
+import "streamlit/proto/BokehChart.proto";
+import "streamlit/proto/Button.proto";
+import "streamlit/proto/Chart.proto";
+import "streamlit/proto/Checkbox.proto";
+import "streamlit/proto/DataFrame.proto";
+import "streamlit/proto/DateInput.proto";
+import "streamlit/proto/DeckGlChart.proto";
+import "streamlit/proto/DocString.proto";
+import "streamlit/proto/Empty.proto";
+import "streamlit/proto/Exception.proto";
+import "streamlit/proto/GraphVizChart.proto";
+import "streamlit/proto/Image.proto";
+import "streamlit/proto/Map.proto";
+import "streamlit/proto/PlotlyChart.proto";
+import "streamlit/proto/Progress.proto";
+import "streamlit/proto/Radio.proto";
+import "streamlit/proto/Selectbox.proto";
+import "streamlit/proto/Slider.proto";
+import "streamlit/proto/Text.proto";
+import "streamlit/proto/TextArea.proto";
+import "streamlit/proto/TextInput.proto";
+import "streamlit/proto/TimeInput.proto";
+import "streamlit/proto/VegaLiteChart.proto";
+import "streamlit/proto/Video.proto";
+
+// An element which can be displayed on the screen.
+message Element {
+
+  // An element can be one of the following element types.
+  oneof type {
+    Audio audio = 13;
+    Balloons balloons = 12;
+    BokehChart bokeh_chart = 17;
+    Button button = 19;
+    Chart chart = 4;
+    Checkbox checkbox = 20;
+    DataFrame data_frame = 3;
+    DataFrame table = 11;
+    DateInput date_input = 27;
+    DeckGlChart deck_gl_chart = 15;
+    DocString doc_string = 7;
+    Empty empty = 2;
+    Exception exception = 8;
+    GraphVizChart graphviz_chart = 18;
+    ImageList imgs = 6;
+    Map map = 9;
+    PlotlyChart plotly_chart = 16;
+    Progress progress = 5;
+    Radio radio = 23;
+    Selectbox selectbox = 25;
+    Slider slider = 21;
+    Text text = 1;
+    TextArea text_area = 22;
+    TextInput text_input = 24;
+    TimeInput time_input = 26;
+    VegaLiteChart vega_lite_chart = 10;
+    Video video = 14;
+
+    // Next ID: 28
+  }
+}

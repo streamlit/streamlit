@@ -1,0 +1,47 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+// Contains updated state for each widget in a report
+message WidgetStates {
+  repeated WidgetState widgets = 1;
+}
+
+// State for a single widget
+message WidgetState {
+  string id = 1;
+
+  oneof value {
+    // trigger_value is for buttons. A button's value needs to
+    // auto-revert back to False after the report has been run with
+    // the value set to True. After running the report, the server
+    // will reset all trigger_values in its stored Widget state dict.
+    // (Use bool_value for widgets like checkboxes, whose state persists
+    // beyond a single report run.)
+    bool trigger_value = 2;
+
+    bool bool_value = 3;
+    float float_value = 4;
+    int32 int_value = 5;
+    string string_value = 6;
+    FloatArray float_array_value = 7;
+  }
+}
+
+message FloatArray {
+  repeated float value = 1;
+}

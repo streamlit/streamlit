@@ -1,10 +1,56 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import sys
 import traceback
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
+
+
+def _format_syntax_error_message(exception):
+    """Returns a nicely formatted SyntaxError message that emulates
+    what the Python interpreter outputs, e.g.:
+
+    > File "raven.py", line 3
+    >   st.write('Hello world!!'))
+    >                            ^
+    > SyntaxError: invalid syntax
+
+    Parameters
+    ----------
+    exception : SyntaxError
+
+    Returns
+    -------
+    str
+
+    """
+    return (
+        'File "%(filename)s", line %(lineno)d\n'
+        '  %(text)s\n'
+        '  %(caret_indent)s^\n'
+        '%(errname)s: %(msg)s' %
+        {
+            'filename': exception.filename,
+            'lineno': exception.lineno,
+            'text': exception.text.rstrip(),
+            'caret_indent': ' ' * max(exception.offset - 1, 0),
+            'errname': type(exception).__name__,
+            'msg': exception.msg,
+        })
 
 
 def marshall(exception_proto, exception, exception_traceback=None):
@@ -15,7 +61,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
     exception_proto : Exception.proto
         The Exception protobuf to fill out
 
-    exception : Exception
+    exception : BaseException
         The exception whose data we're extracting
 
     exception_traceback : Exception Traceback or None
@@ -29,7 +75,13 @@ def marshall(exception_proto, exception, exception_traceback=None):
     exception_proto.stack_trace.extend(stack_trace)
 
     try:
-        exception_proto.message = str(exception)
+        if isinstance(exception, SyntaxError):
+            # SyntaxErrors have additional fields (filename, text, lineno,
+            # offset) that we can use for a nicely-formatted message telling
+            # the user what to fix.
+            exception_proto.message = _format_syntax_error_message(exception)
+        else:
+            exception_proto.message = str(exception)
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.

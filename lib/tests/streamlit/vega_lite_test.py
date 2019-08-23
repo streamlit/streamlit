@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """vega_lite unit test."""
 
@@ -35,18 +48,14 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def test_no_args(self):
-        """Test that it can be called with no args."""
-        st.vega_lite_chart()
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'ValueError')
+        """Test that an error is raised when called with no args."""
+        with self.assertRaises(ValueError):
+            st.vega_lite_chart()
 
     def test_none_args(self):
-        """Test that it can be called with args set to None."""
-        st.vega_lite_chart(None, None)
-
-        c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'ValueError')
+        """Test that an error is raised when called with args set to None."""
+        with self.assertRaises(ValueError):
+            st.vega_lite_chart(None, None)
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""

@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-message TimeInput {
-  string id = 1;
-  string label = 2;
-  string value = 3;
-}

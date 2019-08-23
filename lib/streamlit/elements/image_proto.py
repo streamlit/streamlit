@@ -1,5 +1,20 @@
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Image marshalling."""
-__copyright__ = 'Copyright 2019 Streamlit Inc. All rights reserved.'
+
 import base64
 import io
 import imghdr
@@ -14,10 +29,10 @@ from urllib.parse import urlparse
 
 LOGGER = get_logger(__name__)
 
-
-def _PIL_to_png_bytes(image):
+def _PIL_to_bytes(image, format='JPEG', quality=100):
+    format = format.upper()
     tmp = io.BytesIO()
-    image.save(tmp, format='PNG')
+    image.save(tmp, format=format, quality=quality)
     return tmp.getvalue()
 
 
@@ -26,10 +41,10 @@ def _BytesIO_to_bytes(data):
     return data.getvalue()
 
 
-def _np_array_to_png_bytes(array):
+def _np_array_to_bytes(array, format='JPEG'):
     tmp = io.BytesIO()
     img = Image.fromarray(array.astype(np.uint8))
-    img.save(tmp, format='PNG')
+    img.save(tmp, format=format)
     return tmp.getvalue()
 
 
@@ -51,17 +66,27 @@ def _verify_np_shape(array):
     return array
 
 
-def _bytes_to_b64(data, width):
+def _bytes_to_b64(data, width, format):
+    format = format.lower()
     ext = imghdr.what(None, data)
-    mime_type = mimetypes.guess_type('image.%s' % ext)[0]
+
+    if format is None:
+        mime_type = mimetypes.guess_type('image.%s' % ext)[0]
+    else:
+        mime_type = 'image/' + format
 
     if width > 0:
         image = Image.open(io.BytesIO(data))
         w, h = image.size
         if w > width:
             image = image.resize((width, int(1.0 * h * width / w)))
-            data = _PIL_to_png_bytes(image)
-            mime_type = 'image/png'
+            data = _PIL_to_bytes(image, format=format, quality=80)
+
+            if format is None:
+                mime_type = 'image/png'
+            else:
+                mime_type = 'image/' + format
+
     b64 = base64.b64encode(data).decode('utf-8')
     return (b64, mime_type)
 
@@ -86,7 +111,11 @@ def _clip_image(image, clamp):
     return data
 
 
-def marshall_images(image, caption, width, proto_imgs, clamp):
+def marshall_images(image, caption, width, proto_imgs, clamp,
+                    channels='RGB', format='JPEG'):
+
+    channels = channels.upper()
+
     # Turn single image and caption into one element list.
     if type(image) is list:
         images = image
@@ -126,7 +155,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
         # PIL Images
         if isinstance(image, ImageFile.ImageFile) or isinstance(
                 image, Image.Image):
-            data = _PIL_to_png_bytes(image)
+            data = _PIL_to_bytes(image, format)
 
         # BytesIO
         elif type(image) is io.BytesIO:
@@ -136,7 +165,16 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
         elif type(image) is np.ndarray:
             data = _verify_np_shape(image)
             data = _clip_image(data, clamp)
-            data = _np_array_to_png_bytes(data)
+
+            if channels == 'BGR':
+                if len(data.shape) == 3:
+                    data = data[:, :, [2, 1, 0]]
+                else:
+                    raise RuntimeError(
+                        'When using `channels="BGR"`, the input image should '
+                        'have exactly 3 color channels')
+
+            data = _np_array_to_bytes(data, format=format)
 
         # Strings
         elif isinstance(image, six.string_types):
@@ -163,7 +201,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp):
         else:
             data = image
 
-        (b64, mime_type) = _bytes_to_b64(data, width)
+        (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
         proto_img.data.mime_type = mime_type

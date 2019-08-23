@@ -1,31 +1,21 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
 # -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import copy
 from pprint import pprint
 
-from streamlit.protobuf.BackMsg_pb2 import WidgetStates
-
-
-def reset_widget_triggers(widget_states):
-    """Resets all widget trigger values to False.
-
-    Parameters
-    ----------
-    widget_states : WidgetStates
-        A WidgetStates protobuf
-
-    Returns
-    -------
-    WidgetStates
-        A copy of the passed-in value, with triggers set to False
-    """
-    widget_states = copy.deepcopy(widget_states)
-    for wstate in widget_states.widgets:
-        if wstate.WhichOneof('value') == 'trigger_value':
-            wstate.trigger_value = False
-
-    return widget_states
+from streamlit.proto.Widget_pb2 import WidgetStates
 
 
 def coalesce_widget_states(old_states, new_states):
@@ -116,6 +106,32 @@ class Widgets(object):
         self._state = {}
         for wstate in widget_states.widgets:
             self._state[wstate.id] = wstate
+
+    def get_state(self):
+        """
+        Returns
+        -------
+        WidgetStates
+            A new WidgetStates protobuf containing the contents of
+            our widget state dictionary.
+
+        """
+        states = WidgetStates()
+        states.widgets.extend(self._state.values())
+        return states
+
+    def reset_triggers(self):
+        """Removes all trigger values in our state dictionary.
+
+        (All trigger values default to False, so removing them is equivalent
+        to resetting them from True to False.)
+
+        """
+        prev_state = self._state
+        self._state = {}
+        for wstate in prev_state.values():
+            if wstate.WhichOneof('value') != 'trigger_value':
+                self._state[wstate.id] = wstate
 
     def set_item(self, key, value):
         self._state[key] = value

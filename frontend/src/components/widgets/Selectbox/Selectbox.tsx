@@ -1,6 +1,18 @@
 /**
  * @license
- * Copyright 2019 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import {logWarning} from 'lib/log'
@@ -60,9 +72,17 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
-    const options = this.props.element.get('options')
-    const style = { width: this.props.width }
+    const { element, width } = this.props
+
+    const style = { width }
+    const label = element.get('label')
+    let options = element.get('options')
+    let disabled = this.props.disabled
+
+    if (options.size === 0) {
+      options = ['No options to select.']
+      disabled = true
+    }
 
     let selectOptions: SelectOption[] = []
     options.forEach((option: string, idx: number) => (
@@ -82,7 +102,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.valueOrDefault}
           clearable={false}
-          disabled={this.props.disabled}
+          disabled={disabled}
         />
       </div>
     )

@@ -1,27 +1,26 @@
 /**
  * @license
- * Copyright 2018 Streamlit Inc. All rights reserved.
+ * Copyright 2018-2019 Streamlit Inc.
  *
- * WebsocketConnection State Machine:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   INITIAL
- *     │
- *     │               on conn succeed
- *     v               :
- *   CONNECTING ───────────────> CONNECTED
- *     │  ^                          │
- *     │  │:on ping succeed          │
- *     │:on timeout/error/closed     │
- *     v  │                          │:on error/closed
- *   PINGING_SERVER <────────────────┘
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-import React from 'react'
+import React, { Fragment } from 'react'
 import Resolver from 'lib/Resolver'
-import {ConnectionState} from 'lib/ConnectionState'
-import {ForwardMsg, BackMsg, IBackMsg} from 'autogen/protobuf'
-import {logMessage, logWarning, logError} from 'lib/log'
+import { SessionInfo } from 'lib/SessionInfo'
+import { ConnectionState } from 'lib/ConnectionState'
+import { ForwardMsg, BackMsg, IBackMsg } from 'autogen/proto'
+import { logMessage, logWarning, logError } from 'lib/log'
 
 
 /**
@@ -31,7 +30,7 @@ const LOG = 'WebsocketConnection'
 
 
 /**
- * The path where we should ping (via HTTP) to see if the server.
+ * The path where we should ping (via HTTP) to see if the server is up.
  */
 const SERVER_PING_PATH = 'healthz'
 
@@ -90,6 +89,21 @@ interface MessageQueue {
 }
 
 
+/**
+ * Events of the WebsocketConnection state machine. Here's what the FSM looks
+ * like:
+ *
+ *   INITIAL
+ *     │
+ *     │               on conn succeed
+ *     v               :
+ *   CONNECTING ───────────────> CONNECTED
+ *     │  ^                          │
+ *     │  │:on ping succeed          │
+ *     │:on timeout/error/closed     │
+ *     v  │                          │:on error/closed
+ *   PINGING_SERVER <────────────────┘
+ */
 type Event =
   'INITIALIZED'
   | 'CONNECTION_CLOSED'
@@ -441,51 +455,69 @@ function doHealthPing(
     window.setTimeout(retryImmediately, retryTimeout)
   }
 
-  connect = () => {
-    // Using XHR because it supports timeouts.
-    const xhr = new XMLHttpRequest()
+  // Using XHR because it supports timeouts.
+  // The location of this declaration matters, as XMLHttpRequests can lead to a
+  // memory leak when initialized inside a callback. See
+  // https://stackoverflow.com/a/40532229 for more info.
+  const xhr = new XMLHttpRequest()
 
-    const uri = uriList[uriNumber]
-    xhr.open('GET', uri, true)
-    logMessage(LOG, `Attempting to connect to ${uri}.`)
+  xhr.timeout = timeoutMs
 
-    xhr.timeout = timeoutMs
-    tryTimestamp = Date.now()
+  xhr.onload = () => {
+    if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+      resolver.resolve(uriNumber)
+    } else {
+      retry('Connected, but response is not "ok" or has bad status.')
+    }
+  }
 
-    xhr.onload = () => {
-      if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+  xhr.onreadystatechange = () => {
+    if (xhr.readyState === /* DONE */ 4) {
+      if (xhr.responseText === 'ok') {
         resolver.resolve(uriNumber)
-      } else {
-        retry('Connected, but response is not "ok" or has bad status.')
-      }
-    }
 
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === /* DONE */ 4) {
-        if (xhr.responseText === 'ok') {
-          resolver.resolve(uriNumber)
-        } else if (xhr.status === /* NO RESPONSE */ 0) {
-          if (uri.startsWith('//localhost:')) {
-            retry(
-              <React.Fragment>
-                <strong>Is Streamlit running?</strong>{' '}
-                Try calling <code>streamlit run yourscript.py</code> on a terminal.
-              </React.Fragment>
-            )
-          } else {
-            retry('Connection failed with status 0.')
-          }
-        } else {
+      } else if (xhr.status === /* NO RESPONSE */ 0) {
+        const uri = uriList[uriNumber]
+        if (uri.startsWith('//localhost:')) {
+
+          const scriptname =
+            SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
+              SessionInfo.current.commandLine[0] : 'yourscript.py'
+
           retry(
-            `Connection failed with status ${xhr.status}, ` +
-            `and response "${xhr.responseText}".`)
+            <Fragment>
+              <p>
+                Is Streamlit still running? If you accidentally stopped
+                Streamlit, just restart it in your terminal:
+              </p>
+              <pre>
+                <code>
+                  $ streamlit run {scriptname}
+                </code>
+              </pre>
+            </Fragment>
+          )
+        } else {
+          retry('Connection failed with status 0.')
         }
+
+      } else {
+        retry(
+          `Connection failed with status ${xhr.status}, ` +
+          `and response "${xhr.responseText}".`)
       }
     }
+  }
 
-    xhr.ontimeout = (e) => {
-      retry('Connection timed out.')
-    }
+  xhr.ontimeout = (e) => {
+    retry('Connection timed out.')
+  }
+
+  connect = () => {
+    const uri = uriList[uriNumber]
+    logMessage(LOG, `Attempting to connect to ${uri}.`)
+    tryTimestamp = Date.now()
+    xhr.open('GET', uri, true)
 
     if (uriNumber === 0) {
       totalTries++

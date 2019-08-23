@@ -13,8 +13,31 @@
 // https://on.cypress.io/configuration
 // ***********************************************************
 
-// Import commands.js using ES2015 syntax:
 import './commands'
 
-// Alternatively you can use CommonJS syntax:
-// require('./commands')
+const addContext = require('mochawesome/addContext')
+
+// Thiago has anti-aliasing setup on his machine so we match it in the tests
+const isStyleLoaded = head => head.find('#st-font-antialiased').length > 0
+
+beforeEach(() => {
+  const head = Cypress.$(parent.window.document.head)
+
+  if (isStyleLoaded(head)) {
+    return
+  }
+
+  const css = `
+    body {
+      -webkit-font-smoothing: antialiased;
+    }
+  `
+  head.append(`<style type="text/css" id="st-font-antialiased">\n${css}</style>`)
+})
+
+Cypress.on('test:after:run', (test, runnable) => {
+  if (test.state === 'failed') {
+    const screenshotFileName = `${runnable.parent.title} -- ${test.title} (failed).png`
+    addContext({ test }, `assets/${Cypress.spec.name}/${screenshotFileName}`)
+  }
+})

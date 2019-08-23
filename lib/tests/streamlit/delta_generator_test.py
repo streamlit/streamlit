@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """DeltaGenerator Unittest."""
 
@@ -17,7 +30,8 @@ try:
 except ImportError:
     from funcsigs import signature
 
-from streamlit import protobuf
+from streamlit.proto.Text_pb2 import Text
+from streamlit.proto.Delta_pb2 import Delta
 from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
         _clean_up_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
@@ -41,7 +55,7 @@ class FakeDeltaGenerator(object):
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
-        element.text.format = protobuf.Text.PLAIN
+        element.text.format = Text.PLAIN
 
     def fake_dataframe(self, element, arg0, data=None):
         """Fake dataframe.
@@ -72,7 +86,7 @@ class FakeDeltaGenerator(object):
         to test _with_element we just need this method to exist.  The
         real enqueue_new_element_delta will be tested later on.
         """
-        delta = protobuf.Delta()
+        delta = Delta()
         marshall_element(delta.new_element)
         return delta
 
@@ -141,9 +155,11 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
         dg = FakeDeltaGenerator()
         data = 'some_text'
-        wrapped(dg, data)
-        self.assertEqual(
-            dg._exception_msg, 'Exception in fake_text_raise_exception')
+        with self.assertRaises(Exception) as ctx:
+            wrapped(dg, data)
+
+        self.assertTrue(
+            'Exception in fake_text_raise_exception' in str(ctx.exception))
 
     def set_widget_requires_args(self):
         st.text_input()
@@ -220,13 +236,13 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text Proto Class."""
 
     def test_generic_text(self):
-        """Test protobuf.Text generic str(body) stuff."""
+        """Test Text generic str(body) stuff."""
         test_data = {
-            'text': protobuf.Text.PLAIN,
-            'error': protobuf.Text.ERROR,
-            'warning': protobuf.Text.WARNING,
-            'info': protobuf.Text.INFO,
-            'success': protobuf.Text.SUCCESS,
+            'text': Text.PLAIN,
+            'error': Text.ERROR,
+            'warning': Text.WARNING,
+            'info': Text.INFO,
+            'success': Text.SUCCESS,
         }
 
         # Test with string input.
@@ -252,7 +268,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(format, getattr(element, 'text').format)
 
     def test_json_object(self):
-        """Test protobuf.Text.JSON object."""
+        """Test Text.JSON object."""
         json_data = {
             'key': 'value',
         }
@@ -264,10 +280,10 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.text.body)
-        self.assertEqual(protobuf.Text.JSON, element.text.format)
+        self.assertEqual(Text.JSON, element.text.format)
 
     def test_json_string(self):
-        """Test protobuf.Text.JSON string."""
+        """Test Text.JSON string."""
         json_string = u'{"key": "value"}'
 
         # Testing JSON string
@@ -275,10 +291,10 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.text.body)
-        self.assertEqual(protobuf.Text.JSON, element.text.format)
+        self.assertEqual(Text.JSON, element.text.format)
 
     def test_json_unserializable(self):
-        """Test protobuf.Text.JSON with unserializable object."""
+        """Test Text.JSON with unserializable object."""
         obj = json  # Modules aren't serializable.
 
         # Testing unserializable object.
@@ -289,17 +305,17 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual('"<class \'module\'>"', element.text.body)
         else:
             self.assertEqual('"<type \'module\'>"', element.text.body)
-        self.assertEqual(protobuf.Text.JSON, element.text.format)
+        self.assertEqual(Text.JSON, element.text.format)
 
     def test_markdown(self):
-        """Test protobuf.Text.MARKDOWN."""
+        """Test Text.MARKDOWN."""
         test_string = '    data         '
 
         st.markdown(test_string)
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(u'data', element.text.body)
-        self.assertEqual(protobuf.Text.MARKDOWN, element.text.format)
+        self.assertEqual(Text.MARKDOWN, element.text.format)
 
     def test_code(self):
         """Test st.code()"""
@@ -311,11 +327,11 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         # st.code() creates a MARKDOWN text object that wraps
         # the body inside a codeblock declaration
-        self.assertEqual(element.text.format, protobuf.Text.MARKDOWN)
+        self.assertEqual(element.text.format, Text.MARKDOWN)
         self.assertEqual(element.text.body, expected_body)
 
     def test_empty(self):
-        """Test protobuf.Empty."""
+        """Test Empty."""
         st.empty()
 
         element = self.get_delta_from_queue().new_element
@@ -326,7 +342,7 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Progress."""
 
     def test_progress_int(self):
-        """Test protobuf.Progress with int values."""
+        """Test Progress with int values."""
         values = [0, 42, 100]
         for value in values:
             st.progress(value)
@@ -335,7 +351,7 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(value, element.progress.value)
 
     def test_progress_float(self):
-        """Test protobuf.Progress with float values."""
+        """Test Progress with float values."""
         values = [0.0, 0.42, 1.0]
         for value in values:
             st.progress(value)
@@ -344,18 +360,14 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(int(value * 100), element.progress.value)
 
     def test_progress_bad_values(self):
-        """Test protobuf.Progress with bad values."""
+        """Test Progress with bad values."""
         values = [-1, 101, -0.01, 1.01]
         for value in values:
-            st.progress(value)
+            with self.assertRaises(ValueError):
+                st.progress(value)
 
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(element.exception.type, 'ValueError')
-
-        st.progress('some string')
-
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.exception.type, 'TypeError')
+        with self.assertRaises(TypeError):
+            st.progress('some string')
 
 
 class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
@@ -426,8 +438,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         url = 'https://streamlit.io/an_image.png'
         caption = 'ahoy!'
 
-        st.image([url] * 5, caption=[caption] * 2)
-
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.exception.message,
-                         'Cannot pair 2 captions with 5 images.')
+        with self.assertRaises(Exception) as ctx:
+            st.image([url] * 5, caption=[caption] * 2)
+        self.assertTrue(
+            'Cannot pair 2 captions with 5 images.' in str(ctx.exception))

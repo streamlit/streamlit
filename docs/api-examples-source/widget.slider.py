@@ -1,5 +1,11 @@
 import streamlit as st
 
-w = st.slider('Age', 18, min=0, max=100, step=1)
-if w > 20:
-    print('You can drink now!')
+st.subheader('Slider')
+with st.echo():
+    age = st.slider('How old are you?', 25, 0, 130)
+    st.write('I\'m ', age, 'years old.' )
+
+st.subheader('Range slider')
+with st.echo():
+    values = st.slider('Select a range of values', (25.0, 75.0), 0.0, 100.0, 1.0)
+    st.write("Values:", values)

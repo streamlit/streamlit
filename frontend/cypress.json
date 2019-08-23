@@ -1,1 +1,9 @@
-{}
+{
+  "projectId": "fa9nep",
+  "reporter": "mocha-multi-reporters",
+  "reporterOptions": {
+    "configFile": "reporter-config.json"
+  },
+  "screenshotsFolder": "mochawesome-report/assets",
+  "trashAssetsBeforeRuns": false
+}

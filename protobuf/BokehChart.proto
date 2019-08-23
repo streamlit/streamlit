@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message BokehChart {
-  // A JSON-formatted string from the Bokeh chart figure.
-  string figure = 1;
-}
