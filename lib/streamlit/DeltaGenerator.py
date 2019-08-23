@@ -1755,6 +1755,7 @@ class DeltaGenerator(object):
            height: 600px
 
         """
+
         import streamlit.elements.map as map
         map.marshall(element, data, zoom)
 

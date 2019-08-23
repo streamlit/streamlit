@@ -95,8 +95,15 @@ def marshall(element, data, zoom = None):
             See DeltaGenerator.deck_gl_chart for docs.
         """
 
+        LAT_LON = ['lat', 'lon']
+        if not set(data.columns) >= set(LAT_LON):
+            raise Exception('Map data must contain "lat" and "lon" columns.')
+        if (data['lon'].isnull().values.any() or
+            data['lat'].isnull().values.any()):
+            raise Exception('Map data must be numeric.')
+
         if isinstance(data, pd.DataFrame):
-            bounding = get_bounding_rectangle(data.values)
+            bounding = get_bounding_rectangle(data[LAT_LON].values)
         else:
             bounding = get_bounding_rectangle(data)
 
