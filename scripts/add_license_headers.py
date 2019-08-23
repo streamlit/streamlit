@@ -39,6 +39,7 @@ EXCLUDE_PATTERNS = [
     '/static/',
     '/vendor/',
     '/react-app-env.d.ts',
+    '/css/variables.scss',  # scss-to-json doesn't like our normal header.
 ]
 
 THIS_YEAR = datetime.now().year
