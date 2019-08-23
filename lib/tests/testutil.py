@@ -52,10 +52,12 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.report_queue = ReportQueue()
 
         if override_root:
-            dg = self.new_delta_generator()
+            main_dg = self.new_delta_generator()
+            sidebar_dg = self.new_delta_generator()
             setattr(threading.current_thread(),
                     REPORT_CONTEXT_ATTR_NAME,
-                    ReportContext(root_dg=dg, widgets=Widgets()))
+                    ReportContext(main_dg=main_dg, sidebar_dg=sidebar_dg,
+                                  widgets=Widgets()))
 
     def tearDown(self):
         self.report_queue._clear()

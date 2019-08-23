@@ -24,7 +24,7 @@ it('renders without crashing', () => {
   const mountPoint = document.createElement('div')
   const props = {
     element: ImmutableMap({ 'figure': null }),
-    id: 0,
+    index: 0,
     width: 0,
   }
   ReactDOM.render(<BokehChart {...props} />, mountPoint)

@@ -47,7 +47,7 @@ class ScriptRunnerEvent(Enum):
 
 
 class ScriptRunner(object):
-    def __init__(self, report, root_dg, widget_states, request_queue):
+    def __init__(self, report, main_dg, sidebar_dg, widget_states, request_queue):
         """Initialize the ScriptRunner.
 
         (The ScriptRunner won't start executing until start() is called.)
@@ -57,8 +57,11 @@ class ScriptRunner(object):
         report : Report
             The ReportSession's report.
 
-        root_dg : DeltaGenerator
-            The ReportSession's root DeltaGenerator.
+        main_dg : DeltaGenerator
+            The ReportSession's main DeltaGenerator.
+
+        sidebar_dg : DeltaGenerator
+            The ReportSession's sidebar DeltaGenerator.
 
         widget_states : streamlit.proto.Widget_pb2.WidgetStates
             The ReportSession's current widget states
@@ -70,7 +73,8 @@ class ScriptRunner(object):
 
         """
         self._report = report
-        self._root_dg = root_dg
+        self._main_dg = main_dg
+        self._sidebar_dg = sidebar_dg
         self._request_queue = request_queue
 
         self._widgets = Widgets()
@@ -115,7 +119,8 @@ class ScriptRunner(object):
             raise Exception('ScriptRunner was already started')
 
         self._script_thread = ReportThread(
-            root_dg=self._root_dg,
+            main_dg=self._main_dg,
+            sidebar_dg=self._sidebar_dg,
             widgets=self._widgets,
             target=self._process_request_queue,
             name='ScriptRunner.scriptThread')
@@ -225,7 +230,7 @@ class ScriptRunner(object):
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st
-        st._reset()
+        st._reset(self._main_dg, self._sidebar_dg)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
@@ -302,7 +307,7 @@ class ScriptRunner(object):
             # IMPORTANT: This means we can't count on sys.argv in our code ---
             # but we already knew it from the argv surgery in cli.py.
             # TODO: Remove this feature when we implement interactivity!
-            #  This is not robust in a multi-user environment.
+            # This is not robust in a multi-user environment.
             sys.argv = argv
 
             # Add special variables to the module's globals dict.
@@ -320,6 +325,7 @@ class ScriptRunner(object):
         except BaseException as e:
             # Show exceptions in the Streamlit report.
             LOGGER.debug(e)
+            import streamlit as st
             st.exception(e)  # This is OK because we're in the script thread.
             # TODO: Clean up the stack trace, so it doesn't include
             # ScriptRunner.

@@ -20,8 +20,11 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 ReportContext = namedtuple('ReportContext', [
-    # The root DeltaGenerator for the report
-    'root_dg',
+    # The main DeltaGenerator for the report
+    'main_dg',
+
+    # The sidebar DeltaGenerator for the report
+    'sidebar_dg',
 
     # The Widgets state object for the report
     'widgets',
@@ -32,9 +35,9 @@ REPORT_CONTEXT_ATTR_NAME = 'streamlit_report_ctx'
 
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
-    def __init__(self, root_dg, widgets, target=None, name=None):
+    def __init__(self, main_dg, sidebar_dg, widgets, target=None, name=None):
         super(ReportThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = ReportContext(root_dg, widgets)
+        self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets)
 
 
 def add_report_ctx(thread):

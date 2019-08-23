@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/BlockPath.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
@@ -24,15 +25,21 @@ message Delta {
   // Each delta applies to a particular ID.
   uint32 id = 1;
 
+  // Path to parent block.
+  BlockPath parent_block = 2;
+
   // There are two kinds of supported deltas.
   oneof type {
     // Append a new element to the report.
-    Element new_element = 2;
+    Element new_element = 3;
+
+    // Append a new block to the report.
+    bool new_block = 4;
 
     // Append data to a DataFrame in for current element. The element to add to
     // is identified by the ID field, above. The dataframe is identified either
     // by NamedDataSet.name or by setting NamedDataSet.has_name to false.
     // All elements that contain a DataFrame should support add_rows.
-    NamedDataSet add_rows = 3;
+    NamedDataSet add_rows = 5;
   }
 }

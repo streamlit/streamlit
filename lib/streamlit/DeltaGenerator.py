@@ -16,7 +16,8 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -31,8 +32,9 @@ from datetime import date
 from datetime import time
 
 from streamlit import metrics
-from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Balloons_pb2
+from streamlit.proto import BlockPath_pb2
+from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 from streamlit import get_report_ctx
 
@@ -121,6 +123,7 @@ def _with_element(method):
     def wrapped_method(self, *args, **kwargs):
         def marshall_element(element):
             return method(self, element, *args, **kwargs)
+
         return self._enqueue_new_element_delta(marshall_element)
 
     return wrapped_method
@@ -172,7 +175,8 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, enqueue, id=0, is_root=True):
+    def __init__(self, enqueue, id=0, is_root=True,
+                 container=BlockPath_pb2.BlockPath.MAIN, path=()):
         """Constructor.
 
         Parameters
@@ -188,6 +192,8 @@ class DeltaGenerator(object):
         self._enqueue = enqueue
         self._id = id
         self._is_root = is_root
+        self._container = container
+        self._path = path
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
@@ -210,6 +216,7 @@ class DeltaGenerator(object):
             element.
 
         """
+
         def value_or_dg(value, dg):
             """Widgets have return values unlike other elements and may want to
             return `None`. We create a special `NoValue` class for this scenario
@@ -225,6 +232,8 @@ class DeltaGenerator(object):
         if marshall_element:
             msg = ForwardMsg_pb2.ForwardMsg()
             rv = marshall_element(msg.delta.new_element)
+            msg.delta.parent_block.container = self._container
+            msg.delta.parent_block.path[:] = self._path
             msg.delta.id = self._id
 
         # "Null" delta generators (those without queues), don't send anything.
@@ -250,6 +259,29 @@ class DeltaGenerator(object):
             self._id += 1
 
         return value_or_dg(rv, output_dg)
+
+    def _block(self):
+        if self._enqueue is None:
+            return self
+
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg.delta.new_block = True
+        msg.delta.parent_block.container = self._container
+        msg.delta.parent_block.path[:] = self._path
+        msg.delta.id = self._id
+
+        new_block_dg = DeltaGenerator(
+            enqueue=self._enqueue,
+            id=0,
+            is_root=True,
+            container=self._container,
+            path=self._path + (self._id,)
+        )
+
+        self._enqueue(msg)
+        self._id += 1
+
+        return new_block_dg
 
     @_with_element
     def balloons(self, element):
@@ -727,7 +759,8 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0,
+                        **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1948,6 +1981,8 @@ class DeltaGenerator(object):
                 'Method requires exactly one dataset')
 
         msg = ForwardMsg_pb2.ForwardMsg()
+        msg.delta.parent_block.container = self._container
+        msg.delta.parent_block.path[:] = self._path
         msg.delta.id = self._id
 
         data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)

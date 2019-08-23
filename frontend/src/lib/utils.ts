@@ -15,12 +15,15 @@
  * limitations under the License.
  */
 
+import url from 'url'
 import xxhash from 'xxhashjs'
+import { fromJS, Map as ImmutableMap } from 'immutable'
+import { Text as TextProto } from 'autogen/proto'
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
  * (specified in milliseconds). If the wrapper function is called N times
- * within that interval, only the Nth call will go through.  The function
+ * within that interval, only the Nth call will go through. The function
  * will only be called after the full interval has elapsed since the last
  * call.
  */
@@ -39,8 +42,35 @@ export function debounce(delay: number, fn: any): any {
   }
 }
 
+/**
+ * Returns true if the URL parameters indicated that we're embedded in an
+ * iframe.
+ */
+export function isEmbeddedInIFrame(): boolean {
+  return url.parse(window.location.href, true).query.embed === 'true'
+}
 
+/**
+ * A helper function to make an ImmutableJS
+ * info element from the given text.
+ */
 
-export function hashString(str: string): string {
-  return xxhash.h32(str, 0xDEADBEEF).toString(16)
+type Element = ImmutableMap<string, any>
+
+export function makeElementWithInfoText(text: string): Element {
+  return fromJS({
+    type: 'text',
+    text: {
+      format: TextProto.Format.INFO,
+      body: text,
+    },
+  })
+}
+
+/**
+ * A helper function to hash a string using xxHash32 algorithm.
+ * Seed used: 0xDEADBEEF
+ */
+export function hashString(s: string): string {
+  return xxhash.h32(s, 0xDEADBEEF).toString(16)
 }

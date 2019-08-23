@@ -16,15 +16,15 @@
  */
 
 import React from 'react'
-import ErrorElement from '../ErrorElement'
-import {logError} from '../../../lib/log'
+import ErrorElement from 'components/shared/ErrorElement/'
+import {logError} from 'lib/log'
 
 export interface Props {
   width?: number;
 }
 
 export interface State {
-  error?: Error|null;
+  error?: Error | null;
 }
 
 /**
@@ -32,11 +32,8 @@ export interface State {
  * rendering child components.
  */
 class ErrorBoundary extends React.PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
-    this.state = {
-      error: null,
-    }
+  public state: State = {
+    error: null,
   }
 
   public static getDerivedStateFromError = (error: Error): State => {
@@ -55,7 +52,12 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
 
     if (error) {
       return (
-        <ErrorElement width={this.props.width} name={error.name} message={error.message} stack={error.stack}/>
+        <ErrorElement
+          width={this.props.width}
+          name={error.name}
+          message={error.message}
+          stack={error.stack}
+        />
       )
     }
     return this.props.children

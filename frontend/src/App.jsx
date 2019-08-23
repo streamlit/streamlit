@@ -15,60 +15,56 @@
  * limitations under the License.
  */
 
-/*jshint loopfunc:false */
-
-import React, { PureComponent } from 'react'
+import React, { Fragment, PureComponent } from 'react'
+import { Col, Container, Row } from 'reactstrap'
 import { HotKeys } from 'react-hotkeys'
-import {
-  Col,
-  Container,
-  Row,
-} from 'reactstrap'
-import url from 'url'
-import { fromJS } from 'immutable'
+import { fromJS, List } from 'immutable'
 
 // Other local imports.
+import ReportView from 'components/core/ReportView/'
+import { StatusWidget } from 'components/core/StatusWidget/'
 import LoginBox from 'components/core/LoginBox/'
 import MainMenu from 'components/core/MainMenu/'
-import Resolver from 'lib/Resolver'
 import { StreamlitDialog, DialogType } from 'components/core/StreamlitDialog/'
+import Resolver from 'lib/Resolver'
 import { ConnectionManager } from 'lib/ConnectionManager'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
-import { StatusWidget } from 'components/core/StatusWidget/'
 import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
-import { ReportView } from 'components/core/ReportView/'
+import { applyDelta } from 'lib/DeltaParser'
 
-import { Delta, Text as TextProto } from 'autogen/proto'
 import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
 import { SessionInfo } from 'lib/SessionInfo'
-import { addRows } from 'lib/dataFrameProto'
-import { hashString } from 'lib/util'
-import { logError, logMessage } from 'lib/log'
 import { MetricsManager } from 'lib/MetricsManager'
-import { toImmutableProto, dispatchOneOf } from 'lib/immutableProto'
+import { hashString, isEmbeddedInIFrame, makeElementWithInfoText } from 'lib/utils'
+import { logError, logMessage } from 'lib/log'
 
+// WARNING: order matters
 import 'assets/css/theme.scss'
 import './App.scss'
 import 'assets/css/header.scss'
-
 
 class App extends PureComponent {
   constructor(props) {
     super(props)
 
     this.state = {
+      connectionState: ConnectionState.INITIAL,
+      elements: {
+        main: fromJS([
+          makeElementWithInfoText('Please wait...'),
+        ]),
+        sidebar: fromJS([]),
+      },
       reportId: '<null>',
       reportName: null,
-      elements: fromJS([makeElementWithInfoText('Please wait...')]),
+      reportRunState: ReportRunState.NOT_RUNNING,
+      showLoginBox: false,
       userSettings: {
         wideMode: false,
         runOnSave: false,
       },
-      showLoginBox: false,
-      reportRunState: ReportRunState.NOT_RUNNING,
-      connectionState: ConnectionState.INITIAL,
     }
 
     // Bind event handlers.
@@ -178,12 +174,10 @@ class App extends PureComponent {
         sessionStateChanged: msg => this.handleSessionStateChanged(msg),
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
-        delta: deltaMsg => this.applyDelta(toImmutableProto(Delta, deltaMsg)),
+        delta: deltaMsg => this.handleDeltaMsg(deltaMsg),
         reportFinished: () => this.handleReportFinished(),
-        uploadReportProgress: progress =>
-          this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
-        reportUploaded: url =>
-          this.openDialog({ url, type: DialogType.UPLOADED }),
+        uploadReportProgress: progress => this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
+        reportUploaded: url => this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
       this.showError(err.message)
@@ -323,8 +317,30 @@ class App extends PureComponent {
     // from its previous run - unless our script had a fatal error during
     // execution.
     if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
-      this.clearOldElements()
+      this.setState(({ elements, reportId }) => ({
+        elements: {
+          main: this.clearOldElements(elements.main, reportId),
+          sidebar: this.clearOldElements(elements.sidebar, reportId),
+        },
+      }))
     }
+  }
+
+  /**
+   * Removes old elements. The term old is defined as:
+   *  - simple elements whose reportIds are no longer current
+   *  - empty block elements
+   */
+  clearOldElements = (elements, reportId) => {
+    return elements
+      .map(element => {
+        if (element instanceof List) {
+          const clearedElements = this.clearOldElements(element, reportId)
+          return clearedElements.size > 0 ? clearedElements : null
+        }
+        return element.get('reportId') === reportId ? element : null
+      })
+      .filter(element => element !== null)
   }
 
   /**
@@ -356,45 +372,28 @@ class App extends PureComponent {
     const prevRunOnSave = this.state.userSettings.runOnSave
     const runOnSave = newSettings.runOnSave
 
-    this.setState({userSettings: newSettings})
+    this.setState({ userSettings: newSettings })
 
     if (prevRunOnSave !== runOnSave && this.isServerConnected()) {
-      this.sendBackMsg({type: 'setRunOnSave', setRunOnSave: runOnSave})
+      this.sendBackMsg({ type: 'setRunOnSave', setRunOnSave: runOnSave })
     }
   }
 
   /**
    * Applies a list of deltas to the elements.
    */
-  applyDelta(delta) {
-    if (
-      this.state.reportRunState !== ReportRunState.RUNNING &&
-      !this.connectionManager.isStaticConnection()
-    ) {
-      // Only add messages to report when script is running. Otherwise, we get
-      // bugs like #685.
-      return
+  handleDeltaMsg = (deltaMsg) => {
+    // (BUG #685) When user presses stop, stop adding elements to
+    // report immediately to avoid race condition.
+    // The one exception is static connections, which to not depend on
+    // the report state (and don't have a stop button).
+    const isStaticConnection = this.connectionManager.isStaticConnection()
+    const reportIsRunning = this.state.reportRunState === ReportRunState.RUNNING
+    if (isStaticConnection || reportIsRunning) {
+      this.setState(state => ({
+        elements: applyDelta(state.elements, state.reportId, deltaMsg),
+      }))
     }
-
-    const { reportId } = this.state
-    this.setState(({ elements }) => ({
-      elements: elements.update(delta.get('id'), element =>
-        dispatchOneOf(delta, 'type', {
-          newElement: newElement =>
-            this.handleNewElementMessage(newElement, reportId),
-          addRows: namedDataSet =>
-            this.handleAddRowsMessage(element, namedDataSet),
-        })),
-    }))
-  }
-
-  /**
-   * Removes all elements whose reportIds are no longer current.
-   */
-  clearOldElements() {
-    this.setState(({ elements, reportId }) => ({
-      elements: elements.filter(elt => elt && elt.get('reportId') === reportId),
-    }))
   }
 
   /**
@@ -425,7 +424,7 @@ class App extends PureComponent {
           type: 'warning',
           title: 'Error sharing report',
           msg: (
-            <React.Fragment>
+            <Fragment>
               <div>
                 You do not have sharing configured.
               </div>
@@ -434,7 +433,7 @@ class App extends PureComponent {
                 <a href="mailto:hello@streamlit.io">Streamlit Support</a>
                 {' '}to setup sharing.
               </div>
-            </React.Fragment>
+            </Fragment>
           ),
         })
       }
@@ -485,7 +484,7 @@ class App extends PureComponent {
 
     MetricsManager.current.enqueue('rerunScript')
 
-    this.setState({reportRunState: ReportRunState.RERUN_REQUESTED})
+    this.setState({ reportRunState: ReportRunState.RERUN_REQUESTED })
 
     // Note: `rerunScript` is incorrectly called in some places.
     // We can remove `=== true` after adding type information
@@ -493,7 +492,7 @@ class App extends PureComponent {
       // Update our run-on-save setting *before* calling rerunScript.
       // The rerunScript message currently blocks all BackMsgs from
       // being processed until the script has completed executing.
-      this.saveSettings({...this.state.userSettings, runOnSave: true})
+      this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
     this.sendBackMsg({
@@ -515,8 +514,8 @@ class App extends PureComponent {
       return
     }
 
-    this.sendBackMsg({type: 'stopReport', stopReport: true})
-    this.setState({reportRunState: ReportRunState.STOP_REQUESTED})
+    this.sendBackMsg({ type: 'stopReport', stopReport: true })
+    this.setState({ reportRunState: ReportRunState.STOP_REQUESTED })
   }
 
   /**
@@ -594,6 +593,25 @@ class App extends PureComponent {
     })
   }
 
+  async getUserLogin() {
+    this.setState({ showLoginBox: true })
+    const idToken = await this.userLoginResolver.promise
+    this.setState({ showLoginBox: false })
+    return idToken
+  }
+
+  onLogInSuccess({ accessToken, idToken }) {
+    if (accessToken) {
+      this.userLoginResolver.resolve(idToken)
+    } else {
+      this.userLoginResolver.reject('Error signing in.')
+    }
+  }
+
+  onLogInError(msg) {
+    this.userLoginResolver.reject(`Error signing in. ${msg}`)
+  }
+
   render() {
     const outerDivClass = [
       'stApp',
@@ -647,84 +665,32 @@ class App extends PureComponent {
             <Row className="justify-content-center">
               <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
-                {this.state.showLoginBox ?
-                  <LoginBox
-                    onSuccess={this.onLogInSuccess}
-                    onFailure={this.onLogInError}
-                  />
-                  :
-                  <ReportView
-                    elements={this.state.elements}
-                    reportId={this.state.reportId}
-                    reportRunState={this.state.reportRunState}
-                    showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
-                    widgetMgr={this.widgetMgr}
-                    widgetsDisabled={this.state.connectionState !== ConnectionState.CONNECTED}
-                  />
+                {
+                  this.state.showLoginBox ?
+                    <LoginBox
+                      onSuccess={this.onLogInSuccess}
+                      onFailure={this.onLogInError}
+                    />
+                    :
+                    <ReportView
+                      elements={this.state.elements}
+                      reportId={this.state.reportId}
+                      reportRunState={this.state.reportRunState}
+                      showStaleElementIndicator={this.state.connectionState !== ConnectionState.STATIC}
+                      widgetMgr={this.widgetMgr}
+                      widgetsDisabled={this.state.connectionState !== ConnectionState.CONNECTED}
+                    />
                 }
               </Col>
             </Row>
 
-            <StreamlitDialog {...dialogProps}/>
+            <StreamlitDialog {...dialogProps} />
 
           </Container>
         </div>
       </HotKeys>
     )
   }
-
-  async getUserLogin() {
-    this.setState({ showLoginBox: true })
-    const idToken = await this.userLoginResolver.promise
-    this.setState({ showLoginBox: false })
-
-    return idToken
-  }
-
-  onLogInSuccess({ accessToken, idToken }) {
-    if (accessToken) {
-      this.userLoginResolver.resolve(idToken)
-    } else {
-      this.userLoginResolver.reject('Error signing in.')
-    }
-  }
-
-  onLogInError(msg) {
-    this.userLoginResolver.reject(`Error signing in. ${msg}`)
-  }
-
-  handleNewElementMessage(element, reportId) {
-    MetricsManager.current.incrementDeltaCounter(element.get('type'))
-    // Set reportId on elements so we can clear old elements when the report
-    // script is re-executed.
-    return element.set('reportId', reportId)
-  }
-
-  handleAddRowsMessage(element, namedDataSet) {
-    MetricsManager.current.incrementDeltaCounter('addRows')
-    return addRows(element, namedDataSet)
-  }
 }
-
-
-/**
- * Returns true if the URL parameters indicated that we're embedded in an
- * iframe.
- */
-function isEmbeddedInIFrame() {
-  return url.parse(window.location.href, true).query.embed === 'true'
-}
-
-
-function makeElementWithInfoText(text) {
-  return fromJS({
-    type: 'text',
-    text: {
-      format: TextProto.Format.INFO,
-      body: text,
-    },
-  })
-}
-
 
 export default App

@@ -22,18 +22,18 @@ import { Map as ImmutableMap } from 'immutable'
 interface Props {
   width: number;
   element: ImmutableMap<string, any>;
-  id: number;
+  index: number;
 }
 
 class BokehChart extends React.PureComponent<Props> {
-  private chartId = 'bokeh-chart-' + this.props.id;
+  private chartId = 'bokeh-chart-' + this.props.index;
 
-  private getChartData = () => {
+  private getChartData = (): any => {
     const figure = this.props.element.get('figure')
     return JSON.parse(figure)
   }
 
-  private updateChart = (data: any) => {
+  private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
     if (chart !== null) {
       this.removeAllChildNodes(chart)
@@ -41,18 +41,18 @@ class BokehChart extends React.PureComponent<Props> {
     }
   }
 
-  private removeAllChildNodes = (element: Node) => {
+  private removeAllChildNodes = (element: Node): void => {
     while (element.lastChild) {
       element.lastChild.remove()
     }
   }
 
-  public componentDidMount = () => {
+  public componentDidMount = (): void => {
     const data = this.getChartData()
     this.updateChart(data)
   }
 
-  public componentDidUpdate = () => {
+  public componentDidUpdate = (): void => {
     const data = this.getChartData()
     this.updateChart(data)
   }

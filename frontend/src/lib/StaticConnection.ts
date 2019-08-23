@@ -16,10 +16,10 @@
  */
 
 import url from 'url'
-import {ConnectionState} from './ConnectionState'
-import {ForwardMsg, Text as TextProto} from 'autogen/proto'
-import {getObject} from './s3helper'
-import {logError} from './log'
+import { ConnectionState } from 'lib/ConnectionState'
+import { ForwardMsg, Text as TextProto } from 'autogen/proto'
+import { getObject } from 'lib/s3helper'
+import { logError } from 'lib/log'
 
 interface Manifest {
   name: string;
@@ -56,8 +56,8 @@ export class StaticConnection {
   }
 
   private static async getAllMessages(props: Props): Promise<void> {
-    const {numMessages, firstDeltaIndex, numDeltas} = props.manifest
-    const {bucket, version} = getBucketAndVersion()
+    const { numMessages, firstDeltaIndex, numDeltas } = props.manifest
+    const { bucket, version } = getBucketAndVersion()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
       const isDeltaMsg = msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
@@ -76,7 +76,7 @@ export class StaticConnection {
       const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
 
       try {
-        const response = await getObject({Bucket: bucket, Key: messageKey})
+        const response = await getObject({ Bucket: bucket, Key: messageKey })
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {
@@ -97,19 +97,19 @@ export class StaticConnection {
 /**
  * Parses the S3 data bucket name and report version from the window location href
  */
-function getBucketAndVersion(): {bucket?: string; version: string} {
+function getBucketAndVersion(): { bucket?: string; version: string } {
   // TODO: Unify with ConnectionManager.ts
-  const {hostname, pathname} = url.parse(window.location.href, true)
+  const { hostname, pathname } = url.parse(window.location.href, true)
   const bucket = hostname
   const version = pathname != null ? pathname.split('/')[1] : 'null'
-  return {bucket, version}
+  return { bucket, version }
 }
 
 /**
  * Returns the json to construct a message which places an element at a
  * particular location in the document.
  */
-function textElement({id, body, format}: { id: number; body: string; format: TextProto.Format }): any {
+function textElement({ id, body, format }: { id: number; body: string; format: TextProto.Format }): any {
   return {
     type: 'delta',
     delta: {
@@ -117,7 +117,7 @@ function textElement({id, body, format}: { id: number; body: string; format: Tex
       type: 'newElement',
       newElement: {
         type: 'text',
-        text: {body, format},
+        text: { body, format },
       },
     },
   }

@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +12,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
-export { default } from './ReportView'
+syntax = "proto3";
+
+message BlockPath {
+  enum Container {
+    MAIN = 0;
+    SIDEBAR = 1;
+  }
+
+  // Top level container of the block.
+  Container container = 1;
+
+  // A list with the indices of all ancestors of the block.
+  repeated uint32 path = 2;
+}

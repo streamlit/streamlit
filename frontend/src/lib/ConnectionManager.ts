@@ -79,6 +79,7 @@ export class ConnectionManager {
     return this.connectionState === ConnectionState.CONNECTED
   }
 
+  // A "static" connection is the one that runs in S3
   public isStaticConnection(): boolean {
     return this.connectionState === ConnectionState.STATIC
   }

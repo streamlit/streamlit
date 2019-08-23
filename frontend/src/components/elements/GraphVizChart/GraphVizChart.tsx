@@ -25,7 +25,7 @@ import './GraphVizChart.scss'
 interface Props {
   width: number;
   element: ImmutableMap<string, any>;
-  id: number;
+  index: number;
 }
 
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
@@ -35,7 +35,7 @@ _dummy_graphviz  // eslint-disable-line no-unused-expressions
 
 
 class GraphVizChart extends React.PureComponent<Props> {
-  private chartId: string = 'graphviz-chart-' + this.props.id
+  private chartId: string = 'graphviz-chart-' + this.props.index
   private originalHeight: number = 0
 
   private getChartData = (): string => {

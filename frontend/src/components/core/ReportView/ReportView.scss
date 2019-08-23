@@ -18,6 +18,56 @@
 
 
 .streamlit-container {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    padding-top: 5rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: $z-index-sidebar;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1rem;
+    }
+
+    h4 {
+      font-size: 0.8rem;
+    }
+
+    h5 {
+      font-size: 0.8rem;
+    }
+
+    h6 {
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 1150px) {
+    .sidebar {
+      background: $white;
+      transform: translateX(-240px);
+      transition: transform 300ms 500ms, box-shadow 300ms 500ms;
+    }
+
+    .sidebar:hover {
+      transform: translateX(0);
+      box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.1);
+      transition: transform 300ms, box-shadow 300ms;
+    }
+  }
+
   .element-container {
     display: block;
     margin-bottom: 1rem;

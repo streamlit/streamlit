@@ -27,6 +27,7 @@ from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Widget_pb2 import WidgetStates
 
 
@@ -303,7 +304,7 @@ class ScriptRunnerTest(unittest.TestCase):
             [
                 delta.new_element.text.body for delta in scriptrunner.deltas()
                 if delta.HasField('new_element') and
-                delta.new_element.HasField('text')
+                   delta.new_element.HasField('text')
             ]
         )
 
@@ -321,7 +322,9 @@ class TestScriptRunner(ScriptRunner):
             self.maybe_handle_execution_control_request()
             return True
 
-        self.dg = DeltaGenerator(enqueue_fn)
+        self.main_dg = DeltaGenerator(enqueue_fn, container=BlockPath.MAIN)
+        self.sidebar_dg = DeltaGenerator(enqueue_fn,
+                                         container=BlockPath.SIDEBAR)
         self.script_request_queue = ScriptRequestQueue()
 
         script_path = os.path.join(
@@ -331,7 +334,8 @@ class TestScriptRunner(ScriptRunner):
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, []),
-            root_dg=self.dg,
+            main_dg=self.main_dg,
+            sidebar_dg=self.sidebar_dg,
             widget_states=WidgetStates(),
             request_queue=self.script_request_queue
         )

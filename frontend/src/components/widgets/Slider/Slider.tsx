@@ -18,7 +18,7 @@
 import React from 'react'
 import { Slider as UISlider } from 'baseui/slider'
 import { Map as ImmutableMap } from 'immutable'
-import { debounce } from 'lib/util'
+import { debounce } from 'lib/utils'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { sliderOverrides } from 'lib/widgetTheme'
 

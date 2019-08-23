@@ -190,7 +190,7 @@ class Chart extends React.PureComponent {
   }
 }
 
-function extractProps(elt) {
+function extractProps(element) {
   function tryParseFloat(s) {
     s = s.trim()
     const f = parseFloat(s)
@@ -198,7 +198,7 @@ function extractProps(elt) {
   }
 
   const props = {}
-  for (const prop of elt.get('props')) {
+  element.get('props').forEach(prop => {
     let value = prop.get('value')
 
     // Do a little special-casing here. This is a hack which has to be fixed.
@@ -210,7 +210,7 @@ function extractProps(elt) {
       value = prop.get('value').split(',').map((x) => tryParseFloat(x))
     }
     props[prop.get('key')] = value
-  }
+  })
   return props
 }
 

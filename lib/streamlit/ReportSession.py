@@ -34,8 +34,9 @@ from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
@@ -84,7 +85,12 @@ class ReportSession(object):
         self._report = Report(script_path, script_argv)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
-        self._root_dg = DeltaGenerator(self.enqueue)
+
+        self._main_dg = DeltaGenerator(self.enqueue,
+                                       container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(self.enqueue,
+                                          container=BlockPath.SIDEBAR)
+
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed)
@@ -179,9 +185,11 @@ class ReportSession(object):
         # 2) Marks the current report as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
         msg.delta.id = 0
@@ -298,6 +306,7 @@ class ReportSession(object):
                 # create a new one. (Otherwise, a newly-enqueued ScriptEvent
                 # won't be processed until another event is enqueued.)
                 self._maybe_create_scriptrunner()
+
             self._ioloop.spawn_callback(on_shutdown)
 
         # Send a message if our run state changed
@@ -368,7 +377,7 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def handle_rerun_script_request(
-            self, command_line=None, widget_state=None, is_preheat=False):
+        self, command_line=None, widget_state=None, is_preheat=False):
         """Tells the ScriptRunner to re-run its report.
 
         Parameters
@@ -482,7 +491,8 @@ class ReportSession(object):
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             report=self._report,
-            root_dg=self._root_dg,
+            main_dg=self._main_dg,
+            sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue)
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
@@ -491,6 +501,7 @@ class ReportSession(object):
     @tornado.gen.coroutine
     def handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud."""
+
         @tornado.gen.coroutine
         def progress(percent):
             progress_msg = ForwardMsg()
