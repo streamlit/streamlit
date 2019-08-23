@@ -282,3 +282,17 @@ notices:
 		yarn notices generate-disclaimer --silent --production > ../NOTICES
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
+	#
+
+.PHONY: headers
+# Update the license header on all source files.
+headers:
+	./scripts/add_license_headers.py \
+		lib/streamlit \
+		lib/tests \
+		frontend/src \
+		frontend/cypress/integration \
+		frontend/public \
+		proto \
+		examples \
+		scripts
