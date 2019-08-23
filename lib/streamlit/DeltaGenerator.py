@@ -1680,14 +1680,18 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data):
+    def map(self, element, data, zoom = None):
         """Display a map with points on it.
+        This will use deck_gl under the hood, with auto center and auto zoom.
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
             or None
             The data to be plotted. Must have 'lat' and 'lon' columns.
+        zoom : int
+            Zoom level used by deck_gl ,
+            specified in https://wiki.openstreetmap.org/wiki/Zoom_levels
 
         Example
         -------
@@ -1705,15 +1709,8 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-        LAT_LON = ['lat', 'lon']
-        if not set(data.columns) >= set(LAT_LON):
-            raise Exception('Map data must contain "lat" and "lon" columns.')
-        if (data['lon'].isnull().values.any() or
-            data['lat'].isnull().values.any()):
-            raise Exception('Map data must be numeric.')
-        data_frame_proto.marshall_data_frame(
-            data[LAT_LON], element.map.points)
+        import streamlit.elements.map as map
+        map.marshall(element, data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
