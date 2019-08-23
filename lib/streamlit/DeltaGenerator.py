@@ -1372,24 +1372,24 @@ class DeltaGenerator(object):
         return options[current_value] if len(options) else NoValue
 
     @_widget
-    def slider(self, element, ui_value, label, value=None,
-               min_value=None, max_value=None, step=None):
+    def slider(self, element, ui_value, label,
+               min_value=None, max_value=None, value=None, step=None):
         """Display a slider widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-        value : int/float or a tuple/list of int/float
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
-            Defaults to 0.
         min_value : int/float
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 otherwise.
         max_value : int/float
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
+        value : int/float or a tuple/list of int/float
+            The value of this widget when it first renders. In case the value
+            is passed as a tuple/list a range slider will be used.
+            Defaults to min_value.
         step : int/float
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -1413,7 +1413,7 @@ class DeltaGenerator(object):
         """
         # Set value default.
         if value is None:
-            value = 0
+            value = min_value if min_value is not None else 0
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, (int, float))
