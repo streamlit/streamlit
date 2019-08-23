@@ -1,8 +1,0 @@
-ARG PYTHON_VERSION
-ARG STREAMLIT_VERSION
-
-FROM streamlit/streamlit:$PYTHON_VERSION-$STREAMLIT_VERSION
-ENV PYTHONUNBUFFERED 1
-
-RUN pip install keras==2.1.4 tensorflow==1.12.0
-RUN mkdir -p /root/.keras/datasets && curl -o /root/.keras/datasets/mnist.npz "https://s3.amazonaws.com/img-datasets/mnist.npz"

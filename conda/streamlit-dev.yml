@@ -1,8 +1,0 @@
-# See CONTRIBUTING.md for explanation.
-# This is only used for development
-name: streamlit-dev
-channels:
-  - conda-forge
-  - http://127.0.0.1:8000/streamlit-forge
-dependencies:
-  - streamlit

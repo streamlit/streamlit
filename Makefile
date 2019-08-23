@@ -1,13 +1,7 @@
 # Black magic to get module directories
-modules := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
+PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
-PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
-ANACONDA_VERSION := $(shell ./scripts/anaconda_version.sh only)
-ifdef ANACONDA_VERSION
-PY_VERSION := $(ANACONDA_VERSION)
-else
-PY_VERSION := python-$(PY_VERSION)
-endif
+PY_VERSION := python-$(shell python -c 'import platform; print(platform.python_version())')
 
 .PHONY: help
 help:
@@ -67,7 +61,12 @@ endif
 pylint:
 	# Linting
 	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; flake8 --ignore=E402,E128 --exclude=streamlit/proto/*_pb2.py $(modules) tests/
+	cd lib; \
+		flake8 \
+		--ignore=E402,E128 \
+		--exclude=streamlit/proto/*_pb2.py \
+		$(PYTHON_MODULES) \
+		tests/
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -78,7 +77,7 @@ pytest:
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
-			$(modules)
+			$(PYTHON_MODULES)
 
 .PHONY: pycoverage
 # Show Python test coverage.
@@ -88,14 +87,9 @@ pycoverage:
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
-			-l $(foreach dir,$(modules),--cov=$(dir)) \
+			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
 			--cov-report=term-missing tests/ \
-			$(modules)
-
-.PHONY: user-tests
-user-tests:
-	flake8 --ignore=E402,E128 user-tests/
-	pytest -v -l user-tests/
+			$(PYTHON_MODULES)
 
 .PHONY: install
 # Install Streamlit into your Python environment.
@@ -132,7 +126,6 @@ clean: clean-docs
 	rm -f lib/Pipfile.lock
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
-	rm -rf conda/streamlit-forge
 
 .PHONY: clean-docs
 # Remove all generated files from the docs folder.
@@ -245,6 +238,11 @@ jstest:
 	cd frontend; yarn run test
 	cd frontend; yarn run coverage
 
+.PHONY: e2etest
+# Run E2E tests.
+e2etest:
+	./scripts/run_e2e_tests.sh
+
 .PHONY: loc
 # Counts the number of lines of code in the project
 loc:
@@ -257,23 +255,6 @@ loc:
 distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)
-
-.PHONY: docker-build-frontend
-docker-build-frontend:
-	cd docker/streamlit ; docker-compose build frontend
-
-.PHONY: create-conda-packages serve-conda
-create-conda-packages:
-	cd conda ; ./create_packages.sh
-
-.PHONY: serve-conda
-serve-conda:
-	cd conda ; python -m http.server 8000 || python -m SimpleHTTPServer 8000
-
-.PHONY: e2etest
-# Run E2E tests.
-e2etest:
-	./scripts/e2e.sh
 
 .PHONY: notices
 # Rebuild the NOTICES file.
