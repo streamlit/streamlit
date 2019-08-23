@@ -48,9 +48,10 @@ def _modify_ast_subtree(tree, body_attr='body', is_root=False):
     for i, node in enumerate(body):
         node_type = type(node)
 
-        # Parse the contents of functions and With statements
-        if node_type is ast.FunctionDef or node_type is ast.With:
-            body[i] = _modify_ast_subtree(node)
+        # Parse the contents of functions, With statements, and for statements
+        if (node_type is ast.FunctionDef or node_type is ast.With or
+                node_type is ast.For):
+            _modify_ast_subtree(node)
 
         # Parse the contents of try statements
         elif node_type is ast.Try:
@@ -58,7 +59,12 @@ def _modify_ast_subtree(tree, body_attr='body', is_root=False):
                 node.handlers[j] = _modify_ast_subtree(inner_node)
             finally_node = _modify_ast_subtree(node, body_attr='finalbody')
             node.finalbody = finally_node.finalbody
-            body[i] = _modify_ast_subtree(node)
+            _modify_ast_subtree(node)
+
+        # Convert if expressions to st.write
+        elif node_type is ast.If:
+            _modify_ast_subtree(node)
+            _modify_ast_subtree(node, 'orelse')
 
         # Convert expression nodes to st.write
         elif node_type is ast.Expr:
