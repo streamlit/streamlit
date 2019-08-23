@@ -248,7 +248,7 @@ def _read_from_disk_cache(key):
         raise CacheError('Unable to read from cache: %s' % e)
     except FileNotFoundError:
         raise CacheKeyNotFoundError('Key not found in disk cache')
-    return value
+    return value, args_mutated
 
 
 def _write_to_disk_cache(key, value, args_mutated):
@@ -291,7 +291,7 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
 
         if persisted:
             value, args_mutated = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, ignore_hash)
+            _write_to_mem_cache(key, value, ignore_hash, args_mutated)
             return value, args_mutated
         raise e
 
