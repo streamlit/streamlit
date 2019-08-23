@@ -1,9 +1,23 @@
-# Copyright 2018 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -18,8 +32,9 @@ from datetime import date
 from datetime import time
 
 from streamlit import metrics
-from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Balloons_pb2
+from streamlit.proto import BlockPath_pb2
+from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 from streamlit import get_report_ctx
 
@@ -108,6 +123,7 @@ def _with_element(method):
     def wrapped_method(self, *args, **kwargs):
         def marshall_element(element):
             return method(self, element, *args, **kwargs)
+
         return self._enqueue_new_element_delta(marshall_element)
 
     return wrapped_method
@@ -159,7 +175,8 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, enqueue, id=0, is_root=True):
+    def __init__(self, enqueue, id=0, is_root=True,
+                 container=BlockPath_pb2.BlockPath.MAIN, path=()):
         """Constructor.
 
         Parameters
@@ -175,6 +192,8 @@ class DeltaGenerator(object):
         self._enqueue = enqueue
         self._id = id
         self._is_root = is_root
+        self._container = container
+        self._path = path
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
@@ -197,6 +216,7 @@ class DeltaGenerator(object):
             element.
 
         """
+
         def value_or_dg(value, dg):
             """Widgets have return values unlike other elements and may want to
             return `None`. We create a special `NoValue` class for this scenario
@@ -212,6 +232,8 @@ class DeltaGenerator(object):
         if marshall_element:
             msg = ForwardMsg_pb2.ForwardMsg()
             rv = marshall_element(msg.delta.new_element)
+            msg.delta.parent_block.container = self._container
+            msg.delta.parent_block.path[:] = self._path
             msg.delta.id = self._id
 
         # "Null" delta generators (those without queues), don't send anything.
@@ -237,6 +259,29 @@ class DeltaGenerator(object):
             self._id += 1
 
         return value_or_dg(rv, output_dg)
+
+    def _block(self):
+        if self._enqueue is None:
+            return self
+
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg.delta.new_block = True
+        msg.delta.parent_block.container = self._container
+        msg.delta.parent_block.path[:] = self._path
+        msg.delta.id = self._id
+
+        new_block_dg = DeltaGenerator(
+            enqueue=self._enqueue,
+            id=0,
+            is_root=True,
+            container=self._container,
+            path=self._path + (self._id,)
+        )
+
+        self._enqueue(msg)
+        self._id += 1
+
+        return new_block_dg
 
     @_with_element
     def balloons(self, element):
@@ -714,7 +759,8 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0,
+                        **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1326,24 +1372,24 @@ class DeltaGenerator(object):
         return options[current_value] if len(options) else NoValue
 
     @_widget
-    def slider(self, element, ui_value, label, value=None,
-               min_value=None, max_value=None, step=None):
+    def slider(self, element, ui_value, label,
+               min_value=None, max_value=None, value=None, step=None):
         """Display a slider widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-        value : int/float or a tuple/list of int/float
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
-            Defaults to 0.
         min_value : int/float
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 otherwise.
         max_value : int/float
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
+        value : int/float or a tuple/list of int/float
+            The value of this widget when it first renders. In case the value
+            is passed as a tuple/list a range slider will be used.
+            Defaults to min_value.
         step : int/float
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -1367,7 +1413,7 @@ class DeltaGenerator(object):
         """
         # Set value default.
         if value is None:
-            value = 0
+            value = min_value if min_value is not None else 0
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, (int, float))
@@ -1935,6 +1981,8 @@ class DeltaGenerator(object):
                 'Method requires exactly one dataset')
 
         msg = ForwardMsg_pb2.ForwardMsg()
+        msg.delta.parent_block.container = self._container
+        msg.delta.parent_block.path[:] = self._path
         msg.delta.id = self._id
 
         data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)

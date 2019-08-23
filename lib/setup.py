@@ -18,7 +18,7 @@ setuptools.setup(
     url='https://streamlit.io',
     author='Streamlit Inc',
     author_email='hello@streamlit.io',
-    license='MIT',
+    license='Apache 2',
 
     packages = setuptools.find_packages(exclude=['tests', 'tests.*']),
 
