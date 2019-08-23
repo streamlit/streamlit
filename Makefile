@@ -263,7 +263,11 @@ notices:
 		yarn notices generate-disclaimer --silent --production > ../NOTICES
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
-	#
+
+	./scripts/append_license.sh frontend/src/assets/font/IBM_Plex_Fonts.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 
 .PHONY: headers
 # Update the license header on all source files.
