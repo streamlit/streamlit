@@ -25,6 +25,7 @@ import inspect
 import os
 import shutil
 import struct
+import textwrap
 from collections import namedtuple
 from functools import wraps
 
@@ -33,7 +34,7 @@ import astor
 import streamlit as st
 from streamlit import config, util
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.hashing import CodeHasher, get_hash
+from streamlit.hashing import CodeHasher, Context, get_hash
 from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
@@ -107,7 +108,7 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _build_caching_error_message(persisted, func, caller_frame):
+def _build_caching_func_error_message(persisted, func, caller_frame):
     name = func.__name__
 
     frameinfo = inspect.getframeinfo(caller_frame)
@@ -123,24 +124,31 @@ def _build_caching_error_message(persisted, func, caller_frame):
         copy_code = '... = copy.deepcopy(%s(...))' % name
 
     if persisted:
-        load_or_rerun = 'load the value from disk'
+        load_or_rerun = 'loading the value back from the disk cache'
     else:
-        load_or_rerun = 'rerun the function'
+        load_or_rerun = 'rerunning the function'
 
     message = (
-        '### ⚠️ Your Code Mutated a Return Value\n'
-        'Since your program subsequently mutated the return value of the '
-        'cached function `{name}`, Streamlit has to {load_or_rerun} in '
-        '`{file_name}` line {lineno}.\n\n'
-        'To dismiss this warning, you could copy the return value. '
-        'For example by changing `{caller_file_name}` line {caller_lineno} to:'
-        '\n```python\nimport copy\n{copy_code}\n```\n\n'
+        '**You code mutated a cached return value**\n\n'
 
-        'Or add `ignore_hash=True` to the `streamlit.cache` decorator for '
-        '`{name}`.\n\n'
+        'Streamlit detected the mutation of a return value of `{func_name}`, which is '
+        'a cached function. This happened in `{file_name}` line {lineno}. Since '
+        '`persist` is `{persisted}`, Streamlit will make up for this by '
+        '{load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
-        'Learn more about caching and copying in the '
-        '[Streamlit docs](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
+        'To dismiss this warning, try one of the following:\n'
+
+        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        'this is to copy the cached value to a new variable, which you are allowed to '
+        'mutate. For example, try changing `{caller_file_name}` line {caller_lineno} to:\n'
+
+        '```python\nimport copy\n{copy_code}\n```\n'
+
+        '2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. '
+        'This is an escape hatch for advanced users who really know what they\'re doing.\n\n'
+
+        'Learn more about caching and copying in the [Streamlit documentation]'
+        '(https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
     )
 
     return message.format(
@@ -148,18 +156,54 @@ def _build_caching_error_message(persisted, func, caller_frame):
         load_or_rerun=load_or_rerun,
         file_name=os.path.relpath(func.__code__.co_filename),
         lineno=func.__code__.co_firstlineno,
+        persisted=persisted,
         caller_file_name=os.path.relpath(caller_file_name),
         caller_lineno=caller_lineno,
         copy_code=copy_code
     )
 
 
+def _build_caching_block_error_message(persisted, code):
+    if persisted:
+        load_or_rerun = 'loading the value back from the disk cache'
+    else:
+        load_or_rerun = 'rerunning the code'
+
+    message = (
+        '**Your code mutated a cached value**\n\n'
+
+        'Streamlit detected the mutation of a cached value in `{file_name}` line '
+        '{lineno}. Since `persist` is `{persisted}`, Streamlit will make up for this '
+        'by {load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
+
+        'To dismiss this warning, try one of the following:\n\n'
+
+        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        'this is to copy the cached value to a new variable, which you are allowed to mutate.\n'
+
+        '2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an '
+        'escape hatch for advanced users who really know what they\'re doing.\n\n'
+
+        'Learn more about caching and copying in the [Streamlit documentation]'
+        '(https://streamlit.io/secret/docs/tutorial/tutorial_caching.html).'
+    )
+
+    return message.format(
+        load_or_rerun=load_or_rerun,
+        file_name=os.path.relpath(code.co_filename),
+        lineno=code.co_firstlineno,
+        persisted=persisted
+    )
+
+
 def _build_args_mutated_message(func):
     message = (
         '**Cached function mutated its input arguments**\n\n'
-        'When decorating a function with `@st.cache`, the arguments should not '
-        'be mutated inside the function body, as that breaks the caching '
-        'mechanism. Please update the code of `{name}` to bypass the mutation.\n\n'
+
+        'When decorating a function with `@st.cache`, the arguments should not be mutated inside '
+        'the function body, as that breaks the caching mechanism. Please update the code of '
+        '`{name}` to bypass the mutation.\n\n'
+
         'See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html) for more info.'
     )
 
@@ -225,7 +269,7 @@ def _write_to_disk_cache(key, value, args_mutated):
         raise CacheError('Unable to write to cache: %s' % e)
 
 
-def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
+def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -236,8 +280,12 @@ def _read_from_cache(key, persisted, ignore_hash, func, caller_frame):
         return _read_from_mem_cache(key, ignore_hash)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
-            message = _build_caching_error_message(
-                persisted, func, caller_frame)
+            if inspect.isroutine(func_or_code):
+                message = _build_caching_func_error_message(
+                    persisted, func_or_code, caller_frame)
+            else:
+                message = _build_caching_block_error_message(
+                    persisted, func_or_code)
             st.warning(message)
 
         if persisted:
@@ -254,7 +302,7 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
 
 
 def cache(func=None, persist=False, ignore_hash=False):
-    """Function decorator to memoize input function, saving to disk.
+    """Function decorator to memoize function executions.
 
     Parameters
     ----------
@@ -368,6 +416,116 @@ def cache(func=None, persist=False, ignore_hash=False):
         pass
 
     return wrapped_func
+
+
+class Cache(dict):
+    """Cache object to persist data across reruns.
+
+    Parameters
+    ----------
+
+    Example
+    -------
+    >>> c = st.Cache()
+    ... if c:
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+    ...
+    >>> # c.data will always be defined but the code block only runs the first time
+
+    The only valid side effect inside the if code block are changes to c. Any
+    other side effect has undefined behavior.
+
+    In Python 3.8 and above, you can combine the assignment and if-check with an
+    assignment expression (`:=`).
+
+    >>> if c := st.Cache():
+    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
+    ...     c.data = ...
+
+
+    """
+
+    def __init__(self, persist=False, ignore_hash=False):
+        self._persist = persist
+        self._ignore_hash = ignore_hash
+
+        dict.__init__(self)
+
+    def has_changes(self):
+        current_frame = inspect.currentframe()
+        caller_frame = current_frame.f_back
+
+        current_file = inspect.getfile(current_frame)
+        caller_file = inspect.getfile(caller_frame)
+        real_caller_is_parent_frame = current_file == caller_file
+        if real_caller_is_parent_frame:
+            caller_frame = caller_frame.f_back
+
+        frameinfo = inspect.getframeinfo(caller_frame)
+        filename, caller_lineno, _, code_context, _ = frameinfo
+
+        code_context = code_context[0]
+
+        context_indent = len(code_context) - len(code_context.lstrip())
+
+        lines = ''
+        # TODO: Memoize open(filename, 'r') in a way that clears the memoized version with each
+        # run of the user's script. Then use the memoized text here, in st.echo, and other places.
+        with open(filename, 'r') as f:
+            for line in f.readlines()[caller_lineno:]:
+                if line.strip() == '':
+                    continue
+                indent = len(line) - len(line.lstrip())
+                if indent <= context_indent:
+                    break
+                if line.strip() and not line.lstrip().startswith('#'):
+                    lines += line
+
+        program = textwrap.dedent(lines)
+
+        context = Context(
+            dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
+        code = compile(program, filename, 'exec')
+
+        code_hasher = CodeHasher('md5')
+        code_hasher.update(code, context)
+        LOGGER.debug('Hashing block in %i bytes.', code_hasher.size)
+
+        key = code_hasher.hexdigest()
+        LOGGER.debug('Cache key: %s', key)
+
+        try:
+            value, _ = _read_from_cache(
+                key, self._persist, self._ignore_hash, code, caller_frame)
+            self.update(value)
+        except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+            if self._ignore_hash and not self._persist:
+                # If we don't hash the results, we don't need to use exec and just return True.
+                # This way line numbers will be correct.
+                _write_to_cache(key, self, False, True, None)
+                return True
+
+            exec(code, caller_frame.f_globals, caller_frame.f_locals)
+            _write_to_cache(key, self, self._persist, self._ignore_hash, None)
+
+        # Return False so that we have control over the execution.
+        return False
+
+    def __bool__(self):
+        return self.has_changes()
+
+    # Python 2 doesn't have __bool__
+    def __nonzero__(self):
+        return self.has_changes()
+
+    def __getattr__(self, key):
+        if key not in self:
+            raise AttributeError('Cache has no atribute %s' % key)
+        return self.__getitem__(key)
+
+    def __setattr__(self, key, value):
+        dict.__setitem__(self, key, value)
 
 
 def clear_cache():

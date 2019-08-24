@@ -23,6 +23,14 @@ from streamlit.caching import _build_args_mutated_message
 
 
 class CacheTest(unittest.TestCase):
+    def test_simple(self):
+        @st.cache
+        def foo():
+            return 42
+
+        self.assertEqual(foo(), 42)
+        self.assertEqual(foo(), 42)
+
     @patch.object(st, 'warning')
     def test_args(self, warning):
         called = [False]
@@ -58,3 +66,35 @@ class CacheTest(unittest.TestCase):
         f([1, 2])
 
         warning.assert_called_with(_build_args_mutated_message(f))
+
+
+class CachingObjectTest(unittest.TestCase):
+    def test_simple(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_ignore_hash(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache(ignore_hash=True)
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_has_changes(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c.has_changes():
+                c.value = val
+
+            self.assertEqual(c.value, val)
