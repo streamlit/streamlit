@@ -159,18 +159,24 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
     )
 
 
-def _build_caching_block_error_message(persisted, code):
+def _build_caching_block_error_message(persisted, code, line_number_range):
     if persisted:
         load_or_rerun = 'loading the value back from the disk cache'
     else:
         load_or_rerun = 'rerunning the code'
 
+    [start, end] = line_number_range
+    if start == end:
+        lines = 'line {start}'.format(start)
+    else:
+        lines = 'lines {start} to {end}'.format(start=str(start), end=str(end))
+
     message = (
         '**Your code mutated a cached value**\n\n'
 
-        'Streamlit detected the mutation of a cached value in `{file_name}` line '
-        '{lineno}. Since `persist` is `{persisted}`, Streamlit will make up for this '
-        'by {load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
+        'Streamlit detected the mutation of a cached value in `{file_name}` in {lines}. '
+        'Since `persist` is `{persisted}`, Streamlit will make up for this by {load_or_rerun}, '
+        'so your code will still work, but with reduced performance.\n\n'
 
         'To dismiss this warning, try one of the following:\n\n'
 
@@ -187,7 +193,7 @@ def _build_caching_block_error_message(persisted, code):
     return message.format(
         load_or_rerun=load_or_rerun,
         file_name=os.path.relpath(code.co_filename),
-        lineno=code.co_firstlineno,
+        lines=lines,
         persisted=persisted
     )
 
@@ -265,7 +271,7 @@ def _write_to_disk_cache(key, value, args_mutated):
         raise CacheError('Unable to write to cache: %s' % e)
 
 
-def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
+def _read_from_cache(key, persisted, ignore_hash, func_or_code, message_opts):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -278,10 +284,10 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
         if isinstance(e, CachedObjectWasMutatedError):
             if inspect.isroutine(func_or_code):
                 message = _build_caching_func_error_message(
-                    persisted, func_or_code, caller_frame)
+                    persisted, func_or_code, message_opts)
             else:
                 message = _build_caching_block_error_message(
-                    persisted, func_or_code)
+                    persisted, func_or_code, message_opts)
             st.warning(message)
 
         if persisted:
@@ -465,20 +471,24 @@ class Cache(dict):
 
         context_indent = len(code_context) - len(code_context.lstrip())
 
-        lines = ''
+        lines = []
         # TODO: Memoize open(filename, 'r') in a way that clears the memoized version with each
         # run of the user's script. Then use the memoized text here, in st.echo, and other places.
         with open(filename, 'r') as f:
             for line in f.readlines()[caller_lineno:]:
                 if line.strip() == '':
-                    continue
+                    lines.append(line)
                 indent = len(line) - len(line.lstrip())
                 if indent <= context_indent:
                     break
                 if line.strip() and not line.lstrip().startswith('#'):
-                    lines += line
+                    lines.append(line)
 
-        program = textwrap.dedent(lines)
+        while lines[-1].strip() == '':
+            lines.pop()
+
+        code_block = ''.join(lines)
+        program = textwrap.dedent(code_block)
 
         context = Context(
             dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
@@ -493,7 +503,8 @@ class Cache(dict):
 
         try:
             value, _ = _read_from_cache(
-                key, self._persist, self._ignore_hash, code, caller_frame)
+                key, self._persist, self._ignore_hash, code,
+                [caller_lineno + 1, caller_lineno + len(lines)])
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
             if self._ignore_hash and not self._persist:

@@ -117,3 +117,14 @@ class CachingObjectTest(unittest.TestCase):
                 c.value = val
 
             self.assertEqual(c.value, val)
+
+    @patch.object(st, 'warning')
+    def test_mutate(self, warning):
+        for _ in range(2):
+            c = st.Cache()
+            if c:
+                c.value = [0, 1]
+
+            c.value[0] = 1
+
+        warning.assert_called()
