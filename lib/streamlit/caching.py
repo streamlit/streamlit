@@ -32,8 +32,11 @@ import astor
 
 import streamlit as st
 from streamlit import config, util
+from streamlit.compatibility import setup_2_3_shims
 from streamlit.hashing import CodeHasher, Context, get_hash
 from streamlit.logger import get_logger
+
+setup_2_3_shims(globals())
 
 
 try:
@@ -167,9 +170,9 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
     [start, end] = line_number_range
     if start == end:
-        lines = 'line {start}'.format(start)
+        lines = 'line {start}'.format(start=start)
     else:
-        lines = 'lines {start} to {end}'.format(start=str(start), end=str(end))
+        lines = 'lines {start} to {end}'.format(start=start, end=end)
 
     message = (
         '**Your code mutated a cached value**\n\n'
