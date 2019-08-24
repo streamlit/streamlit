@@ -16,8 +16,7 @@
 """A library of caching utilities."""
 
 # Python 2/3 compatibility
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function)
 
 import ast
 import hashlib
@@ -116,7 +115,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
 
     try:
         # only works if calling code is a single line
-        parsed_context = ast.parse(lines[0])
+        parsed_context = ast.parse(lines[0].lstrip())
         parsed_context = _AddCopy(name).visit(parsed_context)
         copy_code = astor.to_source(parsed_context)
     except SyntaxError:
@@ -129,16 +128,16 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         load_or_rerun = 'rerunning the function'
 
     message = (
-        '**You code mutated a cached return value**\n\n'
+        '**Your code mutated a cached return value**\n\n'
 
-        'Streamlit detected the mutation of a return value of `{func_name}`, which is '
+        'Streamlit detected the mutation of a return value of `{name}`, which is '
         'a cached function. This happened in `{file_name}` line {lineno}. Since '
         '`persist` is `{persisted}`, Streamlit will make up for this by '
         '{load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
-        'To dismiss this warning, try one of the following:\n'
+        'To dismiss this warning, try one of the following:\n\n'
 
-        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        '1. *Preferred:* fix the code by removing the mutation. The simplest way to do '
         'this is to copy the cached value to a new variable, which you are allowed to '
         'mutate. For example, try changing `{caller_file_name}` line {caller_lineno} to:\n'
 
@@ -171,9 +170,9 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
     [start, end] = line_number_range
     if start == end:
-        lines = 'line {start}'.format(start)
+        lines = 'line {start}'.format(start=start)
     else:
-        lines = 'lines {start} to {end}'.format(start=str(start), end=str(end))
+        lines = 'lines {start} to {end}'.format(start=start, end=end)
 
     message = (
         '**Your code mutated a cached value**\n\n'
@@ -184,7 +183,7 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
         'To dismiss this warning, try one of the following:\n\n'
 
-        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        '1. *Preferred:* fix the code by removing the mutation. The simplest way to do '
         'this is to copy the cached value to a new variable, which you are allowed to mutate.\n'
 
         '2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an '
