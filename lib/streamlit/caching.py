@@ -453,10 +453,12 @@ class Cache(dict):
         dict.__init__(self)
 
     def has_changes(self):
-        caller_frame = inspect.currentframe().f_back
+        current_frame = inspect.currentframe()
+        caller_frame = current_frame.f_back
 
-        caller_file = caller_frame.f_code.co_filename
-        real_caller_is_parent_frame = caller_file == __file__
+        current_file = inspect.getfile(current_frame)
+        caller_file = inspect.getfile(caller_frame)
+        real_caller_is_parent_frame = current_file == caller_file
         if real_caller_is_parent_frame:
             caller_frame = caller_frame.f_back
 
@@ -483,7 +485,7 @@ class Cache(dict):
         program = textwrap.dedent(lines)
 
         context = Context(
-            dict(caller_frame.f_globals, **caller_frame.f_locals), None, {})
+            dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
         code = compile(program, filename, 'exec')
 
         code_hasher = CodeHasher('md5')
