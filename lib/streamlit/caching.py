@@ -82,14 +82,18 @@ class _AddCopy(ast.NodeTransformer):
         self.func_name = func_name
 
     def visit_Call(self, node):
+        # We need to force the literals to be a string in Python 2 (not unicode).
+        copy_literal = __builtins__['str']('copy')
+        deepcopy_literal = __builtins__['str']('deepcopy')
+
         if (hasattr(node.func, 'func') and hasattr(node.func.func, 'value')
                 and node.func.func.value.id == 'st'
                 and node.func.func.attr == 'cache'):
             # Wrap st.cache(func(...))().
             return ast.copy_location(ast.Call(
                 func=ast.Attribute(
-                    value=ast.Name(id='copy', ctx=ast.Load()),
-                    attr='deepcopy', ctx=ast.Load()
+                    value=ast.Name(id=copy_literal, ctx=ast.Load()),
+                    attr=deepcopy_literal, ctx=ast.Load()
                 ), args=[node], keywords=[]
             ), node)
         elif hasattr(node.func, 'id') and node.func.id == self.func_name:
@@ -100,8 +104,8 @@ class _AddCopy(ast.NodeTransformer):
 
             return ast.copy_location(ast.Call(
                 func=ast.Attribute(
-                    value=ast.Name(id='copy', ctx=ast.Load()),
-                    attr='deepcopy', ctx=ast.Load()
+                    value=ast.Name(id=copy_literal, ctx=ast.Load()),
+                    attr=deepcopy_literal, ctx=ast.Load()
                 ), args=[node], keywords=[]), node)
 
         self.generic_visit(node)
@@ -116,7 +120,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
 
     try:
         # only works if calling code is a single line
-        parsed_context = ast.parse(lines[0])
+        parsed_context = ast.parse(lines[0].lstrip())
         parsed_context = _AddCopy(name).visit(parsed_context)
         copy_code = astor.to_source(parsed_context)
     except SyntaxError:
@@ -129,16 +133,16 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         load_or_rerun = 'rerunning the function'
 
     message = (
-        '**You code mutated a cached return value**\n\n'
+        '**Your code mutated a cached return value**\n\n'
 
-        'Streamlit detected the mutation of a return value of `{func_name}`, which is '
+        'Streamlit detected the mutation of a return value of `{name}`, which is '
         'a cached function. This happened in `{file_name}` line {lineno}. Since '
         '`persist` is `{persisted}`, Streamlit will make up for this by '
         '{load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
-        'To dismiss this warning, try one of the following:\n'
+        'To dismiss this warning, try one of the following:\n\n'
 
-        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        '1. *Preferred*: fix the code by removing the mutation. The simplest way to do '
         'this is to copy the cached value to a new variable, which you are allowed to '
         'mutate. For example, try changing `{caller_file_name}` line {caller_lineno} to:\n'
 
@@ -178,7 +182,7 @@ def _build_caching_block_error_message(persisted, code):
 
         'To dismiss this warning, try one of the following:\n\n'
 
-        '1. Preferred: fix the code by removing the mutation. The simplest way to do '
+        '1. *Preferred*: fix the code by removing the mutation. The simplest way to do '
         'this is to copy the cached value to a new variable, which you are allowed to mutate.\n'
 
         '2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an '

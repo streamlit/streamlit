@@ -15,11 +15,14 @@
 
 """st.caching unit tests."""
 
+import inspect
 import unittest
+
 from mock import patch
 
 import streamlit as st
-from streamlit.caching import _build_args_mutated_message
+from streamlit.caching import (_build_args_mutated_message,
+                               _build_caching_func_error_message)
 
 
 class CacheTest(unittest.TestCase):
@@ -56,7 +59,23 @@ class CacheTest(unittest.TestCase):
         warning.assert_not_called()
 
     @patch.object(st, 'warning')
-    def test_modify_args(self, warning):
+    def test_mutate_return(self, warning):
+        @st.cache
+        def f():
+            return [0, 1]
+
+        r = f()
+
+        r[0] = 1
+        
+        warning.assert_not_called()
+
+        f()
+
+        warning.assert_called()
+
+    @patch.object(st, 'warning')
+    def test_mutate_args(self, warning):
         @st.cache
         def f(x):
             x[0] = 2

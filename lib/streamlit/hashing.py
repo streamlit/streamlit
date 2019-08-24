@@ -267,12 +267,12 @@ class CodeHasher():
         elif inspect.ismodule(obj):
             # TODO: Hash more than just the name for internal modules.
             st.warning(('Streamlit does not support hashing modules. '
-                        'We did not hash %s.') % obj.__name__)
+                        'We did not hash `%s`.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
             # TODO: Hash more than just the name of classes.
             st.warning(('Streamlit does not support hashing classes. '
-                        'We did not hash %s.') % obj.__name__)
+                        'We did not hash `%s`.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):
             # The return value of functools.partial is not a plain function:
