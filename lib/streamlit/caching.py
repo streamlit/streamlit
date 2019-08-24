@@ -498,14 +498,16 @@ class Cache(dict):
                 key, self._persist, self._ignore_hash, code, caller_frame)
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+            if self._ignore_hash and not self._persist:
+                # If we don't hash the results, we don't need to use exec and just return True.
+                # This way line numbers will be correct.
+                _write_to_cache(key, self, False, True, None)
+                return True
+
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(key, self, self._persist, self._ignore_hash, None)
 
-        # TODO: if we are not hashing the return value (ignore hash) then we can
-        # just return true if we need to rerun since it will make sure that the
-        # line numbers are still correct
-
-        # Always return False so that we have control over the execution.
+        # Return False so that we have control over the execution.
         return False
 
     def __bool__(self):

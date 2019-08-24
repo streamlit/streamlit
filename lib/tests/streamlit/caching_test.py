@@ -79,6 +79,16 @@ class CachingObjectTest(unittest.TestCase):
 
             self.assertEqual(c.value, val)
 
+    def test_ignore_hash(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache(ignore_hash=True)
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
     def test_has_changes(self):
         val = 42
 
