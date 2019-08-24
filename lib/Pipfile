@@ -38,7 +38,6 @@ opencv-python = "*"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
-pylint = "<2.0.0"
 
 [packages]
 base58 = "*"
