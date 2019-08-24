@@ -163,7 +163,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
     )
 
 
-def _build_caching_block_error_message(persisted, code):
+def _build_caching_block_error_message(persisted, code, caller_frame):
     if persisted:
         load_or_rerun = 'loading the value back from the disk cache'
     else:
@@ -172,7 +172,7 @@ def _build_caching_block_error_message(persisted, code):
     message = (
         '**Your code mutated a cached value**\n\n'
 
-        'Streamlit detected the mutation of a cached value in `{file_name}` line '
+        'Streamlit detected the mutation of a cached value in `{file_name}` after line '
         '{lineno}. Since `persist` is `{persisted}`, Streamlit will make up for this '
         'by {load_or_rerun}, so your code will still work, but with reduced performance.\n\n'
 
@@ -191,7 +191,7 @@ def _build_caching_block_error_message(persisted, code):
     return message.format(
         load_or_rerun=load_or_rerun,
         file_name=os.path.relpath(code.co_filename),
-        lineno=code.co_firstlineno,
+        lineno=caller_frame.f_lineno,
         persisted=persisted
     )
 
@@ -285,7 +285,7 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, caller_frame):
                     persisted, func_or_code, caller_frame)
             else:
                 message = _build_caching_block_error_message(
-                    persisted, func_or_code)
+                    persisted, func_or_code, caller_frame)
             st.warning(message)
 
         if persisted:
