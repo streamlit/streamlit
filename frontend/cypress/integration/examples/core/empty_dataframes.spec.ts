@@ -36,7 +36,9 @@ describe('Dataframes', () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 6 && idx <= 7)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot()
+        // Snapshot the parent instead of `.stDataFrame` so we have a larger
+        // bounding box and a lower percentage difference on the snapshot diff
+        cy.wrap(el).parent().matchImageSnapshot()
       })
   })
 

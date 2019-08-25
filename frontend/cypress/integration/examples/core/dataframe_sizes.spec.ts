@@ -22,7 +22,6 @@ describe('Dataframes', () => {
     cy.get(DF_SELECTOR)
       .each((el, idx) => {
         cy.wrap(el)
-          .scrollIntoView()
           .matchImageSnapshot('dataframe-visuals' + idx)
       })
   })
@@ -31,7 +30,6 @@ describe('Dataframes', () => {
     cy.get(TABLE_SELECTOR)
       .each((el, idx) => {
         cy.wrap(el)
-          .scrollIntoView()
           .matchImageSnapshot('table-visuals' + idx)
       })
   })

@@ -24,7 +24,14 @@ describe('st.vega_lite_chart', () => {
       .eq(1).should('have.css', 'width', '692px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(2).should('have.css', 'width', '292px')
+      .eq(2)
+      .should('have.css', 'width')
+      .and((width) => {
+        // Tests run on mac expect 292px while running on linux expects 294px
+        if (width != '292px' && width != '294px') {
+          throw new Error('Expected width to be 292px or 294px')
+        }
+      })
 
     cy.get('.stVegaLiteChart canvas')
       .eq(3).should('have.css', 'width', '500px')
