@@ -40,7 +40,6 @@ const DataFrame = React.lazy(() => import('components/elements/DataFrame/'))
 const DeckGlChart = React.lazy(() => import('components/elements/DeckGlChart/'))
 const ImageList = React.lazy(() => import('components/elements/ImageList/'))
 const GraphVizChart = React.lazy(() => import('components/elements/GraphVizChart/'))
-const MapElement = React.lazy(() => import('components/elements/Map/'))
 const PlotlyChart = React.lazy(() => import('components/elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('components/elements/VegaLiteChart/'))
 const Video = React.lazy(() => import('components/elements/Video/'))
@@ -188,7 +187,6 @@ class Block extends PureComponent<Props> {
       exception: (el: SimpleElement) => <ExceptionElement element={el} width={width} />,
       graphvizChart: (el: SimpleElement) => <GraphVizChart element={el} index={index} width={width} />,
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-      map: (el: SimpleElement) => <MapElement element={el} width={width} />,
       plotlyChart: (el: SimpleElement) => <PlotlyChart element={el} width={width} />,
       progress: (el: SimpleElement) => <Progress value={el.get('value')} className="stProgress" style={{ width }} />,
       table: (el: SimpleElement) => <Table element={el} width={width} />,
