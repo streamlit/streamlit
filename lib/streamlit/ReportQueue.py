@@ -38,7 +38,7 @@ class ReportQueue(object):
         with self._lock:
             self._queue = []
 
-            # Map: (delta_path, msg.delta.id) -> _queue.indexof(msg),
+            # Map: (delta_path, msg.metadata.delta_id) -> _queue.indexof(msg),
             # where delta_path = (container, parent block path as a string)
             self._delta_index_map = dict()
 
@@ -75,10 +75,10 @@ class ReportQueue(object):
                 # Deltas are uniquely identified by the combination of their
                 # container and ID.
                 delta_path = (
-                    msg.delta.parent_block.container,
-                    tuple(msg.delta.parent_block.path)
+                    msg.metadata.parent_block.container,
+                    tuple(msg.metadata.parent_block.path)
                 )
-                delta_key = (delta_path, msg.delta.id)
+                delta_key = (delta_path, msg.metadata.delta_id)
 
                 if delta_key in self._delta_index_map:
                     # Combine the previous message into the new message.
@@ -87,6 +87,7 @@ class ReportQueue(object):
                     composed_delta = compose_deltas(old_msg.delta, msg.delta)
                     new_msg = ForwardMsg()
                     new_msg.delta.CopyFrom(composed_delta)
+                    new_msg.metadata.CopyFrom(msg.metadata)
                     self._queue[index] = new_msg
                 else:
                     # Append this message to the queue, and store its index

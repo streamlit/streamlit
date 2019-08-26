@@ -16,19 +16,11 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/BlockPath.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
 // A change to an element.
 message Delta {
-  // Each delta applies to a particular ID.
-  uint32 id = 1;
-
-  // Path to parent block.
-  BlockPath parent_block = 2;
-
-  // There are two kinds of supported deltas.
   oneof type {
     // Append a new element to the report.
     Element new_element = 3;

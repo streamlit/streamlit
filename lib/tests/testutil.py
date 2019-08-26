@@ -80,7 +80,17 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         return DeltaGenerator(enqueue, *args, **kwargs)
 
     def get_message_from_queue(self, index=-1):
+        """
+        Returns
+        -------
+        ForwardMsg
+        """
         return self.report_queue._queue[index]
 
     def get_delta_from_queue(self, index=-1):
+        """
+        Returns
+        -------
+        Delta
+        """
         return self.report_queue._queue[index].delta

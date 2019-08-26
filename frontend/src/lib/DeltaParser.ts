@@ -15,11 +15,16 @@
  * limitations under the License.
  */
 
-import { List, Map as ImmutableMap } from 'immutable'
-import { Delta, NamedDataSet, BlockPath } from 'autogen/proto'
-import { dispatchOneOf, toImmutableProto } from 'lib/immutableProto'
-import { addRows } from 'lib/dataFrameProto'
-import { MetricsManager } from 'lib/MetricsManager'
+import {
+  BlockPath,
+  Delta,
+  ForwardMsgMetadata,
+  NamedDataSet,
+} from 'autogen/proto'
+import {List, Map as ImmutableMap} from 'immutable'
+import {addRows} from 'lib/dataFrameProto'
+import {dispatchOneOf, toImmutableProto} from 'lib/immutableProto'
+import {MetricsManager} from 'lib/MetricsManager'
 
 type Container = 'main' | 'sidebar'
 type SimpleElement = ImmutableMap<string, any>
@@ -31,15 +36,19 @@ interface Elements {
   sidebar: BlockElement;
 }
 
-export function applyDelta(elements: Elements, reportId: string, deltaMsg: Delta): Elements {
+export function applyDelta(
+  elements: Elements, reportId: string,
+  deltaMsg: Delta, metadata: ForwardMsgMetadata): Elements {
+
+  /* eslint-disable @typescript-eslint/no-non-null-assertion */
   const delta = toImmutableProto(Delta, deltaMsg)
-  const deltaId: number = delta.get('id')
-  const parentBlock = delta.get('parentBlock')
-  const parentBlockContainer = parentBlock.get('container')
-  const parentBlockPath = parentBlock.get('path')
+  const parentBlock = metadata.parentBlock!
+  const parentBlockPath = parentBlock.path!
+  const parentBlockContainer = parentBlock.container
+  /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
   const container = parentBlockContainer === BlockPath.Container.MAIN ? 'main' : 'sidebar'
-  const deltaPath = [...parentBlockPath, deltaId]
+  const deltaPath = [...parentBlockPath, metadata.deltaId]
 
   dispatchOneOf(delta, 'type', {
     newElement: (element: SimpleElement) => {
