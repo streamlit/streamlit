@@ -385,13 +385,15 @@ class App extends PureComponent {
   handleDeltaMsg = (deltaMsg) => {
     // (BUG #685) When user presses stop, stop adding elements to
     // report immediately to avoid race condition.
-    // The one exception is static connections, which to not depend on
+    // The one exception is static connections, which do not depend on
     // the report state (and don't have a stop button).
     const isStaticConnection = this.connectionManager.isStaticConnection()
     const reportIsRunning = this.state.reportRunState === ReportRunState.RUNNING
     if (isStaticConnection || reportIsRunning) {
       this.setState(state => ({
-        elements: applyDelta(state.elements, state.reportId, deltaMsg),
+        // Create brand new `elements` instance, so components that depend on
+        // this for re-rendering catch the change.
+        elements: {...applyDelta(state.elements, state.reportId, deltaMsg)},
       }))
     }
   }

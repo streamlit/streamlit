@@ -15,7 +15,9 @@
 
 """st.caching unit tests."""
 
+import inspect
 import unittest
+
 from mock import patch
 
 import streamlit as st
@@ -23,6 +25,14 @@ from streamlit.caching import _build_args_mutated_message
 
 
 class CacheTest(unittest.TestCase):
+    def test_simple(self):
+        @st.cache
+        def foo():
+            return 42
+
+        self.assertEqual(foo(), 42)
+        self.assertEqual(foo(), 42)
+
     @patch.object(st, 'warning')
     def test_args(self, warning):
         called = [False]
@@ -48,7 +58,23 @@ class CacheTest(unittest.TestCase):
         warning.assert_not_called()
 
     @patch.object(st, 'warning')
-    def test_modify_args(self, warning):
+    def test_mutate_return(self, warning):
+        @st.cache
+        def f():
+            return [0, 1]
+
+        r = f()
+
+        r[0] = 1
+        
+        warning.assert_not_called()
+
+        f()
+
+        warning.assert_called()
+
+    @patch.object(st, 'warning')
+    def test_mutate_args(self, warning):
         @st.cache
         def f(x):
             x[0] = 2
@@ -58,3 +84,46 @@ class CacheTest(unittest.TestCase):
         f([1, 2])
 
         warning.assert_called_with(_build_args_mutated_message(f))
+
+
+class CachingObjectTest(unittest.TestCase):
+    def test_simple(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_ignore_hash(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache(ignore_hash=True)
+            if c:
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    def test_has_changes(self):
+        val = 42
+
+        for _ in range(2):
+            c = st.Cache()
+            if c.has_changes():
+                c.value = val
+
+            self.assertEqual(c.value, val)
+
+    @patch.object(st, 'warning')
+    def test_mutate(self, warning):
+        for _ in range(2):
+            c = st.Cache()
+            if c:
+                c.value = [0, 1]
+
+            c.value[0] = 1
+
+        warning.assert_called()

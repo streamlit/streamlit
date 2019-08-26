@@ -93,7 +93,7 @@ from streamlit.ReportThread import get_report_ctx, add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
-from streamlit.caching import cache  # noqa: F401
+from streamlit.caching import cache, Cache  # noqa: F401
 
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
