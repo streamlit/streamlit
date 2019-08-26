@@ -1,7 +1,0 @@
-[global]
-logLevel = "debug"
-useNode = false
-
-[server]
-# TODO(armando): Renable when #1047 is closed.
-enableCORS = false

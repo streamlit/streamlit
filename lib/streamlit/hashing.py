@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """A hashing utility for code."""
 
@@ -70,10 +83,10 @@ def _get_context(func):
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
-def get_hash(f):
-    """Quick utility to compute a hash."""
+def get_hash(f, context=None):
+    """Quick utility function that computes a hash of an arbitrary object."""
     hasher = CodeHasher('md5')
-    hasher.update(f)
+    hasher.update(f, context)
     return hasher.digest()
 
 
@@ -252,14 +265,19 @@ class CodeHasher():
         elif inspect.iscode(obj):
             return self._code_to_bytes(obj, context)
         elif inspect.ismodule(obj):
+            # TODO: Figure out how to best show this kind of warning to the
+            # user. In the meantime, show nothing. This scenario is too common,
+            # so the current warning is quite annoying...
+            # st.warning(('Streamlit does not support hashing modules. '
+            #             'We did not hash `%s`.') % obj.__name__)
             # TODO: Hash more than just the name for internal modules.
-            st.warning(('Streamlit does not support hashing modules. '
-                        'We did not hash %s.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
-            # TODO: Hash more than just the name of classes.
+            # TODO: Figure out how to best show this kind of warning to the
+            # user.
             st.warning(('Streamlit does not support hashing classes. '
-                        'We did not hash %s.') % obj.__name__)
+                        'We did not hash `%s`.') % obj.__name__)
+            # TODO: Hash more than just the name of classes.
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):
             # The return value of functools.partial is not a plain function:
@@ -275,6 +293,8 @@ class CodeHasher():
                 # As a last resort, we pickle the object to hash it.
                 return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
             except Exception:
+                # TODO: Figure out how to best show this kind of warning to the
+                # user.
                 st.warning('Streamlit cannot hash an object of type %s.' % type(obj))
 
     def _code_to_bytes(self, code, context):
