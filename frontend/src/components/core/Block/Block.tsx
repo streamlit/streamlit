@@ -134,12 +134,12 @@ class Block extends PureComponent<Props> {
 
   private renderElementWithErrorBoundary(
     element: SimpleElement, index: number, width: number
-  ): ReactNode|null {
+  ): (ReactNode|null) {
     const component = this.renderElement(element, index, width)
 
     if (!component) {
       // Do not transform an empty element into a ReactNode.
-      return
+      return null
     }
 
     const isStale =
