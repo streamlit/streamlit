@@ -14,15 +14,7 @@ from math import sqrt
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
-def get_zoom_level(distance):
-    """
-    Get the zoom level for a given distance in degrees
-    https://wiki.openstreetmap.org/wiki/Zoom_levels
-
-    param distance: float Distance in degrees
-    """
-
-    zoom_levels = [
+ZOOM_LEVELS = [
         360,
         180,
         90,
@@ -45,11 +37,30 @@ def get_zoom_level(distance):
         0.0005
     ]
 
-    for i, v in enumerate(zoom_levels):
-        if zoom_levels[i] > distance > zoom_levels[i+1]:
-            return i-1
 
-def get_bounding_rectangle(geolocations):
+def _get_zoom_level(distance):
+    """Get the zoom level for a given distance in degrees.
+
+    See https://wiki.openstreetmap.org/wiki/Zoom_levels for reference.
+
+    Parameters
+    ----------
+    distance : float
+        How many degrees of longitude should fit in the map.
+
+    Returns
+    -------
+    int
+        The zoom level, from 0 to 29.
+
+    """
+
+    for i, v in enumerate(ZOOM_LEVELS):
+        if ZOOM_LEVELS[i] > distance > ZOOM_LEVELS[i + 1]:
+            return i - 1
+
+
+def _get_bounding_rectangle(geolocations):
     """
     Gets the maximum and minimum latitudes and longitude for a given array of
     locations
@@ -76,13 +87,15 @@ def get_bounding_rectangle(geolocations):
 
     return {'min': (minLat, minLon), 'max': (maxLat, maxLon)}
 
-def calculateDistance(x1, y1, x2, y2):
+
+def _calculateDistance(x1, y1, x2, y2):
     """
         Calculate distance between two locations
     """
 
     dist = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return dist
+
 
 def marshall(element, data, zoom = None):
         """
@@ -103,9 +116,9 @@ def marshall(element, data, zoom = None):
             raise Exception('Map data must be numeric.')
 
         if isinstance(data, pd.DataFrame):
-            bounding = get_bounding_rectangle(data[LAT_LON].values)
+            bounding = _get_bounding_rectangle(data[LAT_LON].values)
         else:
-            bounding = get_bounding_rectangle(data)
+            bounding = _get_bounding_rectangle(data)
 
         center_viewport = [
             (bounding['max'][0] + bounding['min'][0])/2,
@@ -116,18 +129,18 @@ def marshall(element, data, zoom = None):
         height = bounding['min'][0] + bounding['max'][0]
 
         if width > height:
-            longitudeDistance = calculateDistance(center_viewport[0],
+            longitudeDistance = _calculateDistance(center_viewport[0],
                                                   center_viewport[1],
                                                   center_viewport[0],
                                                   bounding['max'][1])
         else:
-            longitudeDistance = calculateDistance(center_viewport[0],
+            longitudeDistance = _calculateDistance(center_viewport[0],
                                                   center_viewport[1],
                                                   bounding['max'][0],
                                                   center_viewport[1])
 
         if zoom is None:
-            zoom = get_zoom_level(longitudeDistance)
+            zoom = _get_zoom_level(longitudeDistance)
 
         import streamlit.elements.deck_gl as deck_gl
         deck_gl.marshall(element.deck_gl_chart,

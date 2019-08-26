@@ -1726,9 +1726,11 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data, zoom = None):
+    def map(self, element, data, zoom=None):
         """Display a map with points on it.
-        This will use deck_gl under the hood, with auto center and auto zoom.
+
+        This is a wrapper around st.deck_gl_chart to quickly create scatterplot
+        charts on top of a map, with auto-centering and auto-zoom.
 
         Parameters
         ----------
@@ -1736,8 +1738,8 @@ class DeltaGenerator(object):
             or None
             The data to be plotted. Must have 'lat' and 'lon' columns.
         zoom : int
-            Zoom level used by deck_gl ,
-            specified in https://wiki.openstreetmap.org/wiki/Zoom_levels
+            Zoom level as specified in
+            https://wiki.openstreetmap.org/wiki/Zoom_levels
 
         Example
         -------
