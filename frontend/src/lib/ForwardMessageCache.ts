@@ -7,14 +7,25 @@
  * message caching.
  */
 
-import {ForwardMsg} from 'autogen/proto'
+import {BlockPath, ForwardMsg} from 'autogen/proto'
 import {logMessage} from 'lib/log'
+import {BaseUriParts, buildHttpUri} from 'lib/ServerUtil'
 
 // This value should be equal to the value defined in the server
 const CACHED_MESSAGE_SIZE_MIN = 10 * 10e3  // 10k
 
 export class ForwardMsgCache {
   private readonly messages = new Map<string, ForwardMsg>()
+
+  /**
+   * A function that returns our server's base URI, or undefined
+   * if we're not connected.
+   */
+  private readonly getServerUri: () => BaseUriParts | undefined;
+
+  public constructor(getServerUri: () => BaseUriParts | undefined) {
+    this.getServerUri = getServerUri
+  }
 
   /**
    * Process a ForwardMsg:
@@ -25,36 +36,47 @@ export class ForwardMsgCache {
    * returned.
    */
   public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
-    this.maybeCacheMessage(msg)
+    // this.maybeCacheMessage(msg)
 
     if (msg.type !== 'ref') {
       return msg
     }
 
-    let newMsg = this.messages.get(msg.ref.hash)
+    let newMsg = this.getCachedMessage(msg.ref.hash)
     if (newMsg != null) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.ref.hash}]`)
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.ref.hash}]`)
 
-      const url = `http://127.0.0.1:8501/message?hash=${msg.ref.hash}`
-      const rsp = await fetch(url)
+      const serverURI = this.getServerUri()
+      if (serverURI === undefined) {
+        throw new Error(
+          'Cannot retrieve uncached message: not connected to a server')
+      }
+
+      const url = buildHttpUri(serverURI, `message?hash=${msg.ref.hash}`)
+      const rsp = await fetch(new Request(url, { method: 'GET' }))
+      if (!rsp.ok) {
+        // `fetch` doesn't reject for bad HTTP statuses, so
+        // we explicitly check for that.
+        throw new Error(rsp.statusText)
+      }
+
       const data = await rsp.arrayBuffer()
       const arrayBuffer = new Uint8Array(data)
       newMsg = ForwardMsg.decode(arrayBuffer)
+
+      this.maybeCacheMessage(newMsg)
     }
 
-    if (newMsg.type === 'delta') {
-      // This was a delta. Copy its metadata from the ref message
-      newMsg.delta.id = msg.ref.deltaId
-      newMsg.delta.parentBlock = msg.ref.deltaParentBlock
-    }
-
-    this.maybeCacheMessage(newMsg)
+    ForwardMsgCache.copyMetadataFromRef(newMsg, msg)
     return newMsg
   }
 
+  /**
+   * Add a new message to the cache if appropriate.
+   */
   private maybeCacheMessage(msg: ForwardMsg): void {
     if (msg.type === 'ref') {
       // We never cache reference messages
@@ -68,7 +90,28 @@ export class ForwardMsgCache {
 
     if (getMessageSize(msg) >= CACHED_MESSAGE_SIZE_MIN) {
       logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
-      this.messages.set(msg.hash, msg)
+      this.messages.set(msg.hash, ForwardMsg.create(msg))
+    }
+  }
+
+  /**
+   * Return a new copy of the ForwardMsg with the given hash
+   * from the cache, or undefined if no such message exists.
+   */
+  private getCachedMessage(hash: string): ForwardMsg | undefined {
+    const cached = this.messages.get(hash)
+    return cached != null ? ForwardMsg.create(cached) : undefined
+  }
+
+  /**
+   * Copy non-cached metadata from a reference message into a
+   * message pulled out of the cache.
+   */
+  private static copyMetadataFromRef(msg: ForwardMsg, ref: ForwardMsg): void {
+    if (msg.type === 'delta') {
+      // This was a delta. Copy its metadata from the ref message
+      msg.delta.id = ref.ref.deltaId
+      msg.delta.parentBlock = BlockPath.create(ref.ref.deltaParentBlock)
     }
   }
 }

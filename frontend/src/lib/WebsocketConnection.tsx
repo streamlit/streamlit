@@ -117,7 +117,7 @@ type Event =
  */
 export class WebsocketConnection {
   private readonly args: Args;
-  private readonly cache = new ForwardMsgCache()
+  private readonly cache: ForwardMsgCache;
 
   /**
    * Index to the URI in uriList that we're going to try to connect to.
@@ -149,7 +149,7 @@ export class WebsocketConnection {
   /**
    * The WebSocket object we're connecting with.
    */
-  private websocket?: (WebSocket | null);
+  private websocket?: WebSocket;
 
   /**
    * WebSocket objects don't support retries, so we have to implement them
@@ -157,11 +157,24 @@ export class WebsocketConnection {
    * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
    * needed.
    */
-  private wsConnectionTimeoutId?: (number | null);
+  private wsConnectionTimeoutId?: number;
 
   public constructor(args: Args) {
     this.args = args
+    this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm('INITIALIZED')
+  }
+
+  /**
+   * Return the BaseUriParts for the server we're connected to,
+   * if we are connected to a server.
+   */
+  public getBaseUriParts(): BaseUriParts | undefined {
+    if (this.state !== ConnectionState.CONNECTED) {
+      return undefined
+    }
+
+    return this.args.baseUriPartsList[this.uriIndex]
   }
 
   // This should only be called inside stepFsm().
@@ -264,10 +277,7 @@ export class WebsocketConnection {
     this.setConnectionTimeout(uri)
 
     const localWebsocket = this.websocket
-
-    const checkWebsocket = (): boolean => {
-      return localWebsocket === this.websocket
-    }
+    const checkWebsocket = (): boolean => localWebsocket === this.websocket
 
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
@@ -346,13 +356,13 @@ export class WebsocketConnection {
 
     if (this.websocket) {
       this.websocket.close()
-      this.websocket = null
+      this.websocket = undefined
     }
 
     if (this.wsConnectionTimeoutId != null) {
       logMessage(LOG, `Clearing WS timeout ${this.wsConnectionTimeoutId}`)
       window.clearTimeout(this.wsConnectionTimeoutId)
-      this.wsConnectionTimeoutId = null
+      this.wsConnectionTimeoutId = undefined
     }
   }
 

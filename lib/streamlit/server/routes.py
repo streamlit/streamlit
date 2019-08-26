@@ -25,6 +25,12 @@ from streamlit.server.server_util import serialize_forward_msg
 LOGGER = get_logger(__name__)
 
 
+def _allow_cross_origin_requests():
+    """True if cross-origin requests are allowed"""
+    return (not config.get_option('server.enableCORS') or
+            config.get_option('global.useNode'))
+
+
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def set_extra_headers(self, path):
         """Disable cache for HTML files.
@@ -47,9 +53,16 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
         # Only allow cross-origin requests when using the Node server. This is
         # only needed when using the Node server anyway, since in that case we
         # have a dev port and the prod port, which count as two origins.
-        if (not config.get_option('server.enableCORS') or
-                config.get_option('global.useNode')):
+        if _allow_cross_origin_requests():
             self.set_header('Access-Control-Allow-Origin', '*')
+
+    def options(self):
+        """/OPTIONS handler for preflight CORS checks.
+
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
 
 
 class HealthHandler(_SpecialRequestHandler):
@@ -99,7 +112,7 @@ class DebugHandler(_SpecialRequestHandler):
             ))
 
 
-class MessageCacheHandler(_SpecialRequestHandler):
+class MessageCacheHandler(tornado.web.RequestHandler):
     """Returns ForwardMsgs from our MessageCache"""
     def initialize(self, cache):
         """Initializes the handler.
@@ -110,6 +123,13 @@ class MessageCacheHandler(_SpecialRequestHandler):
 
         """
         self._cache = cache
+
+    def set_default_headers(self):
+        # Only allow cross-origin requests when using the Node server. This is
+        # only needed when using the Node server anyway, since in that case we
+        # have a dev port and the prod port, which count as two origins.
+        if _allow_cross_origin_requests():
+            self.set_header('Access-Control-Allow-Origin', '*')
 
     def get(self):
         msg_hash = self.get_argument('hash', None)
@@ -131,3 +151,11 @@ class MessageCacheHandler(_SpecialRequestHandler):
         self.set_header('Content-Type', 'application/octet-stream')
         self.write(msg_str)
         self.set_status(200)
+
+    def options(self):
+        """/OPTIONS handler for preflight CORS checks.
+
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
