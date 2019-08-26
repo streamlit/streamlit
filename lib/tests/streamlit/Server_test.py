@@ -86,6 +86,25 @@ class ServerTest(ServerTestCase):
         self.assertFalse(self.server.browser_is_connected)
 
     @tornado.testing.gen_test
+    def test_forwardmsg_hashing(self, _):
+        """Test that outgoing ForwardMsgs contain hashes."""
+        yield self.start_server_loop()
+
+        ws_client = yield self.ws_connect()
+
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
+
+        # Create a message and ensure its hash is unset; we're testing
+        # that _send_message adds the hash before it goes out.
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg.ClearField('hash')
+        self.server._send_message(ws, session, msg)
+
+        received = yield self.read_forward_msg(ws_client)
+        self.assertEqual(ensure_hash(msg), received.hash)
+
+    @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self, _):
         """Test that duplicate ForwardMsgs are sent only once."""
         with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 0):

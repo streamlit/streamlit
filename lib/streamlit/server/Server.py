@@ -260,11 +260,13 @@ class Server(object):
             if self._message_cache.has_message_reference(msg, session):
                 # This session has probably cached this message. Send
                 # a reference instead.
+                LOGGER.debug('Sending cached message ref (hash=%s)' % msg.hash)
                 ref_msg = create_reference_msg(msg)
                 ws.write_message(serialize_forward_msg(ref_msg), binary=True)
                 return
 
             # Cache the message so it can be referenced in the future.
+            LOGGER.debug('Caching message (hash=%s)' % msg.hash)
             self._message_cache.add_message(msg, session)
 
         # Ship it off!

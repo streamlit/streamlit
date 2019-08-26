@@ -17,6 +17,7 @@
 
 from streamlit import config
 from streamlit import util
+from streamlit.MessageCache import ensure_hash
 
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)
@@ -59,6 +60,7 @@ def serialize_forward_msg(msg):
         The serialized byte string to send
 
     """
+    ensure_hash(msg)
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:

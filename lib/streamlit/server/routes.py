@@ -122,7 +122,7 @@ class MessageCacheHandler(_SpecialRequestHandler):
         message = self._cache.get_message(msg_hash)
         if message is None:
             # Message not in our cache
-            LOGGER.debug('MessageCache MISS [hash=%s]' % msg_hash)
+            LOGGER.warning('MessageCache MISS [hash=%s]' % msg_hash)
             self.set_status(404)
             raise tornado.web.Finish()
 

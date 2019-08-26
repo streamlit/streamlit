@@ -38,7 +38,8 @@ export class ForwardMsgCache {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.ref.hash}]`)
 
-      const rsp = await fetch(`/message?hash=${msg.hash}`)
+      const url = `http://127.0.0.1:8501/message?hash=${msg.ref.hash}`
+      const rsp = await fetch(url)
       const data = await rsp.arrayBuffer()
       const arrayBuffer = new Uint8Array(data)
       newMsg = ForwardMsg.decode(arrayBuffer)
