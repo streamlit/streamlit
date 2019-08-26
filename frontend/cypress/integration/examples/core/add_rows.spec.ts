@@ -61,7 +61,6 @@ describe('st.add_rows', () => {
     })
     cy.get('.element-container .stVegaLiteChart').each((el, i) => {
       cy.get(el)
-        .scrollIntoView()
         .matchImageSnapshot(`stVegaLiteChart-${i}`)
     })
   })
