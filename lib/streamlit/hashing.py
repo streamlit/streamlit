@@ -48,8 +48,13 @@ except ImportError:
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-PANDAS_ROWS_LARGE = 1000000
-HASHING_FRACTION = 0.1
+PANDAS_ROWS_LARGE = 100000
+PANDAS_SAMPLE_SIZE = 10000
+
+
+# Similar to dataframes, we also sample large numpy arrays.
+NP_SIZE_LARGE = 1000000
+NP_SAMPLE_SIZE = 100000
 
 
 Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
@@ -225,11 +230,22 @@ class CodeHasher():
             return b'bool:0'
         elif util.is_type(obj, 'pandas.core.frame.DataFrame'):
             import pandas as pd
-            if len(obj) > PANDAS_ROWS_LARGE:
-                obj = obj.sample(frac=HASHING_FRACTION, random_state=0)
+            if len(obj) >= PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
             return pd.util.hash_pandas_object(obj).sum()
         elif util.is_type(obj, 'numpy.ndarray'):
-            return obj.tobytes()
+            h = hashlib.new(self.name)
+            self._update(h, obj.shape)
+            
+            if obj.size >= NP_SIZE_LARGE:
+                import numpy as np
+                state = np.random.get_state()  # Save and restore original random state.
+                np.random.seed(0)
+                obj = np.random.choice(obj.flat, size=NP_SAMPLE_SIZE)
+                np.random.set_state(state)
+
+            self._update(h, obj.tobytes())
+            return h.digest()
         elif inspect.isbuiltin(obj):
             return self.to_bytes(obj.__name__)
         elif hasattr(obj, 'name') and (
