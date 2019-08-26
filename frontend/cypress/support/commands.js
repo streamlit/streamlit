@@ -49,6 +49,6 @@ addMatchImageSnapshotCommand({
 // https://docs.cypress.io/guides/core-concepts/interacting-with-elements.html#Actionability
 // This fixes the issue where snapshots are cutoff or the wrong element is captured.
 Cypress.Commands.overwrite('matchImageSnapshot', (originalFn, subject, name, options) => {
-  cy.wrap(subject).trigger('focus')
+  cy.wrap(subject).trigger('blur')
   return originalFn(subject, name, options)
 })
