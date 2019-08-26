@@ -57,8 +57,8 @@ const TextInput = React.lazy(() => import('components/widgets/TextInput/'))
 const TimeInput = React.lazy(() => import('components/widgets/TimeInput/'))
 
 type SimpleElement = ImmutableMap<string, any>
-type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> { }
+type StElement = SimpleElement | BlockElement
+interface BlockElement extends List<StElement> {}
 
 interface Props {
   elements: BlockElement;
@@ -71,59 +71,27 @@ interface Props {
 
 class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.handleEmptyElements()
+    const elementsToRender = this.getElements()
 
     // Transform Streamlit elements into ReactNodes.
-    const nodes: ReactNode[] = []
-    elementsToRender.forEach((element, index) => {
-      if (element instanceof List) {
-        nodes.push(
-          <div key={index} className="stBlock" style={{ width }}>
-            <Block
-              elements={element as BlockElement}
-              reportId={this.props.reportId}
-              reportRunState={this.props.reportRunState}
-              showStaleElementIndicator={this.props.showStaleElementIndicator}
-              widgetMgr={this.props.widgetMgr}
-              widgetsDisabled={this.props.widgetsDisabled}
-            />
-          </div>
-        )
-      } else {
-        const component = this.renderElement(element as SimpleElement, index, width)
-        if (!component) {
-          // Do not transform an empty element into a ReactNode.
-          return
+    return elementsToRender.toArray()
+      .map((element: StElement, index: number): ReactNode|null => {
+        if (element instanceof List) {
+          return this.renderBlock(element as BlockElement, index, width)
+        } else {
+          return this.renderElementWithErrorBoundary(
+            element as SimpleElement, index, width)
         }
-
-        const showStaleState = this.props.showStaleElementIndicator && this.isStaleElement(element as SimpleElement)
-        const className = showStaleState ? 'element-container stale-element' : 'element-container'
-
-        nodes.push(
-          <div key={index} className={className} style={{ width }}>
-            <ErrorBoundary width={width}>
-              <Suspense fallback={
-                <Text
-                  element={makeElementWithInfoText('Loading...').get('text')}
-                  width={width}
-                />
-              }>
-                {component}
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-        )
-      }
-    })
-    return nodes
+      })
+      .filter((node: ReactNode|null): ReactNode => node != null)
   }
 
-  private handleEmptyElements = (): BlockElement => {
+  private getElements = (): BlockElement => {
     let elementsToRender = this.props.elements
     if (this.props.reportRunState === ReportRunState.RUNNING) {
       // (BUG #739) When the report is running, use our most recent list
       // of rendered elements as placeholders for any empty elements we encounter.
-      elementsToRender = this.props.elements.map((element: Element, index: number): Element => {
+      elementsToRender = this.props.elements.map((element: StElement, index: number): StElement => {
         if (element instanceof ImmutableMap) {
           // Repeat the old element if we encounter st.empty()
           const isEmpty = (element as SimpleElement).get('type') === 'empty'
@@ -135,7 +103,7 @@ class Block extends PureComponent<Props> {
     return elementsToRender
   }
 
-  private isStaleElement(element: SimpleElement): boolean {
+  private isElementStale(element: SimpleElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
@@ -145,6 +113,57 @@ class Block extends PureComponent<Props> {
     } else {
       return false
     }
+  }
+
+  private renderBlock(
+    element: BlockElement, index: number, width: number
+  ): ReactNode {
+    return (
+      <div key={index} className="stBlock" style={{ width }}>
+        <Block
+          elements={element}
+          reportId={this.props.reportId}
+          reportRunState={this.props.reportRunState}
+          showStaleElementIndicator={this.props.showStaleElementIndicator}
+          widgetMgr={this.props.widgetMgr}
+          widgetsDisabled={this.props.widgetsDisabled}
+        />
+      </div>
+    )
+  }
+
+  private renderElementWithErrorBoundary(
+    element: SimpleElement, index: number, width: number
+  ): (ReactNode|null) {
+    const component = this.renderElement(element, index, width)
+
+    if (!component) {
+      // Do not transform an empty element into a ReactNode.
+      return null
+    }
+
+    const isStale =
+      this.props.showStaleElementIndicator &&
+      this.isElementStale(element as SimpleElement)
+
+    const className = isStale ?
+      'element-container stale-element' :
+      'element-container'
+
+    return (
+      <div key={index} className={className} style={{ width }}>
+        <ErrorBoundary width={width}>
+          <Suspense fallback={
+            <Text
+              element={makeElementWithInfoText('Loading...').get('text')}
+              width={width}
+            />
+          }>
+            {component}
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    )
   }
 
   private renderElement = (element: SimpleElement, index: number, width: number): ReactNode | undefined => {
@@ -158,7 +177,6 @@ class Block extends PureComponent<Props> {
     }
 
     return dispatchOneOf(element, 'type', {
-      // Elements
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => <BokehChart element={el} index={index} width={width} />,
