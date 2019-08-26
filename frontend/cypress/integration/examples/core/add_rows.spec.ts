@@ -60,8 +60,7 @@ describe('st.add_rows', () => {
       cy.get(el).matchImageSnapshot(`stChart-${i}`)
     })
     cy.get('.element-container .stVegaLiteChart').each((el, i) => {
-      cy.get(el)
-        .matchImageSnapshot(`stVegaLiteChart-${i}`)
+      cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`)
     })
   })
 })

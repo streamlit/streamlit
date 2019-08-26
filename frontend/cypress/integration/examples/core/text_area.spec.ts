@@ -28,8 +28,7 @@ describe('st.text_area', () => {
 
     cy.get('.stTextArea')
       .each((el, idx) => {
-        cy.wrap(el)
-          .matchImageSnapshot('text_area' + idx)
+        cy.wrap(el).matchImageSnapshot('text_area' + idx)
       })
   })
 
