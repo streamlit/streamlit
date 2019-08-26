@@ -20,6 +20,7 @@ import {ConnectionState} from 'lib/ConnectionState'
 import {ForwardMsgCache} from 'lib/ForwardMessageCache'
 import {logError, logMessage, logWarning} from 'lib/log'
 import Resolver from 'lib/Resolver'
+import {BaseUriParts, buildHttpUri, buildWsUri} from 'lib/ServerUtil'
 import {SessionInfo} from 'lib/SessionInfo'
 import React, {Fragment} from 'react'
 
@@ -46,12 +47,6 @@ const PING_RETRY_PERIOD_MS = 500
  * This should be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC.
  */
 const WEBSOCKET_TIMEOUT_MS = 1000
-
-
-interface BaseUriParts {
-  host: string;
-  port: number;
-}
 
 
 type OnMessage = (ForwardMsg: any) => void
@@ -255,7 +250,7 @@ export class WebsocketConnection {
   }
 
   private connectToWebSocket(): void {
-    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex])
+    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex], 'stream')
 
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
@@ -406,17 +401,6 @@ export class WebsocketConnection {
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
   }
-}
-
-
-function buildWsUri({host, port}: BaseUriParts): string {
-  const protocol = window.location.href.startsWith('https://') ? 'wss' : 'ws'
-  return `${protocol}://${host}:${port}/stream`
-}
-
-
-function buildHttpUri({host, port}: BaseUriParts, path: string): string {
-  return `//${host}:${port}/${path}`
 }
 
 
