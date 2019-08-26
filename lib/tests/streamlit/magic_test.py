@@ -4,6 +4,7 @@
 
 import unittest
 import ast
+import sys
 
 import streamlit.magic as magic
 
@@ -63,6 +64,8 @@ with None:
     a
 '''
 
+is_python_2 = sys.version_info[0] == 2
+
 
 class MagicTest(unittest.TestCase):
     """Test for Magic.
@@ -72,6 +75,9 @@ class MagicTest(unittest.TestCase):
     """
 
     def _testCode(self, code, expected_count):
+        # Magic is not supported for python2.
+        if is_python_2:
+            return
         tree = magic.add_magic(code, './')
         count = 0
         for node in ast.walk(tree):
