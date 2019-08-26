@@ -1,4 +1,17 @@
-# Copyright 2019 Streamlit Inc. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Tests ScriptRunner functionality"""
 
@@ -14,6 +27,7 @@ from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Widget_pb2 import WidgetStates
 
 
@@ -290,7 +304,7 @@ class ScriptRunnerTest(unittest.TestCase):
             [
                 delta.new_element.text.body for delta in scriptrunner.deltas()
                 if delta.HasField('new_element') and
-                delta.new_element.HasField('text')
+                   delta.new_element.HasField('text')
             ]
         )
 
@@ -308,7 +322,9 @@ class TestScriptRunner(ScriptRunner):
             self.maybe_handle_execution_control_request()
             return True
 
-        self.dg = DeltaGenerator(enqueue_fn)
+        self.main_dg = DeltaGenerator(enqueue_fn, container=BlockPath.MAIN)
+        self.sidebar_dg = DeltaGenerator(enqueue_fn,
+                                         container=BlockPath.SIDEBAR)
         self.script_request_queue = ScriptRequestQueue()
 
         script_path = os.path.join(
@@ -318,7 +334,8 @@ class TestScriptRunner(ScriptRunner):
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, []),
-            root_dg=self.dg,
+            main_dg=self.main_dg,
+            sidebar_dg=self.sidebar_dg,
             widget_states=WidgetStates(),
             request_queue=self.script_request_queue
         )
