@@ -22,8 +22,10 @@ describe('st.map', () => {
     cy.visit('http://localhost:3000/')
   })
 
-  it('displays a map', () => {
-    cy.get('.element-container .stMap')
-      .should('contain', 'Leaflet')
+
+  it('displays a map using deck_gl', () => {
+    const els = cy.get('.element-container .deckglchart')
+
+    els.should('have.length', 1)
   })
 })

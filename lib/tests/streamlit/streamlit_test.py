@@ -85,9 +85,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame(np.random.randn(3, 3), columns=['a', 'b', 'c'])
 
         c = (alt.Chart(df)
-            .mark_circle()
-            .encode(x='a', y='b', size='c', color='c')
-            .interactive())
+             .mark_circle()
+             .encode(x='a', y='b', size='c', color='c')
+             .interactive())
         st.altair_chart(c)
 
         el = self.get_delta_from_queue().new_element
@@ -180,7 +180,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         dg = st.dataframe(df)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
-        self.assertEqual(el.data_frame.columns.plain_index.data.strings.data, ['one', 'two'])
+        self.assertEqual(el.data_frame.columns.plain_index.data.strings.data,
+                         ['one', 'two'])
 
     def test_st_deck_gl_chart(self):
         """Test st.deck_gl_chart."""
@@ -209,7 +210,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         )
 
         self.assertEqual(
-            json.loads(json_format.MessageToJson(data.columns.plain_index.data.strings)),
+            json.loads(json_format.MessageToJson(
+                data.columns.plain_index.data.strings)),
             {
                 'data': ['lat', 'lon']
             }
@@ -270,7 +272,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.doc_string.name, 'header')
         self.assertEqual(el.doc_string.module, 'streamlit')
         self.assertTrue(
-            el.doc_string.doc_string.startswith('Display text in header formatting.'))
+            el.doc_string.doc_string.startswith(
+                'Display text in header formatting.'))
         if sys.version_info >= (3, 0):
             self.assertEqual(el.doc_string.type, '<class \'function\'>')
         else:
@@ -279,7 +282,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
-        img = Image.new('RGB', (64, 64), color = 'red')
+        img = Image.new('RGB', (64, 64), color='red')
 
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
@@ -298,9 +301,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
         imgs = [
-            Image.new('RGB', (64, 64), color = 'red'),
-            Image.new('RGB', (64, 64), color = 'blue'),
-            Image.new('RGB', (64, 64), color = 'green'),
+            Image.new('RGB', (64, 64), color='red'),
+            Image.new('RGB', (64, 64), color='blue'),
+            Image.new('RGB', (64, 64), color='green'),
         ]
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
@@ -393,36 +396,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         data = json.loads(json_format.MessageToJson(el.chart.data.data))
         result = [x['int64s']['data'][0] for x in data['cols']]
         self.assertEqual(result, ['10', '20', '30'])
-
-    def test_st_map(self):
-        """Test st.map."""
-        df = pd.DataFrame({'lat': [1.0, 2.0, 3.0], 'lon': [11.0, 12.0, 13.0]})
-        dg = st.map(df)
-
-        el = self.get_delta_from_queue().new_element
-        data = json.loads(json_format.MessageToJson(el.map.points.data))
-        self.assertEqual(
-            data['cols'][0]['doubles']['data'],
-            [1.0, 2.0, 3.0])
-        self.assertEqual(
-            data['cols'][1]['doubles']['data'],
-            [11.0, 12.0, 13.0])
-
-    def test_st_map_missing_column(self):
-        """Test st.map with wrong column label."""
-        df = pd.DataFrame({'notlat': [1, 2, 3], 'lon': [11, 12, 13]})
-        with self.assertRaises(Exception) as ctx:
-            st.map(df)
-
-        self.assertTrue('Map data must contain "lat" and "lon" columns.' in str(ctx.exception))
-
-    def test_st_map_nan_exception(self):
-        """Test st.map with NaN in data."""
-        df = pd.DataFrame({'lat': [1, 2, np.nan], 'lon': [11, 12, 13]})
-        with self.assertRaises(Exception) as ctx:
-            st.map(df)
-
-        self.assertTrue('Map data must be numeric.' in str(ctx.exception))
 
     def test_st_markdown(self):
         """Test st.markdown."""
@@ -580,7 +553,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
         self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
-        self.assertEqual(el.table.columns.plain_index.data.strings.data, ['col1', 'col2'])
+        self.assertEqual(el.table.columns.plain_index.data.strings.data,
+                         ['col1', 'col2'])
 
     def test_st_text(self):
         """Test st.text."""
@@ -644,7 +618,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_text_exception(self):
         """Test st._text_exception."""
-        data ={
+        data = {
             'type': 'ModuleNotFoundError',
             'message': 'No module named \'numpy\'',
             'stack_trace': [
@@ -664,7 +638,3 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.exception.type, data.get('type'))
         self.assertEqual(el.exception.message, data.get('message'))
         self.assertEqual(el.exception.stack_trace, data.get('stack_trace'))
-
-
-
-

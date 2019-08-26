@@ -37,9 +37,9 @@ class DocString extends React.PureComponent<Props> {
     const type = element.get('type')
     const signature = element.get('signature')
 
-    const moduleHtml = <span className="doc-module">{module}.</span>
-    const nameHtml = <span className="doc-name">{name}</span>
-    const signatureHtml = <span className="doc-signature">{signature}</span>
+    const moduleHtml = <span className="doc-module" key="module">{module}.</span>
+    const nameHtml = <span className="doc-name" key="name">{name}</span>
+    const signatureHtml = <span className="doc-signature" key="signature">{signature}</span>
     const typeHtml = <span className="doc-type">{type}</span>
 
     // Put it all together into a nice little html view.
