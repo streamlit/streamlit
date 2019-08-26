@@ -58,11 +58,10 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
         deck_gl_spec = json.loads(c.spec)
 
         assert 'viewport' in deck_gl_spec
-        assert 'latitude' in deck_gl_spec['viewport']
-        assert 'longitude' in deck_gl_spec['viewport']
-        assert 'zoom' in deck_gl_spec['viewport']
-        assert 'pitch' in deck_gl_spec['viewport']
 
+        self.assertEqual(deck_gl_spec['viewport']['latitude'], 2.5)
+        self.assertEqual(deck_gl_spec['viewport']['longitude'], 25)
+        self.assertEqual(deck_gl_spec['viewport']['zoom'], 3)
         self.assertEqual(deck_gl_spec['viewport']['pitch'], 50)
 
         for layer in c.layers:
