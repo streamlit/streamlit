@@ -103,7 +103,7 @@ class Block extends PureComponent<Props> {
     return elementsToRender
   }
 
-  private isStaleElement(element: SimpleElement): boolean {
+  private isElementStale(element: SimpleElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
@@ -142,8 +142,13 @@ class Block extends PureComponent<Props> {
       return
     }
 
-    const showStaleState = this.props.showStaleElementIndicator && this.isStaleElement(element as SimpleElement)
-    const className = showStaleState ? 'element-container stale-element' : 'element-container'
+    const isStale =
+      this.props.showStaleElementIndicator &&
+      this.isElementStale(element as SimpleElement)
+
+    const className = isStale ?
+      'element-container stale-element' :
+      'element-container'
 
     return (
       <div key={index} className={className} style={{ width }}>
