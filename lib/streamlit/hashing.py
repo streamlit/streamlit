@@ -265,14 +265,19 @@ class CodeHasher():
         elif inspect.iscode(obj):
             return self._code_to_bytes(obj, context)
         elif inspect.ismodule(obj):
+            # TODO: Figure out how to best show this kind of warning to the
+            # user. In the meantime, show nothing. This scenario is too common,
+            # so the current warning is quite annoying...
+            # st.warning(('Streamlit does not support hashing modules. '
+            #             'We did not hash `%s`.') % obj.__name__)
             # TODO: Hash more than just the name for internal modules.
-            st.warning(('Streamlit does not support hashing modules. '
-                        'We did not hash `%s`.') % obj.__name__)
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
-            # TODO: Hash more than just the name of classes.
+            # TODO: Figure out how to best show this kind of warning to the
+            # user.
             st.warning(('Streamlit does not support hashing classes. '
                         'We did not hash `%s`.') % obj.__name__)
+            # TODO: Hash more than just the name of classes.
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):
             # The return value of functools.partial is not a plain function:
@@ -288,6 +293,8 @@ class CodeHasher():
                 # As a last resort, we pickle the object to hash it.
                 return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
             except Exception:
+                # TODO: Figure out how to best show this kind of warning to the
+                # user.
                 st.warning('Streamlit cannot hash an object of type %s.' % type(obj))
 
     def _code_to_bytes(self, code, context):
