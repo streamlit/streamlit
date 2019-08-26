@@ -48,12 +48,28 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
 
     def test_basic(self):
         """Test that deck_gl_chart can be called with lat/lon."""
-        st.deck_gl_chart(df1)
+        st.map(df1)
 
         c = self.get_delta_from_queue().new_element.deck_gl_chart
+
         self.assertEqual(c.HasField('data'), False)
-        self.assertEqual(len(c.layers), 1)
-        self.assertEqual(json.loads(c.spec), {})
+        self.assertEqual(len(c.layers), 2)
+
+        deck_gl_spec = json.loads(c.spec)
+
+        assert 'viewport' in deck_gl_spec
+        assert 'latitude' in deck_gl_spec['viewport']
+        assert 'longitude' in deck_gl_spec['viewport']
+        assert 'zoom' in deck_gl_spec['viewport']
+        assert 'pitch' in deck_gl_spec['viewport']
+
+        self.assertEqual(deck_gl_spec['viewport']['pitch'], 50)
+
+        for layer in c.layers:
+            spec = json.loads(layer.spec)
+            isHexagonLayer = spec['type'] == 'HexagonLayer'
+            isScatterplotLayer = spec['type'] == 'ScatterplotLayer'
+            assert isHexagonLayer or isScatterplotLayer
 
     def test_missing_column(self):
         """Test st.map with wrong column label."""
