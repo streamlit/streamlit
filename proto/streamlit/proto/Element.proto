@@ -30,7 +30,6 @@ import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
-import "streamlit/proto/Map.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Progress.proto";
 import "streamlit/proto/Radio.proto";
@@ -63,7 +62,6 @@ message Element {
     Exception exception = 8;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
-    Map map = 9;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Radio radio = 23;

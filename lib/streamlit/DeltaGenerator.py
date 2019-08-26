@@ -26,7 +26,6 @@ import functools
 import json
 import random
 import textwrap
-import traceback
 from datetime import datetime
 from datetime import date
 from datetime import time
