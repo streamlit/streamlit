@@ -75,7 +75,7 @@ class Block extends PureComponent<Props> {
 
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender.toArray()
-      .map((element: StElement, index): ReactNode|null => {
+      .map((element: StElement, index: number): ReactNode|null => {
         if (element instanceof List) {
           return this.renderBlock(element as BlockElement, index, width)
         } else {
