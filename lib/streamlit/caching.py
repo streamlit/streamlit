@@ -250,7 +250,11 @@ def _read_from_disk_cache(key):
     except util.Error as e:
         LOGGER.error(e)
         raise CacheError('Unable to read from cache: %s' % e)
-    except FileNotFoundError:
+
+    except (
+            OSError,  # Python 2
+            FileNotFoundError  # Python 3
+        ):
         raise CacheKeyNotFoundError('Key not found in disk cache')
     return value, args_mutated
 
@@ -266,7 +270,7 @@ def _write_to_disk_cache(key, value, args_mutated):
     # In python 3, it's an open error in util.
     except (util.Error, struct.error) as e:
         LOGGER.debug(e)
-        # Cleanup file so we don't leave zero byte files.
+        # Clean up file so we don't leave zero byte files.
         try:
             os.remove(path)
         except (FileNotFoundError, IOError, OSError):
