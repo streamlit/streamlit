@@ -391,7 +391,9 @@ class App extends PureComponent {
     const reportIsRunning = this.state.reportRunState === ReportRunState.RUNNING
     if (isStaticConnection || reportIsRunning) {
       this.setState(state => ({
-        elements: applyDelta(state.elements, state.reportId, deltaMsg),
+        // Create brand new `elements` instance, so components that depend on
+        // this for re-rendering catch the change.
+        elements: {...applyDelta(state.elements, state.reportId, deltaMsg)},
       }))
     }
   }
