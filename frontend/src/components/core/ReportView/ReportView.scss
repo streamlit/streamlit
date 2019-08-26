@@ -69,7 +69,8 @@
   }
 
   .element-container {
-    display: block;
+    display: flex;
+    flex-direction: column;
     margin-bottom: 1rem;
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
