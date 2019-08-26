@@ -27,29 +27,35 @@ export class ForwardMsgCache {
   public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
     this.maybeCacheMessage(msg)
 
-    if (msg.type !== 'hashReference') {
+    if (msg.type !== 'ref') {
       return msg
     }
 
-    const cached = this.messages.get(msg.hashReference)
-    if (cached != null) {
-      logMessage(`Cached ForwardMsg HIT [hash=${msg.hashReference}]`)
-      return cached
+    let newMsg = this.messages.get(msg.ref.hash)
+    if (newMsg != null) {
+      logMessage(`Cached ForwardMsg HIT [hash=${msg.ref.hash}]`)
+    } else {
+      // Cache miss: fetch from the server
+      logMessage(`Cached ForwardMsg MISS [hash=${msg.ref.hash}]`)
+
+      const rsp = await fetch(`/message?hash=${msg.hash}`)
+      const data = await rsp.arrayBuffer()
+      const arrayBuffer = new Uint8Array(data)
+      newMsg = ForwardMsg.decode(arrayBuffer)
     }
 
-    // Cache miss: fetch from the server
-    logMessage(`Cached ForwardMsg MISS [hash=${msg.hashReference}]`)
+    if (newMsg.type === 'delta') {
+      // This was a delta. Copy its metadata from the ref message
+      newMsg.delta.id = msg.ref.deltaId
+      newMsg.delta.parentBlock = msg.ref.deltaParentBlock
+    }
 
-    const rsp = await fetch(`/message?hash=${msg.hashReference}`)
-    const data = await rsp.arrayBuffer()
-    msg = ForwardMsg.decode(new Uint8Array(data))
-    this.maybeCacheMessage(msg)
-
-    return msg
+    this.maybeCacheMessage(newMsg)
+    return newMsg
   }
 
   private maybeCacheMessage(msg: ForwardMsg): void {
-    if (msg.type === 'hashReference') {
+    if (msg.type === 'ref') {
       // We never cache reference messages
       return
     }

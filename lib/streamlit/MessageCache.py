@@ -22,16 +22,34 @@ def ensure_hash(msg):
 
     """
     if msg.hash == '':
+        # If the message is a Delta, unset its id and parent_block
+        # before hashing. These bits are metadata that we don't want
+        # changing our hash.
+        is_delta = msg.WhichOneof('type') == 'delta'
+        if is_delta:
+            id = msg.delta.id
+            parent_block = msg.delta.parent_block
+            msg.delta.ClearField('id')
+            msg.delta.ClearField('parent_block')
+
         # SHA1 is good enough for what we need, which is uniqueness.
         hasher = hashlib.sha1()
         hasher.update(msg.SerializeToString())
         msg.hash = hasher.hexdigest()
 
+        # Restore Delta metadata.
+        if is_delta:
+            msg.delta.id = id
+            msg.delta.parent_block.CopyFrom(parent_block)
+
     return msg.hash
 
 
 def create_reference_msg(msg):
-    """Create a new ForwardMsg that contains just the ID of the given message.
+    """Create a new ForwardMsg that contains the hash of the given message.
+
+    If the original message contains a Delta, its delta metadata (id,
+    parent_block) will be copied into the reference message.
 
     Parameters
     ----------
@@ -42,11 +60,15 @@ def create_reference_msg(msg):
     -------
     ForwardMsg
         A new ForwardMsg that "points" to the original message via the
-        hash_reference field.
+        ref field.
 
     """
+    ensure_hash(msg)
     ref_msg = ForwardMsg()
-    ref_msg.hash_reference = ensure_hash(msg)
+    ref_msg.ref.hash = msg.hash
+    if msg.WhichOneof('type') == 'delta':
+        ref_msg.ref.delta_id = msg.delta.id
+        ref_msg.ref.delta_parent_block.CopyFrom(msg.delta.parent_block)
     return ref_msg
 
 

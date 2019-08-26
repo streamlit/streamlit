@@ -128,5 +128,6 @@ class MessageCacheHandler(_SpecialRequestHandler):
 
         LOGGER.debug('MessageCache HIT [hash=%s]' % msg_hash)
         msg_str = serialize_forward_msg(message)
+        self.set_header('Content-Type', 'application/octet-stream')
         self.write(msg_str)
         self.set_status(200)

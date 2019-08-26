@@ -29,6 +29,7 @@ from streamlit import config
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import ensure_hash
 from streamlit.elements import data_frame_proto
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
 from streamlit.server.routes import DebugHandler
@@ -41,9 +42,10 @@ from streamlit.server.server_util import should_cache_msg
 from tests.ServerTestCase import ServerTestCase
 
 
-def _create_dataframe_msg(df):
+def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
-    msg.delta.id = 1
+    msg.delta.id = id
+    msg.delta.parent_block.container = BlockPath.SIDEBAR
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
@@ -93,22 +95,26 @@ class ServerTest(ServerTestCase):
             # Get the server's socket and session for this client
             ws, session = list(self.server._report_sessions.items())[0]
 
-            msg = _create_dataframe_msg([1, 2, 3])
+            msg1 = _create_dataframe_msg([1, 2, 3], 1)
 
-            # Send the message, and read it back. It will
-            # not have been cached.
-            self.server._send_message(ws, session, msg)
+            # Send the message, and read it back. It will not have been cached.
+            self.server._send_message(ws, session, msg1)
             uncached = yield self.read_forward_msg(ws_client)
             self.assertEqual('delta', uncached.WhichOneof('type'))
-            msg_hash = uncached.hash
 
-            # Send the same message again. This time, it should have
-            # been cached, and an "hash_reference" message should be
-            # received instead.
-            self.server._send_message(ws, session, msg)
+            msg2 = _create_dataframe_msg([1, 2, 3], 123)
+
+            # Send an equivalent message. This time, it should be cached,
+            # and a "hash_reference" message should be received instead.
+            self.server._send_message(ws, session, msg2)
             cached = yield self.read_forward_msg(ws_client)
-            self.assertEqual('hash_reference', cached.WhichOneof('type'))
-            self.assertEqual(msg_hash, cached.hash_reference)
+            self.assertEqual('ref', cached.WhichOneof('type'))
+            # We should have the same *hash* as msg1:
+            self.assertEqual(msg1.hash, cached.ref.hash)
+            # And the same *delta metadata* as msg2:
+            self.assertEqual(msg2.delta.id, cached.ref.delta_id)
+            self.assertEqual(msg2.delta.parent_block,
+                             cached.ref.delta_parent_block)
 
 
 class ServerUtilsTest(unittest.TestCase):

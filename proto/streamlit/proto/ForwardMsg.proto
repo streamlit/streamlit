@@ -21,6 +21,7 @@ import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/BlockPath.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -55,8 +56,22 @@ message ForwardMsg {
 
     // A reference to a ForwardMsg that has already been delivered.
     // The client should substitute the message with the given hash
-    // for this one. If the client does not have the referenced message in
-    // its cache, it can retrieve it from the server.
-    string hash_reference = 10;
+    // for this one. If the client does not have the referenced message
+    // in its cache, it can retrieve it from the server.
+    MessageRef ref = 10;
   }
+}
+
+// Metadata about a
+message MessageRef {
+  // The hash of the referenced message.
+  string hash = 1;
+
+  // If the referenced message is a Delta, this contains the ID of the
+  // new Delta to be created.
+  uint32 delta_id = 2;
+
+  // If the referenced message is a Delta, this contains the BlockPath
+  // of the new Delta to be created.
+  BlockPath delta_parent_block = 3;
 }

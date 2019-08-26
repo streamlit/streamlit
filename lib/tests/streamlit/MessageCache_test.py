@@ -11,12 +11,14 @@ from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
 from streamlit.MessageCache import ensure_hash
 from streamlit.elements import data_frame_proto
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
-def _create_dataframe_msg(df):
+def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
-    msg.delta.id = 1
+    msg.delta.id = id
+    msg.delta.parent_block.container = BlockPath.SIDEBAR
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
@@ -31,11 +33,20 @@ class MessageCacheTest(unittest.TestCase):
         msg3 = _create_dataframe_msg([2, 3, 4])
         self.assertNotEqual(ensure_hash(msg1), ensure_hash(msg3))
 
+    def test_delta_metadata(self):
+        """Test that delta metadata doesn't change the hash"""
+        msg1 = _create_dataframe_msg([1, 2, 3], 1)
+        msg2 = _create_dataframe_msg([1, 2, 3], 2)
+        self.assertEqual(ensure_hash(msg1), ensure_hash(msg2))
+
     def test_reference_msg(self):
         """Test creation of 'reference' ForwardMsgs"""
-        msg = _create_dataframe_msg([1, 2, 3])
+        msg = _create_dataframe_msg([1, 2, 3], 34)
         ref_msg = create_reference_msg(msg)
-        self.assertEqual(ensure_hash(msg), ref_msg.hash_reference)
+        self.assertEqual(ensure_hash(msg), ref_msg.ref.hash)
+        self.assertEqual(msg.delta.id, ref_msg.ref.delta_id)
+        self.assertEqual(msg.delta.parent_block,
+                         ref_msg.ref.delta_parent_block)
 
     def test_add_message(self):
         """Test MessageCache.add_message"""
