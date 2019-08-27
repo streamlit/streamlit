@@ -207,7 +207,6 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
         else:
             data = image
 
-        print('width', width)
         (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
