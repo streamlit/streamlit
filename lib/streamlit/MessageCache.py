@@ -91,6 +91,12 @@ class MessageCache(object):
 
     """
     class Entry(object):
+        """Cache entry.
+
+        Stores the cached message, and the set of ReportSessions
+        that we've sent the cached message to.
+
+        """
         def __init__(self, msg):
             self.msg = msg
             self.sessions = WeakKeyDictionary()
@@ -107,6 +113,10 @@ class MessageCache(object):
 
     def add_message(self, msg, session):
         """Add a ForwardMsg to the cache.
+
+        The cache will also record a reference to the given ReportSession,
+        so that it can track which sessions have already received
+        each given ForwardMsg.
 
         Parameters
         ----------
