@@ -21,7 +21,7 @@ options = ('female', 'male')
 
 w1 = st.checkbox('I am human', True)
 
-w2 = st.slider('Age', 25, 0, 100, 1)
+w2 = st.slider('Age', 0, 100, 25, 1)
 st.write('Value 1:', w2)
 
 w3 = st.text_area('Comments', 'Streamlit is awesomeness!')
