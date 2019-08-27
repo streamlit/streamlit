@@ -36,7 +36,7 @@ export class ForwardMsgCache {
    *   server, cache it, and return it.
    */
   public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
-    // this.maybeCacheMessage(msg)
+    this.maybeCacheMessage(msg)
 
     if (msg.type !== 'refHash') {
       return msg
