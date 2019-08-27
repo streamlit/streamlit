@@ -29,6 +29,8 @@ from urllib.parse import urlparse
 
 LOGGER = get_logger(__name__)
 
+IMAGE_MAXIMUM_WIDTH = 610
+
 def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
     tmp = io.BytesIO()
@@ -75,12 +77,16 @@ def _bytes_to_b64(data, width, format):
     else:
         mime_type = 'image/' + format
 
+    image = Image.open(io.BytesIO(data))
+    w, h = image.size
+
+    if width < 0 and w > IMAGE_MAXIMUM_WIDTH:
+        width = IMAGE_MAXIMUM_WIDTH
+
     if width > 0:
-        image = Image.open(io.BytesIO(data))
-        w, h = image.size
         if w > width:
             image = image.resize((width, int(1.0 * h * width / w)))
-            data = _PIL_to_bytes(image, format=format, quality=80)
+            data = _PIL_to_bytes(image, format=format, quality=90)
 
             if format is None:
                 mime_type = 'image/png'
@@ -201,6 +207,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
         else:
             data = image
 
+        print('width', width)
         (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
