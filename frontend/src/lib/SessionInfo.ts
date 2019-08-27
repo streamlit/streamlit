@@ -67,6 +67,6 @@ export class SessionInfo {
     this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
-    this.minCachedMessageSize = minCachedMessageSize;
+    this.minCachedMessageSize = minCachedMessageSize
   }
 }
