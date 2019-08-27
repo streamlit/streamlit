@@ -25,6 +25,7 @@ import {List, Map as ImmutableMap} from 'immutable'
 import {addRows} from 'lib/dataFrameProto'
 import {dispatchOneOf, toImmutableProto} from 'lib/immutableProto'
 import {MetricsManager} from 'lib/MetricsManager'
+import {requireNonNull} from 'lib/utils'
 
 type Container = 'main' | 'sidebar'
 type SimpleElement = ImmutableMap<string, any>
@@ -40,12 +41,10 @@ export function applyDelta(
   elements: Elements, reportId: string,
   deltaMsg: Delta, metadata: ForwardMsgMetadata): Elements {
 
-  /* eslint-disable @typescript-eslint/no-non-null-assertion */
   const delta = toImmutableProto(Delta, deltaMsg)
-  const parentBlock = metadata.parentBlock!
-  const parentBlockPath = parentBlock.path!
-  const parentBlockContainer = parentBlock.container
-  /* eslint-enable @typescript-eslint/no-non-null-assertion */
+  const parentBlock = requireNonNull(metadata.parentBlock)
+  const parentBlockPath = requireNonNull(parentBlock.path)
+  const parentBlockContainer = requireNonNull(parentBlock.container)
 
   const container = parentBlockContainer === BlockPath.Container.MAIN ? 'main' : 'sidebar'
   const deltaPath = [...parentBlockPath, metadata.deltaId]
