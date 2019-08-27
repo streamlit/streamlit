@@ -24,6 +24,7 @@ import pandas as pd
 from math import sqrt
 
 from streamlit.logger import get_logger
+import streamlit.elements.deck_gl as deck_gl
 
 LOGGER = get_logger(__name__)
 
@@ -154,7 +155,6 @@ def marshall(element, data, zoom=None):
     if zoom is None:
         zoom = _get_zoom_level(longitudeDistance)
 
-    import streamlit.elements.deck_gl as deck_gl
     deck_gl.marshall(element.deck_gl_chart,
                      viewport={
                          'latitude': center_viewport[0],
