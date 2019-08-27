@@ -25,6 +25,8 @@ import "streamlit/proto/BlockPath.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
+  // Contains 'non-payload' ForwardMsg data that isn't cached for the purposes
+  // of ForwardMsg de-duping.
   ForwardMsgMetadata metadata = 1;
 
   oneof type {
@@ -53,8 +55,6 @@ message ForwardMsg {
   }
 }
 
-// Contains 'non-payload' ForwardMsg data that isn't cached for the purposes
-// of ForwardMsg de-duping.
 message ForwardMsgMetadata {
   // Each delta applies to a particular ID. Only set for Delta messages.
   uint32 delta_id = 1;

@@ -80,7 +80,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         return DeltaGenerator(enqueue, *args, **kwargs)
 
     def get_message_from_queue(self, index=-1):
-        """
+        """Get a ForwardMsg proto from the queue, by index.
+
         Returns
         -------
         ForwardMsg
@@ -88,7 +89,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         return self.report_queue._queue[index]
 
     def get_delta_from_queue(self, index=-1):
-        """
+        """Get a Delta proto from the queue, by index.
+
         Returns
         -------
         Delta
