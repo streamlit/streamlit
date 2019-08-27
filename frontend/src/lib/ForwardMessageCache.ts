@@ -6,11 +6,9 @@
  */
 
 import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'
-import {logMessage} from 'lib/log'
+import {logMessage, logWarning} from 'lib/log'
 import {BaseUriParts, buildHttpUri} from 'lib/ServerUtil'
-
-// This value should be equal to the value defined in the server
-const CACHED_MESSAGE_SIZE_MIN = 10 * 10e3  // 10k
+import {SessionInfo} from 'lib/SessionInfo'
 
 export class ForwardMsgCache {
   private readonly messages = new Map<string, ForwardMsg>()
@@ -81,8 +79,9 @@ export class ForwardMsgCache {
    * Add a new message to the cache if appropriate.
    */
   private maybeCacheMessage(msg: ForwardMsg): void {
-    if (msg.type === 'refHash') {
-      // We never cache reference messages
+    if (msg.type === 'refHash' || msg.type === 'initialize') {
+      // We never cache reference messages, or the Initialize message.
+      // (The latter contains the params we use to decide what to cache.)
       return
     }
 
@@ -91,7 +90,15 @@ export class ForwardMsgCache {
       return
     }
 
-    if (getMessageSize(msg) >= CACHED_MESSAGE_SIZE_MIN) {
+    if (!SessionInfo.isSet()) {
+      // Sanity check. After our Initialize message is processed,
+      // SessionInfo should be set, but prevent things from blowing
+      // up if that's not the case.
+      logWarning(`SessionInfo not set; can't cache message!`)
+      return
+    }
+
+    if (getMessageSize(msg) >= SessionInfo.current.minCachedMessageSize) {
       logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
       this.messages.set(msg.hash, ForwardMsg.create(msg))
     }

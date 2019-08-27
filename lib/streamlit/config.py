@@ -245,6 +245,13 @@ _create_option(
     default_val=False)
 
 
+_create_option(
+    'global.minCachedMessageSize',
+    description='Only cache ForwardMsgs that are >= this minimum.',
+    visibility='hidden',
+    default_val=10 * 1e3)  # 10k
+
+
 # Config Section: Client #
 
 _create_section('client', 'Settings for scripts that use Streamlit.')

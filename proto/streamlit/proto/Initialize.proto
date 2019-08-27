@@ -37,6 +37,8 @@ message Config {
   // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
 
+  // See config option "global.minCachedMessageSize"
+  uint32 min_cached_message_size = 3;
 }
 
 message UserInfo {

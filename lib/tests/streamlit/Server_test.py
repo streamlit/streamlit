@@ -107,32 +107,33 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self, _):
         """Test that duplicate ForwardMsgs are sent only once."""
-        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 0):
-            yield self.start_server_loop()
-            ws_client = yield self.ws_connect()
+        config._set_option('global.minCachedMessageSize', 0, 'test')
 
-            # Get the server's socket and session for this client
-            ws, session = list(self.server._report_sessions.items())[0]
+        yield self.start_server_loop()
+        ws_client = yield self.ws_connect()
 
-            msg1 = _create_dataframe_msg([1, 2, 3], 1)
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
 
-            # Send the message, and read it back. It will not have been cached.
-            self.server._send_message(ws, session, msg1)
-            uncached = yield self.read_forward_msg(ws_client)
-            self.assertEqual('delta', uncached.WhichOneof('type'))
+        msg1 = _create_dataframe_msg([1, 2, 3], 1)
 
-            msg2 = _create_dataframe_msg([1, 2, 3], 123)
+        # Send the message, and read it back. It will not have been cached.
+        self.server._send_message(ws, session, msg1)
+        uncached = yield self.read_forward_msg(ws_client)
+        self.assertEqual('delta', uncached.WhichOneof('type'))
 
-            # Send an equivalent message. This time, it should be cached,
-            # and a "hash_reference" message should be received instead.
-            self.server._send_message(ws, session, msg2)
-            cached = yield self.read_forward_msg(ws_client)
-            self.assertEqual('ref_hash', cached.WhichOneof('type'))
-            # We should have the *hash* of msg1 and msg2:
-            self.assertEqual(msg1.hash, cached.ref_hash)
-            self.assertEqual(msg2.hash, cached.ref_hash)
-            # And the same *metadata* as msg2:
-            self.assertEqual(msg2.metadata, cached.metadata)
+        msg2 = _create_dataframe_msg([1, 2, 3], 123)
+
+        # Send an equivalent message. This time, it should be cached,
+        # and a "hash_reference" message should be received instead.
+        self.server._send_message(ws, session, msg2)
+        cached = yield self.read_forward_msg(ws_client)
+        self.assertEqual('ref_hash', cached.WhichOneof('type'))
+        # We should have the *hash* of msg1 and msg2:
+        self.assertEqual(msg1.hash, cached.ref_hash)
+        self.assertEqual(msg2.hash, cached.ref_hash)
+        # And the same *metadata* as msg2:
+        self.assertEqual(msg2.metadata, cached.metadata)
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -172,11 +173,11 @@ class ServerUtilsTest(unittest.TestCase):
 
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""
-        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 0):
-            self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        config._set_option('global.minCachedMessageSize', 0, 'test')
+        self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
 
-        with mock.patch('streamlit.server.server_util.CACHED_MESSAGE_SIZE_MIN', 1000):
-            self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        config._set_option('global.minCachedMessageSize', 1000, 'test')
+        self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):

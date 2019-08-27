@@ -349,6 +349,9 @@ class ReportSession(object):
             'New browser connection: gather_usage_stats=%s',
             imsg.config.gather_usage_stats)
 
+        imsg.config.min_cached_message_size = int(config.get_option(
+            'global.minCachedMessageSize'))
+
         imsg.environment_info.streamlit_version = __version__
         imsg.environment_info.python_version = (
             '.'.join(map(str, sys.version_info)))

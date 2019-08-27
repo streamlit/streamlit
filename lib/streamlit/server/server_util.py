@@ -24,12 +24,9 @@ from streamlit.MessageCache import ensure_hash
 # TODO: Break message in several chunks if too large.
 MESSAGE_SIZE_LIMIT = 50 * 1e6  # 50MB
 
-# Smallest message that we bother storing in our MessageCache
-CACHED_MESSAGE_SIZE_MIN = 10 * 1e3  # 10kB
-
 
 def should_cache_msg(msg):
-    """Return True if the given message qualifies for caching.
+    """True if the given message qualifies for caching.
 
     Parameters
     ----------
@@ -39,8 +36,12 @@ def should_cache_msg(msg):
     -------
     bool
         True if we should cache the message.
+
     """
-    return msg.ByteSize() >= CACHED_MESSAGE_SIZE_MIN
+    if msg.WhichOneof('type') in ['ref_hash', 'initialize']:
+        # Some message types never get cached
+        return False
+    return msg.ByteSize() >= config.get_option('global.minCachedMessageSize')
 
 
 def serialize_forward_msg(msg):
