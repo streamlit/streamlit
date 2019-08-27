@@ -531,7 +531,7 @@ function doHealthPing(
 }
 
 /**
- * Wraps FileReader.readAsArrayBuffer in a Promise
+ * Wrap FileReader.readAsArrayBuffer in a Promise.
  */
 function readFileAsync(data: any): Promise<string | ArrayBuffer | null> {
   return new Promise<any>((resolve, reject) => {
