@@ -28,8 +28,8 @@ df1 = pd.DataFrame({
 })
 
 
-class DeckGLTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall deck_gl_chart protos."""
+class StMapTest(testutil.DeltaGeneratorTestCase):
+    """Test ability to marshall deck_gl_chart protos via st.map."""
 
     def test_no_args(self):
         """Test that it can be called with no args."""
