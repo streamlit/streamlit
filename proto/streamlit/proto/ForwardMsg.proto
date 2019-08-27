@@ -26,31 +26,35 @@ import "streamlit/proto/BlockPath.proto";
 // A message sent from Proxy to the browser
 message ForwardMsg {
   // A hash that uniquely identifies this ForwardMsg, for caching.
-  string hash = 9;
+  string hash = 1;
+
+  // Contains 'non-payload' ForwardMsg data that isn't cached for the purposes
+  // of ForwardMsg de-duping.
+  ForwardMsgMetadata metadata = 2;
 
   oneof type {
     // Report lifecycle messages.
 
-    Initialize initialize = 1;
-    NewReport new_report = 2;
-    Delta delta = 3;
-    bool report_finished = 4;
+    Initialize initialize = 3;
+    NewReport new_report = 4;
+    Delta delta = 5;
+    bool report_finished = 6;
 
     // Upload progress messages.
 
     // Indicates the % progress of a report upload.
-    uint32 upload_report_progress = 5;
+    uint32 upload_report_progress = 7;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 6;
+    string report_uploaded = 8;
 
     // State change and event messages.
 
     // ReportSession state changed. This is the new state.
-    SessionState session_state_changed = 7;
+    SessionState session_state_changed = 9;
 
     // A SessionEvent was emitted.
-    SessionEvent session_event = 8;
+    SessionEvent session_event = 10;
 
     // Other messages.
 
@@ -58,20 +62,14 @@ message ForwardMsg {
     // The client should substitute the message with the given hash
     // for this one. If the client does not have the referenced message
     // in its cache, it can retrieve it from the server.
-    MessageRef ref = 10;
+    string ref_hash = 11;
   }
 }
 
-// Metadata about a
-message MessageRef {
-  // The hash of the referenced message.
-  string hash = 1;
+message ForwardMsgMetadata {
+  // Each delta applies to a particular ID. Only set for Delta messages.
+  uint32 delta_id = 1;
 
-  // If the referenced message is a Delta, this contains the ID of the
-  // new Delta to be created.
-  uint32 delta_id = 2;
-
-  // If the referenced message is a Delta, this contains the BlockPath
-  // of the new Delta to be created.
-  BlockPath delta_parent_block = 3;
+  // Path to parent block. Only set for Delta messages.
+  BlockPath parent_block = 2;
 }

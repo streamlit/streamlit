@@ -74,3 +74,14 @@ export function makeElementWithInfoText(text: string): Element {
 export function hashString(s: string): string {
   return xxhash.h32(s, 0xDEADBEEF).toString(16)
 }
+
+/**
+ * Coerces a possibly-null value into a non-null value, throwing an error
+ * if the value is null or undefined.
+ */
+export function requireNonNull<T>(obj: T | null | undefined): T {
+  if (obj == null) {
+    throw new Error('value is null')
+  }
+  return obj
+}

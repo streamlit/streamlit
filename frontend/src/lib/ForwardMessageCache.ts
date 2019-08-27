@@ -7,7 +7,7 @@
  * message caching.
  */
 
-import {BlockPath, ForwardMsg} from 'autogen/proto'
+import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'
 import {logMessage} from 'lib/log'
 import {BaseUriParts, buildHttpUri} from 'lib/ServerUtil'
 
@@ -30,24 +30,24 @@ export class ForwardMsgCache {
   /**
    * Process a ForwardMsg:
    * - If the message is cacheable, store it in the cache and return it.
-   * - If the message is instead a reference to another message, retrieve
-   * the referenced message from the cache, and re-request it from the server
-   * if it's missing from the cache. The referenced message will be
-   * returned.
+   * - If the message is instead a reference to another message, look for
+   *   the referenced message in the cache, and return it.
+   * - If the referenced message isn't in our cache, request it from the
+   *   server, cache it, and return it.
    */
   public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
     // this.maybeCacheMessage(msg)
 
-    if (msg.type !== 'ref') {
+    if (msg.type !== 'refHash') {
       return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.ref.hash)
+    let newMsg = this.getCachedMessage(msg.refHash)
     if (newMsg != null) {
-      logMessage(`Cached ForwardMsg HIT [hash=${msg.ref.hash}]`)
+      logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
       // Cache miss: fetch from the server
-      logMessage(`Cached ForwardMsg MISS [hash=${msg.ref.hash}]`)
+      logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
 
       const serverURI = this.getServerUri()
       if (serverURI === undefined) {
@@ -55,7 +55,7 @@ export class ForwardMsgCache {
           'Cannot retrieve uncached message: not connected to a server')
       }
 
-      const url = buildHttpUri(serverURI, `message?hash=${msg.ref.hash}`)
+      const url = buildHttpUri(serverURI, `message?hash=${msg.refHash}`)
       const rsp = await fetch(new Request(url, { method: 'GET' }))
       if (!rsp.ok) {
         // `fetch` doesn't reject for bad HTTP statuses, so
@@ -70,7 +70,8 @@ export class ForwardMsgCache {
       this.maybeCacheMessage(newMsg)
     }
 
-    ForwardMsgCache.copyMetadataFromRef(newMsg, msg)
+    // Copy the metadata from the refMsg into our new message
+    newMsg.metadata = ForwardMsgMetadata.create(msg.metadata)
     return newMsg
   }
 
@@ -78,7 +79,7 @@ export class ForwardMsgCache {
    * Add a new message to the cache if appropriate.
    */
   private maybeCacheMessage(msg: ForwardMsg): void {
-    if (msg.type === 'ref') {
+    if (msg.type === 'refHash') {
       // We never cache reference messages
       return
     }
@@ -101,18 +102,6 @@ export class ForwardMsgCache {
   private getCachedMessage(hash: string): ForwardMsg | undefined {
     const cached = this.messages.get(hash)
     return cached != null ? ForwardMsg.create(cached) : undefined
-  }
-
-  /**
-   * Copy non-cached metadata from a reference message into a
-   * message pulled out of the cache.
-   */
-  private static copyMetadataFromRef(msg: ForwardMsg, ref: ForwardMsg): void {
-    if (msg.type === 'delta') {
-      // This was a delta. Copy its metadata from the ref message
-      msg.delta.id = ref.ref.deltaId
-      msg.delta.parentBlock = BlockPath.create(ref.ref.deltaParentBlock)
-    }
   }
 }
 

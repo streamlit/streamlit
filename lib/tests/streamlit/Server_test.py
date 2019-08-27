@@ -44,8 +44,8 @@ from tests.ServerTestCase import ServerTestCase
 
 def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
-    msg.delta.id = id
-    msg.delta.parent_block.container = BlockPath.SIDEBAR
+    msg.metadata.delta_id = id
+    msg.metadata.parent_block.container = BlockPath.SIDEBAR
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
@@ -127,13 +127,12 @@ class ServerTest(ServerTestCase):
             # and a "hash_reference" message should be received instead.
             self.server._send_message(ws, session, msg2)
             cached = yield self.read_forward_msg(ws_client)
-            self.assertEqual('ref', cached.WhichOneof('type'))
-            # We should have the same *hash* as msg1:
-            self.assertEqual(msg1.hash, cached.ref.hash)
-            # And the same *delta metadata* as msg2:
-            self.assertEqual(msg2.delta.id, cached.ref.delta_id)
-            self.assertEqual(msg2.delta.parent_block,
-                             cached.ref.delta_parent_block)
+            self.assertEqual('ref_hash', cached.WhichOneof('type'))
+            # We should have the *hash* of msg1 and msg2:
+            self.assertEqual(msg1.hash, cached.ref_hash)
+            self.assertEqual(msg2.hash, cached.ref_hash)
+            # And the same *metadata* as msg2:
+            self.assertEqual(msg2.metadata, cached.metadata)
 
 
 class ServerUtilsTest(unittest.TestCase):

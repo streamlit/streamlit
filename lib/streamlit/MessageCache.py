@@ -9,7 +9,9 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 def ensure_hash(msg):
-    """Assigns a unique hash to a ForwardMsg, if it doesn't already have one.
+    """Computes and assigns the unique hash for a ForwardMsg.
+
+    If the ForwardMsg already has a hash, this is a no-op.
 
     Parameters
     ----------
@@ -18,35 +20,33 @@ def ensure_hash(msg):
     Returns
     -------
     string
-        The message's hash
+        The message's hash, returned here for convenience. (The hash
+        will also be assigned to the ForwardMsg; callers do not need
+        to do this.)
 
     """
     if msg.hash == '':
-        # If the message is a Delta, unset its id and parent_block
-        # before hashing. These bits are metadata that we don't want
-        # changing our hash.
-        is_delta = msg.WhichOneof('type') == 'delta'
-        if is_delta:
-            id = msg.delta.id
-            parent_block = msg.delta.parent_block
-            msg.delta.ClearField('id')
-            msg.delta.ClearField('parent_block')
+        # Move the message's metadata aside. It's not part of the
+        # hash calculation.
+        metadata = msg.metadata
+        msg.ClearField('metadata')
 
-        # SHA1 is good enough for what we need, which is uniqueness.
-        hasher = hashlib.sha1()
+        # MD5 is good enough for what we need, which is uniqueness.
+        hasher = hashlib.md5()
         hasher.update(msg.SerializeToString())
         msg.hash = hasher.hexdigest()
 
-        # Restore Delta metadata.
-        if is_delta:
-            msg.delta.id = id
-            msg.delta.parent_block.CopyFrom(parent_block)
+        # Restore metadata.
+        msg.metadata.CopyFrom(metadata)
 
     return msg.hash
 
 
 def create_reference_msg(msg):
-    """Create a new ForwardMsg that contains the hash of the given message.
+    """Create a ForwardMsg that refers to the given message via its hash.
+
+    The reference message will also copy the
+
 
     If the original message contains a Delta, its delta metadata (id,
     parent_block) will be copied into the reference message.
@@ -63,12 +63,9 @@ def create_reference_msg(msg):
         ref field.
 
     """
-    ensure_hash(msg)
     ref_msg = ForwardMsg()
-    ref_msg.ref.hash = msg.hash
-    if msg.WhichOneof('type') == 'delta':
-        ref_msg.ref.delta_id = msg.delta.id
-        ref_msg.ref.delta_parent_block.CopyFrom(msg.delta.parent_block)
+    ref_msg.ref_hash = ensure_hash(msg)
+    ref_msg.metadata.CopyFrom(msg.metadata)
     return ref_msg
 
 

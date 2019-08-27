@@ -17,8 +17,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
-    msg.delta.id = id
-    msg.delta.parent_block.container = BlockPath.SIDEBAR
+    msg.metadata.delta_id = id
+    msg.metadata.parent_block.container = BlockPath.SIDEBAR
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
@@ -43,10 +43,8 @@ class MessageCacheTest(unittest.TestCase):
         """Test creation of 'reference' ForwardMsgs"""
         msg = _create_dataframe_msg([1, 2, 3], 34)
         ref_msg = create_reference_msg(msg)
-        self.assertEqual(ensure_hash(msg), ref_msg.ref.hash)
-        self.assertEqual(msg.delta.id, ref_msg.ref.delta_id)
-        self.assertEqual(msg.delta.parent_block,
-                         ref_msg.ref.delta_parent_block)
+        self.assertEqual(ensure_hash(msg), ref_msg.ref_hash)
+        self.assertEqual(msg.metadata, ref_msg.metadata)
 
     def test_add_message(self):
         """Test MessageCache.add_message"""
