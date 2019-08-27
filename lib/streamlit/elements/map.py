@@ -75,16 +75,15 @@ def _get_zoom_level(distance):
 
 
 def marshall(element, data, zoom=None):
+    """Marshall a proto with DeckGL chart info.
+
+    This is a shorthand for DeltaGenerator.deck_gl_chart,
+    which will auto center and auto zoom the chart.
+    If it is needed you can specify the zoom param.
+
+    See DeltaGenerator.deck_gl_chart for docs.
+
     """
-        Marshall a proto with DeckGL chart info.
-
-        This is a shorthand for DeltaGenerator.deck_gl_chart,
-        which will auto center and auto zoom the chart.
-        If it is needed you can specify the zoom param.
-
-        See DeltaGenerator.deck_gl_chart for docs.
-    """
-
     LAT_LON = ['lat', 'lon']
 
     if 'lat' in data:
