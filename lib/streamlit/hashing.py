@@ -274,9 +274,11 @@ class CodeHasher():
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
             # TODO: Figure out how to best show this kind of warning to the
-            # user.
-            st.warning(('Streamlit does not support hashing classes. '
-                        'We did not hash `%s`.') % obj.__name__)
+            # user. In the meantime, show nothing. This scenario is too common,
+            # (e.g. in every "except" statement) so the current warning is
+            # quite annoying...
+            # st.warning(('Streamlit does not support hashing classes. '
+            #             'We did not hash `%s`.') % obj.__name__)
             # TODO: Hash more than just the name of classes.
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):
