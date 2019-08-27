@@ -25,7 +25,7 @@ is_python_2 = sys.version_info[0] == 2
 
 
 class MagicTest(unittest.TestCase):
-    """Test for Magic.
+    """Test for Magic
     The test counts the number of substitutions that magic.add_code do for
     a few code snippets. The test passes if the expected number of
     substitutions have been made.
