@@ -1735,7 +1735,8 @@ class DeltaGenerator(object):
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
             or None
-            The data to be plotted. Must have 'lat' and 'lon' columns.
+            The data to be plotted. Must have columns called 'lat', 'lon',
+            'latitude', or 'longitude'.
         zoom : int
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels
