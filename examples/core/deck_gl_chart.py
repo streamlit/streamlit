@@ -23,13 +23,21 @@ data = np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4]
 df = pd.DataFrame(data, columns=['lat', 'lon'])
 
 # Test for scatterplot basic charts:
-#   st.deck_gl_chart(layers=layers_list).
-st.deck_gl_chart(
-    layers = [{
-        'data': df,
-        'type': 'ScatterplotLayer'
-    }]
-)
+#   st.deck_gl_chart(viewport=viewport_dict, layers=layers_list).
+
+viewport = {
+    'latitude': 37.76,
+    'longitude': -122.4,
+    'zoom': 11,
+    'pitch': 50,
+}
+
+layers = [{
+    'data': df,
+    'type': 'ScatterplotLayer'
+}]
+
+st.deck_gl_chart(viewport=viewport, layers=layers)
 
 # Test a similar chart but with a full dict spec:
 #   st.deck_gl_chart(spec=spec_dict)
