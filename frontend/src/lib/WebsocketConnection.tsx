@@ -170,11 +170,10 @@ export class WebsocketConnection {
    * if we are connected to a server.
    */
   public getBaseUriParts(): BaseUriParts | undefined {
-    if (this.state !== ConnectionState.CONNECTED) {
-      return undefined
+    if (this.state === ConnectionState.CONNECTED) {
+      return this.args.baseUriPartsList[this.uriIndex]
     }
-
-    return this.args.baseUriPartsList[this.uriIndex]
+    return undefined
   }
 
   // This should only be called inside stepFsm().
