@@ -20,7 +20,6 @@ interface Args {
   pythonVersion: string;
   installationId: string;
   authorEmail: string;
-  commandLine: string[];
 }
 
 
