@@ -200,7 +200,7 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, width, height):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -234,6 +234,10 @@ class DeltaGenerator(object):
             msg.metadata.parent_block.container = self._container
             msg.metadata.parent_block.path[:] = self._path
             msg.metadata.delta_id = self._id
+            if width is not None:
+                msg.metadata.width = width
+            if height is not None:
+                msg.metadata.height = height
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -605,7 +609,7 @@ class DeltaGenerator(object):
         element.exception.stack_trace.extend(stack_trace)
 
     @_clean_up_sig
-    def dataframe(self, _, data=None):
+    def dataframe(self, _, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -651,7 +655,7 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame)
+        return self._enqueue_new_element_delta(set_data_frame, width, height)
 
     # TODO: Either remove this or make it public. This is only used in the
     # mnist demo right now.

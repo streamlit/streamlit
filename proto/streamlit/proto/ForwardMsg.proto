@@ -61,4 +61,10 @@ message ForwardMsgMetadata {
 
   // Path to parent block. Only set for Delta messages.
   BlockPath parent_block = 2;
+
+  //
+  uint32 width = 3;
+
+  //
+  uint32 height = 4;
 }
