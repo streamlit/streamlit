@@ -163,14 +163,6 @@ def marshall(element, data, zoom=None):
                          'pitch': 50,
                      },
                      layers=[{
-                         'type': 'HexagonLayer',
-                         'data': data,
-                         'radius': 200,
-                         'elevationScale': 4,
-                         'elevationRange': [0, 1000],
-                         'pickable': True,
-                         'extruded': True,
-                     }, {
                          'type': 'ScatterplotLayer',
                          'data': data,
                      }])
