@@ -25,7 +25,7 @@ def _create_dataframe_msg(df, id=1):
 
 class MessageCacheTest(unittest.TestCase):
     def test_msg_id(self):
-        """Test that ForwardMsg ID generation works as expected"""
+        """Test that ForwardMsg hash generation works as expected"""
         msg1 = _create_dataframe_msg([1, 2, 3])
         msg2 = _create_dataframe_msg([1, 2, 3])
         self.assertEqual(ensure_hash(msg1), ensure_hash(msg2))

@@ -2,9 +2,7 @@
  * @license
  * Copyright 2019 Streamlit Inc. All rights reserved.
  *
- * @fileoverview Sits atop WebsocketConnection or StaticConnection,
- * and transforms received messages into ForwardMsgs. Handles
- * message caching.
+ * @fileoverview Handles message caching for WebsocketConnection.
  */
 
 import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'

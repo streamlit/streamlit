@@ -57,11 +57,8 @@ def ensure_hash(msg):
 def create_reference_msg(msg):
     """Create a ForwardMsg that refers to the given message via its hash.
 
-    The reference message will also copy the
-
-
-    If the original message contains a Delta, its delta metadata (id,
-    parent_block) will be copied into the reference message.
+    The reference message will also get a copy of the source message's
+    metadata.
 
     Parameters
     ----------
@@ -72,7 +69,7 @@ def create_reference_msg(msg):
     -------
     ForwardMsg
         A new ForwardMsg that "points" to the original message via the
-        ref field.
+        ref_hash field.
 
     """
     ref_msg = ForwardMsg()

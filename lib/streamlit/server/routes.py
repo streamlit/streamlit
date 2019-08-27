@@ -26,7 +26,13 @@ LOGGER = get_logger(__name__)
 
 
 def _allow_cross_origin_requests():
-    """True if cross-origin requests are allowed"""
+    """True if cross-origin requests are allowed.
+
+    We only allow cross-origin requests when using the Node server. This is
+    only needed when using the Node server anyway, since in that case we
+    have a dev port and the prod port, which count as two origins.
+
+    """
     return (not config.get_option('server.enableCORS') or
             config.get_option('global.useNode'))
 
@@ -50,9 +56,6 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
     def set_default_headers(self):
         self.set_header('Cache-Control', 'no-cache')
-        # Only allow cross-origin requests when using the Node server. This is
-        # only needed when using the Node server anyway, since in that case we
-        # have a dev port and the prod port, which count as two origins.
         if _allow_cross_origin_requests():
             self.set_header('Access-Control-Allow-Origin', '*')
 
@@ -125,9 +128,6 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         self._cache = cache
 
     def set_default_headers(self):
-        # Only allow cross-origin requests when using the Node server. This is
-        # only needed when using the Node server anyway, since in that case we
-        # have a dev port and the prod port, which count as two origins.
         if _allow_cross_origin_requests():
             self.set_header('Access-Control-Allow-Origin', '*')
 
