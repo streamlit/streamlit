@@ -239,7 +239,9 @@ class CodeHasher():
             
             if obj.size >= NP_SIZE_LARGE:
                 import numpy as np
-                state = np.random.get_state()  # Save and restore original random state.
+                # Save and restore original random state.
+                # Changing the random state is not atomic and therefore not thread safe!
+                state = np.random.get_state()
                 np.random.seed(0)
                 obj = np.random.choice(obj.flat, size=NP_SAMPLE_SIZE)
                 np.random.set_state(state)
