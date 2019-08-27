@@ -190,7 +190,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             'lon': [11, 22, 33, 44],
         })
 
-        dg = st.deck_gl_chart(layers = [{
+        dg = st.deck_gl_chart(layers=[{
             'data': df,
             'type': 'ScatterplotLayer',
         }])
