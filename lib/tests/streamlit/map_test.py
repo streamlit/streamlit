@@ -13,14 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""map unit test."""
-
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, \
-    absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
+"""Unit tests for st.map()."""
 
 import pandas as pd
 import numpy as np
@@ -53,7 +46,7 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.deck_gl_chart
 
         self.assertEqual(c.HasField('data'), False)
-        self.assertEqual(len(c.layers), 2)
+        self.assertEqual(len(c.layers), 1)
 
         deck_gl_spec = json.loads(c.spec)
 
@@ -61,14 +54,13 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(deck_gl_spec['viewport']['latitude'], 2.5)
         self.assertEqual(deck_gl_spec['viewport']['longitude'], 25)
-        self.assertEqual(deck_gl_spec['viewport']['zoom'], 3)
-        self.assertEqual(deck_gl_spec['viewport']['pitch'], 50)
+        self.assertEqual(deck_gl_spec['viewport']['zoom'], 4)
+        self.assertEqual(deck_gl_spec['viewport']['pitch'], 0)
 
-        for layer in c.layers:
-            spec = json.loads(layer.spec)
-            isHexagonLayer = spec['type'] == 'HexagonLayer'
-            isScatterplotLayer = spec['type'] == 'ScatterplotLayer'
-            assert isHexagonLayer or isScatterplotLayer
+        layer = c.layers[0]
+        spec = json.loads(layer.spec)
+        isScatterplotLayer = spec['type'] == 'ScatterplotLayer'
+        assert isScatterplotLayer
 
     def test_missing_column(self):
         """Test st.map with wrong column label."""
@@ -77,7 +69,7 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
             st.map(df)
 
         self.assertTrue(
-            'Map data must contain "lat" and "lon" columns.' in str(
+            'Map data must contain a column named' in str(
                 ctx.exception))
 
     def test_nan_exception(self):
@@ -86,4 +78,4 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertTrue('Map data must be numeric.' in str(ctx.exception))
+        self.assertTrue('data must be numeric.' in str(ctx.exception))

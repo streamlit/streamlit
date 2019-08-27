@@ -86,7 +86,7 @@ def marshall(element, data, zoom=None):
         lat = 'latitude'
     else:
         raise Exception(
-            'Map data must contain a column called "latitude" or "lat".')
+            'Map data must contain a column named "latitude" or "lat".')
 
     if 'lon' in data:
         lon = 'lon'
