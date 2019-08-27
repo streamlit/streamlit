@@ -30,12 +30,12 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, data=None, spec=None, **kwargs):
+def marshall(proto, spec=None, **kwargs):
     """Marshall a proto with DeckGL chart info.
 
     See DeltaGenerator.deck_gl_chart for docs.
     """
-    if data is None:
+    if 'data' not in kwargs:
         data = []
     else:
         raise Exception('Data parameter is deprecated, please use st.map() '

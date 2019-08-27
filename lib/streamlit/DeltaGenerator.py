@@ -1761,7 +1761,7 @@ class DeltaGenerator(object):
         map.marshall(element, data, zoom)
 
     @_with_element
-    def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
+    def deck_gl_chart(self, element, spec=None, **kwargs):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -1875,7 +1875,7 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.deck_gl as deck_gl
-        deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
     def table(self, element, data=None):
