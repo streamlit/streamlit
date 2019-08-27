@@ -47,7 +47,7 @@ class MessageCacheTest(unittest.TestCase):
         self.assertEqual(msg.metadata, ref_msg.metadata)
 
     def test_add_message(self):
-        """Test MessageCache.add_message"""
+        """Test MessageCache.add_message and has_message_reference"""
         cache = MessageCache()
         session = MagicMock()
         msg = _create_dataframe_msg([1, 2, 3])
@@ -66,16 +66,6 @@ class MessageCacheTest(unittest.TestCase):
 
         cache.add_message(msg, session)
         self.assertEqual(msg, cache.get_message(msg_id))
-
-    def test_has_message(self):
-        """Test MessageCache.has_message"""
-        cache = MessageCache()
-        session1 = MagicMock()
-        session2 = MagicMock()
-        msg = _create_dataframe_msg([1, 2, 3])
-        cache.add_message(msg, session1)
-        self.assertTrue(cache.has_message_reference(msg, session1))
-        self.assertFalse(cache.has_message_reference(msg, session2))
 
     def test_clear(self):
         """Test MessageCache.clear"""
