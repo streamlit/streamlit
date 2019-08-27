@@ -69,9 +69,9 @@ def _get_zoom_level(distance):
 
     """
 
-    for i, v in enumerate(ZOOM_LEVELS):
-        if ZOOM_LEVELS[i] > distance > ZOOM_LEVELS[i + 1]:
-            return i - 1
+    for i in range(len(ZOOM_LEVELS) - 1):
+        if ZOOM_LEVELS[i + 1] < distance <= ZOOM_LEVELS[i]:
+            return i + 1
 
 
 def marshall(element, data, zoom=None):
