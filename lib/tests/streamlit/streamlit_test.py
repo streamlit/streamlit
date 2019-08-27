@@ -189,7 +189,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             'lat': [1, 2, 3, 4],
             'lon': [11, 22, 33, 44],
         })
-        dg = st.deck_gl_chart(df)
+
+        dg = st.deck_gl_chart(layers = [{
+            'data': df,
+            'type': 'ScatterplotLayer',
+        }])
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.deck_gl_chart.HasField('data'), False)

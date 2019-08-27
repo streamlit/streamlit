@@ -32,6 +32,7 @@ df1 = pd.DataFrame({
     'lon': [10, 20, 30, 40],
 })
 
+
 class DeckGLTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall deck_gl_chart protos."""
 
@@ -45,7 +46,10 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
 
     def test_basic(self):
         """Test that deck_gl_chart can be called with lat/lon."""
-        st.deck_gl_chart(df1)
+        st.deck_gl_chart(layers=[{
+            'data': df1,
+            'type': 'ScatterplotLayer',
+        }])
 
         c = self.get_delta_from_queue().new_element.deck_gl_chart
         self.assertEqual(c.HasField('data'), False)

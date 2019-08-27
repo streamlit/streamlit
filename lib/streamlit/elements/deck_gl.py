@@ -37,6 +37,9 @@ def marshall(proto, data=None, spec=None, **kwargs):
     """
     if data is None:
         data = []
+    else:
+        raise Exception('Data parameter is deprecated, please use st.map() '
+                        'or specify it in a new layer')
 
     if spec is None:
         spec = dict()

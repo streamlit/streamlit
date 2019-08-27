@@ -1771,10 +1771,6 @@ class DeltaGenerator(object):
         Parameters
         ----------
 
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            Data to be plotted, if no layer specified.
-
         spec : dict
             Keys in this dict can be:
 
@@ -1837,7 +1833,10 @@ class DeltaGenerator(object):
         ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
         ...    columns=['lat', 'lon'])
         ...
-        >>> st.deck_gl_chart(df)
+        >>> st.deck_gl_chart(layers = [{
+                'data': df,
+                'type': 'ScatterplotLayer'
+            }])
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
