@@ -56,7 +56,7 @@ export class ForwardMsgCache {
       }
 
       const url = buildHttpUri(serverURI, `message?hash=${msg.refHash}`)
-      const rsp = await fetch(new Request(url, { method: 'GET' }))
+      const rsp = await fetch(url)
       if (!rsp.ok) {
         // `fetch` doesn't reject for bad HTTP statuses, so
         // we explicitly check for that.
