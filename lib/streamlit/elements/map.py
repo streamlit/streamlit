@@ -74,43 +74,6 @@ def _get_zoom_level(distance):
             return i - 1
 
 
-def _get_bounding_rectangle(geolocations):
-    """
-    Gets the maximum and minimum latitudes and longitude for a given array of
-    locations
-
-    param geolocations: array of lat and lon
-    """
-    maxLat = -85
-    minLat = 85
-    maxLon = -180
-    minLon = 180
-
-    for location in geolocations:
-        lat = location[0]
-        lon = location[1]
-
-        if lat > maxLat:
-            maxLat = lat
-        if lat < minLat:
-            minLat = lat
-        if lon > maxLon:
-            maxLon = lon
-        if lon < minLon:
-            minLon = lon
-
-    return {'min': (minLat, minLon), 'max': (maxLat, maxLon)}
-
-
-def _calculateDistance(x1, y1, x2, y2):
-    """
-        Calculate distance between two locations
-    """
-
-    dist = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    return dist
-
-
 def marshall(element, data, zoom=None):
     """
         Marshall a proto with DeckGL chart info.
@@ -123,44 +86,53 @@ def marshall(element, data, zoom=None):
     """
 
     LAT_LON = ['lat', 'lon']
-    if not set(data.columns) >= set(LAT_LON):
-        raise Exception('Map data must contain "lat" and "lon" columns.')
-    if data['lon'].isnull().values.any() or data['lat'].isnull().values.any():
-        raise Exception('Map data must be numeric.')
 
-    if isinstance(data, pd.DataFrame):
-        bounding = _get_bounding_rectangle(data[LAT_LON].values)
+    if 'lat' in data:
+        lat = 'lat'
+    elif 'latitude' in data:
+        lat = 'latitude'
     else:
-        bounding = _get_bounding_rectangle(data)
+        raise Exception(
+            'Map data must contain a column called "latitude" or "lat".')
 
-    center_viewport = [
-        (bounding['max'][0] + bounding['min'][0]) / 2,
-        (bounding['max'][1] + bounding['min'][1]) / 2,
-    ]
-
-    width = bounding['min'][1] + bounding['max'][1]
-    height = bounding['min'][0] + bounding['max'][0]
-
-    if width > height:
-        longitudeDistance = _calculateDistance(center_viewport[0],
-                                               center_viewport[1],
-                                               center_viewport[0],
-                                               bounding['max'][1])
+    if 'lon' in data:
+        lon = 'lon'
+    elif 'longitude' in data:
+        lon = 'longitude'
     else:
-        longitudeDistance = _calculateDistance(center_viewport[0],
-                                               center_viewport[1],
-                                               bounding['max'][0],
-                                               center_viewport[1])
+        raise Exception(
+            'Map data must contain a column called "longitude" or "lon".')
+
+    if data[lon].isnull().values.any() or data[lat].isnull().values.any():
+        raise Exception('Latitude and longitude data must be numeric.')
+
+    data = pd.DataFrame(data)
 
     if zoom is None:
-        zoom = _get_zoom_level(longitudeDistance)
+        min_lat = data[lat].min()
+        max_lat = data[lat].max()
+        min_lon = data[lon].min()
+        max_lon = data[lon].max()
+
+        center_lat = (max_lat + min_lat) / 2
+        center_lon = (max_lon + min_lon) / 2
+
+        range_lon = abs(max_lon - min_lon)
+        range_lat = abs(max_lat - min_lat)
+
+        if range_lon > range_lat:
+            longitude_distance = range_lon
+        else:
+            longitude_distance = range_lat
+
+        zoom = _get_zoom_level(longitude_distance)
 
     deck_gl.marshall(element.deck_gl_chart,
                      viewport={
-                         'latitude': center_viewport[0],
-                         'longitude': center_viewport[1],
+                         'latitude': center_lat,
+                         'longitude': center_lon,
                          'zoom': zoom,
-                         'pitch': 50,
+                         'pitch': 0,
                      },
                      layers=[{
                          'type': 'ScatterplotLayer',
