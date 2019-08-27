@@ -28,8 +28,6 @@ import textwrap
 from collections import namedtuple
 from functools import wraps
 
-import astor
-
 import streamlit as st
 from streamlit import config, util
 from streamlit.compatibility import setup_2_3_shims
@@ -114,6 +112,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
     caller_file_name, caller_lineno, _, lines, _ = frameinfo
 
     try:
+        import astor
         # only works if calling code is a single line
         parsed_context = ast.parse(lines[0].lstrip())
         parsed_context = _AddCopy(name).visit(parsed_context)
