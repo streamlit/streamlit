@@ -281,7 +281,11 @@ export class WebsocketConnection {
 
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
-        this.handleMessage(event.data)
+        this.handleMessage(event.data).catch(reason => {
+          // TODO: do something reasonable here, beyond simply logging.
+          //  Lots of stuff is likely to be broken!
+          logError(LOG, reason)
+        })
       }
     }
 
@@ -387,13 +391,11 @@ export class WebsocketConnection {
     // Read in the message data.
     const result = await readFileAsync(data)
     if (this.messageQueue == null) {
-      logError(LOG, 'No message queue.')
-      return
+      throw new Error('No message queue.')
     }
 
     if (result == null || typeof result === 'string') {
-      logError(LOG, `Unexpected result from FileReader: ${result}.`)
-      return
+      throw new Error(`Unexpected result from FileReader: ${result}.`)
     }
 
     const resultArray = new Uint8Array(result)

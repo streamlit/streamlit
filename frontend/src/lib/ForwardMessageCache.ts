@@ -60,12 +60,16 @@ export class ForwardMsgCache {
       if (!rsp.ok) {
         // `fetch` doesn't reject for bad HTTP statuses, so
         // we explicitly check for that.
-        throw new Error(rsp.statusText)
+        throw new Error(`Failed to retrieve ForwardMsg (hash=${msg.refHash}): ${rsp.statusText}`)
       }
 
       const data = await rsp.arrayBuffer()
       const arrayBuffer = new Uint8Array(data)
-      newMsg = ForwardMsg.decode(arrayBuffer)
+      try {
+        newMsg = ForwardMsg.decode(arrayBuffer)
+      } catch (e) {
+        throw new Error(`Failed to decode ForwardMsg (hash=${msg.refHash}): ${e.message}`)
+      }
 
       this.maybeCacheMessage(newMsg)
     }
