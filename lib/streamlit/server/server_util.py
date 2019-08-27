@@ -53,9 +53,9 @@ def serialize_forward_msg(msg):
 def _convert_msg_to_exception_msg(msg, e):
     import streamlit.elements.exception_proto as exception_proto
 
-    delta_id = msg.delta.id
+    delta_id = msg.metadata.delta_id
     msg.Clear()
-    msg.delta.id = delta_id
+    msg.metadata.delta_id = delta_id
 
     exception_proto.marshall(msg.delta.new_element.exception, e)
 

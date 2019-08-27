@@ -231,9 +231,9 @@ class DeltaGenerator(object):
         if marshall_element:
             msg = ForwardMsg_pb2.ForwardMsg()
             rv = marshall_element(msg.delta.new_element)
-            msg.delta.parent_block.container = self._container
-            msg.delta.parent_block.path[:] = self._path
-            msg.delta.id = self._id
+            msg.metadata.parent_block.container = self._container
+            msg.metadata.parent_block.path[:] = self._path
+            msg.metadata.delta_id = self._id
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -242,7 +242,7 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.delta.id, is_root=False)
+                self._enqueue, msg.metadata.delta_id, is_root=False)
         else:
             output_dg = self
 
@@ -265,9 +265,9 @@ class DeltaGenerator(object):
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.delta.new_block = True
-        msg.delta.parent_block.container = self._container
-        msg.delta.parent_block.path[:] = self._path
-        msg.delta.id = self._id
+        msg.metadata.parent_block.container = self._container
+        msg.metadata.parent_block.path[:] = self._path
+        msg.metadata.delta_id = self._id
 
         new_block_dg = DeltaGenerator(
             enqueue=self._enqueue,
@@ -1981,9 +1981,9 @@ class DeltaGenerator(object):
                 'Method requires exactly one dataset')
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.delta.parent_block.container = self._container
-        msg.delta.parent_block.path[:] = self._path
-        msg.delta.id = self._id
+        msg.metadata.parent_block.container = self._container
+        msg.metadata.parent_block.path[:] = self._path
+        msg.metadata.delta_id = self._id
 
         data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
 
