@@ -236,7 +236,6 @@ jslint:
 # Run JS unit tests.
 jstest:
 	cd frontend; yarn run test
-	cd frontend; yarn run coverage
 
 .PHONY: e2etest
 # Run E2E tests.
