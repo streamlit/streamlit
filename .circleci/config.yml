@@ -262,12 +262,16 @@ jobs:
           when: always
 
       #################################################################
-      # Run frontend tests
+      # Run frontend tests. (Only executed in the Python 3 job.)
       #################################################################
       - run:
           name: Run frontend tests.
           command: |
-            make jstest
+            if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
+              echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
+            else
+              make jstest
+            fi
 
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
@@ -298,6 +302,11 @@ jobs:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
 
+  # The 'python-2.7.16' job inherits everything from the Python 3 job.
+  # In a few cases, there are steps that are conditionally skipped based
+  # on the name of the current job (see, e.g., "Run frontend tests").
+  # If the python-2.7.16 job name is changed, please also find and replace
+  # any relevant strings that reference it by name!
   python-2.7.16:
     <<: *job-template
     docker:
