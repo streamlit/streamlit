@@ -35,11 +35,13 @@ def marshall(proto, spec=None, **kwargs):
 
     See DeltaGenerator.deck_gl_chart for docs.
     """
-    if 'data' not in kwargs:
-        data = []
-    else:
-        raise Exception('Data parameter is deprecated, please use st.map() '
-                        'or specify it in a new layer')
+    if 'data' in kwargs:
+        # TODO: Remove this check after 2019-11-28.
+        raise Exception(
+            'The `data` parameter is deprecated. Use `st.map` or'
+            'specify a spec dict in `st.deck_gl_chart`.')
+
+    data = []
 
     if spec is None:
         spec = dict()
