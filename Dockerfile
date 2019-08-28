@@ -1,5 +1,3 @@
-# TODO mount snapshots directory so we can update them
-
 FROM circleci/python:3.7.4-stretch
 
 SHELL ["/bin/bash", "-c"]
@@ -9,9 +7,10 @@ ENV PYTHONUNBUFFERED 1
 USER circleci
 
 ARG HOME=/home/circleci
-# ARG BASH_ENV=/etc/bash.bashrc
 
 WORKDIR ${HOME}/repo
+
+RUN sudo chown circleci ${HOME}/repo
 
 # update apt repository
 RUN echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
@@ -24,50 +23,50 @@ RUN sudo apt-get update && sudo apt-get install -y \
 
 # install node
 RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-# RUN export NVM_DIR=${HOME}/.nvm
-# RUN source ${HOME}/.nvm/nvm.sh
 # RUN sudo echo 'export NVM_DIR="$HOME/.nvm"' >> /etc/bash.bashrc
 # RUN sudo echo 'source "${HOME}/.nvm/nvm.sh"' >> /etc/bash.bashrc
 RUN source "${HOME}/.nvm/nvm.sh" && nvm install --lts=dubnium
 RUN source "${HOME}/.nvm/nvm.sh" && npm install -g yarn
 
 # copy package.json
-COPY frontend/package.json frontend/yarn.lock ./frontend/
-# TODO fix permission denied on `yarn install`
-RUN sudo chmod 777 ./frontend
+COPY --chown=circleci frontend/package.json frontend/yarn.lock ./frontend/
 
 # install node modules
 # RUN make react-init
+# TODO store nvm cache in volume so install is shorter
 RUN source "${HOME}/.nvm/nvm.sh" && cd frontend && yarn install --frozen-lockfile
 
 # install virtual env
-RUN sudo python -m venv venv
-RUN source venv/bin/activate
+# RUN mkdir ${HOME}/venv && chown circleci ${HOME}/venv
+RUN python -m venv venv
 # RUN make setup
-RUN sudo pip install pip-tools pipenv
+RUN source venv/bin/activate && pip install pip-tools pipenv
 
 # copy pipfile
-COPY lib/Pipfile.locks/python-3.7.4 ./lib/Pipfile.lock
-COPY lib/Pipfile ./lib/Pipfile
+COPY --chown=circleci lib/Pipfile.locks/python-3.7.4 ./lib/Pipfile.lock
+COPY --chown=circleci lib/Pipfile ./lib/Pipfile
 
 # install python modules
 # RUN make pipenv-lock
-RUN cd lib && sudo pipenv install --ignore-pipfile --dev --system
-RUN source venv/bin/activate && deactivate
-RUN source venv/bin/activate
+RUN source venv/bin/activate && cd lib && pipenv install --ignore-pipfile --dev --system
 
 # register streamlit user
 RUN mkdir ${HOME}/.streamlit && \
     echo '[general]' >  ${HOME}/.streamlit/credentials.toml && \
     echo 'email = "jonathan@streamlit.io"' >> ${HOME}/.streamlit/credentials.toml
 
-# copy app (or mount?)
-COPY . .
+# TODO mount snapshots directory so we can update them
+COPY --chown=circleci . .
 
 # build
-RUN sudo make develop
+RUN source venv/bin/activate && make develop
 
 EXPOSE 3000
 
+ENV PATH="${HOME}/repo/venv/bin:$PATH"
+
 # cypress
-CMD source "${HOME}/.nvm/nvm.sh" && cd frontend && yarn run cy:serve-and-run-all
+# TODO store yarn start cache in volume so install is shorter
+CMD source "${HOME}/.nvm/nvm.sh" && cd frontend && \
+    NODE_OPTIONS=--max_old_space_size=4096 yarn start-server-and-test start http://localhost:3000 \
+    "../scripts/run_e2e_tests.sh -a true -c .."
