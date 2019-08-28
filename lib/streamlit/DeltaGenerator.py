@@ -1762,7 +1762,7 @@ class DeltaGenerator(object):
         map.marshall(element, data, zoom)
 
     @_with_element
-    def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
+    def deck_gl_chart(self, element, spec=None, **kwargs):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -1771,10 +1771,6 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            Data to be plotted, if no layer specified.
 
         spec : dict
             Keys in this dict can be:
@@ -1838,7 +1834,10 @@ class DeltaGenerator(object):
         ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
         ...    columns=['lat', 'lon'])
         ...
-        >>> st.deck_gl_chart(df)
+        >>> st.deck_gl_chart(layers = [{
+                'data': df,
+                'type': 'ScatterplotLayer'
+            }])
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
@@ -1877,7 +1876,7 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.deck_gl as deck_gl
-        deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
     def table(self, element, data=None):
