@@ -665,11 +665,12 @@ class App extends PureComponent {
 
           <Container className="streamlit-container">
             <Row className="justify-content-center">
-              /*
-               Disclaimer: If this columns are changed please update
-               MAXIMUM_CONTENT_WIDTH constant value for st.image() from
-               image_proto.py file
-               */
+              {/*
+                Disclaimer: If this columns are changed please update
+                MAXIMUM_CONTENT_WIDTH constant value for st.image() from
+                image_proto.py file
+              */}
+
               <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
                 {
