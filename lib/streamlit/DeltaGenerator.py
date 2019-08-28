@@ -200,13 +200,18 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element, width, height):
+    def _enqueue_new_element_delta(self, marshall_element, elementWidth=None,
+                                   elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
         ----------
         marshall_element : callable
             Function which sets the fields for a NewElement protobuf.
+        elementWidth : int
+            Desired width for the element
+        elementHeight : int
+            Desired height for the element
 
         Returns
         -------
@@ -234,10 +239,10 @@ class DeltaGenerator(object):
             msg.metadata.parent_block.container = self._container
             msg.metadata.parent_block.path[:] = self._path
             msg.metadata.delta_id = self._id
-            if width is not None:
-                msg.metadata.width = width
-            if height is not None:
-                msg.metadata.height = height
+            if elementWidth is not None:
+                msg.metadata.element_dimension_spec.width = elementWidth
+            if elementHeight is not None:
+                msg.metadata.element_dimension_spec.height = elementHeight
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -623,6 +628,10 @@ class DeltaGenerator(object):
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
+        width : int
+            Desired width of the UI element expressed in CSS points
+        height : int
+            Desired height of the UI element expressed in CSS points
 
         Examples
         --------
@@ -635,6 +644,11 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
+
+        >>> st.dataframe(df, 200, 100)
+
+        .. output::
+           Same as before but width and height are constrained as specified
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:

@@ -23,6 +23,7 @@ import { dispatchOneOf } from 'lib/immutableProto'
 import { ReportRunState } from 'lib/ReportRunState'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { makeElementWithInfoText } from 'lib/utils'
+import { ForwardMsgMetadata } from 'autogen/proto'
 
 // Load (non-lazy) elements.
 import Chart from 'components/elements/Chart/'
@@ -175,11 +176,11 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
-    const widthFromProps = element.get('width')
-    const heightFromProps = element.get('height')
+    const metadata = element.get('metadata') as ForwardMsgMetadata
 
-    if (widthFromProps != null) {
-      width = Math.min(widthFromProps, width)
+    // Modify width using the value from the spec as passed with the message when applicable
+    if (metadata && metadata.elementDimensionSpec && metadata.elementDimensionSpec.width > 0) {
+      width = Math.min(metadata.elementDimensionSpec.width, width)
     }
 
     return dispatchOneOf(element, 'type', {
@@ -187,7 +188,8 @@ class Block extends PureComponent<Props> {
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => <BokehChart element={el} index={index} width={width} />,
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
-      dataFrame: (el: SimpleElement) => <DataFrame element={el} width={width} height={heightFromProps}/>,
+      dataFrame: (el: SimpleElement) =>
+        <DataFrame element={el} width={width} elementDimensionSpec={metadata.elementDimensionSpec}/>,
       deckGlChart: (el: SimpleElement) => <DeckGlChart element={el} width={width} />,
       docString: (el: SimpleElement) => <DocString element={el} width={width} />,
       empty: () => undefined,

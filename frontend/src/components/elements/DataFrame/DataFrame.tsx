@@ -46,7 +46,7 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number;
-  height: number;
+  elementDimensionSpec: any;
   element: ImmutableMap<string, any>;
 }
 
@@ -217,7 +217,7 @@ class DataFrame extends React.PureComponent<Props, State> {
    * Returns rendering dimensions for this DataFrame
    */
   private getDimensions(cellContentsGetter: CellContentsGetter): Dimensions {
-    const {element, width, height} = this.props
+    const {element, width, elementDimensionSpec} = this.props
 
     const { headerRows, headerCols, dataRows, cols, rows } =
       dataFrameGetDimensions(element)
@@ -226,7 +226,8 @@ class DataFrame extends React.PureComponent<Props, State> {
     const rowHeight = 25
     const headerHeight = rowHeight * headerRows
     const border = 3
-    const computedHeight = Math.min(rows * rowHeight, height != null ? height : 300) + border
+    const height = Math.min(rows * rowHeight,
+      (elementDimensionSpec && elementDimensionSpec.height > 0) ? elementDimensionSpec.height : 300) + border
 
     let {elementWidth, columnWidth, headerWidth} = getWidths(
       cols, rows, headerCols, headerRows, width - border, cellContentsGetter)
@@ -249,7 +250,7 @@ class DataFrame extends React.PureComponent<Props, State> {
       rowHeight,
       headerHeight,
       border,
-      height: computedHeight,
+      height,
       elementWidth,
       columnWidth,
       headerWidth,

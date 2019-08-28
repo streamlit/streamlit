@@ -45,8 +45,6 @@ export function applyDelta(
   const parentBlock = requireNonNull(metadata.parentBlock)
   const parentBlockPath = requireNonNull(parentBlock.path)
   const parentBlockContainer = requireNonNull(parentBlock.container)
-  const width = metadata.width
-  const height = metadata.height
 
   const container = parentBlockContainer === BlockPath.Container.MAIN ? 'main' : 'sidebar'
   const deltaPath = [...parentBlockPath, metadata.deltaId]
@@ -54,7 +52,7 @@ export function applyDelta(
   dispatchOneOf(delta, 'type', {
     newElement: (element: SimpleElement) => {
       elements[container] = elements[container]
-        .setIn(deltaPath, handleNewElementMessage(container, element, reportId, width, height))
+        .setIn(deltaPath, handleNewElementMessage(container, element, reportId, metadata))
     },
     newBlock: () => {
       elements[container] = elements[container]
@@ -70,12 +68,13 @@ export function applyDelta(
 }
 
 function handleNewElementMessage(container: Container, element: SimpleElement, reportId: string,
-    width: number, height: number): SimpleElement {
+  metadata: ForwardMsgMetadata): SimpleElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get('type'))
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
-  return element.set('reportId', reportId).set('width', width).set('height', height)
+  // Set metadata on elements so that we can use them downstream.
+  return element.set('reportId', reportId).set('metadata', metadata)
 }
 
 function handleNewBlockMessage(container: Container, element: BlockElement): BlockElement {
