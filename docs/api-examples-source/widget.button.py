@@ -1,6 +1,6 @@
 import streamlit as st
 
-with st.echo():
-    say_hello = st.button('Click me')
-    if say_hello:
-      st.write('Why hello there')
+if st.button('Say hello'):
+    st.write('Why hello there')
+else:
+    st.write('Goodbye')

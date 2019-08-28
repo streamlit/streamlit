@@ -27,7 +27,7 @@ if w1:
     st.write('Agreed')
 
 st.subheader('Slider')
-w2 = st.slider('Age', (32.5, 72.5), 0.0, 100.0, 0.5)
+w2 = st.slider('Age', 0.0, 100.0, (32.5, 72.5), 0.5)
 st.write(w2)
 
 st.subheader('Textarea')
@@ -44,7 +44,7 @@ if w4:
 st.subheader('Radio')
 options = ('female', 'male')
 w5 = st.radio('Gender', options, 1)
-st.write(options[w5])
+st.write(w5)
 
 st.subheader('Text input')
 w6 = st.text_input('Text input widget', 'i iz input')
@@ -53,7 +53,7 @@ st.write(w6)
 st.subheader('Selectbox')
 options = ('first', 'second')
 w7 = st.selectbox('Options', options, 1)
-st.write(options[w7])
+st.write(w7)
 
 st.subheader('Time Input')
 w8 = st.time_input('Set an alarm for', time(8, 45))
