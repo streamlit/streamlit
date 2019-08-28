@@ -62,10 +62,8 @@ PYTHON = {
         r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
     'docs/troubleshooting.md':
         r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
-    'conda/streamlit/meta.yaml':
+    'scripts/conda/meta.yaml':
         r'(?P<pre>.* version = ").*(?P<post>" %}$)',
-    'docker/Makefile':
-        r'(?P<pre>STREAMLIT_VERSION := ).*(?P<post>$)',
 }
 
 NODE = {

@@ -31,12 +31,6 @@
   height: 6rem;
 }
 
-.streamlit-dialog .compile-error-text {
-  color: $red;
-  display: block;
-  white-space: pre-wrap;
-}
-
 /* We make this an id instead of a class to enable clipboard copy */
 #streamlit-upload-url {
   word-wrap: break-word;

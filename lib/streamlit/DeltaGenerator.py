@@ -1230,10 +1230,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...    say_hello = st.button('Click me')
-        ...    if say_hello:
-        ...        st.write('Why hello there')
+        >>> if st.button('Say hello'):
+        ...     st.write('Why hello there')
+        ... else:
+        ...     st.write('Goodbye')
 
         """
         current_value = ui_value if ui_value is not None else False
@@ -1260,10 +1260,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...    agree = st.checkbox('I agree', False)
-        ...    if agree:
-        ...        st.write('Great!')
+        >>> agree = st.checkbox('I agree')
+        >>>
+        >>> if agree:
+        ...     st.write('Great!')
 
         """
         current_value = ui_value if ui_value is not None else value
@@ -1297,14 +1297,14 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...     genre = st.radio(
-        ...         'What\'s your favorite movie genre',
-        ...         ('Comedy', 'Drama', 'Documentary'))
-        ...     if genre == 0:
-        ...         st.write('You selected comedy.')
-        ...     else:
-        ...         st.write('You didn\'t select comedy.')
+        >>> genre = st.radio(
+        ...     'What\'s your favorite movie genre',
+        ...     ('Comedy', 'Drama', 'Documentary'))
+        >>>
+        >>> if genre == 'Comedy':
+        ...     st.write('You selected comedy.')
+        ... else:
+        ...     st.write('You didn\'t select comedy.')
 
         """
         if not isinstance(index, int):
@@ -1347,11 +1347,11 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...     options = st.selectbox(
-        ...         'How would you like to be contacted?',
-        ...         ('Email', 'Home phone', 'Mobile phone'), 0)
-        ...     st.write(options)
+        >>> option = st.selectbox(
+        ...     'How would you like to be contacted?',
+        ...     ('Email', 'Home phone', 'Mobile phone'))
+        >>>
+        >>> st.write('You selected:', option)
 
         """
         if not isinstance(index, int):
@@ -1399,15 +1399,17 @@ class DeltaGenerator(object):
             The current value of the slider widget. The return type follows
             the type of the value argument.
 
-        Example
-        -------
-        >>> age = st.slider('How old are you?', 25, 0, 130)
-        >>> st.write("I'm ", age)
+        Examples
+        --------
+        >>> age = st.slider('How old are you?', 0, 130, 25)
+        >>> st.write("I'm ", age, 'years old')
+
+        And here's an example of a range selector:
 
         >>> values = st.slider(
         ...     'Select a range of values',
-        ...     (25.0, 75.0), 0.0, 100.0, 1.0)
-        >>> st.write("Values:", values)
+        ...     0.0, 100.0, (25.0, 75.0))
+        >>> st.write('Values:', values)
 
         """
         # Set value default.
