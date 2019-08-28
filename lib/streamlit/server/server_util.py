@@ -25,7 +25,7 @@ from streamlit.MessageCache import ensure_hash
 MESSAGE_SIZE_LIMIT = 50 * 1e6  # 50MB
 
 
-def should_cache_msg(msg):
+def is_cacheable_msg(msg):
     """True if the given message qualifies for caching.
 
     Parameters

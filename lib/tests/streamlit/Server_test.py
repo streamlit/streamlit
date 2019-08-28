@@ -38,7 +38,7 @@ from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import should_cache_msg
+from streamlit.server.server_util import is_cacheable_msg
 from tests.ServerTestCase import ServerTestCase
 
 
@@ -174,10 +174,10 @@ class ServerUtilsTest(unittest.TestCase):
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""
         config._set_option('global.minCachedMessageSize', 0, 'test')
-        self.assertTrue(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        self.assertTrue(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
         config._set_option('global.minCachedMessageSize', 1000, 'test')
-        self.assertFalse(should_cache_msg(_create_dataframe_msg([1, 2, 3])))
+        self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):

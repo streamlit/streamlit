@@ -39,7 +39,7 @@ from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import should_cache_msg
+from streamlit.server.server_util import is_cacheable_msg
 
 LOGGER = get_logger(__name__)
 
@@ -254,7 +254,7 @@ class Server(object):
             The message to send to the client
 
         """
-        if should_cache_msg(msg):
+        if is_cacheable_msg(msg):
             ensure_hash(msg)
 
             if self._message_cache.has_message_reference(msg, session):
