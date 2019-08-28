@@ -35,6 +35,11 @@ const LOG = 'WebsocketConnection'
  */
 const SERVER_PING_PATH = 'healthz'
 
+/**
+ * The path of the server's websocket endpoint.
+ */
+const WEBSOCKET_STREAM_PATH = 'stream'
+
 
 /**
  * Wait this long between pings, in millis.
@@ -262,7 +267,7 @@ export class WebsocketConnection {
   }
 
   private connectToWebSocket(): void {
-    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex], 'stream')
+    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex], WEBSOCKET_STREAM_PATH)
 
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
