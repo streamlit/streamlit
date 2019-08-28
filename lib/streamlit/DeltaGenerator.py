@@ -1400,10 +1400,12 @@ class DeltaGenerator(object):
             The current value of the slider widget. The return type follows
             the type of the value argument.
 
-        Example
-        -------
+        Examples
+        --------
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
+
+        And here's an example of a range selector:
 
         >>> values = st.slider(
         ...     'Select a range of values',
