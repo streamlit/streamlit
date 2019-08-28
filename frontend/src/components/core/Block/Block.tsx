@@ -175,12 +175,19 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
+    const widthFromProps = element.get('width')
+    const heightFromProps = element.get('height')
+
+    if (widthFromProps != null) {
+      width = Math.min(widthFromProps, width)
+    }
+
     return dispatchOneOf(element, 'type', {
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => <BokehChart element={el} index={index} width={width} />,
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
-      dataFrame: (el: SimpleElement) => <DataFrame element={el} width={width} />,
+      dataFrame: (el: SimpleElement) => <DataFrame element={el} width={width} height={heightFromProps}/>,
       deckGlChart: (el: SimpleElement) => <DeckGlChart element={el} width={width} />,
       docString: (el: SimpleElement) => <DocString element={el} width={width} />,
       empty: () => undefined,
