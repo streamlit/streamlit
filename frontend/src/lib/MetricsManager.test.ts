@@ -24,12 +24,14 @@ beforeEach(() => {
     streamlitVersion: 'sv',
     installationId: 'iid',
     authorEmail: 'ae',
+    pythonVersion: 'pv',
+    minCachedMessageSize: 0,
   })
 })
 
 
 afterEach(() => {
-  SessionInfo['singleton'] = null
+  SessionInfo['singleton'] = undefined
 })
 
 
