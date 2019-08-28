@@ -36,7 +36,6 @@ message Config {
 
   // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
-
 }
 
 message UserInfo {

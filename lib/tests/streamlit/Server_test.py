@@ -21,16 +21,33 @@ import mock
 import tornado.testing
 import tornado.web
 import tornado.websocket
+from mock import MagicMock
 from mock import patch
 from tornado import gen
 
 from streamlit import config
+from streamlit.MessageCache import MessageCache
+from streamlit.MessageCache import populate_hash_if_needed
+from streamlit.elements import data_frame_proto
+from streamlit.proto.BlockPath_pb2 import BlockPath
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import is_cacheable_msg
 from tests.ServerTestCase import ServerTestCase
+
+
+def _create_dataframe_msg(df, id=1):
+    msg = ForwardMsg()
+    msg.metadata.delta_id = id
+    msg.metadata.parent_block.container = BlockPath.SIDEBAR
+    data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
+    return msg
 
 
 # Stub out the Server's ReportSession import. We don't want
@@ -68,6 +85,81 @@ class ServerTest(ServerTestCase):
         yield gen.sleep(0.1)
         self.assertFalse(self.server.browser_is_connected)
 
+    @tornado.testing.gen_test
+    def test_forwardmsg_hashing(self, _):
+        """Test that outgoing ForwardMsgs contain hashes."""
+        yield self.start_server_loop()
+
+        ws_client = yield self.ws_connect()
+
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
+
+        # Create a message and ensure its hash is unset; we're testing
+        # that _send_message adds the hash before it goes out.
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg.ClearField('hash')
+        self.server._send_message(ws, session, msg)
+
+        received = yield self.read_forward_msg(ws_client)
+        self.assertEqual(populate_hash_if_needed(msg), received.hash)
+
+    @tornado.testing.gen_test
+    def test_forwardmsg_cacheable_flag(self, _):
+        """Test that the metadata.cacheable flag is set properly on outgoing
+         ForwardMsgs."""
+        yield self.start_server_loop()
+
+        ws_client = yield self.ws_connect()
+
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
+
+        config._set_option('global.minCachedMessageSize', 0, 'test')
+        cacheable_msg = _create_dataframe_msg([1, 2, 3])
+        self.server._send_message(ws, session, cacheable_msg)
+        received = yield self.read_forward_msg(ws_client)
+        self.assertTrue(cacheable_msg.metadata.cacheable)
+        self.assertTrue(received.metadata.cacheable)
+
+        config._set_option('global.minCachedMessageSize', 1000, 'test')
+        cacheable_msg = _create_dataframe_msg([4, 5, 6])
+        self.server._send_message(ws, session, cacheable_msg)
+        received = yield self.read_forward_msg(ws_client)
+        self.assertFalse(cacheable_msg.metadata.cacheable)
+        self.assertFalse(received.metadata.cacheable)
+
+    @tornado.testing.gen_test
+    def test_duplicate_forwardmsg_caching(self, _):
+        """Test that duplicate ForwardMsgs are sent only once."""
+        config._set_option('global.minCachedMessageSize', 0, 'test')
+
+        yield self.start_server_loop()
+        ws_client = yield self.ws_connect()
+
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
+
+        msg1 = _create_dataframe_msg([1, 2, 3], 1)
+
+        # Send the message, and read it back. It will not have been cached.
+        self.server._send_message(ws, session, msg1)
+        uncached = yield self.read_forward_msg(ws_client)
+        self.assertEqual('delta', uncached.WhichOneof('type'))
+
+        msg2 = _create_dataframe_msg([1, 2, 3], 123)
+
+        # Send an equivalent message. This time, it should be cached,
+        # and a "hash_reference" message should be received instead.
+        self.server._send_message(ws, session, msg2)
+        cached = yield self.read_forward_msg(ws_client)
+        self.assertEqual('ref_hash', cached.WhichOneof('type'))
+        # We should have the *hash* of msg1 and msg2:
+        self.assertEqual(msg1.hash, cached.ref_hash)
+        self.assertEqual(msg2.hash, cached.ref_hash)
+        # And the same *metadata* as msg2:
+        self.assertEqual(msg2.metadata, cached.metadata)
+
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
@@ -103,6 +195,14 @@ class ServerUtilsTest(unittest.TestCase):
                       side_effect=[True, 's3.amazon.com']):
             self.assertTrue(
                 is_url_from_allowed_origins('s3.amazon.com'))
+
+    def test_should_cache_msg(self):
+        """Test server_util.should_cache_msg"""
+        config._set_option('global.minCachedMessageSize', 0, 'test')
+        self.assertTrue(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
+
+        config._set_option('global.minCachedMessageSize', 1000, 'test')
+        self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -156,3 +256,26 @@ class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_debug(self):
         # TODO - debugz is currently broken
         pass
+
+
+class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        self._cache = MessageCache()
+        return tornado.web.Application([
+            (r'/message', MessageCacheHandler, dict(cache=self._cache)),
+        ])
+
+    def test_message_cache(self):
+        # Create a new ForwardMsg and cache it
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg_hash = populate_hash_if_needed(msg)
+        self._cache.add_message(msg, MagicMock())
+
+        # Cache hit
+        response = self.fetch('/message?hash=%s' % msg_hash)
+        self.assertEqual(200, response.code)
+        self.assertEqual(serialize_forward_msg(msg), response.body)
+
+        # Cache misses
+        self.assertEqual(404, self.fetch('/message').code)
+        self.assertEqual(404, self.fetch('/message?id=non_existent').code)

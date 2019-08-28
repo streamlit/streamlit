@@ -258,6 +258,7 @@ class ConfigTest(unittest.TestCase):
             u'global.developmentMode',
             u'global.logLevel',
             u'global.metrics',
+            u'global.minCachedMessageSize',
             u'global.sharingMode',
             u'global.showWarningOnDirectExecution',
             u'global.unitTest',

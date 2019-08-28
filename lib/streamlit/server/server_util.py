@@ -17,11 +17,31 @@
 
 from streamlit import config
 from streamlit import util
+from streamlit.MessageCache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)
 # TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 5 * 10e7  # 50MB
+MESSAGE_SIZE_LIMIT = 50 * 1e6  # 50MB
+
+
+def is_cacheable_msg(msg):
+    """True if the given message qualifies for caching.
+
+    Parameters
+    ----------
+    msg : ForwardMsg
+
+    Returns
+    -------
+    bool
+        True if we should cache the message.
+
+    """
+    if msg.WhichOneof('type') in {'ref_hash', 'initialize'}:
+        # Some message types never get cached
+        return False
+    return msg.ByteSize() >= config.get_option('global.minCachedMessageSize')
 
 
 def serialize_forward_msg(msg):
@@ -41,6 +61,7 @@ def serialize_forward_msg(msg):
         The serialized byte string to send
 
     """
+    populate_hash_if_needed(msg)
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:

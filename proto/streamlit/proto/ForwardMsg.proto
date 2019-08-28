@@ -25,40 +25,55 @@ import "streamlit/proto/BlockPath.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
+  // A hash that uniquely identifies this ForwardMsg, for caching.
+  string hash = 1;
+
   // Contains 'non-payload' ForwardMsg data that isn't cached for the purposes
   // of ForwardMsg de-duping.
-  ForwardMsgMetadata metadata = 1;
+  ForwardMsgMetadata metadata = 2;
 
   oneof type {
     // Report lifecycle messages.
 
-    Initialize initialize = 2;
-    NewReport new_report = 3;
-    Delta delta = 4;
-    bool report_finished = 5;
+    Initialize initialize = 3;
+    NewReport new_report = 4;
+    Delta delta = 5;
+    bool report_finished = 6;
 
     // Upload progress messages.
 
     // Indicates the % progress of a report upload.
-    uint32 upload_report_progress = 6;
+    uint32 upload_report_progress = 7;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 7;
+    string report_uploaded = 8;
 
     // State change and event messages.
 
     // ReportSession state changed. This is the new state.
-    SessionState session_state_changed = 8;
+    SessionState session_state_changed = 9;
 
     // A SessionEvent was emitted.
-    SessionEvent session_event = 9;
+    SessionEvent session_event = 10;
+
+    // Other messages.
+
+    // A reference to a ForwardMsg that has already been delivered.
+    // The client should substitute the message with the given hash
+    // for this one. If the client does not have the referenced message
+    // in its cache, it can retrieve it from the server.
+    string ref_hash = 11;
   }
 }
 
 message ForwardMsgMetadata {
+  // If this is set, the server will have cached this message,
+  // and a client that receives it should do the same.
+  bool cacheable = 1;
+
   // Each delta applies to a particular ID. Only set for Delta messages.
-  uint32 delta_id = 1;
+  uint32 delta_id = 2;
 
   // Path to parent block. Only set for Delta messages.
-  BlockPath parent_block = 2;
+  BlockPath parent_block = 3;
 }

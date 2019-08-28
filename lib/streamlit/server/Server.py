@@ -26,15 +26,20 @@ import tornado.websocket
 from streamlit import config
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
+from streamlit.MessageCache import MessageCache
+from streamlit.MessageCache import create_reference_msg
+from streamlit.MessageCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import is_cacheable_msg
 
 LOGGER = get_logger(__name__)
 
@@ -101,6 +106,7 @@ class Server(object):
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
+        self._message_cache = MessageCache()
 
     def start(self, on_started):
         """Start the server.
@@ -142,6 +148,7 @@ class Server(object):
                 health_check=lambda: self.is_ready_for_browser_connection)),
             (r'/debugz', DebugHandler, dict(server=self)),
             (r'/metrics', MetricsHandler),
+            (r'/message', MessageCacheHandler, dict(cache=self._message_cache))
         ]
 
         if (config.get_option('global.developmentMode') and
@@ -206,9 +213,8 @@ class Server(object):
                         continue
                     msg_list = session.flush_browser_queue()
                     for msg in msg_list:
-                        msg_str = serialize_forward_msg(msg)
                         try:
-                            ws.write_message(msg_str, binary=True)
+                            self._send_message(ws, session, msg)
                         except tornado.websocket.WebSocketClosedError:
                             self._remove_browser_connection(ws)
                         yield
@@ -230,6 +236,42 @@ class Server(object):
         self._set_state(State.STOPPED)
 
         self._on_stopped()
+
+    def _send_message(self, ws, session, msg):
+        """Send a message to a client.
+
+        If the client is likely to have already cached the message, we may
+        instead send a "reference" message that contains only the hash of the
+        message.
+
+        Parameters
+        ----------
+        ws : _BrowserWebSocketHandler
+            The socket connected to the client
+        session : ReportSession
+            The session associated with websocket
+        msg : ForwardMsg
+            The message to send to the client
+
+        """
+        msg.metadata.cacheable = is_cacheable_msg(msg)
+        if msg.metadata.cacheable:
+            populate_hash_if_needed(msg)
+
+            if self._message_cache.has_message_reference(msg, session):
+                # This session has probably cached this message. Send
+                # a reference instead.
+                LOGGER.debug('Sending cached message ref (hash=%s)' % msg.hash)
+                ref_msg = create_reference_msg(msg)
+                ws.write_message(serialize_forward_msg(ref_msg), binary=True)
+                return
+
+            # Cache the message so it can be referenced in the future.
+            LOGGER.debug('Caching message (hash=%s)' % msg.hash)
+            self._message_cache.add_message(msg, session)
+
+        # Ship it off!
+        ws.write_message(serialize_forward_msg(msg), binary=True)
 
     def stop(self):
         self._set_state(State.STOPPING)
