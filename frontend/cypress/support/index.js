@@ -35,6 +35,7 @@ beforeEach(() => {
   head.append(`<style type="text/css" id="st-font-antialiased">\n${css}</style>`)
 })
 
+// Add screenshots from failed tests to the Mochawesome report
 Cypress.on('test:after:run', (test, runnable) => {
   if (test.state === 'failed') {
     const screenshotFileName = `${runnable.parent.title} -- ${test.title} (failed).png`

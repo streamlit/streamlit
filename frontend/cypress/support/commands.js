@@ -41,6 +41,14 @@ function getSnapshotFolder() {
 
 addMatchImageSnapshotCommand({
   customSnapshotsDir: getSnapshotFolder(),
-  failureThreshold: 0.03, // Threshold for entire image
+  failureThreshold: 0.035, // Threshold for entire image
   failureThresholdType: 'percent', // Percent of image or number of pixels
+})
+
+// Calling trigger before capturing the snapshot forces Cypress to very Actionability.
+// https://docs.cypress.io/guides/core-concepts/interacting-with-elements.html#Actionability
+// This fixes the issue where snapshots are cutoff or the wrong element is captured.
+Cypress.Commands.overwrite('matchImageSnapshot', (originalFn, subject, name, options) => {
+  cy.wrap(subject).trigger('blur')
+  return originalFn(subject, name, options)
 })
