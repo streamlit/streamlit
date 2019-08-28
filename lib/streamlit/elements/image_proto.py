@@ -29,7 +29,10 @@ from urllib.parse import urlparse
 
 LOGGER = get_logger(__name__)
 
-IMAGE_MAXIMUM_WIDTH = 610
+# This constant is related to the frontend maximum content width specified
+# in App.jsx main container
+MAXIMUM_CONTENT_WIDTH = 610
+
 
 def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
@@ -51,7 +54,8 @@ def _np_array_to_bytes(array, format='JPEG'):
 
 
 def _4d_to_list_3d(array):
-    return [array[i,:,:,:] for i in range(0, array.shape[0])]
+    return [array[i, :, :, :] for i in range(0, array.shape[0])]
+
 
 def _verify_np_shape(array):
     if len(array.shape) not in (2, 3):
@@ -59,7 +63,7 @@ def _verify_np_shape(array):
     if len(array.shape) == 3:
         assert array.shape[-1] in (
             1, 3, 4), 'Channel can only be 1, 3, or 4 got %d. Shape is %s' % (
-                array.shape[-1], str(array.shape))
+            array.shape[-1], str(array.shape))
 
     # If there's only one channel, convert is to x, y
     if len(array.shape) == 3 and array.shape[-1] == 1:
@@ -78,14 +82,15 @@ def _bytes_to_b64(data, width, format):
         mime_type = 'image/' + format
 
     image = Image.open(io.BytesIO(data))
-    w, h = image.size
+    actual_width, actual_height = image.size
 
-    if width < 0 and w > IMAGE_MAXIMUM_WIDTH:
-        width = IMAGE_MAXIMUM_WIDTH
+    if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
+        width = MAXIMUM_CONTENT_WIDTH
 
     if width > 0:
-        if w > width:
-            image = image.resize((width, int(1.0 * h * width / w)))
+        if actual_width > width:
+            new_height = int(1.0 * actual_height * width / actual_width)
+            image = image.resize((width, new_height))
             data = _PIL_to_bytes(image, format=format, quality=90)
 
             if format is None:
@@ -94,7 +99,8 @@ def _bytes_to_b64(data, width, format):
                 mime_type = 'image/' + format
 
     b64 = base64.b64encode(data).decode('utf-8')
-    return (b64, mime_type)
+
+    return b64, mime_type
 
 
 def _clip_image(image, clamp):
@@ -119,7 +125,6 @@ def _clip_image(image, clamp):
 
 def marshall_images(image, caption, width, proto_imgs, clamp,
                     channels='RGB', format='JPEG'):
-
     channels = channels.upper()
 
     # Turn single image and caption into one element list.
@@ -160,7 +165,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
 
         # PIL Images
         if isinstance(image, ImageFile.ImageFile) or isinstance(
-                image, Image.Image):
+            image, Image.Image):
             data = _PIL_to_bytes(image, format)
 
         # BytesIO
