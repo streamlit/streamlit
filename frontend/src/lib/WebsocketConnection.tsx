@@ -20,7 +20,7 @@ import {ConnectionState} from 'lib/ConnectionState'
 import {ForwardMsgCache} from 'lib/ForwardMessageCache'
 import {logError, logMessage, logWarning} from 'lib/log'
 import Resolver from 'lib/Resolver'
-import {BaseUriParts, buildHttpUri, buildWsUri} from 'lib/ServerUtil'
+import {BaseUriParts, buildHttpUri, buildWsUri} from 'lib/UriUtil'
 import {SessionInfo} from 'lib/SessionInfo'
 import React, {Fragment} from 'react'
 

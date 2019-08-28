@@ -17,7 +17,7 @@
 
 import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'
 import {logMessage} from 'lib/log'
-import {BaseUriParts, buildHttpUri} from 'lib/ServerUtil'
+import {BaseUriParts, buildHttpUri} from 'lib/UriUtil'
 
 /**
  * Handles ForwardMsg caching for WebsocketConnection.
