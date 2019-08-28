@@ -9,7 +9,7 @@ from mock import MagicMock
 
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
-from streamlit.MessageCache import ensure_hash
+from streamlit.MessageCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -28,22 +28,22 @@ class MessageCacheTest(unittest.TestCase):
         """Test that ForwardMsg hash generation works as expected"""
         msg1 = _create_dataframe_msg([1, 2, 3])
         msg2 = _create_dataframe_msg([1, 2, 3])
-        self.assertEqual(ensure_hash(msg1), ensure_hash(msg2))
+        self.assertEqual(populate_hash_if_needed(msg1), populate_hash_if_needed(msg2))
 
         msg3 = _create_dataframe_msg([2, 3, 4])
-        self.assertNotEqual(ensure_hash(msg1), ensure_hash(msg3))
+        self.assertNotEqual(populate_hash_if_needed(msg1), populate_hash_if_needed(msg3))
 
     def test_delta_metadata(self):
         """Test that delta metadata doesn't change the hash"""
         msg1 = _create_dataframe_msg([1, 2, 3], 1)
         msg2 = _create_dataframe_msg([1, 2, 3], 2)
-        self.assertEqual(ensure_hash(msg1), ensure_hash(msg2))
+        self.assertEqual(populate_hash_if_needed(msg1), populate_hash_if_needed(msg2))
 
     def test_reference_msg(self):
         """Test creation of 'reference' ForwardMsgs"""
         msg = _create_dataframe_msg([1, 2, 3], 34)
         ref_msg = create_reference_msg(msg)
-        self.assertEqual(ensure_hash(msg), ref_msg.ref_hash)
+        self.assertEqual(populate_hash_if_needed(msg), ref_msg.ref_hash)
         self.assertEqual(msg.metadata, ref_msg.metadata)
 
     def test_add_message(self):
@@ -62,7 +62,7 @@ class MessageCacheTest(unittest.TestCase):
         session = MagicMock()
         msg = _create_dataframe_msg([1, 2, 3])
 
-        msg_id = ensure_hash(msg)
+        msg_id = populate_hash_if_needed(msg)
 
         cache.add_message(msg, session)
         self.assertEqual(msg, cache.get_message(msg_id))
@@ -73,7 +73,7 @@ class MessageCacheTest(unittest.TestCase):
         session = MagicMock()
         msg = _create_dataframe_msg([1, 2, 3])
 
-        msg_id = ensure_hash(msg)
+        msg_id = populate_hash_if_needed(msg)
 
         cache.add_message(msg, session)
         self.assertEqual(msg, cache.get_message(msg_id))

@@ -27,7 +27,7 @@ from tornado import gen
 
 from streamlit import config
 from streamlit.MessageCache import MessageCache
-from streamlit.MessageCache import ensure_hash
+from streamlit.MessageCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -102,7 +102,7 @@ class ServerTest(ServerTestCase):
         self.server._send_message(ws, session, msg)
 
         received = yield self.read_forward_msg(ws_client)
-        self.assertEqual(ensure_hash(msg), received.hash)
+        self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
     def test_forwardmsg_cacheable_flag(self, _):
@@ -268,7 +268,7 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_message_cache(self):
         # Create a new ForwardMsg and cache it
         msg = _create_dataframe_msg([1, 2, 3])
-        msg_hash = ensure_hash(msg)
+        msg_hash = populate_hash_if_needed(msg)
         self._cache.add_message(msg, MagicMock())
 
         # Cache hit

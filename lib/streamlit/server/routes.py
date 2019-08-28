@@ -134,15 +134,18 @@ class MessageCacheHandler(tornado.web.RequestHandler):
     def get(self):
         msg_hash = self.get_argument('hash', None)
         if msg_hash is None:
-            # ID is missing
-            LOGGER.warning('MessageCacheHandler.get: missing hash')
+            # Hash is missing! This is a malformed request.
+            LOGGER.error('HTTP request for cached message is '
+                         'missing the hash attribute.')
             self.set_status(404)
             raise tornado.web.Finish()
 
         message = self._cache.get_message(msg_hash)
         if message is None:
-            # Message not in our cache
-            LOGGER.warning('MessageCache MISS [hash=%s]' % msg_hash)
+            # Message not in our cache.
+            LOGGER.error(
+                'HTTP request for cached message could not be fulfilled. '
+                'No such message: %s' % msg_hash)
             self.set_status(404)
             raise tornado.web.Finish()
 

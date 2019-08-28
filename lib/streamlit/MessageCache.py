@@ -20,7 +20,7 @@ from weakref import WeakKeyDictionary
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
-def ensure_hash(msg):
+def populate_hash_if_needed(msg):
     """Computes and assigns the unique hash for a ForwardMsg.
 
     If the ForwardMsg already has a hash, this is a no-op.
@@ -73,7 +73,7 @@ def create_reference_msg(msg):
 
     """
     ref_msg = ForwardMsg()
-    ref_msg.ref_hash = ensure_hash(msg)
+    ref_msg.ref_hash = populate_hash_if_needed(msg)
     ref_msg.metadata.CopyFrom(msg.metadata)
     return ref_msg
 
@@ -121,12 +121,12 @@ class MessageCache(object):
         session : ReportSession
 
         """
-        hash = ensure_hash(msg)
+        populate_hash_if_needed(msg)
         with self._lock:
-            entry = self._entries.get(hash, None)
+            entry = self._entries.get(msg.hash, None)
             if entry is None:
                 entry = MessageCache.Entry(msg)
-                self._entries[hash] = entry
+                self._entries[msg.hash] = entry
             entry.add_ref(session)
 
     def get_message(self, hash):
@@ -159,9 +159,9 @@ class MessageCache(object):
         bool
 
         """
-        id = ensure_hash(msg)
+        populate_hash_if_needed(msg)
         with self._lock:
-            entry = self._entries.get(id, None)
+            entry = self._entries.get(msg.hash, None)
             return entry is not None and session in entry.sessions
 
     def clear(self):
