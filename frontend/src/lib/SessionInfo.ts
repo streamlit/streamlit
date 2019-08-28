@@ -20,7 +20,6 @@ interface Args {
   pythonVersion: string;
   installationId: string;
   authorEmail: string;
-  minCachedMessageSize: number;
 }
 
 
@@ -30,7 +29,6 @@ export class SessionInfo {
   public readonly pythonVersion: string;
   public readonly installationId: string;
   public readonly authorEmail: string;
-  public readonly minCachedMessageSize: number;
 
   // Fields that can change during the lifetime of a session.
   public commandLine: string[] = [];
@@ -61,12 +59,10 @@ export class SessionInfo {
 
   public constructor({
     streamlitVersion, pythonVersion, installationId, authorEmail,
-    minCachedMessageSize,
   }: Args) {
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
-    this.minCachedMessageSize = minCachedMessageSize
   }
 }

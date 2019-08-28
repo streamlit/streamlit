@@ -194,7 +194,6 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
-      minCachedMessageSize: initializeMsg.config.minCachedMessageSize,
     })
 
     MetricsManager.current.initialize({

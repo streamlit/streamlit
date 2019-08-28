@@ -38,7 +38,7 @@ def is_cacheable_msg(msg):
         True if we should cache the message.
 
     """
-    if msg.WhichOneof('type') in ['ref_hash', 'initialize']:
+    if msg.WhichOneof('type') in {'ref_hash', 'initialize'}:
         # Some message types never get cached
         return False
     return msg.ByteSize() >= config.get_option('global.minCachedMessageSize')

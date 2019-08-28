@@ -254,7 +254,8 @@ class Server(object):
             The message to send to the client
 
         """
-        if is_cacheable_msg(msg):
+        msg.metadata.cacheable = is_cacheable_msg(msg)
+        if msg.metadata.cacheable:
             ensure_hash(msg)
 
             if self._message_cache.has_message_reference(msg, session):

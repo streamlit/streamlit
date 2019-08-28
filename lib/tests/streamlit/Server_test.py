@@ -105,6 +105,31 @@ class ServerTest(ServerTestCase):
         self.assertEqual(ensure_hash(msg), received.hash)
 
     @tornado.testing.gen_test
+    def test_forwardmsg_cacheable_flag(self, _):
+        """Test that the metadata.cacheable flag is set properly on outgoing
+         ForwardMsgs."""
+        yield self.start_server_loop()
+
+        ws_client = yield self.ws_connect()
+
+        # Get the server's socket and session for this client
+        ws, session = list(self.server._report_sessions.items())[0]
+
+        config._set_option('global.minCachedMessageSize', 0, 'test')
+        cacheable_msg = _create_dataframe_msg([1, 2, 3])
+        self.server._send_message(ws, session, cacheable_msg)
+        received = yield self.read_forward_msg(ws_client)
+        self.assertTrue(cacheable_msg.metadata.cacheable)
+        self.assertTrue(received.metadata.cacheable)
+
+        config._set_option('global.minCachedMessageSize', 1000, 'test')
+        cacheable_msg = _create_dataframe_msg([4, 5, 6])
+        self.server._send_message(ws, session, cacheable_msg)
+        received = yield self.read_forward_msg(ws_client)
+        self.assertFalse(cacheable_msg.metadata.cacheable)
+        self.assertFalse(received.metadata.cacheable)
+
+    @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self, _):
         """Test that duplicate ForwardMsgs are sent only once."""
         config._set_option('global.minCachedMessageSize', 0, 'test')

@@ -67,9 +67,13 @@ message ForwardMsg {
 }
 
 message ForwardMsgMetadata {
+  // If this is set, the server will have cached this message,
+  // and a client that receives it should do the same.
+  bool cacheable = 1;
+
   // Each delta applies to a particular ID. Only set for Delta messages.
-  uint32 delta_id = 1;
+  uint32 delta_id = 2;
 
   // Path to parent block. Only set for Delta messages.
-  BlockPath parent_block = 2;
+  BlockPath parent_block = 3;
 }

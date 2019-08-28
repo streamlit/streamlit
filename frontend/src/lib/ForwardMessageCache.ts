@@ -6,9 +6,8 @@
  */
 
 import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'
-import {logMessage, logWarning} from 'lib/log'
+import {logMessage} from 'lib/log'
 import {BaseUriParts, buildHttpUri} from 'lib/ServerUtil'
-import {SessionInfo} from 'lib/SessionInfo'
 
 export class ForwardMsgCache {
   private readonly messages = new Map<string, ForwardMsg>()
@@ -79,29 +78,22 @@ export class ForwardMsgCache {
    * Add a new message to the cache if appropriate.
    */
   private maybeCacheMessage(msg: ForwardMsg): void {
-    if (msg.type === 'refHash' || msg.type === 'initialize') {
-      // We never cache reference messages, or the Initialize message.
-      // (The latter contains the params we use to decide what to cache.)
+    if (msg.type === 'refHash') {
+      // We never cache reference messages. These messages
+      // may have `metadata.cacheable` set, but this is
+      // only because they carry the metadata for the messages
+      // they refer to.
       return
     }
 
-    if (this.messages.has(msg.hash)) {
-      // Already cached
+    if (!msg.metadata.cacheable || this.messages.has(msg.hash)) {
+      // Don't cache messages that the server hasn't marked as
+      // cacheable, or that we've already cached.
       return
     }
 
-    if (!SessionInfo.isSet()) {
-      // Sanity check. After our Initialize message is processed,
-      // SessionInfo should be set, but prevent things from blowing
-      // up if that's not the case.
-      logWarning(`SessionInfo not set; can't cache message!`)
-      return
-    }
-
-    if (getMessageSize(msg) >= SessionInfo.current.minCachedMessageSize) {
-      logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
-      this.messages.set(msg.hash, ForwardMsg.create(msg))
-    }
+    logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
+    this.messages.set(msg.hash, ForwardMsg.create(msg))
   }
 
   /**
@@ -112,11 +104,4 @@ export class ForwardMsgCache {
     const cached = this.messages.get(hash)
     return cached != null ? ForwardMsg.create(cached) : undefined
   }
-}
-
-/**
- * Compute the byte length of a ForwardMsg.
- */
-function getMessageSize(msg: ForwardMsg): number {
-  return ForwardMsg.encode(msg).finish().byteLength
 }
