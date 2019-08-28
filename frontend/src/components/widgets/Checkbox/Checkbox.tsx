@@ -31,45 +31,46 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: boolean;
+  value: boolean;
 }
 
 class Checkbox extends React.PureComponent<Props, State> {
-  public state: State = {}
+  public state: State = {
+    value: this.props.element.get('default')
+  }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): boolean {
-    if (this.state.value === undefined) {
-      return this.props.element.get('value') as boolean
-    } else {
-      return this.state.value
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: boolean = prevProps.element.get('default')
+    const newDefaultValue: boolean = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
   }
 
-  private handleChange = (e: any) => {
-    const widgetId = this.props.element.get('id')
-    const value = (e.target as HTMLInputElement).checked
-
-    this.setState({ value })
-    this.props.widgetMgr.setBoolValue(widgetId, value)
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setBoolValue(widgetId, this.state.value)
   }
 
-  public render(): React.ReactNode {
+  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = e.target.checked
+    this.setState({ value }, this.setWidgetValue)
+  }
+
+  public render = (): React.ReactNode => {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 
     return (
       <div className="Widget row-widget stCheckbox" style={style}>
         <UICheckbox
-          checked={this.valueOrDefault}
-          onChange={this.handleChange}
-          disabled={this.props.disabled}
           overrides={checkboxOverrides}
+          checked={this.state.value}
+          onChange={this.onChange}
+          disabled={this.props.disabled}
         >
           {label}
         </UICheckbox>

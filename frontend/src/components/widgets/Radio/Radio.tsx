@@ -31,41 +31,39 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: number;
+  value: number;
 }
 
 class Radio extends React.PureComponent<Props, State> {
-  public state: State = {}
+  public state: State = {
+    value: this.props.element.get('default')
+  }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): number {
-    if (this.state.value === undefined) {
-      return this.props.element.get('value') as number
-    } else {
-      return this.state.value
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: number = prevProps.element.get('default')
+    const newDefaultValue: number = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
   }
 
-  private onChange = (e: any) => {
-    const widgetId = this.props.element.get('id')
-    const stringValue = (e.target as HTMLInputElement).value
-    const value = parseInt(stringValue, 10)
-
-    this.setState({ value })
-    this.props.widgetMgr.setIntValue(widgetId, value)
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setIntValue(widgetId, this.state.value)
   }
 
-  public render(): React.ReactNode {
-    const { element, width } = this.props
+  private onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10)
+    this.setState({ value }, this.setWidgetValue)
+  }
 
-    const style = { width }
-    const label = element.get('label')
-    let options = element.get('options')
+  public render = (): React.ReactNode => {
+    const style = { width: this.props.width }
+    const label = this.props.element.get('label')
+    let options = this.props.element.get('options')
     let disabled = this.props.disabled
 
     if (options.size === 0) {
@@ -78,16 +76,20 @@ class Radio extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <RadioGroup
           onChange={this.onChange}
-          value={this.valueOrDefault.toString()}
+          value={this.state.value.toString()}
           disabled={disabled}
         >
-          {options.map((option: string, idx: number) => (
-            <UIRadio
-              key={idx}
-              value={idx.toString()}
-              overrides={radioOverrides}
-            >{option}</UIRadio>
-          ))}
+          {
+            options.map((option: string, index: number) => (
+              <UIRadio
+                key={index}
+                value={index.toString()}
+                overrides={radioOverrides}
+              >
+                {option}
+              </UIRadio>
+            ))
+          }
         </RadioGroup>
       </div>
     )

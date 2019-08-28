@@ -16,8 +16,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, \
-    absolute_import
+from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -121,30 +120,10 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method)
     def wrapped_method(self, *args, **kwargs):
-<<<<<<< HEAD
-        try:
-            def marshall_element(element):
-                return method(self, element, *args, **kwargs)
-
-            return self._enqueue_new_element_delta(marshall_element)
-        except Exception as e:
-            # First, write the delta to stderr.
-            import sys
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback, file=sys.stderr)
-
-            # Now write the delta to the report.
-            # (To avoid infinite recursion, we make sure that
-            # the exception didn't occur *within* st.exception
-            # itself!)
-            if method.__name__ != 'exception':
-                self.exception(e)
-=======
         def marshall_element(element):
             return method(self, element, *args, **kwargs)
 
         return self._enqueue_new_element_delta(marshall_element)
->>>>>>> b9de457f4eb75f79d1e94b5df7d94298aea859cc
 
     return wrapped_method
 
@@ -1259,7 +1238,7 @@ class DeltaGenerator(object):
         """
         current_value = ui_value if ui_value is not None else False
         element.button.label = label
-        element.button.value = False
+        element.button.default = False
         return current_value
 
     @_widget
@@ -1288,10 +1267,9 @@ class DeltaGenerator(object):
 
         """
         current_value = ui_value if ui_value is not None else value
-        current_value = bool(current_value)
         element.checkbox.label = label
-        element.checkbox.value = current_value
-        return current_value
+        element.checkbox.default = bool(value)
+        return bool(current_value)
 
     @_widget
     def radio(self, element, ui_value, label, options, index=0,
@@ -1332,16 +1310,15 @@ class DeltaGenerator(object):
             raise TypeError(
                 'Radio Value has invalid type: %s' % type(index).__name__)
 
-        if len(options) and not 0 <= index < len(options):
+        if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError(
                 'Radio index must be between 0 and length of options')
 
         current_value = ui_value if ui_value is not None else index
-
         element.radio.label = label
-        element.radio.value = current_value
+        element.radio.default = index
         element.radio.options[:] = [str(format_func(opt)) for opt in options]
-        return options[current_value] if len(options) else NoValue
+        return options[current_value] if len(options) > 0 else NoValue
 
     @_widget
     def selectbox(self, element, ui_value, label, options, index=0,
@@ -1379,17 +1356,15 @@ class DeltaGenerator(object):
             raise TypeError(
                 'Selectbox Value has invalid type: %s' % type(index).__name__)
 
-        if len(options) and not 0 <= index < len(options):
+        if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError(
                 'Selectbox index must be between 0 and length of options')
 
         current_value = ui_value if ui_value is not None else index
-
         element.selectbox.label = label
-        element.selectbox.value = current_value
-        element.selectbox.options[:] = [
-            str(format_func(opt)) for opt in options]
-        return options[current_value] if len(options) else NoValue
+        element.selectbox.default = index
+        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+        return options[current_value] if len(options) > 0 else NoValue
 
     @_widget
     def slider(self, element, ui_value, label,
@@ -1522,9 +1497,7 @@ class DeltaGenerator(object):
             current_value = current_value[0] if single_value else current_value
 
         element.slider.label = label
-        element.slider.value[:] = (
-            [current_value] if single_value
-            else current_value)
+        element.slider.value[:] = [current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
@@ -1553,13 +1526,10 @@ class DeltaGenerator(object):
         >>> st.write('The current movie title is', title)
 
         """
-        # TODO: compare the default value with the current value
         current_value = ui_value if ui_value is not None else value
-        current_value = str(current_value)
         element.text_input.label = label
-        element.text_input.value = current_value
-        element.text_input.default = value
-        return current_value
+        element.text_input.default = str(value)
+        return str(current_value)
 
     @_widget
     def text_area(self, element, ui_value, label, value=''):

@@ -29,30 +29,36 @@ interface Props {
 
 interface State {
   /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
-   */
-  value: string;
-
-  /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
   dirty: boolean;
+
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, the default value is used.
+   */
+  value: string;
 }
 
 class TextInput extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
-    value: this.props.element.get('value'),
+    value: this.props.element.get('default'),
   }
 
-  componentDidUpdate = (prevProps: Props): void => {
-    // Reset the widget's state when the default value changes
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
     const oldDefaultValue: string = prevProps.element.get('default')
     const newDefaultValue: string = this.props.element.get('default')
     if (oldDefaultValue !== newDefaultValue) {
       this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
+  }
+
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.setState({ dirty: false })
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -74,13 +80,7 @@ class TextInput extends React.PureComponent<Props, State> {
     })
   }
 
-  private setWidgetValue(): void {
-    const widgetId: string = this.props.element.get('id')
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
-    this.setState({ dirty: false })
-  }
-
-  public render(): React.ReactNode {
+  public render = (): React.ReactNode => {
     const label: string = this.props.element.get('label')
     const style = { width: this.props.width }
 

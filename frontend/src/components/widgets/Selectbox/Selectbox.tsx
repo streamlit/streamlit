@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import {logWarning} from 'lib/log'
 import React from 'react'
 import { Select as UISelect } from 'baseui/select'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
+import { logWarning } from 'lib/log'
 
 interface Props {
   disabled: boolean;
@@ -31,9 +31,9 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: number;
+  value: number;
 }
 
 interface SelectOption {
@@ -42,41 +42,46 @@ interface SelectOption {
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
-  public state: State = {}
-
-  private get valueOrDefault(): SelectOption[] | undefined {
-    const value = this.state.value === undefined ?
-      this.props.element.get('value') as number :
-      this.state.value
-
-    return [{
-      'value': value.toString(),
-      'label': this.props.element.get('options')[value],
-    }]
+  public state: State = {
+    value: this.props.element.get('default')
   }
 
-  private onChange = (data: any) => {
-    const widgetId = this.props.element.get('id')
-    const selectedValue: SelectOption[] = data['value']
-
-    if (selectedValue.length === 0) {
-      logWarning('No value selected!')
-      return
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: number = prevProps.element.get('default')
+    const newDefaultValue: number = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
-
-    const valueId = selectedValue[0].value
-    const index = parseInt(valueId, 10)
-
-    this.setState({ value: index })
-    this.props.widgetMgr.setIntValue(widgetId, index)
   }
 
-  public render(): React.ReactNode {
-    const { element, width } = this.props
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setIntValue(widgetId, this.state.value)
+  }
 
-    const style = { width }
-    const label = element.get('label')
-    let options = element.get('options')
+  // 👉 To be continued...
+  // private formatValue = (): any[] => {
+  //   return [{
+  //     label: this.props.element.get('options')[this.state.value],
+  //     value: this.state.value.toString(),
+  //   }]
+  // }
+
+  // private onChange = ({ value }: { value: SelectOption[] }) => {
+  //   if (value.length === 0) {
+  //     logWarning('No value selected!')
+  //     return
+  //   }
+
+  //   const selectedValue = value.length > 0 ? parseInt(value[0], 10) : 0
+  //   this.setState({ value: selectedValue }, this.setWidgetValue)
+  // }
+
+  public render = (): React.ReactNode => {
+    const style = { width: this.props.width }
+    const label = this.props.element.get('label')
+    let options = this.props.element.get('options')
     let disabled = this.props.disabled
 
     if (options.size === 0) {
@@ -84,13 +89,11 @@ class Selectbox extends React.PureComponent<Props, State> {
       disabled = true
     }
 
-    let selectOptions: SelectOption[] = []
-    options.forEach((option: string, idx: number) => (
-      selectOptions.push({
-        'label': option,
-        'value': idx.toString(),
-      })
-    ))
+    const selectOptions: SelectOption[] =
+      options.map((option: string, index: number) => ({
+        label: option,
+        value: index.toString(),
+      }))
 
     return (
       <div className="Widget row-widget stSelectbox" style={style}>
@@ -100,7 +103,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           labelKey="label"
           valueKey="value"
           onChange={this.onChange}
-          value={this.valueOrDefault}
+          value={this.formatValue}
           clearable={false}
           disabled={disabled}
         />
