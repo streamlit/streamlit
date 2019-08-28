@@ -399,7 +399,7 @@ export class WebsocketConnection {
 
     const resultArray = new Uint8Array(result)
     const msg = ForwardMsg.decode(resultArray)
-    this.messageQueue[messageIndex] = await this.cache.processMessage(msg)
+    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(msg)
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other

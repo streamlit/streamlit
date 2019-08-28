@@ -23,14 +23,16 @@ export class ForwardMsgCache {
   }
 
   /**
-   * Process a ForwardMsg:
+   * Process a ForwardMsg, "de-referencing" it if it's a reference to
+   * a cached message.
+   *
    * - If the message is cacheable, store it in the cache and return it.
    * - If the message is instead a reference to another message, look for
    *   the referenced message in the cache, and return it.
    * - If the referenced message isn't in our cache, request it from the
    *   server, cache it, and return it.
    */
-  public async processMessage(msg: ForwardMsg): Promise<ForwardMsg> {
+  public async processMessagePayload(msg: ForwardMsg): Promise<ForwardMsg> {
     this.maybeCacheMessage(msg)
 
     if (msg.type !== 'refHash') {
