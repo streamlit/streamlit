@@ -202,7 +202,7 @@ slider to the report with the `st.slider()` method.
 
 1. Locate `hour_to_filter` and replace it with this code snippet:
    ```Python
-   hour_to_filter = st.slider('hour', 17, 0, 23, 1)
+   hour_to_filter = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
    ```
 2. Use the slider and watch the map update in real time.
 

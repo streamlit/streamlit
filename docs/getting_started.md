@@ -435,7 +435,7 @@ used to pass data to another function, such as a table or chart, and change
 the data in real time.
 
 ```Python
-sample_var = st.slider('hour', 17, 1, 24)
+sample_var = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
 ```
 
 ## Order the elements of a report
