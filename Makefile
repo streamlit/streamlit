@@ -164,7 +164,6 @@ publish-docs: docs
 			--distribution-id=E5G9JPT7IOJDV \
 			--paths \
 				'/secret/docs/*' \
-				'/secret/docs/api/*' \
 				'/secret/docs/tutorial/*' \
 			--profile streamlit
 
