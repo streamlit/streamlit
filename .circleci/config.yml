@@ -175,8 +175,8 @@ jobs:
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
-              make react-init
             fi
+            make react-init scssvars
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
