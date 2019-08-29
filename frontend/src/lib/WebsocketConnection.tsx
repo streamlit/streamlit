@@ -118,9 +118,6 @@ type Event =
   | 'CONNECTION_SUCCEEDED'
   | 'CONNECTION_TIMED_OUT'
   | 'SERVER_PING_SUCCEEDED'
-  | 'WAIT_TIMER_FIRED'
-  | 'WAIT_TIMER_STARTED'
-
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
