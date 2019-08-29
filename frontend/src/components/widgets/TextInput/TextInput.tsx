@@ -61,12 +61,6 @@ class TextInput extends React.PureComponent<Props, State> {
     this.setState({ dirty: false })
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter' && this.state.dirty) {
-      this.setWidgetValue()
-    }
-  }
-
   private onBlur = (): void => {
     if (this.state.dirty) {
       this.setWidgetValue()
@@ -80,6 +74,12 @@ class TextInput extends React.PureComponent<Props, State> {
     })
   }
 
+  private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter' && this.state.dirty) {
+      this.setWidgetValue()
+    }
+  }
+
   public render = (): React.ReactNode => {
     const label: string = this.props.element.get('label')
     const style = { width: this.props.width }
@@ -89,10 +89,10 @@ class TextInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UIInput
           value={this.state.value}
-          disabled={this.props.disabled}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
+          disabled={this.props.disabled}
         />
         {
           this.state.dirty

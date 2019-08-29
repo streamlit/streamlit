@@ -29,78 +29,70 @@ interface Props {
 
 interface State {
   /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
-   */
-  value?: string;
-
-  /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
   dirty: boolean;
+
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, the default value is used.
+   */
+  value: string;
 }
 
 class TextArea extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
+    value: this.props.element.get('default'),
   }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): string {
-    if (this.state.value === undefined) {
-      return this.props.element.get('value') as string
-    } else {
-      return this.state.value
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: string = prevProps.element.get('default')
+    const newDefaultValue: string = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
   }
 
-  private onKeyPress = (e: any) => {
-    const event = e as React.KeyboardEvent<HTMLTextAreaElement>
-    if (event.key === 'Enter' && event.ctrlKey && this.state.dirty) {
-      this.setWidgetValue()
-    }
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.setState({ dirty: false })
   }
 
-  private onBlur = () => {
+  private onBlur = (): void => {
     if (this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
-  private onChange = (e: any) => {
-    const value = (e.target as HTMLTextAreaElement).value
+  private onChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     this.setState({
-      value,
       dirty: true,
+      value: e.target.value,
     })
   }
 
-  private setWidgetValue(): void {
-    if (this.state.value === undefined) {
-      throw new Error('Assertion error: value is undefined')
+  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Enter' && e.ctrlKey && this.state.dirty) {
+      this.setWidgetValue()
     }
-    const widgetId = this.props.element.get('id')
-
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
-    this.setState({ dirty: false })
   }
 
-  public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+  public render = (): React.ReactNode => {
     const style = { width: this.props.width }
+    const label = this.props.element.get('label')
 
     return (
       <div className="Widget stTextArea" style={style}>
         <label>{label}</label>
         <UITextArea
-          value={this.valueOrDefault}
-          disabled={this.props.disabled}
+          value={this.state.value}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
+          disabled={this.props.disabled}
         />
         {
           this.state.dirty

@@ -1561,10 +1561,9 @@ class DeltaGenerator(object):
 
         """
         current_value = ui_value if ui_value is not None else value
-        current_value = str(current_value)
         element.text_area.label = label
-        element.text_area.value = current_value
-        return current_value
+        element.text_area.default = str(value)
+        return str(current_value)
 
     @_widget
     def time_input(self, element, ui_value, label, value=None):
