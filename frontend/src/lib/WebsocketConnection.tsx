@@ -472,19 +472,19 @@ function doHealthPing(
   xhr.onload = () => {
     if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
       resolver.resolve(uriNumber)
-    } else if(xhr.status === 403) {
+    } else if (xhr.status === 403) {
       retry(
-          <Fragment>
-            <p>
-              Cannot connect to Streamlit (HTTP status: 403).
-            </p>
-            <p>
-              If you are trying to access a Streamlit app running on another server, this could be due to the app's <a
-                href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
-            </p>
-          </Fragment>
+        <Fragment>
+          <p>
+            Cannot connect to Streamlit (HTTP status: 403).
+          </p>
+          <p>
+            If you are trying to access a Streamlit app running on another server, this could be due to the app's <a
+              href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
+          </p>
+        </Fragment>
       )
-    }else {
+    } else {
       retry('Connected, but response is not "ok" or has bad status.')
     }
   }
