@@ -4,7 +4,7 @@ import streamlit as st
 # if st.checkbox("Change default"):
 #     default = "goodbye"
 
-# text = st.text_input("Text:", default)
+# text = st.text_input("Text", default)
 # st.write(text)
 
 
@@ -12,7 +12,7 @@ import streamlit as st
 # if st.checkbox("Change default"):
 #     default = False
 
-# checkbox = st.checkbox("Checkbox:", default)
+# checkbox = st.checkbox("Checkbox", default)
 # st.write(checkbox)
 
 
@@ -20,12 +20,12 @@ import streamlit as st
 # if st.checkbox("Change default"):
 #     default = 1
 
-# checkbox = st.radio("Radio:", ("female", "male"), default)
+# checkbox = st.radio("Radio", ("female", "male"), default)
 # st.write(checkbox)
 
 default = 0
 if st.checkbox("Change default"):
     default = 1
 
-selectbox = st.selectbox("SelectBox:", ("female", "male"), default)
+selectbox = st.selectbox("Selectbox", ("female", "male"), default)
 st.write(selectbox)

@@ -16,7 +16,7 @@
  */
 
 import React from 'react'
-import { Select as UISelect } from 'baseui/select'
+import { Select as UISelect, OnChangeParams } from 'baseui/select'
 import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { logWarning } from 'lib/log'
@@ -60,23 +60,15 @@ class Selectbox extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntValue(widgetId, this.state.value)
   }
 
-  // 👉 To be continued...
-  // private formatValue = (): any[] => {
-  //   return [{
-  //     label: this.props.element.get('options')[this.state.value],
-  //     value: this.state.value.toString(),
-  //   }]
-  // }
+  private onChange = (params: OnChangeParams) => {
+    if (params.value.length === 0) {
+      logWarning('No value selected!')
+      return
+    }
 
-  // private onChange = ({ value }: { value: SelectOption[] }) => {
-  //   if (value.length === 0) {
-  //     logWarning('No value selected!')
-  //     return
-  //   }
-
-  //   const selectedValue = value.length > 0 ? parseInt(value[0], 10) : 0
-  //   this.setState({ value: selectedValue }, this.setWidgetValue)
-  // }
+    const [ selected ] = params.value
+    this.setState({ value: parseInt(selected.value, 10) }, this.setWidgetValue)
+  }
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
@@ -84,16 +76,23 @@ class Selectbox extends React.PureComponent<Props, State> {
     let options = this.props.element.get('options')
     let disabled = this.props.disabled
 
+    const value = [{
+      label: options.size > 0 ? options[this.state.value] : 'No options to select.',
+      value: this.state.value.toString(),
+    }]
+
     if (options.size === 0) {
       options = ['No options to select.']
       disabled = true
     }
 
-    const selectOptions: SelectOption[] =
-      options.map((option: string, index: number) => ({
-        label: option,
-        value: index.toString(),
-      }))
+    const selectOptions: SelectOption[] = []
+    options.forEach((option: string, idx: number) => (
+      selectOptions.push({
+        'label': option,
+        'value': idx.toString(),
+      })
+    ))
 
     return (
       <div className="Widget row-widget stSelectbox" style={style}>
@@ -102,8 +101,8 @@ class Selectbox extends React.PureComponent<Props, State> {
           options={selectOptions}
           labelKey="label"
           valueKey="value"
+          value={value}
           onChange={this.onChange}
-          value={this.formatValue}
           clearable={false}
           disabled={disabled}
         />
