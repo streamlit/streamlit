@@ -175,8 +175,8 @@ jobs:
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
-              make react-init
             fi
+            make react-init scssvars
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
@@ -262,6 +262,18 @@ jobs:
           when: always
 
       #################################################################
+      # Run frontend tests. (Only executed in the Python 3 job.)
+      #################################################################
+      - run:
+          name: Run frontend tests.
+          command: |
+            if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
+              echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
+            else
+              make jstest
+            fi
+
+      #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
       #################################################################
       - save_cache:
@@ -290,6 +302,11 @@ jobs:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
 
+  # The 'python-2.7.16' job inherits everything from the Python 3 job.
+  # In a few cases, there are steps that are conditionally skipped based
+  # on the name of the current job (see, e.g., "Run frontend tests").
+  # If the python-2.7.16 job name is changed, please also find and replace
+  # any relevant strings that reference it by name!
   python-2.7.16:
     <<: *job-template
     docker:
