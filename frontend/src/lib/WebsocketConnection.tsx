@@ -47,6 +47,12 @@ const PING_RETRY_PERIOD_MS = 500
  */
 const WEBSOCKET_TIMEOUT_MS = 1000
 
+/**
+ * If the ping retrieves a 403 status code a message will be displayed.
+ * This constant is the link to the documentation.
+ */
+const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK = 'https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS'
+
 
 interface BaseUriParts {
   host: string;
@@ -466,6 +472,18 @@ function doHealthPing(
   xhr.onload = () => {
     if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
       resolver.resolve(uriNumber)
+    } else if (xhr.status === 403) {
+      retry(
+        <Fragment>
+          <p>
+            Cannot connect to Streamlit (HTTP status: 403).
+          </p>
+          <p>
+            If you are trying to access a Streamlit app running on another server, this could be due to the app's <a
+              href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
+          </p>
+        </Fragment>
+      )
     } else {
       retry('Connected, but response is not "ok" or has bad status.')
     }
