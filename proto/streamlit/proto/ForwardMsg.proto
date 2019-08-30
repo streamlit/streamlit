@@ -61,4 +61,15 @@ message ForwardMsgMetadata {
 
   // Path to parent block. Only set for Delta messages.
   BlockPath parent_block = 2;
+
+  ElementDimensionSpec element_dimension_spec = 3;
+}
+
+// Specifies the dimensions for the element
+message ElementDimensionSpec {
+  // width in CSS points
+  uint32 width = 1;
+
+  // height in CSS points
+  uint32 height = 2;
 }

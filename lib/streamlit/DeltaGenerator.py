@@ -200,13 +200,18 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, elementWidth=None,
+                                   elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
         ----------
         marshall_element : callable
             Function which sets the fields for a NewElement protobuf.
+        elementWidth : int or None
+            Desired width for the element
+        elementHeight : int or None
+            Desired height for the element
 
         Returns
         -------
@@ -234,6 +239,10 @@ class DeltaGenerator(object):
             msg.metadata.parent_block.container = self._container
             msg.metadata.parent_block.path[:] = self._path
             msg.metadata.delta_id = self._id
+            if elementWidth is not None:
+                msg.metadata.element_dimension_spec.width = elementWidth
+            if elementHeight is not None:
+                msg.metadata.element_dimension_spec.height = elementHeight
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -605,7 +614,7 @@ class DeltaGenerator(object):
         element.exception.stack_trace.extend(stack_trace)
 
     @_clean_up_sig
-    def dataframe(self, _, data=None):
+    def dataframe(self, _, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -619,6 +628,12 @@ class DeltaGenerator(object):
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
+        width : int or None
+            Desired width of the UI element expressed in pixels. If None, a
+            default width based on the page width is used.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
 
         Examples
         --------
@@ -631,6 +646,11 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
+
+        >>> st.dataframe(df, 200, 100)
+
+        .. output::
+           Same as before but width and height are constrained as specified
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -651,7 +671,7 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame)
+        return self._enqueue_new_element_delta(set_data_frame, width, height)
 
     # TODO: Either remove this or make it public. This is only used in the
     # mnist demo right now.
