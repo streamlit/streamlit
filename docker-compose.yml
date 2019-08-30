@@ -1,7 +1,6 @@
 version: '3.7'
 services:
   streamlit:
-    # container_name: streamlit_circleci
     image: streamlit_circleci
     build: .
     volumes:
@@ -23,10 +22,6 @@ services:
     networks:
       - streamlit_app
 
-volumes:
-  node_modules:
-  python_modules:
-
 networks:
   streamlit_app:
 
@@ -35,6 +30,7 @@ networks:
 
 # testing a single example
 # - need to open multiple terminals, yarn start, streamlit run, yarn cy:run
+# - https://stackoverflow.com/questions/39794509/how-to-open-multiple-terminals-in-docker
 
 # custom command for running cy:run when in container so not copy/pasting whole string
 
@@ -48,3 +44,9 @@ networks:
 # - use `host.docker.internal` instead of `localhost` on mac and winows
 
 # multi stage builds
+
+# docker and compose file location.. cypress/circleci specific?
+
+# regenerate all snapshots and lower threshold
+
+# copy makefile in to use make commands or just use raw commands?

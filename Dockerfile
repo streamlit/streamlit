@@ -46,7 +46,6 @@ ENV PATH $HOME/repo/venv/bin:$PATH
 COPY --chown=circleci frontend/package.json frontend/yarn.lock ./frontend/
 
 # install node modules
-# TODO store nvm cache in volume so install is shorter
 # RUN make react-init
 RUN cd frontend && yarn install --frozen-lockfile
 
@@ -58,7 +57,7 @@ COPY --chown=circleci lib/Pipfile ./lib/Pipfile
 # RUN source venv/bin/activate && make pipenv-lock CIRCLECI=true
 RUN source venv/bin/activate && cd lib && pipenv install --ignore-pipfile --dev --system
 
-# TODO mount snapshots directory so we can update them
+# copy streamlit code
 COPY --chown=circleci . .
 
 # install streamlit
@@ -70,15 +69,5 @@ RUN mkdir $HOME/.streamlit && \
     echo 'email = "jonathan@streamlit.io"' >> $HOME/.streamlit/credentials.toml
 
 EXPOSE 3000
-
-# cypress
-# TODO store yarn start cache in volume so install is shorter
-#CMD cd frontend && \
-#    NODE_OPTIONS=--max_old_space_size=4096 yarn start-server-and-test start http://localhost:3000 \
-#    "../scripts/run_e2e_tests.sh -a true -c .."
-
-# cache node modules and virtualenv in a volume
-#VOLUME /home/circleci/.cache
-#VOLUME /home/circleci/repo/venv
 
 CMD /bin/bash
