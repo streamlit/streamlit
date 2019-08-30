@@ -235,7 +235,11 @@ jslint:
 # Run JS unit tests.
 jstest:
 	cd frontend; yarn run test
-	cd frontend; yarn run coverage
+
+.PHONY: jscoverage
+# Run JS unit tests and generate a coverage report
+jscoverage:
+	cd frontend; yarn run test --coverage --watchAll=false
 
 .PHONY: e2etest
 # Run E2E tests.
