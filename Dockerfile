@@ -70,4 +70,8 @@ RUN mkdir $HOME/.streamlit && \
 
 EXPOSE 3000
 
+# TODO move to better location in dockerfile
+RUN mkdir -p $HOME/repo/frontend/node_modules/.cache/hard-source && \
+    sudo chown circleci:circleci $HOME/repo/frontend/node_modules/.cache/hard-source
+
 CMD /bin/bash

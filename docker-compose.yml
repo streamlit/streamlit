@@ -19,34 +19,35 @@ services:
       - type: bind
         source: ./lib/streamlit
         target: /home/circleci/repo/lib/streamlit
+      - type: volume
+        source: hard_source_webpack_plugin_cache
+        target: /home/circleci/repo/frontend/node_modules/.cache/hard-source
+        volume:
+          nocopy: true
+
     networks:
       - streamlit_app
+
+volumes:
+  hard_source_webpack_plugin_cache:
 
 networks:
   streamlit_app:
 
 # TODO
-# should docker/compose build and run commands go in yarn or makefile?
+# clean up Dockerfile, remove apt-cache, bundle run commands, etc
+# multi stage builds
+# regenerate all snapshots and lower threshold
+
+# -
+
+# how much to mount versus copy in, when do we expect changes to get picked up without having to rebuild?
+# should docker/compose build and run commands go in makefile?
+# docker and compose file location.. cypress/circleci sub directory?
+# copy makefile in to use make commands or just use raw commands?
+
+# --
 
 # testing a single example
 # - need to open multiple terminals, yarn start, streamlit run, yarn cy:run
 # - https://stackoverflow.com/questions/39794509/how-to-open-multiple-terminals-in-docker
-
-# custom command for running cy:run when in container so not copy/pasting whole string
-
-# how much to mount versus copy in, when do we expect changes to get picked up without having to rebuild?
-
-# clean up Dockerfile, remove apt-cache, bundle run commands, etc
-
-# improve yarn start speed
-# - store `HardSourceWebpackPlugin` `cacheDirectory` in a volume
-# - use network_mode: host in docker-compose and use `localhost` to access local yarn start, onl Linux
-# - use `host.docker.internal` instead of `localhost` on mac and winows
-
-# multi stage builds
-
-# docker and compose file location.. cypress/circleci specific?
-
-# regenerate all snapshots and lower threshold
-
-# copy makefile in to use make commands or just use raw commands?
