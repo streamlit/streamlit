@@ -1,0 +1,50 @@
+version: '3.7'
+services:
+  streamlit:
+    # container_name: streamlit_circleci
+    image: streamlit_circleci
+    build: .
+    volumes:
+      - type: bind
+        source: ./examples
+        target: /home/circleci/repo/examples
+      - type: bind
+        source: ./frontend/cypress
+        target: /home/circleci/repo/frontend/cypress
+      - type: bind
+        source: ./frontend/mochawesome-report
+        target: /home/circleci/repo/frontend/mochawesome-report
+      - type: bind
+        source: ./frontend/src
+        target: /home/circleci/repo/frontend/src
+      - type: bind
+        source: ./lib/streamlit
+        target: /home/circleci/repo/lib/streamlit
+    networks:
+      - streamlit_app
+
+volumes:
+  node_modules:
+  python_modules:
+
+networks:
+  streamlit_app:
+
+# TODO
+# should docker/compose build and run commands go in yarn or makefile?
+
+# testing a single example
+# - need to open multiple terminals, yarn start, streamlit run, yarn cy:run
+
+# custom command for running cy:run when in container so not copy/pasting whole string
+
+# how much to mount versus copy in, when do we expect changes to get picked up without having to rebuild?
+
+# clean up Dockerfile, remove apt-cache, bundle run commands, etc
+
+# improve yarn start speed
+# - store `HardSourceWebpackPlugin` `cacheDirectory` in a volume
+# - use network_mode: host in docker-compose and use `localhost` to access local yarn start, onl Linux
+# - use `host.docker.internal` instead of `localhost` on mac and winows
+
+# multi stage builds

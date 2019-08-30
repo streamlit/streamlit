@@ -20,6 +20,9 @@
 describe('st.table styling', () => {
   beforeEach(() => {
     cy.visit('http://localhost:3000/')
+
+    cy.get('.stTable')
+      .should('have.length', 4)
   })
 
   it('displays unstyled table', () => {
@@ -69,6 +72,10 @@ describe('st.table styling', () => {
       .find('table tbody tr').eq(0)
       .find('td').eq(0)
       .should('have.css', 'color', 'rgb(124, 252, 0)')
+
+    cy.get('.stTable').eq(3)
+      .find('table tbody tr')
+      .should('have.length', 10)
 
     cy.get('.stTable').eq(3)
       .find('table tbody tr').eq(5)
