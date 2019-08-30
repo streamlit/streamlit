@@ -1293,6 +1293,45 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
+    def multiselectbox(self, element, ui_value, label, options, format_func=str):
+        """Display a multiselect widget.
+        The multiselect widget starts as empty.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this select widget is for.
+        options : list, tuple, numpy.ndarray, or pandas.Series
+            Labels for the select options. This will be cast to str internally
+            by default.
+        format_func : function
+            Function to modify the display of the labels. It receives the option
+            as an argument and its output will be cast to str.
+
+        Returns
+        -------
+        [str]
+            A list with the selected options
+
+        Example
+        -------
+        >>> options = st.multiselectbox(
+        ...     'What are your favorite colors',
+        ...     ('Green', 'Yellow', 'Red', 'Blue'))
+        >>>
+        >>> st.write('You selected:', options)
+
+        """
+
+        current_value = ui_value.value if ui_value is not None else []
+
+        element.multiselectbox.label = label
+        element.multiselectbox.value[:] = current_value  # should be a list
+        element.multiselectbox.options[:] = [
+            str(format_func(opt)) for opt in options]
+        return [options[i] for i in current_value]
+
+    @_widget
     def radio(self, element, ui_value, label, options, index=0,
               format_func=str):
         """Display a radio button widget.

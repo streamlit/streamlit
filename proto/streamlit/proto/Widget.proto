@@ -38,10 +38,15 @@ message WidgetState {
     float float_value = 4;
     int32 int_value = 5;
     string string_value = 6;
+    IntArray int_array_value = 8;
     FloatArray float_array_value = 7;
   }
 }
 
 message FloatArray {
   repeated float value = 1;
+}
+
+message IntArray {
+  repeated int32 value = 1;
 }
