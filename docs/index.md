@@ -63,13 +63,14 @@ Follow these steps and you'll have a sample report running in less than 5 minute
    ```
 4. That's it! In the next few seconds the sample report will open in a new tab in your default browser.
 
-## Build your first report
+## Get started
 
-The next step is to build your first Streamlit report from scratch with our [get started guide](getting_started.md). When you're finished, you'll know how to structure a Streamlit report, visualize data, and add headings and text to organize your observations and conclusions.
+The easiest way to learn how to use Streamlit is to try it out. Use our [get started guide](getting_started.md) to kick the tires, and learn the basics of building a report.
 
-## Learn common patterns
+## Build your first interactive report
 
-Now that you've put together a simple report with our Getting Started guide, learn about [Streamlit's core mechanics](core_mechanics.md). Here you'll learn more about different ways to add elements to a report, how to create animations, and techniques to speed up calculations.
+If you've got the basics covered, the next step is to [create an interactive report](tutorial/create_an_interactive_report.md) from scratch. When you're finished, you'll know how to fetch
+and cache data, draw charts, plot information on a map, and use interactive widgets, like sliders and checkboxes, to filter results.
 
 ## Some helpful links
 

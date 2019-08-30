@@ -476,4 +476,4 @@ my_slot2.line_chart(numpy.random.randn(20, 2))
 
 ## What's next?
 
-* [Learn how to speed up your reports with caching](api/index.md#optimize-performance)
+* [Learn how to speed up your reports with caching](api.md#optimize-performance)

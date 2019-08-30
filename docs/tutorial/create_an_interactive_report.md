@@ -1,4 +1,4 @@
-# Tutorial: Create an interactive report with Streamlit
+# Tutorial: Create your first interactive report
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/secret/docs/#install-streamlit) and
