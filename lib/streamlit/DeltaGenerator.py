@@ -208,9 +208,9 @@ class DeltaGenerator(object):
         ----------
         marshall_element : callable
             Function which sets the fields for a NewElement protobuf.
-        elementWidth : int
+        elementWidth : int or None
             Desired width for the element
-        elementHeight : int
+        elementHeight : int or None
             Desired height for the element
 
         Returns
@@ -628,10 +628,12 @@ class DeltaGenerator(object):
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
-        width : int
-            Desired width of the UI element expressed in CSS points
-        height : int
-            Desired height of the UI element expressed in CSS points
+        width : int or None
+            Desired width of the UI element expressed in pixels. If None, a
+            default width based on the page width is used.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
 
         Examples
         --------
