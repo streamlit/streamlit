@@ -18,7 +18,7 @@
 /// <reference types="cypress" />
 
 describe('st.code', () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit('http://localhost:3000/')
   })
 

@@ -18,7 +18,7 @@
 /// <reference types="cypress" />
 
 describe('st.graphviz_chart', () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit('http://localhost:3000/')
   })
 

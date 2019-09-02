@@ -18,7 +18,7 @@
 /// <reference types="cypress" />
 
 describe('st.image', () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit('http://localhost:3000/')
   })
 
