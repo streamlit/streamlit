@@ -34,16 +34,16 @@ class Button extends React.PureComponent<Props> {
     this.props.widgetMgr.setTriggerValue(widgetId)
   }
 
-  public render(): React.ReactNode {
+  public render = (): React.ReactNode => {
     const label = this.props.element.get('label')
     const style = { width: this.props.width }
 
     return (
       <div className="Widget row-widget stButton" style={style}>
         <UIButton
-          overrides={buttonOverrides}
           onClick={this.handleClick}
           disabled={this.props.disabled}
+          overrides={buttonOverrides}
         >
           {label}
         </UIButton>

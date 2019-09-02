@@ -30,39 +30,40 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: string;
+  value: string;
 }
 
 class TimeInput extends React.PureComponent<Props, State> {
-  public state: State = {}
+  public state: State = {
+    value: this.props.element.get('default')
+  }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): Date {
-    if (this.state.value === undefined) {
-      return stringToDate(this.props.element.get('value') as string)
-    } else {
-      return stringToDate(this.state.value)
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: string = prevProps.element.get('default')
+    const newDefaultValue: string = this.props.element.get('default')
+    if (oldDefaultValue !== newDefaultValue) {
+      this.setState({ value: newDefaultValue }, this.setWidgetValue)
     }
   }
 
-  private handleChange = (newDate: Date): void => {
-    const widgetId = this.props.element.get('id')
-
-    const value = dateToString(newDate)
-    this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, value)
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
   }
 
-  public render(): React.ReactNode {
-    const label = this.props.element.get('label')
-    const style = { width: this.props.width }
+  private handleChange = (newDate: Date): void => {
+    const value = dateToString(newDate)
+    this.setState({ value }, this.setWidgetValue)
+  }
 
-    const selectOverride = {
+  public render = (): React.ReactNode => {
+    const style = { width: this.props.width }
+    const label = this.props.element.get('label')
+
+    const selectOverrides = {
       Select: {
         props: {
           disabled: this.props.disabled,
@@ -75,9 +76,9 @@ class TimeInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UITimePicker
           format="24"
-          value={this.valueOrDefault}
+          value={stringToDate(this.state.value)}
           onChange={this.handleChange}
-          overrides={selectOverride}
+          overrides={selectOverrides}
           creatable
         />
       </div>
@@ -86,6 +87,7 @@ class TimeInput extends React.PureComponent<Props, State> {
 }
 
 function stringToDate(value: string): Date {
+  console.log('value', value)
   const [hours, minutes] = value.split(':').map(Number)
   const date = new Date()
   date.setHours(hours)

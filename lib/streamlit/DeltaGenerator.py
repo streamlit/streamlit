@@ -1607,7 +1607,7 @@ class DeltaGenerator(object):
             current_value = datetime.strptime(ui_value, '%H:%M').time()
 
         element.time_input.label = label
-        element.time_input.value = time.strftime(current_value, '%H:%M')
+        element.time_input.default = time.strftime(value, '%H:%M')
         return current_value
 
     @_widget

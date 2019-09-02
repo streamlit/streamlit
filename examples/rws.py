@@ -1,3 +1,4 @@
+from datetime import time
 import streamlit as st
 
 # default = "hello"
@@ -32,9 +33,17 @@ import streamlit as st
 # st.write(selectbox)
 
 
-default = "hello"
-if st.checkbox("Change default"):
-    default = "goodbye"
+# default = "hello"
+# if st.checkbox("Change default"):
+#     default = "goodbye"
 
-text_area = st.text_area("Text Area", default)
-st.write(text_area)
+# text_area = st.text_area("Text Area", default)
+# st.write(text_area)
+
+
+default = time(0, 0)
+if st.checkbox("Change default"):
+    default = time(23, 59)
+
+time_input = st.time_input("Time Input", default)
+st.write(time_input)
