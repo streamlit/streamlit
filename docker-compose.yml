@@ -31,7 +31,5 @@ volumes:
   hard_source_webpack_plugin_cache:
 
 # TODO
-# cypress circleci task fails even tho no tests failed
-# -
 # multi stage builds
 # update image and container names
