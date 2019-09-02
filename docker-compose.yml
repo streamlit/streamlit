@@ -3,6 +3,8 @@ services:
   streamlit:
     image: streamlit_circleci
     build: .
+    ports:
+      - "3000:3000"
     volumes:
       - type: bind
         source: ./examples
@@ -25,29 +27,12 @@ services:
         volume:
           nocopy: true
 
-    networks:
-      - streamlit_app
-
 volumes:
   hard_source_webpack_plugin_cache:
 
-networks:
-  streamlit_app:
-
 # TODO
-# clean up Dockerfile, remove apt-cache, bundle run commands, etc
-# multi stage builds
 # regenerate all snapshots and lower threshold
-
+# cypress circleci task fails even tho no tests failed
 # -
-
-# how much to mount versus copy in, when do we expect changes to get picked up without having to rebuild?
-# should docker/compose build and run commands go in makefile?
-# docker and compose file location.. cypress/circleci sub directory?
-# copy makefile in to use make commands or just use raw commands?
-
-# --
-
-# testing a single example
-# - need to open multiple terminals, yarn start, streamlit run, yarn cy:run
-# - https://stackoverflow.com/questions/39794509/how-to-open-multiple-terminals-in-docker
+# multi stage builds
+# update image and container names

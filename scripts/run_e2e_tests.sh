@@ -72,7 +72,7 @@ rm frontend/cypress/mochawesome/* || true
 rm frontend/mochawesome.json || true
 
 # Test core streamlit elements
-for file in examples/core/*.py
+for file in examples/core/button.py
 do
   # Run next test
   streamlit run $file &
