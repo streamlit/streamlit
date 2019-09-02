@@ -31,7 +31,6 @@ volumes:
   hard_source_webpack_plugin_cache:
 
 # TODO
-# regenerate all snapshots and lower threshold
 # cypress circleci task fails even tho no tests failed
 # -
 # multi stage builds
