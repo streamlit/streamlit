@@ -83,9 +83,6 @@ do
   # Kill the last process executed in the background
   kill -9 $!
 
-  echo "rhone: ${file%.*}"
-  echo "exit code: $EXITCODE"
-
   # If exit code is nonzero, prompt user to continue or continue without prompting
   if [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "false" ]; then
     read -p "Continue? [y/n] " yn
@@ -96,15 +93,9 @@ do
   elif [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "true" ]; then
     any_failed=true
   fi
-
-  echo "any failed: $any_failed"
 done
 
 if [ "$any_failed" = "true" ]
 then
-  echo "any failed"
   exit 1
 fi
-
-echo "no failed"
-exit 0
