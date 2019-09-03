@@ -41,7 +41,7 @@ class Slider extends React.PureComponent<Props, State> {
   private sliderRef = React.createRef<HTMLDivElement>()
   private setWidgetValue: () => void
   public state: State = {
-    value: this.props.element.get('default').toJS()
+    value: this.props.element.get('default').toJS(),
   }
 
   public constructor(props: Props) {

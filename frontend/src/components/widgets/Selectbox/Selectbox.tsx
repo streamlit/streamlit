@@ -43,7 +43,7 @@ interface SelectOption {
 
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get('default')
+    value: this.props.element.get('default'),
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
@@ -66,7 +66,7 @@ class Selectbox extends React.PureComponent<Props, State> {
       return
     }
 
-    const [ selected ] = params.value
+    const [selected] = params.value
     this.setState({ value: parseInt(selected.value, 10) }, this.setWidgetValue)
   }
 
