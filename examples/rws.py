@@ -50,9 +50,17 @@ import streamlit as st
 # st.write(time_input)
 
 
-default = date(2000, 1, 1)
-if st.checkbox("Change default"):
-    default = date(1979, 1, 1)
+# default = date(2000, 1, 1)
+# if st.checkbox("Change default"):
+#     default = date(1979, 1, 1)
 
-date_input = st.date_input("Date Input", default)
-st.write(date_input)
+# date_input = st.date_input("Date Input", default)
+# st.write(date_input)
+
+
+default = 1
+if st.checkbox("Change default"):
+    default = 50
+
+slider = st.slider("Slider", 1, 100, default)
+st.write(slider)

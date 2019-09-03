@@ -17,10 +17,10 @@
 
 import React from 'react'
 import { Slider as UISlider } from 'baseui/slider'
-import { Map as ImmutableMap } from 'immutable'
-import { debounce } from 'lib/utils'
+import { Map as ImmutableMap, List } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { sliderOverrides } from 'lib/widgetTheme'
+import { debounce } from 'lib/utils'
 
 interface Props {
   disabled: boolean;
@@ -32,23 +32,30 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: number[];
-}
-
-interface SliderValue {
   value: number[];
 }
 
 class Slider extends React.PureComponent<Props, State> {
   private sliderRef = React.createRef<HTMLDivElement>()
   private setWidgetValue: () => void
-  public state: State = {}
+  public state: State = {
+    value: this.props.element.get('default').toJS()
+  }
 
   public constructor(props: Props) {
     super(props)
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
+  }
+
+  public componentDidUpdate = (prevProps: Props): void => {
+    // Reset the widget state when the default value changes
+    const oldDefaultValue: List<number> = prevProps.element.get('default')
+    const newDefaultValue: List<number> = this.props.element.get('default')
+    if (!oldDefaultValue.equals(newDefaultValue)) {
+      this.setState({ value: newDefaultValue.toJS() }, this.setWidgetValue)
+    }
   }
 
   public componentDidMount = () => {
@@ -69,20 +76,25 @@ class Slider extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): number[] {
+  private setWidgetValueRaw = (): void => {
+    const widgetId: string = this.props.element.get('id')
+    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
+  }
+
+  private handleChange = ({ value }: { value: number[] }): void => {
+    this.setState({ value }, this.setWidgetValue)
+  }
+
+  private handleClick = (e: Event): void => {
+    (e.target as HTMLElement).focus()
+  }
+
+  private get value(): number[] {
     const min = this.props.element.get('min')
     const max = this.props.element.get('max')
-    const value = this.state.value === undefined
-      ? this.props.element.get('value').toArray()
-      : this.state.value
-
+    const value = this.state.value
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
-
     // Adjust the value if it's out of bounds.
     if (start > end) {
       start = end
@@ -99,34 +111,15 @@ class Slider extends React.PureComponent<Props, State> {
     if (end > max) {
       end = max
     }
-
     return value.length > 1 ? [start, end] : [start]
   }
 
-  private handleClick = (e: Event): void => {
-    (e.target as HTMLElement).focus()
-  }
-
-  private handleChange = ({ value }: SliderValue): void => {
-    this.setState({ value })
-    this.setWidgetValue()
-  }
-
-  private setWidgetValueRaw(): void {
-    if (!this.state.value) {
-      throw new Error('Assert error: value is undefined')
-    }
-    const widgetId = this.props.element.get('id')
-    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
-  }
-
-  public render(): React.ReactNode {
-    const { element, width } = this.props
-    const label = element.get('label')
-    const min = element.get('min')
-    const max = element.get('max')
-    const step = element.get('step')
-    const style = { width }
+  public render = (): React.ReactNode => {
+    const style = { width: this.props.width }
+    const label = this.props.element.get('label')
+    const min = this.props.element.get('min')
+    const max = this.props.element.get('max')
+    const step = this.props.element.get('step')
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
@@ -135,7 +128,7 @@ class Slider extends React.PureComponent<Props, State> {
           min={min}
           max={max}
           step={step}
-          value={this.valueOrDefault}
+          value={this.value}
           onChange={this.handleChange}
           disabled={this.props.disabled}
           overrides={sliderOverrides}
