@@ -21,31 +21,55 @@ import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/BlockPath.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
+  // Contains 'non-payload' ForwardMsg data that isn't cached for the purposes
+  // of ForwardMsg de-duping.
+  ForwardMsgMetadata metadata = 1;
+
   oneof type {
     // Report lifecycle messages.
 
-    Initialize initialize = 1;
-    NewReport new_report = 2;
-    Delta delta = 3;
-    bool report_finished = 4;
+    Initialize initialize = 2;
+    NewReport new_report = 3;
+    Delta delta = 4;
+    bool report_finished = 5;
 
     // Upload progress messages.
 
     // Indicates the % progress of a report upload.
-    uint32 upload_report_progress = 5;
+    uint32 upload_report_progress = 6;
 
     // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 6;
+    string report_uploaded = 7;
 
     // State change and event messages.
 
     // ReportSession state changed. This is the new state.
-    SessionState session_state_changed = 7;
+    SessionState session_state_changed = 8;
 
     // A SessionEvent was emitted.
-    SessionEvent session_event = 8;
+    SessionEvent session_event = 9;
   }
+}
+
+message ForwardMsgMetadata {
+  // Each delta applies to a particular ID. Only set for Delta messages.
+  uint32 delta_id = 1;
+
+  // Path to parent block. Only set for Delta messages.
+  BlockPath parent_block = 2;
+
+  ElementDimensionSpec element_dimension_spec = 3;
+}
+
+// Specifies the dimensions for the element
+message ElementDimensionSpec {
+  // width in CSS points
+  uint32 width = 1;
+
+  // height in CSS points
+  uint32 height = 2;
 }

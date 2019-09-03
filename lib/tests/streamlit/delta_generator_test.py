@@ -227,9 +227,9 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue_new_element_delta(marshall_element)
         self.assertEqual(dg, new_dg)
 
-        delta = self.get_delta_from_queue()
-        self.assertEqual(123, delta.id)
-        self.assertEqual(delta.new_element.text.body, test_data)
+        msg = self.get_message_from_queue()
+        self.assertEqual(123, msg.metadata.delta_id)
+        self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
 class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):

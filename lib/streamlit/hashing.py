@@ -48,8 +48,13 @@ except ImportError:
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-PANDAS_ROWS_LARGE = 1000000
-HASHING_FRACTION = 0.1
+PANDAS_ROWS_LARGE = 100000
+PANDAS_SAMPLE_SIZE = 10000
+
+
+# Similar to dataframes, we also sample large numpy arrays.
+NP_SIZE_LARGE = 1000000
+NP_SAMPLE_SIZE = 100000
 
 
 Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
@@ -225,11 +230,20 @@ class CodeHasher():
             return b'bool:0'
         elif util.is_type(obj, 'pandas.core.frame.DataFrame'):
             import pandas as pd
-            if len(obj) > PANDAS_ROWS_LARGE:
-                obj = obj.sample(frac=HASHING_FRACTION, random_state=0)
+            if len(obj) >= PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
             return pd.util.hash_pandas_object(obj).sum()
         elif util.is_type(obj, 'numpy.ndarray'):
-            return obj.tobytes()
+            h = hashlib.new(self.name)
+            self._update(h, obj.shape)
+            
+            if obj.size >= NP_SIZE_LARGE:
+                import numpy as np
+                state = np.random.RandomState(0)
+                obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
+
+            self._update(h, obj.tobytes())
+            return h.digest()
         elif inspect.isbuiltin(obj):
             return self.to_bytes(obj.__name__)
         elif hasattr(obj, 'name') and (
@@ -274,9 +288,11 @@ class CodeHasher():
             return self.to_bytes(obj.__name__)
         elif inspect.isclass(obj):
             # TODO: Figure out how to best show this kind of warning to the
-            # user.
-            st.warning(('Streamlit does not support hashing classes. '
-                        'We did not hash `%s`.') % obj.__name__)
+            # user. In the meantime, show nothing. This scenario is too common,
+            # (e.g. in every "except" statement) so the current warning is
+            # quite annoying...
+            # st.warning(('Streamlit does not support hashing classes. '
+            #             'We did not hash `%s`.') % obj.__name__)
             # TODO: Hash more than just the name of classes.
             return self.to_bytes(obj.__name__)
         elif isinstance(obj, functools.partial):

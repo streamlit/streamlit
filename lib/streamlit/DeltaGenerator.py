@@ -25,7 +25,6 @@ import functools
 import json
 import random
 import textwrap
-import traceback
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -200,13 +199,18 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, elementWidth=None,
+                                   elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
         ----------
         marshall_element : callable
             Function which sets the fields for a NewElement protobuf.
+        elementWidth : int or None
+            Desired width for the element
+        elementHeight : int or None
+            Desired height for the element
 
         Returns
         -------
@@ -231,9 +235,13 @@ class DeltaGenerator(object):
         if marshall_element:
             msg = ForwardMsg_pb2.ForwardMsg()
             rv = marshall_element(msg.delta.new_element)
-            msg.delta.parent_block.container = self._container
-            msg.delta.parent_block.path[:] = self._path
-            msg.delta.id = self._id
+            msg.metadata.parent_block.container = self._container
+            msg.metadata.parent_block.path[:] = self._path
+            msg.metadata.delta_id = self._id
+            if elementWidth is not None:
+                msg.metadata.element_dimension_spec.width = elementWidth
+            if elementHeight is not None:
+                msg.metadata.element_dimension_spec.height = elementHeight
 
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
@@ -242,7 +250,7 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.delta.id, is_root=False)
+                self._enqueue, msg.metadata.delta_id, is_root=False)
         else:
             output_dg = self
 
@@ -265,9 +273,9 @@ class DeltaGenerator(object):
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.delta.new_block = True
-        msg.delta.parent_block.container = self._container
-        msg.delta.parent_block.path[:] = self._path
-        msg.delta.id = self._id
+        msg.metadata.parent_block.container = self._container
+        msg.metadata.parent_block.path[:] = self._path
+        msg.metadata.delta_id = self._id
 
         new_block_dg = DeltaGenerator(
             enqueue=self._enqueue,
@@ -605,7 +613,7 @@ class DeltaGenerator(object):
         element.exception.stack_trace.extend(stack_trace)
 
     @_clean_up_sig
-    def dataframe(self, _, data=None):
+    def dataframe(self, _, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -619,6 +627,12 @@ class DeltaGenerator(object):
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
+        width : int or None
+            Desired width of the UI element expressed in pixels. If None, a
+            default width based on the page width is used.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
 
         Examples
         --------
@@ -631,6 +645,11 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
+
+        >>> st.dataframe(df, 200, 100)
+
+        .. output::
+           Same as before but width and height are constrained as specified
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -651,7 +670,7 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame)
+        return self._enqueue_new_element_delta(set_data_frame, width, height)
 
     # TODO: Either remove this or make it public. This is only used in the
     # mnist demo right now.
@@ -1230,10 +1249,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...    say_hello = st.button('Click me')
-        ...    if say_hello:
-        ...        st.write('Why hello there')
+        >>> if st.button('Say hello'):
+        ...     st.write('Why hello there')
+        ... else:
+        ...     st.write('Goodbye')
 
         """
         current_value = ui_value if ui_value is not None else False
@@ -1260,10 +1279,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...    agree = st.checkbox('I agree', False)
-        ...    if agree:
-        ...        st.write('Great!')
+        >>> agree = st.checkbox('I agree')
+        >>>
+        >>> if agree:
+        ...     st.write('Great!')
 
         """
         current_value = ui_value if ui_value is not None else value
@@ -1296,14 +1315,14 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...     genre = st.radio(
-        ...         'What\'s your favorite movie genre',
-        ...         ('Comedy', 'Drama', 'Documentary'))
-        ...     if genre == 0:
-        ...         st.write('You selected comedy.')
-        ...     else:
-        ...         st.write('You didn\'t select comedy.')
+        >>> genre = st.radio(
+        ...     'What\'s your favorite movie genre',
+        ...     ('Comedy', 'Drama', 'Documentary'))
+        >>>
+        >>> if genre == 'Comedy':
+        ...     st.write('You selected comedy.')
+        ... else:
+        ...     st.write('You didn\'t select comedy.')
 
         """
         if not isinstance(index, int):
@@ -1345,11 +1364,11 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> with st.echo():
-        ...     options = st.selectbox(
-        ...         'How would you like to be contacted?',
-        ...         ('Email', 'Home phone', 'Mobile phone'), 0)
-        ...     st.write(options)
+        >>> option = st.selectbox(
+        ...     'How would you like to be contacted?',
+        ...     ('Email', 'Home phone', 'Mobile phone'))
+        >>>
+        >>> st.write('You selected:', option)
 
         """
         if not isinstance(index, int):
@@ -1395,15 +1414,17 @@ class DeltaGenerator(object):
             The current value of the slider widget. The return type follows
             the type of the value argument.
 
-        Example
-        -------
-        >>> age = st.slider('How old are you?', 25, 0, 130)
-        >>> st.write("I'm ", age)
+        Examples
+        --------
+        >>> age = st.slider('How old are you?', 0, 130, 25)
+        >>> st.write("I'm ", age, 'years old')
+
+        And here's an example of a range selector:
 
         >>> values = st.slider(
         ...     'Select a range of values',
-        ...     (25.0, 75.0), 0.0, 100.0, 1.0)
-        >>> st.write("Values:", values)
+        ...     0.0, 100.0, (25.0, 75.0))
+        >>> st.write('Values:', values)
 
         """
         # Set value default.
@@ -1717,14 +1738,21 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data):
+    def map(self, element, data, zoom=None):
         """Display a map with points on it.
+
+        This is a wrapper around st.deck_gl_chart to quickly create scatterplot
+        charts on top of a map, with auto-centering and auto-zoom.
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
             or None
-            The data to be plotted. Must have 'lat' and 'lon' columns.
+            The data to be plotted. Must have columns called 'lat', 'lon',
+            'latitude', or 'longitude'.
+        zoom : int
+            Zoom level as specified in
+            https://wiki.openstreetmap.org/wiki/Zoom_levels
 
         Example
         -------
@@ -1742,18 +1770,12 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-        LAT_LON = ['lat', 'lon']
-        if not set(data.columns) >= set(LAT_LON):
-            raise Exception('Map data must contain "lat" and "lon" columns.')
-        if (data['lon'].isnull().values.any() or
-            data['lat'].isnull().values.any()):
-            raise Exception('Map data must be numeric.')
-        data_frame_proto.marshall_data_frame(
-            data[LAT_LON], element.map.points)
+
+        import streamlit.elements.map as map
+        map.marshall(element, data, zoom)
 
     @_with_element
-    def deck_gl_chart(self, element, data=None, spec=None, **kwargs):
+    def deck_gl_chart(self, element, spec=None, **kwargs):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -1762,10 +1784,6 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            Data to be plotted, if no layer specified.
 
         spec : dict
             Keys in this dict can be:
@@ -1829,7 +1847,10 @@ class DeltaGenerator(object):
         ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
         ...    columns=['lat', 'lon'])
         ...
-        >>> st.deck_gl_chart(df)
+        >>> st.deck_gl_chart(layers = [{
+                'data': df,
+                'type': 'ScatterplotLayer'
+            }])
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
@@ -1868,7 +1889,7 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.deck_gl as deck_gl
-        deck_gl.marshall(element.deck_gl_chart, data, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
     def table(self, element, data=None):
@@ -1972,9 +1993,9 @@ class DeltaGenerator(object):
                 'Method requires exactly one dataset')
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.delta.parent_block.container = self._container
-        msg.delta.parent_block.path[:] = self._path
-        msg.delta.id = self._id
+        msg.metadata.parent_block.container = self._container
+        msg.metadata.parent_block.path[:] = self._path
+        msg.metadata.delta_id = self._id
 
         data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
 

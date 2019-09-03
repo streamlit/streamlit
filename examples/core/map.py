@@ -19,4 +19,11 @@ import numpy as np
 
 coords = np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4]
 df = pd.DataFrame(coords, columns=['lat', 'lon'])
+
+# Sugar syntax for a basic scatterplot map using deck_gl:
+# st.map(df)
 st.map(df)
+
+# Similar test but specifying a custom zoom level:
+# st.map(df)
+st.map(df, zoom=8)

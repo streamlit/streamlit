@@ -19,8 +19,6 @@
 
 describe('st.vega_lite_chart', () => {
   before(() => {
-    // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
 
     // Force our header to scroll with the page, rather than
@@ -37,13 +35,20 @@ describe('st.vega_lite_chart', () => {
 
   it('sets the correct chart width', () => {
     cy.get('.stVegaLiteChart canvas')
-      .eq(0).should('have.css', 'width', '572px')
+      .eq(0).should('have.css', 'width', '692px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(1).should('have.css', 'width', '572px')
+      .eq(1).should('have.css', 'width', '692px')
 
     cy.get('.stVegaLiteChart canvas')
-      .eq(2).should('have.css', 'width', '292px')
+      .eq(2)
+      .should('have.css', 'width')
+      .and((width) => {
+        // Tests run on mac expect 292px while running on linux expects 294px
+        if (width != '292px' && width != '294px') {
+          throw new Error('Expected width to be 292px or 294px')
+        }
+      })
 
     cy.get('.stVegaLiteChart canvas')
       .eq(3).should('have.css', 'width', '500px')

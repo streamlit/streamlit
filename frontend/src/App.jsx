@@ -174,7 +174,7 @@ class App extends PureComponent {
         sessionStateChanged: msg => this.handleSessionStateChanged(msg),
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
-        delta: deltaMsg => this.handleDeltaMsg(deltaMsg),
+        delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
         reportFinished: () => this.handleReportFinished(),
         uploadReportProgress: progress => this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url => this.openDialog({ url, type: DialogType.UPLOADED }),
@@ -382,7 +382,7 @@ class App extends PureComponent {
   /**
    * Applies a list of deltas to the elements.
    */
-  handleDeltaMsg = (deltaMsg) => {
+  handleDeltaMsg = (deltaMsg, metadataMsg) => {
     // (BUG #685) When user presses stop, stop adding elements to
     // report immediately to avoid race condition.
     // The one exception is static connections, which do not depend on
@@ -393,7 +393,7 @@ class App extends PureComponent {
       this.setState(state => ({
         // Create brand new `elements` instance, so components that depend on
         // this for re-rendering catch the change.
-        elements: {...applyDelta(state.elements, state.reportId, deltaMsg)},
+        elements: {...applyDelta(state.elements, state.reportId, deltaMsg, metadataMsg)},
       }))
     }
   }
@@ -665,6 +665,12 @@ class App extends PureComponent {
 
           <Container className="streamlit-container">
             <Row className="justify-content-center">
+              {/*
+                Disclaimer: If this columns are changed please update
+                MAXIMUM_CONTENT_WIDTH constant value for st.image() from
+                image_proto.py file
+              */}
+
               <Col className={this.state.userSettings.wideMode ?
                 '' : 'col-lg-8 col-md-9 col-sm-12 col-xs-12'}>
                 {

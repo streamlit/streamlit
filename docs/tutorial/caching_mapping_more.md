@@ -140,19 +140,21 @@ Bam! Like magic.
 "But, wait a second," you're thinking, "this sounds too good. What are the
 limitations of all this awesomesauce?"
 
-Streamlit will only check for changes within the current working directory.
-For example, Streamlit won't check for changes in your libraries.
+Well, there are a few:
 
-Another limitation is that Streamlit does not check for changes to dataset
-from a URL. So if the remote dataset is time-varying, Streamlit will not
-automatically rerun your code. 
+1. Streamlit will only check for changes within the current working directory.
+   This means, Streamlit detect code updates inside installed Python libraries.
+1. If your function is not deterministic (that is, its output depends on random
+   numbers), or if it pulls data from an external time-varying source (e.g.
+   a live stock market ticker service) the cached value will be none-the-wiser.
+1. And lastly, you should not mutate the output of a cached function since
+   cached values are stored by reference (for performance reasons and to be
+   able to support libraries such as TensorFlow). Note that, here,
+   Streamlit is smart enough to detect these mutations and show a loud warning
+   explaining how to fix the problem.
 
-And lastly, you will get the full magic of detecting changes in dependent code
-in Python 3.4 and later. In particular, if you call `foo.bar`, only in these
-Python versions Streamlit will detect changes to the object `bar`.
-
-These limitations are important to keep in mind, but tend not to be an issue
-a surprising amount of times. Those times, this cache is really
+While these limitations are important to keep in mind, they tend not to be an
+issue a surprising amount of times. Those times, this cache is really
 transformational.
 
 So if nothing else, here's what you should take from this tutorial:
@@ -220,10 +222,26 @@ st.subheader('Map of all pickups at %d:00' % hour_to_filter)
 st.map(filtered_data)
 ```
 
-And we're done!
+Now every time you change the `hour_to_filter` variable and save the file, your
+Streamlit report will update to show only the data for the selected hour.
 
-Looks like Uber's prime real estate at that time is Midtown, slightly
-off-center toward the East side. Groovy!
+
+## Add interactivity
+
+To finish up, let's make it easier to filter the data by hour. Try replacing
+`hour_to_filter = 17` with this:
+
+```python
+hour_to_filter = st.slider('Hour', 0, 23, 17)
+```
+
+Now save the file and look at your browser: a slider showed up in your report!
+Try dragging the slider left and right and see what happens to the rest of the
+report.
+
+At 17h it looks like Uber's prime real estate at that time is Midtown, slightly
+off-center toward the East side. And around 0h it's Downtown, where much of
+Manhattan's night-life is. Groovy!
 
 
 ## Appendix: the final script
@@ -262,7 +280,7 @@ hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
 st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = 17
+hour_to_filter = st.slider('Hour', 0, 23, 17)
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
 st.subheader('Map of all pickups at %d:00' % hour_to_filter)

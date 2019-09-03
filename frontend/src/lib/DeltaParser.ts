@@ -15,11 +15,17 @@
  * limitations under the License.
  */
 
-import { List, Map as ImmutableMap } from 'immutable'
-import { Delta, NamedDataSet, BlockPath } from 'autogen/proto'
-import { dispatchOneOf, toImmutableProto } from 'lib/immutableProto'
-import { addRows } from 'lib/dataFrameProto'
-import { MetricsManager } from 'lib/MetricsManager'
+import {
+  BlockPath,
+  Delta,
+  ForwardMsgMetadata,
+  NamedDataSet,
+} from 'autogen/proto'
+import {List, Map as ImmutableMap} from 'immutable'
+import {addRows} from 'lib/dataFrameProto'
+import {dispatchOneOf, toImmutableProto} from 'lib/immutableProto'
+import {MetricsManager} from 'lib/MetricsManager'
+import {requireNonNull} from 'lib/utils'
 
 type Container = 'main' | 'sidebar'
 type SimpleElement = ImmutableMap<string, any>
@@ -31,20 +37,22 @@ interface Elements {
   sidebar: BlockElement;
 }
 
-export function applyDelta(elements: Elements, reportId: string, deltaMsg: Delta): Elements {
+export function applyDelta(
+  elements: Elements, reportId: string,
+  deltaMsg: Delta, metadata: ForwardMsgMetadata): Elements {
+
   const delta = toImmutableProto(Delta, deltaMsg)
-  const deltaId: number = delta.get('id')
-  const parentBlock = delta.get('parentBlock')
-  const parentBlockContainer = parentBlock.get('container')
-  const parentBlockPath = parentBlock.get('path')
+  const parentBlock = requireNonNull(metadata.parentBlock)
+  const parentBlockPath = requireNonNull(parentBlock.path)
+  const parentBlockContainer = requireNonNull(parentBlock.container)
 
   const container = parentBlockContainer === BlockPath.Container.MAIN ? 'main' : 'sidebar'
-  const deltaPath = [...parentBlockPath, deltaId]
+  const deltaPath = [...parentBlockPath, metadata.deltaId]
 
   dispatchOneOf(delta, 'type', {
     newElement: (element: SimpleElement) => {
       elements[container] = elements[container]
-        .setIn(deltaPath, handleNewElementMessage(container, element, reportId))
+        .setIn(deltaPath, handleNewElementMessage(container, element, reportId, metadata))
     },
     newBlock: () => {
       elements[container] = elements[container]
@@ -59,12 +67,14 @@ export function applyDelta(elements: Elements, reportId: string, deltaMsg: Delta
   return elements
 }
 
-function handleNewElementMessage(container: Container, element: SimpleElement, reportId: string): SimpleElement {
+function handleNewElementMessage(container: Container, element: SimpleElement, reportId: string,
+  metadata: ForwardMsgMetadata): SimpleElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get('type'))
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
-  return element.set('reportId', reportId)
+  // Set metadata on elements so that we can use them downstream.
+  return element.set('reportId', reportId).set('metadata', metadata)
 }
 
 function handleNewBlockMessage(container: Container, element: BlockElement): BlockElement {

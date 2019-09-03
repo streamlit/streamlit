@@ -45,7 +45,7 @@ Now that you have a report, the next thing you'll need to do is fetch the Uber
 dataset for pickups and drop-offs in New York City.
 
  1. Let's start by writing a function to load the data. Add this code to your
-    script:  
+    script:
     ```Python
     DATE_COLUMN = 'date/time'
     DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
@@ -61,7 +61,7 @@ dataset for pickups and drop-offs in New York City.
     You'll notice that `load_data` is a plain old function that downloads some
     date, puts it in a Pandas dataframe, and converts the date column from text
     to datetime. The function accepts a single parameter (`nrows`), which
-    specifies the number of rows that you want to load into the dataframe.  
+    specifies the number of rows that you want to load into the dataframe.
 2. Now let's test the function and review the output. Below your function, add
    these lines:
 
@@ -75,7 +75,7 @@ dataset for pickups and drop-offs in New York City.
    ```
    You'll see a few buttons in the upper-right corner of your report asking if
    you'd like to rerun the report. Choose **Always rerun**, and you'll see your
-   changes automatically each time you save.  
+   changes automatically each time you save.
 3. Turns out that it takes a long time download data and load 10,000 lines into
    a dataframe. Not to mention that converting the date column into datetime
    isn't a quick job. We don't want to reload the data each
@@ -100,7 +100,7 @@ dataset for pickups and drop-offs in New York City.
   If you need a refresher on `st.cache` check out `Core mechanics <../core_mechanics.md>`_.
 ```
 
-## Inspect the raw data  
+## Inspect the raw data
 
 It's always a good idea to take a look at the raw data you're working with
 before you start working with it. Let's add a subheader and a printout of the
@@ -180,7 +180,7 @@ at 17:00.
    st.subheader('Map of all pickups')
    st.map(data)
    ```
-2. Replace it with:  
+2. Replace it with:
    ```Python
    hour_to_filter = 17
    filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
@@ -191,7 +191,7 @@ at 17:00.
 
 To draw this map we used a simple map function that's built into Streamlit, but
 if you'd like to visualize complex map data, we encourage you to take a look at
-the [`st.deckgl_chart`](../api.html#streamlit.deck_gl_chart). 
+the [`st.deckgl_chart`](../api.html#streamlit.deck_gl_chart).
 
 ## Filter results with a slider
 
@@ -202,7 +202,7 @@ slider to the report with the `st.slider()` method.
 
 1. Locate `hour_to_filter` and replace it with this code snippet:
    ```Python
-   hour_to_filter = st.slider('hour', 17, 0, 23, 1)
+   hour_to_filter = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
    ```
 2. Use the slider and watch the map update in real time.
 

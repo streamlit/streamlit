@@ -22,6 +22,7 @@ import DataFrameCell from './DataFrameCell'
 import {SortDirection} from './SortDirection'
 import {dataFrameGet, dataFrameGetDimensions, getSortedDataRowIndices} from 'lib/dataFrameProto'
 import {toFormattedString} from 'lib/format'
+import {ElementDimensionSpec} from 'autogen/proto'
 import './DataFrame.scss'
 
 /**
@@ -46,6 +47,7 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number;
+  elementDimensionSpec: ElementDimensionSpec;
   element: ImmutableMap<string, any>;
 }
 
@@ -216,7 +218,7 @@ class DataFrame extends React.PureComponent<Props, State> {
    * Returns rendering dimensions for this DataFrame
    */
   private getDimensions(cellContentsGetter: CellContentsGetter): Dimensions {
-    const {element, width} = this.props
+    const {element, width, elementDimensionSpec} = this.props
 
     const { headerRows, headerCols, dataRows, cols, rows } =
       dataFrameGetDimensions(element)
@@ -225,7 +227,8 @@ class DataFrame extends React.PureComponent<Props, State> {
     const rowHeight = 25
     const headerHeight = rowHeight * headerRows
     const border = 3
-    const height = Math.min(rows * rowHeight, 300) + border
+    const height = border + Math.min(rows * rowHeight,
+      (elementDimensionSpec && elementDimensionSpec.height > 0) ? elementDimensionSpec.height : 300)
 
     let {elementWidth, columnWidth, headerWidth} = getWidths(
       cols, rows, headerCols, headerRows, width - border, cellContentsGetter)

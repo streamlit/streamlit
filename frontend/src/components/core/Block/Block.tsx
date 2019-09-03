@@ -23,6 +23,7 @@ import { dispatchOneOf } from 'lib/immutableProto'
 import { ReportRunState } from 'lib/ReportRunState'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { makeElementWithInfoText } from 'lib/utils'
+import { ForwardMsgMetadata } from 'autogen/proto'
 
 // Load (non-lazy) elements.
 import Chart from 'components/elements/Chart/'
@@ -40,7 +41,6 @@ const DataFrame = React.lazy(() => import('components/elements/DataFrame/'))
 const DeckGlChart = React.lazy(() => import('components/elements/DeckGlChart/'))
 const ImageList = React.lazy(() => import('components/elements/ImageList/'))
 const GraphVizChart = React.lazy(() => import('components/elements/GraphVizChart/'))
-const MapElement = React.lazy(() => import('components/elements/Map/'))
 const PlotlyChart = React.lazy(() => import('components/elements/PlotlyChart/'))
 const VegaLiteChart = React.lazy(() => import('components/elements/VegaLiteChart/'))
 const Video = React.lazy(() => import('components/elements/Video/'))
@@ -176,19 +176,26 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
+    const metadata = element.get('metadata') as ForwardMsgMetadata
+
+    // Modify width using the value from the spec as passed with the message when applicable
+    if (metadata && metadata.elementDimensionSpec && metadata.elementDimensionSpec.width > 0) {
+      width = Math.min(metadata.elementDimensionSpec.width, width)
+    }
+
     return dispatchOneOf(element, 'type', {
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => <BokehChart element={el} index={index} width={width} />,
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
-      dataFrame: (el: SimpleElement) => <DataFrame element={el} width={width} />,
+      dataFrame: (el: SimpleElement) =>
+        <DataFrame element={el} width={width} elementDimensionSpec={metadata.elementDimensionSpec}/>,
       deckGlChart: (el: SimpleElement) => <DeckGlChart element={el} width={width} />,
       docString: (el: SimpleElement) => <DocString element={el} width={width} />,
       empty: () => undefined,
       exception: (el: SimpleElement) => <ExceptionElement element={el} width={width} />,
       graphvizChart: (el: SimpleElement) => <GraphVizChart element={el} index={index} width={width} />,
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-      map: (el: SimpleElement) => <MapElement element={el} width={width} />,
       plotlyChart: (el: SimpleElement) => <PlotlyChart element={el} width={width} />,
       progress: (el: SimpleElement) => <Progress value={el.get('value')} className="stProgress" style={{ width }} />,
       table: (el: SimpleElement) => <Table element={el} width={width} />,
