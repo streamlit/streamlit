@@ -1,3 +1,4 @@
+from datetime import date
 from datetime import time
 import streamlit as st
 
@@ -41,9 +42,17 @@ import streamlit as st
 # st.write(text_area)
 
 
-default = time(0, 0)
-if st.checkbox("Change default"):
-    default = time(23, 59)
+# default = time(0, 0)
+# if st.checkbox("Change default"):
+#     default = time(23, 59)
 
-time_input = st.time_input("Time Input", default)
-st.write(time_input)
+# time_input = st.time_input("Time Input", default)
+# st.write(time_input)
+
+
+default = date(2000, 1, 1)
+if st.checkbox("Change default"):
+    default = date(1979, 1, 1)
+
+date_input = st.date_input("Date Input", default)
+st.write(date_input)

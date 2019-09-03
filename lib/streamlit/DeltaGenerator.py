@@ -1654,7 +1654,7 @@ class DeltaGenerator(object):
             current_value = datetime.strptime(ui_value, '%Y/%m/%d').date()
 
         element.date_input.label = label
-        element.date_input.value = date.strftime(current_value, '%Y/%m/%d')
+        element.date_input.default = date.strftime(value, '%Y/%m/%d')
         return current_value
 
     @_with_element

@@ -87,7 +87,6 @@ class TimeInput extends React.PureComponent<Props, State> {
 }
 
 function stringToDate(value: string): Date {
-  console.log('value', value)
   const [hours, minutes] = value.split(':').map(Number)
   const date = new Date()
   date.setHours(hours)
