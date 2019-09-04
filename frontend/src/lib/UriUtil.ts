@@ -25,16 +25,24 @@ export interface BaseUriParts {
 }
 
 /**
- * Creates a ws:// or wss:// URI for the given path.
+ * Create a ws:// or wss:// URI for the given path.
  */
 export function buildWsUri({host, port}: BaseUriParts, path: string): string {
-  const protocol = window.location.href.startsWith('https://') ? 'wss' : 'ws'
+  const protocol = isHttps() ? 'wss' : 'ws'
   return `${protocol}://${host}:${port}/${path}`
 }
 
 /**
- * Creates an HTTP URI for the given path.
+ * Create an HTTP URI for the given path.
  */
 export function buildHttpUri({host, port}: BaseUriParts, path: string): string {
-  return `//${host}:${port}/${path}`
+  const protocol = isHttps() ? 'https' : 'http'
+  return `${protocol}://${host}:${port}/${path}`
+}
+
+/**
+ * True if we're connected to the host via HTTPS.
+ */
+function isHttps(): boolean {
+  return window.location.href.startsWith('https://')
 }
