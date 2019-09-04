@@ -15,11 +15,6 @@
 
 """An example of showing geographic data."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-setup_2_3_shims(globals())
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -38,27 +33,20 @@ def load_data(nrows):
     data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
     return data
 
-def display_uber_data(hour):
-    data = load_data(100000)
+data = load_data(100000)
 
-    st.subheader('Usage By Hour')
-    st.bar_chart(np.histogram(data[DATE_TIME].dt.hour, bins=24, range=(0,24))[0])
+st.subheader('Pickups by hour')
+st.bar_chart(np.histogram(data[DATE_TIME].dt.hour, bins=24, range=(0,24))[0])
 
-    data = data[data[DATE_TIME].dt.hour == hour]
+hour = st.sidebar.slider('Hour to look at', 0, 23)
 
-    st.subheader('Geo Data at %sh' % hour)
-    st.map(data[data[DATE_TIME].dt.hour == hour])
+data = data[data[DATE_TIME].dt.hour == hour]
 
-    st.subheader('Usage By Minute at %sh' % hour)
-    st.bar_chart(np.histogram(data[DATE_TIME].dt.minute, bins=60, range=(0,60))[0])
+st.subheader('Pickup locations at %ih' % hour)
+st.map(data[data[DATE_TIME].dt.hour == hour])
 
-    st.subheader('Raw Data at %sh' % hour)
-    st.write(data)
+st.subheader('Pickup breakdown by minute at %ih' % hour)
+st.bar_chart(np.histogram(data[DATE_TIME].dt.minute, bins=60, range=(0,60))[0])
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        hour = int(sys.argv[1])
-    else:
-        hour = 12
-    assert 0 <= hour < 24
-    display_uber_data(hour)
+st.subheader('Raw data at %ih' % hour)
+st.write(data)

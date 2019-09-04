@@ -211,7 +211,7 @@ function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement 
       <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <code className="compile-error-text">{props.exception.message}</code>
+          <pre><code>{props.exception.message}</code></pre>
         </div>
       </ModalBody>
       <ModalFooter>

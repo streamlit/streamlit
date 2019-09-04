@@ -18,7 +18,6 @@ from streamlit import config
 import random
 
 
-num_executions = 0
 cache_was_hit = True
 
 
@@ -30,8 +29,6 @@ def check_if_cached():
 
 @st.cache
 def my_func(arg1, arg2=None, *args, **kwargs):
-    global num_executions
-    num_executions += 1
     return random.randint(0, 2 ** 32)
 
 
@@ -51,39 +48,31 @@ else:
     ''')
 
     st.subheader('Test that basic caching works')
-    before = num_executions
-    v1 = my_func(1, 2, dont_care=10)
-    v2 = my_func(1, 2, dont_care=10)
-    after = num_executions
-    if after == before + 1:
+    u = my_func(1, 2, dont_care=10)
+    v = my_func(1, 2, dont_care=10)
+    if u == v:
         st.success('OK')
     else:
         st.error('Fail')
 
     st.subheader('Test that when you change arguments it\'s a cache miss')
-    before = num_executions
     v = my_func(10, 2, dont_care=10)
-    after = num_executions
-    if after == before + 1:
+    if u != v:
         st.success('OK')
     else:
         st.error('Fail')
 
     st.subheader('Test that when you change **kwargs it\'s a cache miss')
-    before = num_executions
     v = my_func(10, 2, dont_care=100)
-    after = num_executions
-    if after == before + 1:
+    if u != v:
         st.success('OK')
     else:
         st.error('Fail')
 
     st.subheader('Test that you can turn off caching')
-    before = num_executions
     config.set_option('client.caching', False)
     v = my_func(1, 2, dont_care=10)
-    after = num_executions
-    if after == before + 1:
+    if u != v:
         st.success('OK')
     else:
         st.error('Fail')
@@ -95,15 +84,11 @@ else:
     # config option from when it was declared.
     @st.cache
     def my_func(arg1, arg2=None, *args, **kwargs):
-        global num_executions
-        num_executions += 1
         return random.randint(0, 2 ** 32)
 
-    v1 = my_func(1, 2, dont_care=10)
-    before = num_executions
-    v2 = my_func(1, 2, dont_care=10)
-    after = num_executions
-    if after == before:
+    u = my_func(1, 2, dont_care=10)
+    v = my_func(1, 2, dont_care=10)
+    if u == v:
         st.success('OK')
     else:
         st.error('Fail')

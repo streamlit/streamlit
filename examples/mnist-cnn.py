@@ -117,7 +117,7 @@ class MyCallback(keras.callbacks.Callback):
         # HACK: Use get_report_ctx() to grab root delta generator in an i9e
         # world.
         # TODO: Make this file not need _native_chart
-        return get_report_ctx().root_dg._native_chart(epoch_chart)
+        return get_report_ctx().main_dg._native_chart(epoch_chart)
 
 st.title('MNIST CNN')
 

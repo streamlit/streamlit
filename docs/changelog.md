@@ -27,6 +27,30 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ conda update streamlit
 ```
 
+## Version 0.45.0
+*Release date: August 28, 2019*
+
+**Highlights:**
+
+* 😱 Experimental support for *sidebar*! Let us know if you want to be a beta
+  tester.
+* 🎁 Completely redesigned `st.cache`! Much more performant, has a cleaner API,
+  support for caching functions called by `@st.cached` functions,
+  user-friendly error messages, and much more!
+* 🖼️ Lightning fast `st.image`, ability to choose between JPEG and PNG
+  compression, and between RGB and BGR (for OpenCV).
+* 💡 Smarter API for `st.slider`, `st.selectbox`, and `st.radio`.
+* 🤖 Automatically fixes the Matplotlib backend -- no need to edit .matplotlibrc
+
+## Version 0.44.0
+*Release date: July 28, 2019*
+
+**Highlights:**
+
+• ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
+• 📣 Useful error messages when the connection fails
+• 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
+
 ## Version 0.43.0
 *Release date: July 9, 2019*
 
