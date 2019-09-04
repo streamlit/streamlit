@@ -81,6 +81,7 @@ class ReportSession(object):
         self.id = ReportSession._next_id
         ReportSession._next_id += 1
 
+        self._report_run_count = 0
         self._ioloop = ioloop
         self._report = Report(script_path, script_argv)
 
@@ -106,6 +107,16 @@ class ReportSession(object):
         self._scriptrunner = None
 
         LOGGER.debug('ReportSession initialized (id=%s)', self.id)
+
+    @property
+    def report_run_count(self):
+        """The number of times this ReportSession has had its report run.
+
+        This value is updated each time the session's ScriptRunner has finished
+        executing, as long as the ScriptRunner didn't fail due to a compilation
+        error. It's used by the ForwardMsg cache expiration logic.
+        """
+        return self._report_run_count
 
     def flush_browser_queue(self):
         """Clears the report queue and returns the messages it contained.
@@ -279,6 +290,8 @@ class ReportSession(object):
                 event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
             if script_succeeded:
+                self._report_run_count += 1
+
                 # When a script completes successfully, we update our
                 # LocalSourcesWatcher to account for any source code changes
                 # that change which modules should be watched. (This is run on

@@ -17,7 +17,11 @@ import hashlib
 import threading
 from weakref import WeakKeyDictionary
 
+from streamlit import config
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+LOGGER = get_logger(__name__)
 
 
 def populate_hash_if_needed(msg):
@@ -96,13 +100,39 @@ class MessageCache(object):
         """
         def __init__(self, msg):
             self.msg = msg
-            self.sessions = WeakKeyDictionary()
+            # {ReportSession -> report_run_count}
+            self._session_report_run_count = WeakKeyDictionary()
 
-        def add_ref(self, session):
-            self.sessions[session] = True
+        def add_session_ref(self, session):
+            """Adds a reference to a ReportSession that has referenced
+            this Entry's message. Also records the
 
-        def decrement_ref(self, session):
-            del self.sessions[session]
+            Parameters
+            ----------
+            session : ReportSession
+
+            """
+            self._session_report_run_count[session] = session.report_run_count
+
+        def has_session_ref(self, session):
+            return session in self._session_report_run_count
+
+        def get_session_ref_age(self, session, report_run_count):
+            """The age of the given session's reference to the Entry,
+            given a new report_run_count.
+
+            """
+            return report_run_count - self._session_report_run_count[session]
+
+        def remove_session_ref(self, session):
+            del self._session_report_run_count[session]
+
+        def has_refs(self):
+            """True if this Entry has any references from ReportSession.
+
+            If not, it can be safely removed from the cache.
+            """
+            return len(self._session_report_run_count) > 0
 
     def __init__(self):
         self._lock = threading.RLock()
@@ -127,7 +157,7 @@ class MessageCache(object):
             if entry is None:
                 entry = MessageCache.Entry(msg)
                 self._entries[msg.hash] = entry
-            entry.add_ref(session)
+            entry.add_session_ref(session)
 
     def get_message(self, hash):
         """Return the message with the given ID if it exists in the cache.
@@ -162,7 +192,41 @@ class MessageCache(object):
         populate_hash_if_needed(msg)
         with self._lock:
             entry = self._entries.get(msg.hash, None)
-            return entry is not None and session in entry.sessions
+            if entry is None or not entry.has_session_ref(session):
+                return False
+
+            # Ensure we're not expired
+            age = entry.get_session_ref_age(session, session.report_run_count)
+            return age <= config.get_option('global.maxCachedMessageAge')
+
+    def remove_expired_session_entries(self, session):
+        """Remove any cached messages that have expired from the given session.
+
+        This should be called each time a ReportSession finishes executing.
+
+        Parameters
+        ----------
+        session : ReportSession
+
+        """
+        session_report_run_count = session.report_run_count
+        max_age = config.get_option('global.maxCachedMessageAge')
+        with self._lock:
+            # Operate on a copy of our entries dict.
+            # We may be deleting from it.
+            for hash, entry in self._entries.copy().items():
+                if (
+                    entry.has_session_ref(session) and
+                    entry.get_session_ref_age(session, session_report_run_count) > max_age
+                ):
+                    LOGGER.debug(
+                        'Removing expired entry [session=%s, hash=%s]',
+                        session, hash)
+                    entry.remove_session_ref(session)
+                    if not entry.has_refs():
+                        # The entry has no more references. Remove it from
+                        # the cache completely.
+                        del self._entries[hash]
 
     def clear(self):
         """Remove all entries from the cache"""

@@ -7,6 +7,8 @@ import unittest
 
 from mock import MagicMock
 
+from streamlit import ReportSession
+from streamlit import config
 from streamlit.MessageCache import MessageCache
 from streamlit.MessageCache import create_reference_msg
 from streamlit.MessageCache import populate_hash_if_needed
@@ -23,8 +25,14 @@ def _create_dataframe_msg(df, id=1):
     return msg
 
 
+def _create_mock_session():
+    session = MagicMock(ReportSession)
+    session.report_run_count = 0
+    return session
+
+
 class MessageCacheTest(unittest.TestCase):
-    def test_msg_id(self):
+    def test_msg_hash(self):
         """Test that ForwardMsg hash generation works as expected"""
         msg1 = _create_dataframe_msg([1, 2, 3])
         msg2 = _create_dataframe_msg([1, 2, 3])
@@ -49,34 +57,73 @@ class MessageCacheTest(unittest.TestCase):
     def test_add_message(self):
         """Test MessageCache.add_message and has_message_reference"""
         cache = MessageCache()
-        session = MagicMock()
+        session = _create_mock_session()
         msg = _create_dataframe_msg([1, 2, 3])
         cache.add_message(msg, session)
 
         self.assertTrue(cache.has_message_reference(msg, session))
-        self.assertFalse(cache.has_message_reference(msg, MagicMock()))
+        self.assertFalse(
+            cache.has_message_reference(msg, _create_mock_session()))
 
     def test_get_message(self):
         """Test MessageCache.get_message"""
         cache = MessageCache()
-        session = MagicMock()
+        session = _create_mock_session()
         msg = _create_dataframe_msg([1, 2, 3])
 
-        msg_id = populate_hash_if_needed(msg)
+        msg_hash = populate_hash_if_needed(msg)
 
         cache.add_message(msg, session)
-        self.assertEqual(msg, cache.get_message(msg_id))
+        self.assertEqual(msg, cache.get_message(msg_hash))
 
     def test_clear(self):
         """Test MessageCache.clear"""
         cache = MessageCache()
-        session = MagicMock()
-        msg = _create_dataframe_msg([1, 2, 3])
+        session = _create_mock_session()
 
-        msg_id = populate_hash_if_needed(msg)
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg_hash = populate_hash_if_needed(msg)
 
         cache.add_message(msg, session)
-        self.assertEqual(msg, cache.get_message(msg_id))
+        self.assertEqual(msg, cache.get_message(msg_hash))
 
         cache.clear()
-        self.assertEqual(None, cache.get_message(msg_id))
+        self.assertEqual(None, cache.get_message(msg_hash))
+
+    def test_message_expiration(self):
+        """Test MessageCache's expiration logic"""
+        config._set_option('global.maxCachedMessageAge', 1, 'test')
+
+        cache = MessageCache()
+        session1 = _create_mock_session()
+
+        msg = _create_dataframe_msg([1, 2, 3])
+        msg_hash = populate_hash_if_needed(msg)
+
+        cache.add_message(msg, session1)
+
+        # Increment session1's run_count. This should not resolve in expiry.
+        session1.report_run_count += 1
+        self.assertTrue(cache.has_message_reference(msg, session1))
+
+        # Increment again. The message will now be expired for session1,
+        # though it won't have actually been removed yet.
+        session1.report_run_count += 1
+        self.assertFalse(cache.has_message_reference(msg, session1))
+        self.assertIsNotNone(cache.get_message(msg_hash))
+
+        # Add another reference to the message
+        session2 = _create_mock_session()
+        cache.add_message(msg, session2)
+
+        # Remove session1's expired entries. This should not remove the
+        # entry from the cache, because session2 still has a reference to it.
+        cache.remove_expired_session_entries(session1)
+        self.assertFalse(cache.has_message_reference(msg, session1))
+        self.assertTrue(cache.has_message_reference(msg, session2))
+
+        # Expire session2's reference. The message should no longer be
+        # in the cache at all.
+        session2.report_run_count += 2
+        cache.remove_expired_session_entries(session2)
+        self.assertIsNone(cache.get_message(msg_hash))
