@@ -32,7 +32,7 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.date_input
         self.assertEqual(c.label, 'the label')
         self.assertLessEqual(
-            datetime.strptime(c.value, '%Y/%m/%d').date(),
+            datetime.strptime(c.default, '%Y/%m/%d').date(),
             datetime.now().date())
 
     @parameterized.expand([
@@ -45,4 +45,4 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.date_input
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, proto_value)
+        self.assertEqual(c.default, proto_value)

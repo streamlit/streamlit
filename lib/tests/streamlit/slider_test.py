@@ -30,7 +30,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, [0.0])
+        self.assertEqual(c.default, [0.0])
 
     @parameterized.expand([
         (0, [0.0], 0),
@@ -48,7 +48,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, proto_value)
+        self.assertEqual(c.default, proto_value)
 
     def test_value_greater_than_min(self):
         with pytest.raises(ValueError) as exc_slider:

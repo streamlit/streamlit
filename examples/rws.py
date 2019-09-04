@@ -50,9 +50,9 @@ import streamlit as st
 # st.write(time_input)
 
 
-# default = date(2000, 1, 1)
+# default = date(2020, 1, 1)
 # if st.checkbox("Change default"):
-#     default = date(1979, 1, 1)
+#     default = date(1970, 1, 1)
 
 # date_input = st.date_input("Date Input", default)
 # st.write(date_input)

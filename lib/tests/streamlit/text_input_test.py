@@ -30,7 +30,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_input
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, '')
+        self.assertEqual(c.default, '')
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -42,7 +42,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
             c = self.get_delta_from_queue().new_element.text_input
             self.assertEqual(c.label, 'the label')
-            self.assertTrue(re.match(proto_value, c.value))
+            self.assertTrue(re.match(proto_value, c.default))
 
 
 class SomeObj(object):
