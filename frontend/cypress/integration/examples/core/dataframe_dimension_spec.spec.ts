@@ -26,12 +26,10 @@ describe('Dataframes with different sizes', () => {
 
   ]
   before(() => {
-    // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
   })
 
-  it('should shows as expected', () => {
+  it('should show as expected', () => {
     cy.get('.element-container .stDataFrame')
       .should('have.length', 4)
       .each((el, idx) => {
