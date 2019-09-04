@@ -62,13 +62,18 @@ class ReportSession(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, message_cache, script_path, script_argv):
         """Initialize the ReportSession.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within
+
+        message_cache : MessageCache
+            The server's MessageCache. The ReportSession will tell the
+            cache to remove its expired entries each time the session's
+            scriptrunner has executed.
 
         script_path : str
             Path of the Python file from which this report is generated.
@@ -83,6 +88,7 @@ class ReportSession(object):
 
         self._report_run_count = 0
         self._ioloop = ioloop
+        self._message_cache = message_cache
         self._report = Report(script_path, script_argv)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
@@ -290,7 +296,7 @@ class ReportSession(object):
                 event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
             if script_succeeded:
-                self._report_run_count += 1
+                self._increment_report_run_count()
 
                 # When a script completes successfully, we update our
                 # LocalSourcesWatcher to account for any source code changes
@@ -327,6 +333,12 @@ class ReportSession(object):
         report_is_running = self._state == ReportSessionState.REPORT_IS_RUNNING
         if report_is_running != report_was_running:
             self._enqueue_session_state_changed_message()
+
+    def _increment_report_run_count(self):
+        """Increments our report run count and tells the cache to remove
+        any entries that have now expired."""
+        self._report_run_count += 1
+        self._message_cache.remove_expired_session_entries(self)
 
     def _enqueue_session_state_changed_message(self):
         msg = ForwardMsg()
