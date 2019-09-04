@@ -63,12 +63,15 @@ def create_image(r=0,g=0,b=0,a=0):
     return np.array(image).astype('float') / 255.0
 
 if True:
-    st.header(datetime.datetime.now().isoformat())
+    st.title('Image, checkbox and slider test')
 
-    r_color = st.slider('red background', 0, 0, 100, 1)
-    g_color = st.slider('green background', 0, 0, 100, 1)
-    b_color = st.slider('blue background', 0, 0, 100, 1)
-    alpha_pct = st.slider('alpha background', 50, 0, 100, 1)
+    st.write('Script ran at', datetime.datetime.now().isoformat())
+
+    st.subheader('Background color')
+    r_color = st.slider('Red amount', 0, 100)
+    g_color = st.slider('Green amount', 0, 100)
+    b_color = st.slider('Blue amount', 0, 100)
+    alpha_pct = st.slider('Alpha amount', 0, 100, 50)
 
     image = create_image(r_color, g_color, b_color, alpha_pct)
     r = image[:, :, 0]
@@ -81,20 +84,15 @@ if True:
 
     image = np.stack([r,g,b], 2)
 
-    r_on = st.checkbox('red', True)
-    g_on = st.checkbox('green', False)
-    b_on = st.checkbox('blue', True)
-    alpha_on = st.checkbox('alpha', True)
+    st.subheader('Channels to include in output')
+    r_on = st.checkbox('Red', True)
+    g_on = st.checkbox('Green', True)
+    b_on = st.checkbox('Blue', True)
+    alpha_on = st.checkbox('Alpha', True)
     image = np.stack([
         r if r_on else z,
         g if g_on else z,
         b if b_on else z,
         alpha if alpha_on else mask], 2)
 
-    st.image(image)
-    with st.echo():
-        st.help(st.checkbox)
-        st.help(st.slider)
-
-    text_area = st.text_area('some text area', 'some default message')
-    st.header(text_area)
+    st.image(image, format='png')

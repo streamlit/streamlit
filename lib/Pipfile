@@ -40,10 +40,11 @@ opencv-python = "*"
 # add to the dev dependencies above, instead.
 
 [packages]
+astor = "*"
 base58 = "*"
 blinker = "*"
-botocore = "*"
 boto3 = "*"
+botocore = "*"
 click = ">=7.0"
 enum-compat = "*"
 # python3 code backported to python2

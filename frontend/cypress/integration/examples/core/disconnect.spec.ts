@@ -34,7 +34,9 @@ describe('kill server', () => {
           'have.text',
           'Connecting')
 
-      cy.get('#ConnectionStatus')
+      // Snapshot `toolbar` instead of `ConnectionStatus` so we have a larger
+      // bounding box and a lower percentage difference on the snapshot diff
+      cy.get('.toolbar')
         .matchImageSnapshot('disconnected')
     })
   })

@@ -40,6 +40,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES = (
     '(self, element, ',
     '(self, _, ',
     '(self, ',
+    '(ui_value, ',
 )
 
 

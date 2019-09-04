@@ -5,5 +5,7 @@
     "configFile": "reporter-config.json"
   },
   "screenshotsFolder": "mochawesome-report/assets",
-  "trashAssetsBeforeRuns": false
+  "trashAssetsBeforeRuns": false,
+  "viewportWidth": 1366,
+  "viewportHeight": 768
 }

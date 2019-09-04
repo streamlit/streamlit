@@ -53,6 +53,12 @@ const PING_RETRY_PERIOD_MS = 500
  */
 const WEBSOCKET_TIMEOUT_MS = 1000
 
+/**
+ * If the ping retrieves a 403 status code a message will be displayed.
+ * This constant is the link to the documentation.
+ */
+const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK = 'https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS'
+
 
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (connectionState: ConnectionState) => void
@@ -112,9 +118,6 @@ type Event =
   | 'CONNECTION_SUCCEEDED'
   | 'CONNECTION_TIMED_OUT'
   | 'SERVER_PING_SUCCEEDED'
-  | 'WAIT_TIMER_FIRED'
-  | 'WAIT_TIMER_STARTED'
-
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
@@ -467,48 +470,49 @@ function doHealthPing(
   xhr.timeout = timeoutMs
 
   xhr.onload = () => {
-    if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+    if (xhr.responseText === 'ok') {
       resolver.resolve(uriNumber)
-    } else {
-      retry('Connected, but response is not "ok" or has bad status.')
-    }
-  }
+    } else if (xhr.status === /* NO RESPONSE */ 0) {
+      const uri = uriList[uriNumber]
+      if (uri.startsWith('//localhost:')) {
 
-  xhr.onreadystatechange = () => {
-    if (xhr.readyState === /* DONE */ 4) {
-      if (xhr.responseText === 'ok') {
-        resolver.resolve(uriNumber)
+        const scriptname =
+          SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
+            SessionInfo.current.commandLine[0] : 'yourscript.py'
 
-      } else if (xhr.status === /* NO RESPONSE */ 0) {
-        const uri = uriList[uriNumber]
-        if (uri.startsWith('//localhost:')) {
-
-          const scriptname =
-            SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
-              SessionInfo.current.commandLine[0] : 'yourscript.py'
-
-          retry(
-            <Fragment>
-              <p>
-                Is Streamlit still running? If you accidentally stopped
-                Streamlit, just restart it in your terminal:
-              </p>
-              <pre>
-                <code>
-                  $ streamlit run {scriptname}
-                </code>
-              </pre>
-            </Fragment>
-          )
-        } else {
-          retry('Connection failed with status 0.')
-        }
-
-      } else {
         retry(
-          `Connection failed with status ${xhr.status}, ` +
-          `and response "${xhr.responseText}".`)
+          <Fragment>
+            <p>
+              Is Streamlit still running? If you accidentally stopped
+              Streamlit, just restart it in your terminal:
+            </p>
+            <pre>
+              <code>
+                  $ streamlit run {scriptname}
+              </code>
+            </pre>
+          </Fragment>
+        )
+      } else {
+        retry('Connection failed with status 0.')
       }
+    } else if (xhr.status === 403) {
+      retry(
+        <Fragment>
+          <p>
+            Cannot connect to Streamlit (HTTP status: 403).
+          </p>
+          <p>
+            If you are trying to access a Streamlit app running on another
+            server, this could be due to the app's <a
+              href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
+          </p>
+        </Fragment>
+      )
+    } else {
+      retry(
+        `Connection failed with status ${xhr.status}, ` +
+        `and response "${xhr.responseText}".`)
     }
   }
 

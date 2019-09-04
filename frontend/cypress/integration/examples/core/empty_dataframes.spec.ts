@@ -23,7 +23,6 @@ describe('Dataframes', () => {
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.viewport(1366, 768)
     cy.visit('http://localhost:3000/')
 
     cy.wait(1000)
@@ -35,9 +34,11 @@ describe('Dataframes', () => {
   })
 
   it('have consistent empty list visuals', () => {
-    cy.get('code').first().each(el => {
-      cy.wrap(el).matchImageSnapshot()
-    })
+    cy.get('.element-container')
+      .eq(1)
+      .each(el => {
+        cy.wrap(el).matchImageSnapshot()
+      })
   })
 
   it('have consistent empty visuals', () => {
@@ -52,7 +53,9 @@ describe('Dataframes', () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 6 && idx <= 7)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot()
+        // Snapshot the parent instead of `.stDataFrame` so we have a larger
+        // bounding box and a lower percentage difference on the snapshot diff
+        cy.wrap(el).parent().matchImageSnapshot()
       })
   })
 
