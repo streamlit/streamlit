@@ -65,7 +65,7 @@ type OnConnectionStateChange = (connectionState: ConnectionState) => void
 type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
 
 
-interface Args {
+interface Props {
   /**
    * List of URLs to connect to. We'll try the first, then the second, etc. If
    * all fail, we'll retry from the top. The number of retries depends on
@@ -124,7 +124,12 @@ type Event =
  * server and gets deltas over a websocket connection.
  */
 export class WebsocketConnection {
-  private readonly args: Args;
+  private readonly props: Props;
+
+  /**
+   * ForwardMessages get passed through this cache. This gets initialized
+   * once we connect to the server.
+   */
   private readonly cache: ForwardMsgCache;
 
   /**
@@ -167,8 +172,8 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number;
 
-  public constructor(args: Args) {
-    this.args = args
+  public constructor(props: Props) {
+    this.props = props
     this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm('INITIALIZED')
   }
@@ -179,7 +184,7 @@ export class WebsocketConnection {
    */
   public getBaseUriParts(): BaseUriParts | undefined {
     if (this.state === ConnectionState.CONNECTED) {
-      return this.args.baseUriPartsList[this.uriIndex]
+      return this.props.baseUriPartsList[this.uriIndex]
     }
     return undefined
   }
@@ -188,7 +193,7 @@ export class WebsocketConnection {
   private setFsmState(state: ConnectionState): void {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
-    this.args.onConnectionStateChange(state)
+    this.props.onConnectionStateChange(state)
 
     // Perform actions when entering certain states.
     switch (this.state) {
@@ -260,17 +265,17 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
-    const uris = this.args.baseUriPartsList.map(
-      (_, i) => buildHttpUri(this.args.baseUriPartsList[i], SERVER_PING_PATH))
+    const uris = this.props.baseUriPartsList.map(
+      (_, i) => buildHttpUri(this.props.baseUriPartsList[i], SERVER_PING_PATH))
 
     this.uriIndex =
-      await doHealthPing(uris, PING_RETRY_PERIOD_MS, this.args.onRetry)
+      await doHealthPing(uris, PING_RETRY_PERIOD_MS, this.props.onRetry)
 
     this.stepFsm('SERVER_PING_SUCCEEDED')
   }
 
   private connectToWebSocket(): void {
-    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex], WEBSOCKET_STREAM_PATH)
+    const uri = buildWsUri(this.props.baseUriPartsList[this.uriIndex], WEBSOCKET_STREAM_PATH)
 
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
@@ -390,6 +395,14 @@ export class WebsocketConnection {
     this.websocket.send(buffer)
   }
 
+  /**
+   * Called when our report has finished running. Calls through
+   * to the ForwardMsgCache, to handle cached entry expiry.
+   */
+  public incrementMessageCacheRunCount(maxMessageAge: number): void {
+    this.cache.incrementRunCount(maxMessageAge)
+  }
+
   private async handleMessage(data: any): Promise<void> {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex
@@ -415,7 +428,7 @@ export class WebsocketConnection {
     // downloaded, our message won't be sent until they're done.
     while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
+      this.props.onMessage(this.messageQueue[dispatchMessageIndex])
       delete this.messageQueue[dispatchMessageIndex]
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }

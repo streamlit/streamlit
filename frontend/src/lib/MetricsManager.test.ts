@@ -25,6 +25,7 @@ beforeEach(() => {
     installationId: 'iid',
     authorEmail: 'ae',
     pythonVersion: 'pv',
+    maxCachedMessageAge: 2,
   })
 })
 

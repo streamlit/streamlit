@@ -364,15 +364,21 @@ class ReportSession(object):
 
         imsg.config.sharing_enabled = (
             config.get_option('global.sharingMode') != 'off')
-        LOGGER.debug(
-            'New browser connection: sharing_enabled=%s',
-            imsg.config.sharing_enabled)
 
         imsg.config.gather_usage_stats = (
             config.get_option('browser.gatherUsageStats'))
+
+        imsg.config.max_cached_message_age = (
+            config.get_option('global.maxCachedMessageAge'))
+
         LOGGER.debug(
-            'New browser connection: gather_usage_stats=%s',
-            imsg.config.gather_usage_stats)
+            'New browser connection: '
+            'gather_usage_stats=%s, '
+            'sharing_enabled=%s, '
+            'max_cached_message_age=%s',
+            imsg.config.gather_usage_stats,
+            imsg.config.sharing_enabled,
+            imsg.config.max_cached_message_age)
 
         imsg.environment_info.streamlit_version = __version__
         imsg.environment_info.python_version = (

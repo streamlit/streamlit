@@ -22,8 +22,18 @@ import {buildHttpUri} from 'lib/UriUtil'
 
 const MOCK_SERVER_URI = {host: 'streamlit.mock', port: 80}
 
-function createCache(): ForwardMsgCache {
-  return new ForwardMsgCache(() => MOCK_SERVER_URI)
+interface MockCache {
+  cache: ForwardMsgCache;
+  getCachedMessage: (hash: string) => ForwardMsg | undefined;
+}
+
+function createCache(): MockCache {
+  const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
+
+  const getCachedMessage = (hash: string): ForwardMsg | undefined =>
+    cache['getCachedMessage'](hash, false)
+
+  return {cache, getCachedMessage}
 }
 
 /**
@@ -85,24 +95,24 @@ beforeEach(() => fetchMock.config.sendAsJson = false)
 afterEach(() => fetchMock.restore())
 
 test('caches messages correctly', async () => {
-  const cache = createCache()
+  const {cache, getCachedMessage} = createCache()
 
   // Cacheable messages should be cached
   const msg1 = createForwardMsg('Cacheable', true)
   await cache.processMessagePayload(msg1)
-  expect(cache['getCachedMessage']('Cacheable')).toEqual(msg1)
+  expect(getCachedMessage('Cacheable')).toEqual(msg1)
 
   // Uncacheable ones shouldn't!
   const msg2 = createForwardMsg('Uncacheable', false)
   await cache.processMessagePayload(msg2)
-  expect(cache['getCachedMessage']('Uncacheable')).toBeUndefined()
+  expect(getCachedMessage('Uncacheable')).toBeUndefined()
 
   // Ref messages should never be cached
   const msg3 = createForwardMsg('Cacheable', true)
   msg3.metadata.deltaId = 2
   const ref = createRefMsg(msg3)
   const unreferenced = await cache.processMessagePayload(ref)
-  expect(cache['getCachedMessage'](ref.hash)).toBeUndefined()
+  expect(getCachedMessage(ref.hash)).toBeUndefined()
   expect(unreferenced).toEqual(msg3)
 
   // Test that our uncached messages are copies
@@ -116,7 +126,7 @@ test('fetches uncached messages from server', async () => {
   // Mock response: /message?hash=Cacheable -> msg
   mockGetMessageResponse(msg)
 
-  const cache = createCache()
+  const {cache, getCachedMessage} = createCache()
 
   // processMessagePayload on a reference message whose
   // original version does *not* exist in our local cache. We
@@ -124,7 +134,7 @@ test('fetches uncached messages from server', async () => {
   await expect(cache.processMessagePayload(refMsg)).resolves.toEqual(msg)
 
   // The fetched message should now be cached
-  expect(cache['getCachedMessage']('Cacheable')).toEqual(msg)
+  expect(getCachedMessage('Cacheable')).toEqual(msg)
 })
 
 test('errors when uncached message is not on server', async () => {
@@ -134,6 +144,23 @@ test('errors when uncached message is not on server', async () => {
   // Mock response: /message?hash=Cacheable -> 404
   mockMissingMessageResponse(msg)
 
-  const cache = createCache()
+  const {cache} = createCache()
   await expect(cache.processMessagePayload(refMsg)).rejects.toThrow()
+})
+
+test('removes expired messages', () => {
+  const {cache, getCachedMessage} = createCache()
+  const msg = createForwardMsg('Cacheable', true)
+
+  // Add the message to the cache
+  cache['maybeCacheMessage'](msg)
+  expect(getCachedMessage(msg.hash)).toEqual(msg)
+
+  // Increment our age. Our message should still exist.
+  cache.incrementRunCount(1)
+  expect(getCachedMessage(msg.hash)).toEqual(msg)
+
+  // Bump our age over the expiration threshold.
+  cache.incrementRunCount(1)
+  expect(getCachedMessage(msg.hash)).toBeUndefined()
 })

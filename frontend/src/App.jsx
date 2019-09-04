@@ -194,6 +194,7 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
+      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
     })
 
     MetricsManager.current.initialize({
@@ -323,6 +324,9 @@ class App extends PureComponent {
           sidebar: this.clearOldElements(elements.sidebar, reportId),
         },
       }))
+
+      this.connectionManager.incrementMessageCacheRunCount(
+        SessionInfo.current.maxCachedMessageAge)
     }
   }
 

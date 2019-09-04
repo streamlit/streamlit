@@ -28,6 +28,7 @@ beforeEach(() => {
     streamlitVersion: 'sv',
     installationId: 'iid',
     authorEmail: 'ae',
+    maxCachedMessageAge: 2,
   })
   MetricsManager.current = getMetricsManagerForTest()
 })

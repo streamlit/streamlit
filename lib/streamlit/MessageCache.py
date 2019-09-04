@@ -209,7 +209,7 @@ class MessageCache(object):
         session : ReportSession
 
         """
-        session_report_run_count = session.report_run_count
+        new_run_count = session.report_run_count
         max_age = config.get_option('global.maxCachedMessageAge')
         with self._lock:
             # Operate on a copy of our entries dict.
@@ -217,7 +217,7 @@ class MessageCache(object):
             for hash, entry in self._entries.copy().items():
                 if (
                     entry.has_session_ref(session) and
-                    entry.get_session_ref_age(session, session_report_run_count) > max_age
+                    entry.get_session_ref_age(session, new_run_count) > max_age
                 ):
                     LOGGER.debug(
                         'Removing expired entry [session=%s, hash=%s]',

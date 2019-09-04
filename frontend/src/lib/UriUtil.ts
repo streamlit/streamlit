@@ -16,12 +16,26 @@
  */
 
 
+import {IS_DEV_ENV, WEBSOCKET_PORT_DEV} from 'lib/baseconsts'
+
 /**
  * host:port tuple
  */
 export interface BaseUriParts {
   host: string;
   port: number;
+}
+
+/**
+ * Return the BaseUriParts for the global window
+ */
+export function getWindowBaseUriParts(): BaseUriParts {
+  // If dev, always connect to 8501, since window.location.port is the Node
+  // server's port 3000.
+  // If changed, also change config.py
+  const host = window.location.hostname
+  const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port)
+  return { host, port }
 }
 
 /**
