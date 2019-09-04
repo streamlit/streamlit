@@ -252,6 +252,15 @@ _create_option(
     default_val=10 * 1e3)  # 10k
 
 
+_create_option(
+    'global.maxCachedMessageAge',
+    description='''Expire cached ForwardMsgs whose age is > this value.
+        A message's age is defined by how many times its report has been run
+        since the message has been accessed.''',
+    visibility='hidden',
+    default_val=1)
+
+
 # Config Section: Client #
 
 _create_section('client', 'Settings for scripts that use Streamlit.')
