@@ -32,9 +32,8 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
-from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
-        _clean_up_sig, _with_element
-from streamlit.ReportQueue import ReportQueue
+from streamlit.DeltaGenerator import _wraps_with_cleaned_sig, _clean_up_sig, \
+    _with_element
 from tests import testutil
 import streamlit as st
 
@@ -377,7 +376,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         """Test dg.line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = st.line_chart(data)
+        st.line_chart(data)
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.chart.type, 'LineChart')
@@ -388,7 +387,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         """Test dg.area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = st.area_chart(data)
+        st.area_chart(data)
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.chart.type, 'AreaChart')
@@ -399,12 +398,13 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         """Test dg.bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
 
-        dg = st.bar_chart(data)
+        st.bar_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, 'BarChart')
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+
+        self.assertEqual(chart_spec['mark'], 'bar')
+        self.assertEqual(element.data.data.cols[2].int64s.data[0], 20)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
@@ -417,7 +417,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         caption = 'ahoy!'
 
         # single URL
-        dg = st.image(url, caption=caption, width=200)
+        st.image(url, caption=caption, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.imgs.width, 200)
         self.assertEqual(len(element.imgs.imgs), 1)
@@ -425,7 +425,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.imgs.imgs[0].caption, caption)
 
         # multiple URLs
-        dg = st.image([url] * 5, caption=[caption] * 5, width=200)
+        st.image([url] * 5, caption=[caption] * 5, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(len(element.imgs.imgs), 5)
         self.assertEqual(element.imgs.imgs[4].url, url)

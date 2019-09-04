@@ -102,7 +102,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_area_chart(self):
         """Test st.area_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
-        dg = st.area_chart(df, width=640, height=480)
+        st.area_chart(df, width=640, height=480)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'AreaChart')
@@ -122,7 +122,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # For now it doesnt matter cause browser is the one that uses it.
         fake_audio_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
 
-        dg = st.audio(fake_audio_data)
+        st.audio(fake_audio_data)
 
         el = self.get_delta_from_queue().new_element
         # Manually base64 encoded payload above via
@@ -134,7 +134,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """Test st.balloons."""
         with patch('random.randrange') as p:
             p.return_value = 0xDEADBEEF
-            dg = st.balloons()
+            st.balloons()
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.balloons.type, Balloons.DEFAULT)
@@ -143,24 +143,29 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
-        dg = st.bar_chart(df, width=640, height=480)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.chart.type, 'BarChart')
-        self.assertEqual(el.chart.width, 640)
-        self.assertEqual(el.chart.height, 480)
+        st.bar_chart(df, width=640, height=480)
+
+        el = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(el.spec)
+        # print(el)
+        self.assertEqual(chart_spec['mark'], 'bar')
+        self.assertEqual(chart_spec['width'], 640)
+        self.assertEqual(chart_spec['height'], 480)
         self.assertEqual(
-            el.chart.data.columns.plain_index.data.strings.data,
-            ['a', 'b', 'c']
+            el.data.columns.plain_index.data.strings.data,
+            ['index', 'variable', 'value']
         )
-        data = json.loads(json_format.MessageToJson(el.chart.data.data))
-        result = [x['int64s']['data'][0] for x in data['cols']]
-        self.assertEqual(result, ['10', '20', '30'])
+
+        data = json.loads(json_format.MessageToJson(el.data.data))
+        result = [x['int64s']['data'] for x in data['cols'] if 'int64s' in x]
+
+        self.assertEqual(result[1], ['10', '20', '30'])
 
     def test_st_code(self):
         """Test st.code."""
-        dg = st.code('print(\'My string = %d\' % my_value)',
-                     language='python')
+        st.code('print(\'My string = %d\' % my_value)',
+                language='python')
         expected = textwrap.dedent('''
             ```python
             print('My string = %d' % my_value)
@@ -177,7 +182,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             'one': [1, 2],
             'two': [11, 22],
         })
-        dg = st.dataframe(df)
+
+        st.dataframe(df)
+
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
         self.assertEqual(el.data_frame.columns.plain_index.data.strings.data,
@@ -185,14 +192,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_empty(self):
         """Test st.empty."""
-        dg = st.empty()
+        st.empty()
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.empty.unused, True)
 
     def test_st_error(self):
         """Test st.error."""
-        dg = st.error('some error')
+        st.error('some error')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some error')
@@ -201,7 +208,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_exception(self):
         """Test st.exception."""
         e = RuntimeError('Test Exception')
-        dg = st.exception(e)
+        st.exception(e)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.exception.type, 'RuntimeError')
@@ -218,7 +225,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_header(self):
         """Test st.header."""
-        dg = st.header('some header')
+        st.header('some header')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '## some header')
@@ -226,7 +233,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_help(self):
         """Test st.help."""
-        dg = st.help(st.header)
+        st.help(st.header)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.doc_string.name, 'header')
@@ -248,7 +255,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # pasting the result.
         checksum = 'gNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII='
 
-        dg = st.image(
+        st.image(
             img,
             caption='some caption',
             width=100, format='PNG')
@@ -272,7 +279,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             'WgNaA1oDWgPaBVCHAX/y3CvgAAAAAElFTkSuQmCC',
             'NaA1oDWgNaBdYVwBALVjUB8AAAAASUVORK5CYII=',
         ]
-        dg = st.image(
+        st.image(
             imgs,
             caption=['some caption'] * 3,
             width=200,
@@ -289,7 +296,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """Test st.image with single url."""
         url = 'http://server/fake0.jpg'
 
-        dg = st.image(
+        st.image(
             url,
             caption='some caption',
             width=300)
@@ -306,7 +313,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             'http://server/fake1.jpg',
             'http://server/fake2.jpg',
         ]
-        dg = st.image(
+        st.image(
             urls,
             caption=['some caption'] * 3,
             width=300)
@@ -326,7 +333,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_info(self):
         """Test st.info."""
-        dg = st.info('some info')
+        st.info('some info')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some info')
@@ -334,7 +341,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_json(self):
         """Test st.json."""
-        dg = st.json('{"some": "json"}')
+        st.json('{"some": "json"}')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '{"some": "json"}')
@@ -343,7 +350,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_line_chart(self):
         """Test st.line_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
-        dg = st.line_chart(df, width=640, height=480)
+        st.line_chart(df, width=640, height=480)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'LineChart')
@@ -359,7 +366,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_markdown(self):
         """Test st.markdown."""
-        dg = st.markdown('    some markdown  ')
+        st.markdown('    some markdown  ')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some markdown')
@@ -367,7 +374,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_progress(self):
         """Test st.progress."""
-        dg = st.progress(51)
+        st.progress(51)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
@@ -400,7 +407,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         plt.figure(figsize=(2, 2))
         # Add 20 random points to scatter plot.
         plt.scatter(data[0], data[1])
-        dg = st.pyplot()
+
+        st.pyplot()
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
@@ -417,7 +425,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         )
 
         data = [trace0]
-        dg = st.plotly_chart(data)
+
+        st.plotly_chart(data)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
@@ -436,7 +445,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         )
 
         data = [trace0]
-        dg = st.plotly_chart(data, width=100, height=200)
+
+        st.plotly_chart(data, width=100, height=200)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
@@ -458,7 +468,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         fig = plt.figure()
         plt.plot([10, 20, 30])
-        dg = st.plotly_chart(fig)
+        st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField('url'), False)
@@ -490,7 +500,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_subheader(self):
         """Test st.subheader."""
-        dg = st.subheader('some subheader')
+        st.subheader('some subheader')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '### some subheader')
@@ -498,7 +508,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_success(self):
         """Test st.success."""
-        dg = st.success('some success')
+        st.success('some success')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some success')
@@ -509,7 +519,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame(
             [[1, 2], [3, 4]],
             columns=['col1', 'col2'])
-        dg = st.table(df)
+
+        st.table(df)
+
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
         self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
@@ -518,7 +530,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_text(self):
         """Test st.text."""
-        dg = st.text('some text')
+        st.text('some text')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some text')
@@ -526,7 +538,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_title(self):
         """Test st.title."""
-        dg = st.title('some title')
+        st.title('some title')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, '# some title')
@@ -542,7 +554,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # For now it doesnt matter cause browser is the one that uses it.
         fake_video_data = '\x11\x22\x33\x44\x55\x66'.encode('utf-8')
 
-        dg = st.video(fake_video_data)
+        st.video(fake_video_data)
 
         el = self.get_delta_from_queue().new_element
         # Manually base64 encoded payload above via
@@ -552,7 +564,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_warning(self):
         """Test st.warning."""
-        dg = st.warning('some warning')
+        st.warning('some warning')
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, 'some warning')
@@ -562,7 +574,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """Test st._native_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
         chart = Chart(df, 'line_chart', width=640, height=480)
-        dg = st._native_chart(chart)
+        st._native_chart(chart)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.chart.type, 'LineChart')
@@ -588,7 +600,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             ]
         }
 
-        dg = st._text_exception(
+        st._text_exception(
             data.get('type'),
             data.get('message'),
             data.get('stack_trace'),

@@ -26,6 +26,7 @@ import functools
 import json
 import random
 import textwrap
+import pandas as pd
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -746,7 +747,7 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def bar_chart(self, element, data, width=0, height=0):
+    def bar_chart(self, element, data, width=0, **kwargs):
         """Display a bar chart.
 
         Parameters
@@ -773,9 +774,26 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
-        chart = Chart(data, type='bar_chart', width=width, height=height)
-        chart.marshall(element.chart)
+        encoding_x = {'field': 'variable', 'type': 'ordinal'}
+        data_for_vega = data.reset_index()
+        melted = pd.melt(data_for_vega, id_vars=['index'])
+
+        index_value = melted.at[0, 'index']
+
+        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
+            encoding_x = {'field': 'index', 'type': 'temporal'}
+
+        spec = {
+            'mark': 'bar',
+            'encoding': {
+                'x': encoding_x,
+                'y': {'field': 'value', 'type': 'quantitative'}
+            }
+        }
+
+        import streamlit.elements.vega_lite as vega_lite
+        vega_lite.marshall(
+            element.vega_lite_chart, melted, spec, width, **kwargs)
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, width=0,
@@ -1440,7 +1458,8 @@ class DeltaGenerator(object):
         single_value = isinstance(value, (int, float))
         range_value = isinstance(value, (list, tuple)) and len(value) == 2
         if not single_value and not range_value:
-            raise ValueError('The value should either be an int/float or a list/tuple of int/float')
+            raise ValueError(
+                'The value should either be an int/float or a list/tuple of int/float')
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
         if single_value:
@@ -1507,7 +1526,8 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError('The value and/or arguments are out of range.')
+                raise ValueError(
+                    'The value and/or arguments are out of range.')
 
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
