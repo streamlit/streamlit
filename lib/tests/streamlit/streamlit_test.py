@@ -148,7 +148,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(el.spec)
-        # print(el)
         self.assertEqual(chart_spec['mark'], 'bar')
         self.assertEqual(chart_spec['width'], 640)
         self.assertEqual(chart_spec['height'], 480)
@@ -352,17 +351,20 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
         st.line_chart(df, width=640, height=480)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.chart.type, 'LineChart')
-        self.assertEqual(el.chart.width, 640)
-        self.assertEqual(el.chart.height, 480)
+        el = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(el.spec)
+        self.assertEqual(chart_spec['mark'], 'line')
+        self.assertEqual(chart_spec['width'], 640)
+        self.assertEqual(chart_spec['height'], 480)
         self.assertEqual(
-            el.chart.data.columns.plain_index.data.strings.data,
-            ['a', 'b', 'c']
+            el.data.columns.plain_index.data.strings.data,
+            ['index', 'variable', 'value']
         )
-        data = json.loads(json_format.MessageToJson(el.chart.data.data))
-        result = [x['int64s']['data'][0] for x in data['cols']]
-        self.assertEqual(result, ['10', '20', '30'])
+
+        data = json.loads(json_format.MessageToJson(el.data.data))
+        result = [x['int64s']['data'] for x in data['cols'] if 'int64s' in x]
+
+        self.assertEqual(result[1], ['10', '20', '30'])
 
     def test_st_markdown(self):
         """Test st.markdown."""

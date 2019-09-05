@@ -682,7 +682,7 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def line_chart(self, element, data, width=0, height=0):
+    def line_chart(self, element, data, width=0, **kwargs):
         """Display a line chart.
 
         Parameters
@@ -710,9 +710,28 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
-        chart = Chart(data, type='line_chart', width=width, height=height)
-        chart.marshall(element.chart)
+
+        encoding_x = {'field': 'index', 'type': 'ordinal'}
+        data_for_vega = data.reset_index()
+        melted = pd.melt(data_for_vega, id_vars=['index'])
+
+        index_value = melted.at[0, 'index']
+
+        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
+            encoding_x = {'field': 'index', 'type': 'temporal'}
+
+        spec = {
+            'mark': 'line',
+            'encoding': {
+                'x': encoding_x,
+                'y': {'field': 'value', 'type': 'quantitative'},
+                "color": {"field": "variable", "type": "nominal"}
+            }
+        }
+
+        import streamlit.elements.vega_lite as vega_lite
+        vega_lite.marshall(
+            element.vega_lite_chart, melted, spec, width, **kwargs)
 
     @_with_element
     def area_chart(self, element, data, width=0, height=0):
