@@ -389,10 +389,10 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
         st.area_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, 'AreaChart')
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec['mark'], 'area')
+        self.assertEqual(element.data.data.cols[2].int64s.data[0], 20)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""

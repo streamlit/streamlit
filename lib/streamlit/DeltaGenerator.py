@@ -710,31 +710,13 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-
-        encoding_x = {'field': 'index', 'type': 'ordinal'}
-        data_for_vega = data.reset_index()
-        melted = pd.melt(data_for_vega, id_vars=['index'])
-
-        index_value = melted.at[0, 'index']
-
-        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-            encoding_x = {'field': 'index', 'type': 'temporal'}
-
-        spec = {
-            'mark': 'line',
-            'encoding': {
-                'x': encoding_x,
-                'y': {'field': 'value', 'type': 'quantitative'},
-                "color": {"field": "variable", "type": "nominal"}
-            }
-        }
-
         import streamlit.elements.vega_lite as vega_lite
+        spec = vega_lite.generate_spec_from_data('line', data)
         vega_lite.marshall(
-            element.vega_lite_chart, melted, spec, width, **kwargs)
+            element.vega_lite_chart, None, spec, width, **kwargs)
 
     @_with_element
-    def area_chart(self, element, data, width=0, height=0):
+    def area_chart(self, element, data, width=0, **kwargs):
         """Display a area chart.
 
         Parameters
@@ -761,9 +743,10 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
-        chart = Chart(data, type='area_chart', width=width, height=height)
-        chart.marshall(element.chart)
+        import streamlit.elements.vega_lite as vega_lite
+        spec = vega_lite.generate_spec_from_data('area', data)
+        vega_lite.marshall(
+            element.vega_lite_chart, None, spec, width, **kwargs)
 
     @_with_element
     def bar_chart(self, element, data, width=0, **kwargs):

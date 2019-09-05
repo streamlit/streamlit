@@ -16,17 +16,45 @@
 """A Python wrapper around Vega-Lite."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import json
+import pandas as pd
+from datetime import datetime
 
 import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
+
+
+def generate_spec_from_data(graph_type, data):
+    encoding_x = {'field': 'index', 'type': 'ordinal'}
+    data_for_vega = data.reset_index()
+    melted = pd.melt(data_for_vega, id_vars=['index'])
+
+    index_value = melted.at[0, 'index']
+
+    if type(index_value) is datetime or type(index_value) is pd.Timestamp:
+        encoding_x = {'field': 'index', 'type': 'temporal'}
+
+    spec = {
+        'data': melted,
+        'mark': graph_type,
+        'encoding': {
+            'x': encoding_x,
+            'y': {'field': 'value', 'type': 'quantitative'},
+            "color": {"field": "variable", "type": "nominal"}
+        }
+    }
+
+    return spec
 
 
 def marshall(proto, data=None, spec=None, width=0, **kwargs):
