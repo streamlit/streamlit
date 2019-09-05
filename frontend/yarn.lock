@@ -1727,7 +1727,7 @@
   dependencies:
     "@types/yargs-parser" "*"
 
-"@typescript-eslint/eslint-plugin@1.13.0", "@typescript-eslint/eslint-plugin@^1.13.0":
+"@typescript-eslint/eslint-plugin@1.13.0":
   version "1.13.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-1.13.0.tgz#22fed9b16ddfeb402fd7bcde56307820f6ebc49f"
   dependencies:
@@ -1745,7 +1745,7 @@
     "@typescript-eslint/typescript-estree" "1.13.0"
     eslint-scope "^4.0.0"
 
-"@typescript-eslint/parser@1.13.0", "@typescript-eslint/parser@^1.13.0":
+"@typescript-eslint/parser@1.13.0":
   version "1.13.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/parser/-/parser-1.13.0.tgz#61ac7811ea52791c47dc9fd4dd4a184fae9ac355"
   dependencies:
@@ -4889,10 +4889,6 @@ escodegen@~1.3.2:
   optionalDependencies:
     source-map "~0.1.33"
 
-eslint-config-fbjs@^3.1.0:
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/eslint-config-fbjs/-/eslint-config-fbjs-3.1.1.tgz#f5b4c1df888693672116f000527a8df25d61b888"
-
 eslint-config-react-app@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/eslint-config-react-app/-/eslint-config-react-app-5.0.1.tgz#5f3d666ba3ee3cb384eb943e260e868f6c72251b"
@@ -4923,19 +4919,13 @@ eslint-module-utils@^2.4.0:
     debug "^2.6.8"
     pkg-dir "^2.0.0"
 
-eslint-plugin-babel@^5.3.0:
-  version "5.3.0"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-babel/-/eslint-plugin-babel-5.3.0.tgz#2e7f251ccc249326da760c1a4c948a91c32d0023"
-  dependencies:
-    eslint-rule-composer "^0.3.0"
-
 eslint-plugin-flowtype@3.13.0:
   version "3.13.0"
   resolved "https://registry.yarnpkg.com/eslint-plugin-flowtype/-/eslint-plugin-flowtype-3.13.0.tgz#e241ebd39c0ce519345a3f074ec1ebde4cf80f2c"
   dependencies:
     lodash "^4.17.15"
 
-eslint-plugin-import@2.18.2, eslint-plugin-import@^2.18.2:
+eslint-plugin-import@2.18.2:
   version "2.18.2"
   resolved "https://registry.yarnpkg.com/eslint-plugin-import/-/eslint-plugin-import-2.18.2.tgz#02f1180b90b077b33d447a17a2326ceb400aceb6"
   dependencies:
@@ -4951,7 +4941,7 @@ eslint-plugin-import@2.18.2, eslint-plugin-import@^2.18.2:
     read-pkg-up "^2.0.0"
     resolve "^1.11.0"
 
-eslint-plugin-jsx-a11y@6.2.3, eslint-plugin-jsx-a11y@^6.2.3:
+eslint-plugin-jsx-a11y@6.2.3:
   version "6.2.3"
   resolved "https://registry.yarnpkg.com/eslint-plugin-jsx-a11y/-/eslint-plugin-jsx-a11y-6.2.3.tgz#b872a09d5de51af70a97db1eea7dc933043708aa"
   dependencies:
@@ -4969,7 +4959,7 @@ eslint-plugin-react-hooks@^1.6.1:
   version "1.7.0"
   resolved "https://registry.yarnpkg.com/eslint-plugin-react-hooks/-/eslint-plugin-react-hooks-1.7.0.tgz#6210b6d5a37205f0b92858f895a4e827020a7d04"
 
-eslint-plugin-react@7.14.3, eslint-plugin-react@^7.14.2:
+eslint-plugin-react@7.14.3:
   version "7.14.3"
   resolved "https://registry.yarnpkg.com/eslint-plugin-react/-/eslint-plugin-react-7.14.3.tgz#911030dd7e98ba49e1b2208599571846a66bdf13"
   dependencies:
@@ -4982,16 +4972,6 @@ eslint-plugin-react@7.14.3, eslint-plugin-react@^7.14.2:
     object.values "^1.1.0"
     prop-types "^15.7.2"
     resolve "^1.10.1"
-
-eslint-plugin-relay@^1.3.5:
-  version "1.3.7"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-relay/-/eslint-plugin-relay-1.3.7.tgz#ba4eac3084608b10848f5018a0526bc9cd7eec5d"
-  dependencies:
-    graphql "^14.0.0"
-
-eslint-rule-composer@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/eslint-rule-composer/-/eslint-rule-composer-0.3.0.tgz#79320c927b0c5c0d3d3d2b76c8b4a488f25bbaf9"
 
 eslint-scope@3.7.1:
   version "3.7.1"
@@ -6433,12 +6413,6 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.1.6
   version "4.2.2"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.2.tgz#6f0952605d0140c1cfdb138ed005775b92d67b02"
 
-graphql@^14.0.0:
-  version "14.4.2"
-  resolved "https://registry.yarnpkg.com/graphql/-/graphql-14.4.2.tgz#553a7d546d524663eda49ed6df77577be3203ae3"
-  dependencies:
-    iterall "^1.2.2"
-
 grid-index@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/grid-index/-/grid-index-1.1.0.tgz#97f8221edec1026c8377b86446a7c71e79522ea7"
@@ -7417,10 +7391,6 @@ istanbul-reports@^2.2.6:
   resolved "https://registry.yarnpkg.com/istanbul-reports/-/istanbul-reports-2.2.6.tgz#7b4f2660d82b29303a8fe6091f8ca4bf058da1af"
   dependencies:
     handlebars "^4.1.2"
-
-iterall@^1.2.2:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/iterall/-/iterall-1.2.2.tgz#92d70deb8028e0c39ff3164fdbf4d8b088130cd7"
 
 iterm2-version@^4.1.0:
   version "4.2.0"
