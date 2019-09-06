@@ -78,7 +78,7 @@ class FakeDeltaGenerator(object):
         """
         self._exception_msg = str(e)
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, delta_type):
         """Fake enqueue new element delta.
 
         The real DeltaGenerator method actually enqueues the deltas but
@@ -187,7 +187,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_new_element_delta_null(self):
         # Test "Null" Delta generators
         dg = self.new_delta_generator(None)
-        new_dg = dg._enqueue_new_element_delta(None)
+        new_dg = dg._enqueue_new_element_delta(None, None)
         self.assertEqual(dg, new_dg)
 
     def test_enqueue_new_element_delta(self):
@@ -203,7 +203,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._id)
 
@@ -223,7 +223,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
         self.assertEqual(dg, new_dg)
 
         msg = self.get_message_from_queue()

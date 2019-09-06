@@ -124,7 +124,8 @@ def _with_element(method):
         def marshall_element(element):
             return method(self, element, *args, **kwargs)
 
-        return self._enqueue_new_element_delta(marshall_element)
+        return self._enqueue_new_element_delta(marshall_element,
+                                               method.__name__)
 
     return wrapped_method
 
@@ -175,7 +176,7 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self, enqueue, id=0, is_root=True,
+    def __init__(self, enqueue, id=0, delta_type=None, is_root=True,
                  container=BlockPath_pb2.BlockPath.MAIN, path=()):
         """Constructor.
 
@@ -194,6 +195,7 @@ class DeltaGenerator(object):
         self._is_root = is_root
         self._container = container
         self._path = path
+        self._delta_type = delta_type
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
@@ -201,7 +203,8 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element, elementWidth=None,
+    def _enqueue_new_element_delta(self, marshall_element, delta_type,
+                                   elementWidth=None,
                                    elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -252,8 +255,10 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.metadata.delta_id, is_root=False)
+                self._enqueue, msg.metadata.delta_id, delta_type,
+                is_root=False)
         else:
+            self.delta_type = delta_type
             output_dg = self
 
         kind = msg.delta.new_element.WhichOneof('type')
@@ -672,7 +677,8 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame, width, height)
+        return self._enqueue_new_element_delta(set_data_frame, 'dataframe',
+                                               width, height)
 
     # TODO: Either remove this or make it public. This is only used in the
     # mnist demo right now.
@@ -2022,6 +2028,12 @@ class DeltaGenerator(object):
             raise RuntimeError(
                 'Wrong number of arguments to add_rows().'
                 'Method requires exactly one dataset')
+
+        # As we are using vega_lite for these deltas we have to reshape
+        # the data structure otherwise the input data and the actual data used
+        # by vega_lite will be different and it will throw an error.
+        if self._delta_type in ('line_chart', 'bar_chart', 'area_chart'):
+            data = pd.melt(data.reset_index(), id_vars=['index'])
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.parent_block.container = self._container
