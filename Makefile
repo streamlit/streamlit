@@ -219,7 +219,7 @@ scssvars: react-init
 # Lint the JS code.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	@# HK: I'm commenting `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
+	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
