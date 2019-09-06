@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Input as UIInput } from 'baseui/input'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-
+import React from "react"
+import { Input as UIInput } from "baseui/input"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,12 +32,12 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: string;
+  value?: string
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
-  dirty: boolean;
+  dirty: boolean
 }
 
 class TextInput extends React.PureComponent<Props, State> {
@@ -52,7 +51,7 @@ class TextInput extends React.PureComponent<Props, State> {
    */
   private get valueOrDefault(): string {
     if (this.state.value === undefined) {
-      return this.props.element.get('value') as string
+      return this.props.element.get("value") as string
     } else {
       return this.state.value
     }
@@ -60,7 +59,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   private onKeyPress = (e: any) => {
     const event = e as React.KeyboardEvent<HTMLInputElement>
-    if (event.key === 'Enter' && this.state.dirty) {
+    if (event.key === "Enter" && this.state.dirty) {
       this.setWidgetValue()
     }
   }
@@ -81,16 +80,16 @@ class TextInput extends React.PureComponent<Props, State> {
 
   private setWidgetValue(): void {
     if (this.state.value === undefined) {
-      throw new Error('Assertion error: value is undefined')
+      throw new Error("Assertion error: value is undefined")
     }
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
 
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
     this.setState({ dirty: false })
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
@@ -103,11 +102,9 @@ class TextInput extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
         />
-        {
-          this.state.dirty
-            ? <div className="instructions">Press Enter to apply</div>
-            : null
-        }
+        {this.state.dirty ? (
+          <div className="instructions">Press Enter to apply</div>
+        ) : null}
       </div>
     )
   }

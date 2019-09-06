@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Checkbox as UICheckbox } from 'baseui/checkbox'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { checkboxOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { checkboxOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,7 +33,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: boolean;
+  value?: boolean
 }
 
 class Checkbox extends React.PureComponent<Props, State> {
@@ -45,14 +45,14 @@ class Checkbox extends React.PureComponent<Props, State> {
    */
   private get valueOrDefault(): boolean {
     if (this.state.value === undefined) {
-      return this.props.element.get('value') as boolean
+      return this.props.element.get("value") as boolean
     } else {
       return this.state.value
     }
   }
 
   private handleChange = (e: any) => {
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
     const value = (e.target as HTMLInputElement).checked
 
     this.setState({ value })
@@ -60,7 +60,7 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
