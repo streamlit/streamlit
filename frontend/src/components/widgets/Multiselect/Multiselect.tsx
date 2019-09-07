@@ -44,9 +44,12 @@ class Multiselect extends React.PureComponent<Props, State> {
   public state: State = { value: [] }
 
   private get valueOrDefault(): MultiselectOption[] {
+    if (this.state.value.length === 0) {
+      return this.props.element.get('default').toArray()
+    }
     return this.state.value.map(i => {
       const label = this.props.element.get('options').get(i)
-      return {value: i.toString(), label }
+      return { value: i.toString(), label }
     })
   }
 

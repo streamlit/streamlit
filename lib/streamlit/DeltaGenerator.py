@@ -1326,7 +1326,7 @@ class DeltaGenerator(object):
         current_value = ui_value.value if ui_value is not None else []
 
         element.multiselectbox.label = label
-        element.multiselectbox.value[:] = current_value  # should be a list
+        element.multiselectbox.default[:] = current_value
         element.multiselectbox.options[:] = [
             str(format_func(opt)) for opt in options]
         return [options[i] for i in current_value]
