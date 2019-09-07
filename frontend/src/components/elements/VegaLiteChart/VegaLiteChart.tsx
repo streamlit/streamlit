@@ -15,47 +15,44 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import {Map as ImmutableMap} from 'immutable'
-import {tableGetRowsAndCols, indexGet, tableGet} from 'lib/dataFrameProto'
-import {logMessage} from 'lib/log'
+import React from "react"
+import { Map as ImmutableMap } from "immutable"
+import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
+import { logMessage } from "lib/log"
 
-import embed from 'vega-embed'
-import * as vega from 'vega'
+import embed from "vega-embed"
+import * as vega from "vega"
 
-import './VegaLiteChart.scss'
-
+import "./VegaLiteChart.scss"
 
 const MagicFields = {
-  DATAFRAME_INDEX: '(index)',
+  DATAFRAME_INDEX: "(index)",
 }
 
-
-const DEFAULT_DATA_NAME = 'source'
+const DEFAULT_DATA_NAME = "source"
 
 /**
  * Horizontal space needed for the embed actions button.
  */
 const EMBED_PADDING = 38
 
-
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'datetimeIndex',
-  'float_64Index',
-  'int_64Index',
-  'rangeIndex',
-  'timedeltaIndex',
-  'uint_64Index',
+  "datetimeIndex",
+  "float_64Index",
+  "int_64Index",
+  "rangeIndex",
+  "timedeltaIndex",
+  "uint_64Index",
 ])
 
 interface Props {
-  width: number;
-  element: ImmutableMap<string, any>;
+  width: number
+  element: ImmutableMap<string, any>
 }
 
 interface State {
-  error?: Error;
+  error?: Error
 }
 
 class VegaLiteChart extends React.PureComponent<Props, State> {
@@ -67,7 +64,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
   /**
    * The width from the parsed Vega-Lite spec.
    */
-  private specWidth: number | undefined;
+  private specWidth: number | undefined
 
   /**
    * The default data name to add to.
@@ -94,14 +91,15 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
     return (
       // Create the container Vega draws inside.
-      <div className="stVegaLiteChart" ref={c => this.element = c} />)
+      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
+    )
   }
 
   public async componentDidMount(): Promise<void> {
     try {
       await this.createView()
     } catch (error) {
-      this.setState({error})
+      this.setState({ error })
     }
   }
 
@@ -109,15 +107,15 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     const prevElement = prevProps.element
     const element = this.props.element
 
-    const prevSpec = prevElement.get('spec')
-    const spec = element.get('spec')
+    const prevSpec = prevElement.get("spec")
+    const spec = element.get("spec")
 
     if (!this.vegaView || prevSpec !== spec) {
-      logMessage('Vega spec changed.')
+      logMessage("Vega spec changed.")
       try {
         await this.createView()
       } catch (error) {
-        this.setState({error})
+        this.setState({ error })
       }
       return
     }
@@ -126,8 +124,8 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
       this.vegaView.width(this.props.width - EMBED_PADDING)
     }
 
-    const prevData = prevElement.get('data')
-    const data = element.get('data')
+    const prevData = prevElement.get("data")
+    const data = element.get("data")
 
     if (prevData || data) {
       this.updateData(this.defaultDataName, prevData, data)
@@ -152,7 +150,6 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     this.vegaView.resize().runAsync()
   }
 
-
   /**
    * Update the dataset in the Vega view. This method tried to minimize changes
    * by automatically creating and applying diffs.
@@ -162,39 +159,57 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
    * @param data The dataset at the current state.
    */
   private updateData(
-    name: string, prevData: ImmutableMap<string, any> | null,
-    data: ImmutableMap<string, any> | null): void {
-
+    name: string,
+    prevData: ImmutableMap<string, any> | null,
+    data: ImmutableMap<string, any> | null
+  ): void {
     if (!this.vegaView) {
-      throw new Error('Chart has not been drawn yet')
+      throw new Error("Chart has not been drawn yet")
     }
 
-    if (!data || !data.get('data')) {
-      const viewHasDataWithName = (this.vegaView as any)._runtime.data.hasOwnProperty(name)
+    if (!data || !data.get("data")) {
+      const viewHasDataWithName = (this
+        .vegaView as any)._runtime.data.hasOwnProperty(name)
       if (viewHasDataWithName) {
         this.vegaView.remove(name, vega.truthy)
       }
       return
     }
 
-    if (!prevData || !prevData.get('data')) {
+    if (!prevData || !prevData.get("data")) {
       this.vegaView.insert(name, getDataArray(data))
       return
     }
 
-    const [prevNumRows, prevNumCols] = tableGetRowsAndCols(prevData.get('data'))
-    const [numRows, numCols] = tableGetRowsAndCols(data.get('data'))
+    const [prevNumRows, prevNumCols] = tableGetRowsAndCols(
+      prevData.get("data")
+    )
+    const [numRows, numCols] = tableGetRowsAndCols(data.get("data"))
 
     // Check if dataframes have same "shape" but the new one has more rows.
-    if (dataIsAnAppendOfPrev(prevData, prevNumRows, prevNumCols, data, numRows, numCols)) {
+    if (
+      dataIsAnAppendOfPrev(
+        prevData,
+        prevNumRows,
+        prevNumCols,
+        data,
+        numRows,
+        numCols
+      )
+    ) {
       if (prevNumRows < numRows) {
         this.vegaView.insert(name, getDataArray(data, prevNumRows))
       }
     } else {
       // Clean the dataset and insert from scratch.
-      const cs = vega.changeset().remove(vega.truthy).insert(getDataArray(data))
+      const cs = vega
+        .changeset()
+        .remove(vega.truthy)
+        .insert(getDataArray(data))
       this.vegaView.change(name, cs)
-      logMessage(`Had to clear the ${name} dataset before inserting data through Vega view.`)
+      logMessage(
+        `Had to clear the ${name} dataset before inserting data through Vega view.`
+      )
     }
   }
 
@@ -202,10 +217,10 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
    * Create a new Vega view and add the data.
    */
   private async createView(): Promise<void> {
-    logMessage('Creating a new Vega view.')
+    logMessage("Creating a new Vega view.")
 
     if (!this.element) {
-      throw Error('Element missing.')
+      throw Error("Element missing.")
     }
 
     if (this.vegaView) {
@@ -215,13 +230,13 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
     const el = this.props.element
 
-    const spec = JSON.parse(el.get('spec'))
+    const spec = JSON.parse(el.get("spec"))
 
     if (spec.datasets) {
-      throw new Error('Datasets should not be passed as part of the spec')
+      throw new Error("Datasets should not be passed as part of the spec")
     }
 
-    const {vgSpec, view} = await embed(this.element, spec)
+    const { vgSpec, view } = await embed(this.element, spec)
 
     const datasets = getDataArrays(el)
 
@@ -258,9 +273,10 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
   }
 }
 
-
-function getInlineData(el: ImmutableMap<string, any>): {[field: string]: any}[] | null {
-  const dataProto = el.get('data')
+function getInlineData(
+  el: ImmutableMap<string, any>
+): { [field: string]: any }[] | null {
+  const dataProto = el.get("data")
 
   if (!dataProto) {
     return null
@@ -269,15 +285,16 @@ function getInlineData(el: ImmutableMap<string, any>): {[field: string]: any}[] 
   return getDataArray(dataProto)
 }
 
-
-function getDataArrays(el: ImmutableMap<string, any>): {[dataset: string]: any[] } | null {
+function getDataArrays(
+  el: ImmutableMap<string, any>
+): { [dataset: string]: any[] } | null {
   const datasets = getDataSets(el)
 
   if (datasets == null) {
     return null
   }
 
-  const datasetArrays: {[dataset: string]: any[]} = {}
+  const datasetArrays: { [dataset: string]: any[] } = {}
 
   for (const [name, dataset] of Object.entries(datasets)) {
     datasetArrays[name] = getDataArray(dataset)
@@ -286,46 +303,63 @@ function getDataArrays(el: ImmutableMap<string, any>): {[dataset: string]: any[]
   return datasetArrays
 }
 
-
-function getDataSets(el: ImmutableMap<string, any>): {[dataset: string]: ImmutableMap<string, any>} | null {
-  if (!el.get('datasets') || el.get('datasets').isEmpty()) {
+function getDataSets(
+  el: ImmutableMap<string, any>
+): { [dataset: string]: ImmutableMap<string, any> } | null {
+  if (!el.get("datasets") || el.get("datasets").isEmpty()) {
     return null
   }
 
-  const datasets: {[dataset: string]: any} = {}
+  const datasets: { [dataset: string]: any } = {}
 
-  el.get('datasets').forEach((x: any, i: number) => {
-    if (!x) { return }
-    const name = x.get('hasName') ? x.get('name') : null
-    datasets[name] = x.get('data')
+  el.get("datasets").forEach((x: any, i: number) => {
+    if (!x) {
+      return
+    }
+    const name = x.get("hasName") ? x.get("name") : null
+    datasets[name] = x.get("data")
   })
 
   return datasets
 }
 
-
-function getDataArray(dataProto: ImmutableMap<string, any>, startIndex = 0): {[field: string]: any}[] {
-  if (!dataProto.get('data')) { return [] }
-  if (!dataProto.get('index')) { return [] }
-  if (!dataProto.get('columns')) { return [] }
+function getDataArray(
+  dataProto: ImmutableMap<string, any>,
+  startIndex = 0
+): { [field: string]: any }[] {
+  if (!dataProto.get("data")) {
+    return []
+  }
+  if (!dataProto.get("index")) {
+    return []
+  }
+  if (!dataProto.get("columns")) {
+    return []
+  }
 
   const dataArr = []
-  const [rows, cols] = tableGetRowsAndCols(dataProto.get('data'))
+  const [rows, cols] = tableGetRowsAndCols(dataProto.get("data"))
 
-  const indexType = dataProto.get('index').get('type')
+  const indexType = dataProto.get("index").get("type")
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
 
   for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
-    let row: {[field: string]: any} = {}
+    const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      row[MagicFields.DATAFRAME_INDEX] =
-          indexGet(dataProto.get('index'), 0, rowIndex)
+      row[MagicFields.DATAFRAME_INDEX] = indexGet(
+        dataProto.get("index"),
+        0,
+        rowIndex
+      )
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
-      row[indexGet(dataProto.get('columns'), 0, colIndex)] =
-          tableGet(dataProto.get('data'), colIndex, rowIndex)
+      row[indexGet(dataProto.get("columns"), 0, colIndex)] = tableGet(
+        dataProto.get("data"),
+        colIndex,
+        rowIndex
+      )
     }
 
     dataArr.push(row)
@@ -334,13 +368,16 @@ function getDataArray(dataProto: ImmutableMap<string, any>, startIndex = 0): {[f
   return dataArr
 }
 
-
 /**
  * Checks if data looks like it's just prevData plus some appended rows.
  */
 function dataIsAnAppendOfPrev(
-  prevData: ImmutableMap<string, number>, prevNumRows: number, prevNumCols: number,
-  data: ImmutableMap<string, number>, numRows: number, numCols: number,
+  prevData: ImmutableMap<string, number>,
+  prevNumRows: number,
+  prevNumCols: number,
+  data: ImmutableMap<string, number>,
+  numRows: number,
+  numCols: number
 ): boolean {
   // Check whether dataframes have the same shape.
 
@@ -352,20 +389,21 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
-  const df0 = prevData.get('data')
-  const df1 = data.get('data')
+  const df0 = prevData.get("data")
+  const df1 = data.get("data")
   const c = numCols - 1
   const r = prevNumRows - 1
 
   // Check if the new dataframe looks like it's a superset of the old one.
   // (this is a very light check, and not guaranteed to be right!)
-  if (tableGet(df0, c, 0) !== tableGet(df1, c, 0) ||
-      tableGet(df0, c, r) !== tableGet(df1, c, r)) {
+  if (
+    tableGet(df0, c, 0) !== tableGet(df1, c, 0) ||
+    tableGet(df0, c, r) !== tableGet(df1, c, r)
+  ) {
     return false
   }
 
   return true
 }
-
 
 export default VegaLiteChart

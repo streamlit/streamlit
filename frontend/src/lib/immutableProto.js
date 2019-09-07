@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { fromJS } from 'immutable'
-import { IS_DEV_ENV } from './baseconsts'
-import { logMessage } from './log'
+import { fromJS } from "immutable"
+import { IS_DEV_ENV } from "./baseconsts"
+import { logMessage } from "./log"
 
 /**
  * Converts a protobuf JS object into its immutable counterpart.
@@ -28,7 +28,7 @@ export function toImmutableProto(messageType, message) {
     oneofs: true,
   })
   if (IS_DEV_ENV) {
-    logMessage('Protobuf: ', x)
+    logMessage("Protobuf: ", x)
   }
   return fromJS(x)
 }

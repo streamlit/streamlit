@@ -1,9 +1,9 @@
-const HardSourceWebpackPlugin = require('hard-source-webpack-plugin')
+const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
 
 module.exports = {
   webpack: {
-    configure: (webpackConfig, {env, paths}) => {
-      webpackConfig.resolve.mainFields = ['main', 'module']
+    configure: (webpackConfig, { env, paths }) => {
+      webpackConfig.resolve.mainFields = ["main", "module"]
 
       // HardSourceWebpackPlugin adds aggressive build caching
       // to speed up our slow builds.

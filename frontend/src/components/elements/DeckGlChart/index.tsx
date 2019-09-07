@@ -15,5 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from './DeckGlChart'
-
+export { default } from "./DeckGlChart"

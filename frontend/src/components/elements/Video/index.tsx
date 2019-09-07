@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from './Video'
+export { default } from "./Video"

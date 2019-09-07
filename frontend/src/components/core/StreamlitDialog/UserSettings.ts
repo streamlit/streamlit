@@ -19,7 +19,7 @@ export interface UserSettings {
   /**
    * If true, the report will be rendered with a wider column size
    */
-  wideMode: boolean;
+  wideMode: boolean
 
   /**
    * Flag indicating whether the server should re-run the report automatically
@@ -29,5 +29,5 @@ export interface UserSettings {
    * forward message. If the value is modified via {@link App.saveSettings},
    * a 'setRunOnSave' message will be sent back to the server.
    */
-  runOnSave: boolean;
+  runOnSave: boolean
 }
