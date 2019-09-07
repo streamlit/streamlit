@@ -15,29 +15,29 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { TYPE, Select as UISelect} from 'baseui/select'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import * as _ from 'lodash'
+import React from "react"
+import { TYPE, Select as UISelect } from "baseui/select"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import * as _ from "lodash"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
   /**
    * The value specified by the user via the UI.
    */
-  value: number[];
+  value: number[]
 }
 
 interface MultiselectOption {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 class Multiselect extends React.PureComponent<Props, State> {
@@ -45,10 +45,10 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private get valueOrDefault(): MultiselectOption[] {
     if (this.state.value.length === 0) {
-      return this.props.element.get('default').toArray()
+      return this.props.element.get("default").toArray()
     }
     return this.state.value.map(i => {
-      const label = this.props.element.get('options').get(i)
+      const label = this.props.element.get("options").get(i)
       return { value: i.toString(), label }
     })
   }
@@ -60,13 +60,13 @@ class Multiselect extends React.PureComponent<Props, State> {
     }
 
     switch (data.type) {
-      case 'remove': {
+      case "remove": {
         return { value: _.without(this.state.value, getIndex()) }
       }
-      case 'clear': {
+      case "clear": {
         return { value: [] }
       }
-      case 'select': {
+      case "select": {
         return { value: this.state.value.concat([getIndex()]) }
       }
       default: {
@@ -76,7 +76,7 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private onChange = (data: any) => {
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
     const newState = this.generateNewState(data)
     this.props.widgetMgr.setIntArrayValue(widgetId, newState.value)
     this.setState(newState)
@@ -85,20 +85,18 @@ class Multiselect extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { element, width } = this.props
     const style = { width }
-    const label = element.get('label')
-    const options = element.get('options')
-    const disabled = options.size === 0
-      ? true
-      : this.props.disabled
-    const placeholder = options.size === 0
-      ? 'No options to select.'
-      : 'Choose an option'
-    const selectOptions: MultiselectOption[] = options.map((option: string, idx: number) => {
-      return {
-        label: option,
-        value: idx.toString(),
-      }
-    })
+    const label = element.get("label")
+    const options = element.get("options")
+    const disabled = options.size === 0 ? true : this.props.disabled
+    const placeholder =
+      options.size === 0 ? "No options to select." : "Choose an option"
+    const selectOptions: MultiselectOption[] = options
+      .map((option: string, idx: number) => {
+        return {
+          label: option,
+          value: idx.toString(),
+        }
+      })
       .toArray()
 
     return (

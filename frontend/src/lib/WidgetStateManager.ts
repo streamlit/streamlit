@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-import { IBackMsg, IntArray, FloatArray, WidgetState, WidgetStates } from "autogen/proto"
+import {
+  IBackMsg,
+  IntArray,
+  FloatArray,
+  WidgetState,
+  WidgetStates,
+} from "autogen/proto"
 
 /**
  * Manages widget values, and sends widget update messages back to the server.
@@ -129,11 +135,12 @@ export class WidgetStateManager {
 
   public getIntArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null &&
-        state.value === 'intArrayValue' &&
-        state.intArrayValue != null &&
-        state.intArrayValue.value != null) {
-
+    if (
+      state != null &&
+      state.value === "intArrayValue" &&
+      state.intArrayValue != null &&
+      state.intArrayValue.value != null
+    ) {
       return state.intArrayValue.value
     }
 
@@ -141,10 +148,11 @@ export class WidgetStateManager {
   }
 
   public setIntArrayValue(widgetId: string, value: number[]): void {
-    this.getOrCreateWidgetStateProto(widgetId).intArrayValue = IntArray.fromObject({ value })
+    this.getOrCreateWidgetStateProto(
+      widgetId
+    ).intArrayValue = IntArray.fromObject({ value })
     this.sendUpdateWidgetsMessage()
   }
-
 
   public sendUpdateWidgetsMessage(): void {
     this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
