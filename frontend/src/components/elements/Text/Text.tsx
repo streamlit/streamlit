@@ -16,6 +16,7 @@
  */
 
 import React, {ReactNode, ReactElement} from 'react'
+import ImmutablePureComponent from 'react-immutable-pure-component'
 import ReactJson from 'react-json-view'
 import ReactMarkdown from 'react-markdown'
 import {Map as ImmutableMap} from 'immutable'

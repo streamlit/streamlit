@@ -16,6 +16,7 @@
  */
 
 import React, { PureComponent, ReactNode, Suspense } from 'react'
+import ImmutablePureComponent from 'react-immutable-pure-component'
 import { Progress } from 'reactstrap'
 import { AutoSizer } from 'react-virtualized'
 import { List, Map as ImmutableMap } from 'immutable'
@@ -70,9 +71,22 @@ interface Props {
 }
 
 class Block extends PureComponent<Props> {
+
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.getElements()
 
+
+    // NOTE we're getting an incrementally larger list for each added element
+    console.log(elementsToRender.size)
+    const a = elementsToRender.get(elementsToRender.size-1)
+
+    // @ts-ignore
+    if (a && a._root.entries[0][1] && a._root.entries[0][1]._root) {
+      // @ts-ignore
+      console.log(a._root.entries[0][1]._root.entries[0])
+    }
+
+    // NOTE fast if we comment this block
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender.toArray()
       .map((element: StElement, index: number): ReactNode|null => {
@@ -84,6 +98,10 @@ class Block extends PureComponent<Props> {
         }
       })
       .filter((node: ReactNode|null): ReactNode => node != null)
+
+    // NOTE fast if we don't render anything
+    // NOTE slow if the `Text` element (leaf component) returns only </div>
+    return [<div/>]
   }
 
   private getElements = (): BlockElement => {
@@ -135,6 +153,8 @@ class Block extends PureComponent<Props> {
   private renderElementWithErrorBoundary(
     element: SimpleElement, index: number, width: number
   ): (ReactNode|null) {
+    // NOTE from 12-20 seconds to 4 seconds if we return div here
+    // return <div/>
     const component = this.renderElement(element, index, width)
 
     if (!component) {
@@ -150,6 +170,19 @@ class Block extends PureComponent<Props> {
       'element-container stale-element' :
       'element-container'
 
+
+    // NOTE 4 second
+    // return <div/>
+
+    // NOTE 6 seconds
+
+    /*
+    return (
+      <div key={index} className={className} style={{ width }}>
+        {component}
+      </div>
+    )
+    */
     return (
       <div key={index} className={className} style={{ width }}>
         <ErrorBoundary width={width}>

@@ -17,6 +17,7 @@
 
 import React, { PureComponent, ReactNode } from 'react'
 import { List, Map as ImmutableMap } from 'immutable'
+import ImmutablePureComponent from 'react-immutable-pure-component'
 
 import Block from 'components/core/Block/'
 import { ReportRunState } from 'lib/ReportRunState'

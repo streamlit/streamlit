@@ -16,12 +16,16 @@
  */
 
 import React from 'react'
+
 import ReactDOM from 'react-dom'
 import App from './App'
 
 import { Client as Styletron } from 'styletron-engine-atomic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { LightTheme, BaseProvider } from 'baseui'
+
+// const whyDidYouRender = require('@welldone-software/why-did-you-render')
+// whyDidYouRender(React)
 
 const engine = new Styletron()
 

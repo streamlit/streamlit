@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@welldone-software/why-did-you-render": "^3.3.3",
     "aws-sdk": "^2.496.0",
     "baseui": "^8.8.0",
     "bokehjs": "^1.2.0",
@@ -40,6 +41,7 @@
     "react-feather": "^2.0.3",
     "react-google-login": "^5.0.4",
     "react-hotkeys": "1.1.4",
+    "react-immutable-pure-component": "^2.2.1",
     "react-json-view": "^1.19.1",
     "react-leaflet": "^2.4.0",
     "react-map-gl": "^5.0.7",
@@ -56,6 +58,7 @@
     "vega": "^5.4.0",
     "vega-embed": "^4.2.1",
     "vega-lite": "^3.3.0",
+    "why-did-you-update": "^1.0.6",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {

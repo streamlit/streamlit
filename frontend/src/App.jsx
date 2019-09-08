@@ -393,6 +393,7 @@ class App extends PureComponent {
       this.setState(state => ({
         // Create brand new `elements` instance, so components that depend on
         // this for re-rendering catch the change.
+        // NOTE potential source of slowness issues
         elements: {...applyDelta(state.elements, state.reportId, deltaMsg, metadataMsg)},
       }))
     }
