@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import {IBackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/proto'
+import { IBackMsg, FloatArray, WidgetState, WidgetStates } from "autogen/proto"
 
 /**
  * Manages widget values, and sends widget update messages back to the server.
@@ -23,7 +23,10 @@ import {IBackMsg, FloatArray, WidgetState, WidgetStates} from 'autogen/proto'
 export class WidgetStateManager {
   // Called to deliver a message to the server
   private readonly sendBackMsg: (msg: IBackMsg) => void
-  private readonly widgetStates: Map<string, WidgetState> = new Map<string, WidgetState>()
+  private readonly widgetStates: Map<string, WidgetState> = new Map<
+    string,
+    WidgetState
+  >()
 
   public constructor(sendBackMsg: (msg: IBackMsg) => void) {
     this.sendBackMsg = sendBackMsg
@@ -49,7 +52,7 @@ export class WidgetStateManager {
 
   public getBoolValue(widgetId: string): boolean | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null && state.value === 'boolValue') {
+    if (state != null && state.value === "boolValue") {
       return state.boolValue
     }
 
@@ -63,7 +66,7 @@ export class WidgetStateManager {
 
   public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null && state.value === 'intValue') {
+    if (state != null && state.value === "intValue") {
       return state.intValue
     }
 
@@ -77,7 +80,7 @@ export class WidgetStateManager {
 
   public getFloatValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null && state.value === 'floatValue') {
+    if (state != null && state.value === "floatValue") {
       return state.floatValue
     }
 
@@ -91,7 +94,7 @@ export class WidgetStateManager {
 
   public getStringValue(widgetId: string): string | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null && state.value === 'stringValue') {
+    if (state != null && state.value === "stringValue") {
       return state.stringValue
     }
 
@@ -105,11 +108,12 @@ export class WidgetStateManager {
 
   public getFloatArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null &&
-        state.value === 'floatArrayValue' &&
-        state.floatArrayValue != null &&
-        state.floatArrayValue.value != null) {
-
+    if (
+      state != null &&
+      state.value === "floatArrayValue" &&
+      state.floatArrayValue != null &&
+      state.floatArrayValue.value != null
+    ) {
       return state.floatArrayValue.value
     }
 
@@ -117,7 +121,9 @@ export class WidgetStateManager {
   }
 
   public setFloatArrayValue(widgetId: string, value: number[]): void {
-    this.getOrCreateWidgetStateProto(widgetId).floatArrayValue = FloatArray.fromObject({ value })
+    this.getOrCreateWidgetStateProto(
+      widgetId
+    ).floatArrayValue = FloatArray.fromObject({ value })
     this.sendUpdateWidgetsMessage()
   }
 

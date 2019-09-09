@@ -16,23 +16,22 @@
  */
 
 interface Args {
-  streamlitVersion: string;
-  pythonVersion: string;
-  installationId: string;
-  authorEmail: string;
-  commandLine: string[];
+  streamlitVersion: string
+  pythonVersion: string
+  installationId: string
+  authorEmail: string
+  commandLine: string[]
 }
-
 
 export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
-  public readonly streamlitVersion: string;
-  public readonly pythonVersion: string;
-  public readonly installationId: string;
-  public readonly authorEmail: string;
+  public readonly streamlitVersion: string
+  public readonly pythonVersion: string
+  public readonly installationId: string
+  public readonly authorEmail: string
 
   // Fields that can change during the lifetime of a session.
-  public commandLine: string[] = [];
+  public commandLine: string[] = []
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -45,7 +44,7 @@ export class SessionInfo {
 
   public static get current(): SessionInfo {
     if (!SessionInfo.singleton) {
-      throw new Error('Tried to use SessionInfo before it was initialized')
+      throw new Error("Tried to use SessionInfo before it was initialized")
     }
     return SessionInfo.singleton
   }
@@ -59,7 +58,10 @@ export class SessionInfo {
   }
 
   public constructor({
-    streamlitVersion, pythonVersion, installationId, authorEmail,
+    streamlitVersion,
+    pythonVersion,
+    installationId,
+    authorEmail,
   }: Args) {
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion

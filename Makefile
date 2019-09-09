@@ -219,6 +219,7 @@ scssvars: react-init
 # Lint the JS code.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -226,7 +227,6 @@ jslint:
 			--ext .ts \
 			--ext .tsx \
 			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
@@ -323,3 +323,18 @@ headers:
 		proto \
 		examples \
 		scripts
+
+.PHONY: build-circleci
+# Build docker image that mirrors circleci
+build-circleci:
+	docker build -t streamlit_circleci .
+
+.PHONY: run-circleci
+# Run circleci image with volume mounts
+run-circleci:
+	docker-compose run --rm --name streamlit_circleci streamlit
+
+.PHONY: connect-circleci
+# Connect to running circleci container
+connect-circleci:
+	docker exec -it streamlit_circleci /bin/bash

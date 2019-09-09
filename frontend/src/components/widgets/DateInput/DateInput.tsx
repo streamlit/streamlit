@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Datepicker as UIDatePicker } from 'baseui/datepicker'
-import { Map as ImmutableMap } from 'immutable'
-import moment from 'moment'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { datePickerOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { Map as ImmutableMap } from "immutable"
+import moment from "moment"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { datePickerOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -34,7 +34,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: string;
+  value?: string
 }
 
 class DateInput extends React.PureComponent<Props, State> {
@@ -46,21 +46,21 @@ class DateInput extends React.PureComponent<Props, State> {
    */
   private get valueOrDefault(): Date {
     if (this.state.value === undefined) {
-      return stringToDate(this.props.element.get('value') as string)
+      return stringToDate(this.props.element.get("value") as string)
     } else {
       return stringToDate(this.state.value)
     }
   }
 
   private handleChange = (e: any): void => {
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
 
     this.setState({ value: e.date })
     this.props.widgetMgr.setStringValue(widgetId, dateToString(e.date))
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
@@ -79,11 +79,11 @@ class DateInput extends React.PureComponent<Props, State> {
 }
 
 function dateToString(date: Date): string {
-  return moment(date).format('YYYY/MM/DD')
+  return moment(date).format("YYYY/MM/DD")
 }
 
 function stringToDate(value: string): Date {
-  return moment(value, 'YYYY/MM/DD').toDate()
+  return moment(value, "YYYY/MM/DD").toDate()
 }
 
 export default DateInput

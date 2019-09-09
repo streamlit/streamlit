@@ -15,19 +15,22 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Map as ImmutableMap } from 'immutable'
+import React from "react"
+import { Map as ImmutableMap } from "immutable"
 
 interface Props {
-  width: number;
-  element: ImmutableMap<string, any>;
+  width: number
+  element: ImmutableMap<string, any>
 }
 
 class Audio extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     const { element, width } = this.props
-    const dataUrl = 'data:' + element.get('format') + ';base64,' + element.get('data')
-    return <audio controls src={dataUrl} className="stAudio" style={{ width }} />
+    const dataUrl =
+      "data:" + element.get("format") + ";base64," + element.get("data")
+    return (
+      <audio controls src={dataUrl} className="stAudio" style={{ width }} />
+    )
   }
 }
 

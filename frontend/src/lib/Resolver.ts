@@ -19,8 +19,8 @@
  * A promise wrapper that makes resolve/reject functions public.
  */
 export default class Resolver<T> {
-  public resolve: (arg?: T) => (void|Promise<any>)
-  public reject: (reason?: any) => (void|Promise<any>)
+  public resolve: (arg?: T) => void | Promise<any>
+  public reject: (reason?: any) => void | Promise<any>
   public promise: Promise<T>
 
   public constructor() {

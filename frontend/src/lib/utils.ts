@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import url from 'url'
-import xxhash from 'xxhashjs'
-import { fromJS, Map as ImmutableMap } from 'immutable'
-import { Text as TextProto } from 'autogen/proto'
+import url from "url"
+import xxhash from "xxhashjs"
+import { fromJS, Map as ImmutableMap } from "immutable"
+import { Text as TextProto } from "autogen/proto"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -47,7 +47,7 @@ export function debounce(delay: number, fn: any): any {
  * iframe.
  */
 export function isEmbeddedInIFrame(): boolean {
-  return url.parse(window.location.href, true).query.embed === 'true'
+  return url.parse(window.location.href, true).query.embed === "true"
 }
 
 /**
@@ -59,7 +59,7 @@ type Element = ImmutableMap<string, any>
 
 export function makeElementWithInfoText(text: string): Element {
   return fromJS({
-    type: 'text',
+    type: "text",
     text: {
       format: TextProto.Format.INFO,
       body: text,
@@ -72,7 +72,7 @@ export function makeElementWithInfoText(text: string): Element {
  * Seed used: 0xDEADBEEF
  */
 export function hashString(s: string): string {
-  return xxhash.h32(s, 0xDEADBEEF).toString(16)
+  return xxhash.h32(s, 0xdeadbeef).toString(16)
 }
 
 /**
@@ -81,7 +81,7 @@ export function hashString(s: string): string {
  */
 export function requireNonNull<T>(obj: T | null | undefined): T {
   if (obj == null) {
-    throw new Error('value is null')
+    throw new Error("value is null")
   }
   return obj
 }

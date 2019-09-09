@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { TimePicker as UITimePicker } from 'baseui/datepicker'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
+import React from "react"
+import { TimePicker as UITimePicker } from "baseui/datepicker"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -32,7 +32,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: string;
+  value?: string
 }
 
 class TimeInput extends React.PureComponent<Props, State> {
@@ -44,14 +44,14 @@ class TimeInput extends React.PureComponent<Props, State> {
    */
   private get valueOrDefault(): Date {
     if (this.state.value === undefined) {
-      return stringToDate(this.props.element.get('value') as string)
+      return stringToDate(this.props.element.get("value") as string)
     } else {
       return stringToDate(this.state.value)
     }
   }
 
   private handleChange = (newDate: Date): void => {
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
 
     const value = dateToString(newDate)
     this.setState({ value })
@@ -59,7 +59,7 @@ class TimeInput extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     const selectOverride = {
@@ -86,7 +86,7 @@ class TimeInput extends React.PureComponent<Props, State> {
 }
 
 function stringToDate(value: string): Date {
-  const [hours, minutes] = value.split(':').map(Number)
+  const [hours, minutes] = value.split(":").map(Number)
   const date = new Date()
   date.setHours(hours)
   date.setMinutes(minutes)
@@ -94,9 +94,15 @@ function stringToDate(value: string): Date {
 }
 
 function dateToString(value: Date): string {
-  const hours = value.getHours().toString().padStart(2, '0')
-  const minutes = value.getMinutes().toString().padStart(2, '0')
-  return hours + ':' + minutes
+  const hours = value
+    .getHours()
+    .toString()
+    .padStart(2, "0")
+  const minutes = value
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")
+  return hours + ":" + minutes
 }
 
 export default TimeInput

@@ -15,42 +15,42 @@
  * limitations under the License.
  */
 
-import {RERUN_PROMPT_MODAL_DIALOG} from 'lib/baseconsts'
-import React, {PureComponent, ReactNode} from 'react'
-import {HotKeys} from 'react-hotkeys'
-import {CSSTransition} from 'react-transition-group'
-import {Button, UncontrolledTooltip} from 'reactstrap'
-import {SignalConnection} from 'typed-signals'
+import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
+import React, { PureComponent, ReactNode } from "react"
+import { HotKeys } from "react-hotkeys"
+import { CSSTransition } from "react-transition-group"
+import { Button, UncontrolledTooltip } from "reactstrap"
+import { SignalConnection } from "typed-signals"
 
-import {ConnectionState} from 'lib/ConnectionState'
-import {SessionEvent} from 'autogen/proto'
-import {SessionEventDispatcher} from 'lib/SessionEventDispatcher'
-import {ReportRunState} from 'lib/ReportRunState'
-import {Timer} from 'lib/Timer'
-import openIconic from 'assets/img/open-iconic.svg'
-import iconRunning from 'assets/img/icon_running.gif'
-import './StatusWidget.scss'
+import { ConnectionState } from "lib/ConnectionState"
+import { SessionEvent } from "autogen/proto"
+import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { ReportRunState } from "lib/ReportRunState"
+import { Timer } from "lib/Timer"
+import openIconic from "assets/img/open-iconic.svg"
+import iconRunning from "assets/img/icon_running.gif"
+import "./StatusWidget.scss"
 
 /** Component props */
 interface Props {
   /** State of our connection to the server. */
-  connectionState: ConnectionState;
+  connectionState: ConnectionState
 
   /** Dispatches transient SessionEvents received from the server. */
-  sessionEventDispatcher: SessionEventDispatcher;
+  sessionEventDispatcher: SessionEventDispatcher
 
   /** Report's current runstate */
-  reportRunState: ReportRunState;
+  reportRunState: ReportRunState
 
   /**
    * Function called when the user chooses to re-run the report
    * in response to its source file changing.
    * @param alwaysRerun if true, also change the run-on-save setting for this report
    */
-  rerunReport: (alwaysRerun: boolean) => void;
+  rerunReport: (alwaysRerun: boolean) => void
 
   /** Function called when the user chooses to stop the running report. */
-  stopReport: () => void;
+  stopReport: () => void
 }
 
 /** Component state */
@@ -59,7 +59,7 @@ interface State {
    * True if our ReportStatus or ConnectionStatus should be minimized.
    * Does not affect ReportStatus prompts.
    */
-  statusMinimized: boolean;
+  statusMinimized: boolean
 
   /**
    * If true, the server has told us that the report has changed and is
@@ -69,22 +69,22 @@ interface State {
    * This is reverted to false in getDerivedStateFromProps when the report
    * begins running again.
    */
-  reportChangedOnDisk: boolean;
+  reportChangedOnDisk: boolean
 
   /** True if our Report Changed prompt should be minimized. */
-  promptMinimized: boolean;
+  promptMinimized: boolean
 
   /**
    * True if our Report Changed prompt is being hovered. Hovered prompts are always
    * shown, even if they'd otherwise be minimized.
    */
-  promptHovered: boolean;
+  promptHovered: boolean
 }
 
 interface ConnectionStateUI {
-  icon: ReactNode;
-  label: string;
-  tooltip: string;
+  icon: ReactNode
+  label: string
+  tooltip: string
 }
 
 // Amount of time to display the "Report Changed. Rerun?" prompt when it first appears.
@@ -105,7 +105,9 @@ export class StatusWidget extends PureComponent<Props, State> {
   private curView?: ReactNode
 
   private readonly minimizePromptTimer = new Timer()
-  private readonly keyHandlers: { [key: string]: (keyEvent?: KeyboardEvent) => void }
+  private readonly keyHandlers: {
+    [key: string]: (keyEvent?: KeyboardEvent) => void
+  }
 
   public constructor(props: Props) {
     super(props)
@@ -118,7 +120,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     }
 
     this.keyHandlers = {
-      'a': this.handleAlwaysRerunClick,
+      a: this.handleAlwaysRerunClick,
       // No handler for 'r' since it's handled by app.jsx and precedence
       // isn't working when multiple components handle the same key
       // 'r': this.handleRerunClick,
@@ -130,19 +132,20 @@ export class StatusWidget extends PureComponent<Props, State> {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
     if (props.reportRunState === ReportRunState.RUNNING) {
-      return {reportChangedOnDisk: false, promptHovered: false}
+      return { reportChangedOnDisk: false, promptHovered: false }
     }
 
     return null
   }
 
   public componentDidMount(): void {
-    this.sessionEventConn = this.props
-      .sessionEventDispatcher.onSessionEvent.connect(e => this.handleSessionEvent(e))
-    window.addEventListener('scroll', this.handleScroll)
+    this.sessionEventConn = this.props.sessionEventDispatcher.onSessionEvent.connect(
+      e => this.handleSessionEvent(e)
+    )
+    window.addEventListener("scroll", this.handleScroll)
 
     // Preload the close icon as a fix for it sporadically not appearing
-    new Image().src = openIconic + '#circle-x'
+    new Image().src = openIconic + "#circle-x"
   }
 
   public componentWillUnmount(): void {
@@ -153,7 +156,7 @@ export class StatusWidget extends PureComponent<Props, State> {
 
     this.minimizePromptTimer.cancel()
 
-    window.removeEventListener('scroll', this.handleScroll)
+    window.removeEventListener("scroll", this.handleScroll)
   }
 
   private isConnected(): boolean {
@@ -161,8 +164,8 @@ export class StatusWidget extends PureComponent<Props, State> {
   }
 
   private handleSessionEvent(event: SessionEvent): void {
-    if (event.type === 'reportChangedOnDisk') {
-      this.setState({reportChangedOnDisk: true, promptMinimized: false})
+    if (event.type === "reportChangedOnDisk") {
+      this.setState({ reportChangedOnDisk: true, promptMinimized: false })
       this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
     }
   }
@@ -173,7 +176,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     // value, leave the timer alone.
     if (timeout > this.minimizePromptTimer.remainingTime) {
       this.minimizePromptTimer.setTimeout(() => {
-        this.setState({promptMinimized: true})
+        this.setState({ promptMinimized: true })
       }, timeout)
     }
   }
@@ -218,7 +221,8 @@ export class StatusWidget extends PureComponent<Props, State> {
         in={animateIn}
         timeout={200}
         unmountOnExit={true}
-        classNames="StatusWidget">
+        classNames="StatusWidget"
+      >
         <div key="StatusWidget">{renderView}</div>
       </CSSTransition>
     )
@@ -226,16 +230,20 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   private renderWidget(): ReactNode {
     if (this.isConnected()) {
-      if (this.props.reportRunState === ReportRunState.RUNNING ||
-        this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
-
+      if (
+        this.props.reportRunState === ReportRunState.RUNNING ||
+        this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+      ) {
         // Show reportIsRunning when the report is actually running,
         // but also when the user has just requested a re-run.
         // In the latter case, the server should get around to actually
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderReportIsRunning()
-      } else if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
+      } else if (
+        !RERUN_PROMPT_MODAL_DIALOG &&
+        this.state.reportChangedOnDisk
+      ) {
         return this.renderRerunReportPrompt()
       }
     }
@@ -254,13 +262,12 @@ export class StatusWidget extends PureComponent<Props, State> {
       <div>
         <div
           id="ConnectionStatus"
-          className={this.state.statusMinimized ? 'minimized' : ''}>
+          className={this.state.statusMinimized ? "minimized" : ""}
+        >
           <svg className="icon" viewBox="0 0 8 8">
             {ui.icon}
           </svg>
-          <label>
-            {ui.label}
-          </label>
+          <label>{ui.label}</label>
         </div>
         <UncontrolledTooltip placement="bottom" target="ConnectionStatus">
           {ui.tooltip}
@@ -271,26 +278,35 @@ export class StatusWidget extends PureComponent<Props, State> {
 
   /** "Running... [Stop]" */
   private renderReportIsRunning(): ReactNode {
-    const stopRequested = this.props.reportRunState === ReportRunState.STOP_REQUESTED
+    const stopRequested =
+      this.props.reportRunState === ReportRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
-      stopRequested ? 'Stopping...' : 'Stop',
+      stopRequested ? "Stopping..." : "Stop",
       stopRequested,
-      this.handleStopReportClick)
+      this.handleStopReportClick
+    )
 
     return (
       <div
         id="ReportStatus"
-        className={this.state.statusMinimized ? 'report-is-running-minimized' : ''}>
-        <img className="ReportRunningIcon" src={iconRunning} alt="Running..."/>
+        className={
+          this.state.statusMinimized ? "report-is-running-minimized" : ""
+        }
+      >
+        <img
+          className="ReportRunningIcon"
+          src={iconRunning}
+          alt="Running..."
+        />
         <label>Running...</label>
         {stopButton}
-        {
-          this.state.statusMinimized ?
-            <UncontrolledTooltip placement="bottom" target="ReportStatus">
-              This script is currently running
-            </UncontrolledTooltip> :
-            ''
-        }
+        {this.state.statusMinimized ? (
+          <UncontrolledTooltip placement="bottom" target="ReportStatus">
+            This script is currently running
+          </UncontrolledTooltip>
+        ) : (
+          ""
+        )}
       </div>
     )
   }
@@ -300,7 +316,8 @@ export class StatusWidget extends PureComponent<Props, State> {
    * (This is only shown when the RERUN_PROMPT_MODAL_DIALOG feature flag is false)
    */
   private renderRerunReportPrompt(): ReactNode {
-    const rerunRequested = this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+    const rerunRequested =
+      this.props.reportRunState === ReportRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
 
     // Not sure exactly why attach and focused are necessary on the
@@ -309,17 +326,17 @@ export class StatusWidget extends PureComponent<Props, State> {
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <div
           onMouseEnter={this.onReportPromptHover}
-          onMouseLeave={this.onReportPromptUnhover}>
+          onMouseLeave={this.onReportPromptUnhover}
+        >
           <div
             id="ReportStatus"
-            className={minimized ? 'rerun-prompt-minimized' : ''}>
+            className={minimized ? "rerun-prompt-minimized" : ""}
+          >
             <svg className="icon" viewBox="0 0 8 8">
-              <use href={openIconic + '#info'}/>
+              <use href={openIconic + "#info"} />
             </svg>
 
-            <label className="prompt">
-              Source file changed.
-            </label>
+            <label className="prompt">Source file changed.</label>
 
             {StatusWidget.promptButton(
               <div className="underlineFirstLetter">Rerun</div>,
@@ -339,11 +356,11 @@ export class StatusWidget extends PureComponent<Props, State> {
   }
 
   private onReportPromptHover = (): void => {
-    this.setState({promptHovered: true})
+    this.setState({ promptHovered: true })
   }
 
   private onReportPromptUnhover = (): void => {
-    this.setState({promptHovered: false, promptMinimized: false})
+    this.setState({ promptHovered: false, promptMinimized: false })
     this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
   }
 
@@ -359,23 +376,35 @@ export class StatusWidget extends PureComponent<Props, State> {
     this.props.rerunReport(true)
   }
 
-  private static promptButton(title: ReactNode, disabled: boolean, onClick: () => void): ReactNode {
+  private static promptButton(
+    title: ReactNode,
+    disabled: boolean,
+    onClick: () => void
+  ): ReactNode {
     return (
-      <Button outline size="sm" color="info" disabled={disabled} onClick={onClick}>
+      <Button
+        outline
+        size="sm"
+        color="info"
+        disabled={disabled}
+        onClick={onClick}
+      >
         <div>{title}</div>
       </Button>
     )
   }
 
-  private static getConnectionStateUI(state: ConnectionState): ConnectionStateUI | undefined {
+  private static getConnectionStateUI(
+    state: ConnectionState
+  ): ConnectionStateUI | undefined {
     switch (state) {
       case ConnectionState.INITIAL:
       case ConnectionState.PINGING_SERVER:
       case ConnectionState.CONNECTING:
         return {
-          icon: <use href={openIconic + '#ellipses'}/>,
-          label: 'Connecting',
-          tooltip: 'Connecting to Streamlit server',
+          icon: <use href={openIconic + "#ellipses"} />,
+          label: "Connecting",
+          tooltip: "Connecting to Streamlit server",
         }
 
       case ConnectionState.CONNECTED:
@@ -385,9 +414,9 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
-          icon: <use href={openIconic + '#warning'}/>,
-          label: 'Error',
-          tooltip: 'Unable to connect to Streamlit server',
+          icon: <use href={openIconic + "#warning"} />,
+          label: "Error",
+          tooltip: "Unable to connect to Streamlit server",
         }
     }
   }
