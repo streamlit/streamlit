@@ -36,16 +36,17 @@ LOGGER = get_logger(__name__)
 
 def generate_spec_from_data(graph_type, data):
     encoding_x = {'field': 'index', 'type': 'ordinal'}
-    data_for_vega = data.reset_index()
-    melted = pd.melt(data_for_vega, id_vars=['index'])
 
-    index_value = melted.at[0, 'index']
+    if isinstance(data, pd.DataFrame):
+        data = pd.melt(data.reset_index(), id_vars=['index'])
 
-    if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-        encoding_x = {'field': 'index', 'type': 'temporal'}
+        index_value = data.at[0, 'index']
+
+        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
+            encoding_x = {'field': 'index', 'type': 'temporal'}
 
     spec = {
-        'data': melted,
+        'data': data,
         'mark': graph_type,
         'encoding': {
             'x': encoding_x,
