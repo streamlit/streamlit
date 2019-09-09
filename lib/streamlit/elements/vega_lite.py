@@ -34,7 +34,7 @@ LOGGER = get_logger(__name__)
 
 
 def generate_spec_from_data(graph_type, data):
-    encoding_x = {'field': 'index', 'type': 'ordinal'}
+    encoding_x = {'field': 'index', 'type': 'ordinal', 'axis': {'title': ''}}
 
     if isinstance(data, pd.DataFrame):
         data = pd.melt(data.reset_index(), id_vars=['index'])
@@ -42,15 +42,18 @@ def generate_spec_from_data(graph_type, data):
         index_value = data.at[0, 'index']
 
         if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-            encoding_x = {'field': 'index', 'type': 'temporal'}
+            encoding_x = {'field': 'index', 'type': 'temporal',
+                          'axis': {'title': ''}}
 
     spec = {
         'data': data,
         'mark': graph_type,
         'encoding': {
             'x': encoding_x,
-            'y': {'field': 'value', 'type': 'quantitative'},
-            "color": {"field": "variable", "type": "nominal"}
+            'y': {'field': 'value', 'type': 'quantitative',
+                  'axis': {'title': ''}},
+            'color': {'field': 'variable', 'type': 'nominal',
+                      'legend': {'title': None}}
         }
     }
 

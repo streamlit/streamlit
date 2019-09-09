@@ -789,13 +789,15 @@ class DeltaGenerator(object):
         index_value = melted.at[0, 'index']
 
         if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-            encoding_x = {'field': 'index', 'type': 'temporal'}
+            encoding_x = {'field': 'index', 'type': 'temporal',
+                          'axis': {'title': ''}}
 
         spec = {
             'mark': 'bar',
             'encoding': {
                 'x': encoding_x,
-                'y': {'field': 'value', 'type': 'quantitative'}
+                'y': {'field': 'value', 'type': 'quantitative',
+                      'axis': {'title': ''}}
             }
         }
 
