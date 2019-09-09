@@ -156,6 +156,7 @@ json            = _with_dg(_DeltaGenerator.json)  # noqa: E221
 line_chart      = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
 map             = _with_dg(_DeltaGenerator.map)  # noqa: E221
 markdown        = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
+multiselectbox  = _with_dg(_DeltaGenerator.multiselectbox)  # noqa: E221
 plotly_chart    = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress        = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot          = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
