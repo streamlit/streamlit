@@ -146,7 +146,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         'This is an escape hatch for advanced users who really know what they\'re doing.\n\n'
 
         'Learn more about caching and copying in the [Streamlit documentation]'
-        '(https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html).'
+        '(https://streamlit.io/secret/docs/tutorial/create_an_interactive_report.html).'
     )
 
     return message.format(
@@ -208,7 +208,7 @@ def _build_args_mutated_message(func):
         'the function body, as that breaks the caching mechanism. Please update the code of '
         '`{name}` to bypass the mutation.\n\n'
 
-        'See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html) for more info.'
+        'See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/create_an_interactive_report.html) for more info.'
     )
 
     return message.format(

@@ -26,9 +26,9 @@
 
 # Welcome to Streamlit
 
-Streamlit is a free developer tool for machine learning engineers, designed to make the coding and introspection of models more joyful and efficient. With just a text editor and a browser you can rapidly load data, visualize, explore, interact, debug, and demo -- all in pure Python with no hidden state or callbacks.
+Streamlit is an open-source Python library that makes it ridiculously easy to turn your Python script into an interactive app. With just a text editor, a browser and a few lines of pure Python, you can build an interactive frontend for your model or datastore -- converting it into a tool, dashboard, demo, or report in minutes.
 
-Getting started is easy. Install Streamlit, import it, write some code, and run your script. Our tools watch for changes on each save, and will rerun the report instantly – with your permission. Did we mention, we love sharing? Whether you've written a full report that you want to share with your team or need a second set of eyes to inspect your work, Streamlit lets you easily share it with a unique URL.
+Getting started is easy. Install Streamlit, import it, write some code, and run your script.  Streamlit watches for changes on each save and updates automatically, visualizing your output while you’re coding. Your code runs from top to bottom, always from a clean state, just like running an ordinary script. There is no hidden state and no need for callbacks. You can view your code as a pure data flow model where you [cache anything that is expensive](api.md#optimize-performance). It’s a very simple and powerful app model that lets you build rich UIs incredibly quickly. Read more in [Streamlit’s Core Mechanics](core_mechanics.md).
 
 ## Install Streamlit
 
@@ -63,13 +63,14 @@ Follow these steps and you'll have a sample report running in less than 5 minute
    ```
 4. That's it! In the next few seconds the sample report will open in a new tab in your default browser.
 
-## Build your first report
+## Get started
 
-The next step is to build your first Streamlit report from scratch with our [get started guide](getting_started.md). When you're finished, you'll know how to structure a Streamlit report, visualize data, and add headings and text to organize your observations and conclusions.
+The easiest way to learn how to use Streamlit is to try it out. Use our [get started guide](getting_started.md) to kick the tires, and learn the basics of building a report.
 
-## Learn common patterns
+## Build your first interactive report
 
-Now that you've put together a simple report with our Getting Started guide, learn about [Streamlit's core mechanics](core_mechanics.md). Here you'll learn more about different ways to add elements to a report, how to create animations, and techniques to speed up calculations.
+If you've got the basics covered, the next step is to [create an interactive report](tutorial/create_an_interactive_report.md) from scratch. When you're finished, you'll know how to fetch
+and cache data, draw charts, plot information on a map, and use interactive widgets, like sliders and checkboxes, to filter results.
 
 ## Some helpful links
 
