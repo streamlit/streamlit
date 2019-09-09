@@ -31,7 +31,8 @@ LOGGER = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container
-MAXIMUM_CONTENT_WIDTH = 610
+# (730 is the max width of element-container in the frontend)
+MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
 def _PIL_to_bytes(image, format='JPEG', quality=100):
