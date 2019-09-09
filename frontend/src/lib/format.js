@@ -19,9 +19,9 @@
  * Text formatting utilities
  */
 
-import moment from 'moment'
-import momentDurationFormat from 'moment-duration-format'
-import numeral from 'numeral'
+import moment from "moment"
+import momentDurationFormat from "moment-duration-format"
+import numeral from "numeral"
 momentDurationFormat(moment)
 
 class Duration {
@@ -45,9 +45,9 @@ class Format {
 
   dateToString(date) {
     const m = moment(date)
-    let format = 'lll'
+    let format = "lll"
     if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
-      format = 'll'
+      format = "ll"
     }
     return m.format(format)
   }
@@ -64,7 +64,7 @@ const format = new Format()
  */
 function toFormattedString(x) {
   if (isFloat(x)) {
-    return numeral(x).format('0,0.0000')
+    return numeral(x).format("0,0.0000")
   } else if (x instanceof Date) {
     return format.dateToString(x)
   } else if (x instanceof Duration) {

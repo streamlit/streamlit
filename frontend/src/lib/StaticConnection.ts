@@ -15,32 +15,32 @@
  * limitations under the License.
  */
 
-import url from 'url'
-import { ConnectionState } from 'lib/ConnectionState'
-import { ForwardMsg, Text as TextProto } from 'autogen/proto'
-import { getObject } from 'lib/s3helper'
-import { logError } from 'lib/log'
+import url from "url"
+import { ConnectionState } from "lib/ConnectionState"
+import { ForwardMsg, Text as TextProto } from "autogen/proto"
+import { getObject } from "lib/s3helper"
+import { logError } from "lib/log"
 
 interface Manifest {
-  name: string;
-  numMessages: number;
-  firstDeltaIndex: number;
-  numDeltas: number;
+  name: string
+  numMessages: number
+  firstDeltaIndex: number
+  numDeltas: number
 }
 
 interface Props {
-  reportId: string;
+  reportId: string
 
   /** Manifest JSON from the server. */
-  manifest: Manifest;
+  manifest: Manifest
 
   /** Function called when we receive a new message. */
-  onMessage: (message: ForwardMsg) => void;
+  onMessage: (message: ForwardMsg) => void
 
   /**
    * Function called when our ConnectionState changes.
    */
-  onConnectionStateChange: (connectionState: ConnectionState) => void;
+  onConnectionStateChange: (connectionState: ConnectionState) => void
 }
 
 /**
@@ -60,17 +60,20 @@ export class StaticConnection {
     const { bucket, version } = getBucketAndVersion()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
-      const isDeltaMsg = msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
+      const isDeltaMsg =
+        msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
       const deltaID = isDeltaMsg ? msgIdx - firstDeltaIndex : -1
 
       // If this is a delta message, insert a loading message
       // for its associated element
       if (isDeltaMsg) {
-        props.onMessage(textElement({
-          id: deltaID,
-          body: `Loading element ${deltaID}...`,
-          format: TextProto.Format.INFO,
-        }))
+        props.onMessage(
+          textElement({
+            id: deltaID,
+            body: `Loading element ${deltaID}...`,
+            format: TextProto.Format.INFO,
+          })
+        )
       }
 
       const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
@@ -81,11 +84,13 @@ export class StaticConnection {
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {
         if (isDeltaMsg) {
-          props.onMessage(textElement({
-            id: deltaID,
-            body: `Error loading element ${deltaID}: ${error}`,
-            format: TextProto.Format.ERROR,
-          }))
+          props.onMessage(
+            textElement({
+              id: deltaID,
+              body: `Error loading element ${deltaID}: ${error}`,
+              format: TextProto.Format.ERROR,
+            })
+          )
         } else {
           logError(`Error loading non-delta message ${msgIdx}: ${error}`)
         }
@@ -101,7 +106,7 @@ function getBucketAndVersion(): { bucket?: string; version: string } {
   // TODO: Unify with ConnectionManager.ts
   const { hostname, pathname } = url.parse(window.location.href, true)
   const bucket = hostname
-  const version = pathname != null ? pathname.split('/')[1] : 'null'
+  const version = pathname != null ? pathname.split("/")[1] : "null"
   return { bucket, version }
 }
 
@@ -109,14 +114,22 @@ function getBucketAndVersion(): { bucket?: string; version: string } {
  * Returns the json to construct a message which places an element at a
  * particular location in the document.
  */
-function textElement({ id, body, format }: { id: number; body: string; format: TextProto.Format }): any {
+function textElement({
+  id,
+  body,
+  format,
+}: {
+  id: number
+  body: string
+  format: TextProto.Format
+}): any {
   return {
-    type: 'delta',
+    type: "delta",
     delta: {
       id,
-      type: 'newElement',
+      type: "newElement",
       newElement: {
-        type: 'text',
+        type: "text",
         text: { body, format },
       },
     },

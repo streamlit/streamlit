@@ -24,10 +24,10 @@
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 
-import path from 'path'
+import path from "path"
 
 // https://github.com/palmerhq/cypress-image-snapshot#installation
-import {addMatchImageSnapshotCommand} from 'cypress-image-snapshot/command'
+import { addMatchImageSnapshotCommand } from "cypress-image-snapshot/command"
 
 /**
  * Returns an OS and device-pixel-ratio specific snapshot folder, e.g. <rootDir>/cypress/snapshots/darwin/2x
@@ -35,8 +35,13 @@ import {addMatchImageSnapshotCommand} from 'cypress-image-snapshot/command'
  * We use per-DPR snapshots to account for rendering differences in image dimensions.
  */
 function getSnapshotFolder() {
-  const devicePixelRatio = Cypress.env('devicePixelRatio') || 2
-  return path.join('cypress', 'snapshots', Cypress.platform, devicePixelRatio + 'x')
+  const devicePixelRatio = Cypress.env("devicePixelRatio") || 2
+  return path.join(
+    "cypress",
+    "snapshots",
+    Cypress.platform,
+    devicePixelRatio + "x"
+  )
 }
 
 addMatchImageSnapshotCommand({
@@ -48,7 +53,10 @@ addMatchImageSnapshotCommand({
 // Calling trigger before capturing the snapshot forces Cypress to very Actionability.
 // https://docs.cypress.io/guides/core-concepts/interacting-with-elements.html#Actionability
 // This fixes the issue where snapshots are cutoff or the wrong element is captured.
-Cypress.Commands.overwrite('matchImageSnapshot', (originalFn, subject, name, options) => {
-  cy.wrap(subject).trigger('blur')
-  return originalFn(subject, name, options)
-})
+Cypress.Commands.overwrite(
+  "matchImageSnapshot",
+  (originalFn, subject, name, options) => {
+    cy.wrap(subject).trigger("blur")
+    return originalFn(subject, name, options)
+  }
+)

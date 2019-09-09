@@ -28,7 +28,8 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import HASHING_FRACTION, PANDAS_ROWS_LARGE, get_hash
+from streamlit.hashing import (NP_SAMPLE_SIZE, NP_SIZE_LARGE,
+                               PANDAS_ROWS_LARGE, PANDAS_SAMPLE_SIZE, get_hash)
 
 
 class HashTest(unittest.TestCase):
@@ -90,7 +91,24 @@ class HashTest(unittest.TestCase):
 
         def sample():
             return pd.util.hash_pandas_object(
-                df.sample(frac=HASHING_FRACTION, random_state=0)).sum()
+                df.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)).sum()
+
+        t_full = timeit.Timer(full).timeit(number=10)
+        t_sample = timeit.Timer(sample).timeit(number=10)
+
+        self.assertGreater(t_full, t_sample)
+
+    def test_numpy_sample(self):
+        """Test the performance of hashing a large matrices."""
+
+        arr_large = np.random.randn(NP_SIZE_LARGE-1)
+        arr_too_large = np.random.randn(NP_SIZE_LARGE)
+        
+        def full():
+            return get_hash(arr_large)
+
+        def sample():
+            return get_hash(arr_too_large)
 
         t_full = timeit.Timer(full).timeit(number=10)
         t_sample = timeit.Timer(sample).timeit(number=10)
@@ -104,6 +122,11 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(np1), get_hash(np3))
         self.assertNotEqual(get_hash(np1), get_hash(np2))
+
+        np4 = np.zeros(NP_SIZE_LARGE)
+        np5 = np.zeros(NP_SIZE_LARGE)
+
+        self.assertEqual(get_hash(np4), get_hash(np5))
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)

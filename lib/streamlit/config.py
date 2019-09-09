@@ -566,9 +566,8 @@ def show_config():
 
     out = []
     out.append(_clean('''
-        Below are all the sections and options you can have in
-        ~/.streamlit/config.toml. The values shown below are the current values
-        that are set for your system.
+        # Below are all the sections and options you can have in
+        ~/.streamlit/config.toml.
     '''))
 
     def append_desc(text):

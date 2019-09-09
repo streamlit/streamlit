@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from './BokehChart'
+export { default } from "./BokehChart"

@@ -17,11 +17,11 @@
 
 /// <reference types="cypress" />
 
-describe('st.sidebar', () => {
+describe("st.sidebar", () => {
   before(() => {
-    cy.visit('http://localhost:3000/')
+    cy.visit("http://localhost:3000/")
   })
 
-  it('is missing a test', () => {
+  it("is missing a test", () => {
   })
 })

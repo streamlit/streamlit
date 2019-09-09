@@ -164,7 +164,6 @@ publish-docs: docs
 			--distribution-id=E5G9JPT7IOJDV \
 			--paths \
 				'/secret/docs/*' \
-				'/secret/docs/api/*' \
 				'/secret/docs/tutorial/*' \
 			--profile streamlit
 
@@ -220,6 +219,7 @@ scssvars: react-init
 # Lint the JS code.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -227,7 +227,6 @@ jslint:
 			--ext .ts \
 			--ext .tsx \
 			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
@@ -236,7 +235,11 @@ jslint:
 # Run JS unit tests.
 jstest:
 	cd frontend; yarn run test
-	cd frontend; yarn run coverage
+
+.PHONY: jscoverage
+# Run JS unit tests and generate a coverage report
+jscoverage:
+	cd frontend; yarn run test --coverage --watchAll=false
 
 .PHONY: e2etest
 # Run E2E tests.
@@ -255,6 +258,45 @@ loc:
 distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)
+
+.PHONY: prepare-conda-repo
+prepare-conda-repo:
+	mkdir -p /var/tmp/streamlit-conda
+	aws s3 sync \
+			s3://repo.streamlit.io/streamlit-forge/ \
+			/var/tmp/streamlit-conda/streamlit-forge/ \
+			--profile streamlit
+
+.PHONY: conda-packages
+conda-packages:
+	cd scripts; \
+		./create_conda_packages.sh
+
+.PHONY: serve-conda-packages
+serve-conda-packages:
+	cd /var/tmp/streamlit-conda; \
+		python -m SimpleHTTPServer 8000 || python -m http.server 8000
+
+.PHONY: conda-dev-env
+conda-dev-env:
+	conda env create -f scripts/conda/test_conda_env.yml
+
+.PHONY: clean-conda-dev-env
+clean-conda-dev-env:
+	conda env remove -n streamlit-dev
+
+.PHONY: distribute-conda-packages
+distribute-conda-packages:
+	aws s3 sync \
+		/var/tmp/streamlit-conda/streamlit-forge/ \
+		s3://repo.streamlit.io/streamlit-forge/ \
+		--acl public-read \
+		--profile streamlit
+
+	aws cloudfront create-invalidation \
+		--distribution-id=E3V3HGGB52ZUA0 \
+		--paths '/*' \
+		--profile streamlit
 
 .PHONY: notices
 # Rebuild the NOTICES file.

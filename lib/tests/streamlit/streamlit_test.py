@@ -183,46 +183,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.data_frame.columns.plain_index.data.strings.data,
                          ['one', 'two'])
 
-    def test_st_deck_gl_chart(self):
-        """Test st.deck_gl_chart."""
-        df = pd.DataFrame({
-            'lat': [1, 2, 3, 4],
-            'lon': [11, 22, 33, 44],
-        })
-        dg = st.deck_gl_chart(df)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.deck_gl_chart.HasField('data'), False)
-        self.assertEqual(json.loads(el.deck_gl_chart.spec), {})
-
-        data = el.deck_gl_chart.layers[0].data
-        self.assertEqual(
-            json.loads(json_format.MessageToJson(data.data.cols[0].int64s)),
-            {
-                'data': ['1', '2', '3', '4']
-            }
-        )
-        self.assertEqual(
-            json.loads(json_format.MessageToJson(data.data.cols[1].int64s)),
-            {
-                'data': ['11', '22', '33', '44']
-            }
-        )
-
-        self.assertEqual(
-            json.loads(json_format.MessageToJson(
-                data.columns.plain_index.data.strings)),
-            {
-                'data': ['lat', 'lon']
-            }
-        )
-
-        # Default layer
-        self.assertEqual(
-            json.loads(el.deck_gl_chart.layers[0].spec),
-            {'type': 'ScatterplotLayer'}
-        )
-
     def test_st_empty(self):
         """Test st.empty."""
         dg = st.empty()

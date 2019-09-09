@@ -15,31 +15,27 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from 'react'
-import Resolver from 'lib/Resolver'
-import { SessionInfo } from 'lib/SessionInfo'
-import { ConnectionState } from 'lib/ConnectionState'
-import { ForwardMsg, BackMsg, IBackMsg } from 'autogen/proto'
-import { logMessage, logWarning, logError } from 'lib/log'
-
+import React, { Fragment } from "react"
+import Resolver from "lib/Resolver"
+import { SessionInfo } from "lib/SessionInfo"
+import { ConnectionState } from "lib/ConnectionState"
+import { ForwardMsg, BackMsg, IBackMsg } from "autogen/proto"
+import { logMessage, logWarning, logError } from "lib/log"
 
 /**
  * Name of the logger.
  */
-const LOG = 'WebsocketConnection'
-
+const LOG = "WebsocketConnection"
 
 /**
  * The path where we should ping (via HTTP) to see if the server is up.
  */
-const SERVER_PING_PATH = 'healthz'
-
+const SERVER_PING_PATH = "healthz"
 
 /**
  * Wait this long between pings, in millis.
  */
 const PING_RETRY_PERIOD_MS = 500
-
 
 /**
  * Timeout when attempting to connect to a websocket, in millis.
@@ -47,17 +43,21 @@ const PING_RETRY_PERIOD_MS = 500
  */
 const WEBSOCKET_TIMEOUT_MS = 1000
 
+/**
+ * If the ping retrieves a 403 status code a message will be displayed.
+ * This constant is the link to the documentation.
+ */
+const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
+  "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 interface BaseUriParts {
-  host: string;
-  port: number;
+  host: string
+  port: number
 }
-
 
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (connectionState: ConnectionState) => void
 type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
-
 
 interface Args {
   /**
@@ -65,29 +65,28 @@ interface Args {
    * all fail, we'll retry from the top. The number of retries depends on
    * whether this is a local connection.
    */
-  baseUriPartsList: BaseUriParts[];
+  baseUriPartsList: BaseUriParts[]
 
   /**
    * Function called when our ConnectionState changes.
    * If the new ConnectionState is ERROR, errMsg will be defined.
    */
-  onConnectionStateChange: OnConnectionStateChange;
+  onConnectionStateChange: OnConnectionStateChange
 
   /**
    * Function called every time we ping the server for sign of life.
    */
-  onRetry: OnRetry;
+  onRetry: OnRetry
 
   /**
    * Function called when we receive a new message.
    */
-  onMessage: OnMessage;
+  onMessage: OnMessage
 }
 
 interface MessageQueue {
-  [index: number]: any;
+  [index: number]: any
 }
-
 
 /**
  * Events of the WebsocketConnection state machine. Here's what the FSM looks
@@ -105,55 +104,52 @@ interface MessageQueue {
  *   PINGING_SERVER <────────────────┘
  */
 type Event =
-  'INITIALIZED'
-  | 'CONNECTION_CLOSED'
-  | 'CONNECTION_ERROR'
-  | 'CONNECTION_WTF'
-  | 'CONNECTION_SUCCEEDED'
-  | 'CONNECTION_TIMED_OUT'
-  | 'SERVER_PING_SUCCEEDED'
-  | 'WAIT_TIMER_FIRED'
-  | 'WAIT_TIMER_STARTED'
-
+  | "INITIALIZED"
+  | "CONNECTION_CLOSED"
+  | "CONNECTION_ERROR"
+  | "CONNECTION_WTF"
+  | "CONNECTION_SUCCEEDED"
+  | "CONNECTION_TIMED_OUT"
+  | "SERVER_PING_SUCCEEDED"
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
  * server and gets deltas over a websocket connection.
  */
 export class WebsocketConnection {
-  private readonly args: Args;
+  private readonly args: Args
 
   /**
    * Index to the URI in uriList that we're going to try to connect to.
    */
-  private uriIndex: number = 0;
+  private uriIndex = 0
 
   /**
    * To guarantee packet transmission order, this is the index of the last
    * dispatched incoming message.
    */
-  private lastDispatchedMessageIndex = -1;
+  private lastDispatchedMessageIndex = -1
 
   /**
    * And this is the index of the next message we recieve.
    */
-  private nextMessageIndex = 0;
+  private nextMessageIndex = 0
 
   /**
    * This dictionary stores recieved messages that we haven't sent out yet
    * (because we're still decoding previous messages)
    */
-  private messageQueue: MessageQueue = {};
+  private messageQueue: MessageQueue = {}
 
   /**
    * The current state of this object's state machine.
    */
-  private state = ConnectionState.INITIAL;
+  private state = ConnectionState.INITIAL
 
   /**
    * The WebSocket object we're connecting with.
    */
-  private websocket?: (WebSocket | null);
+  private websocket?: WebSocket | null
 
   /**
    * WebSocket objects don't support retries, so we have to implement them
@@ -161,11 +157,11 @@ export class WebsocketConnection {
    * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
    * needed.
    */
-  private wsConnectionTimeoutId?: (number | null);
+  private wsConnectionTimeoutId?: number | null
 
   public constructor(args: Args) {
     this.args = args
-    this.stepFsm('INITIALIZED')
+    this.stepFsm("INITIALIZED")
   }
 
   // This should only be called inside stepFsm().
@@ -199,35 +195,35 @@ export class WebsocketConnection {
 
     switch (this.state) {
       case ConnectionState.INITIAL:
-        if (event === 'INITIALIZED') {
+        if (event === "INITIALIZED") {
           this.setFsmState(ConnectionState.CONNECTING)
           return
         }
         break
 
       case ConnectionState.CONNECTING:
-        if (event === 'CONNECTION_SUCCEEDED') {
+        if (event === "CONNECTION_SUCCEEDED") {
           this.setFsmState(ConnectionState.CONNECTED)
           return
-
-        } else if (event === 'CONNECTION_TIMED_OUT' ||
-                   event === 'CONNECTION_ERROR' ||
-                   event === 'CONNECTION_CLOSED') {
+        } else if (
+          event === "CONNECTION_TIMED_OUT" ||
+          event === "CONNECTION_ERROR" ||
+          event === "CONNECTION_CLOSED"
+        ) {
           this.setFsmState(ConnectionState.PINGING_SERVER)
           return
         }
         break
 
       case ConnectionState.CONNECTED:
-        if (event === 'CONNECTION_CLOSED' ||
-            event === 'CONNECTION_ERROR') {
+        if (event === "CONNECTION_CLOSED" || event === "CONNECTION_ERROR") {
           this.setFsmState(ConnectionState.PINGING_SERVER)
           return
         }
         break
 
       case ConnectionState.PINGING_SERVER:
-        if (event === 'SERVER_PING_SUCCEEDED') {
+        if (event === "SERVER_PING_SUCCEEDED") {
           this.setFsmState(ConnectionState.CONNECTING)
           return
         }
@@ -238,19 +234,24 @@ export class WebsocketConnection {
     }
 
     throw new Error(
-      'Unsupported state transition.\n' +
-      `State: ${this.state}\n` +
-      `Event: ${event}`)
+      "Unsupported state transition.\n" +
+        `State: ${this.state}\n` +
+        `Event: ${event}`
+    )
   }
 
   private async pingServer(): Promise<void> {
-    const uris = this.args.baseUriPartsList.map(
-      (_, i) => buildHttpUri(this.args.baseUriPartsList[i], SERVER_PING_PATH))
+    const uris = this.args.baseUriPartsList.map((_, i) =>
+      buildHttpUri(this.args.baseUriPartsList[i], SERVER_PING_PATH)
+    )
 
-    this.uriIndex =
-      await doHealthPing(uris, PING_RETRY_PERIOD_MS, this.args.onRetry)
+    this.uriIndex = await doHealthPing(
+      uris,
+      PING_RETRY_PERIOD_MS,
+      this.args.onRetry
+    )
 
-    this.stepFsm('SERVER_PING_SUCCEEDED')
+    this.stepFsm("SERVER_PING_SUCCEEDED")
   }
 
   private connectToWebSocket(): void {
@@ -259,10 +260,10 @@ export class WebsocketConnection {
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
       // nodes that lead to this one.
-      throw new Error('Websocket already exists')
+      throw new Error("Websocket already exists")
     }
 
-    logMessage(LOG, 'creating WebSocket')
+    logMessage(LOG, "creating WebSocket")
     this.websocket = new WebSocket(uri)
 
     this.setConnectionTimeout(uri)
@@ -281,24 +282,24 @@ export class WebsocketConnection {
 
     this.websocket.onopen = () => {
       if (checkWebsocket()) {
-        logMessage(LOG, 'WebSocket onopen')
-        this.stepFsm('CONNECTION_SUCCEEDED')
+        logMessage(LOG, "WebSocket onopen")
+        this.stepFsm("CONNECTION_SUCCEEDED")
       }
     }
 
     this.websocket.onclose = () => {
       if (checkWebsocket()) {
-        logMessage(LOG, 'WebSocket onclose')
+        logMessage(LOG, "WebSocket onclose")
         this.cancelConnectionAttempt()
-        this.stepFsm('CONNECTION_CLOSED')
+        this.stepFsm("CONNECTION_CLOSED")
       }
     }
 
     this.websocket.onerror = () => {
       if (checkWebsocket()) {
-        logMessage(LOG, 'WebSocket onerror')
+        logMessage(LOG, "WebSocket onerror")
         this.cancelConnectionAttempt()
-        this.stepFsm('CONNECTION_ERROR')
+        this.stepFsm("CONNECTION_ERROR")
       }
     }
   }
@@ -307,7 +308,7 @@ export class WebsocketConnection {
     if (this.wsConnectionTimeoutId != null) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
-      throw new Error('WS timeout is already set')
+      throw new Error("WS timeout is already set")
     }
 
     const localWebsocket = this.websocket
@@ -319,7 +320,7 @@ export class WebsocketConnection {
 
       if (this.wsConnectionTimeoutId == null) {
         // Sometimes the clearTimeout doesn't work. No idea why :-/
-        logWarning(LOG, 'Timeout fired after cancellation')
+        logWarning(LOG, "Timeout fired after cancellation")
         return
       }
 
@@ -328,14 +329,14 @@ export class WebsocketConnection {
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
         this.cancelConnectionAttempt()
-        this.stepFsm('CONNECTION_WTF')
+        this.stepFsm("CONNECTION_WTF")
         return
       }
 
       if (this.websocket.readyState === 0 /* CONNECTING */) {
         logMessage(LOG, `${uri} timed out`)
         this.cancelConnectionAttempt()
-        this.stepFsm('CONNECTION_TIMED_OUT')
+        this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
     logMessage(LOG, `Set WS timeout ${this.wsConnectionTimeoutId}`)
@@ -383,19 +384,19 @@ export class WebsocketConnection {
     reader.readAsArrayBuffer(data)
     reader.onloadend = () => {
       if (this.messageQueue == null) {
-        logError(LOG, 'No message queue.')
+        logError(LOG, "No message queue.")
         return
       }
 
       const result = reader.result
-      if (result == null || typeof result === 'string') {
+      if (result == null || typeof result === "string") {
         logError(LOG, `Unexpected result from FileReader: ${result}.`)
         return
       }
 
       const resultArray = new Uint8Array(result)
       this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray)
-      while ((this.lastDispatchedMessageIndex + 1) in this.messageQueue) {
+      while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
         const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
         this.args.onMessage(this.messageQueue[dispatchMessageIndex])
         delete this.messageQueue[dispatchMessageIndex]
@@ -405,17 +406,14 @@ export class WebsocketConnection {
   }
 }
 
-
-function buildWsUri({host, port}: BaseUriParts): string {
-  const protocol = window.location.href.startsWith('https://') ? 'wss' : 'ws'
+function buildWsUri({ host, port }: BaseUriParts): string {
+  const protocol = window.location.href.startsWith("https://") ? "wss" : "ws"
   return `${protocol}://${host}:${port}/stream`
 }
 
-
-function buildHttpUri({host, port}: BaseUriParts, path: string): string {
+function buildHttpUri({ host, port }: BaseUriParts, path: string): string {
   return `//${host}:${port}/${path}`
 }
-
 
 /**
  * Attempts to connect to the URIs in uriList (in round-robin fashion) and
@@ -423,9 +421,10 @@ function buildHttpUri({host, port}: BaseUriParts, path: string): string {
  * Returns a promise with the index of the URI that worked.
  */
 function doHealthPing(
-  uriList: string[], timeoutMs: number, retryCallback: OnRetry,
+  uriList: string[],
+  timeoutMs: number,
+  retryCallback: OnRetry
 ): Promise<number> {
-
   const resolver = new Resolver<number>()
   let totalTries = 0
   let uriNumber = 0
@@ -464,60 +463,58 @@ function doHealthPing(
   xhr.timeout = timeoutMs
 
   xhr.onload = () => {
-    if (xhr.readyState === /* DONE */ 4 && xhr.responseText === 'ok') {
+    if (xhr.responseText === "ok") {
       resolver.resolve(uriNumber)
-    } else {
-      retry('Connected, but response is not "ok" or has bad status.')
-    }
-  }
+    } else if (xhr.status === /* NO RESPONSE */ 0) {
+      const uri = uriList[uriNumber]
+      if (uri.startsWith("//localhost:")) {
+        const scriptname =
+          SessionInfo.isSet() && SessionInfo.current.commandLine.length
+            ? SessionInfo.current.commandLine[0]
+            : "yourscript.py"
 
-  xhr.onreadystatechange = () => {
-    if (xhr.readyState === /* DONE */ 4) {
-      if (xhr.responseText === 'ok') {
-        resolver.resolve(uriNumber)
-
-      } else if (xhr.status === /* NO RESPONSE */ 0) {
-        const uri = uriList[uriNumber]
-        if (uri.startsWith('//localhost:')) {
-
-          const scriptname =
-            SessionInfo.isSet() && SessionInfo.current.commandLine.length ?
-              SessionInfo.current.commandLine[0] : 'yourscript.py'
-
-          retry(
-            <Fragment>
-              <p>
-                Is Streamlit still running? If you accidentally stopped
-                Streamlit, just restart it in your terminal:
-              </p>
-              <pre>
-                <code>
-                  $ streamlit run {scriptname}
-                </code>
-              </pre>
-            </Fragment>
-          )
-        } else {
-          retry('Connection failed with status 0.')
-        }
-
-      } else {
         retry(
-          `Connection failed with status ${xhr.status}, ` +
-          `and response "${xhr.responseText}".`)
+          <Fragment>
+            <p>
+              Is Streamlit still running? If you accidentally stopped
+              Streamlit, just restart it in your terminal:
+            </p>
+            <pre>
+              <code>$ streamlit run {scriptname}</code>
+            </pre>
+          </Fragment>
+        )
+      } else {
+        retry("Connection failed with status 0.")
       }
+    } else if (xhr.status === 403) {
+      retry(
+        <Fragment>
+          <p>Cannot connect to Streamlit (HTTP status: 403).</p>
+          <p>
+            If you are trying to access a Streamlit app running on another
+            server, this could be due to the app's{" "}
+            <a href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
+          </p>
+        </Fragment>
+      )
+    } else {
+      retry(
+        `Connection failed with status ${xhr.status}, ` +
+          `and response "${xhr.responseText}".`
+      )
     }
   }
 
-  xhr.ontimeout = (e) => {
-    retry('Connection timed out.')
+  xhr.ontimeout = e => {
+    retry("Connection timed out.")
   }
 
   connect = () => {
     const uri = uriList[uriNumber]
     logMessage(LOG, `Attempting to connect to ${uri}.`)
     tryTimestamp = Date.now()
-    xhr.open('GET', uri, true)
+    xhr.open("GET", uri, true)
 
     if (uriNumber === 0) {
       totalTries++

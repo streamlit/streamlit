@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import ReactDOM from 'react-dom'
-import { Map as ImmutableMap } from 'immutable'
-import BokehChart from './BokehChart'
+import React from "react"
+import ReactDOM from "react-dom"
+import { Map as ImmutableMap } from "immutable"
+import BokehChart from "./BokehChart"
 
-it('renders without crashing', () => {
-  const mountPoint = document.createElement('div')
+it("renders without crashing", () => {
+  const mountPoint = document.createElement("div")
   const props = {
-    element: ImmutableMap({ 'figure': null }),
+    element: ImmutableMap({ figure: null }),
     index: 0,
     width: 0,
   }

@@ -17,13 +17,15 @@
 
 /// <reference types="cypress" />
 
-describe('st.info', () => {
+describe("st.info", () => {
   before(() => {
-    cy.visit('http://localhost:3000/')
+    cy.visit("http://localhost:3000/")
   })
 
-  it('displays an info message', () => {
-    cy.get('.element-container .stText')
-      .should('contain', 'This info message is awesome!')
+  it("displays an info message", () => {
+    cy.get(".element-container .stText").should(
+      "contain",
+      "This info message is awesome!"
+    )
   })
 })

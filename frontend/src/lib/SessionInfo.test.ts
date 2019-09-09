@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-import { SessionInfo } from 'lib/SessionInfo'
+import { SessionInfo } from "lib/SessionInfo"
 
-
-test('Throws an error when used before initialization', () => {
+test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
 })

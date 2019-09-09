@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from 'react'
-import Clipboard from 'clipboard'
-import { Copy as CopyIcon } from 'react-feather'
-import './CopyButton.scss'
+import React, { PureComponent } from "react"
+import Clipboard from "clipboard"
+import { Copy as CopyIcon } from "react-feather"
+import "./CopyButton.scss"
 
 interface Props {
-  text: string;
+  text: string
 }
 
 class CopyButton extends PureComponent<Props> {
   private button = React.createRef<HTMLButtonElement>()
-  private clipboard: (ClipboardJS | null) = null
+  private clipboard: ClipboardJS | null = null
 
   public componentDidMount = () => {
     const node = this.button.current
