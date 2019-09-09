@@ -18,13 +18,12 @@
 /// <reference types="cypress" />
 
 describe("st.map", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
   })
 
   it("displays a map using deck_gl", () => {
-    const els = cy.get(".element-container .deckglchart")
-
-    els.should("have.length", 1)
+    cy.get(".element-container .deckglchart")
+      .should("have.length", 1)
   })
 })

@@ -18,8 +18,11 @@
 /// <reference types="cypress" />
 
 describe("st.table styling", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
+
+    cy.get(".stTable")
+      .should("have.length", 4)
   })
 
   it("displays unstyled table", () => {
@@ -66,20 +69,18 @@ describe("st.table styling", () => {
   })
 
   it("displays table with differently styled rows", () => {
-    cy.get(".stTable")
-      .eq(3)
+    cy.get(".stTable").eq(3)
       .find("table tbody tr")
-      .eq(0)
-      .find("td")
-      .eq(0)
+      .should("have.length", 10)
+
+    cy.get(".stTable").eq(3)
+      .find("table tbody tr").eq(0)
+      .find("td").eq(0)
       .should("have.css", "color", "rgb(124, 252, 0)")
 
-    cy.get(".stTable")
-      .eq(3)
-      .find("table tbody tr")
-      .eq(5)
-      .find("td")
-      .eq(0)
+    cy.get(".stTable").eq(3)
+      .find("table tbody tr").eq(5)
+      .find("td").eq(0)
       .should("have.css", "color", "rgb(0, 0, 0)")
 
     cy.get(".stTable")

@@ -46,8 +46,8 @@ function getSnapshotFolder() {
 
 addMatchImageSnapshotCommand({
   customSnapshotsDir: getSnapshotFolder(),
-  failureThreshold: 0.035, // Threshold for entire image
-  failureThresholdType: "percent", // Percent of image or number of pixels
+  failureThreshold: 0.01, // Threshold for entire image
+  failureThresholdType: 'percent', // Percent of image or number of pixels
 })
 
 // Calling trigger before capturing the snapshot forces Cypress to very Actionability.

@@ -323,3 +323,18 @@ headers:
 		proto \
 		examples \
 		scripts
+
+.PHONY: build-circleci
+# Build docker image that mirrors circleci
+build-circleci:
+	docker build -t streamlit_circleci .
+
+.PHONY: run-circleci
+# Run circleci image with volume mounts
+run-circleci:
+	docker-compose run --rm --name streamlit_circleci streamlit
+
+.PHONY: connect-circleci
+# Connect to running circleci container
+connect-circleci:
+	docker exec -it streamlit_circleci /bin/bash

@@ -18,7 +18,7 @@
 /// <reference types="cypress" />
 
 describe("handles empty charts", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
   })
 
