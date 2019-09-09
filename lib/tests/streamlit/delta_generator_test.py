@@ -32,8 +32,7 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
-from streamlit.DeltaGenerator import _wraps_with_cleaned_sig, _clean_up_sig, \
-    _with_element
+from streamlit.DeltaGenerator import _wraps_with_cleaned_sig, _clean_up_sig, _with_element
 from tests import testutil
 import streamlit as st
 

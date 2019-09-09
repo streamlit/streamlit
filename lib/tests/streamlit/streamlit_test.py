@@ -165,7 +165,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_code(self):
         """Test st.code."""
-        st.code('print(\'My string = %d\' % my_value)',
+        st.code("print(\'My string = %d\' % my_value)",
                 language='python')
         expected = textwrap.dedent('''
             ```python
