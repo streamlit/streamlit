@@ -319,7 +319,6 @@ class Server(object):
                 LOGGER.debug('Creating new context for ws %s', ws)
                 session = ReportSession(
                     ioloop=self._ioloop,
-                    message_cache=self._message_cache,
                     script_path=self._script_path,
                     script_argv=self._script_argv)
 

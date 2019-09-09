@@ -26,9 +26,7 @@ def _create_dataframe_msg(df, id=1):
 
 
 def _create_mock_session():
-    session = MagicMock(ReportSession)
-    session.report_run_count = 0
-    return session
+    return MagicMock(ReportSession)
 
 
 class MessageCacheTest(unittest.TestCase):
@@ -59,11 +57,11 @@ class MessageCacheTest(unittest.TestCase):
         cache = MessageCache()
         session = _create_mock_session()
         msg = _create_dataframe_msg([1, 2, 3])
-        cache.add_message(msg, session)
+        cache.add_message(msg, session, 0)
 
-        self.assertTrue(cache.has_message_reference(msg, session))
+        self.assertTrue(cache.has_message_reference(msg, session, 0))
         self.assertFalse(
-            cache.has_message_reference(msg, _create_mock_session()))
+            cache.has_message_reference(msg, _create_mock_session(), 0))
 
     def test_get_message(self):
         """Test MessageCache.get_message"""
@@ -73,7 +71,7 @@ class MessageCacheTest(unittest.TestCase):
 
         msg_hash = populate_hash_if_needed(msg)
 
-        cache.add_message(msg, session)
+        cache.add_message(msg, session, 0)
         self.assertEqual(msg, cache.get_message(msg_hash))
 
     def test_clear(self):
@@ -84,7 +82,7 @@ class MessageCacheTest(unittest.TestCase):
         msg = _create_dataframe_msg([1, 2, 3])
         msg_hash = populate_hash_if_needed(msg)
 
-        cache.add_message(msg, session)
+        cache.add_message(msg, session, 0)
         self.assertEqual(msg, cache.get_message(msg_hash))
 
         cache.clear()
@@ -96,34 +94,36 @@ class MessageCacheTest(unittest.TestCase):
 
         cache = MessageCache()
         session1 = _create_mock_session()
+        runcount1 = 0
 
         msg = _create_dataframe_msg([1, 2, 3])
         msg_hash = populate_hash_if_needed(msg)
 
-        cache.add_message(msg, session1)
+        cache.add_message(msg, session1, runcount1)
 
         # Increment session1's run_count. This should not resolve in expiry.
-        session1.report_run_count += 1
-        self.assertTrue(cache.has_message_reference(msg, session1))
+        runcount1 += 1
+        self.assertTrue(cache.has_message_reference(msg, session1, runcount1))
 
         # Increment again. The message will now be expired for session1,
         # though it won't have actually been removed yet.
-        session1.report_run_count += 1
-        self.assertFalse(cache.has_message_reference(msg, session1))
+        runcount1 += 1
+        self.assertFalse(cache.has_message_reference(msg, session1, runcount1))
         self.assertIsNotNone(cache.get_message(msg_hash))
 
         # Add another reference to the message
         session2 = _create_mock_session()
-        cache.add_message(msg, session2)
+        runcount2 = 0
+        cache.add_message(msg, session2, runcount2)
 
         # Remove session1's expired entries. This should not remove the
         # entry from the cache, because session2 still has a reference to it.
-        cache.remove_expired_session_entries(session1)
-        self.assertFalse(cache.has_message_reference(msg, session1))
-        self.assertTrue(cache.has_message_reference(msg, session2))
+        cache.remove_expired_session_entries(session1, runcount1)
+        self.assertFalse(cache.has_message_reference(msg, session1, runcount1))
+        self.assertTrue(cache.has_message_reference(msg, session2, runcount2))
 
         # Expire session2's reference. The message should no longer be
         # in the cache at all.
-        session2.report_run_count += 2
-        cache.remove_expired_session_entries(session2)
+        runcount2 += 2
+        cache.remove_expired_session_entries(session2, runcount2)
         self.assertIsNone(cache.get_message(msg_hash))

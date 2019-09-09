@@ -103,16 +103,18 @@ class MessageCache(object):
             # {ReportSession -> report_run_count}
             self._session_report_run_count = WeakKeyDictionary()
 
-        def add_session_ref(self, session):
+        def add_session_ref(self, session, report_run_count):
             """Adds a reference to a ReportSession that has referenced
-            this Entry's message. Also records the
+            this Entry's message.
 
             Parameters
             ----------
             session : ReportSession
+            report_run_count : int
+                The session's run count at the time of the call
 
             """
-            self._session_report_run_count[session] = session.report_run_count
+            self._session_report_run_count[session] = report_run_count
 
         def has_session_ref(self, session):
             return session in self._session_report_run_count
@@ -128,9 +130,9 @@ class MessageCache(object):
             del self._session_report_run_count[session]
 
         def has_refs(self):
-            """True if this Entry has any references from ReportSession.
+            """True if this Entry has references from any ReportSession.
 
-            If not, it can be safely removed from the cache.
+            If not, it can be removed from the cache.
             """
             return len(self._session_report_run_count) > 0
 
@@ -138,7 +140,7 @@ class MessageCache(object):
         self._lock = threading.RLock()
         self._entries = {}  # Map: hash -> Entry
 
-    def add_message(self, msg, session):
+    def add_message(self, msg, session, report_run_count):
         """Add a ForwardMsg to the cache.
 
         The cache will also record a reference to the given ReportSession,
@@ -149,6 +151,8 @@ class MessageCache(object):
         ----------
         msg : ForwardMsg
         session : ReportSession
+        report_run_count : int
+            The number of times the session has run its report
 
         """
         populate_hash_if_needed(msg)
@@ -157,7 +161,7 @@ class MessageCache(object):
             if entry is None:
                 entry = MessageCache.Entry(msg)
                 self._entries[msg.hash] = entry
-            entry.add_session_ref(session)
+            entry.add_session_ref(session, report_run_count)
 
     def get_message(self, hash):
         """Return the message with the given ID if it exists in the cache.
@@ -176,13 +180,15 @@ class MessageCache(object):
             entry = self._entries.get(hash, None)
             return entry.msg if entry else None
 
-    def has_message_reference(self, msg, session):
+    def has_message_reference(self, msg, session, report_run_count):
         """Return True if a session has a reference to a message.
 
         Parameters
         ----------
         msg : ForwardMsg
         session : ReportSession
+        report_run_count : int
+            The number of times the session has run its report
 
         Returns
         -------
@@ -196,10 +202,10 @@ class MessageCache(object):
                 return False
 
             # Ensure we're not expired
-            age = entry.get_session_ref_age(session, session.report_run_count)
+            age = entry.get_session_ref_age(session, report_run_count)
             return age <= config.get_option('global.maxCachedMessageAge')
 
-    def remove_expired_session_entries(self, session):
+    def remove_expired_session_entries(self, session, report_run_count):
         """Remove any cached messages that have expired from the given session.
 
         This should be called each time a ReportSession finishes executing.
@@ -207,9 +213,10 @@ class MessageCache(object):
         Parameters
         ----------
         session : ReportSession
+        report_run_count : int
+            The number of times the session has run its report
 
         """
-        new_run_count = session.report_run_count
         max_age = config.get_option('global.maxCachedMessageAge')
         with self._lock:
             # Operate on a copy of our entries dict.
@@ -217,7 +224,7 @@ class MessageCache(object):
             for hash, entry in self._entries.copy().items():
                 if (
                     entry.has_session_ref(session) and
-                    entry.get_session_ref_age(session, new_run_count) > max_age
+                    entry.get_session_ref_age(session, report_run_count) > max_age
                 ):
                     LOGGER.debug(
                         'Removing expired entry [session=%s, hash=%s]',
