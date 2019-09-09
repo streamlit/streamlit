@@ -192,10 +192,10 @@ class DeltaGenerator(object):
         """
         self._enqueue = enqueue
         self._id = id
+        self._delta_type = delta_type
         self._is_root = is_root
         self._container = container
         self._path = path
-        self._delta_type = delta_type
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
