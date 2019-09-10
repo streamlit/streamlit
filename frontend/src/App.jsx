@@ -176,8 +176,9 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
-        reportFinished: (msg) => this.handleReportFinished(msg),
-        uploadReportProgress: progress => this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
+        reportFinished: status => this.handleReportFinished(status),
+        uploadReportProgress: progress =>
+          this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url => this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
@@ -313,23 +314,26 @@ class App extends PureComponent {
 
   /**
    * Handler for ForwardMsg.reportFinished messages
+   * @param status the ReportFinishedStatus that the report finished with
    */
-  handleReportFinished(msg) {
-    // When a script finishes running, we clear any stale elements left over
-    // from its previous run - unless our script had a fatal error during
-    // execution.
-    if (msg === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
-      if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
-        this.setState(({ elements, reportId }) => ({
-          elements: {
-            main: this.clearOldElements(elements.main, reportId),
-            sidebar: this.clearOldElements(elements.sidebar, reportId),
-          },
-        }))
+  handleReportFinished(status) {
+    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
+      this.setState(({ elements, reportId }) => ({
+        elements: {
+          main: this.clearOldElements(elements.main, reportId),
+          sidebar: this.clearOldElements(elements.sidebar, reportId),
+        },
+      }))
 
-        this.connectionManager.incrementMessageCacheRunCount(
-          SessionInfo.current.maxCachedMessageAge)
-      }
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      this.connectionManager.incrementMessageCacheRunCount(
+        SessionInfo.current.maxCachedMessageAge)
     }
   }
 
