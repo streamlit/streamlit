@@ -62,7 +62,8 @@ export class ForwardMsgCache {
    *
    * @param maxMessageAge Max age of a message in the cache.
    * The "age" of a message is defined by how many times the underyling report
-   * has been re-run since the message was last accessed.
+   * has finished running (without a compile error) since the message was
+   * last accessed.
    */
   public incrementRunCount(maxMessageAge: number): void {
     this.reportRunCount += 1
