@@ -41,28 +41,28 @@ except NameError:  # pragma: nocover
 
 
 EMAIL_PROMPT = '''
-👋 %(welcome)s
-
-If you are one of our development partners or are interested in
-getting personal technical support, please enter your email address
-below. Otherwise, you may leave the field blank.
-
-Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
+  👋 %(welcome)s
+  
+  If you are one of our development partners or are interested in
+  getting personal technical support, please enter your email address
+  below. Otherwise, you may leave the field blank.
+  
+  Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
 
 TELEMETRY_TEXT = '''
-Telemetry: as an open source project, we use collect summary
-statistics and metadata to understand how people are using Streamlit.
-
-If you'd like to opt out, add the following to ~/.streamlit/config.toml,
-creating that file if necessary:
-
-[browser]
-gatherUsageStats = false
+  Telemetry: as an open source project, we use collect summary
+  statistics and metadata to understand how people are using Streamlit.
+  
+  If you'd like to opt out, add the following to ~/.streamlit/config.toml,
+  creating that file if necessary:
+  
+  [browser]
+  gatherUsageStats = false
 '''
 
 INSTRUCTIONS_TEXT = '''
-Get started by typing:
-$ %(hello)s
+  Get started by typing:
+  $ %(hello)s
 ''' % {'hello': click.style('streamlit hello', bold=True)}
 
 
@@ -172,16 +172,15 @@ class Credentials(object):
             while not activated:
 
                 email = click.prompt(
-                    text=textwrap.indent(EMAIL_PROMPT, prefix='  '),
+                    text=EMAIL_PROMPT,
                     default='', show_default=False)
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
-                    click.secho(textwrap.indent(TELEMETRY_TEXT, prefix='  '))
+                    click.secho(TELEMETRY_TEXT)
                     if show_instructions:
-                        click.secho(
-                            textwrap.indent(INSTRUCTIONS_TEXT, prefix='  '))
+                        click.secho(INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
                     LOGGER.error('Please try again.')
