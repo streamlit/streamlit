@@ -25,9 +25,9 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import util
-from streamlit.MessageCache import MessageCache
-from streamlit.MessageCache import create_reference_msg
-from streamlit.MessageCache import populate_hash_if_needed
+from streamlit.ForwardMsgCache import ForwardMsgCache
+from streamlit.ForwardMsgCache import create_reference_msg
+from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -59,7 +59,12 @@ PREHEATED_REPORT_SESSION = 'PREHEATED_REPORT_SESSION'
 
 
 class SessionInfo(object):
-    """Type stored in our _report_sessions dict"""
+    """Type stored in our _report_sessions dict.
+
+    For each ReportSession, the server tracks that session's
+    report_run_count. This is used to track the age of messages in
+    the ForwardMsgCache.
+    """
     def __init__(self, session):
         """Initialize a SessionInfo instance.
 
@@ -120,7 +125,7 @@ class Server(object):
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
-        self._message_cache = MessageCache()
+        self._message_cache = ForwardMsgCache()
 
     def start(self, on_started):
         """Start the server.

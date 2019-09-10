@@ -9,9 +9,9 @@ from mock import MagicMock
 
 from streamlit import ReportSession
 from streamlit import config
-from streamlit.MessageCache import MessageCache
-from streamlit.MessageCache import create_reference_msg
-from streamlit.MessageCache import populate_hash_if_needed
+from streamlit.ForwardMsgCache import ForwardMsgCache
+from streamlit.ForwardMsgCache import create_reference_msg
+from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -29,7 +29,7 @@ def _create_mock_session():
     return MagicMock(ReportSession)
 
 
-class MessageCacheTest(unittest.TestCase):
+class ForwardMsgCacheTest(unittest.TestCase):
     def test_msg_hash(self):
         """Test that ForwardMsg hash generation works as expected"""
         msg1 = _create_dataframe_msg([1, 2, 3])
@@ -54,7 +54,7 @@ class MessageCacheTest(unittest.TestCase):
 
     def test_add_message(self):
         """Test MessageCache.add_message and has_message_reference"""
-        cache = MessageCache()
+        cache = ForwardMsgCache()
         session = _create_mock_session()
         msg = _create_dataframe_msg([1, 2, 3])
         cache.add_message(msg, session, 0)
@@ -65,7 +65,7 @@ class MessageCacheTest(unittest.TestCase):
 
     def test_get_message(self):
         """Test MessageCache.get_message"""
-        cache = MessageCache()
+        cache = ForwardMsgCache()
         session = _create_mock_session()
         msg = _create_dataframe_msg([1, 2, 3])
 
@@ -76,7 +76,7 @@ class MessageCacheTest(unittest.TestCase):
 
     def test_clear(self):
         """Test MessageCache.clear"""
-        cache = MessageCache()
+        cache = ForwardMsgCache()
         session = _create_mock_session()
 
         msg = _create_dataframe_msg([1, 2, 3])
@@ -92,7 +92,7 @@ class MessageCacheTest(unittest.TestCase):
         """Test MessageCache's expiration logic"""
         config._set_option('global.maxCachedMessageAge', 1, 'test')
 
-        cache = MessageCache()
+        cache = ForwardMsgCache()
         session1 = _create_mock_session()
         runcount1 = 0
 

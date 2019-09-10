@@ -82,7 +82,7 @@ def create_reference_msg(msg):
     return ref_msg
 
 
-class MessageCache(object):
+class ForwardMsgCache(object):
     """A thread-safe cache of ForwardMsgs.
 
     Large ForwardMsgs (e.g. those containing big DataFrame payloads) are
@@ -161,7 +161,7 @@ class MessageCache(object):
         with self._lock:
             entry = self._entries.get(msg.hash, None)
             if entry is None:
-                entry = MessageCache.Entry(msg)
+                entry = ForwardMsgCache.Entry(msg)
                 self._entries[msg.hash] = entry
             entry.add_session_ref(session, report_run_count)
 

@@ -26,8 +26,8 @@ from mock import patch
 from tornado import gen
 
 from streamlit import config
-from streamlit.MessageCache import MessageCache
-from streamlit.MessageCache import populate_hash_if_needed
+from streamlit.ForwardMsgCache import ForwardMsgCache
+from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -337,7 +337,7 @@ class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
-        self._cache = MessageCache()
+        self._cache = ForwardMsgCache()
         return tornado.web.Application([
             (r'/message', MessageCacheHandler, dict(cache=self._cache)),
         ])
