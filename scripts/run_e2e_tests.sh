@@ -72,27 +72,36 @@ rm frontend/cypress/mochawesome/* || true
 rm frontend/mochawesome.json || true
 
 # Test core streamlit elements
-for file in examples/core/*.py
+for file in e2e/scripts/*.py
 do
-  # Run next test
-  streamlit run $file &
-  yarn --cwd "frontend" cy:run --spec "cypress/integration/${file%.*}.spec.ts" $record_results
+  # Infinite loop to support retries.
+  while true
+  do
+    # Run next test
+    streamlit run $file &
+    yarn --cwd "frontend" cy:run --spec "../e2e/specs/${file%.*}.spec.ts" $record_results
 
-  EXITCODE="$?"
+    EXITCODE="$?"
 
-  # Kill the last process executed in the background
-  kill -9 $!
+    # Kill the last process executed in the background
+    kill -9 $!
 
-  # If exit code is nonzero, prompt user to continue or continue without prompting
-  if [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "false" ]; then
-    read -p "Continue? [y/n] " yn
-    case $yn in
-      [Yy]* ) continue ;;
-      * ) exit 1 ;;
-    esac
-  elif [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "true" ]; then
-    any_failed=true
-  fi
+    # If exit code is nonzero, prompt user to continue or continue without prompting
+    if [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "false" ]; then
+      read -p "Retry, Skip, or Quit? " key
+      case $key in
+        [Ss]* ) break ;;
+        [Qq]* ) exit 1 ;;
+        [Rr]* ) continue ;;
+        * ) continue ;;  # Retry if key not recognized.
+      esac
+    elif [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "true" ]; then
+      any_failed=true
+    fi
+
+    # If we got to this point, break out of the infite loop. No need to retry.
+    break
+  done
 done
 
 if [ "$any_failed" = "true" ]
