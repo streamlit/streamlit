@@ -327,12 +327,18 @@ headers:
 .PHONY: build-circleci
 # Build docker image that mirrors circleci
 build-circleci:
-	docker build -t streamlit_circleci .
+	docker build -t streamlit_circleci -f e2e/Dockerfile .
 
 .PHONY: run-circleci
 # Run circleci image with volume mounts
 run-circleci:
-	docker-compose run --rm --name streamlit_circleci streamlit
+	mkdir -p frontend/mochawesome-report
+	docker-compose \
+		-f e2e/docker-compose.yml \
+		run \
+		--rm \
+		--name streamlit_circleci \
+		streamlit
 
 .PHONY: connect-circleci
 # Connect to running circleci container
