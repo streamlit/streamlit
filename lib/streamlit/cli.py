@@ -96,16 +96,30 @@ def main_hello():
 
 
 @main.command('run')
-@click.argument('file', type=click.Path(exists=True))
+@click.argument('file', type=click.Path(exists=True), required=False)
 @click.argument('args', nargs=-1)
-def main_run(file, args):
+@click.option('-m', '--module')
+def main_run(file, args, module):
+    click.echo(module)
     """Run a Python script, piping stderr to Streamlit."""
-    _main_run(file, args)
+    _main_run(file, args, module)
 
-def _main_run(file, args=[]):
+
+def _main_run(file, args=[], module_name=None):
     Credentials.get_current().check_activated(auto_resolve=True)
     import streamlit.bootstrap as bootstrap
     import sys
+
+    if not module_name and not file:
+        raise Exception(('Please, you need to set either '
+                         'a module or a file'))
+    if file and module_name:
+        raise Exception('You cannot set both a module name and a file')
+
+    if module_name:
+        from importlib import import_module
+        module = import_module(module_name)
+        file = module.__file__
 
     # We don't use args ourselves. We just allow people to pass them so their
     # script can handle them via sys.argv or whatever.
