@@ -716,10 +716,10 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        import streamlit.elements.vega_lite as vega_lite
-        spec = vega_lite.generate_spec_from_data('line', data)
-        vega_lite.marshall(
-            element.vega_lite_chart, None, spec, width, **kwargs)
+
+        import streamlit.elements.altair as altair
+        chart = altair.generate_chart('line', data)
+        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
 
     @_with_element
     def area_chart(self, element, data, width=0, **kwargs):
@@ -749,10 +749,9 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        import streamlit.elements.vega_lite as vega_lite
-        spec = vega_lite.generate_spec_from_data('area', data)
-        vega_lite.marshall(
-            element.vega_lite_chart, None, spec, width, **kwargs)
+        import streamlit.elements.altair as altair
+        chart = altair.generate_chart('area', data)
+        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
 
     @_with_element
     def bar_chart(self, element, data, width=0, **kwargs):
@@ -782,28 +781,20 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        encoding_x = {'field': 'variable', 'type': 'ordinal'}
-        data_for_vega = data.reset_index()
-        melted = pd.melt(data_for_vega, id_vars=['index'])
+        import altair as alt
 
-        index_value = melted.at[0, 'index']
+        if isinstance(data, pd.DataFrame):
+            data = pd.melt(data.reset_index(), id_vars=['index'])
 
-        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-            encoding_x = {'field': 'index', 'type': 'temporal',
-                          'axis': {'title': ''}}
+            chart = alt.Chart(data).mark_bar().encode(
+                alt.X('variable', title=''),
+                alt.Y('value', title=''))
 
-        spec = {
-            'mark': 'bar',
-            'encoding': {
-                'x': encoding_x,
-                'y': {'field': 'value', 'type': 'quantitative',
-                      'axis': {'title': ''}}
-            }
-        }
+        else:
+            chart = alt.Chart(data).mark_bar()
 
-        import streamlit.elements.vega_lite as vega_lite
-        vega_lite.marshall(
-            element.vega_lite_chart, melted, spec, width, **kwargs)
+        import streamlit.elements.altair as altair
+        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, width=0,

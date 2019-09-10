@@ -110,11 +110,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(chart_spec['width'], 640)
         self.assertEqual(chart_spec['height'], 480)
         self.assertEqual(
-            el.data.columns.plain_index.data.strings.data,
+            el.datasets[0].data.columns.plain_index.data.strings.data,
             ['index', 'variable', 'value']
         )
 
-        data = json.loads(json_format.MessageToJson(el.data.data))
+        data = json.loads(json_format.MessageToJson(el.datasets[0].data.data))
         result = [x['int64s']['data'] for x in data['cols'] if 'int64s' in x]
         self.assertEqual(result[1], ['10', '20', '30'])
 
@@ -154,11 +154,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(chart_spec['width'], 640)
         self.assertEqual(chart_spec['height'], 480)
         self.assertEqual(
-            el.data.columns.plain_index.data.strings.data,
+            el.datasets[0].data.columns.plain_index.data.strings.data,
             ['index', 'variable', 'value']
         )
 
-        data = json.loads(json_format.MessageToJson(el.data.data))
+        data = json.loads(json_format.MessageToJson(el.datasets[0].data.data))
         result = [x['int64s']['data'] for x in data['cols'] if 'int64s' in x]
 
         self.assertEqual(result[1], ['10', '20', '30'])
@@ -358,12 +358,13 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(chart_spec['mark'], 'line')
         self.assertEqual(chart_spec['width'], 640)
         self.assertEqual(chart_spec['height'], 480)
+
         self.assertEqual(
-            el.data.columns.plain_index.data.strings.data,
+            el.datasets[0].data.columns.plain_index.data.strings.data,
             ['index', 'variable', 'value']
         )
 
-        data = json.loads(json_format.MessageToJson(el.data.data))
+        data = json.loads(json_format.MessageToJson(el.datasets[0].data.data))
         result = [x['int64s']['data'] for x in data['cols'] if 'int64s' in x]
 
         self.assertEqual(result[1], ['10', '20', '30'])

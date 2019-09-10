@@ -76,7 +76,7 @@ for test_type in ['coalesce in Py', 'coalesce in JS', 'clear after addrows']:
             'y': {'field': 'b', 'type': 'quantitative'},
         },
     })
-    altair_el = st.altair_chart(alt.Chart(df)
+    altair_el = st.altair_chart(alt.Chart(df1)
         .mark_line(point=True)
         .encode(x='a', y='b')
         .interactive())

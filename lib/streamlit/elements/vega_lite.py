@@ -34,7 +34,8 @@ LOGGER = get_logger(__name__)
 
 
 def generate_spec_from_data(graph_type, data):
-    encoding_x = {'field': 'index', 'type': 'ordinal', 'axis': {'title': ''}}
+    encoding_x = {'field': 'index', 'type': 'quantitative',
+                  'axis': {'title': ''}}
 
     if isinstance(data, pd.DataFrame):
         data = pd.melt(data.reset_index(), id_vars=['index'])
