@@ -14,26 +14,23 @@
 # limitations under the License.
 
 """Manage the user's Streamlit credentials."""
-from collections import namedtuple
-import hashlib
-import hmac
+
 import os
 import sys
 import textwrap
+from collections import namedtuple
 
 import click
-import base58
 import toml
 
-from streamlit.logger import get_logger
 from streamlit import util
+from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 Activation = namedtuple('Activation', [
-    'code',  # str: the user's activation code, sent via email.
     'email',  # str : the user's email.
-    'is_valid',  # boolean : whether the code+email combination is valid.
+    'is_valid',  # boolean : whether the email is valid.
 ])
 
 # For python 2.7
@@ -75,7 +72,7 @@ class Credentials(object):
         try:
             with open(self._conf_file, 'r') as f:
                 data = toml.load(f).get('general')
-            self.activation = _verify_code(data.get('email'), data.get('code'))
+            self.activation = _verify_email(data.get('email'))
         except FileNotFoundError:
             if auto_resolve:
                 return self.activate(show_instructions=not auto_resolve)
@@ -101,7 +98,7 @@ class Credentials(object):
             _exit(str(e))
 
         if not self.activation.is_valid:
-            _exit('Activation code/email not valid.')
+            _exit('Activation email not valid.')
 
     @classmethod
     def reset(cls):
@@ -121,7 +118,6 @@ class Credentials(object):
         """Save to toml file."""
         data = {
             'email': self.activation.email,
-            'code': self.activation.code,
         }
         with open(self._conf_file, 'w') as f:
             toml.dump({'general': data}, f)
@@ -159,11 +155,10 @@ class Credentials(object):
                     'welcome': click.style('Welcome to Streamlit!', fg='green')
                 })
 
-                code = None
                 email = click.prompt(
                     text=email_prompt, default='', show_default=False)
 
-                self.activation = _verify_code(email, code)
+                self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
                     click.secho('')
@@ -179,31 +174,21 @@ class Credentials(object):
                     LOGGER.error('Please try again.')
 
 
-def _generate_code(secret, email):
-    """Generate code for activation.
+def _verify_email(email):
+    """Verify the user's email address.
 
-    This is here so streamlit developers can create activation codes if
-    needed that are not in the spreadsheet.
-    """
-    secret = secret.encode('utf-8')
-    email = email.encode('utf-8')
-
-    salt = hmac.new(secret, email, hashlib.sha512).hexdigest()[0:4]
-    salt_encoded = salt.encode('utf-8')
-    hash = hmac.new(salt_encoded, email, hashlib.md5).hexdigest()[0:4]
-
-    code = base58.b58encode(salt + hash)
-    return code.decode('utf-8')
-
-
-def _verify_code(email, code):
-    """Verify activation code with email.
+    The email can either be an empty string (which gets converted to None),
+    or a string with a single '@' somewhere in it.
 
     Parameters
     ----------
-    email : str
-    code : str | None
+    email : str | None
 
+    Returns
+    -------
+    Activation
+        An Activation object. Its 'is_valid' property will be True only if
+        the email was validated.
     """
     if email is not None:
         email = email.strip()
@@ -212,35 +197,9 @@ def _verify_code(email, code):
 
     if email is not None and email.count('@') != 1:
         LOGGER.error('That doesn\'t look like an email :(')
-        return Activation(None, None, None)
+        return Activation(None, False)
 
-    if code is None:
-        return Activation(None, email, True)
-
-    # Python2/3 Madness
-    email_encoded = email
-    code_encoded = code
-    if sys.version_info >= (3, 0):
-        email_encoded = email.encode('utf-8')
-    else:
-        code_encoded = code.encode('utf-8')  # pragma: nocover
-
-    try:
-        decoded = base58.b58decode(code_encoded)
-
-        salt, hash = decoded[0:4], decoded[4:8]
-
-        calculated_hash = hmac.new(salt, email_encoded,
-                                   hashlib.md5).hexdigest()
-
-        if hash.decode('utf-8') == calculated_hash[0:4]:
-            return Activation(code, email, True)
-        else:
-            return Activation(code, email, False)
-
-    except Exception as e:
-        LOGGER.error('Unable to verify code: %s', e)
-        return Activation(None, None, None)
+    return Activation(email, True)
 
 
 def _exit(message):  # pragma: nocover

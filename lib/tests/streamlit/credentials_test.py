@@ -27,8 +27,7 @@ from mock import patch
 
 from streamlit.credentials import Activation
 from streamlit.credentials import Credentials
-from streamlit.credentials import _generate_code
-from streamlit.credentials import _verify_code
+from streamlit.credentials import _verify_email
 
 if sys.version_info < (3, 0):
     FileNotFoundError = IOError
@@ -80,7 +79,6 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.load()."""
         data = textwrap.dedent('''
             [general]
-            code = "ARzVsqhSB5i"
             email = "user@domain.com"
         ''').strip()
         m = mock_open(read_data=data)
@@ -88,11 +86,10 @@ class CredentialsClassTest(unittest.TestCase):
             c = Credentials.get_current()
             c.load()
             self.assertEqual('user@domain.com', c.activation.email)
-            self.assertEqual('ARzVsqhSB5i', c.activation.code)
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_empty(self):
-        """Test Credentials.load() with empty code and email"""
+        """Test Credentials.load() with empty email"""
         data = textwrap.dedent('''
             [general]
         ''').strip()
@@ -101,13 +98,12 @@ class CredentialsClassTest(unittest.TestCase):
             c = Credentials.get_current()
             c.load()
             self.assertEqual(None, c.activation.email)
-            self.assertEqual(None, c.activation.code)
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_twice(self):
         """Test Credentials.load() called twice."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', True)
+        c.activation = Activation('some_email', True)
         with patch('streamlit.credentials.LOGGER') as p:
             c.load()
             p.error.assert_called_once_with(
@@ -149,7 +145,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_check_activated_already_loaded(self):
         """Test Credentials.check_activated() already loaded."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', True)
+        c.activation = Activation('some_email', True)
         with patch('streamlit.credentials._exit') as p:
             c.check_activated()
             p.assert_not_called()
@@ -158,16 +154,16 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_check_activated_false(self):
         """Test Credentials.check_activated() not activated."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', False)
+        c.activation = Activation('some_email', False)
         with patch('streamlit.credentials._exit') as p:
             c.check_activated()
-            p.assert_called_once_with('Activation code/email not valid.')
+            p.assert_called_once_with('Activation email not valid.')
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_check_activated_error(self):
         """Test Credentials.check_activated() has an error."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', True)
+        c.activation = Activation('some_email', True)
         with patch.object(c, 'load', side_effect=Exception(
                 'Some error')), patch('streamlit.credentials._exit') as p:
             c.check_activated()
@@ -177,16 +173,14 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_save(self):
         """Test Credentials.save()."""
         c = Credentials.get_current()
-        c.activation = Activation('some_code', 'some_email', True)
+        c.activation = Activation('some_email', True)
         truth = textwrap.dedent('''
             [general]
             email = "some_email"
-            code = "some_code"
         ''').lstrip()
 
         truth2 = textwrap.dedent('''
             [general]
-            code = "some_code"
             email = "some_email"
         ''').lstrip()
 
@@ -202,7 +196,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', True)
+        c.activation = Activation('some_email', True)
         with patch('streamlit.credentials.LOGGER') as p:
             with pytest.raises(SystemExit):
                 c.activate()
@@ -214,7 +208,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_activate_already_activated_not_valid(self):
         """Test Credentials.activate() already activated but not valid."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', 'some_code', False)
+        c.activation = Activation('some_email', False)
         with patch('streamlit.credentials.LOGGER') as p:
             with pytest.raises(SystemExit):
                 c.activate()
@@ -236,7 +230,6 @@ class CredentialsClassTest(unittest.TestCase):
             patched_prompt.side_effect = ['user@domain.com']
             c.activate()
             patched_save.assert_called_once()
-            self.assertEqual(c.activation.code, None)
             self.assertEqual(c.activation.email, 'user@domain.com')
             self.assertEqual(c.activation.is_valid, True)
 
@@ -262,22 +255,10 @@ class CredentialsClassTest(unittest.TestCase):
 class CredentialsModulesTest(unittest.TestCase):
     """Credentials Module Unittest class."""
 
-    def test__generate_code(self):
-        """Test _generate_code."""
-        code = _generate_code('testing', 'user@domain.com')
-        self.assertEqual('ARzVsqhSB5i', code)
+    def test_verify_email(self):
+        """Test _verify_email."""
+        self.assertTrue(_verify_email('user@domain.com').is_valid)
+        self.assertTrue(_verify_email('').is_valid)
+        self.assertTrue(_verify_email(None).is_valid)
 
-    def test__verify_code(self):
-        """Test _generate_code."""
-        ret = _verify_code('user@domain.com', 'ARzVsqhSB5i')
-        self.assertTrue(ret.is_valid)
-
-    def test__verify_code_wrong_code(self):
-        """Test credentials._verify_code with code from another user."""
-        ret = _verify_code('user@domain.com', 'ARxJtdP43GU')
-        self.assertFalse(ret.is_valid)
-
-    def test__verify_code_bad_code(self):
-        """Test credentials._verify_code with invalid base58 code."""
-        ret = _verify_code('user@domain.com', '****')
-        self.assertFalse(ret.is_valid)
+        self.assertFalse(_verify_email('missing_at_sign').is_valid)
