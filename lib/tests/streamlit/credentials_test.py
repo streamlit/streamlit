@@ -92,12 +92,13 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.load() with empty email"""
         data = textwrap.dedent('''
             [general]
+            email = ""
         ''').strip()
         m = mock_open(read_data=data)
         with patch('streamlit.credentials.open', m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual(None, c.activation.email)
+            self.assertEqual('', c.activation.email)
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_twice(self):
@@ -259,6 +260,4 @@ class CredentialsModulesTest(unittest.TestCase):
         """Test _verify_email."""
         self.assertTrue(_verify_email('user@domain.com').is_valid)
         self.assertTrue(_verify_email('').is_valid)
-        self.assertTrue(_verify_email(None).is_valid)
-
         self.assertFalse(_verify_email('missing_at_sign').is_valid)

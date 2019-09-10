@@ -190,25 +190,23 @@ class Credentials(object):
 def _verify_email(email):
     """Verify the user's email address.
 
-    The email can either be an empty string (which gets converted to None),
-    or a string with a single '@' somewhere in it.
+    The email can either be an empty string (if the user chooses not to enter
+    it), or a string with a single '@' somewhere in it.
 
     Parameters
     ----------
-    email : str | None
+    email : str
 
     Returns
     -------
     Activation
         An Activation object. Its 'is_valid' property will be True only if
         the email was validated.
-    """
-    if email is not None:
-        email = email.strip()
-        if len(email) == 0:
-            email = None
 
-    if email is not None and email.count('@') != 1:
+    """
+    email = email.strip()
+
+    if len(email) > 0 and email.count('@') != 1:
         LOGGER.error('That doesn\'t look like an email :(')
         return Activation(None, False)
 
