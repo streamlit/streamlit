@@ -98,28 +98,32 @@ def main_hello():
 @main.command('run')
 @click.argument('file', type=click.Path(exists=True), required=False)
 @click.argument('args', nargs=-1)
-@click.option('-m', '--module')
-def main_run(file, args, module):
-    click.echo(module)
-    """Run a Python script, piping stderr to Streamlit."""
-    _main_run(file, args, module)
+@click.option('-m', '--module', 'module_name', help='Run module')
+def main_run(file, args, module_name):
+    """Run a Python script or a Python module, piping stderr to Streamlit.
+    The option -m/--module allows to specify a module to run in alternative
+    to a file.
+    """
 
-
-def _main_run(file, args=[], module_name=None):
-    Credentials.get_current().check_activated(auto_resolve=True)
-    import streamlit.bootstrap as bootstrap
-    import sys
-
-    if not module_name and not file:
-        raise Exception(('Please, you need to set either '
-                         'a module or a file'))
+    if not file and not module_name:
+        raise click.UsageError(('You need to specify either '
+                                'a module or a file'))
     if file and module_name:
-        raise Exception('You cannot set both a module name and a file')
+        raise click.UsageError(('You cannot specify both a module name and a '
+                                'file'))
 
     if module_name:
         from importlib import import_module
         module = import_module(module_name)
         file = module.__file__
+
+    _main_run(file, args)
+
+
+def _main_run(file, args=[]):
+    Credentials.get_current().check_activated(auto_resolve=True)
+    import streamlit.bootstrap as bootstrap
+    import sys
 
     # We don't use args ourselves. We just allow people to pass them so their
     # script can handle them via sys.argv or whatever.
