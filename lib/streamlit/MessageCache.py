@@ -223,19 +223,20 @@ class MessageCache(object):
         with self._lock:
             # Operate on a copy of our entries dict.
             # We may be deleting from it.
-            for hash, entry in self._entries.copy().items():
-                if (
-                    entry.has_session_ref(session) and
-                    entry.get_session_ref_age(session, report_run_count) > max_age
-                ):
+            for msg_hash, entry in self._entries.copy().items():
+                if not entry.has_session_ref(session):
+                    continue
+
+                age = entry.get_session_ref_age(session, report_run_count)
+                if age > max_age:
                     LOGGER.debug(
-                        'Removing expired entry [session=%s, hash=%s]',
-                        id(session), hash)
+                        'Removing expired entry [session=%s, hash=%s, age=%s]',
+                        id(session), msg_hash, age)
                     entry.remove_session_ref(session)
                     if not entry.has_refs():
                         # The entry has no more references. Remove it from
                         # the cache completely.
-                        del self._entries[hash]
+                        del self._entries[msg_hash]
 
     def clear(self):
         """Remove all entries from the cache"""
