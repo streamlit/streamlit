@@ -101,7 +101,7 @@ class MessageCache(object):
         def __init__(self, msg):
             self.msg = msg
             # {ReportSession -> report_run_count}
-            self._session_report_run_count = WeakKeyDictionary()
+            self._session_report_run_counts = WeakKeyDictionary()
 
         def add_session_ref(self, session, report_run_count):
             """Adds a reference to a ReportSession that has referenced
@@ -114,27 +114,29 @@ class MessageCache(object):
                 The session's run count at the time of the call
 
             """
-            self._session_report_run_count[session] = report_run_count
+            prev_run_count = self._session_report_run_counts.get(session, 0)
+            run_count = max(prev_run_count, report_run_count)
+            self._session_report_run_counts[session] = run_count
 
         def has_session_ref(self, session):
-            return session in self._session_report_run_count
+            return session in self._session_report_run_counts
 
         def get_session_ref_age(self, session, report_run_count):
             """The age of the given session's reference to the Entry,
             given a new report_run_count.
 
             """
-            return report_run_count - self._session_report_run_count[session]
+            return report_run_count - self._session_report_run_counts[session]
 
         def remove_session_ref(self, session):
-            del self._session_report_run_count[session]
+            del self._session_report_run_counts[session]
 
         def has_refs(self):
             """True if this Entry has references from any ReportSession.
 
             If not, it can be removed from the cache.
             """
-            return len(self._session_report_run_count) > 0
+            return len(self._session_report_run_counts) > 0
 
     def __init__(self):
         self._lock = threading.RLock()
@@ -152,7 +154,7 @@ class MessageCache(object):
         msg : ForwardMsg
         session : ReportSession
         report_run_count : int
-            The number of times the session has run its report
+            The number of times the session's report has run
 
         """
         populate_hash_if_needed(msg)
@@ -188,7 +190,7 @@ class MessageCache(object):
         msg : ForwardMsg
         session : ReportSession
         report_run_count : int
-            The number of times the session has run its report
+            The number of times the session's report has run
 
         Returns
         -------
@@ -214,7 +216,7 @@ class MessageCache(object):
         ----------
         session : ReportSession
         report_run_count : int
-            The number of times the session has run its report
+            The number of times the session's report has run
 
         """
         max_age = config.get_option('global.maxCachedMessageAge')

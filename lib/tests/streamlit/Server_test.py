@@ -36,9 +36,9 @@ from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
+from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import is_cacheable_msg
 from tests.ServerTestCase import ServerTestCase
 
 
@@ -50,115 +50,187 @@ def _create_dataframe_msg(df, id=1):
     return msg
 
 
-# Stub out the Server's ReportSession import. We don't want
-# actual sessions to be instantiated, or scripts to be run.
-# Test methods must take an additional parameter (mock.patch
-# will pass the mocked stub to each test function.)
-@mock.patch('streamlit.server.Server.ReportSession', autospec=True)
+def _create_report_finished_msg(status):
+    msg = ForwardMsg()
+    msg.report_finished = status
+    return msg
+
+
 class ServerTest(ServerTestCase):
+    def _patch_report_session(self):
+        """Mock the Server's ReportSession import. We don't want
+        actual sessions to be instantiated, or scripts to be run.
+        """
+
+        return mock.patch(
+            'streamlit.server.Server.ReportSession',
+            autospec=True
+        )
+
     @tornado.testing.gen_test
-    def test_start_stop(self, _):
+    def test_start_stop(self):
         """Test that we can start and stop the server."""
-        yield self.start_server_loop()
-        self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
+        with self._patch_report_session():
+            yield self.start_server_loop()
+            self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
-        self.server.stop()
-        self.assertEqual(State.STOPPING, self.server._state)
+            self.server.stop()
+            self.assertEqual(State.STOPPING, self.server._state)
 
-        yield gen.sleep(0.1)
-        self.assertEqual(State.STOPPED, self.server._state)
+            yield gen.sleep(0.1)
+            self.assertEqual(State.STOPPED, self.server._state)
 
     @tornado.testing.gen_test
-    def test_websocket_connect(self, _):
+    def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
-        yield self.start_server_loop()
+        with self._patch_report_session():
+            yield self.start_server_loop()
 
-        self.assertFalse(self.server.browser_is_connected)
+            self.assertFalse(self.server.browser_is_connected)
 
-        # Open a websocket connection
-        ws_client = yield self.ws_connect()
-        self.assertTrue(self.server.browser_is_connected)
+            # Open a websocket connection
+            ws_client = yield self.ws_connect()
+            self.assertTrue(self.server.browser_is_connected)
 
-        # Close the connection, give the server a moment to step
-        # its runloop, and assert we're no longer connected.
-        ws_client.close()
-        yield gen.sleep(0.1)
-        self.assertFalse(self.server.browser_is_connected)
+            # Close the connection, give the server a moment to step
+            # its runloop, and assert we're no longer connected.
+            ws_client.close()
+            yield gen.sleep(0.1)
+            self.assertFalse(self.server.browser_is_connected)
 
     @tornado.testing.gen_test
-    def test_forwardmsg_hashing(self, _):
+    def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
-        yield self.start_server_loop()
+        with self._patch_report_session():
+            yield self.start_server_loop()
 
-        ws_client = yield self.ws_connect()
+            ws_client = yield self.ws_connect()
 
-        # Get the server's socket and session for this client
-        ws, session = list(self.server._report_sessions.items())[0]
+            # Get the server's socket and session for this client
+            ws, session = list(self.server._session_infos.items())[0]
 
-        # Create a message and ensure its hash is unset; we're testing
-        # that _send_message adds the hash before it goes out.
-        msg = _create_dataframe_msg([1, 2, 3])
-        msg.ClearField('hash')
-        self.server._send_message(ws, session, msg)
+            # Create a message and ensure its hash is unset; we're testing
+            # that _send_message adds the hash before it goes out.
+            msg = _create_dataframe_msg([1, 2, 3])
+            msg.ClearField('hash')
+            self.server._send_message(ws, session, msg)
 
-        received = yield self.read_forward_msg(ws_client)
-        self.assertEqual(populate_hash_if_needed(msg), received.hash)
+            received = yield self.read_forward_msg(ws_client)
+            self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
-    def test_forwardmsg_cacheable_flag(self, _):
+    def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
          ForwardMsgs."""
-        yield self.start_server_loop()
+        with self._patch_report_session():
+            yield self.start_server_loop()
 
-        ws_client = yield self.ws_connect()
+            ws_client = yield self.ws_connect()
 
-        # Get the server's socket and session for this client
-        ws, session = list(self.server._report_sessions.items())[0]
+            # Get the server's socket and session for this client
+            ws, session = list(self.server._session_infos.items())[0]
 
-        config._set_option('global.minCachedMessageSize', 0, 'test')
-        cacheable_msg = _create_dataframe_msg([1, 2, 3])
-        self.server._send_message(ws, session, cacheable_msg)
-        received = yield self.read_forward_msg(ws_client)
-        self.assertTrue(cacheable_msg.metadata.cacheable)
-        self.assertTrue(received.metadata.cacheable)
+            config._set_option('global.minCachedMessageSize', 0, 'test')
+            cacheable_msg = _create_dataframe_msg([1, 2, 3])
+            self.server._send_message(ws, session, cacheable_msg)
+            received = yield self.read_forward_msg(ws_client)
+            self.assertTrue(cacheable_msg.metadata.cacheable)
+            self.assertTrue(received.metadata.cacheable)
 
-        config._set_option('global.minCachedMessageSize', 1000, 'test')
-        cacheable_msg = _create_dataframe_msg([4, 5, 6])
-        self.server._send_message(ws, session, cacheable_msg)
-        received = yield self.read_forward_msg(ws_client)
-        self.assertFalse(cacheable_msg.metadata.cacheable)
-        self.assertFalse(received.metadata.cacheable)
+            config._set_option('global.minCachedMessageSize', 1000, 'test')
+            cacheable_msg = _create_dataframe_msg([4, 5, 6])
+            self.server._send_message(ws, session, cacheable_msg)
+            received = yield self.read_forward_msg(ws_client)
+            self.assertFalse(cacheable_msg.metadata.cacheable)
+            self.assertFalse(received.metadata.cacheable)
 
     @tornado.testing.gen_test
-    def test_duplicate_forwardmsg_caching(self, _):
+    def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
-        config._set_option('global.minCachedMessageSize', 0, 'test')
+        with self._patch_report_session():
+            config._set_option('global.minCachedMessageSize', 0, 'test')
 
-        yield self.start_server_loop()
-        ws_client = yield self.ws_connect()
+            yield self.start_server_loop()
+            ws_client = yield self.ws_connect()
 
-        # Get the server's socket and session for this client
-        ws, session = list(self.server._report_sessions.items())[0]
+            # Get the server's socket and session for this client
+            ws, session = list(self.server._session_infos.items())[0]
 
-        msg1 = _create_dataframe_msg([1, 2, 3], 1)
+            msg1 = _create_dataframe_msg([1, 2, 3], 1)
 
-        # Send the message, and read it back. It will not have been cached.
-        self.server._send_message(ws, session, msg1)
-        uncached = yield self.read_forward_msg(ws_client)
-        self.assertEqual('delta', uncached.WhichOneof('type'))
+            # Send the message, and read it back. It will not have been cached.
+            self.server._send_message(ws, session, msg1)
+            uncached = yield self.read_forward_msg(ws_client)
+            self.assertEqual('delta', uncached.WhichOneof('type'))
 
-        msg2 = _create_dataframe_msg([1, 2, 3], 123)
+            msg2 = _create_dataframe_msg([1, 2, 3], 123)
 
-        # Send an equivalent message. This time, it should be cached,
-        # and a "hash_reference" message should be received instead.
-        self.server._send_message(ws, session, msg2)
-        cached = yield self.read_forward_msg(ws_client)
-        self.assertEqual('ref_hash', cached.WhichOneof('type'))
-        # We should have the *hash* of msg1 and msg2:
-        self.assertEqual(msg1.hash, cached.ref_hash)
-        self.assertEqual(msg2.hash, cached.ref_hash)
-        # And the same *metadata* as msg2:
-        self.assertEqual(msg2.metadata, cached.metadata)
+            # Send an equivalent message. This time, it should be cached,
+            # and a "hash_reference" message should be received instead.
+            self.server._send_message(ws, session, msg2)
+            cached = yield self.read_forward_msg(ws_client)
+            self.assertEqual('ref_hash', cached.WhichOneof('type'))
+            # We should have the *hash* of msg1 and msg2:
+            self.assertEqual(msg1.hash, cached.ref_hash)
+            self.assertEqual(msg2.hash, cached.ref_hash)
+            # And the same *metadata* as msg2:
+            self.assertEqual(msg2.metadata, cached.metadata)
+
+    @tornado.testing.gen_test
+    def test_cache_clearing(self):
+        """Test that report_run_count is incremented when a report
+        finishes running.
+        """
+        with self._patch_report_session():
+            config._set_option('global.minCachedMessageSize', 0, 'test')
+            config._set_option('global.maxCachedMessageAge', 1, 'test')
+
+            yield self.start_server_loop()
+            yield self.ws_connect()
+
+            ws, session = list(self.server._session_infos.items())[0]
+
+            data_msg = _create_dataframe_msg([1, 2, 3])
+
+            def finish_report(success):
+                status = ForwardMsg.FINISHED_SUCCESSFULLY if success \
+                    else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+                finish_msg = _create_report_finished_msg(status)
+                self.server._send_message(ws, session, finish_msg)
+
+            def is_data_msg_cached():
+                return self.server._message_cache.get_message(data_msg.hash) is not None
+
+            def send_data_msg():
+                self.server._send_message(ws, session, data_msg)
+
+            # Send a cacheable message. It should be cached.
+            send_data_msg()
+            self.assertTrue(is_data_msg_cached())
+
+            # End the report with a compile error. Nothing should change;
+            # compile errors don't increase the age of items in the cache.
+            finish_report(False)
+            self.assertTrue(is_data_msg_cached())
+
+            # End the report successfully. Nothing should change, because
+            # the age of the cached message is now 1.
+            finish_report(True)
+            self.assertTrue(is_data_msg_cached())
+
+            # Send the message again. This should reset its age to 0 in the
+            # cache, so it won't be evicted when the report next finishes.
+            send_data_msg()
+            self.assertTrue(is_data_msg_cached())
+
+            # Finish the report. The cached message age is now 1.
+            finish_report(True)
+            self.assertTrue(is_data_msg_cached())
+
+            # Finish again. The cached message age will be 2, and so it
+            # should be evicted from the cache.
+            finish_report(True)
+            self.assertFalse(is_data_msg_cached())
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -269,7 +341,7 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Create a new ForwardMsg and cache it
         msg = _create_dataframe_msg([1, 2, 3])
         msg_hash = populate_hash_if_needed(msg)
-        self._cache.add_message(msg, MagicMock())
+        self._cache.add_message(msg, MagicMock(), 0)
 
         # Cache hit
         response = self.fetch('/message?hash=%s' % msg_hash)

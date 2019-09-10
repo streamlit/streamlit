@@ -33,6 +33,7 @@ import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
 import { applyDelta } from 'lib/DeltaParser'
+import {ForwardMsg} from 'autogen/proto'
 
 import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
 import { SessionInfo } from 'lib/SessionInfo'
@@ -175,7 +176,7 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
-        reportFinished: () => this.handleReportFinished(),
+        reportFinished: (msg) => this.handleReportFinished(msg),
         uploadReportProgress: progress => this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url => this.openDialog({ url, type: DialogType.UPLOADED }),
       })
@@ -313,20 +314,22 @@ class App extends PureComponent {
   /**
    * Handler for ForwardMsg.reportFinished messages
    */
-  handleReportFinished() {
+  handleReportFinished(msg) {
     // When a script finishes running, we clear any stale elements left over
     // from its previous run - unless our script had a fatal error during
     // execution.
-    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
-      this.setState(({ elements, reportId }) => ({
-        elements: {
-          main: this.clearOldElements(elements.main, reportId),
-          sidebar: this.clearOldElements(elements.sidebar, reportId),
-        },
-      }))
+    if (msg === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+        this.setState(({ elements, reportId }) => ({
+          elements: {
+            main: this.clearOldElements(elements.main, reportId),
+            sidebar: this.clearOldElements(elements.sidebar, reportId),
+          },
+        }))
 
-      this.connectionManager.incrementMessageCacheRunCount(
-        SessionInfo.current.maxCachedMessageAge)
+        this.connectionManager.incrementMessageCacheRunCount(
+          SessionInfo.current.maxCachedMessageAge)
+      }
     }
   }
 
