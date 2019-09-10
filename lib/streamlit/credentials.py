@@ -75,8 +75,7 @@ class Credentials(object):
         try:
             with open(self._conf_file, 'r') as f:
                 data = toml.load(f).get('general')
-            self.activation = _verify_code(
-                data['email'], getattr(data, 'code', None))
+            self.activation = _verify_code(data.get('email'), data.get('code'))
         except FileNotFoundError:
             if auto_resolve:
                 return self.activate(show_instructions=not auto_resolve)
@@ -149,8 +148,20 @@ class Credentials(object):
             activated = False
 
             while not activated:
-                code = None  #code = _get_data('Enter your invite code')
-                email = _get_data('Enter your email for access to our beta')
+                email_prompt = textwrap.dedent('''
+                👋 %(welcome)s
+
+                If you are one of our development partners or are interested in
+                getting personal technical support, please enter your email address
+                below. Otherwise, you may leave the field blank.
+
+                Email''' % {
+                    'welcome': click.style('Welcome to Streamlit!', fg='green')
+                })
+
+                code = None
+                email = click.prompt(
+                    text=email_prompt, default='', show_default=False)
 
                 self.activation = _verify_code(email, code)
                 if self.activation.is_valid:
@@ -186,13 +197,24 @@ def _generate_code(secret, email):
 
 
 def _verify_code(email, code):
-    """Verify activation code with email."""
-    # Bypass code verification for now.
-    if email.count('@') != 1:
+    """Verify activation code with email.
+
+    Parameters
+    ----------
+    email : str
+    code : str | None
+
+    """
+    if email is not None:
+        email = email.strip()
+        if len(email) == 0:
+            email = None
+
+    if email is not None and email.count('@') != 1:
         LOGGER.error('That doesn\'t look like an email :(')
         return Activation(None, None, None)
 
-    if code == None:
+    if code is None:
         return Activation(None, email, True)
 
     # Python2/3 Madness
@@ -225,14 +247,3 @@ def _exit(message):  # pragma: nocover
     """Exit program with error."""
     LOGGER.error(message)
     sys.exit(-1)
-
-
-def _get_data(msg):
-    """Utility to get data from console."""
-    data = None
-    while not data:
-        if sys.version_info >= (3, 0):
-            data = input('%s: ' % msg)
-        else:  # pragma: nocover
-            data = raw_input('%s: ' % msg)  # noqa: F821
-    return data

@@ -18,18 +18,22 @@
 import sys
 import textwrap
 import unittest
+
 import pytest
+from mock import MagicMock
+from mock import call
+from mock import mock_open
+from mock import patch
 
-from mock import call, mock_open, patch, MagicMock
+from streamlit.credentials import Activation
+from streamlit.credentials import Credentials
+from streamlit.credentials import _generate_code
+from streamlit.credentials import _verify_code
 
-from streamlit.credentials import Activation, Credentials, _generate_code, _verify_code, _get_data
-
-if sys.version_info >= (3, 0):
-    INPUT = 'streamlit.credentials.input'
-else:
-    INPUT = 'streamlit.credentials.raw_input'
+if sys.version_info < (3, 0):
     FileNotFoundError = IOError
 
+PROMPT = 'streamlit.credentials.click.prompt'
 
 mock_get_path = MagicMock(
     return_value='/mock/home/folder/.streamlit/credentials.toml')
@@ -80,11 +84,24 @@ class CredentialsClassTest(unittest.TestCase):
             email = "user@domain.com"
         ''').strip()
         m = mock_open(read_data=data)
-        with patch('streamlit.credentials.open', m, create=True) as m:
+        with patch('streamlit.credentials.open', m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual(c.activation.email, 'user@domain.com')
-            self.assertEqual(c.activation.code, None)
+            self.assertEqual('user@domain.com', c.activation.email)
+            self.assertEqual('ARzVsqhSB5i', c.activation.code)
+
+    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    def test_Credentials_load_empty(self):
+        """Test Credentials.load() with empty code and email"""
+        data = textwrap.dedent('''
+            [general]
+        ''').strip()
+        m = mock_open(read_data=data)
+        with patch('streamlit.credentials.open', m, create=True):
+            c = Credentials.get_current()
+            c.load()
+            self.assertEqual(None, c.activation.email)
+            self.assertEqual(None, c.activation.code)
 
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_load_twice(self):
@@ -211,13 +228,14 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
         c.activation = None
-        with patch.object(
-                c, 'load',
-                side_effect=RuntimeError('Some error')), patch.object(
-                    c, 'save') as s, patch(INPUT) as p:
-            p.side_effect = ['ARzVsqhSB5i', 'user@domain.com']
+
+        with patch.object(c, 'load', side_effect=RuntimeError('Some error')), \
+             patch.object(c, 'save') as patched_save, \
+             patch(PROMPT) as patched_prompt:
+
+            patched_prompt.side_effect = ['user@domain.com']
             c.activate()
-            s.assert_called_once()
+            patched_save.assert_called_once()
             self.assertEqual(c.activation.code, None)
             self.assertEqual(c.activation.email, 'user@domain.com')
             self.assertEqual(c.activation.is_valid, True)
@@ -233,9 +251,9 @@ class CredentialsClassTest(unittest.TestCase):
     @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
     def test_Credentials_reset_error(self):
         """Test Credentials.reset() with error."""
-        with patch('streamlit.credentials.os.remove',
-                   side_effect=OSError('some error')), patch(
-                       'streamlit.credentials.LOGGER') as p:
+        with patch('streamlit.credentials.os.remove', side_effect=OSError('some error')), \
+             patch('streamlit.credentials.LOGGER') as p:
+
             Credentials.reset()
             p.error.assert_called_once_with(
                 'Error removing credentials file: some error')
@@ -263,13 +281,3 @@ class CredentialsModulesTest(unittest.TestCase):
         """Test credentials._verify_code with invalid base58 code."""
         ret = _verify_code('user@domain.com', '****')
         self.assertFalse(ret.is_valid)
-
-    def test_get_data(self):
-        """Test get_data."""
-        with patch(INPUT) as p:
-            p.return_value = 'my data'
-            data = _get_data('some message')
-
-            self.assertEqual(1, p.call_count)
-            self.assertEqual('some message: ', p.call_args[0][0])
-            self.assertEqual('my data', data)
