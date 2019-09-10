@@ -40,6 +40,32 @@ except NameError:  # pragma: nocover
     FileNotFoundError = IOError
 
 
+EMAIL_PROMPT = '''
+👋 %(welcome)s
+
+If you are one of our development partners or are interested in
+getting personal technical support, please enter your email address
+below. Otherwise, you may leave the field blank.
+
+Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
+
+TELEMETRY_TEXT = '''
+Telemetry: as an open source project, we use collect summary
+statistics and metadata to understand how people are using Streamlit.
+
+If you'd like to opt out, add the following to ~/.streamlit/config.toml,
+creating that file if necessary:
+
+[browser]
+gatherUsageStats = false
+'''
+
+INSTRUCTIONS_TEXT = '''
+Get started by typing:
+$ %(hello)s
+''' % {'hello': click.style('streamlit hello', bold=True)}
+
+
 class Credentials(object):
     """Credentials class."""
     _singleton = None
@@ -144,31 +170,18 @@ class Credentials(object):
             activated = False
 
             while not activated:
-                email_prompt = textwrap.dedent('''
-                👋 %(welcome)s
-
-                If you are one of our development partners or are interested in
-                getting personal technical support, please enter your email address
-                below. Otherwise, you may leave the field blank.
-
-                Email''' % {
-                    'welcome': click.style('Welcome to Streamlit!', fg='green')
-                })
 
                 email = click.prompt(
-                    text=email_prompt, default='', show_default=False)
+                    text=textwrap.indent(EMAIL_PROMPT, prefix='  '),
+                    default='', show_default=False)
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
-                    click.secho('')
-                    click.secho('  Welcome to Streamlit!', fg='green')
-                    click.secho('')
+                    click.secho(textwrap.indent(TELEMETRY_TEXT, prefix='  '))
                     if show_instructions:
-                        click.secho('  Get started by typing:')
-                        click.secho('  $ ', nl=False)
-                        click.secho('streamlit hello', bold=True)
-                        click.secho('')
+                        click.secho(
+                            textwrap.indent(INSTRUCTIONS_TEXT, prefix='  '))
                     activated = True
                 else:  # pragma: nocover
                     LOGGER.error('Please try again.')
