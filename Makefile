@@ -61,12 +61,18 @@ endif
 pylint:
 	# Linting
 	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; \
-		flake8 \
-		--ignore=E402,E128 \
-		--exclude=streamlit/proto/*_pb2.py \
-		$(PYTHON_MODULES) \
-		tests/
+	# Code formating checks
+	black --check docs/
+	black --check examples/
+	black --check lib/streamlit/
+	black --check lib/tests/ --exclude=compile_error.py
+	# cd lib; \
+	# 	flake8 \
+	# 	--ignore=E402,E128 \
+	# 	--exclude=streamlit/proto/*_pb2.py \
+	# 	$(PYTHON_MODULES) \
+	# 	tests/
+	
 
 .PHONY: pytest
 # Run Python unit tests.
