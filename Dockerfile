@@ -7,6 +7,11 @@ ARG USER=circleci
 ARG HOME=/home/$USER
 ARG APP=$HOME/repo
 
+# create `yarn start` cache directory
+# run before setting the user (https://github.com/docker/compose/issues/3270)
+RUN mkdir -p $APP/frontend/node_modules/.cache/hard-source \
+    && chown $USER:$USER $APP/frontend/node_modules/.cache/hard-source
+
 USER $USER
 WORKDIR $APP
 RUN sudo chown $USER $APP
@@ -54,10 +59,6 @@ COPY --chown=$USER frontend/package.json frontend/yarn.lock ./frontend/
 
 # install node modules
 RUN make react-init
-
-# create `yarn start` cache directory
-RUN mkdir -p $APP/frontend/node_modules/.cache/hard-source \
-    && sudo chown $USER:$USER $APP/frontend/node_modules/.cache/hard-source
 
 # copy pipfile
 COPY --chown=$USER lib/Pipfile.locks/python-3.7.4 ./lib/Pipfile.locks/
