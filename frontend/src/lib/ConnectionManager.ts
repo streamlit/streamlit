@@ -94,7 +94,12 @@ export class ConnectionManager {
     }
   }
 
+  /**
+   * Increment the runCount on our message cache, and clear entries
+   * whose age is greater than the max.
+   */
   public incrementMessageCacheRunCount(maxMessageAge: number): void {
+    // StaticConnection does not use a MessageCache.
     if (this.connection instanceof WebsocketConnection) {
       this.connection.incrementMessageCacheRunCount(maxMessageAge)
     }

@@ -328,7 +328,6 @@ class App extends PureComponent {
         },
       }))
 
-
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
       // the cache.
