@@ -72,7 +72,13 @@ class ServerTest(ServerTestCase):
         """Test that we can start and stop the server."""
         with self._patch_report_session():
             yield self.start_server_loop()
-            self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
+            self.assertEqual(State.WAITING_FOR_FIRST_BROWSER,
+                             self.server._state)
+
+            # Open a websocket connection
+            yield self.ws_connect()
+            self.assertEqual(State.ONE_OR_MORE_BROWSERS_CONNECTED,
+                             self.server._state)
 
             self.server.stop()
             self.assertEqual(State.STOPPING, self.server._state)

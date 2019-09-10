@@ -244,8 +244,8 @@ class Server(object):
             yield tornado.gen.sleep(0.01)
 
         # Shut down all ReportSessions
-        for session in list(self._session_infos.values()):
-            session.shutdown()
+        for session_info in list(self._session_infos.values()):
+            session_info.session.shutdown()
 
         self._set_state(State.STOPPED)
 
