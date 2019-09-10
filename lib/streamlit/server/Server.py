@@ -293,7 +293,9 @@ class Server(object):
         if (msg.WhichOneof('type') == 'report_finished' and
                 msg.report_finished == ForwardMsg.FINISHED_SUCCESSFULLY):
             LOGGER.debug('Report finished successfully; '
-                         'removing expired entries from MessageCache')
+                         'removing expired entries from MessageCache '
+                         '(max_age=%s)',
+                         config.get_option('global.maxCachedMessageAge'))
             session_info.report_run_count += 1
             self._message_cache.remove_expired_session_entries(
                 session_info.session, session_info.report_run_count)

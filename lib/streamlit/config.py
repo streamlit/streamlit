@@ -255,10 +255,10 @@ _create_option(
 _create_option(
     'global.maxCachedMessageAge',
     description='''Expire cached ForwardMsgs whose age is > this value.
-        A message's age is defined by how many times its report has been run
-        since the message has been accessed.''',
+        A message's age is defined by how many times its report has finished
+        running since the message has been accessed.''',
     visibility='hidden',
-    default_val=1)
+    default_val=2)
 
 
 # Config Section: Client #

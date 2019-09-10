@@ -230,7 +230,7 @@ class MessageCache(object):
                 ):
                     LOGGER.debug(
                         'Removing expired entry [session=%s, hash=%s]',
-                        session, hash)
+                        id(session), hash)
                     entry.remove_session_ref(session)
                     if not entry.has_refs():
                         # The entry has no more references. Remove it from
