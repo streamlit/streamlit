@@ -28,21 +28,26 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import (NP_SAMPLE_SIZE, NP_SIZE_LARGE,
-                               PANDAS_ROWS_LARGE, PANDAS_SAMPLE_SIZE, get_hash)
+from streamlit.hashing import (
+    NP_SAMPLE_SIZE,
+    NP_SIZE_LARGE,
+    PANDAS_ROWS_LARGE,
+    PANDAS_SAMPLE_SIZE,
+    get_hash,
+)
 
 
 class HashTest(unittest.TestCase):
     def test_string(self):
-        self.assertEqual(get_hash('hello'), get_hash('hello'))
-        self.assertNotEqual(get_hash('hello'), get_hash('hellö'))
+        self.assertEqual(get_hash("hello"), get_hash("hello"))
+        self.assertNotEqual(get_hash("hello"), get_hash("hellö"))
 
     def test_int(self):
         self.assertEqual(get_hash(145757624235), get_hash(145757624235))
         self.assertNotEqual(get_hash(10), get_hash(11))
         self.assertNotEqual(get_hash(-1), get_hash(1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2**7-1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2**7+1))
+        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 - 1))
+        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
         self.assertEqual([1, 2], [1, 2])
@@ -72,9 +77,9 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(abs), get_hash(type))
 
     def test_pandas(self):
-        df1 = pd.DataFrame({'foo': [12]})
-        df2 = pd.DataFrame({'foo': [42]})
-        df3 = pd.DataFrame({'foo': [12]})
+        df1 = pd.DataFrame({"foo": [12]})
+        df2 = pd.DataFrame({"foo": [42]})
+        df3 = pd.DataFrame({"foo": [12]})
 
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
@@ -83,15 +88,15 @@ class HashTest(unittest.TestCase):
         """Test the performance of hashing a large dataframe or a sample of said
         dataframe."""
 
-        df = pd.DataFrame(
-            np.random.randn(PANDAS_ROWS_LARGE, 4), columns=list('ABCD'))
-        
+        df = pd.DataFrame(np.random.randn(PANDAS_ROWS_LARGE, 4), columns=list("ABCD"))
+
         def full():
             return pd.util.hash_pandas_object(df).sum()
 
         def sample():
             return pd.util.hash_pandas_object(
-                df.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)).sum()
+                df.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
+            ).sum()
 
         t_full = timeit.Timer(full).timeit(number=10)
         t_sample = timeit.Timer(sample).timeit(number=10)
@@ -101,9 +106,9 @@ class HashTest(unittest.TestCase):
     def test_numpy_sample(self):
         """Test the performance of hashing a large matrices."""
 
-        arr_large = np.random.randn(NP_SIZE_LARGE-1)
+        arr_large = np.random.randn(NP_SIZE_LARGE - 1)
         arr_too_large = np.random.randn(NP_SIZE_LARGE)
-        
+
         def full():
             return get_hash(arr_large)
 
@@ -138,14 +143,16 @@ class HashTest(unittest.TestCase):
 
     def test_lambdas(self):
         # self.assertEqual(get_hash(lambda x: x.lower()), get_hash(lambda x: x.lower()))
-        self.assertNotEqual(get_hash(lambda x: x.lower()), get_hash(lambda x: x.upper()))
+        self.assertNotEqual(
+            get_hash(lambda x: x.lower()), get_hash(lambda x: x.upper())
+        )
 
     def test_files(self):
         temp1 = tempfile.NamedTemporaryFile()
         temp2 = tempfile.NamedTemporaryFile()
 
-        with open(__file__, 'r') as f:
-            with open(__file__, 'r') as g:
+        with open(__file__, "r") as f:
+            with open(__file__, "r") as g:
                 self.assertEqual(get_hash(f), get_hash(g))
 
             self.assertNotEqual(get_hash(f), get_hash(temp1))
@@ -154,7 +161,7 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(temp1), get_hash(temp2))
 
     def test_file_position(self):
-        with open(__file__, 'r') as f:
+        with open(__file__, "r") as f:
             h1 = get_hash(f)
             self.assertEqual(h1, get_hash(f))
             f.readline()
@@ -172,6 +179,7 @@ class HashTest(unittest.TestCase):
 class CodeHashTest(unittest.TestCase):
     def test_simple(self):
         """Test the hash of simple functions."""
+
         def f(x):
             return x * x
 
@@ -179,13 +187,14 @@ class CodeHashTest(unittest.TestCase):
             return x + x
 
         def h(x):
-            return x*x
+            return x * x
 
         self.assertNotEqual(get_hash(f), get_hash(g))
         self.assertEqual(get_hash(f), get_hash(h))
 
     def test_rename(self):
         """Test the hash of function with renamed variables."""
+
         def f(x, y):
             return x + y
 
@@ -200,6 +209,7 @@ class CodeHashTest(unittest.TestCase):
 
     def test_value(self):
         """Test the hash of functions with values."""
+
         def f():
             x = 42
             return x
@@ -217,6 +227,7 @@ class CodeHashTest(unittest.TestCase):
 
     def test_defaults(self):
         """Test the hash of functions with defaults."""
+
         def f(x=42):
             return x
 
@@ -289,24 +300,27 @@ class CodeHashTest(unittest.TestCase):
         """Test code that references pandas dataframes."""
 
         def hash_prog_1():
-            df = pd.DataFrame({'foo': [12]})
+            df = pd.DataFrame({"foo": [12]})
 
             def f():
                 return df
+
             return get_hash(f)
 
         def hash_prog_2():
-            df = pd.DataFrame({'foo': [42]})
+            df = pd.DataFrame({"foo": [42]})
 
             def f():
                 return df
+
             return get_hash(f)
 
         def hash_prog_3():
-            df = pd.DataFrame({'foo': [12]})
+            df = pd.DataFrame({"foo": [12]})
 
             def f():
                 return df
+
             return get_hash(f)
 
         self.assertNotEqual(hash_prog_1(), hash_prog_2())
@@ -344,21 +358,16 @@ class CodeHashTest(unittest.TestCase):
     def test_dict_reference(self):
         """Test code with lambdas that call a dictionary."""
 
-        a = {
-            'foo': 42,
-            'bar': {
-                'baz': 12
-            }
-        }
+        a = {"foo": 42, "bar": {"baz": 12}}
 
         def f():
-            return a['bar']['baz']
+            return a["bar"]["baz"]
 
         def g():
-            return a['foo']
+            return a["foo"]
 
         def h():
-            return a['bar']['baz']
+            return a["bar"]["baz"]
 
         self.assertNotEqual(get_hash(f), get_hash(g))
         self.assertEqual(get_hash(f), get_hash(h))
@@ -379,14 +388,17 @@ class CodeHashTest(unittest.TestCase):
 
         def f():
             import numpy
+
             return numpy
 
         def g():
             import pandas
+
             return pandas
 
         def n():
             import foobar
+
             return foobar
 
         self.assertNotEqual(get_hash(f), get_hash(g))
@@ -398,7 +410,7 @@ class CodeHashTest(unittest.TestCase):
         x = 12
         y = 13
 
-        class Foo():
+        class Foo:
             def get_x(self):
                 return x
 
@@ -437,7 +449,7 @@ class CodeHashTest(unittest.TestCase):
         """Test hash for classes with methods that reference values."""
 
         def hash_prog_1():
-            class Foo():
+            class Foo:
                 x = 12
 
                 def get_x(self):
@@ -451,7 +463,7 @@ class CodeHashTest(unittest.TestCase):
             return get_hash(f)
 
         def hash_prog_2():
-            class Foo():
+            class Foo:
                 x = 42
 
                 def get_x(self):
@@ -507,6 +519,7 @@ class CodeHashTest(unittest.TestCase):
             @functools.wraps(func)
             def wrapper_do(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return wrapper_do
 
         @do
@@ -526,6 +539,7 @@ class CodeHashTest(unittest.TestCase):
 
     def test_cached(self):
         """Test decorated functions."""
+
         @st.cache
         def f():
             return 42
@@ -543,6 +557,7 @@ class CodeHashTest(unittest.TestCase):
 
     def test_streamlit(self):
         """Test hashing streamlit functions."""
+
         def f():
             st.write("Hello")
 
@@ -560,17 +575,20 @@ class CodeHashTest(unittest.TestCase):
 
         def f(x):
             def func(v):
-                return v**x
+                return v ** x
+
             return func
 
         def g(x):
             def func(v):
-                return v*x
+                return v * x
+
             return func
 
         def h(x):
             def func(v):
-                return v**x
+                return v ** x
+
             return func
 
         self.assertNotEqual(get_hash(f), get_hash(g))

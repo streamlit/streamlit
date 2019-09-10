@@ -33,4 +33,4 @@ class BokehTest(testutil.DeltaGeneratorTestCase):
         st.bokeh_chart(plot)
 
         c = self.get_delta_from_queue().new_element.bokeh_chart
-        self.assertEqual(hasattr(c, 'figure'), True)
+        self.assertEqual(hasattr(c, "figure"), True)

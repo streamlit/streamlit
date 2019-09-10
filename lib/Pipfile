@@ -38,6 +38,7 @@ opencv-python = "*"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
+black = "*"
 
 [packages]
 astor = "*"
@@ -64,3 +65,6 @@ toml = "*"
 tornado = ">=5.0,<6.0"
 tzlocal = "*"
 watchdog = "*"
+
+[pipenv]
+allow_prereleases = true

@@ -40,25 +40,25 @@ LOGGER = get_logger(__name__)
 
 
 TORNADO_SETTINGS = {
-    'compress_response': True,  # Gzip HTTP responses.
-    'websocket_ping_interval': 20,  # Ping every 20s to keep WS alive.
-    'websocket_ping_timeout': 30,  # Pings should be responded to within 30s.
-    'websocket_max_message_size': MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    "compress_response": True,  # Gzip HTTP responses.
+    "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
+    "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
+    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
 }
 
 
 # Dictionary key used to mark the script execution context that starts
 # up before the first browser connects.
-PREHEATED_REPORT_SESSION = 'PREHEATED_REPORT_SESSION'
+PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 
 
 class State(Enum):
-    INITIAL = 'INITIAL'
-    WAITING_FOR_FIRST_BROWSER = 'WAITING_FOR_FIRST_BROWSER'
-    ONE_OR_MORE_BROWSERS_CONNECTED = 'ONE_OR_MORE_BROWSERS_CONNECTED'
-    NO_BROWSERS_CONNECTED = 'NO_BROWSERS_CONNECTED'
-    STOPPING = 'STOPPING'
-    STOPPED = 'STOPPED'
+    INITIAL = "INITIAL"
+    WAITING_FOR_FIRST_BROWSER = "WAITING_FOR_FIRST_BROWSER"
+    ONE_OR_MORE_BROWSERS_CONNECTED = "ONE_OR_MORE_BROWSERS_CONNECTED"
+    NO_BROWSERS_CONNECTED = "NO_BROWSERS_CONNECTED"
+    STOPPING = "STOPPING"
+    STOPPED = "STOPPED"
 
 
 class Server(object):
@@ -69,7 +69,7 @@ class Server(object):
     def get_current(cls):
         """Return the singleton instance."""
         if cls._singleton is None:
-            raise RuntimeError('Server has not been initialized yet')
+            raise RuntimeError("Server has not been initialized yet")
 
         return Server._singleton
 
@@ -84,8 +84,7 @@ class Server(object):
 
         """
         if Server._singleton is not None:
-            raise RuntimeError(
-                'Server already initialized. Use .get_current() instead')
+            raise RuntimeError("Server already initialized. Use .get_current() instead")
 
         Server._singleton = self
 
@@ -113,20 +112,18 @@ class Server(object):
 
         """
         if self._state != State.INITIAL:
-            raise RuntimeError('Server has already been started')
+            raise RuntimeError("Server has already been started")
 
-        LOGGER.debug('Starting server...')
+        LOGGER.debug("Starting server...")
         app = self._create_app()
-        port = config.get_option('server.port')
+        port = config.get_option("server.port")
         app.listen(port)
-        LOGGER.debug('Server started on port %s', port)
+        LOGGER.debug("Server started on port %s", port)
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
     def get_debug(self):
-        return {
-            'report': self._report.get_debug(),
-        }
+        return {"report": self._report.get_debug()}
 
     def _create_app(self):
         """Create our tornado web app.
@@ -137,40 +134,44 @@ class Server(object):
 
         """
         routes = [
-            (r'/stream', _BrowserWebSocketHandler, dict(server=self)),
-            (r'/healthz', HealthHandler, dict(
-                health_check=lambda: self.is_ready_for_browser_connection)),
-            (r'/debugz', DebugHandler, dict(server=self)),
-            (r'/metrics', MetricsHandler),
+            (r"/stream", _BrowserWebSocketHandler, dict(server=self)),
+            (
+                r"/healthz",
+                HealthHandler,
+                dict(health_check=lambda: self.is_ready_for_browser_connection),
+            ),
+            (r"/debugz", DebugHandler, dict(server=self)),
+            (r"/metrics", MetricsHandler),
         ]
 
-        if (config.get_option('global.developmentMode') and
-                config.get_option('global.useNode')):
-            LOGGER.debug('Serving static content from the Node dev server')
+        if config.get_option("global.developmentMode") and config.get_option(
+            "global.useNode"
+        ):
+            LOGGER.debug("Serving static content from the Node dev server")
         else:
             static_path = util.get_static_dir()
-            LOGGER.debug('Serving static content from %s', static_path)
+            LOGGER.debug("Serving static content from %s", static_path)
 
-            routes.extend([
-                (r"/()$", StaticFileHandler,
-                    {'path': '%s/index.html' % static_path}),
-                (r"/(.*)", StaticFileHandler,
-                    {'path': '%s/' % static_path}),
-            ])
+            routes.extend(
+                [
+                    (
+                        r"/()$",
+                        StaticFileHandler,
+                        {"path": "%s/index.html" % static_path},
+                    ),
+                    (r"/(.*)", StaticFileHandler, {"path": "%s/" % static_path}),
+                ]
+            )
 
         return tornado.web.Application(routes, **TORNADO_SETTINGS)
 
     def _set_state(self, new_state):
-        LOGGER.debug('Server state: %s -> %s' % (self._state, new_state))
+        LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
         self._state = new_state
 
     @property
     def is_ready_for_browser_connection(self):
-        return self._state not in (
-            State.INITIAL,
-            State.STOPPING,
-            State.STOPPED,
-        )
+        return self._state not in (State.INITIAL, State.STOPPING, State.STOPPED)
 
     @property
     def browser_is_connected(self):
@@ -183,7 +184,7 @@ class Server(object):
         elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
             pass
         else:
-            raise RuntimeError('Bad server state at start: %s' % self._state)
+            raise RuntimeError("Bad server state at start: %s" % self._state)
 
         if on_started is not None:
             on_started(self)
@@ -271,15 +272,16 @@ class Server(object):
 
             if PREHEATED_REPORT_SESSION in self._report_sessions:
                 assert len(self._report_sessions) == 1
-                LOGGER.debug('Reusing preheated context for ws %s', ws)
+                LOGGER.debug("Reusing preheated context for ws %s", ws)
                 session = self._report_sessions[PREHEATED_REPORT_SESSION]
                 del self._report_sessions[PREHEATED_REPORT_SESSION]
             else:
-                LOGGER.debug('Creating new context for ws %s', ws)
+                LOGGER.debug("Creating new context for ws %s", ws)
                 session = ReportSession(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv)
+                    script_argv=self._script_argv,
+                )
 
             self._report_sessions[ws] = session
 
@@ -300,6 +302,7 @@ class Server(object):
 
 class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     """Handles a WebSocket connection from the browser"""
+
     def initialize(self, server):
         self._server = server
 
@@ -319,31 +322,32 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         try:
             msg.ParseFromString(payload)
-            LOGGER.debug('Received the following back message:\n%s', msg)
+            LOGGER.debug("Received the following back message:\n%s", msg)
 
-            msg_type = msg.WhichOneof('type')
+            msg_type = msg.WhichOneof("type")
 
-            if msg_type == 'cloud_upload':
+            if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
-            elif msg_type == 'rerun_script':
-                self._session.handle_rerun_script_request(
-                    command_line=msg.rerun_script)
-            elif msg_type == 'clear_cache':
+            elif msg_type == "rerun_script":
+                self._session.handle_rerun_script_request(command_line=msg.rerun_script)
+            elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
-            elif msg_type == 'set_run_on_save':
+            elif msg_type == "set_run_on_save":
                 self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == 'stop_report':
+            elif msg_type == "stop_report":
                 self._session.handle_stop_script_request()
-            elif msg_type == 'update_widgets':
+            elif msg_type == "update_widgets":
                 self._session.handle_rerun_script_request(
-                    widget_state=msg.update_widgets)
-            elif msg_type == 'close_connection':
-                if config.get_option('global.developmentMode'):
+                    widget_state=msg.update_widgets
+                )
+            elif msg_type == "close_connection":
+                if config.get_option("global.developmentMode"):
                     Server.get_current().stop()
                 else:
                     LOGGER.warning(
-                        'Client tried to close connection when '
-                        'not in development mode')
+                        "Client tried to close connection when "
+                        "not in development mode"
+                    )
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -353,9 +357,9 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 def _set_tornado_log_levels():
-    if not config.get_option('global.developmentMode'):
+    if not config.get_option("global.developmentMode"):
         # Hide logs unless they're super important.
         # Example of stuff we don't care about: 404 about .js.map files.
-        logging.getLogger('tornado.access').setLevel(logging.ERROR)
-        logging.getLogger('tornado.application').setLevel(logging.ERROR)
-        logging.getLogger('tornado.general').setLevel(logging.ERROR)
+        logging.getLogger("tornado.access").setLevel(logging.ERROR)
+        logging.getLogger("tornado.application").setLevel(logging.ERROR)
+        logging.getLogger("tornado.general").setLevel(logging.ERROR)

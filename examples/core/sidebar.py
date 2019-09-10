@@ -15,5 +15,5 @@
 
 import streamlit as st
 
-st.sidebar.text('foo')
-st.text('bar')
+st.sidebar.text("foo")
+st.text("bar")

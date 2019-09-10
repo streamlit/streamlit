@@ -54,10 +54,13 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         if override_root:
             main_dg = self.new_delta_generator()
             sidebar_dg = self.new_delta_generator()
-            setattr(threading.current_thread(),
-                    REPORT_CONTEXT_ATTR_NAME,
-                    ReportContext(main_dg=main_dg, sidebar_dg=sidebar_dg,
-                                  widgets=Widgets()))
+            setattr(
+                threading.current_thread(),
+                REPORT_CONTEXT_ATTR_NAME,
+                ReportContext(
+                    main_dg=main_dg, sidebar_dg=sidebar_dg, widgets=Widgets()
+                ),
+            )
 
     def tearDown(self):
         self.report_queue._clear()
@@ -72,8 +75,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         if len(args) > 0:
             enqueue = args[0]
             args = args[1:]
-        elif 'enqueue' in kwargs:
-            enqueue = kwargs.pop('enqueue')
+        elif "enqueue" in kwargs:
+            enqueue = kwargs.pop("enqueue")
         else:
             enqueue = enqueue_fn
 

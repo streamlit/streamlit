@@ -16,6 +16,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import unittest
@@ -30,10 +31,10 @@ class EventBasedFileWatcherTest(unittest.TestCase):
 
     def setUp(self):
         self.observer_class_patcher = mock.patch(
-            'streamlit.watcher.EventBasedFileWatcher.Observer')
-        self.util_patcher = mock.patch(
-            'streamlit.watcher.EventBasedFileWatcher.util')
-        self.os_patcher = mock.patch('streamlit.watcher.EventBasedFileWatcher.os')
+            "streamlit.watcher.EventBasedFileWatcher.Observer"
+        )
+        self.util_patcher = mock.patch("streamlit.watcher.EventBasedFileWatcher.util")
+        self.os_patcher = mock.patch("streamlit.watcher.EventBasedFileWatcher.os")
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()
         self.os = self.os_patcher.start()
@@ -52,9 +53,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher('/this/is/my/file.py', cb)
+        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
         fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
@@ -64,9 +65,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
-        ev = events.FileSystemEvent('/this/is/my/file.py')
+        ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
         folder_handler.on_modified(ev)
 
@@ -79,9 +80,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher('/this/is/my/file.py', cb)
+        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
         fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
@@ -91,9 +92,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
-        ev = events.FileSystemEvent('/this/is/my/file.py')
+        ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
         folder_handler.on_modified(ev)
 
@@ -107,9 +108,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher('/this/is/my/file.py', cb)
+        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
         fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
@@ -122,7 +123,7 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         # Same MD5:
         # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
-        ev = events.FileSystemEvent('/this/is/my/file.py')
+        ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
         folder_handler.on_modified(ev)
 
@@ -136,9 +137,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher('/this/is/my/file.py', cb)
+        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
         fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
@@ -148,9 +149,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
-        ev = events.FileSystemEvent('/this/is/my/file.py')
+        ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_DELETED  # Wrong type
         folder_handler.on_modified(ev)
 
@@ -162,13 +163,15 @@ class EventBasedFileWatcherTest(unittest.TestCase):
     def test_multiple_watchers_same_file(self):
         """Test that we can have multiple watchers of the same file."""
 
-        filename = '/this/is/my/file.py'
+        filename = "/this/is/my/file.py"
 
         mod_count = [0]
+
         def modify_mock_file():
             self.os.stat = lambda x: FakeStat(mod_count[0])
-            self.mock_util.calc_md5_with_blocking_retries = \
-                lambda x: '%d' % mod_count[0]
+            self.mock_util.calc_md5_with_blocking_retries = (
+                lambda x: "%d" % mod_count[0]
+            )
 
             ev = events.FileSystemEvent(filename)
             ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -218,6 +221,6 @@ class EventBasedFileWatcherTest(unittest.TestCase):
 
 class FakeStat(object):
     """Emulates the output of os.stat()."""
+
     def __init__(self, mtime):
         self.st_mtime = mtime
-

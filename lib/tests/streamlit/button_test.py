@@ -24,8 +24,8 @@ class ButtonTest(testutil.DeltaGeneratorTestCase):
 
     def test_button(self):
         """Test that it can be called."""
-        st.button('the label')
+        st.button("the label")
 
         c = self.get_delta_from_queue().new_element.button
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertEqual(c.value, False)

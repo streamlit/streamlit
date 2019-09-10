@@ -27,22 +27,21 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
 
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.date_input('the label')
+        st.date_input("the label")
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertLessEqual(
-            datetime.strptime(c.value, '%Y/%m/%d').date(),
-            datetime.now().date())
+            datetime.strptime(c.value, "%Y/%m/%d").date(), datetime.now().date()
+        )
 
-    @parameterized.expand([
-        (date(1970, 1, 1), '1970/01/01'),
-        (datetime(2019, 7, 6, 21, 15), '2019/07/06')
-    ])
+    @parameterized.expand(
+        [(date(1970, 1, 1), "1970/01/01"), (datetime(2019, 7, 6, 21, 15), "2019/07/06")]
+    )
     def test_value_types(self, arg_value, proto_value):
         """Test that it supports different types of values."""
-        st.date_input('the label', arg_value)
+        st.date_input("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertEqual(c.value, proto_value)

@@ -36,7 +36,7 @@ setup:
 .PHONY: pipenv-install
 pipenv-install: lib/Pipfile
 	@# Runs pipenv install; doesn't update the Pipfile.lock.
-	cd lib; pipenv install --dev
+	cd lib; pipenv install --dev --pre
 
 .PHONY: pipenv-lock
 # Re-generate Pipfile.lock. This should be run when you update the Pipfile.
@@ -44,16 +44,16 @@ pipenv-lock: lib/Pipfile
 	@# Regenerates Pipfile.lock and rebuilds the virtualenv. This is rather slow.
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
 ifndef CIRCLECI
-	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
+	cd lib; rm -f Pipfile.lock; pipenv lock --dev --pre && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
 else
 	echo "Running in CircleCI, not generating requirements."
 endif
 	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
 ifndef CIRCLECI
 	# Dont update lockfile and install whatever is in lock.
-	cd lib; pipenv install --ignore-pipfile --dev
+	cd lib; pipenv install --ignore-pipfile --dev --pre
 else
-	cd lib; pipenv install --ignore-pipfile --dev --system
+	cd lib; pipenv install --ignore-pipfile --dev --system --pre
 endif
 
 .PHONY: pylint
