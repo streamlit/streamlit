@@ -37,6 +37,7 @@
     "protobufjs": "^6.8.8",
     "react": "^16.8.6",
     "react-copy-to-clipboard": "^5.0.1",
+    "react-debounce-render": "^5.0.0",
     "react-dom": "^16.8.4",
     "react-feather": "^2.0.3",
     "react-google-login": "^5.0.4",

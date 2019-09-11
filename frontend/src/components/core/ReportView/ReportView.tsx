@@ -22,6 +22,9 @@ import Block from "components/core/Block/"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
+//@ts-ignore
+import debounceRender from 'react-debounce-render'
+
 import { Col, Row } from "reactstrap"
 import { ThemeProvider } from "baseui"
 import { widgetTheme } from "lib/widgetTheme"
@@ -59,6 +62,8 @@ interface Props {
   widgetsDisabled: boolean
 }
 
+const DebouncedBlock = debounceRender(Block, 100, {leading: true, trailing: true, maxWait: 500})
+
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
@@ -79,7 +84,7 @@ class ReportView extends PureComponent<Props> {
           </Col>
         )}
         <Col className="main">
-          <Block
+          <DebouncedBlock
             elements={this.props.elements.main}
             reportId={this.props.reportId}
             reportRunState={this.props.reportRunState}
