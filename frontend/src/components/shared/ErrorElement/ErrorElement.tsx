@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import {Alert} from 'reactstrap'
+import React from "react"
+import { Alert } from "reactstrap"
 
 export interface Props {
-  name: string;
-  message: string;
-  stack?: string;
-  width?: number;
+  name: string
+  message: string
+  stack?: string
+  width?: number
 }
 
 /**
@@ -33,25 +33,22 @@ export interface Props {
  */
 class ErrorElement extends React.PureComponent<Props> {
   public render(): React.ReactNode {
-    const {name, message, stack} = this.props
+    const { name, message, stack } = this.props
 
     // Remove first line from stack (because it's just the error message) and
     // trim indentation.
-    const stackArray = stack ? stack.split('\n') : []
+    const stackArray = stack ? stack.split("\n") : []
     stackArray.shift()
-    const cleanedStack = stackArray
-      .map(s => s.trim())
-      .join('\n')
+    const cleanedStack = stackArray.map(s => s.trim()).join("\n")
 
     return (
-      <Alert
-        color="danger" style={{width: this.props.width}}>
-        <strong>{name}:</strong>{' '}{message}
-        {
-          stack ?
-            <pre className="error"><code>{ cleanedStack }</code></pre>
-            : null
-        }
+      <Alert color="danger" style={{ width: this.props.width }}>
+        <strong>{name}:</strong> {message}
+        {stack ? (
+          <pre className="error">
+            <code>{cleanedStack}</code>
+          </pre>
+        ) : null}
       </Alert>
     )
   }

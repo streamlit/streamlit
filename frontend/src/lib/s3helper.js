@@ -15,15 +15,17 @@
  * limitations under the License.
  */
 
-import AWS from 'aws-sdk/global'
-import S3 from 'aws-sdk/clients/s3'
-import { FETCH_PARAMS, AWS_REGION, COGNITO_IDENTITY_POOL_ID } from './baseconsts'
-import { logError } from './log'
-
+import AWS from "aws-sdk/global"
+import S3 from "aws-sdk/clients/s3"
+import {
+  FETCH_PARAMS,
+  AWS_REGION,
+  COGNITO_IDENTITY_POOL_ID,
+} from "./baseconsts"
+import { logError } from "./log"
 
 let s3 = null
 let haveCredentials = false
-
 
 /**
  * Set up AWS credentials, given an OAuth ID token from Google.
@@ -31,7 +33,7 @@ let haveCredentials = false
  */
 export async function configureCredentials(idToken) {
   if (haveCredentials) {
-    logError('Grabbing credentials again. This should never happen.')
+    logError("Grabbing credentials again. This should never happen.")
   }
 
   AWS.config.region = AWS_REGION
@@ -40,14 +42,13 @@ export async function configureCredentials(idToken) {
     // These keys are capitalized funnily on purpose. That's the actual API.
     IdentityPoolId: COGNITO_IDENTITY_POOL_ID,
     Logins: {
-      'accounts.google.com': idToken,
+      "accounts.google.com": idToken,
     },
   })
 
   await AWS.config.credentials.getPromise()
   haveCredentials = true
 }
-
 
 /**
  * Get an Object from S3. This smartly chooses whether hit the HTTP server in
@@ -71,25 +72,24 @@ export async function getObject(args) {
   }
 }
 
-
 async function getObjectViaFetchAPI(args) {
   const response = await fetch(`/${args.Key}`, FETCH_PARAMS)
 
   if (!response.ok) {
     if (response.status === 403) {
       // Can't subclass Error class in Babel, so this is my crappy solution.
-      throw new Error('PermissionError')
+      throw new Error("PermissionError")
     } else {
       const responseText = await response.text()
       throw new Error(
         `HTTP status code: ${response.status}\n` +
-        `Response text: ${responseText}`)
+          `Response text: ${responseText}`
+      )
     }
   }
 
   return response
 }
-
 
 async function getObjectViaS3API(args) {
   if (!s3) {
@@ -98,8 +98,8 @@ async function getObjectViaS3API(args) {
 
   const data = await s3.getObject(args).promise()
   return {
-    json: () => Promise.resolve(JSON.parse(data.Body.toString('utf-8'))),
-    text: () => Promise.resolve(data.Body.toString('utf-8')),
+    json: () => Promise.resolve(JSON.parse(data.Body.toString("utf-8"))),
+    text: () => Promise.resolve(data.Body.toString("utf-8")),
     arrayBuffer: () => Promise.resolve(data.Body),
   }
 }

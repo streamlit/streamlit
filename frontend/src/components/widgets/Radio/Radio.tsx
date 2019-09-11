@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Radio as UIRadio, RadioGroup } from 'baseui/radio'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { radioOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { radioOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,7 +33,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: number;
+  value?: number
 }
 
 class Radio extends React.PureComponent<Props, State> {
@@ -45,14 +45,14 @@ class Radio extends React.PureComponent<Props, State> {
    */
   private get valueOrDefault(): number {
     if (this.state.value === undefined) {
-      return this.props.element.get('value') as number
+      return this.props.element.get("value") as number
     } else {
       return this.state.value
     }
   }
 
   private onChange = (e: any) => {
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
     const stringValue = (e.target as HTMLInputElement).value
     const value = parseInt(stringValue, 10)
 
@@ -64,12 +64,12 @@ class Radio extends React.PureComponent<Props, State> {
     const { element, width } = this.props
 
     const style = { width }
-    const label = element.get('label')
-    let options = element.get('options')
+    const label = element.get("label")
+    let options = element.get("options")
     let disabled = this.props.disabled
 
     if (options.size === 0) {
-      options = ['No options to select.']
+      options = ["No options to select."]
       disabled = true
     }
 
@@ -86,7 +86,9 @@ class Radio extends React.PureComponent<Props, State> {
               key={idx}
               value={idx.toString()}
               overrides={radioOverrides}
-            >{option}</UIRadio>
+            >
+              {option}
+            </UIRadio>
           ))}
         </RadioGroup>
       </div>

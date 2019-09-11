@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import PropTypes from 'prop-types'
+import React from "react"
+import PropTypes from "prop-types"
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -26,22 +26,21 @@ import DeckGL, {
   ScatterplotLayer,
   ScreenGridLayer,
   TextLayer,
-} from 'deck.gl'
-import Immutable from 'immutable'
-import { StaticMap } from 'react-map-gl'
-import { dataFrameToArrayOfDicts } from '../../../lib/dataFrameProto'
-import 'mapbox-gl/dist/mapbox-gl.css'
-import './DeckGlChart.scss'
+} from "deck.gl"
+import Immutable from "immutable"
+import { StaticMap } from "react-map-gl"
+import { dataFrameToArrayOfDicts } from "../../../lib/dataFrameProto"
+import "mapbox-gl/dist/mapbox-gl.css"
+import "./DeckGlChart.scss"
 
 const MAPBOX_ACCESS_TOKEN =
-  'pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ'
-
+  "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
 
 class DeckGlChart extends React.PureComponent {
   constructor(props) {
     super(props)
 
-    const specStr = this.props.element.get('spec')
+    const specStr = this.props.element.get("spec")
     const spec = specStr ? JSON.parse(specStr) : {}
     const v = spec.viewport || {}
 
@@ -98,17 +97,15 @@ class DeckGlChart extends React.PureComponent {
   }
 
   buildLayers() {
-    const layers = this.props.element.get('layers')
+    const layers = this.props.element.get("layers")
     return layers.map(layer => buildLayer(layer)).toArray()
   }
 }
-
 
 DeckGlChart.propTypes = {
   element: PropTypes.instanceOf(Immutable.Map).isRequired,
   width: PropTypes.number.isRequired,
 }
-
 
 /**
  * Defines default getters for columns.
@@ -160,62 +157,79 @@ const Defaults = {
 
   TextLayer: {
     getColor: getColorFromColorRGBAColumns,
-    getPixelOffset:
-      d => [fallback(d.pixelOffsetX, 0), fallback(d.pixelOffsetY, 0)],
+    getPixelOffset: d => [
+      fallback(d.pixelOffsetX, 0),
+      fallback(d.pixelOffsetY, 0),
+    ],
     getPosition: getPositionFromLatLonColumns,
-    getAlignmentBaseline: 'bottom',
+    getAlignmentBaseline: "bottom",
   },
 }
 
-
 function buildLayer(layer) {
-  const data = dataFrameToArrayOfDicts(layer.get('data'))
-  const spec = JSON.parse(layer.get('spec'))
+  const data = dataFrameToArrayOfDicts(layer.get("data"))
+  const spec = JSON.parse(layer.get("spec"))
 
-  const type = spec.type ? spec.type.toLowerCase() : ''
+  const type = spec.type ? spec.type.toLowerCase() : ""
   delete spec.type
 
   parseGetters(type, spec)
 
   switch (type) {
-    case 'arclayer':
+    case "arclayer":
       return new ArcLayer({
-        data, ...Defaults.ArcLayer, ...spec,
+        data,
+        ...Defaults.ArcLayer,
+        ...spec,
       })
 
-    case 'gridlayer':
+    case "gridlayer":
       return new GridLayer({
-        data, ...Defaults.GridLayer, ...spec,
+        data,
+        ...Defaults.GridLayer,
+        ...spec,
       })
 
-    case 'hexagonlayer':
+    case "hexagonlayer":
       return new HexagonLayer({
-        data, ...Defaults.HexagonLayer, ...spec,
+        data,
+        ...Defaults.HexagonLayer,
+        ...spec,
       })
 
-    case 'linelayer':
+    case "linelayer":
       return new LineLayer({
-        data, ...Defaults.LineLayer, ...spec,
+        data,
+        ...Defaults.LineLayer,
+        ...spec,
       })
 
-    case 'pointcloudlayer':
+    case "pointcloudlayer":
       return new PointCloudLayer({
-        data, ...Defaults.PointCloudLayer, ...spec,
+        data,
+        ...Defaults.PointCloudLayer,
+        ...spec,
       })
 
-    case 'scatterplotlayer':
+    case "scatterplotlayer":
       return new ScatterplotLayer({
-        data, ...Defaults.ScatterplotLayer, ...spec,
+        data,
+        ...Defaults.ScatterplotLayer,
+        ...spec,
       })
 
-    case 'screengridlayer':
+    case "screengridlayer":
       return new ScreenGridLayer({
-        data, ...Defaults.ScreenGridLayer, ...spec,
+        data,
+        ...Defaults.ScreenGridLayer,
+        ...spec,
       })
 
-    case 'textlayer':
+    case "textlayer":
       return new TextLayer({
-        data, ...Defaults.TextLayer, ...spec,
+        data,
+        ...Defaults.TextLayer,
+        ...spec,
       })
 
     default:
@@ -223,27 +237,20 @@ function buildLayer(layer) {
   }
 }
 
-
-
 // Set of DeckGL Layers that take a getPosition argument. We'll allow users to
 // specify position columns via getLatitude and getLongitude instead.
 const POSITION_LAYER_TYPES = new Set([
-  'gridlayer',
-  'hexagonlayer',
-  'scatterplotlayer',
-  'screengridlayer',
-  'textlayer',
+  "gridlayer",
+  "hexagonlayer",
+  "scatterplotlayer",
+  "screengridlayer",
+  "textlayer",
 ])
-
 
 // Set of DeckGL Layers that take a getSourcePosition/getTargetPosition
 // arguments.  We'll allow users to specify position columns via
 // getLatitude/getTargetLatitude and getLongitude/getTargetLongitude instead.
-const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set([
-  'arclayer',
-  'linelayer',
-])
-
+const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set(["arclayer", "linelayer"])
 
 /**
  * Take a short "map style" string and convert to the full URL for the style.
@@ -251,17 +258,17 @@ const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set([
  *
  * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
  */
-function getStyleUrl(styleStr = 'light-v9') {
+function getStyleUrl(styleStr = "light-v9") {
   if (
-    styleStr.startsWith('http://') ||
-    styleStr.startsWith('https://') ||
-    styleStr.startsWith('mapbox://')) {
+    styleStr.startsWith("http://") ||
+    styleStr.startsWith("https://") ||
+    styleStr.startsWith("mapbox://")
+  ) {
     return styleStr
   }
 
   return `mapbox://styles/mapbox/${styleStr}`
 }
-
 
 /**
  * Returns the first non-null/non-undefined argument.
@@ -274,11 +281,12 @@ function getStyleUrl(styleStr = 'light-v9') {
  */
 function fallback(...args) {
   for (let i = 0; i < args.length; i += 1) {
-    if (args[i] != null) { return args[i] }
+    if (args[i] != null) {
+      return args[i]
+    }
   }
   return null
 }
-
 
 /* Define a bunch of getters */
 
@@ -305,60 +313,69 @@ function getNormalFromNormalXYZColumns(d) {
 const DEFAULT_COLOR = [200, 30, 0, 160]
 
 function getColorFromColorRGBAColumns(d) {
-  return d.colorR && d.colorG && d.colorB ?
-    [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
-    DEFAULT_COLOR
+  return d.colorR && d.colorG && d.colorB
+    ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
+    : DEFAULT_COLOR
 }
 
 function getSourceColorFromSourceColorRGBAColumns(d) {
-  return d.colorR && d.colorG && d.colorB ?
-    [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA] :
-    DEFAULT_COLOR
+  return d.colorR && d.colorG && d.colorB
+    ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
+    : DEFAULT_COLOR
 }
 
 function getTargetColorFromTargetColorRGBAColumns(d) {
-  return d.targetColorR && d.targetColorG && d.targetColorB ?
-    [d.targetColorR, d.targetColorG, d.targetColorB,
-      d.targetColorA == null ? 255 : d.targetColorA] :
-    DEFAULT_COLOR
+  return d.targetColorR && d.targetColorG && d.targetColorB
+    ? [
+        d.targetColorR,
+        d.targetColorG,
+        d.targetColorB,
+        d.targetColorA == null ? 255 : d.targetColorA,
+      ]
+    : DEFAULT_COLOR
 }
 
 function parseGetters(type, spec) {
   // If this is a layer that accepts a getPosition argument, build that
   // argument from getLatiude and getLongitude.
-  if (POSITION_LAYER_TYPES.has(type) &&
-      spec.getLatitude &&
-      spec.getLongitude) {
+  if (
+    POSITION_LAYER_TYPES.has(type) &&
+    spec.getLatitude &&
+    spec.getLongitude
+  ) {
     const latField = spec.getLatitude
     const lonField = spec.getLongitude
-    spec.getPosition = (d) => [d[lonField], d[latField]]
+    spec.getPosition = d => [d[lonField], d[latField]]
   }
 
   // Same as the above, but for getSourcePosition/getTargetPosition.
-  if (SOURCE_TARGET_POSITION_LAYER_TYPES.has(type) &&
-      spec.getLatitude &&
-      spec.getLongitude &&
-      spec.getTargetLatitude &&
-      spec.getTargetLongitude) {
+  if (
+    SOURCE_TARGET_POSITION_LAYER_TYPES.has(type) &&
+    spec.getLatitude &&
+    spec.getLongitude &&
+    spec.getTargetLatitude &&
+    spec.getTargetLongitude
+  ) {
     const latField = spec.getLatitude
     const lonField = spec.getLongitude
     const latField2 = spec.getTargetLatitude
     const lonField2 = spec.getTargetLongitude
-    spec.getSourcePosition = (d) => [d[lonField], d[latField]]
-    spec.getTargetPosition = (d) => [d[lonField2], d[latField2]]
+    spec.getSourcePosition = d => [d[lonField], d[latField]]
+    spec.getTargetPosition = d => [d[lonField2], d[latField2]]
   }
 
-  Object.keys(spec).forEach((key) => {
-    if (!key.startsWith('get')) { return }
+  Object.keys(spec).forEach(key => {
+    if (!key.startsWith("get")) {
+      return
+    }
     const v = spec[key]
     spec[key] =
-        typeof v === 'function' ?
-          v :                       // Leave functions untouched.
-          typeof v === 'string' ?
-            d => d[v] :             // Make getters from strings.
-            () => v                 // Make constant function otherwise.
+      typeof v === "function"
+        ? v // Leave functions untouched.
+        : typeof v === "string"
+        ? d => d[v] // Make getters from strings.
+        : () => v // Make constant function otherwise.
   })
 }
-
 
 export default DeckGlChart

@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import {IS_DEV_ENV} from './baseconsts'
-
+import { IS_DEV_ENV } from "./baseconsts"
 
 /**
  * Log a message to the console, but only if in dev mode.
@@ -26,7 +25,6 @@ export function logMessage(...args: any[]): void {
     console.log(...args)
   }
 }
-
 
 /**
  * Log an warning to the console, but only if in dev mode.
@@ -39,7 +37,6 @@ export function logWarning(...args: any[]): void {
   }
 }
 
-
 /**
  * Log an error to the console. ALWAYS does this, even if in prod mode, because
  * errors are _that_ important.
@@ -50,7 +47,6 @@ export function logError(...args: any[]): void {
   console.error(...args)
   // TODO: Send error report to our servers when there's an error.
 }
-
 
 /**
  * Log a message to the console. ALWAYS does this, even if in prod mode.

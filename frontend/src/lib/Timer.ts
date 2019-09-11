@@ -20,10 +20,10 @@
  * remaining time.
  */
 export class Timer {
-  private timerHandle?: number;
-  private duration: number = 0;
-  private startTime: number = 0;
-  private _isRunning: boolean = false;
+  private timerHandle?: number
+  private duration = 0
+  private startTime = 0
+  private _isRunning = false
 
   /** True if the timer is currently running */
   public get isRunning(): boolean {
