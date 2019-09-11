@@ -24,6 +24,11 @@ except ImportError:
     # Python 3
     import importlib
 
+from streamlit import config
+
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
+
 try:
     # If the watchdog module is installed.
     from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher as FileWatcher
@@ -31,10 +36,14 @@ except ImportError:
     # Fallback that doesn't use watchdog.
     from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
-from streamlit import config
+    if not config.get_option('global.disableWatchdogWarning'):
+        LOGGER.warning("""
+  For better performance, install the Watchdog module:
 
-from streamlit.logger import get_logger
-LOGGER = get_logger(__name__)
+  $ xcode-select --install
+  $ pip install watchdog
+
+        """)
 
 
 WatchedModule = collections.namedtuple(

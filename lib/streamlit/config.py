@@ -172,6 +172,15 @@ _create_section('global', 'Global options that apply across all of Streamlit.')
 
 
 _create_option(
+    'global.disableWatchdogWarning',
+    description='''
+        If False, will show a warning if the watchdog module is not available
+        on the user's system and we fall back to the polling file watcher.
+        ''',
+    default_val=False)
+
+
+_create_option(
     'global.sharingMode',
     description='''
         Configure the ability to share reports to the cloud.
