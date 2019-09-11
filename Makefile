@@ -317,8 +317,9 @@ headers:
 	./scripts/add_license_headers.py \
 		lib/streamlit \
 		lib/tests \
+		e2e/scripts \
+		e2e/specs \
 		frontend/src \
-		frontend/cypress/integration \
 		frontend/public \
 		proto \
 		examples \
