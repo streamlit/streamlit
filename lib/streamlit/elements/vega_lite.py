@@ -33,34 +33,6 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def generate_spec_from_data(graph_type, data):
-    encoding_x = {'field': 'index', 'type': 'quantitative',
-                  'axis': {'title': ''}}
-
-    if isinstance(data, pd.DataFrame):
-        data = pd.melt(data.reset_index(), id_vars=['index'])
-
-        index_value = data.at[0, 'index']
-
-        if type(index_value) is datetime or type(index_value) is pd.Timestamp:
-            encoding_x = {'field': 'index', 'type': 'temporal',
-                          'axis': {'title': ''}}
-
-    spec = {
-        'data': data,
-        'mark': graph_type,
-        'encoding': {
-            'x': encoding_x,
-            'y': {'field': 'value', 'type': 'quantitative',
-                  'axis': {'title': ''}},
-            'color': {'field': 'variable', 'type': 'nominal',
-                      'legend': {'title': None}}
-        }
-    }
-
-    return spec
-
-
 def marshall(proto, data=None, spec=None, width=0, **kwargs):
     """Construct a Vega-Lite chart object.
 
