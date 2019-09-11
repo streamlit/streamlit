@@ -32,8 +32,7 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
-from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
-        _clean_up_sig, _with_element
+from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, _remove_self_from_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
 from tests import testutil
 import streamlit as st
@@ -57,14 +56,9 @@ class FakeDeltaGenerator(object):
         element.text.body = str(body)
         element.text.format = Text.PLAIN
 
-    def fake_dataframe(self, element, arg0, data=None):
-        """Fake dataframe.
-
-        In the real dataframe, element is set to _ but in reality the
-        decorator passes None in to what would be the element, so I want to
-        verify that None is indeed getting passed in.
-        """
-        return (element, arg0, data)
+    def fake_dataframe(self, arg0, data=None):
+        """Fake dataframe."""
+        return (arg0, data)
 
     def fake_text_raise_exception(self, element, body):
         """Fake text that raises exception."""
@@ -121,13 +115,13 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         sig = signature(wrapped)
         self.assertEqual(str(sig), '(body)')
 
-    def test_clean_up_sig(self):
-        wrapped = _clean_up_sig(FakeDeltaGenerator.fake_dataframe)
+    def test_remove_self_from_sig(self):
+        wrapped = _remove_self_from_sig(FakeDeltaGenerator.fake_dataframe)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_dataframe)
         self.assertEqual(
-            str(sig), '(self, element, arg0, data=None)', str(sig))
+            str(sig), '(self, arg0, data=None)', str(sig))
 
         # Check cleaned signature.
         # On python2 it looks like: '(self, *args, **kwargs)'
@@ -138,7 +132,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         # Check cleaned output.
         dg = FakeDeltaGenerator()
         result = wrapped(dg, 'foo', data='bar')
-        self.assertEqual(result, (None, 'foo', 'bar'))
+        self.assertEqual(result, ('foo', 'bar'))
 
     def test_with_element(self):
         wrapped = _with_element(FakeDeltaGenerator.fake_text)

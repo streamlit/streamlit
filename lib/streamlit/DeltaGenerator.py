@@ -46,13 +46,14 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
-    """Simplify the function signature by removing "self" and "element".
+    """Simplify the function signature by removing arguments from it.
 
-    Removes arguments from function signature, since signatures are
-    visible in our user-facing docs and these elements make no sense to the
-    user.
+    Removes arguments the first N arguments from function signature (where N is
+    num_args_to_remove). This is useful since function signatures are visible
+    in our user-facing docs, and many methods in DeltaGenerator have arguments
+    that users have no access to.
     """
-    # By passing (None, None), we're removing (self, element) from *args
+    # By passing (None, ...), we're removing (arg1, ...) from *args
     args_to_remove = (None,) * num_args_to_remove
     fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
@@ -65,35 +66,12 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     return functools.wraps(fake_wrapped)
 
 
-def _clean_up_sig(method):
-    """Cleanup function signature.
+def _remove_self_from_sig(method):
+    """Remove the `self` argument from `method`'s signature."""
 
-    This passes 'None' into the `element` argument of the wrapped function.
-
-    The reason this function exists is to allow us to use
-    `@_wraps_with_cleaned_sig` in functions like `st.dataframe`, which do not
-    take an element as input.
-
-    Contrast this with the `_with_element()` function, below, which creates an
-    actual Element proto, passes it into the function, and takes care of
-    enqueueing the element later.
-
-    So if you have some function
-        @_clean_up_sig
-        def some_function(self, unused_element_argument, stuff):
-    then the wrapped version of `some_function` can be called like this by
-    the user:
-        dg.some_function(stuff)
-
-    and its signature (introspected in st.help or IPython's `?` magic command)
-    will correctly reflect the above.  Meanwhile, when the user calls the
-    function as above, the wrapped function will be called this way:
-        dg.some_function(None, stuff)
-    """
-
-    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    @_wraps_with_cleaned_sig(method, 1)  # Remove self from sig.
     def wrapped_method(self, *args, **kwargs):
-        return method(self, None, *args, **kwargs)
+        return method(self, *args, **kwargs)
 
     return wrapped_method
 
@@ -614,8 +592,8 @@ class DeltaGenerator(object):
         element.exception.message = message
         element.exception.stack_trace.extend(stack_trace)
 
-    @_clean_up_sig
-    def dataframe(self, _, data=None, width=None, height=None):
+    @_remove_self_from_sig
+    def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
