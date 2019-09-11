@@ -2008,6 +2008,7 @@ class DeltaGenerator(object):
             'Only existing elements can add_rows.'
 
         import streamlit.elements.data_frame_proto as data_frame_proto
+        import pandas as pd
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
