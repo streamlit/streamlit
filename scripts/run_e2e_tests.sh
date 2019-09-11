@@ -57,7 +57,7 @@ then
 fi
 
 # Set working directory
-cd "$cwd"
+cd "$cwd"/frontend
 
 # Generate report on exit
 generate_report() {
@@ -68,18 +68,25 @@ generate_report() {
 trap generate_report EXIT
 
 # Clear old results
-rm frontend/cypress/mochawesome/* || true
-rm frontend/mochawesome.json || true
+rm cypress/mochawesome/* || true
+rm mochawesome.json || true
 
 # Test core streamlit elements
-for file in e2e/scripts/*.py
+for file in ../e2e/scripts/*.py
 do
   # Infinite loop to support retries.
   while true
   do
     # Run next test
     streamlit run $file &
-    yarn --cwd "frontend" cy:run --spec "../e2e/specs/${file%.*}.spec.ts" $record_results
+
+    filename=$(basename $file)
+    specpath="../e2e/specs/${filename%.*}.spec.ts"
+
+    yarn \
+      cy:run \
+      --spec $specpath \
+      $record_results
 
     EXITCODE="$?"
 
