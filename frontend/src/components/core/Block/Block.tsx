@@ -79,22 +79,9 @@ interface Props {
 }
 
 class Block extends PureComponent<Props> {
-
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.getElements()
 
-
-    // NOTE we're getting an incrementally larger list for each added element
-    // console.log(elementsToRender.size)
-    const a = elementsToRender.get(elementsToRender.size-1)
-
-    // @ts-ignore
-    if (a && a._root.entries[0][1] && a._root.entries[0][1]._root) {
-      // @ts-ignore
-      // console.log(a._root.entries[0][1]._root.entries[0])
-    }
-
-    // NOTE fast if we comment this block
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
@@ -182,19 +169,6 @@ class Block extends PureComponent<Props> {
       ? "element-container stale-element"
       : "element-container"
 
-
-    // NOTE 4 second
-    // return <div/>
-
-    // NOTE 6 seconds
-
-    /*
-    return (
-      <div key={index} className={className} style={{ width }}>
-        {component}
-      </div>
-    )
-    */
     return (
       <div key={index} className={className} style={{ width }}>
         <ErrorBoundary width={width}>
@@ -316,15 +290,11 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = () => {
-    console.log('render block')
-
-    return (
-      <AutoSizer disableHeight={true}>
-        {({ width }) => this.renderElements(width)}
-      </AutoSizer>
-    )
-  }
+  public render = () => (
+    <AutoSizer disableHeight={true}>
+      {({ width }) => this.renderElements(width)}
+    </AutoSizer>
+  )
 }
 
 export default Block

@@ -62,7 +62,8 @@ interface Props {
   widgetsDisabled: boolean
 }
 
-const DebouncedBlock = debounceRender(Block, 100, {leading: true, trailing: true, maxWait: 500})
+// https://lodash.com/docs/4.17.15#debounce
+const DebouncedBlock = debounceRender(Block, 500, {leading: false, trailing: true, maxWait: 1000})
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
