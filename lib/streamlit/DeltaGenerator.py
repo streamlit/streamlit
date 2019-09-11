@@ -45,15 +45,16 @@ LOGGER = get_logger(__name__)
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 
-def _wraps_with_cleaned_sig(wrapped):
+def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     """Simplify the function signature by removing "self" and "element".
 
-    Removes "self" and "element" from function signature, since signatures are
+    Removes arguments from function signature, since signatures are
     visible in our user-facing docs and these elements make no sense to the
     user.
     """
     # By passing (None, None), we're removing (self, element) from *args
-    fake_wrapped = functools.partial(wrapped, None, None)
+    args_to_remove = (None,) * num_args_to_remove
+    fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
 
     # These fields are used by wraps(), but in Python 2 partial() does not
@@ -90,7 +91,7 @@ def _clean_up_sig(method):
         dg.some_function(None, stuff)
     """
 
-    @_wraps_with_cleaned_sig(method)
+    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(self, *args, **kwargs):
         return method(self, None, *args, **kwargs)
 
@@ -118,18 +119,18 @@ def _with_element(method):
 
     """
 
-    @_wraps_with_cleaned_sig(method)
-    def wrapped_method(self, *args, **kwargs):
+    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    def wrapped_method(dg, *args, **kwargs):
         def marshall_element(element):
-            return method(self, element, *args, **kwargs)
+            return method(dg, element, *args, **kwargs)
 
-        return self._enqueue_new_element_delta(marshall_element)
+        return dg._enqueue_new_element_delta(marshall_element)
 
     return wrapped_method
 
 
-def _widget(f):
-    @_wraps_with_cleaned_sig(f)
+def _widget(method):
+    @_wraps_with_cleaned_sig(method, 3)  # Remove self, element, ui_value.
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
         # All of this label-parsing code only exists so we can throw a pretty
@@ -142,7 +143,7 @@ def _widget(f):
             label = args[0]
             args = args[1:]
         else:
-            raise TypeError('%s must have a label' % f.__name__)
+            raise TypeError('%s must have a label' % method.__name__)
 
         ctx = get_report_ctx()
         # The widget ID is the widget type (i.e. the name "foo" of the
@@ -150,15 +151,15 @@ def _widget(f):
         # This allows widgets of different types to have the same label,
         # and solves a bug where changing the widget type but keeping
         # the label could break things.
-        widget_id = '%s-%s' % (f.__name__, label)
+        widget_id = '%s-%s' % (method.__name__, label)
 
-        el = getattr(element, f.__name__)
+        el = getattr(element, method.__name__)
         el.id = widget_id
 
         ui_value = (
             ctx.widgets.get_widget_value(widget_id) if ctx else None
         )
-        return f(dg, element, ui_value, label, *args, **kwargs)
+        return method(dg, element, ui_value, label, *args, **kwargs)
 
     return wrapper
 

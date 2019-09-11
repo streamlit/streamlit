@@ -104,7 +104,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = (
-            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text))
+            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2))
         wrapped = wrapped_function.keywords.get('wrapped')
 
         # Check meta data.
