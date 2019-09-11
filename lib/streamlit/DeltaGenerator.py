@@ -780,19 +780,8 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        import altair as alt
-        import pandas as pd
-
-        if not isinstance(data, pd.DataFrame):
-            data = pd.DataFrame(data)
-
-        data = pd.melt(data.reset_index(), id_vars=['index'])
-
-        chart = alt.Chart(data).mark_bar().encode(
-            alt.X('variable', title=''),
-            alt.Y('value', title=''))
-
         import streamlit.elements.altair as altair
+        chart = altair.generate_chart('bar', data)
         altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
 
     @_with_element
