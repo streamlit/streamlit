@@ -33,7 +33,8 @@ def generate_chart(chart_type, data):
     chart = getattr(alt.Chart(data), 'mark_' + chart_type)().encode(
         alt.X('index', title=''),
         alt.Y('value', title=''),
-        alt.Color('variable', title=''))
+        alt.Color('variable', title=''),
+        alt.Tooltip(['index', 'value', 'variable'])).interactive()
 
     return chart
 
