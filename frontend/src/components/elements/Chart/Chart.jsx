@@ -15,42 +15,42 @@
  * limitations under the License.
  */
 
-import React from 'react'
+import React from "react"
 import {
   tableGetRowsAndCols,
   indexGet,
   tableGet,
   INDEX_COLUMN_DESIGNATOR,
-} from '../../../lib/dataFrameProto'
-import { format, Duration } from '../../../lib/format'
+} from "../../../lib/dataFrameProto"
+import { format, Duration } from "../../../lib/format"
 
-import * as recharts from 'recharts'
+import * as recharts from "recharts"
 
-import './Chart.scss'
+import "./Chart.scss"
 
 const COMPONENTS = {
   ////////////
   // Charts //
   ////////////
 
-  AreaChart         : recharts.AreaChart,
-  BarChart          : recharts.BarChart,
-  LineChart         : recharts.LineChart,
-  ComposedChart     : recharts.ComposedChart,
+  AreaChart: recharts.AreaChart,
+  BarChart: recharts.BarChart,
+  LineChart: recharts.LineChart,
+  ComposedChart: recharts.ComposedChart,
   // PieChart       <- not implemented
-  RadarChart        : recharts.RadarChart,
+  RadarChart: recharts.RadarChart,
   // RadialBarChart <- not implemented
   // ScatterChart   <- not implemented
-  Treemap           : recharts.Treemap,
+  Treemap: recharts.Treemap,
 
   ////////////////////////
   // General Components //
   ////////////////////////
 
   // ResponsiveContainer, <- not implemented
-  Area              : recharts.Area,
-  Legend            : recharts.Legend,
-  Tooltip           : recharts.Tooltip,
+  Area: recharts.Area,
+  Legend: recharts.Legend,
+  Tooltip: recharts.Tooltip,
   // Cell           <- not implemented
   // Text           <- not implemented
   // Label          <- not implemented
@@ -60,30 +60,30 @@ const COMPONENTS = {
   // Cartesian Components //
   //////////////////////////
 
-  Bar               : recharts.Bar,
-  Line              : recharts.Line,
-  Scatter           : recharts.Scatter,
-  XAxis             : recharts.XAxis,
-  YAxis             : recharts.YAxis,
-  ZAxis             : recharts.ZAxis,
-  Brush             : recharts.Brush,
-  CartesianAxis     : recharts.CartesianAxis,
-  CartesianGrid     : recharts.CartesianGrid,
-  ReferenceLine     : recharts.ReferenceLine,
-  ReferenceDot      : recharts.ReferenceDot,
-  ReferenceArea     : recharts.ReferenceArea,
-  ErrorBar          : recharts.ErrorBar,
+  Bar: recharts.Bar,
+  Line: recharts.Line,
+  Scatter: recharts.Scatter,
+  XAxis: recharts.XAxis,
+  YAxis: recharts.YAxis,
+  ZAxis: recharts.ZAxis,
+  Brush: recharts.Brush,
+  CartesianAxis: recharts.CartesianAxis,
+  CartesianGrid: recharts.CartesianGrid,
+  ReferenceLine: recharts.ReferenceLine,
+  ReferenceDot: recharts.ReferenceDot,
+  ReferenceArea: recharts.ReferenceArea,
+  ErrorBar: recharts.ErrorBar,
 
   //////////////////////
   // Polar Components //
   //////////////////////
 
-  Pie               : recharts.Pie,
-  Radar             : recharts.Radar,
-  RadialBar         : recharts.RadialBar,
-  PolarAngleAxis    : recharts.PolarAngleAxis,
-  PolarGrid         : recharts.PolarGrid,
-  PolarRadiusAxis   : recharts.PolarRadiusAxis,
+  Pie: recharts.Pie,
+  Radar: recharts.Radar,
+  RadialBar: recharts.RadialBar,
+  PolarAngleAxis: recharts.PolarAngleAxis,
+  PolarGrid: recharts.PolarGrid,
+  PolarRadiusAxis: recharts.PolarRadiusAxis,
 
   ////////////
   // Shapes //
@@ -99,27 +99,32 @@ const COMPONENTS = {
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
-  'plainIndex', 'int_64Index', 'uint_64Index', 'float_64Index',
-  'datetimeIndex', 'timedeltaIndex', 'rangeIndex',
+  "plainIndex",
+  "int_64Index",
+  "uint_64Index",
+  "float_64Index",
+  "datetimeIndex",
+  "timedeltaIndex",
+  "rangeIndex",
   // TODO(tvst): Support other index types
 ])
 
 class Chart extends React.PureComponent {
   render() {
-    const {element, width} = this.props
+    const { element, width } = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
     const chartDims = {
-      width: (element.get('width') || width) + chartXOffset,
-      height: element.get('height') || 200,
+      width: (element.get("width") || width) + chartXOffset,
+      height: element.get("height") || 200,
     }
 
     // Convert the data into a format that Recharts understands.
-    const dataFrame = element.get('data')
+    const dataFrame = element.get("data")
     const data = []
-    const [rows, cols] = tableGetRowsAndCols(dataFrame.get('data'))
+    const [rows, cols] = tableGetRowsAndCols(dataFrame.get("data"))
 
-    const indexType = dataFrame.get('index').get('type')
+    const indexType = dataFrame.get("index").get("type")
     const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
 
     // transform to number, e.g. to support Date
@@ -127,15 +132,15 @@ class Chart extends React.PureComponent {
     // transform to human readable tick, e.g. to support Date
     let tickFormatter = undefined
     switch (indexType) {
-      case 'datetimeIndex':
+      case "datetimeIndex":
         indexTransform = date => date.getTime()
         tickFormatter = millis => format.dateToString(new Date(millis))
         break
-      case 'timedeltaIndex':
+      case "timedeltaIndex":
         indexTransform = date => date.getTime()
         tickFormatter = millis => format.durationToString(new Duration(millis))
         break
-      case 'float_64Index':
+      case "float_64Index":
         tickFormatter = float => float.toFixed(2)
         break
       default:
@@ -143,20 +148,27 @@ class Chart extends React.PureComponent {
     }
 
     for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      let rowData = {}
+      const rowData = {}
 
       if (hasSupportedIndex) {
-        rowData[INDEX_COLUMN_DESIGNATOR] =
-            indexGet(dataFrame.get('index'), 0, rowIndex)
+        rowData[INDEX_COLUMN_DESIGNATOR] = indexGet(
+          dataFrame.get("index"),
+          0,
+          rowIndex
+        )
         if (indexTransform) {
-          rowData[INDEX_COLUMN_DESIGNATOR] =
-              indexTransform(rowData[INDEX_COLUMN_DESIGNATOR])
+          rowData[INDEX_COLUMN_DESIGNATOR] = indexTransform(
+            rowData[INDEX_COLUMN_DESIGNATOR]
+          )
         }
       }
 
       for (let colIndex = 0; colIndex < cols; colIndex++) {
-        rowData[indexGet(dataFrame.get('columns'), 0, colIndex)] =
-            tableGet(dataFrame.get('data'), colIndex, rowIndex)
+        rowData[indexGet(dataFrame.get("columns"), 0, colIndex)] = tableGet(
+          dataFrame.get("data"),
+          colIndex,
+          rowIndex
+        )
       }
       data.push(rowData)
     }
@@ -168,22 +180,22 @@ class Chart extends React.PureComponent {
 
     return (
       <div className="stChart" style={chartDims}>
-        <div style={{...chartDims, left: -chartXOffset}}>
-          {
-            React.createElement(
-              COMPONENTS[element.get('type')],
-              {...chartDims, data, ...chart_props},
-              ...element.get('components').map((component) => {
-                const component_props = extractProps(component)
-                const isXAxis = component.get('type') === 'XAxis'
-                if (isXAxis && tickFormatter) {
-                  component_props['tickFormatter'] = tickFormatter
-                }
-                return React.createElement(
-                  COMPONENTS[component.get('type')], component_props)
-              })
-            )
-          }
+        <div style={{ ...chartDims, left: -chartXOffset }}>
+          {React.createElement(
+            COMPONENTS[element.get("type")],
+            { ...chartDims, data, ...chart_props },
+            ...element.get("components").map(component => {
+              const component_props = extractProps(component)
+              const isXAxis = component.get("type") === "XAxis"
+              if (isXAxis && tickFormatter) {
+                component_props["tickFormatter"] = tickFormatter
+              }
+              return React.createElement(
+                COMPONENTS[component.get("type")],
+                component_props
+              )
+            })
+          )}
         </div>
       </div>
     )
@@ -198,18 +210,21 @@ function extractProps(element) {
   }
 
   const props = {}
-  element.get('props').forEach(prop => {
-    let value = prop.get('value')
+  element.get("props").forEach(prop => {
+    let value = prop.get("value")
 
     // Do a little special-casing here. This is a hack which has to be fixed.
-    if (value === 'true') {
+    if (value === "true") {
       value = true
-    } else if (value === 'false') {
+    } else if (value === "false") {
       value = false
-    } else if (prop.get('key') === 'domain') {
-      value = prop.get('value').split(',').map((x) => tryParseFloat(x))
+    } else if (prop.get("key") === "domain") {
+      value = prop
+        .get("value")
+        .split(",")
+        .map(x => tryParseFloat(x))
     }
-    props[prop.get('key')] = value
+    props[prop.get("key")] = value
   })
   return props
 }

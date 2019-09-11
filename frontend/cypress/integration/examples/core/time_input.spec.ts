@@ -17,32 +17,25 @@
 
 /// <reference types="cypress" />
 
-describe('st.time_input', () => {
+describe("st.time_input", () => {
   beforeEach(() => {
-    cy.visit('http://localhost:3000/')
+    cy.visit("http://localhost:3000/")
   })
 
-  it('shows labels', () => {
-    cy.get('.stTimeInput label')
-      .should(
-        'have.text',
-        'Label 1' +
-        'Label 2'
-      )
+  it("shows labels", () => {
+    cy.get(".stTimeInput label").should("have.text", "Label 1" + "Label 2")
   })
 
-  it('has correct values', () => {
-    cy.get('.stText')
-      .should(
-        'have.text',
-        'Value 1: 08:45:00' +
-        'Value 2: 21:15:00'
-      )
+  it("has correct values", () => {
+    cy.get(".stText").should(
+      "have.text",
+      "Value 1: 08:45:00" + "Value 2: 21:15:00"
+    )
   })
 
-  it('handles value changes', () => {
+  it("handles value changes", () => {
     // open time picker
-    cy.get('.stTimeInput')
+    cy.get(".stTimeInput")
       .first()
       .click()
 
@@ -51,22 +44,22 @@ describe('st.time_input', () => {
       .first()
       .click()
 
-    cy.get('.stText')
+    cy.get(".stText")
       .first()
-      .should('have.text', 'Value 1: 00:00:00')
+      .should("have.text", "Value 1: 00:00:00")
   })
 
-  it('allows creatable values', () => {
-    cy.get('.stTimeInput input')
+  it("allows creatable values", () => {
+    cy.get(".stTimeInput input")
       .first()
-      .type('1:11')
+      .type("1:11")
 
-    cy.get('li')
+    cy.get("li")
       .first()
       .click()
 
-    cy.get('.stText')
+    cy.get(".stText")
       .first()
-      .should('have.text', 'Value 1: 01:11:00')
+      .should("have.text", "Value 1: 01:11:00")
   })
 })

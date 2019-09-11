@@ -17,25 +17,24 @@
 
 /// <reference types="cypress" />
 
-describe('Dataframes with different sizes', () => {
+describe("Dataframes with different sizes", () => {
   const expected = [
-    { width: '727px', height: '300px' },
-    { width: '247px', height: '150px' },
-    { width: '247px', height: '300px' },
-    { width: '727px', height: '150px' },
-
+    { width: "727px", height: "300px" },
+    { width: "247px", height: "150px" },
+    { width: "247px", height: "300px" },
+    { width: "727px", height: "150px" },
   ]
   before(() => {
-    cy.visit('http://localhost:3000/')
+    cy.visit("http://localhost:3000/")
   })
 
-  it('should show as expected', () => {
-    cy.get('.element-container .stDataFrame')
-      .should('have.length', 4)
+  it("should show as expected", () => {
+    cy.get(".element-container .stDataFrame")
+      .should("have.length", 4)
       .each((el, idx) => {
         cy.wrap(el)
-          .should('have.css', 'width', expected[idx].width)
-          .should('have.css', 'height', expected[idx].height)
+          .should("have.css", "width", expected[idx].width)
+          .should("have.css", "height", expected[idx].height)
       })
   })
 })

@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Table as ReactTable }  from 'reactstrap'
-import { toFormattedString } from '../../../lib/format'
+import React from "react"
+import { Table as ReactTable } from "reactstrap"
+import { toFormattedString } from "../../../lib/format"
 
 import {
   dataFrameGet,
   dataFrameGetDimensions,
-} from '../../../lib/dataFrameProto'
+} from "../../../lib/dataFrameProto"
 
-import './Table.scss'
+import "./Table.scss"
 
 /**
  * Functional element representing a DataFrame.
@@ -41,7 +41,7 @@ class Table extends React.PureComponent {
     // media==screen). But need to fix the autosizer first.
     return (
       <div className="streamlit-table stTable">
-        <ReactTable className={hasNoData ? 'empty-table' : ''}>
+        <ReactTable className={hasNoData ? "empty-table" : ""}>
           <thead>
             <TableRows
               df={element}
@@ -52,25 +52,24 @@ class Table extends React.PureComponent {
             />
           </thead>
           <tbody>
-            { hasNoData ?
+            {hasNoData ? (
               <tr>
                 <td colSpan={cols || 1}>empty</td>
               </tr>
-              :
+            ) : (
               <TableRows
                 df={element}
                 headerRows={headerRows}
                 rows={rows}
                 cols={cols}
               />
-            }
+            )}
           </tbody>
         </ReactTable>
       </div>
     )
   }
 }
-
 
 /**
  * Purely functional component returning a list of rows.
@@ -81,14 +80,14 @@ class Table extends React.PureComponent {
  * rows       - Number of rows in the table (header + data).
  * cols       - Number of colums in the table.
  */
-function TableRows({df, header, headerRows, rows, cols}) {
+function TableRows({ df, header, headerRows, rows, cols }) {
   const startRow = header ? 0 : headerRows
   const endRow = header ? headerRows : rows
   const rowArray = []
   for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
     rowArray.push(
       <tr key={rowIdx}>
-        <TableRow df={df} rowIdx={rowIdx} cols={cols}/>
+        <TableRow df={df} rowIdx={rowIdx} cols={cols} />
       </tr>
     )
   }
@@ -102,19 +101,27 @@ function TableRows({df, header, headerRows, rows, cols}) {
  * rowIdx - The row index.
  * cols   - numver of colums in the table.
  */
-function TableRow({df, rowIdx, cols}) {
+function TableRow({ df, rowIdx, cols }) {
   const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
     const { contents, styles, type } = dataFrameGet(df, colIdx, rowIdx)
     const formattedContents = toFormattedString(contents)
-    if (type === 'corner') {
+    if (type === "corner") {
       entries.push(<th key={colIdx}>&nbsp;</th>)
-    } else if (type === 'row-header') {
-      entries.push(<th key={colIdx} scope="row">{ formattedContents }</th>)
-    } else if (type === 'col-header') {
-      entries.push(<th key={colIdx}>{ formattedContents }</th>)
-    } else if (type === 'data') {
-      entries.push(<td style={styles} key={colIdx}>{ formattedContents }</td>)
+    } else if (type === "row-header") {
+      entries.push(
+        <th key={colIdx} scope="row">
+          {formattedContents}
+        </th>
+      )
+    } else if (type === "col-header") {
+      entries.push(<th key={colIdx}>{formattedContents}</th>)
+    } else if (type === "data") {
+      entries.push(
+        <td style={styles} key={colIdx}>
+          {formattedContents}
+        </td>
+      )
     } else {
       throw new Error(`Cannot parse type "${type}".`)
     }

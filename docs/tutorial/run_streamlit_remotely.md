@@ -1,4 +1,4 @@
-# Tutorial: Running Streamlit remotely
+# Tutorial: Run Streamlit remotely
 
 When you run Streamlit remotely you can still use your local web browser to
 see the results. Be it on AWS, GCS, a Docker instance, or some other remote

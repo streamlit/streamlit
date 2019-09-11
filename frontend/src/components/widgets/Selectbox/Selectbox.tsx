@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import {logWarning} from 'lib/log'
-import React from 'react'
-import { Select as UISelect } from 'baseui/select'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
+import { logWarning } from "lib/log"
+import React from "react"
+import { Select as UISelect } from "baseui/select"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,34 +33,37 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: number;
+  value?: number
 }
 
 interface SelectOption {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {}
 
   private get valueOrDefault(): SelectOption[] | undefined {
-    const value = this.state.value === undefined ?
-      this.props.element.get('value') as number :
-      this.state.value
+    const value =
+      this.state.value === undefined
+        ? (this.props.element.get("value") as number)
+        : this.state.value
 
-    return [{
-      'value': value.toString(),
-      'label': this.props.element.get('options')[value],
-    }]
+    return [
+      {
+        value: value.toString(),
+        label: this.props.element.get("options")[value],
+      },
+    ]
   }
 
   private onChange = (data: any) => {
-    const widgetId = this.props.element.get('id')
-    const selectedValue: SelectOption[] = data['value']
+    const widgetId = this.props.element.get("id")
+    const selectedValue: SelectOption[] = data["value"]
 
     if (selectedValue.length === 0) {
-      logWarning('No value selected!')
+      logWarning("No value selected!")
       return
     }
 
@@ -75,22 +78,22 @@ class Selectbox extends React.PureComponent<Props, State> {
     const { element, width } = this.props
 
     const style = { width }
-    const label = element.get('label')
-    let options = element.get('options')
+    const label = element.get("label")
+    let options = element.get("options")
     let disabled = this.props.disabled
 
     if (options.size === 0) {
-      options = ['No options to select.']
+      options = ["No options to select."]
       disabled = true
     }
 
-    let selectOptions: SelectOption[] = []
-    options.forEach((option: string, idx: number) => (
+    const selectOptions: SelectOption[] = []
+    options.forEach((option: string, idx: number) =>
       selectOptions.push({
-        'label': option,
-        'value': idx.toString(),
+        label: option,
+        value: idx.toString(),
       })
-    ))
+    )
 
     return (
       <div className="Widget row-widget stSelectbox" style={style}>

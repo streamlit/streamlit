@@ -1,4 +1,4 @@
-# Tutorial: Create an interactive report with Streamlit
+# Tutorial: Create your first interactive report
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/secret/docs/#install-streamlit) and
@@ -76,29 +76,54 @@ dataset for pickups and drop-offs in New York City.
    You'll see a few buttons in the upper-right corner of your report asking if
    you'd like to rerun the report. Choose **Always rerun**, and you'll see your
    changes automatically each time you save.
-3. Turns out that it takes a long time download data and load 10,000 lines into
-   a dataframe. Not to mention that converting the date column into datetime
-   isn't a quick job. We don't want to reload the data each
-   time the report is updated -- luckily Streamlit allows you to cache the
-   data. Let's add `@st.cache` right before the `load_data` declaration. It
-   should look just like this:
 
-   ```Python
+Ok, that's underwhelming...
+
+It turns out that it takes a long time to download data, and load 10,000 lines into a dataframe. Converting the date column into datetime isn’t a quick job either. You don’t want to reload the data each time the report is updated – luckily Streamlit allows you to cache the data.
+
+## Magical caching
+
+1. Try adding `@st.cache` before the `load_data` declaration:
+
+   ```python
    @st.cache
    def load_data(nrows):
-       ...
    ```
-4. Now it's time to save the report. It's a little underwhelming -- it doesn't
-   look like anything's changed. That's expected, since you didn't update
-   the report. `st.cache` will save any long computation or data pull that you
-   don't want to frequently re-run. It's also smart. `st.cache` will
-   automatically update and invalidate the cache if it notices that the code
-   has changed or if any variable it depends upon has changed.
+2. Then save the script, and Streamlit will automatically rerun your report. Since this is the first time you’re running the script with `@st.cache `, you won't see anything change. Let’s tweak your file a little bit more so that you can see the power of caching.
+3. Replace the line `st.write('Done!')` with this:
+   ```python
+   st.write('Done! (using st.cache)')
+   ```
+4. Now save. See how the line you added appeared immediately? If you take a step back for a second, this is actually quite amazing. Something magical is happening behind the scenes, and it only takes one line of code to activate it.
+
+### How's it work?
+
+Let's take a few minutes to discuss how `@st.cache` actually works.
+
+When you mark a function with Streamlit’s cache annotation, it tells Streamlit that whenever the function is called that it should check three things:
+
+1. The actual bytecode that makes up the body of the function
+2. Code, variables, and files that the function depends on
+3. The input parameters that you called the function with
+
+If this is the first time Streamlit has seen these items, with these exact values, and in this exact combination, it runs the function and stores the result in a local cache. The next time the function is called, if the three values haven't changed, then  Streamlit knows it can skip executing the function altogether. Instead, it reads the output from the local cache and passes it on to the caller -- like magic.
+
+"But, wait a second," you’re saying to yourself, "this sounds too good to be true. What are the limitations of all this awesomesauce?"
+
+Well, there are a few:
+
+1. Streamlit will only check for changes within the current working directory. This means that Streamlit only detects code updates inside installed Python libraries.
+2. If your function is not deterministic (that is, its output depends on random numbers), or if it pulls data from an external time-varying source (for example, a live stock market ticker service) the cached value will be none-the-wiser.
+3. Lastly, you should not mutate the output of a cached function since cached values are stored by reference (for performance reasons and to be able to support libraries such as TensorFlow). Note that, here, Streamlit is smart enough to detect these mutations and show a loud warning explaining how to fix the problem.
+
+While these limitations are important to keep in mind, they tend not to be an issue a surprising amount of the time. Those times, this cache is really transformational.
 
 ```eval_rst
 .. tip::
-  If you need a refresher on `st.cache` check out `Core mechanics <../core_mechanics.md>`_.
+  Whenever you have a long-running computation in your code, consider refactoring it so you can use `@st.cache`, if possible.
 ```
+
+Now that you know how caching with Streamlit works, let’s get back to the Uber pickup data.
 
 ## Inspect the raw data
 

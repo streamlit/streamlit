@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import url from 'url'
-
+import url from "url"
 
 /**
  * When in dev mode, this is the port used to connect to the web server that is
@@ -46,21 +45,21 @@ export const IS_SHARED_REPORT =
  * Parameters for our fetch() requests.
  */
 export const FETCH_PARAMS = {
-  redirect: 'follow',
-  credentials: 'same-origin',
-  mode: 'cors',
+  redirect: "follow",
+  credentials: "same-origin",
+  mode: "cors",
 }
 
 /**
  * Region of our AWS S3 bucket.
  */
-export const AWS_REGION = 'us-west-2'
+export const AWS_REGION = "us-west-2"
 
 /**
  * Pool ID for Cognito credentials.
  */
 export const COGNITO_IDENTITY_POOL_ID =
-  'us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06'
+  "us-west-2:9f2fd5d3-79e5-44be-830a-137fef3c2a06"
 
 /**
  * Feature flag for https://github.com/streamlit/streamlit/issues/678.

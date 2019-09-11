@@ -15,42 +15,42 @@
  * limitations under the License.
  */
 
-import React, {PureComponent} from 'react'
-import {SortDirection} from './SortDirection'
-import openIconic from 'assets/img/open-iconic.svg'
+import React, { PureComponent } from "react"
+import { SortDirection } from "./SortDirection"
+import openIconic from "assets/img/open-iconic.svg"
 
 interface Props {
   /** The cell's column index in the DataFrame */
-  columnIndex: number;
+  columnIndex: number
 
   /** The cell's row index in the DataFrame */
-  rowIndex: number;
+  rowIndex: number
 
   /** The cell's css class name */
-  className: string;
+  className: string
 
   /** Additional css styling for the cell */
-  style: object;
+  style: object
 
   /**
    * The HTML contents of the cell. Added to the DOM as a child of this
    * DataFrameCel.
    */
-  contents: string;
+  contents: string
 
   /**
    * If true, then the table's sorting was manually set by the user, by
    * clicking on a column header. We only show the sort arrow when this is
    * true.
    */
-  sortedByUser: boolean;
+  sortedByUser: boolean
 
   /**
    * The {@link SortDirection} for this column, or undefined if the column is
    * unsorted. No sorting is done here - this property is used to determine
    * which, if any, sort icon to draw in column-header cells.
    */
-  columnSortDirection?: SortDirection;
+  columnSortDirection?: SortDirection
 
   /**
    * An optional callback that will be called when a column header is clicked.
@@ -59,14 +59,20 @@ interface Props {
    *
    * {@link DataFrame} uses this to toggle column sorting.
    */
-  headerClickedCallback?: (columnIndex: number) => void;
+  headerClickedCallback?: (columnIndex: number) => void
 }
 
 class DataFrameCell extends PureComponent<Props> {
   public render(): React.ReactNode {
     const {
-      columnIndex, rowIndex, className, style, contents, columnSortDirection,
-      headerClickedCallback, sortedByUser,
+      columnIndex,
+      rowIndex,
+      className,
+      style,
+      contents,
+      columnSortDirection,
+      headerClickedCallback,
+      sortedByUser,
     } = this.props
 
     let onClick
@@ -78,21 +84,23 @@ class DataFrameCell extends PureComponent<Props> {
 
     if (headerClickedCallback != null && rowIndex === 0) {
       onClick = () => headerClickedCallback(columnIndex)
-      role = 'button'
+      role = "button"
       tabIndex = 0
-      title = columnSortDirection == null ?
-        `Sort by column "${contents}"` :
-        `Sorted by column "${contents}" (${isDescending ? 'descending' : 'ascending'})`
+      title =
+        columnSortDirection == null
+          ? `Sort by column "${contents}"`
+          : `Sorted by column "${contents}" (${
+              isDescending ? "descending" : "ascending"
+            })`
     }
 
     // The sort icon is only drawn in the top row
-    const sortIcon = rowIndex === 0 ?
-      drawSortIcon(columnSortDirection) :
-      undefined
+    const sortIcon =
+      rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
 
     return (
-      // (eslint erroneously believes we're not assigning a role to our clickable div)
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      // (ESLint erroneously believes we're not assigning a role to our clickable div)
+      // eslint-disable-next-line
       <div
         className={className}
         style={style}
@@ -101,13 +109,12 @@ class DataFrameCell extends PureComponent<Props> {
         tabIndex={tabIndex}
         title={title}
       >
-        {sortedByUser ? sortIcon : ''}
+        {sortedByUser ? sortIcon : ""}
         {contents}
       </div>
     )
   }
 }
-
 
 function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // If these icons are changed, you may also need to update DataFrame.SORT_ICON_WIDTH
@@ -116,14 +123,14 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
     case SortDirection.ASCENDING:
       return (
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use href={openIconic + '#chevron-top'} />
+          <use href={openIconic + "#chevron-top"} />
         </svg>
       )
 
     case SortDirection.DESCENDING:
       return (
         <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use href={openIconic + '#chevron-bottom'} />
+          <use href={openIconic + "#chevron-bottom"} />
         </svg>
       )
 

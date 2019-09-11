@@ -91,7 +91,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     ])
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.selectbox('the label', [])
+        st.selectbox('the label', options)
 
         c = self.get_delta_from_queue().new_element.selectbox
         self.assertEqual(c.label, 'the label')
