@@ -26,7 +26,6 @@ import functools
 import json
 import random
 import textwrap
-import pandas as pd
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -782,16 +781,16 @@ class DeltaGenerator(object):
 
         """
         import altair as alt
+        import pandas as pd
 
-        if isinstance(data, pd.DataFrame):
-            data = pd.melt(data.reset_index(), id_vars=['index'])
+        if not isinstance(data, pd.DataFrame):
+            data = pd.DataFrame(data)
 
-            chart = alt.Chart(data).mark_bar().encode(
-                alt.X('variable', title=''),
-                alt.Y('value', title=''))
+        data = pd.melt(data.reset_index(), id_vars=['index'])
 
-        else:
-            chart = alt.Chart(data).mark_bar()
+        chart = alt.Chart(data).mark_bar().encode(
+            alt.X('variable', title=''),
+            alt.Y('value', title=''))
 
         import streamlit.elements.altair as altair
         altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
