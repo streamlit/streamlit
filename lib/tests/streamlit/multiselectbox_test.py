@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""selectbox unit tests."""
+"""multiselectbox unit tests."""
 
 import numpy as np
 import pandas as pd
@@ -24,23 +24,15 @@ from tests import testutil
 
 
 class SelectboxTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall selectbox protos."""
+    """Test ability to marshall multiselectbox protos."""
 
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.selectbox('the label', ('m', 'f'))
+        st.multiselectbox('the label', ('m', 'f'))
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element.multiselectbox
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 0)
-
-    def test_valid_value(self):
-        """Test that valid value is an int."""
-        st.selectbox('the label', ('m', 'f'), 1)
-
-        c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 1)
+        self.assertListEqual(c.default[:], [])
 
     @parameterized.expand([
         (('m', 'f'), ['m', 'f']),
@@ -50,11 +42,11 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     ])
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        st.selectbox('the label', options)
+        st.multiselectbox('the label', options)
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element.multiselectbox
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 0)
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_cast_options_to_string(self):
@@ -62,11 +54,11 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         arg_options = ['some str', 123, None, {}]
         proto_options = ['some str', '123', 'None', '{}']
 
-        st.selectbox('the label', arg_options)
+        st.multiselectbox('the label', arg_options)
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element.multiselectbox
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 0)
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -75,12 +67,12 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
                        {'name': 'lisa', 'height': 200}]
         proto_options = ['john', 'lisa']
 
-        st.selectbox('the label', arg_options,
+        st.multiselectbox('the label', arg_options,
                      format_func=lambda x: x['name'])
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element.multiselectbox
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 0)
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     @parameterized.expand([
@@ -91,19 +83,10 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     ])
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.selectbox('the label', options)
+        st.multiselectbox('the label', options)
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element.multiselectbox
         self.assertEqual(c.label, 'the label')
-        self.assertEqual(c.value, 0)
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    def test_invalid_value(self):
-        """Test that value must be an int."""
-        with self.assertRaises(TypeError):
-            st.selectbox('the label', ('m', 'f'), '1')
-
-    def test_invalid_value_range(self):
-        """Test that value must be within the length of the options."""
-        with self.assertRaises(ValueError):
-            st.selectbox('the label', ('m', 'f'), 2)

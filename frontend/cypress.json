@@ -1,9 +1,10 @@
 {
-  "projectId": "fa9nep",
+  "projectId": "r53s63",
   "reporter": "mocha-multi-reporters",
   "reporterOptions": {
     "configFile": "reporter-config.json"
   },
+  "integrationFolder": "../e2e/specs",
   "screenshotsFolder": "mochawesome-report/assets",
   "trashAssetsBeforeRuns": false,
   "viewportWidth": 1366,

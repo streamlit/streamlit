@@ -57,6 +57,7 @@ const Video = React.lazy(() => import("components/elements/Video/"))
 const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
+const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("components/widgets/Slider/"))
@@ -239,6 +240,9 @@ class Block extends PureComponent<Props> {
         <GraphVizChart element={el} index={index} width={width} />
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
+      multiselectbox: (el: SimpleElement) => (
+        <Multiselect element={el} width={width} {...widgetProps} />
+      ),
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),

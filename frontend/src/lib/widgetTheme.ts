@@ -233,7 +233,6 @@ export const widgetTheme = createTheme(
 
     primaryFontFamily: SCSS_VARS["$font-family-sans-serif"],
 
-    primary50: primary,
     primary100: primary,
     primary200: primary,
     primary300: primary,
