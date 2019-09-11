@@ -21,6 +21,8 @@ from __future__ import print_function, division, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
+import os
+
 import click
 
 from streamlit.credentials import Credentials
@@ -96,25 +98,27 @@ def main_hello():
 
 
 @main.command('run')
-@click.argument('file', type=click.Path(exists=True), required=False)
+@click.argument('file_or_module', required=True)
 @click.argument('args', nargs=-1)
-@click.option('-m', '--module', 'module_name', help='Run module')
-def main_run(file, args, module_name):
+@click.option('-m', '--module', 'run_as_module', is_flag=True,
+              default=False, help='Run as a module', show_default=True)
+def main_run(file_or_module, args, run_as_module):
     """Run a Python script or a Python module, piping stderr to Streamlit.
-    The option -m/--module allows to specify a module to run in alternative
-    to a file.
+    The option -m/--module is a boolean flag that allows to specify a python
+    module instead of a file to run.
     """
-
-    if not file and not module_name:
-        raise click.UsageError(('You need to specify either '
-                                'a module or a file'))
-    if file and module_name:
-        raise click.UsageError(('You cannot specify both a module name and a '
-                                'file'))
-
-    if module_name:
+    if not run_as_module:
+        if not os.path.exists(file_or_module):
+            raise click.BadParameter('File does not exist: {}'
+                                     .format(file_or_module))
+        file = file_or_module
+    else:
         from importlib import import_module
-        module = import_module(module_name)
+        from importlib.util import find_spec
+        if not find_spec(file_or_module):
+            raise click.BadParameter('Module not found: {}'
+                                     .format(file_or_module))
+        module = import_module(file_or_module)
         file = module.__file__
 
     _main_run(file, args)
