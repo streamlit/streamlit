@@ -256,6 +256,7 @@ class ConfigTest(unittest.TestCase):
             u'client.caching',
             u'client.displayEnabled',
             u'global.developmentMode',
+            u'global.disableWatchdogWarning',
             u'global.logLevel',
             u'global.metrics',
             u'global.sharingMode',
