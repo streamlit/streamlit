@@ -2,9 +2,16 @@ import setuptools
 
 from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
+from sys import version_info
 
-pfile = Project(chdir=False).parsed_pipfile
-requirements = convert_deps_to_pip(pfile["packages"], r=False)
+pipfile = Project(chdir=False).parsed_pipfile
+
+packages = pipfile["packages"].copy()
+if version_info.major == 2:
+    packages.update(pipfile["python2"])
+else:
+    packages.update(pipfile["python3"])
+requirements = convert_deps_to_pip(packages, r=False)
 
 
 def readme():
