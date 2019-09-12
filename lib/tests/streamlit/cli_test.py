@@ -16,6 +16,7 @@
 """Unit tests for the cli."""
 
 import unittest
+from unittest.mock import MagicMock
 from click.testing import CliRunner
 
 import tempfile
@@ -69,7 +70,7 @@ Commands:
         runner = CliRunner()
 
         # Mocking _main_run
-        cli._main_run = lambda arg1, args2: None
+        cli._main_run = MagicMock()
 
         with tempfile.NamedTemporaryFile() as file:
             result = runner.invoke(cli, ['run', file.name])
@@ -80,7 +81,7 @@ Commands:
         runner = CliRunner()
 
         # Mocking _main_run
-        cli._main_run = lambda arg1, args2: None
+        cli._main_run = MagicMock()
 
         result = runner.invoke(cli, ['run', '/non-existing-streamlit-script'])
         self.assertNotEqual(0, result.exit_code)
@@ -90,7 +91,7 @@ Commands:
         runner = CliRunner()
 
         # Mocking _main_run
-        cli._main_run = lambda arg1, args2: None
+        cli._main_run = MagicMock()
 
         result = runner.invoke(cli, ['run', 'http://www.cnn.com'])
         self.assertEqual(0, result.exit_code)
@@ -100,7 +101,7 @@ Commands:
         runner = CliRunner()
 
         # Mocking _main_run
-        cli._main_run = lambda arg1, args2: None
+        cli._main_run = MagicMock()
 
         result = runner.invoke(cli, ['run', 'odd_protocol://www.cnn.com'])
         self.assertNotEqual(0, result.exit_code)
@@ -112,7 +113,7 @@ Commands:
         runner = CliRunner()
 
         # Mocking _main_run
-        cli._main_run = lambda arg1, args2: None
+        cli._main_run = MagicMock()
 
         result = runner.invoke(cli, [
             'run',
