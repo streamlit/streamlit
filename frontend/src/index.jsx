@@ -27,7 +27,7 @@ const engine = new Styletron()
 
 ReactDOM.render(
   <StyletronProvider value={engine}>
-    <BaseProvider theme={LightTheme}>
+    <BaseProvider theme={LightTheme} zIndex={102}>
       <App />
     </BaseProvider>
   </StyletronProvider>,
