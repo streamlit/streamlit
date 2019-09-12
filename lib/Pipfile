@@ -53,8 +53,6 @@ click = ">=7.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
-# specifically concurrent.futures in python2
-futures = {version = "*",markers = "python_version < '3.0'"}
 numpy = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
 pillow = "!=5.1.0"
