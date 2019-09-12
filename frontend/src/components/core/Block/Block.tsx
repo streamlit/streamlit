@@ -290,11 +290,14 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = () => (
-    <AutoSizer disableHeight={true}>
-      {({ width }) => this.renderElements(width)}
-    </AutoSizer>
-  )
+  public render = () => {
+    console.log('render')
+    return (
+      <AutoSizer disableHeight={true}>
+        {({ width }) => this.renderElements(width)}
+      </AutoSizer>
+    )
+  }
 }
 
 export default Block

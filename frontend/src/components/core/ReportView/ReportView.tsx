@@ -62,8 +62,12 @@ interface Props {
   widgetsDisabled: boolean
 }
 
+// TODO debounce at the ReportView level in App.jsx
+// 33ms per frame.. try to run at 30 fps
+// streamlit hello .. to see example with loading data
 // https://lodash.com/docs/4.17.15#debounce
-const DebouncedBlock = debounceRender(Block, 500, {leading: false, trailing: true, maxWait: 1000})
+const DebouncedBlock = debounceRender(Block, 50, {leading: false, trailing: true, maxWait: 100})
+
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
