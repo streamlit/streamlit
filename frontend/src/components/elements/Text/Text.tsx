@@ -83,7 +83,6 @@ class Text extends React.PureComponent<Props> {
           <div className="markdown-text-container stText" style={{ width }}>
             <ReactMarkdown
               source={body}
-              escapeHtml={false}
               renderers={renderers}
             />
           </div>
