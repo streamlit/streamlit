@@ -23,6 +23,7 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import os
 import click
 
 from streamlit.credentials import Credentials
@@ -113,11 +114,35 @@ def main_hello():
 
 
 @main.command("run")
-@click.argument("file", type=click.Path(exists=True))
+@click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file, args):
-    """Run a Python script, piping stderr to Streamlit."""
-    _main_run(file, args)
+def main_run(file_or_url, args):
+    """Run a Python script, piping stderr to Streamlit.
+    The script can be local or it can be an url. In the
+    latter case, streamlit will download the script to a
+    temporary file and runs this file.
+    """
+    from validators import url
+    import tempfile
+    import requests
+
+    if url(file_or_url):
+        with tempfile.NamedTemporaryFile() as fp:
+            try:
+                resp = requests.get(file_or_url)
+                resp.raise_for_status()
+                fp.write(resp.content)
+            except requests.exceptions.RequestException as e:
+                raise click.BadParameter(("Streamlit failed to fetch the url "
+                                          "{} and an exception was raised: {}"
+                                          .format(file_or_url, e)))
+            file = fp.name
+            _main_run(file, args)
+    else:
+        if not os.path.exists(file_or_url):
+            raise click.BadParameter("File does not exist: {}"
+                                     .format(file_or_url))
+        _main_run(file_or_url, args)
 
 
 def _main_run(file, args=None):
