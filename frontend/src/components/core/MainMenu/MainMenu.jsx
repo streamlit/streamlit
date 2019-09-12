@@ -26,6 +26,9 @@ import openIconic from "assets/img/open-iconic.svg"
 import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "//streamlit.io/secret/docs"
+const COMMUNITY_URL = "//discuss.streamlit.io"
+const TEAMS_URL = "//streamlit.io/teams"
+const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 class MainMenu extends PureComponent {
   /**
@@ -84,21 +87,28 @@ class MainMenu extends PureComponent {
 
           <DropdownItem divider />
 
-          <DropdownItem
-            disabled={!this.props.isServerConnected()}
-            onClick={this.props.saveCallback}
-          >
-            Share report
+          <DropdownItem onClick={() => window.open(ONLINE_DOCS_URL, "_blank")}>
+            Documentation
+          </DropdownItem>
+
+          <DropdownItem onClick={() => window.open(COMMUNITY_URL, "_blank")}>
+            Community
+          </DropdownItem>
+
+          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
+            Streamlit for teams
+          </DropdownItem>
+
+          <DropdownItem divider />
+
+          <DropdownItem onClick={() => window.open(BUG_URL, "_blank")}>
+            Report a bug
           </DropdownItem>
 
           <DropdownItem divider />
 
           <DropdownItem onClick={() => this.props.settingsCallback()}>
             Settings
-          </DropdownItem>
-
-          <DropdownItem onClick={() => window.open(ONLINE_DOCS_URL, "_blank")}>
-            Documentation
           </DropdownItem>
 
           <DropdownItem onClick={() => this.props.aboutCallback()}>
