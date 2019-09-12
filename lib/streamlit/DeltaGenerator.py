@@ -687,7 +687,7 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def line_chart(self, element, data, width=0, **kwargs):
+    def line_chart(self, element, data, width=0, height=0):
         """Display a line chart.
 
         Parameters
@@ -718,10 +718,10 @@ class DeltaGenerator(object):
 
         import streamlit.elements.altair as altair
         chart = altair.generate_chart('line', data)
-        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def area_chart(self, element, data, width=0, **kwargs):
+    def area_chart(self, element, data, width=0, height=0):
         """Display a area chart.
 
         Parameters
@@ -750,10 +750,10 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
         chart = altair.generate_chart('area', data)
-        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def bar_chart(self, element, data, width=0, **kwargs):
+    def bar_chart(self, element, data, width=0, height=0):
         """Display a bar chart.
 
         Parameters
@@ -782,7 +782,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
         chart = altair.generate_chart('bar', data)
-        altair.marshall(element.vega_lite_chart, chart, width, **kwargs)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, width=0,
