@@ -28,7 +28,7 @@ export function toImmutableProto(messageType, message) {
     oneofs: true,
   })
   if (IS_DEV_ENV) {
-    //logMessage("Protobuf: ", x)
+    logMessage("Protobuf: ", x)
   }
   return fromJS(x)
 }
