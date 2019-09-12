@@ -22,9 +22,6 @@ import Block from "components/core/Block/"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-//@ts-ignore
-import debounceRender from 'react-debounce-render'
-
 import { Col, Row } from "reactstrap"
 import { ThemeProvider } from "baseui"
 import { widgetTheme } from "lib/widgetTheme"
@@ -62,13 +59,6 @@ interface Props {
   widgetsDisabled: boolean
 }
 
-// TODO debounce at the ReportView level in App.jsx
-// 33ms per frame.. try to run at 30 fps
-// streamlit hello .. to see example with loading data
-// https://lodash.com/docs/4.17.15#debounce
-const DebouncedBlock = debounceRender(Block, 50, {leading: false, trailing: true, maxWait: 100})
-
-
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
@@ -89,7 +79,7 @@ class ReportView extends PureComponent<Props> {
           </Col>
         )}
         <Col className="main">
-          <DebouncedBlock
+          <Block
             elements={this.props.elements.main}
             reportId={this.props.reportId}
             reportRunState={this.props.reportRunState}

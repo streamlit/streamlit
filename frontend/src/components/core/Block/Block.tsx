@@ -291,7 +291,6 @@ class Block extends PureComponent<Props> {
   }
 
   public render = () => {
-    console.log('render')
     return (
       <AutoSizer disableHeight={true}>
         {({ width }) => this.renderElements(width)}

@@ -19,6 +19,8 @@ import React, { Fragment, PureComponent } from "react"
 import { Col, Container, Row } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
+//@ts-ignore
+import debounceRender from "react-debounce-render"
 
 // Other local imports.
 import ReportView from "components/core/ReportView/"
@@ -48,6 +50,10 @@ import { logError, logMessage } from "lib/log"
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
+
+// https://lodash.com/docs/4.17.15#debounce
+const DebouncedReportView = debounceRender(
+  ReportView, 150, {leading: false, trailing: true, maxWait: 300})
 
 class App extends PureComponent {
   constructor(props) {
@@ -707,7 +713,7 @@ class App extends PureComponent {
                     onFailure={this.onLogInError}
                   />
                 ) : (
-                  <ReportView
+                  <DebouncedReportView
                     elements={this.state.elements}
                     reportId={this.state.reportId}
                     reportRunState={this.state.reportRunState}
