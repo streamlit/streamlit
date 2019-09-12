@@ -6,6 +6,7 @@ from sys import version_info
 
 pipfile = Project(chdir=False).parsed_pipfile
 
+# Combine [packages] with either [python3] or [python2]
 packages = pipfile["packages"].copy()
 if version_info.major == 2:
     packages.update(pipfile["python2"])

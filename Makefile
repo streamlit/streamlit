@@ -69,10 +69,14 @@ pylint:
 	# 	tests/
 
 	# Code formating checks
-	black --check docs/
-	black --check examples/
-	black --check lib/streamlit/ --exclude=/*_pb2.py$/
-	black --check lib/tests/ --exclude=compile_error.py
+	# It requires Python 3.6.0+ to run but you can reformat
+	# Python 2 code with it, too.
+	if command -v "black" > /dev/null; then
+		black --check docs/
+		black --check examples/
+		black --check lib/streamlit/ --exclude=/*_pb2.py$/
+		black --check lib/tests/ --exclude=compile_error.py
+	fi
 
 .PHONY: pytest
 # Run Python unit tests.
