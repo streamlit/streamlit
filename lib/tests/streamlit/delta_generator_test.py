@@ -380,8 +380,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
         self.assertEqual(chart_spec['mark'], 'line')
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0]
-                         , 20)
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_area_chart(self):
         """Test dg.area_chart."""
@@ -392,8 +392,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
         self.assertEqual(chart_spec['mark'], 'area')
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0]
-                         , 20)
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""
@@ -405,8 +405,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         chart_spec = json.loads(element.spec)
 
         self.assertEqual(chart_spec['mark'], 'bar')
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0]
-                         , 20)
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
