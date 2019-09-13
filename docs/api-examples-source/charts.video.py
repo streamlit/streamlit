@@ -1,9 +1,9 @@
 import streamlit as st
-import urllib
+import requests
 
 @st.cache
 def read_file_from_url(url):
-    return urllib.request.urlopen(url).read()
+    return requests.get(url).content
 
 file_bytes = read_file_from_url(
     'https://streamlit.io/media/Star%20-%206962.mp4')

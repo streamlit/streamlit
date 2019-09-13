@@ -1,9 +1,9 @@
+import requests
 import streamlit as st
-import urllib
 
 @st.cache
 def read_file_from_url(url):
-    return urllib.request.urlopen(url).read()
+    return requests.get(url).content
 
 file_bytes = read_file_from_url(
     'https://streamlit.io/media/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
