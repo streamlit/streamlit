@@ -127,20 +127,21 @@ def main_run(file_or_url, args):
     if url(file_or_url):
         import tempfile
         import requests
+
         with tempfile.NamedTemporaryFile() as fp:
             try:
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
             except requests.exceptions.RequestException as e:
-                raise click.BadParameter(("Unable to fetch {}.\n{}"
-                                          .format(file_or_url, e)))
+                raise click.BadParameter(
+                    ("Unable to fetch {}.\n{}".format(file_or_url, e))
+                )
             _main_run(fp.name, args)
 
     else:
         if not os.path.exists(file_or_url):
-            raise click.BadParameter("File does not exist: {}"
-                                     .format(file_or_url))
+            raise click.BadParameter("File does not exist: {}".format(file_or_url))
         _main_run(file_or_url, args)
 
 
