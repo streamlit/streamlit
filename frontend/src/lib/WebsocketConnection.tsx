@@ -462,47 +462,50 @@ function doHealthPing(
 
   xhr.timeout = timeoutMs
 
-  xhr.onload = () => {
-    if (xhr.responseText === "ok") {
-      resolver.resolve(uriNumber)
-    } else if (xhr.status === /* NO RESPONSE */ 0) {
-      const uri = uriList[uriNumber]
-      if (uri.startsWith("//localhost:")) {
-        const scriptname =
-          SessionInfo.isSet() && SessionInfo.current.commandLine.length
-            ? SessionInfo.current.commandLine[0]
-            : "yourscript.py"
+  xhr.onreadystatechange = () => {
+    if (xhr.readyState === /* DONE */ 4) {
+      if (xhr.responseText === "ok") {
+        resolver.resolve(uriNumber)
+      } else if (xhr.status === /* NO RESPONSE */ 0) {
+        const uri = uriList[uriNumber]
+        if (uri.startsWith("//localhost:")) {
+          const scriptname =
+            SessionInfo.isSet() && SessionInfo.current.commandLine.length
+              ? SessionInfo.current.commandLine[0]
+              : "yourscript.py"
 
+          retry(
+            <Fragment>
+              <p>
+                Is Streamlit still running? If you accidentally stopped
+                Streamlit, just restart it in your terminal:
+              </p>
+              <pre>
+                <code>$ streamlit run {scriptname}</code>
+              </pre>
+            </Fragment>
+          )
+        } else {
+          retry("Connection failed with status 0.")
+        }
+      } else if (xhr.status === 403) {
         retry(
           <Fragment>
+            <p>Cannot connect to Streamlit (HTTP status: 403).</p>
             <p>
-              Is Streamlit still running? If you accidentally stopped
-              Streamlit, just restart it in your terminal:
+              If you are trying to access a Streamlit app running on another
+              server, this could be due to the app's{" "}
+              <a href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a>{" "}
+              settings.
             </p>
-            <pre>
-              <code>$ streamlit run {scriptname}</code>
-            </pre>
           </Fragment>
         )
       } else {
-        retry("Connection failed with status 0.")
+        retry(
+          `Connection failed with status ${xhr.status}, ` +
+            `and response "${xhr.responseText}".`
+        )
       }
-    } else if (xhr.status === 403) {
-      retry(
-        <Fragment>
-          <p>Cannot connect to Streamlit (HTTP status: 403).</p>
-          <p>
-            If you are trying to access a Streamlit app running on another
-            server, this could be due to the app's{" "}
-            <a href={CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}>CORS</a> settings.
-          </p>
-        </Fragment>
-      )
-    } else {
-      retry(
-        `Connection failed with status ${xhr.status}, ` +
-          `and response "${xhr.responseText}".`
-      )
     }
   }
 
