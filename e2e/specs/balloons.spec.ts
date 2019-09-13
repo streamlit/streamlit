@@ -19,10 +19,10 @@
 
 describe("st.balloons", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays balloons", () => {
-    cy.get(".element-container").find(".balloons")
-  })
-})
+    cy.get(".element-container").find(".balloons");
+  });
+});

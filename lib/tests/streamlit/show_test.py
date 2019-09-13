@@ -34,36 +34,36 @@ class ShowTest(unittest.TestCase):
         Improvements:
         - verify markdown is escaped on write delta
         """
-        thing = 'something'
+        thing = "something"
 
-        with patch('streamlit.write') as write:
-            with patch('streamlit.markdown') as markdown:
+        with patch("streamlit.write") as write:
+            with patch("streamlit.markdown") as markdown:
                 st.show(thing)
                 write.assert_called_once()
                 markdown.assert_called_once()
 
-        foo_show_bar = 'baz'
+        foo_show_bar = "baz"
 
-        with patch('streamlit.write') as write:
-            with patch('streamlit.markdown') as markdown:
+        with patch("streamlit.write") as write:
+            with patch("streamlit.markdown") as markdown:
                 st.show(foo_show_bar)
                 write.assert_called_once()
                 markdown.assert_called_once()
 
-    @parameterized.expand([
-        ('simple', '(a, b, c)', range(0, 3), ['a', 'b', 'c']),
-        ('complex', '(a, foo(c))', range(0, 2), ['a', 'foo(c)']),
-        ('tricky', 'get(a, foo(c)) trash', range(0, 2), ['a', 'foo(c)']),
-    ])
+    @parameterized.expand(
+        [
+            ("simple", "(a, b, c)", range(0, 3), ["a", "b", "c"]),
+            ("complex", "(a, foo(c))", range(0, 2), ["a", "foo(c)"]),
+            ("tricky", "get(a, foo(c)) trash", range(0, 2), ["a", "foo(c)"]),
+        ]
+    )
     def test_get_method_args_from_code(self, name, input, args, expected):
         """Parse method arguments from a string"""
         parsed = code_util.get_method_args_from_code(args, input)
 
         self.assertEqual(parsed, expected)
 
-    @parameterized.expand([
-        ('fails', '(a, ")b", c)', range(0, 3), ['a', '")b"', 'c']),
-    ])
+    @parameterized.expand([("fails", '(a, ")b", c)', range(0, 3), ["a", '")b"', "c"])])
     def test_failed_get_args_from_code(self, name, input, args, expected):
         """Fail to parse method arguments from a string
 
@@ -72,11 +72,13 @@ class ShowTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             code_util.get_method_args_from_code(args, input)
 
-    @parameterized.expand([
-        ('simple', '(a, b, c)', ['a, b, c']),
-        ('complex', '(a, foo(c))', ['a, foo(c)']),
-        ('tricky', 'pickup(a, foo(c)) my(trash)', ['a, foo(c)', 'trash']),
-    ])
+    @parameterized.expand(
+        [
+            ("simple", "(a, b, c)", ["a, b, c"]),
+            ("complex", "(a, foo(c))", ["a, foo(c)"]),
+            ("tricky", "pickup(a, foo(c)) my(trash)", ["a, foo(c)", "trash"]),
+        ]
+    )
     def test_extract_args(self, name, input, expected):
         """Parse contents of outer parentheses from a string"""
         parsed = code_util.extract_args(input)

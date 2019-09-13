@@ -16,6 +16,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import re
@@ -26,7 +27,7 @@ def to_upper_camel_case(snake_case_str):
     Example:
         foo_bar -> FooBar
     """
-    return ''.join(map(str.title, snake_case_str.split('_')))
+    return "".join(map(str.title, snake_case_str.split("_")))
 
 
 def to_lower_camel_case(snake_case_str):
@@ -36,11 +37,11 @@ def to_lower_camel_case(snake_case_str):
         foo_bar -> fooBar
         fooBar -> foobar
     """
-    words = snake_case_str.split('_')
+    words = snake_case_str.split("_")
     if len(words) > 1:
         capitalized = [w.title() for w in words]
         capitalized[0] = words[0]
-        return ''.join(capitalized)
+        return "".join(capitalized)
     else:
         return snake_case_str
 
@@ -52,8 +53,8 @@ def to_snake_case(camel_case_str):
         fooBar -> foo_bar
         BazBang -> baz_bang
     """
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camel_case_str)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def convert_dict_keys(func, in_dict):

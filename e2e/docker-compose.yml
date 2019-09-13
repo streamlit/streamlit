@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 services:
   streamlit:
     image: streamlit_circleci
@@ -29,7 +29,6 @@ services:
 
 volumes:
   hard_source_webpack_plugin_cache:
-
 # TODO
 # multi stage builds
 # update image and container names

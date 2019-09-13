@@ -22,6 +22,7 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import hashlib
@@ -59,7 +60,7 @@ def calc_md5_with_blocking_retries(file_path):
     # So here we retry a few times using this loop. See issue #186.
     for i in range(_MAX_RETRIES):
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 file_bytes = f.read()
                 break
         except FileNotFoundError as e:

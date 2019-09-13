@@ -27,17 +27,16 @@ from streamlit.watcher import LocalSourcesWatcher
 
 
 class FileIsInFolderTest(unittest.TestCase):
-
     def test_file_in_folder(self):
-        ret = LocalSourcesWatcher._file_is_in_folder('/a/b/c/foo.py', '/a/b/c/')
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
         self.assertTrue(ret)
 
     def test_file_not_in_folder(self):
-        ret = LocalSourcesWatcher._file_is_in_folder('/a/b/c/foo.py', '/d/e/f/')
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
         self.assertFalse(ret)
 
     def test_rel_file_not_in_folder(self):
-        ret = LocalSourcesWatcher._file_is_in_folder('foo.py', '/d/e/f/')
+        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f/")
         self.assertFalse(ret)
 
 
@@ -50,19 +49,17 @@ else:
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 
-REPORT_PATH = os.path.join(
-        os.path.dirname(__file__), 'test_data/not_a_real_script.py')
+REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, [])
 CALLBACK = lambda x: x
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
+
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
-        modules = [
-            'DUMMY_MODULE_1', 'DUMMY_MODULE_2', 'MISBEHAVED_MODULE',
-        ]
+        modules = ["DUMMY_MODULE_1", "DUMMY_MODULE_2", "MISBEHAVED_MODULE"]
 
         the_globals = globals()
 
@@ -77,7 +74,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             except:
                 pass
 
-    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_just_script(self, fob):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
@@ -95,14 +92,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 1)  # __init__.py
 
-    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_script_and_2_modules_at_once(self, fob):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 
-        sys.modules['DUMMY_MODULE_1'] = DUMMY_MODULE_1
-        sys.modules['DUMMY_MODULE_2'] = DUMMY_MODULE_2
+        sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+        sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
 
         fob.reset_mock()
         lso.update_watched_modules()
@@ -114,7 +111,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         call_args_list = sort_args_list(fob.call_args_list)
 
         args = call_args_list[0].args
-        self.assertTrue('__init__.py' in args[0])
+        self.assertTrue("__init__.py" in args[0])
         args = call_args_list[1].args
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
@@ -127,13 +124,13 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 0)
 
-    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_script_and_2_modules_in_series(self, fob):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 
-        sys.modules['DUMMY_MODULE_1'] = DUMMY_MODULE_1
+        sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
         fob.reset_mock()
 
         lso.update_watched_modules()
@@ -145,13 +142,13 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         call_args_list = sort_args_list(fob.call_args_list)
 
         args = call_args_list[0].args
-        self.assertTrue('__init__.py' in args[0])
+        self.assertTrue("__init__.py" in args[0])
 
         args = call_args_list[1].args
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
 
-        sys.modules['DUMMY_MODULE_2'] = DUMMY_MODULE_2
+        sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
         fob.reset_mock()
         lso.update_watched_modules()
 
@@ -161,31 +158,31 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()
 
-    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_misbehaved_module(self, fob):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 
-        sys.modules['MISBEHAVED_MODULE'] = MISBEHAVED_MODULE.MisbehavedModule
+        sys.modules["MISBEHAVED_MODULE"] = MISBEHAVED_MODULE.MisbehavedModule
         fob.reset_mock()
         lso.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
 
-    @patch('streamlit.watcher.LocalSourcesWatcher.FileWatcher')
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_blacklist(self, fob):
-        prev_blacklist = config.get_option('server.folderWatchBlacklist')
+        prev_blacklist = config.get_option("server.folderWatchBlacklist")
 
         config.set_option(
-                'server.folderWatchBlacklist',
-                [os.path.dirname(DUMMY_MODULE_1.__file__)])
+            "server.folderWatchBlacklist", [os.path.dirname(DUMMY_MODULE_1.__file__)]
+        )
 
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
 
         fob.assert_called_once()
 
-        sys.modules['DUMMY_MODULE_1'] = DUMMY_MODULE_1
+        sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
         fob.reset_mock()
 
         lso.update_watched_modules()
@@ -193,7 +190,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_not_called()
 
         # Reset the config object.
-        config.set_option('server.folderWatchBlacklist', prev_blacklist)
+        config.set_option("server.folderWatchBlacklist", prev_blacklist)
 
 
 def sort_args_list(args_list):
