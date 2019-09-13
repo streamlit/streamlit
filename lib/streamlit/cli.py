@@ -37,8 +37,9 @@ NEW_VERSION_TEXT = '''
   $ %(command)s
 ''' % {
     'new_version': click.style('A new version of Streamlit is available.',
-                               fg='white', bold=True),
-    'command': click.style('pip install streamlit --upgrade', fg='green')
+                               fg='green'),
+    'command': click.style('pip install streamlit --upgrade',
+                           fg='white', bold=True)
 }
 
 
