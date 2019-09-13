@@ -50,8 +50,8 @@ EMAIL_PROMPT = '''
   Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
 
 TELEMETRY_TEXT = '''
-  Telemetry: as an open source project, we use collect summary
-  statistics and metadata to understand how people are using Streamlit.
+  Telemetry: as an open source project, we collect summary statistics 
+  and metadata to understand how people are using Streamlit.
   
   If you'd like to opt out, add the following to ~/.streamlit/config.toml,
   creating that file if necessary:
