@@ -14,11 +14,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/classnames": "^2.2.9",
     "aws-sdk": "^2.524.0",
     "baseui": "^8.17.1",
     "bokehjs": "^1.2.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
+    "classnames": "^2.2.6",
     "clipboard": "^2.0.4",
     "d3": "^5.12.0",
     "d3-graphviz": "^2.6.1",

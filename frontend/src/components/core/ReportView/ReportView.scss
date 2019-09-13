@@ -33,21 +33,30 @@
     }
   }
 
+  &.--with-sidebar {
+    .main {
+      margin-left: 275px;
+
+      @media (max-width: 756px) {
+        margin-left: 0;
+      }
+    }
+  }
+
   .main {
     display: flex;
     width: 100%;
     flex-direction: column;
-    margin-left: 275px;
     align-items: center;
 
     .block-container {
       min-width: $content-min-width;
       max-width: $content-max-width;
       width: 100%;
-    }
 
-    @media (max-width: 756px) {
-      margin-left: 0;
+      @media (max-width: 756px) {
+        min-width: 0;
+      }
     }
   }
 
