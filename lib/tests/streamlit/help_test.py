@@ -108,7 +108,9 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(ds.type, '<type \'function\'>')
         else:
             self.assertEqual(ds.type, '<class \'function\'>')
-        self.assertEqual(ds.signature, '(func=None, persist=False, ignore_hash=False)')
+        self.assertEqual(ds.signature, ('(func=None, persist=False, '
+                                        'ignore_hash=False, show_spinner=True)'
+                                        ))
         self.assertTrue(ds.doc_string.startswith('Function decorator to'))
 
     def test_st_write(self):
