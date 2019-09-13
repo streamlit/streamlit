@@ -123,21 +123,20 @@ def main_run(file_or_url, args):
     temporary file and runs this file.
     """
     from validators import url
-    import tempfile
-    import requests
 
     if url(file_or_url):
+        import tempfile
+        import requests
         with tempfile.NamedTemporaryFile() as fp:
             try:
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
             except requests.exceptions.RequestException as e:
-                raise click.BadParameter(("Streamlit failed to fetch the url "
-                                          "{} and an exception was raised: {}"
+                raise click.BadParameter(("Unable to fetch {}.\n{}"
                                           .format(file_or_url, e)))
-            file = fp.name
-            _main_run(file, args)
+            _main_run(fp.name, args)
+
     else:
         if not os.path.exists(file_or_url):
             raise click.BadParameter("File does not exist: {}"

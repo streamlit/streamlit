@@ -16,10 +16,11 @@
 """Unit tests for the cli."""
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock, patch
 from click.testing import CliRunner
 
-import tempfile
+import requests
+import requests_mock
 
 from streamlit import cli
 
@@ -28,43 +29,12 @@ class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
 
     def setUp(self):
-        cli.name = 'test'
+        cli.name = "test"
         self.runner = CliRunner()
-
-    def test_help(self):
-        """streamlit help should show the expected help text"""
-        expected_help = """Usage: _jb_pytest_runner.py [OPTIONS] COMMAND [ARGS]...
-
-  Try out a demo with:
-
-      $ streamlit hello
-
-  Or use the line below to run your own script:
-
-      $ streamlit run your_script.py
-
-Options:
-  --log_level [error|warning|info|debug]
-  --version                       Show the version and exit.
-  --help                          Show this message and exit.
-
-Commands:
-  activate  Activate Streamlit by entering your email.
-  cache     Manage the Streamlit cache.
-  config    Manage Streamlit's config settings.
-  docs      Show help in browser.
-  hello     Runs the Hello World script.
-  help      Print this help message.
-  run       Run a Python script, piping stderr to Streamlit.
-  version   Print Streamlit's version number.
-"""
-        result = self.runner.invoke(cli, ['help'])
-        self.assertEqual(0, result.exit_code)
-        self.assertEqual(expected_help, result.output)
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments"""
-        result = self.runner.invoke(cli, ['run'])
+        result = self.runner.invoke(cli, ["run"])
         self.assertNotEqual(0, result.exit_code)
 
     def test_run_existing_file_argument(self):
@@ -72,8 +42,9 @@ Commands:
         # Mocking _main_run
         cli._main_run = MagicMock()
 
-        with tempfile.NamedTemporaryFile() as file:
-            result = self.runner.invoke(cli, ['run', file.name])
+        with patch("validators.url", return_value=False):
+            with patch("os.path.exists", return_value=True):
+                result = self.runner.invoke(cli, ["run", "file_name"])
         self.assertEqual(0, result.exit_code)
 
     def test_run_non_existing_file_argument(self):
@@ -81,24 +52,24 @@ Commands:
         # Mocking _main_run
         cli._main_run = MagicMock()
 
-        result = self.runner.invoke(cli, ['run', '/non-existing-streamlit-script'])
+        with patch("validators.url", return_value=False):
+            with patch("os.path.exists", return_value=False):
+                result = self.runner.invoke(cli, ["run", "file_name"])
         self.assertNotEqual(0, result.exit_code)
+        self.assertTrue("File does not exist" in result.output)
 
     def test_run_valid_url(self):
         """streamlit run succeeds if an existing url is passed"""
         # Mocking _main_run
         cli._main_run = MagicMock()
 
-        result = self.runner.invoke(cli, ['run', 'http://www.cnn.com'])
+        with patch("validators.url", return_value=True):
+            with requests_mock.mock() as m:
+                m.get("http://url", content=b"content")
+                with patch("tempfile.NamedTemporaryFile"):
+                    result = self.runner.invoke(cli, ["run", "http://url"])
+
         self.assertEqual(0, result.exit_code)
-
-    def test_run_non_valid_url(self):
-        """streamlit run should fail if a non valid url is passed"""
-        # Mocking _main_run
-        cli._main_run = MagicMock()
-
-        result = self.runner.invoke(cli, ['run', 'odd_protocol://www.cnn.com'])
-        self.assertNotEqual(0, result.exit_code)
 
     def test_run_non_existing_url(self):
         """streamlit run should fail if a non existing but valid
@@ -107,8 +78,11 @@ Commands:
         # Mocking _main_run
         cli._main_run = MagicMock()
 
-        result = self.runner.invoke(cli, [
-            'run',
-            'http://www.cnn.com/some-cnn-streamlit-script'
-        ])
+        with patch("validators.url", return_value=True):
+            with requests_mock.mock() as m:
+                m.get("http://url", exc=requests.exceptions.RequestException)
+                with patch("tempfile.NamedTemporaryFile"):
+                    result = self.runner.invoke(cli, ["run", "http://url"])
+
         self.assertNotEqual(0, result.exit_code)
+        self.assertTrue("Unable to fetch" in result.output)
