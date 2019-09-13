@@ -110,9 +110,11 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         if is_python_2:
             self.assertEqual(ds.type, "<type 'function'>")
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(func=None, persist=False, ignore_hash=False)")
-        self.assertTrue(ds.doc_string.startswith("Function decorator to"))
+            self.assertEqual(ds.type, '<class \'function\'>')
+            self.assertEqual(ds.signature, ('(func=None, persist=False, '
+                                            'ignore_hash=False, show_spinner=True)'
+                                            ))
+            self.assertTrue(ds.doc_string.startswith('Function decorator to'))
 
     def test_st_write(self):
         """Test st.write function (since it's from __init__)."""

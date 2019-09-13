@@ -438,11 +438,12 @@ def spinner(text="In progress..."):
 
     """
     display_message_lock = None
+    message = empty()
+
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
         # flickering if this spinner runs too quickly.
         DELAY_SECS = 0.1
-        message = empty()  # noqa: F821
         display_message = True
         display_message_lock = _threading.Lock()
 

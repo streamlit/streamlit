@@ -18,7 +18,6 @@
 import functools
 import sys
 import tempfile
-import timeit
 import unittest
 
 import altair as alt
@@ -28,13 +27,7 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import (
-    NP_SAMPLE_SIZE,
-    NP_SIZE_LARGE,
-    PANDAS_ROWS_LARGE,
-    PANDAS_SAMPLE_SIZE,
-    get_hash,
-)
+from streamlit.hashing import (NP_SIZE_LARGE, get_hash)
 
 
 class HashTest(unittest.TestCase):
@@ -46,8 +39,8 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(145757624235), get_hash(145757624235))
         self.assertNotEqual(get_hash(10), get_hash(11))
         self.assertNotEqual(get_hash(-1), get_hash(1))
-        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 - 1))
-        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2 ** 7 - 1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
         self.assertEqual([1, 2], [1, 2])
@@ -83,42 +76,6 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
-
-    def test_pandas_sample(self):
-        """Test the performance of hashing a large dataframe or a sample of said
-        dataframe."""
-
-        df = pd.DataFrame(np.random.randn(PANDAS_ROWS_LARGE, 4), columns=list("ABCD"))
-
-        def full():
-            return pd.util.hash_pandas_object(df).sum()
-
-        def sample():
-            return pd.util.hash_pandas_object(
-                df.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
-            ).sum()
-
-        t_full = timeit.Timer(full).timeit(number=10)
-        t_sample = timeit.Timer(sample).timeit(number=10)
-
-        self.assertGreater(t_full, t_sample)
-
-    def test_numpy_sample(self):
-        """Test the performance of hashing a large matrices."""
-
-        arr_large = np.random.randn(NP_SIZE_LARGE - 1)
-        arr_too_large = np.random.randn(NP_SIZE_LARGE)
-
-        def full():
-            return get_hash(arr_large)
-
-        def sample():
-            return get_hash(arr_too_large)
-
-        t_full = timeit.Timer(full).timeit(number=10)
-        t_sample = timeit.Timer(sample).timeit(number=10)
-
-        self.assertGreater(t_full, t_sample)
 
     def test_numpy(self):
         np1 = np.zeros(10)
@@ -582,7 +539,6 @@ class CodeHashTest(unittest.TestCase):
         def g(x):
             def func(v):
                 return v * x
-
             return func
 
         def h(x):

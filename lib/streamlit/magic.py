@@ -155,9 +155,9 @@ def _get_st_write_from_expr(node, i, parent_type):
         args = [node.value]
         st_write = _build_st_write_call(args)
 
-    # st.write all variables, and also print the variable's name.
+    # st.write all variables.
     elif type(node.value) is ast.Name:
-        args = [ast.Str(s="**%s**" % node.value.id), node.value]
+        args = [node.value]
         st_write = _build_st_write_call(args)
 
     # st.write everything else
