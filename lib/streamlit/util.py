@@ -33,12 +33,8 @@ import subprocess
 import sys
 import urllib
 
-try:
-    import urllib.request  # for Python3
-except ImportError:
-    pass
-
 import click
+import requests
 
 from streamlit.logger import get_logger
 
@@ -164,8 +160,8 @@ def memoize(func):
 
 def _make_blocking_http_get(url, timeout=5):
     try:
-        return urllib.request.urlopen(url, timeout=timeout).read()
-    except Exception:
+        return requests.get(url, timeout=timeout).text
+    except Exception as e:
         return None
 
 
@@ -194,7 +190,7 @@ def get_external_ip():
             HELP_DOC,
         )
     else:
-        _external_ip = response.decode("utf-8").strip()
+        _external_ip = response.strip()
 
     return _external_ip
 

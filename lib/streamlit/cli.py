@@ -26,10 +26,21 @@ setup_2_3_shims(globals())
 import click
 
 from streamlit.credentials import Credentials
-from streamlit import config
+from streamlit import version
 
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
+
+NEW_VERSION_TEXT = """
+  %(new_version)s
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  $ %(command)s
+""" % {
+    "new_version": click.style("A new version of Streamlit is available.", fg="green"),
+    "command": click.style("pip install streamlit --upgrade", fg="white", bold=True),
+}
 
 
 @click.group()
@@ -109,8 +120,17 @@ def main_run(file, args):
     _main_run(file, args)
 
 
-def _main_run(file, args=[]):
+def _main_run(file, args=None):
+    if args is None:
+        args = []
+
+    # Check credentials.
     Credentials.get_current().check_activated(auto_resolve=True)
+
+    # Notify if streamlit is out of date.
+    if version.should_show_new_version_notice():
+        click.echo(NEW_VERSION_TEXT)
+
     import streamlit.bootstrap as bootstrap
     import sys
 

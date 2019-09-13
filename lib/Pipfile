@@ -30,6 +30,8 @@ tensorflow = "*"
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
+requests-mock = "*"
+
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
@@ -50,6 +52,7 @@ pillow = "!=5.1.0"
 # Set protobuf version based on the protoc version on the release machine
 # (i.e. Thiago's machine)
 protobuf = ">=3.6.0"
+requests = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
 # 6.0 doesn't support Python 2

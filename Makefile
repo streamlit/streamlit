@@ -68,6 +68,7 @@ pylint:
 		black --check examples/ ; \
 		black --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
 		black --check lib/tests/ --exclude=compile_error.py ; \
+		black --check e2e/scripts/ ; \
 	fi
 
 .PHONY: pytest
