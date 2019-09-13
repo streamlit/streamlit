@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 
@@ -60,7 +61,7 @@ def _unflatten_single_dict(flat_dict):
     """
     out = dict()
     for pathstr, v in flat_dict.items():
-        path = pathstr.split('_')
+        path = pathstr.split("_")
 
         prev_dict = None
         curr_dict = out
@@ -123,16 +124,16 @@ def unflatten(flat_dict, encodings=None):
         # Unflatten child dicts:
         if type(v) in (dict, native_dict):
             v = unflatten(v, encodings)
-        elif hasattr(v, '__iter__'):
+        elif hasattr(v, "__iter__"):
             for i, child in enumerate(v):
                 if type(child) in (dict, native_dict):
                     v[i] = unflatten(child, encodings)
 
         # Move items into 'encoding' if needed:
         if k in encodings:
-            if 'encoding' not in out_dict:
-                out_dict['encoding'] = dict()
-            out_dict['encoding'][k] = v
+            if "encoding" not in out_dict:
+                out_dict["encoding"] = dict()
+            out_dict["encoding"][k] = v
             out_dict.pop(k)
 
     return out_dict

@@ -28,10 +28,13 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-Activation = namedtuple('Activation', [
-    'email',  # str : the user's email.
-    'is_valid',  # boolean : whether the email is valid.
-])
+Activation = namedtuple(
+    "Activation",
+    [
+        "email",  # str : the user's email.
+        "is_valid",  # boolean : whether the email is valid.
+    ],
+)
 
 # For python 2.7
 try:
@@ -40,34 +43,39 @@ except NameError:  # pragma: nocover
     FileNotFoundError = IOError
 
 
-EMAIL_PROMPT = '''
+EMAIL_PROMPT = """
   👋 %(welcome)s
-  
+
   If you are one of our development partners or are interested in
   getting personal technical support, please enter your email address
   below. Otherwise, you may leave the field blank.
-  
-  Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
 
-TELEMETRY_TEXT = '''
-  Telemetry: as an open source project, we collect summary statistics 
+  Email""" % {
+    "welcome": click.style("Welcome to Streamlit!", fg="green")
+}
+
+TELEMETRY_TEXT = """
+  Telemetry: as an open source project, we collect summary statistics
   and metadata to understand how people are using Streamlit.
-  
+
   If you'd like to opt out, add the following to ~/.streamlit/config.toml,
   creating that file if necessary:
-  
+
   [browser]
   gatherUsageStats = false
-'''
+"""
 
-INSTRUCTIONS_TEXT = '''
+INSTRUCTIONS_TEXT = """
   Get started by typing:
   $ %(hello)s
-''' % {'hello': click.style('streamlit hello', bold=True)}
+""" % {
+    "hello": click.style("streamlit hello", bold=True)
+}
 
 
 class Credentials(object):
     """Credentials class."""
+
     _singleton = None
 
     @classmethod
@@ -82,36 +90,43 @@ class Credentials(object):
         """Initialize class."""
         if Credentials._singleton is not None:
             raise RuntimeError(
-                'Credentials already initialized. Use .get_current() instead')
+                "Credentials already initialized. Use .get_current() instead"
+            )
 
         self.activation = None
-        self._conf_file = util.get_streamlit_file_path('credentials.toml')
+        self._conf_file = util.get_streamlit_file_path("credentials.toml")
 
         Credentials._singleton = self
 
     def load(self, auto_resolve=False):
         """Load from toml file."""
         if self.activation is not None:
-            LOGGER.error('Credentials already loaded. Not rereading file.')
+            LOGGER.error("Credentials already loaded. Not rereading file.")
             return
 
         try:
-            with open(self._conf_file, 'r') as f:
-                data = toml.load(f).get('general')
-            self.activation = _verify_email(data.get('email'))
+            with open(self._conf_file, "r") as f:
+                data = toml.load(f).get("general")
+            self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
                 return self.activate(show_instructions=not auto_resolve)
             raise RuntimeError(
-                'Credentials not found. Please run "streamlit activate".')
+                'Credentials not found. Please run "streamlit activate".'
+            )
         except Exception as e:
             if auto_resolve:
                 self.reset()
                 return self.activate(show_instructions=not auto_resolve)
-            raise Exception(textwrap.dedent('''
+            raise Exception(
+                textwrap.dedent(
+                    """
                 Unable to load credentials from %s.
                 Run "streamlit reset" and try again.
-                ''') % (self._conf_file))
+                """
+                )
+                % (self._conf_file)
+            )
 
     def check_activated(self, auto_resolve=False):
         """Check if streamlit is activated.
@@ -124,7 +139,7 @@ class Credentials(object):
             _exit(str(e))
 
         if not self.activation.is_valid:
-            _exit('Activation email not valid.')
+            _exit("Activation email not valid.")
 
     @classmethod
     def reset(cls):
@@ -138,15 +153,13 @@ class Credentials(object):
         try:
             os.remove(c._conf_file)
         except OSError as e:
-            LOGGER.error('Error removing credentials file: %s' % e)
+            LOGGER.error("Error removing credentials file: %s" % e)
 
     def save(self):
         """Save to toml file."""
-        data = {
-            'email': self.activation.email,
-        }
-        with open(self._conf_file, 'w') as f:
-            toml.dump({'general': data}, f)
+        data = {"email": self.activation.email}
+        with open(self._conf_file, "w") as f:
+            toml.dump({"general": data}, f)
 
     def activate(self, show_instructions=True):
         """Activate Streamlit.
@@ -160,20 +173,18 @@ class Credentials(object):
 
         if self.activation:
             if self.activation.is_valid:
-                _exit('Already activated')
+                _exit("Already activated")
             else:
                 _exit(
-                    'Activation not valid. Please run '
-                    '`streamlit activate reset` then `streamlit activate`'
+                    "Activation not valid. Please run "
+                    "`streamlit activate reset` then `streamlit activate`"
                 )
         else:
             activated = False
 
             while not activated:
 
-                email = click.prompt(
-                    text=EMAIL_PROMPT,
-                    default='', show_default=False)
+                email = click.prompt(text=EMAIL_PROMPT, default="", show_default=False)
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
@@ -183,7 +194,7 @@ class Credentials(object):
                         click.secho(INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
-                    LOGGER.error('Please try again.')
+                    LOGGER.error("Please try again.")
 
 
 def _verify_email(email):
@@ -205,8 +216,8 @@ def _verify_email(email):
     """
     email = email.strip()
 
-    if len(email) > 0 and email.count('@') != 1:
-        LOGGER.error('That doesn\'t look like an email :(')
+    if len(email) > 0 and email.count("@") != 1:
+        LOGGER.error("That doesn't look like an email :(")
         return Activation(None, False)
 
     return Activation(email, True)

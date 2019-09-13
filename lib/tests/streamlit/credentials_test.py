@@ -32,10 +32,9 @@ from streamlit.credentials import _verify_email
 if sys.version_info < (3, 0):
     FileNotFoundError = IOError
 
-PROMPT = 'streamlit.credentials.click.prompt'
+PROMPT = "streamlit.credentials.click.prompt"
 
-mock_get_path = MagicMock(
-    return_value='/mock/home/folder/.streamlit/credentials.toml')
+mock_get_path = MagicMock(return_value="/mock/home/folder/.streamlit/credentials.toml")
 
 
 class CredentialsClassTest(unittest.TestCase):
@@ -45,16 +44,15 @@ class CredentialsClassTest(unittest.TestCase):
         """Setup."""
         Credentials._singleton = None
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_constructor(self):
         """Test Credentials constructor."""
         c = Credentials()
 
-        self.assertEqual(c._conf_file,
-                         '/mock/home/folder/.streamlit/credentials.toml')
+        self.assertEqual(c._conf_file, "/mock/home/folder/.streamlit/credentials.toml")
         self.assertEqual(c.activation, None)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_get_current(self):
         """Test Credentials.get_current."""
 
@@ -63,7 +61,7 @@ class CredentialsClassTest(unittest.TestCase):
 
         self.assertEqual(Credentials._singleton, c)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_constructor_runs_twice(self):
         """Test Credentials constructor runs twice."""
         Credentials._singleton = None
@@ -71,186 +69,197 @@ class CredentialsClassTest(unittest.TestCase):
         with pytest.raises(RuntimeError) as e:
             Credentials()
         self.assertEqual(
-            str(e.value),
-            'Credentials already initialized. Use .get_current() instead')
+            str(e.value), "Credentials already initialized. Use .get_current() instead"
+        )
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load(self):
         """Test Credentials.load()."""
-        data = textwrap.dedent('''
+        data = textwrap.dedent(
+            """
             [general]
             email = "user@domain.com"
-        ''').strip()
+        """
+        ).strip()
         m = mock_open(read_data=data)
-        with patch('streamlit.credentials.open', m, create=True):
+        with patch("streamlit.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual('user@domain.com', c.activation.email)
+            self.assertEqual("user@domain.com", c.activation.email)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load_empty(self):
         """Test Credentials.load() with empty email"""
-        data = textwrap.dedent('''
+        data = textwrap.dedent(
+            """
             [general]
             email = ""
-        ''').strip()
+        """
+        ).strip()
         m = mock_open(read_data=data)
-        with patch('streamlit.credentials.open', m, create=True):
+        with patch("streamlit.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual('', c.activation.email)
+            self.assertEqual("", c.activation.email)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load_twice(self):
         """Test Credentials.load() called twice."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', True)
-        with patch('streamlit.credentials.LOGGER') as p:
+        c.activation = Activation("some_email", True)
+        with patch("streamlit.credentials.LOGGER") as p:
             c.load()
             p.error.assert_called_once_with(
-                'Credentials already loaded. Not rereading file.')
+                "Credentials already loaded. Not rereading file."
+            )
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load_file_not_found(self):
         """Test Credentials.load() with FileNotFoundError."""
-        with patch('streamlit.credentials.open') as m:
+        with patch("streamlit.credentials.open") as m:
             m.side_effect = FileNotFoundError()
             c = Credentials.get_current()
             c.activation = None
             with pytest.raises(RuntimeError) as e:
                 c.load()
             self.assertEqual(
-                str(e.value),
-                'Credentials not found. Please run "streamlit activate".')
+                str(e.value), 'Credentials not found. Please run "streamlit activate".'
+            )
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load_permission_denied(self):
         """Test Credentials.load() with Perission denied."""
         if sys.version_info < (3, 0):
             return
-        with patch('streamlit.credentials.open') as m:
+        with patch("streamlit.credentials.open") as m:
             m.side_effect = PermissionError(
-                '[Errno 13] Permission denied: ~/.streamlit/credentials.toml')
+                "[Errno 13] Permission denied: ~/.streamlit/credentials.toml"
+            )
             c = Credentials.get_current()
             c.activation = None
             with pytest.raises(Exception) as e:
                 c.load()
             self.assertEqual(
-                str(e.value).split(':')[0],
-                '\nUnable to load credentials from '
-                '/mock/home/folder/.streamlit/credentials.toml.\n'
-                'Run "streamlit reset" and try again.\n'
+                str(e.value).split(":")[0],
+                "\nUnable to load credentials from "
+                "/mock/home/folder/.streamlit/credentials.toml.\n"
+                'Run "streamlit reset" and try again.\n',
             )
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_check_activated_already_loaded(self):
         """Test Credentials.check_activated() already loaded."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', True)
-        with patch('streamlit.credentials._exit') as p:
+        c.activation = Activation("some_email", True)
+        with patch("streamlit.credentials._exit") as p:
             c.check_activated()
             p.assert_not_called()
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_check_activated_false(self):
         """Test Credentials.check_activated() not activated."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', False)
-        with patch('streamlit.credentials._exit') as p:
+        c.activation = Activation("some_email", False)
+        with patch("streamlit.credentials._exit") as p:
             c.check_activated()
-            p.assert_called_once_with('Activation email not valid.')
+            p.assert_called_once_with("Activation email not valid.")
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_check_activated_error(self):
         """Test Credentials.check_activated() has an error."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', True)
-        with patch.object(c, 'load', side_effect=Exception(
-                'Some error')), patch('streamlit.credentials._exit') as p:
+        c.activation = Activation("some_email", True)
+        with patch.object(c, "load", side_effect=Exception("Some error")), patch(
+            "streamlit.credentials._exit"
+        ) as p:
             c.check_activated()
-            p.assert_called_once_with('Some error')
+            p.assert_called_once_with("Some error")
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_save(self):
         """Test Credentials.save()."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', True)
-        truth = textwrap.dedent('''
+        c.activation = Activation("some_email", True)
+        truth = textwrap.dedent(
+            """
             [general]
             email = "some_email"
-        ''').lstrip()
+        """
+        ).lstrip()
 
-        truth2 = textwrap.dedent('''
+        truth2 = textwrap.dedent(
+            """
             [general]
             email = "some_email"
-        ''').lstrip()
+        """
+        ).lstrip()
 
         m = mock_open()
-        with patch('streamlit.credentials.open', m, create=True) as m:
+        with patch("streamlit.credentials.open", m, create=True) as m:
             c.save()
             if sys.version_info >= (3, 0):
                 m.return_value.write.assert_called_once_with(truth)
             else:
                 m.return_value.write.assert_called_once_with(truth2)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', True)
-        with patch('streamlit.credentials.LOGGER') as p:
+        c.activation = Activation("some_email", True)
+        with patch("streamlit.credentials.LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
             self.assertEqual(p.error.call_count, 2)
-            self.assertEqual(p.error.call_args_list[1],
-                             call('Already activated'))
+            self.assertEqual(p.error.call_args_list[1], call("Already activated"))
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_activate_already_activated_not_valid(self):
         """Test Credentials.activate() already activated but not valid."""
         c = Credentials.get_current()
-        c.activation = Activation('some_email', False)
-        with patch('streamlit.credentials.LOGGER') as p:
+        c.activation = Activation("some_email", False)
+        with patch("streamlit.credentials.LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
             self.assertEqual(p.error.call_count, 2)
             self.assertEqual(
-                str(p.error.call_args_list[1])[0:27],
-                'call(\'Activation not valid.')
+                str(p.error.call_args_list[1])[0:27], "call('Activation not valid."
+            )
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_activate(self):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
         c.activation = None
 
-        with patch.object(c, 'load', side_effect=RuntimeError('Some error')), \
-             patch.object(c, 'save') as patched_save, \
-             patch(PROMPT) as patched_prompt:
+        with patch.object(
+            c, "load", side_effect=RuntimeError("Some error")
+        ), patch.object(c, "save") as patched_save, patch(PROMPT) as patched_prompt:
 
-            patched_prompt.side_effect = ['user@domain.com']
+            patched_prompt.side_effect = ["user@domain.com"]
             c.activate()
             patched_save.assert_called_once()
-            self.assertEqual(c.activation.email, 'user@domain.com')
+            self.assertEqual(c.activation.email, "user@domain.com")
             self.assertEqual(c.activation.is_valid, True)
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""
-        with patch('streamlit.credentials.os.remove') as p:
+        with patch("streamlit.credentials.os.remove") as p:
             Credentials.reset()
-            p.assert_called_once_with(
-                '/mock/home/folder/.streamlit/credentials.toml')
+            p.assert_called_once_with("/mock/home/folder/.streamlit/credentials.toml")
 
-    @patch('streamlit.credentials.util.get_streamlit_file_path', mock_get_path)
+    @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_reset_error(self):
         """Test Credentials.reset() with error."""
-        with patch('streamlit.credentials.os.remove', side_effect=OSError('some error')), \
-             patch('streamlit.credentials.LOGGER') as p:
+        with patch(
+            "streamlit.credentials.os.remove", side_effect=OSError("some error")
+        ), patch("streamlit.credentials.LOGGER") as p:
 
             Credentials.reset()
             p.error.assert_called_once_with(
-                'Error removing credentials file: some error')
+                "Error removing credentials file: some error"
+            )
 
 
 class CredentialsModulesTest(unittest.TestCase):
@@ -258,6 +267,6 @@ class CredentialsModulesTest(unittest.TestCase):
 
     def test_verify_email(self):
         """Test _verify_email."""
-        self.assertTrue(_verify_email('user@domain.com').is_valid)
-        self.assertTrue(_verify_email('').is_valid)
-        self.assertFalse(_verify_email('missing_at_sign').is_valid)
+        self.assertTrue(_verify_email("user@domain.com").is_valid)
+        self.assertTrue(_verify_email("").is_valid)
+        self.assertFalse(_verify_email("missing_at_sign").is_valid)

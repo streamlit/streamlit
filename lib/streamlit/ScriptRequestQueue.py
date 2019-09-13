@@ -23,23 +23,25 @@ from streamlit.widgets import coalesce_widget_states
 
 class ScriptRequest(Enum):
     # Stop the script, but don't shutdown the ScriptRunner (data=None)
-    STOP = 'STOP'
+    STOP = "STOP"
     # Rerun the script (data=RerunData)
-    RERUN = 'RERUN'
+    RERUN = "RERUN"
     # Shut down the ScriptRunner, stopping any running script first (data=None)
-    SHUTDOWN = 'SHUTDOWN'
+    SHUTDOWN = "SHUTDOWN"
 
 
 # Data attached to RERUN requests
-RerunData = namedtuple('RerunData', [
-    # The argv value to run the script with. If this is None,
-    # the argv from the most recent run of the script will be used instead.
-    'argv',
-
-    # WidgetStates protobuf to run the script with. If this is None, the
-    # widget_state from the most recent run of the script will be used instead.
-    'widget_state'
-])
+RerunData = namedtuple(
+    "RerunData",
+    [
+        # The argv value to run the script with. If this is None,
+        # the argv from the most recent run of the script will be used instead.
+        "argv",
+        # WidgetStates protobuf to run the script with. If this is None, the
+        # widget_state from the most recent run of the script will be used instead.
+        "widget_state",
+    ],
+)
 
 
 class ScriptRequestQueue(object):
@@ -48,6 +50,7 @@ class ScriptRequestQueue(object):
     ReportSession publishes to this queue, and ScriptRunner consumes from it.
 
     """
+
     def __init__(self):
         self._lock = threading.Lock()
         self._queue = deque()
@@ -90,9 +93,10 @@ class ScriptRequestQueue(object):
                         # recent script execution's widget state was.
                         # We have no meaningful state to merge with, and
                         # so we simply overwrite the existing request.
-                        self._queue[index] = (request, RerunData(
-                            argv=data.argv,
-                            widget_state=data.widget_state))
+                        self._queue[index] = (
+                            request,
+                            RerunData(argv=data.argv, widget_state=data.widget_state),
+                        )
                     elif data.widget_state is None:
                         # If this request's widget_state is None, and the
                         # existing request's widget_state was not, this
@@ -102,10 +106,12 @@ class ScriptRequestQueue(object):
                         # Both the existing and the new request have
                         # non-null widget_states. Merge them together.
                         coalesced_state = coalesce_widget_states(
-                            old_data.widget_state, data.widget_state)
-                        self._queue[index] = (request, RerunData(
-                            argv=data.argv,
-                            widget_state=coalesced_state))
+                            old_data.widget_state, data.widget_state
+                        )
+                        self._queue[index] = (
+                            request,
+                            RerunData(argv=data.argv, widget_state=coalesced_state),
+                        )
                 else:
                     self._queue.append((request, data))
             else:

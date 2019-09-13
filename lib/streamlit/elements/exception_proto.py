@@ -17,6 +17,7 @@ import sys
 import traceback
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -40,17 +41,18 @@ def _format_syntax_error_message(exception):
     """
     return (
         'File "%(filename)s", line %(lineno)d\n'
-        '  %(text)s\n'
-        '  %(caret_indent)s^\n'
-        '%(errname)s: %(msg)s' %
-        {
-            'filename': exception.filename,
-            'lineno': exception.lineno,
-            'text': exception.text.rstrip(),
-            'caret_indent': ' ' * max(exception.offset - 1, 0),
-            'errname': type(exception).__name__,
-            'msg': exception.msg,
-        })
+        "  %(text)s\n"
+        "  %(caret_indent)s^\n"
+        "%(errname)s: %(msg)s"
+        % {
+            "filename": exception.filename,
+            "lineno": exception.lineno,
+            "text": exception.text.rstrip(),
+            "caret_indent": " " * max(exception.offset - 1, 0),
+            "errname": type(exception).__name__,
+            "msg": exception.msg,
+        }
+    )
 
 
 def marshall(exception_proto, exception, exception_traceback=None):
@@ -85,8 +87,9 @@ def marshall(exception_proto, exception, exception_traceback=None):
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
-        exception_proto.message = ''
-        LOGGER.warning('''
+        exception_proto.message = ""
+        LOGGER.warning(
+            """
 
 Streamlit was unable to parse the data from an exception in the user's script.
 This is usually due to a bug in the Exception object itself. Here is some info
@@ -101,18 +104,20 @@ Problem:
 Traceback:
 %(str_exception_tb)s
 
-        ''' % {
-            'etype': type(exception).__name__,
-            'str_exception': str_exception,
-            'str_exception_tb': '\n'.join(get_stack_trace(str_exception)),
-        })
+        """
+            % {
+                "etype": type(exception).__name__,
+                "str_exception": str_exception,
+                "str_exception_tb": "\n".join(get_stack_trace(str_exception)),
+            }
+        )
 
 
 def get_stack_trace(exception, exception_traceback=None):
     # Get and extract the traceback for the exception.
     if exception_traceback is not None:
         extracted_traceback = traceback.extract_tb(exception_traceback)
-    elif hasattr(exception, '__traceback__'):
+    elif hasattr(exception, "__traceback__"):
         # This is the Python 3 way to get the traceback.
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
     else:
@@ -128,8 +133,9 @@ def get_stack_trace(exception, exception_traceback=None):
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
         stack_trace = [
-            'Cannot extract the stack trace for this exception. '
-            'Try calling exception() within the `catch` block.']
+            "Cannot extract the stack trace for this exception. "
+            "Try calling exception() within the `catch` block."
+        ]
     else:
         stack_trace = traceback.format_list(extracted_traceback)
 

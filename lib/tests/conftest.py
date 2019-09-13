@@ -27,15 +27,15 @@ from mock import patch, mock_open
 from streamlit import config
 
 
-os.environ['HOME'] = '/mock/home/folder'
+os.environ["HOME"] = "/mock/home/folder"
 
-CONFIG_FILE_CONTENTS = '''
+CONFIG_FILE_CONTENTS = """
 [global]
 sharingMode = "off"
 unitTest = true
 
 [browser]
 gatherUsageStats = false
-'''
+"""
 
 config.parse_config_file(CONFIG_FILE_CONTENTS)

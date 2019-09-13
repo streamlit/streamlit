@@ -19,16 +19,16 @@
 
 describe("st.text_area", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 4)
+    cy.get(".stTextArea").should("have.length", 4);
 
     cy.get(".stTextArea").each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("text_area" + idx)
-    })
-  })
+      cy.wrap(el).matchImageSnapshot("text_area" + idx);
+    });
+  });
 
   it("has correct default values", () => {
     cy.get(".stText").should(
@@ -37,13 +37,13 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    )
-  })
+    );
+  });
 
   it("sets value correctly when user types", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{enter}")
+      .type("test area{enter}");
 
     cy.get(".stText").should(
       "have.text",
@@ -51,13 +51,13 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    )
-  })
+    );
+  });
 
   it("sets value correctly on ctrl-enter keypress", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{ctrl}{enter}")
+      .type("test area{ctrl}{enter}");
 
     cy.get(".stText").should(
       "have.text",
@@ -65,14 +65,14 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    )
-  })
+    );
+  });
 
   it("sets value correctly on blur", () => {
     cy.get(".stTextArea textarea")
       .first()
       .type("test area")
-      .blur()
+      .blur();
 
     cy.get(".stText").should(
       "have.text",
@@ -80,6 +80,6 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    )
-  })
-})
+    );
+  });
+});

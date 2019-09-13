@@ -20,15 +20,15 @@ from dateutil.parser import parse
 
 np.random.seed(0)
 data = np.random.randn(200, 3)
-df = pd.DataFrame(data, columns=['a', 'b', 'c'])
+df = pd.DataFrame(data, columns=["a", "b", "c"])
 spec = {
-    'mark': 'circle',
-    'encoding': {
-        'x': {'field': 'a', 'type': 'quantitative'},
-        'y': {'field': 'b', 'type': 'quantitative'},
-        'size': {'field': 'c', 'type': 'quantitative'},
-        'color': {'field': 'c', 'type': 'quantitative'},
-    }
+    "mark": "circle",
+    "encoding": {
+        "x": {"field": "a", "type": "quantitative"},
+        "y": {"field": "b", "type": "quantitative"},
+        "size": {"field": "c", "type": "quantitative"},
+        "color": {"field": "c", "type": "quantitative"},
+    },
 }
 st.vega_lite_chart(df, spec)
 st.vega_lite_chart(df, spec, width=0)
@@ -37,59 +37,58 @@ st.vega_lite_chart(df, spec, width=500)
 
 # Screenshot comparison
 
-st.header('Different ways to get the exact same plot')
+st.header("Different ways to get the exact same plot")
 
-df = pd.DataFrame([['A', 'B', 'C', 'D'], [28, 55, 43, 91]], index=['a', 'b']).T
+df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
-st.write('Using a top-level `df` and a `spec` dict:')
+st.write("Using a top-level `df` and a `spec` dict:")
 
-st.vega_lite_chart(df, {
-    'mark': 'bar',
-    'encoding': {
-      'x': {'field': 'a', 'type': 'ordinal'},
-      'y': {'field': 'b', 'type': 'quantitative'}
-    }
-  })
-
-st.write('Using a top-level `df` and keywords as a spec:')
-
-st.vega_lite_chart(df,
-    mark='bar',
-    x_field='a',
-    x_type='ordinal',
-    y_field='b',
-    y_type='quantitative')
-
-st.write('Putting the `df` inside the spec, as a `dataset`:')
-
-st.vega_lite_chart({
-    'datasets': {
-        'foo': df,
+st.vega_lite_chart(
+    df,
+    {
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
     },
-    'data': {
-        'name': 'foo',
-    },
-    'mark': 'bar',
-    'encoding': {
-      'x': {'field': 'a', 'type': 'ordinal'},
-      'y': {'field': 'b', 'type': 'quantitative'}
+)
+
+st.write("Using a top-level `df` and keywords as a spec:")
+
+st.vega_lite_chart(
+    df, mark="bar", x_field="a", x_type="ordinal", y_field="b", y_type="quantitative"
+)
+
+st.write("Putting the `df` inside the spec, as a `dataset`:")
+
+st.vega_lite_chart(
+    {
+        "datasets": {"foo": df},
+        "data": {"name": "foo"},
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
     }
-  })
+)
 
-st.write('Putting the `df` inside the spec, as inline `data`:')
+st.write("Putting the `df` inside the spec, as inline `data`:")
 
-st.vega_lite_chart({
-    'data': df,
-    'mark': 'bar',
-    'encoding': {
-      'x': {'field': 'a', 'type': 'ordinal'},
-      'y': {'field': 'b', 'type': 'quantitative'}
+st.vega_lite_chart(
+    {
+        "data": df,
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
     }
-  })
+)
 
-st.write(
-    'Putting the `df` inside the spec, as inline `data` (different notation):')
-st.write('**This fails now, but not a big deal. It\'s a weird notation.**')
+st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
+st.write("**This fails now, but not a big deal. It's a weird notation.**")
 
 # st.vega_lite_chart({
 #     'data': {'values': df},

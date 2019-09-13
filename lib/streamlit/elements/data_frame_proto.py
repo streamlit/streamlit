@@ -25,7 +25,7 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-CSSStyle = namedtuple('CSSStyle', ['property', 'value'])
+CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
 def marshall_data_frame(data, proto_df):
@@ -67,7 +67,7 @@ def convert_anything_to_df(df):
     pandas.DataFrame
 
     """
-    if util.is_type(df, 'pandas.core.frame.DataFrame'):
+    if util.is_type(df, "pandas.core.frame.DataFrame"):
         return df
 
     if _is_pandas_styler(df):
@@ -75,7 +75,7 @@ def convert_anything_to_df(df):
 
     import pandas as pd
 
-    if util.is_type(df, 'numpy.ndarray') and len(df.shape) == 0:
+    if util.is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -84,7 +84,7 @@ def convert_anything_to_df(df):
 
 
 def _is_pandas_styler(obj):
-    return util.is_type(obj, 'pandas.io.formats.style.Styler')
+    return util.is_type(obj, "pandas.io.formats.style.Styler")
 
 
 def _marshall_styles(proto_table_style, df, styler=None):
@@ -142,20 +142,20 @@ def _get_css_styles(translated_style):
     #   ...
     # ]
 
-    cell_selector_regex = re.compile(r'row(\d+)_col(\d+)')
+    cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
 
     css_styles = {}
-    for cell_style in translated_style['cellstyle']:
-        cell_selector = cell_style[
-            'selector']  # a string of the form 'row0_col0'
+    for cell_style in translated_style["cellstyle"]:
+        cell_selector = cell_style["selector"]  # a string of the form 'row0_col0'
         match = cell_selector_regex.match(cell_selector)
         if not match:
-            raise RuntimeError('Failed to parse cellstyle selector "%s"' %
-                               cell_selector)
+            raise RuntimeError(
+                'Failed to parse cellstyle selector "%s"' % cell_selector
+            )
         row = int(match.group(1))
         col = int(match.group(2))
         css_declarations = []
-        props = cell_style['props']
+        props = cell_style["props"]
         for prop in props:
             if not isinstance(prop, list) or len(prop) != 2:
                 raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
@@ -190,8 +190,8 @@ def _get_custom_display_values(df, translated_style):
     default_formatter = df.style._display_funcs[(0, 0)]
 
     def has_custom_display_value(cell):
-        value = str(cell['value'])
-        display_value = str(cell['display_value'])
+        value = str(cell["value"])
+        display_value = str(cell["display_value"])
         if value == display_value:
             return False
 
@@ -200,16 +200,16 @@ def _get_custom_display_values(df, translated_style):
         # for that here.
         return default_formatter(value) != display_value
 
-    cell_selector_regex = re.compile(r'row(\d+)_col(\d+)')
-    header_selector_regex = re.compile(r'level(\d+)_row(\d+)')
+    cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
+    header_selector_regex = re.compile(r"level(\d+)_row(\d+)")
 
     display_values = {}
-    for row in translated_style['body']:
+    for row in translated_style["body"]:
         # row is a List[Dict], containing format data for each cell in the row,
         # plus an extra first entry for the row header, which we skip
         found_row_header = False
         for cell in row:
-            cell_id = cell['id']  # a string in the form 'row0_col0'
+            cell_id = cell["id"]  # a string in the form 'row0_col0'
             if header_selector_regex.match(cell_id):
                 if not found_row_header:
                     # We don't care about processing row headers, but as
@@ -217,18 +217,16 @@ def _get_custom_display_values(df, translated_style):
                     found_row_header = True
                     continue
                 else:
-                    raise RuntimeError('Found unexpected row header "%s"' %
-                                       cell)
+                    raise RuntimeError('Found unexpected row header "%s"' % cell)
             match = cell_selector_regex.match(cell_id)
             if not match:
-                raise RuntimeError('Failed to parse cell selector "%s"' %
-                                   cell_id)
+                raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
 
             # Only store display values that differ from the cell's default
             if has_custom_display_value(cell):
                 row = int(match.group(1))
                 col = int(match.group(2))
-                display_values[(row, col)] = str(cell['display_value'])
+                display_values[(row, col)] = str(cell["display_value"])
 
     return display_values
 
@@ -241,9 +239,9 @@ def _marshall_index(pandas_index, proto_index):
     """
     import pandas as pd
     import numpy as np
+
     if type(pandas_index) == pd.Index:
-        _marshall_any_array(np.array(pandas_index),
-                            proto_index.plain_index.data)
+        _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     elif type(pandas_index) == pd.RangeIndex:
         min = pandas_index.min()
         max = pandas_index.max()
@@ -256,7 +254,7 @@ def _marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.MultiIndex:
         for level in pandas_index.levels:
             _marshall_index(level, proto_index.multi_index.levels.add())
-        if hasattr(pandas_index, 'codes'):
+        if hasattr(pandas_index, "codes"):
             index_codes = pandas_index.codes
         else:
             # Deprecated in Pandas 0.24, do don't bother covering.
@@ -267,11 +265,9 @@ def _marshall_index(pandas_index, proto_index):
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(
-            pandas_index.astype(np.int64))
+        proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.TimedeltaIndex:
-        proto_index.timedelta_index.data.data.extend(
-            pandas_index.astype(np.int64))
+        proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:
         proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.Float64Index:
@@ -297,13 +293,14 @@ def _marshall_any_array(pandas_array, proto_array):
     proto_array  - proto.AnyArray (output)
     """
     import numpy as np
+
     # Convert to np.array as necessary.
-    if not hasattr(pandas_array, 'dtype'):
+    if not hasattr(pandas_array, "dtype"):
         pandas_array = np.array(pandas_array)
 
     # Only works on 1D arrays.
     if len(pandas_array.shape) != 1:
-        raise ValueError('Array must be 1D.')
+        raise ValueError("Array must be 1D.")
 
     # Perform type-conversion based on the array dtype.
     if issubclass(pandas_array.dtype.type, np.floating):
@@ -320,15 +317,14 @@ def _marshall_any_array(pandas_array, proto_array):
     #   'datetime64[ns]', <class 'numpy.datetime64'>
     # to
     #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
-    elif pandas_array.dtype.name.startswith('datetime64'):
+    elif pandas_array.dtype.name.startswith("datetime64"):
         # TODO(armando): Convert eveything to UTC not local timezone.
         if pandas_array.dt.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_array = pandas_array.dt.tz_localize(current_zone)
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
-        raise NotImplementedError('Dtype %s not understood.' %
-                                  pandas_array.dtype)
+        raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
 
 
 def add_rows(delta1, delta2, name=None):
@@ -352,7 +348,7 @@ def add_rows(delta1, delta2, name=None):
 
     # Copy Data
     if len(df1.data.cols) != len(df2.data.cols):
-        raise ValueError('Dataframes have incompatible shapes')
+        raise ValueError("Dataframes have incompatible shapes")
     for (col1, col2) in zip(df1.data.cols, df2.data.cols):
         _concat_any_array(col1, col2)
 
@@ -377,29 +373,27 @@ def _concat_index(index1, index2):
         return
 
     # Otherwise, dispatch based on type.
-    type1 = index1.WhichOneof('type')
-    type2 = index2.WhichOneof('type')
+    type1 = index1.WhichOneof("type")
+    type2 = index2.WhichOneof("type")
     # This branch is covered with tests but pytest doesnt seem to realize it.
     if type1 != type2:  # pragma: no cover
-        raise ValueError('Cannot concatenate %(type1)s with %(type2)s.' % {
-            'type1': type1,
-            'type2': type2
-        })
+        raise ValueError(
+            "Cannot concatenate %(type1)s with %(type2)s."
+            % {"type1": type1, "type2": type2}
+        )
 
-    if type1 == 'plain_index':
+    if type1 == "plain_index":
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
-    elif type1 == 'range_index':
-        index1.range_index.stop += \
-            (index2.range_index.stop - index2.range_index.start)
-    elif type1 == 'multi_index':
-        raise NotImplementedError('Cannot yet concatenate MultiIndices.')
-    elif type1 == 'int_64_index':
+    elif type1 == "range_index":
+        index1.range_index.stop += index2.range_index.stop - index2.range_index.start
+    elif type1 == "multi_index":
+        raise NotImplementedError("Cannot yet concatenate MultiIndices.")
+    elif type1 == "int_64_index":
         index1.int_64_index.data.data.extend(index2.int_64_index.data.data)
-    elif type1 == 'datetime_index':
+    elif type1 == "datetime_index":
         index1.datetime_index.data.data.extend(index2.datetime_index.data.data)
-    elif type1 == 'timedelta_index':
-        index1.timedelta_index.data.data.extend(
-            index2.timedelta_index.data.data)
+    elif type1 == "timedelta_index":
+        index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
     else:
         raise NotImplementedError('Cannot concatenate "%s" indices.' % type1)
 
@@ -411,13 +405,13 @@ def _concat_any_array(any_array_1, any_array_2):
         any_array_1.CopyFrom(any_array_2)
         return
 
-    type1 = any_array_1.WhichOneof('type')
-    type2 = any_array_2.WhichOneof('type')
+    type1 = any_array_1.WhichOneof("type")
+    type2 = any_array_2.WhichOneof("type")
     if type1 != type2:
-        raise ValueError('Cannot concatenate %(type1)s with %(type2)s.' % {
-            'type1': type1,
-            'type2': type2
-        })
+        raise ValueError(
+            "Cannot concatenate %(type1)s with %(type2)s."
+            % {"type1": type1, "type2": type2}
+        )
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 
@@ -433,23 +427,22 @@ def _concat_cell_style_array(style_array1, style_array2):
 
 def _get_data_frame(delta, name=None):
     """Extract the dataframe from a delta."""
-    delta_type = delta.WhichOneof('type')
+    delta_type = delta.WhichOneof("type")
 
-    if delta_type == 'new_element':
-        element_type = delta.new_element.WhichOneof('type')
+    if delta_type == "new_element":
+        element_type = delta.new_element.WhichOneof("type")
 
         # Some element types don't support named datasets.
-        if name and element_type in ('data_frame', 'table', 'chart'):
-            raise ValueError(
-                'Dataset names not supported for st.%s' % element_type)
+        if name and element_type in ("data_frame", "table", "chart"):
+            raise ValueError("Dataset names not supported for st.%s" % element_type)
 
-        if element_type in 'data_frame':
+        if element_type in "data_frame":
             return delta.new_element.data_frame
-        elif element_type in 'table':
+        elif element_type in "table":
             return delta.new_element.table
-        elif element_type == 'chart':
+        elif element_type == "chart":
             return delta.new_element.chart.data
-        elif element_type == 'vega_lite_chart':
+        elif element_type == "vega_lite_chart":
             chart_proto = delta.new_element.vega_lite_chart
             if name:
                 return _get_or_create_dataset(chart_proto.datasets, name)
@@ -463,12 +456,12 @@ def _get_data_frame(delta, name=None):
         # TODO: Support DeckGL. Need to figure out how to handle layer indices
         # first.
 
-    elif delta_type == 'add_rows':
+    elif delta_type == "add_rows":
         if delta.add_rows.has_name and name != delta.add_rows.name:
             raise ValueError('No dataset found with name "%s".' % name)
         return delta.add_rows.data
     else:
-        raise ValueError('Cannot extract DataFrame from %s.' % delta_type)
+        raise ValueError("Cannot extract DataFrame from %s." % delta_type)
 
 
 def _get_or_create_dataset(datasets_proto, name):
@@ -484,28 +477,28 @@ def _get_or_create_dataset(datasets_proto, name):
 
 def _index_len(index):
     """Return the number of elements in an index."""
-    index_type = index.WhichOneof('type')
-    if index_type == 'plain_index':
+    index_type = index.WhichOneof("type")
+    if index_type == "plain_index":
         return _any_array_len(index.plain_index.data)
-    elif index_type == 'range_index':
+    elif index_type == "range_index":
         return index.range_index.stop - index.range_index.start
-    elif index_type == 'multi_index':
+    elif index_type == "multi_index":
         if len(index.multi_index.labels) == 0:
             return 0
         else:
             return len(index.multi_index.labels[0].data)
-    elif index_type == 'int_64_index':
+    elif index_type == "int_64_index":
         return len(index.int_64_index.data.data)
-    elif index_type == 'float_64_index':
+    elif index_type == "float_64_index":
         return len(index.float_64_index.data.data)
-    elif index_type == 'datetime_index':
+    elif index_type == "datetime_index":
         return len(index.datetime_index.data.data)
-    elif index_type == 'timedelta_index':
+    elif index_type == "timedelta_index":
         return len(index.timedelta_index.data.data)
 
 
 def _any_array_len(any_array):
     """Return the length of an any_array."""
-    array_type = any_array.WhichOneof('type')
+    array_type = any_array.WhichOneof("type")
     the_array = getattr(any_array, array_type).data
     return len(the_array)

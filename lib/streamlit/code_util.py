@@ -43,11 +43,11 @@ def extract_args(line):
     results = []
 
     for i, c in enumerate(line):
-        if c == '(':
+        if c == "(":
             if stack == 0:
                 startIndex = i + 1
             stack += 1
-        elif c == ')':
+        elif c == ")":
             stack -= 1
             if stack == 0:
                 results.append(line[startIndex:i])
@@ -81,8 +81,8 @@ def get_method_args_from_code(args, line):
 
     # Split arguments, https://stackoverflow.com/a/26634150
     if len(args) > 1:
-        inputs = re.split(',\\s*(?![^(){}[\]]*\\))', line_args)
-        assert len(inputs) == len(args), 'Could not split arguments'
+        inputs = re.split(",\\s*(?![^(){}[\]]*\\))", line_args)
+        assert len(inputs) == len(args), "Could not split arguments"
     else:
         inputs = [line_args]
     return inputs
