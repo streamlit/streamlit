@@ -25,13 +25,13 @@ import random
 import unittest
 from collections import namedtuple
 
+import requests
 import pytest
-
+import requests_mock
 from mock import patch, mock_open, mock, MagicMock
+import plotly.graph_objs as go
 
 from streamlit import util
-
-import plotly.graph_objs as go
 
 
 FILENAME = '/some/cache/file'
@@ -43,6 +43,7 @@ class UtilTest(unittest.TestCase):
     def setUp(self):
         self.patch1 = patch('streamlit.util.os.stat')
         self.os_stat = self.patch1.start()
+        util._external_ip = None
 
     def tearDown(self):
         self.patch1.stop()
@@ -189,3 +190,16 @@ class UtilTest(unittest.TestCase):
 
         res = util.is_namedtuple(John)
         self.assertTrue(res)
+
+    def test_get_external_ip(self):
+        # Test success
+        with requests_mock.mock() as m:
+            m.get(util._AWS_CHECK_IP, text='1.2.3.4')
+            self.assertEqual('1.2.3.4', util.get_external_ip())
+
+        util._external_ip = None
+
+        # Test failure
+        with requests_mock.mock() as m:
+            m.get(util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
+            self.assertEqual(None, util.get_external_ip())
