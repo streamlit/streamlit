@@ -22,7 +22,6 @@ import Block from "components/core/Block/"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import { Col, Row } from "reactstrap"
 import { ThemeProvider } from "baseui"
 import { widgetTheme } from "lib/widgetTheme"
 import "./ReportView.scss"
@@ -57,6 +56,9 @@ interface Props {
 
   // Disable the widgets when not connected to the server.
   widgetsDisabled: boolean
+
+  // Wide mode
+  wide: boolean
 }
 
 /**
@@ -65,30 +67,34 @@ interface Props {
 class ReportView extends PureComponent<Props> {
   public render = (): ReactNode => (
     <ThemeProvider theme={widgetTheme}>
-      <Row>
+      <div className={`reportview-container ${this.props.wide && "--wide"}`}>
         {!this.props.elements.sidebar.isEmpty() && (
-          <Col className="sidebar">
+          <section className="sidebar">
+            <div className="block-container">
+              <Block
+                elements={this.props.elements.sidebar}
+                reportId={this.props.reportId}
+                reportRunState={this.props.reportRunState}
+                showStaleElementIndicator={this.props.showStaleElementIndicator}
+                widgetMgr={this.props.widgetMgr}
+                widgetsDisabled={this.props.widgetsDisabled}
+              />
+            </div>
+          </section>
+        )}
+        <section className="main">
+          <div className="block-container">
             <Block
-              elements={this.props.elements.sidebar}
+              elements={this.props.elements.main}
               reportId={this.props.reportId}
               reportRunState={this.props.reportRunState}
               showStaleElementIndicator={this.props.showStaleElementIndicator}
               widgetMgr={this.props.widgetMgr}
               widgetsDisabled={this.props.widgetsDisabled}
             />
-          </Col>
-        )}
-        <Col className="main">
-          <Block
-            elements={this.props.elements.main}
-            reportId={this.props.reportId}
-            reportRunState={this.props.reportRunState}
-            showStaleElementIndicator={this.props.showStaleElementIndicator}
-            widgetMgr={this.props.widgetMgr}
-            widgetsDisabled={this.props.widgetsDisabled}
-          />
-        </Col>
-      </Row>
+          </div>
+        </section>
+      </div>
     </ThemeProvider>
   )
 }

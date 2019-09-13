@@ -686,42 +686,27 @@ class App extends PureComponent {
             </div>
           </header>
 
-          <Container className="streamlit-container">
-            <Row className="justify-content-center">
-              {/*
-                Disclaimer: If this columns are changed please update
-                MAXIMUM_CONTENT_WIDTH constant value for st.image() from
-                image_proto.py file
-              */}
-
-              <Col
-                className={
-                  this.state.userSettings.wideMode
-                    ? ""
-                    : "col-lg-8 col-md-9 col-sm-12 col-xs-12"
+          <Container className="streamlit-container streamlit-wide">
+            {this.state.showLoginBox ? (
+              <LoginBox
+                onSuccess={this.onLogInSuccess}
+                onFailure={this.onLogInError}
+              />
+            ) : (
+              <ReportView
+                wide={this.state.userSettings.wideMode}
+                elements={this.state.elements}
+                reportId={this.state.reportId}
+                reportRunState={this.state.reportRunState}
+                showStaleElementIndicator={
+                  this.state.connectionState !== ConnectionState.STATIC
                 }
-              >
-                {this.state.showLoginBox ? (
-                  <LoginBox
-                    onSuccess={this.onLogInSuccess}
-                    onFailure={this.onLogInError}
-                  />
-                ) : (
-                  <ReportView
-                    elements={this.state.elements}
-                    reportId={this.state.reportId}
-                    reportRunState={this.state.reportRunState}
-                    showStaleElementIndicator={
-                      this.state.connectionState !== ConnectionState.STATIC
-                    }
-                    widgetMgr={this.widgetMgr}
-                    widgetsDisabled={
-                      this.state.connectionState !== ConnectionState.CONNECTED
-                    }
-                  />
-                )}
-              </Col>
-            </Row>
+                widgetMgr={this.widgetMgr}
+                widgetsDisabled={
+                  this.state.connectionState !== ConnectionState.CONNECTED
+                }
+              />
+            )}
 
             <StreamlitDialog {...dialogProps} />
           </Container>

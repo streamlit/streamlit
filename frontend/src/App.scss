@@ -25,11 +25,6 @@ body.embedded:hover {
   overflow: auto;
 }
 
-.main {
-  display: flex;
-  flex-direction: column;
-}
-
 a,
 a:visited {
   color: $primary;
@@ -47,14 +42,17 @@ iframe {
   margin: 0;
 }
 
-.streamlit-regular .streamlit-container {
-  margin: 80px auto;
-}
 
-.streamlit-wide .streamlit-container {
-  margin-top: 80px;
-  width: unset;
-  max-width: unset;
+.streamlit-container {
+  &.streamlit-container {
+    margin: 80px auto;
+  }
+
+  &.streamlit-wide {
+    margin-top: 80px;
+    width: unset;
+    max-width: unset;
+  }
 }
 
 .streamlit-embedded .streamlit-container {
