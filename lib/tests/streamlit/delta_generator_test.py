@@ -35,12 +35,10 @@ from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
-    DeltaGenerator,
     _wraps_with_cleaned_sig,
     _clean_up_sig,
     _with_element,
 )
-from streamlit.ReportQueue import ReportQueue
 from tests import testutil
 import streamlit as st
 
