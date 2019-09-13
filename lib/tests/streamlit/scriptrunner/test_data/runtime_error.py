@@ -18,11 +18,11 @@
 import streamlit as st
 
 # Create a delta
-st.text('first')
+st.text("first")
 
 # Cause an exception
 bad = None
 bad.do_a_thing()
 
 # Create another delta (we'll never get here)
-st.text('second')
+st.text("second")

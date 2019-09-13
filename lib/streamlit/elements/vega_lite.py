@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import json
@@ -26,6 +27,7 @@ import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -57,40 +59,40 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
         spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
 
     if len(spec) == 0:
-        raise ValueError('Vega-Lite charts require a non-empty spec dict.')
+        raise ValueError("Vega-Lite charts require a non-empty spec dict.")
 
     # TODO: Improve autosizing code. It doesn't work with some kinds of charts,
     # like composed charts, for example.
-    if width >= 0 and 'width' not in spec:
-        spec['width'] = width
-        if 'autosize' not in spec:
-            spec['autosize'] = {'type': 'fit', 'contains': 'padding'}
+    if width >= 0 and "width" not in spec:
+        spec["width"] = width
+        if "autosize" not in spec:
+            spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     # Pull data out of spec dict when it's in a 'dataset' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
-    if 'datasets' in spec:
-        for k, v in spec['datasets'].items():
+    if "datasets" in spec:
+        for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
             dataset.name = str(k)
             dataset.has_name = True
             data_frame_proto.marshall_data_frame(v, dataset.data)
-        del spec['datasets']
+        del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})
     #   marshall(proto, {data: {values: df, ...}})
     #   marshall(proto, {data: {url: 'url'}})
     #   marshall(proto, {data: {name: 'foo'}})
-    if 'data' in spec:
-        data_spec = spec['data']
+    if "data" in spec:
+        data_spec = spec["data"]
 
         if type(data_spec) in dict_types:
-            if 'values' in data_spec:
-                data = data_spec['values']
-                del data_spec['values']
+            if "values" in data_spec:
+                data = data_spec["values"]
+                del data_spec["values"]
         else:
             data = data_spec
-            del spec['data']
+            del spec["data"]
 
     proto.spec = json.dumps(spec)
 
@@ -99,31 +101,33 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
-_CHANNELS = set([
-    'x',
-    'y',
-    'x2',
-    'y2',
-    'xError',
-    'yError2',
-    'xError',
-    'yError2',
-    'longitude',
-    'latitude',
-    'color',
-    'opacity',
-    'fillOpacity',
-    'strokeOpacity',
-    'strokeWidth',
-    'size',
-    'shape',
-    'text',
-    'tooltip',
-    'href',
-    'key',
-    'order',
-    'detail',
-    'facet',
-    'row',
-    'column',
-])
+_CHANNELS = set(
+    [
+        "x",
+        "y",
+        "x2",
+        "y2",
+        "xError",
+        "yError2",
+        "xError",
+        "yError2",
+        "longitude",
+        "latitude",
+        "color",
+        "opacity",
+        "fillOpacity",
+        "strokeOpacity",
+        "strokeWidth",
+        "size",
+        "shape",
+        "text",
+        "tooltip",
+        "href",
+        "key",
+        "order",
+        "detail",
+        "facet",
+        "row",
+        "column",
+    ]
+)

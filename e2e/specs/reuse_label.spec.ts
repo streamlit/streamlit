@@ -19,17 +19,17 @@
 
 describe("reuse widget label", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("reuses a widget label for different widget types", () => {
-    cy.get('.stSlider [role="slider"]').should("exist")
+    cy.get('.stSlider [role="slider"]').should("exist");
 
-    cy.get(".stSelectbox").should("not.exist")
+    cy.get(".stSelectbox").should("not.exist");
 
     cy.get(".stText")
       .first()
-      .should("have.text", "value 1: 25")
+      .should("have.text", "value 1: 25");
 
     // Trigger click in the center of the slider so that
     // the widget state for the label gets a value, which
@@ -37,14 +37,14 @@ describe("reuse widget label", () => {
     cy.get('.stSlider [role="slider"]')
       .first()
       .parent()
-      .click()
+      .click();
 
-    cy.get(".stSelectbox").should("exist")
+    cy.get(".stSelectbox").should("exist");
 
-    cy.get('.stSlider [role="slider"]').should("not.exist")
+    cy.get('.stSlider [role="slider"]').should("not.exist");
 
     cy.get(".stText")
       .first()
-      .should("have.text", "value 1: f")
-  })
-})
+      .should("have.text", "value 1: f");
+  });
+});

@@ -34,6 +34,7 @@ class CacheSpinnerTest(testutil.DeltaGeneratorTestCase):
     We test the ability to turn on and off the spinner with the show_spinner
     option by inspecting the report queue.
     """
+
     def test_with_spinner(self):
         """If the show_spinner flag is set, there should be one element in the
         report queue.

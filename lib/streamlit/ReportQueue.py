@@ -44,9 +44,10 @@ class ReportQueue(object):
 
     def get_debug(self):
         from google.protobuf.json_format import MessageToDict
+
         return {
-            'queue': [MessageToDict(m) for m in self._queue],
-            'ids': list(self._delta_index_map.keys()),
+            "queue": [MessageToDict(m) for m in self._queue],
+            "ids": list(self._delta_index_map.keys()),
         }
 
     def __iter__(self):
@@ -69,14 +70,14 @@ class ReportQueue(object):
         """
         with self._lock:
             # Optimize only if it's a delta message
-            if not msg.HasField('delta'):
+            if not msg.HasField("delta"):
                 self._queue.append(msg)
             else:
                 # Deltas are uniquely identified by the combination of their
                 # container and ID.
                 delta_path = (
                     msg.metadata.parent_block.container,
-                    tuple(msg.metadata.parent_block.path)
+                    tuple(msg.metadata.parent_block.path),
                 )
                 delta_key = (delta_path, msg.metadata.delta_id)
 
@@ -128,24 +129,26 @@ def compose_deltas(old_delta, new_delta):
     data. If not, returns new_delta.
 
     """
-    new_delta_type = new_delta.WhichOneof('type')
+    new_delta_type = new_delta.WhichOneof("type")
 
-    if new_delta_type == 'new_element':
+    if new_delta_type == "new_element":
         return new_delta
 
-    elif new_delta_type == 'new_block':
+    elif new_delta_type == "new_block":
         return new_delta
 
-    elif new_delta_type == 'add_rows':
+    elif new_delta_type == "add_rows":
         import streamlit.elements.data_frame_proto as data_frame_proto
+
         # We should make data_frame_proto.add_rows *not* mutate any of the
         # inputs. In the meantime, we have to deepcopy the input that will be
         # mutated.
         composed_delta = copy.deepcopy(old_delta)
         data_frame_proto.add_rows(
-            composed_delta, new_delta, name=new_delta.add_rows.name)
+            composed_delta, new_delta, name=new_delta.add_rows.name
+        )
         return composed_delta
 
-    LOGGER.error('Old delta: %s;\nNew delta: %s;', old_delta, new_delta)
+    LOGGER.error("Old delta: %s;\nNew delta: %s;", old_delta, new_delta)
 
-    raise NotImplementedError('Need to implement the compose code.')
+    raise NotImplementedError("Need to implement the compose code.")

@@ -16,6 +16,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import mock
@@ -33,9 +34,8 @@ class PollingFileWatcherTest(unittest.TestCase):
 
     def setUp(self):
         super(PollingFileWatcherTest, self).setUp()
-        self.util_patcher = mock.patch(
-            'streamlit.watcher.PollingFileWatcher.util')
-        self.os_patcher = mock.patch('streamlit.watcher.PollingFileWatcher.os')
+        self.util_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.util")
+        self.os_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.os")
         self.mock_util = self.util_patcher.start()
         self.os = self.os_patcher.start()
 
@@ -52,9 +52,9 @@ class PollingFileWatcherTest(unittest.TestCase):
             cb_marker()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
 
         try:
             time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
@@ -63,7 +63,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         cb_marker.assert_not_called()
 
         self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
         time.sleep(4 * PollingFileWatcher._POLLING_PERIOD_SECS)
         cb_marker.assert_called_once()
@@ -78,9 +78,9 @@ class PollingFileWatcherTest(unittest.TestCase):
             cb_marker()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
 
         try:
             time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
@@ -89,7 +89,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         cb_marker.assert_not_called()
 
         # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
         # This is the test:
         try:
@@ -108,9 +108,9 @@ class PollingFileWatcherTest(unittest.TestCase):
             cb_marker()
 
         self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: '1'
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = PollingFileWatcher.PollingFileWatcher('/this/is/my/file.py', cb)
+        ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
 
         try:
             time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
@@ -133,13 +133,15 @@ class PollingFileWatcherTest(unittest.TestCase):
 
     def test_multiple_watchers_same_file(self):
         """Test that we can have multiple watchers of the same file."""
-        filename = '/this/is/my/file.py'
+        filename = "/this/is/my/file.py"
 
         mod_count = [0]
+
         def modify_mock_file():
             self.os.stat = lambda x: FakeStat(mod_count[0])
-            self.mock_util.calc_md5_with_blocking_retries = \
-                lambda x: '%d' % mod_count[0]
+            self.mock_util.calc_md5_with_blocking_retries = (
+                lambda x: "%d" % mod_count[0]
+            )
 
             mod_count[0] += 1
 
@@ -192,7 +194,6 @@ class PollingFileWatcherTest(unittest.TestCase):
 
 class FakeStat(object):
     """Emulates the output of os.stat()."""
+
     def __init__(self, mtime):
         self.st_mtime = mtime
-
-

@@ -19,13 +19,13 @@
 
 describe("st.write", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays a text", () => {
     cy.get(".element-container .stText p").should(
       "contain",
       "This text is awesome!"
-    )
-  })
-})
+    );
+  });
+});

@@ -40,32 +40,32 @@ def get_referenced_objects(code, context):
     # Read more about bytecode at https://docs.python.org/3/library/dis.html
 
     for op in dis.get_instructions(code):
-        if op.opname in ['LOAD_GLOBAL', 'LOAD_NAME']:
+        if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
             if op.argval in context.globals:
                 set_tos(context.globals[op.argval])
             else:
                 set_tos(op.argval)
-        elif op.opname in ['LOAD_DEREF', 'LOAD_CLOSURE']:
+        elif op.opname in ["LOAD_DEREF", "LOAD_CLOSURE"]:
             set_tos(context.cells[op.argval])
-        elif op.opname == 'IMPORT_NAME':
+        elif op.opname == "IMPORT_NAME":
             try:
                 set_tos(importlib.import_module(op.argval))
             except ImportError:
                 set_tos(op.argval)
-        elif op.opname in ['LOAD_METHOD', 'LOAD_ATTR', 'IMPORT_FROM']:
+        elif op.opname in ["LOAD_METHOD", "LOAD_ATTR", "IMPORT_FROM"]:
             if tos is None:
                 refs.append(op.argval)
             elif isinstance(tos, str):
-                tos += '.' + op.argval
+                tos += "." + op.argval
             else:
                 tos = getattr(tos, op.argval)
-        elif op.opname == 'DELETE_FAST' and tos:
+        elif op.opname == "DELETE_FAST" and tos:
             del context.varnames[op.argval]
             tos = None
-        elif op.opname == 'STORE_FAST' and tos:
+        elif op.opname == "STORE_FAST" and tos:
             context.varnames[op.argval] = tos
             tos = None
-        elif op.opname == 'LOAD_FAST' and op.argval in context.varnames:
+        elif op.opname == "LOAD_FAST" and op.argval in context.varnames:
             set_tos(context.varnames[op.argval])
         else:
             # For all other instructions, hash the current TOS.

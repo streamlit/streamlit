@@ -16,8 +16,7 @@
 """A hashing utility for code."""
 
 # Python 2/3 compatibility
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
 import dis
@@ -57,13 +56,12 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
-Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
+Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
 
 def _is_magicmock(obj):
-    return (
-        util.is_type(obj, 'unittest.mock.MagicMock') or
-        util.is_type(obj, 'mock.mock.MagicMock')
+    return util.is_type(obj, "unittest.mock.MagicMock") or util.is_type(
+        obj, "mock.mock.MagicMock"
     )
 
 
@@ -76,50 +74,50 @@ def _get_context(func):
         cells[var] = var  # Instead of value, we use the name.
     if code.co_freevars:
         assert len(code.co_freevars) == len(func.__closure__)
-        cells.update(zip(
-            code.co_freevars,
-            map(lambda c: c.cell_contents, func.__closure__)
-        ))
+        cells.update(
+            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))
+        )
 
     varnames = {}
     if inspect.ismethod(func):
-        varnames = {'self': func.__self__}
+        varnames = {"self": func.__self__}
 
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
 def get_hash(f, context=None):
     """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher('md5')
+    hasher = CodeHasher("md5")
     hasher.update(f, context)
     return hasher.digest()
 
 
 def _int_to_bytes(i):
-    if hasattr(i, 'to_bytes'):
+    if hasattr(i, "to_bytes"):
         num_bytes = (i.bit_length() + 8) // 8
-        return i.to_bytes(num_bytes, 'little', signed=True)
+        return i.to_bytes(num_bytes, "little", signed=True)
     else:
         # For Python 2
-        return b'int:' + str(i).encode()
+        return b"int:" + str(i).encode()
 
 
 def _key(obj, context):
     """Return key for memoization."""
 
     if obj is None:
-        return b'none:'  # special value so we can hash None
+        return b"none:"  # special value so we can hash None
 
     def is_simple(obj):
         return (
-            isinstance(obj, bytes) or
-            isinstance(obj, bytearray) or
-            isinstance(obj, bytes) or
-            isinstance(obj, string_types) or
-            isinstance(obj, float) or
-            isinstance(obj, int) or
-            isinstance(obj, bool) or
-            obj is None)
+            isinstance(obj, bytes)
+            or isinstance(obj, bytearray)
+            or isinstance(obj, bytes)
+            or isinstance(obj, string_types)
+            or isinstance(obj, float)
+            or isinstance(obj, int)
+            or isinstance(obj, bool)
+            or obj is None
+        )
 
     if is_simple(obj):
         return obj
@@ -130,20 +128,24 @@ def _key(obj, context):
 
     if isinstance(obj, list):
         if all(map(is_simple, obj)):
-            return ('__l', tuple(obj))
+            return ("__l", tuple(obj))
 
-    if (util.is_type(obj, 'pandas.core.frame.DataFrame')
-            or util.is_type(obj, 'numpy.ndarray') or inspect.isbuiltin(obj) or
-            inspect.isroutine(obj) or inspect.iscode(obj)):
+    if (
+        util.is_type(obj, "pandas.core.frame.DataFrame")
+        or util.is_type(obj, "numpy.ndarray")
+        or inspect.isbuiltin(obj)
+        or inspect.isroutine(obj)
+        or inspect.iscode(obj)
+    ):
         return id(obj)
 
     return None
 
 
-class CodeHasher():
+class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name='md5', hasher=None):
+    def __init__(self, name="md5", hasher=None):
         self.hashes = dict()
 
         self.name = name
@@ -215,7 +217,7 @@ class CodeHasher():
         elif isinstance(obj, list) or isinstance(obj, tuple):
             h = hashlib.new(self.name)
             # add type to distingush x from [x]
-            self._update(h, type(obj).__name__.encode() + b':')
+            self._update(h, type(obj).__name__.encode() + b":")
             for e in obj:
                 self._update(h, e, context)
             return h.digest()
@@ -223,22 +225,24 @@ class CodeHasher():
             # Special string since hashes change between sessions.
             # We don't use Python's `hash` since hashes are not consistent
             # across runs.
-            return b'none:'
+            return b"none:"
         elif obj is True:
-            return b'bool:1'
+            return b"bool:1"
         elif obj is False:
-            return b'bool:0'
-        elif util.is_type(obj, 'pandas.core.frame.DataFrame'):
+            return b"bool:0"
+        elif util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
+
             if len(obj) >= PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
             return pd.util.hash_pandas_object(obj).sum()
-        elif util.is_type(obj, 'numpy.ndarray'):
+        elif util.is_type(obj, "numpy.ndarray"):
             h = hashlib.new(self.name)
             self._update(h, obj.shape)
-            
+
             if obj.size >= NP_SIZE_LARGE:
                 import numpy as np
+
                 state = np.random.RandomState(0)
                 obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
@@ -246,8 +250,9 @@ class CodeHasher():
             return h.digest()
         elif inspect.isbuiltin(obj):
             return self.to_bytes(obj.__name__)
-        elif hasattr(obj, 'name') and (
-                isinstance(obj, io.IOBase) or os.path.exists(obj.name)):
+        elif hasattr(obj, "name") and (
+            isinstance(obj, io.IOBase) or os.path.exists(obj.name)
+        ):
             # Hash files as name + last modification date + offset.
             h = hashlib.new(self.name)
             self._update(h, obj.name)
@@ -255,14 +260,14 @@ class CodeHasher():
             self._update(h, obj.tell())
             return h.digest()
         elif inspect.isroutine(obj):
-            if hasattr(obj, '__wrapped__'):
+            if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.
                 return self.to_bytes(obj.__wrapped__)
 
-            if obj.__module__.startswith('streamlit'):
+            if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
                 # (e.g. during development).
-                return self.to_bytes('%s.%s' % (obj.__module__, obj.__name__))
+                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
             h = hashlib.new(self.name)
             # TODO: This may be too restrictive for libraries in development.
@@ -311,7 +316,7 @@ class CodeHasher():
             except Exception:
                 # TODO: Figure out how to best show this kind of warning to the
                 # user.
-                st.warning('Streamlit cannot hash an object of type %s.' % type(obj))
+                st.warning("Streamlit cannot hash an object of type %s." % type(obj))
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
@@ -320,12 +325,15 @@ class CodeHasher():
         self._update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
-        consts = [n for n in code.co_consts if
-                  not isinstance(n, string_types) or not n.endswith('.<lambda>')]
+        consts = [
+            n
+            for n in code.co_consts
+            if not isinstance(n, string_types) or not n.endswith(".<lambda>")
+        ]
         self._update(h, consts, context)
 
         # Hash non-local names and functions referenced by the bytecode.
-        if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
+        if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):
                 self._update(h, ref, context)
         else:

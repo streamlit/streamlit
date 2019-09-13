@@ -19,18 +19,18 @@
 
 describe("main menu", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays menu dropdown", () => {
-    cy.get("#ConnectionStatus").should('not.exist')
+    cy.get("#ConnectionStatus").should("not.exist");
 
     // Main menu renders visually as we expect
-    cy.get('#MainMenu').click()
-    cy.get('.dropdown-menu').matchImageSnapshot('main_menu')
+    cy.get("#MainMenu").click();
+    cy.get(".dropdown-menu").matchImageSnapshot("main_menu");
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
-  })
-})
+  });
+});

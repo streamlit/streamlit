@@ -44,9 +44,9 @@ LOGGER = get_logger(__name__)
 
 
 class ReportSessionState(Enum):
-    REPORT_NOT_RUNNING = 'REPORT_NOT_RUNNING'
-    REPORT_IS_RUNNING = 'REPORT_IS_RUNNING'
-    SHUTDOWN_REQUESTED = 'SHUTDOWN_REQUESTED'
+    REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
+    REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
+    SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
 
 
 class ReportSession(object):
@@ -86,18 +86,17 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(self.enqueue,
-                                       container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(self.enqueue,
-                                          container=BlockPath.SIDEBAR)
+        self._main_dg = DeltaGenerator(self.enqueue, container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(self.enqueue, container=BlockPath.SIDEBAR)
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
-            self._report, self._on_source_file_changed)
+            self._report, self._on_source_file_changed
+        )
         self._sent_initialize_message = False
         self._storage = None
         self._maybe_reuse_previous_run = False
-        self._run_on_save = config.get_option('server.runOnSave')
+        self._run_on_save = config.get_option("server.runOnSave")
 
         # The ScriptRequestQueue is the means by which we communicate
         # with the active ScriptRunner.
@@ -105,7 +104,7 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
-        LOGGER.debug('ReportSession initialized (id=%s)', self.id)
+        LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
         """Clears the report queue and returns the messages it contained.
@@ -129,7 +128,7 @@ class ReportSession(object):
 
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.debug('Shutting down (id=%s)', self.id)
+            LOGGER.debug("Shutting down (id=%s)", self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -158,7 +157,7 @@ class ReportSession(object):
             client.displayEnabled is not set
 
         """
-        if not config.get_option('client.displayEnabled'):
+        if not config.get_option("client.displayEnabled"):
             return False
 
         # If we have an active ScriptRunner, signal that it can handle
@@ -185,11 +184,9 @@ class ReportSession(object):
         # 2) Marks the current report as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._on_scriptrunner_event(
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
         msg.metadata.delta_id = 0
@@ -213,8 +210,7 @@ class ReportSession(object):
             to use the widget state from the previous run of the script.
 
         """
-        self._enqueue_script_request(ScriptRequest.RERUN,
-                                     RerunData(argv, widget_state))
+        self._enqueue_script_request(ScriptRequest.RERUN, RerunData(argv, widget_state))
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -226,8 +222,7 @@ class ReportSession(object):
     def _clear_queue(self):
         self._report.clear()
 
-    def _on_scriptrunner_event(self, event, exception=None,
-                               widget_states=None):
+    def _on_scriptrunner_event(self, event, exception=None, widget_states=None):
         """Called when our ScriptRunner emits an event.
 
         This is *not* called on the main thread.
@@ -245,7 +240,7 @@ class ReportSession(object):
             SHUTDOWN event.
 
         """
-        LOGGER.debug('OnScriptRunnerEvent: %s', event)
+        LOGGER.debug("OnScriptRunnerEvent: %s", event)
 
         prev_state = self._state
 
@@ -253,7 +248,7 @@ class ReportSession(object):
             if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
                 self._state = ReportSessionState.REPORT_IS_RUNNING
 
-            if config.get_option('server.liveSave'):
+            if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_running_report)
@@ -262,21 +257,22 @@ class ReportSession(object):
             self._maybe_enqueue_initialize_message()
             self._enqueue_new_report_message()
 
-        elif (event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS or
-              event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR):
+        elif (
+            event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+        ):
 
             if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
                 self._state = ReportSessionState.REPORT_NOT_RUNNING
 
             self._enqueue_report_finished_message()
 
-            if config.get_option('server.liveSave'):
+            if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_final_report_and_quit)
 
-            script_succeeded = \
-                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
             if script_succeeded:
                 # When a script completes successfully, we update our
@@ -285,13 +281,16 @@ class ReportSession(object):
                 # the main thread, because LocalSourcesWatcher is not
                 # thread safe.)
                 self._ioloop.spawn_callback(
-                    self._local_sources_watcher.update_watched_modules)
+                    self._local_sources_watcher.update_watched_modules
+                )
             else:
                 # When a script fails to compile, we send along the exception.
                 from streamlit.elements import exception_proto
+
                 msg = ForwardMsg()
                 exception_proto.marshall(
-                    msg.session_event.script_compilation_exception, exception)
+                    msg.session_event.script_compilation_exception, exception
+                )
                 self.enqueue(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
@@ -318,12 +317,13 @@ class ReportSession(object):
     def _enqueue_session_state_changed_message(self):
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
-        msg.session_state_changed.report_is_running = \
+        msg.session_state_changed.report_is_running = (
             self._state == ReportSessionState.REPORT_IS_RUNNING
+        )
         self.enqueue(msg)
 
     def _enqueue_file_change_message(self):
-        LOGGER.debug('Enqueuing report_changed message (id=%s)', self.id)
+        LOGGER.debug("Enqueuing report_changed message (id=%s)", self.id)
         msg = ForwardMsg()
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
@@ -337,25 +337,24 @@ class ReportSession(object):
         msg = ForwardMsg()
         imsg = msg.initialize
 
-        imsg.config.sharing_enabled = (
-            config.get_option('global.sharingMode') != 'off')
+        imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
         LOGGER.debug(
-            'New browser connection: sharing_enabled=%s',
-            imsg.config.sharing_enabled)
+            "New browser connection: sharing_enabled=%s", imsg.config.sharing_enabled
+        )
 
-        imsg.config.gather_usage_stats = (
-            config.get_option('browser.gatherUsageStats'))
+        imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
         LOGGER.debug(
-            'New browser connection: gather_usage_stats=%s',
-            imsg.config.gather_usage_stats)
+            "New browser connection: gather_usage_stats=%s",
+            imsg.config.gather_usage_stats,
+        )
 
         imsg.environment_info.streamlit_version = __version__
-        imsg.environment_info.python_version = (
-            '.'.join(map(str, sys.version_info)))
+        imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
         imsg.session_state.run_on_save = self._run_on_save
         imsg.session_state.report_is_running = (
-            self._state == ReportSessionState.REPORT_IS_RUNNING)
+            self._state == ReportSessionState.REPORT_IS_RUNNING
+        )
 
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email
@@ -377,7 +376,8 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def handle_rerun_script_request(
-        self, command_line=None, widget_state=None, is_preheat=False):
+        self, command_line=None, widget_state=None, is_preheat=False
+    ):
         """Tells the ScriptRunner to re-run its report.
 
         Parameters
@@ -409,12 +409,12 @@ class ReportSession(object):
             self._maybe_reuse_previous_run = False
 
             has_widget_state = (
-                widget_state is not None and len(widget_state.widgets) > 0)
+                widget_state is not None and len(widget_state.widgets) > 0
+            )
             has_new_argv = old_argv != self._report.argv
 
             if not has_widget_state and not has_new_argv:
-                LOGGER.debug(
-                    'Skipping rerun since the preheated run is the same')
+                LOGGER.debug("Skipping rerun since the preheated run is the same")
                 return
 
         self.request_rerun(self._report.argv, widget_state)
@@ -465,7 +465,7 @@ class ReportSession(object):
 
         """
         if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning('Discarding %s request after shutdown' % request)
+            LOGGER.warning("Discarding %s request after shutdown" % request)
             return
 
         self._script_request_queue.enqueue(request, data)
@@ -482,9 +482,9 @@ class ReportSession(object):
 
         """
         if (
-            self._state == ReportSessionState.SHUTDOWN_REQUESTED or
-            self._scriptrunner is not None or
-            not self._script_request_queue.has_request
+            self._state == ReportSessionState.SHUTDOWN_REQUESTED
+            or self._scriptrunner is not None
+            or not self._script_request_queue.has_request
         ):
             return
 
@@ -494,7 +494,8 @@ class ReportSession(object):
             main_dg=self._main_dg,
             sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
-            request_queue=self._script_request_queue)
+            request_queue=self._script_request_queue,
+        )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
 
@@ -506,8 +507,7 @@ class ReportSession(object):
         def progress(percent):
             progress_msg = ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
 
         # Indicate that the save is starting.
         try:
@@ -518,27 +518,23 @@ class ReportSession(object):
             # Indicate that the save is done.
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
 
         except Exception as e:
             # Horrible hack to show something if something breaks.
-            err_msg = '%s: %s' % (
-                type(e).__name__, str(e) or 'No further details.')
+            err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield ws.write_message(
-                progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
             raise e
 
     @tornado.gen.coroutine
     def _save_running_report(self):
         files = self._report.serialize_running_report_to_files()
-        url = yield self._get_storage().save_report_files(
-            self._report.report_id, files)
+        url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
-        if config.get_option('server.liveSave'):
-            util.print_url('Saved running report', url)
+        if config.get_option("server.liveSave"):
+            util.print_url("Saved running report", url)
 
         raise tornado.gen.Return(url)
 
@@ -546,10 +542,11 @@ class ReportSession(object):
     def _save_final_report(self, progress=None):
         files = self._report.serialize_final_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._report.report_id, files, progress)
+            self._report.report_id, files, progress
+        )
 
-        if config.get_option('server.liveSave'):
-            util.print_url('Saved final report', url)
+        if config.get_option("server.liveSave"):
+            util.print_url("Saved final report", url)
 
         raise tornado.gen.Return(url)
 

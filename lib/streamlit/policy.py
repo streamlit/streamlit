@@ -22,7 +22,8 @@ import sys
 from textwrap import dedent
 
 
-POLICY = dedent('''{
+POLICY = dedent(
+    """{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -81,4 +82,5 @@ POLICY = dedent('''{
             ]
         }
     ]
-}''')
+}"""
+)
