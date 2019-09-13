@@ -23,7 +23,7 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-PYPI_STREAMLIT_URL = 'https://pypi.org/pypi/streamlit/json'
+PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 
 # Probability that we'll make a network call to PyPI to check
 # the latest version of streamlit. This is used each time
@@ -40,7 +40,7 @@ def get_installed_streamlit_version():
         The version string specified in setup.py.
 
     """
-    return pkg_resources.get_distribution('streamlit').version
+    return pkg_resources.get_distribution("streamlit").version
 
 
 def get_latest_streamlit_version(timeout=None):
@@ -51,7 +51,7 @@ def get_latest_streamlit_version(timeout=None):
 
     Parameters
     ----------
-    timeout : float | None
+    timeout : float or None
         The request timeout.
 
     Returns
@@ -63,9 +63,9 @@ def get_latest_streamlit_version(timeout=None):
     """
     rsp = requests.get(PYPI_STREAMLIT_URL, timeout=timeout)
     try:
-        return rsp.json()['info']['version']
+        return rsp.json()["info"]["version"]
     except Exception as e:
-        raise RuntimeError('Got unexpected response from PyPI', e)
+        raise RuntimeError("Got unexpected response from PyPI", e)
 
 
 def should_show_new_version_notice():
@@ -86,7 +86,7 @@ def should_show_new_version_notice():
     """
     if random.random() >= CHECK_PYPI_PROBABILITY:
         # We don't check PyPI every time this function is called.
-        LOGGER.debug('Skipping PyPI version check')
+        LOGGER.debug("Skipping PyPI version check")
         return False
 
     try:
@@ -94,7 +94,7 @@ def should_show_new_version_notice():
         latest_version = get_latest_streamlit_version(timeout=1)
     except BaseException as e:
         # Log this as a debug. We don't care if the user sees it.
-        LOGGER.debug('Failed PyPI version check', e)
+        LOGGER.debug("Failed PyPI version check.\n%s", e)
         return False
 
     return latest_version != installed_version

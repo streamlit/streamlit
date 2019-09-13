@@ -33,7 +33,7 @@ LOG_LEVELS = ["error", "warning", "info", "debug"]
 
 NEW_VERSION_TEXT = """
   %(new_version)s
-  See what's new at https://streamlit.trydiscourse.com/c/announcements
+  See what's new at https://discuss.streamlit.io/c/announcements
 
   Enter the following command to upgrade:
   $ %(command)s
