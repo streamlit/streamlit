@@ -35,12 +35,12 @@ def add_magic(code, script_path):
     """
     if compatibility.is_running_py3():
         # Pass script_path so we get pretty exceptions.
-        tree = ast.parse(code, script_path, 'exec')
+        tree = ast.parse(code, script_path, "exec")
         return _modify_ast_subtree(tree, is_root=True)
     return code
 
 
-def _modify_ast_subtree(tree, body_attr='body', is_root=False):
+def _modify_ast_subtree(tree, body_attr="body", is_root=False):
     """Parses magic commands and modifies the given AST (sub)tree."""
 
     body = getattr(tree, body_attr)
@@ -49,22 +49,25 @@ def _modify_ast_subtree(tree, body_attr='body', is_root=False):
         node_type = type(node)
 
         # Parse the contents of functions, With statements, and for statements
-        if (node_type is ast.FunctionDef or node_type is ast.With or
-                node_type is ast.For):
+        if (
+            node_type is ast.FunctionDef
+            or node_type is ast.With
+            or node_type is ast.For
+        ):
             _modify_ast_subtree(node)
 
         # Parse the contents of try statements
         elif node_type is ast.Try:
             for j, inner_node in enumerate(node.handlers):
                 node.handlers[j] = _modify_ast_subtree(inner_node)
-            finally_node = _modify_ast_subtree(node, body_attr='finalbody')
+            finally_node = _modify_ast_subtree(node, body_attr="finalbody")
             node.finalbody = finally_node.finalbody
             _modify_ast_subtree(node)
 
         # Convert if expressions to st.write
         elif node_type is ast.If:
             _modify_ast_subtree(node)
-            _modify_ast_subtree(node, 'orelse')
+            _modify_ast_subtree(node, "orelse")
 
         # Convert expression nodes to st.write
         elif node_type is ast.Expr:
@@ -95,12 +98,11 @@ def _insert_import_statement(tree):
     # If the 0th node is a docstring and the 1st is an import statement,
     # put the Streamlit import below those, so we don't break "from
     # __future__ import".
-    elif (len(tree.body) > 1
-            and (
-                type(tree.body[0]) is ast.Expr and
-                type(tree.body[0].value) is ast.Str
-            )
-            and type(tree.body[1]) in (ast.ImportFrom, ast.Import)):
+    elif (
+        len(tree.body) > 1
+        and (type(tree.body[0]) is ast.Expr and type(tree.body[0].value) is ast.Str)
+        and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
+    ):
         tree.body.insert(2, st_import)
 
     else:
@@ -109,20 +111,15 @@ def _insert_import_statement(tree):
 
 def _build_st_import_statement():
     """Build AST node for `import streamlit as __streamlit__`."""
-    return ast.Import(
-        names=[ast.alias(
-            name='streamlit',
-            asname='__streamlit__',
-        )],
-    )
+    return ast.Import(names=[ast.alias(name="streamlit", asname="__streamlit__")])
 
 
 def _build_st_write_call(nodes):
     """Build AST node for `__streamlit__._transparent_write(*nodes)`."""
     return ast.Call(
         func=ast.Attribute(
-            attr='_transparent_write',
-            value=ast.Name(id='__streamlit__', ctx=ast.Load()),
+            attr="_transparent_write",
+            value=ast.Name(id="__streamlit__", ctx=ast.Load()),
             ctx=ast.Load(),
         ),
         args=nodes,
@@ -138,8 +135,11 @@ def _get_st_write_from_expr(node, i, parent_type):
         return None
 
     # Don't change Docstring nodes
-    if (i == 0 and type(node.value) is ast.Str
-            and parent_type in (ast.FunctionDef, ast.Module)):
+    if (
+        i == 0
+        and type(node.value) is ast.Str
+        and parent_type in (ast.FunctionDef, ast.Module)
+    ):
         return None
 
     # If tuple, call st.write on the 0th element (rather than the
@@ -155,12 +155,9 @@ def _get_st_write_from_expr(node, i, parent_type):
         args = [node.value]
         st_write = _build_st_write_call(args)
 
-    # st.write all variables, and also print the variable's name.
+    # st.write all variables.
     elif type(node.value) is ast.Name:
-        args = [
-            ast.Str(s='**%s**' % node.value.id),
-            node.value
-        ]
+        args = [node.value]
         st_write = _build_st_write_call(args)
 
     # st.write everything else

@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import inspect
@@ -28,19 +29,17 @@ except ImportError:
     pass
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
-CONFUSING_STREAMLIT_MODULES = (
-    'streamlit.DeltaGenerator',
-    'streamlit.caching',
-)
+CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = (
-    '(self, element, ',
-    '(self, _, ',
-    '(self, ',
-    '(ui_value, ',
+    "(self, element, ",
+    "(self, _, ",
+    "(self, ",
+    "(ui_value, ",
 )
 
 
@@ -54,10 +53,10 @@ def marshall(proto, obj):
     except AttributeError:
         pass
 
-    module_name = getattr(obj, '__module__', None)
+    module_name = getattr(obj, "__module__", None)
 
     if module_name in CONFUSING_STREAMLIT_MODULES:
-        proto.doc_string.module = 'streamlit'
+        proto.doc_string.module = "streamlit"
     elif module_name is not None:
         proto.doc_string.module = module_name
     else:
@@ -77,14 +76,16 @@ def marshall(proto, obj):
     # For objects where type is type we do not print the docs.
     # We also do not print the docs for functions and methods if
     # the docstring is empty.
-    if (doc_string is None and
-            obj_type is not type and
-            not inspect.isfunction(obj) and
-            not inspect.ismethod(obj)):
+    if (
+        doc_string is None
+        and obj_type is not type
+        and not inspect.isfunction(obj)
+        and not inspect.ismethod(obj)
+    ):
         doc_string = inspect.getdoc(obj_type)
 
     if doc_string is None:
-        doc_string = 'No docs available.'
+        doc_string = "No docs available."
 
     proto.doc_string.doc_string = doc_string
 
@@ -92,7 +93,7 @@ def marshall(proto, obj):
 def _get_signature(f):
     is_delta_gen = False
     try:
-        is_delta_gen = f.__module__ == 'streamlit.DeltaGenerator'
+        is_delta_gen = f.__module__ == "streamlit.DeltaGenerator"
 
         if is_delta_gen:
             # DeltaGenerator functions are doubly wrapped, and their function
@@ -105,19 +106,19 @@ def _get_signature(f):
     except AttributeError:
         pass
 
-    sig = ''
+    sig = ""
 
     get_signature = None
 
     # Python 3.3+
-    if hasattr(inspect, 'signature'):
+    if hasattr(inspect, "signature"):
         get_signature = inspect.signature
     else:
         try:
             get_signature = funcsigs.signature
         except NameError:
             # Funcsigs doesn't exist.
-            get_signature = lambda x: ''
+            get_signature = lambda x: ""
             pass
 
     try:
@@ -129,17 +130,17 @@ def _get_signature(f):
     if is_delta_gen:
         for prefix in CONFUSING_STREAMLIT_SIG_PREFIXES:
             if sig.startswith(prefix):
-                sig = sig.replace(prefix, '(')
+                sig = sig.replace(prefix, "(")
                 break
 
     return sig
 
 
 def _unwrap_decorated_func(f):
-    if hasattr(f, 'func_closure'):
+    if hasattr(f, "func_closure"):
         try:
             # Python 2 way.
-            while getattr(f, 'func_closure'):
+            while getattr(f, "func_closure"):
                 contents = f.func_closure[0].cell_contents
                 if not callable(contents):
                     break
@@ -148,10 +149,10 @@ def _unwrap_decorated_func(f):
         except AttributeError:
             pass
 
-    if hasattr(f, '__wrapped__'):
+    if hasattr(f, "__wrapped__"):
         try:
             # Python 3 way.
-            while getattr(f, '__wrapped__'):
+            while getattr(f, "__wrapped__"):
                 contents = f.__wrapped__
                 if not callable(contents):
                     break

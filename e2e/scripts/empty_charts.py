@@ -19,16 +19,13 @@ import pandas as pd
 import time
 import random
 
-data = pd.DataFrame({
-    'a': [1, 2, 3, 4],
-    'b': [1, 3, 2, 4],
-})
+data = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]})
 
 spec = {
-    'mark': 'line',
-    'encoding': {
-        'x': {'field': 'a', 'type': 'quantitative'},
-        'y': {'field': 'b', 'type': 'quantitative'},
+    "mark": "line",
+    "encoding": {
+        "x": {"field": "a", "type": "quantitative"},
+        "y": {"field": "b", "type": "quantitative"},
     },
 }
 

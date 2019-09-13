@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import pandas as pd
@@ -26,9 +27,9 @@ import streamlit.elements.data_frame_proto as data_frame_proto
 from tests import testutil
 
 
-DATAFRAME = pd.DataFrame({'a': [1, 2], 'b': [10, 20]})
-NEW_ROWS = pd.DataFrame({'a': [3, 4, 5], 'b': [30, 40, 50]})
-NEW_ROWS_WRONG_SHAPE = pd.DataFrame({'a': [3, 4], 'b': [30, 40], 'c': [50, 60]})
+DATAFRAME = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
+NEW_ROWS = pd.DataFrame({"a": [3, 4, 5], "b": [30, 40, 50]})
+NEW_ROWS_WRONG_SHAPE = pd.DataFrame({"a": [3, 4], "b": [30, 40], "c": [50, 60]})
 
 
 class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
@@ -43,11 +44,9 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         return [
             lambda df: self._dg.dataframe(df),
             lambda df: self._dg.table(df),
-            lambda df: self._dg.vega_lite_chart(df, {
-                'mark': 'line',
-                'encoding': {'x': 'a', 'y': 'b'},
-            }),
-
+            lambda df: self._dg.vega_lite_chart(
+                df, {"mark": "line", "encoding": {"x": "a", "y": "b"}}
+            ),
             # TODO: line_chart, bar_chart, etc.
         ]
 
@@ -55,28 +54,27 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         """DeltaGenerator methods that produce named datasets."""
         # These should always name the desired data "mydata1"
         return [
-            lambda df: self._dg.vega_lite_chart({
-                'mark': 'line',
-                'datasets': {'mydata1': df},
-                'data': {'name': 'mydata1'},
-                'encoding': {'x': 'a', 'y': 'b'},
-            }),
-
+            lambda df: self._dg.vega_lite_chart(
+                {
+                    "mark": "line",
+                    "datasets": {"mydata1": df},
+                    "data": {"name": "mydata1"},
+                    "encoding": {"x": "a", "y": "b"},
+                }
+            ),
             # TODO: deck_gl_chart
         ]
 
     def test_simple_add_rows(self):
         """Test plain old add_rows."""
-        all_methods = (
-            self._get_unnamed_data_methods() + self._get_named_data_methods())
+        all_methods = self._get_unnamed_data_methods() + self._get_named_data_methods()
 
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -84,8 +82,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el.add_rows(NEW_ROWS)
 
             # Make sure there are 5 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
@@ -95,16 +92,14 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
     def test_simple_add_rows_with_clear_queue(self):
         """Test plain old add_rows after clearing the queue."""
-        all_methods = (
-            self._get_unnamed_data_methods() + self._get_named_data_methods())
+        all_methods = self._get_unnamed_data_methods() + self._get_named_data_methods()
 
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -128,8 +123,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -137,8 +131,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el.add_rows(mydata1=NEW_ROWS)
 
             # Make sure there are 5 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
@@ -153,8 +146,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(
-                self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -193,8 +185,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
     def test_add_rows_fails_when_wrong_shape(self):
         """Test that add_rows raises error when input has wrong shape."""
-        all_methods = (
-            self._get_unnamed_data_methods() + self._get_named_data_methods())
+        all_methods = self._get_unnamed_data_methods() + self._get_named_data_methods()
 
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)

@@ -24,18 +24,20 @@ import sys
 # # This tests that errors before the first st call get caught.
 # if True  # EXPECTED: modal dialog
 
-st.title('Syntax error test')
+st.title("Syntax error test")
 
-st.info('Uncomment the comment blocks in the source code one at a time.')
+st.info("Uncomment the comment blocks in the source code one at a time.")
 
-st.write('''
+st.write(
+    """
     Here's the source file for you to edit:
     ```
     examples/syntax_error.py
     ```
-    ''')
+    """
+)
 
-st.write('(Some top text)')
+st.write("(Some top text)")
 
 # # Uncomment this as a block.
 # a = not_a_real_variable  # EXPECTED: inline exception.
@@ -52,4 +54,4 @@ st.write('(Some top text)')
 # # This tests that errors after the first st call get caught.
 # a = not_a_real_variable  # EXPECTED: inline exception.
 
-st.write('(Some bottom text)')
+st.write("(Some bottom text)")

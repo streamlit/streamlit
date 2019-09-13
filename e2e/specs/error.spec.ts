@@ -19,13 +19,13 @@
 
 describe("st.error", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays an error message", () => {
     cy.get(".element-container .stText").should(
       "contain",
       "This error message is awesome!"
-    )
-  })
-})
+    );
+  });
+});

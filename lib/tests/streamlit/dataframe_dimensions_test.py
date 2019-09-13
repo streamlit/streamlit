@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import pandas as pd
@@ -30,6 +31,7 @@ class DeltaGeneratorDataframeTest(testutil.DeltaGeneratorTestCase):
     """Test the metadata in the serialized delta message for the different
     dimension specifier options.
     """
+
     def test_no_dimensions(self):
         """When no dimension parameters are passed
         """
@@ -51,13 +53,12 @@ class DeltaGeneratorDataframeTest(testutil.DeltaGeneratorTestCase):
         self._do_test(lambda fn, df: fn(df, width=20), 20, 0)
 
     def _do_test(self, fn, expectedWidth, expectedHeight):
-        df = pd.DataFrame({'A': [1, 2, 3, 4, 5]})
+        df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
         fn(st.dataframe, df)
         metadata = self._get_metadata()
         self.assertEqual(metadata.element_dimension_spec.width, expectedWidth)
-        self.assertEqual(metadata.element_dimension_spec.height,
-                         expectedHeight)
+        self.assertEqual(metadata.element_dimension_spec.height, expectedHeight)
 
     def _get_metadata(self):
         """Returns the metadata for the most recent element in the

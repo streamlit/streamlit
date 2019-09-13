@@ -19,12 +19,12 @@
 
 describe("st.altair_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays an altair chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.class", "marks")
-  })
-})
+      .should("have.class", "marks");
+  });
+});
