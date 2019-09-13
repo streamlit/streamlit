@@ -308,7 +308,7 @@ class Block extends PureComponent<Props> {
   public render = () => {
     console.log('render block')
     // https://github.com/bvaughn/react-virtualized/blob/master/source/WindowScroller/WindowScroller.example.js
-
+    // https://github.com/bvaughn/react-window#how-is-react-window-different-from-react-virtualized
     return (
       <WindowScroller scrollElement={window}>
         {({ height, isScrolling, registerChild, onChildScroll, scrollTop }) => (
