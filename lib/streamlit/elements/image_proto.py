@@ -36,10 +36,16 @@ LOGGER = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
-def _PIL_to_bytes(image, format="JPEG", quality=100):
+def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
     tmp = io.BytesIO()
-    image.save(tmp, format=format, quality=quality)
+
+    if image.mode in ('RGBA', 'LA') or (
+            image.mode == 'P' and 'transparency' in image.info):
+        image.save(tmp, format='PNG', quality=quality)
+    else:
+        image.save(tmp, format=format, quality=quality)
+
     return tmp.getvalue()
 
 
