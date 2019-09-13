@@ -33,47 +33,56 @@ class VersionTest(unittest.TestCase):
 
     def test_get_latest_streamlit_version(self):
         with requests_mock.mock() as m:
-            m.get(PYPI_STREAMLIT_URL, json={'info': {'version': '1.2.3'}})
-            self.assertEqual('1.2.3', get_latest_streamlit_version())
+            m.get(PYPI_STREAMLIT_URL, json={"info": {"version": "1.2.3"}})
+            self.assertEqual("1.2.3", get_latest_streamlit_version())
 
     def test_should_show_new_version_notice(self):
         # Skip the check
-        with mock.patch('streamlit.version.get_latest_streamlit_version') as get_latest:
+        with mock.patch("streamlit.version.get_latest_streamlit_version") as get_latest:
             version.CHECK_PYPI_PROBABILITY = 0
             self.assertFalse(should_show_new_version_notice())
             get_latest.assert_not_called()
 
         # Check - outdated
-        with mock.patch('streamlit.version.get_latest_streamlit_version') as get_latest, \
-             mock.patch('streamlit.version.get_installed_streamlit_version') as get_installed:
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = ['1.0.0']
-            get_latest.side_effect = ['1.2.3']
+            get_installed.side_effect = ["1.0.0"]
+            get_latest.side_effect = ["1.2.3"]
 
             self.assertTrue(should_show_new_version_notice())
             get_installed.assert_called_once()
             get_latest.assert_called_once()
 
         # Check - up-to-date
-        with mock.patch('streamlit.version.get_latest_streamlit_version') as get_latest, \
-             mock.patch('streamlit.version.get_installed_streamlit_version') as get_installed:
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = ['1.2.3']
-            get_latest.side_effect = ['1.2.3']
+            get_installed.side_effect = ["1.2.3"]
+            get_latest.side_effect = ["1.2.3"]
 
             self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
             get_latest.assert_called_once()
 
         # Check - error
-        with mock.patch('streamlit.version.get_latest_streamlit_version') as get_latest, \
-             mock.patch('streamlit.version.get_installed_streamlit_version') as get_installed:
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = ['1.2.3']
-            get_latest.side_effect = RuntimeError('apocalypse!')
+            get_installed.side_effect = ["1.2.3"]
+            get_latest.side_effect = RuntimeError("apocalypse!")
 
             self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
