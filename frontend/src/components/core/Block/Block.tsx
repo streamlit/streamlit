@@ -17,7 +17,7 @@
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { Progress } from "reactstrap"
-import { AutoSizer } from "react-virtualized"
+import { AutoSizer, List as VirtualList, WindowScroller } from "react-virtualized"
 import { List, Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
@@ -290,11 +290,53 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = () => (
-    <AutoSizer disableHeight={true}>
-      {({ width }) => this.renderElements(width)}
-    </AutoSizer>
-  )
+  //@ts-ignore
+  private rowRenderer = ({ key, index, style }): ReactNode => {
+    return (
+      <div key={key} style={style}>
+        {
+          this.renderElementWithErrorBoundary(
+            this.props.elements.get(index) as SimpleElement,
+            index,
+            610
+          )
+        }
+      </div>
+    )
+  }
+
+  public render = () => {
+    console.log('render block')
+    // https://github.com/bvaughn/react-virtualized/blob/master/source/WindowScroller/WindowScroller.example.js
+
+    return (
+      <WindowScroller scrollElement={window}>
+        {({ height, isScrolling, registerChild, onChildScroll, scrollTop }) => (
+          <div>
+            <AutoSizer disableHeight={true}>
+              {({ width }) => (
+                <div>
+                  <VirtualList
+                    autoHeight
+                    height={height}
+                    isScrolling={isScrolling}
+                    onScroll={onChildScroll}
+                    overscanRowCount={10}
+                    rowCount={this.props.elements.size}
+                    rowHeight={41}
+                    rowRenderer={this.rowRenderer}
+                    scrollToIndex={-1}
+                    scrollTop={scrollTop}
+                    width={width}
+                  />
+                </div>
+              )}
+            </AutoSizer>
+          </div>
+        )}
+      </WindowScroller>
+    )
+  }
 }
 
 export default Block

@@ -713,7 +713,7 @@ class App extends PureComponent {
                     onFailure={this.onLogInError}
                   />
                 ) : (
-                  <DebouncedReportView
+                  <ReportView
                     elements={this.state.elements}
                     reportId={this.state.reportId}
                     reportRunState={this.state.reportRunState}
