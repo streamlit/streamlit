@@ -24,7 +24,7 @@ from streamlit import version
 from streamlit.version import PYPI_STREAMLIT_URL
 from streamlit.version import get_installed_streamlit_version
 from streamlit.version import get_latest_streamlit_version
-from streamlit.version import should_show_old_version_warning
+from streamlit.version import should_show_new_version_notice
 
 
 class VersionTest(unittest.TestCase):
@@ -36,11 +36,11 @@ class VersionTest(unittest.TestCase):
             m.get(PYPI_STREAMLIT_URL, json={'info': {'version': '1.2.3'}})
             self.assertEqual('1.2.3', get_latest_streamlit_version())
 
-    def test_should_show_old_version_warning(self):
+    def test_should_show_new_version_notice(self):
         # Skip the check
         with mock.patch('streamlit.version.get_latest_streamlit_version') as get_latest:
             version.CHECK_PYPI_PROBABILITY = 0
-            self.assertFalse(should_show_old_version_warning())
+            self.assertFalse(should_show_new_version_notice())
             get_latest.assert_not_called()
 
         # Check - outdated
@@ -51,7 +51,7 @@ class VersionTest(unittest.TestCase):
             get_installed.side_effect = ['1.0.0']
             get_latest.side_effect = ['1.2.3']
 
-            self.assertTrue(should_show_old_version_warning())
+            self.assertTrue(should_show_new_version_notice())
             get_installed.assert_called_once()
             get_latest.assert_called_once()
 
@@ -63,7 +63,7 @@ class VersionTest(unittest.TestCase):
             get_installed.side_effect = ['1.2.3']
             get_latest.side_effect = ['1.2.3']
 
-            self.assertFalse(should_show_old_version_warning())
+            self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
             get_latest.assert_called_once()
 
@@ -75,6 +75,6 @@ class VersionTest(unittest.TestCase):
             get_installed.side_effect = ['1.2.3']
             get_latest.side_effect = RuntimeError('apocalypse!')
 
-            self.assertFalse(should_show_old_version_warning())
+            self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
             get_latest.assert_called_once()

@@ -68,8 +68,8 @@ def get_latest_streamlit_version(timeout=None):
         raise RuntimeError('Got unexpected response from PyPI', e)
 
 
-def should_show_old_version_warning():
-    """True if streamlit should show an 'out of date' warning to the user.
+def should_show_new_version_notice():
+    """True if streamlit should show a 'new version!' notice to the user.
 
     We need to make a network call to PyPI to determine the latest streamlit
     version. Since we don't want to do this every time streamlit is run,
@@ -81,7 +81,7 @@ def should_show_old_version_warning():
     Returns
     -------
     bool
-        True if we should warn the user that their streamlit is out of date.
+        True if we should tell the user that their streamlit is out of date.
 
     """
     if random.random() >= CHECK_PYPI_PROBABILITY:
