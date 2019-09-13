@@ -31,6 +31,7 @@ seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
+keras = "*"
 
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
