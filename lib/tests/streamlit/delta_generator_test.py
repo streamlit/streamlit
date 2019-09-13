@@ -32,6 +32,7 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
         _clean_up_sig, _with_element
 from streamlit.ReportQueue import ReportQueue
@@ -51,6 +52,17 @@ class FakeDeltaGenerator(object):
     def __init__(self):
         """Constructor."""
         pass
+
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            if self._container == BlockPath.SIDEBAR:
+                raise RuntimeError("'%s' was called but "
+                                   "it's not available for sidebar" % name)
+            else:
+                raise RuntimeError("'%s' was called but "
+                                   "it's not an existing method" % name)
+
+        return wrapper
 
     def fake_text(self, element, body):
         """Fake text delta generator."""
@@ -101,6 +113,20 @@ class MockQueue(object):
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
+
+    def test_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.nonexisting()
+
+        self.assertEqual(str(ctx.exception),
+                         "module 'streamlit' has no attribute 'nonexisting'")
+
+    def test_sidebar_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.write()
+
+        self.assertEqual(str(ctx.exception),
+                         "'write' was called but it's not an existing method")
 
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = (

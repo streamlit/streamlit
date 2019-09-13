@@ -194,6 +194,17 @@ class DeltaGenerator(object):
         self._container = container
         self._path = path
 
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
+                raise RuntimeError("'%s' was called but "
+                                   "it's not available for sidebar" % name)
+            else:
+                raise RuntimeError("'%s' was called but "
+                                   "it's not an existing method" % name)
+
+        return wrapper
+
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
         """Reset delta generator so it starts from index 0."""
@@ -323,6 +334,7 @@ class DeltaGenerator(object):
            height: 50px
 
         """
+
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.PLAIN
 
