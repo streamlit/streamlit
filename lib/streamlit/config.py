@@ -853,7 +853,3 @@ def on_config_parsed(func):
 # loops.
 on_config_parsed(_check_conflicts)
 on_config_parsed(_set_development_mode)
-
-if __name__ == '__main__':
-    creds = _get_public_credentials()
-    print(creds)
