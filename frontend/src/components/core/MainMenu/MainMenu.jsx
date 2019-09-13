@@ -25,9 +25,9 @@ import {
 import openIconic from "assets/img/open-iconic.svg"
 import "./MainMenu.scss"
 
-const ONLINE_DOCS_URL = "//streamlit.io/secret/docs"
-const COMMUNITY_URL = "//discuss.streamlit.io"
-const TEAMS_URL = "//streamlit.io/teams"
+const ONLINE_DOCS_URL = "https://streamlit.io/secret/docs"
+const COMMUNITY_URL = "https://discuss.streamlit.io"
+const TEAMS_URL = "https://streamlit.io/teams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 class MainMenu extends PureComponent {
