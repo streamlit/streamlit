@@ -289,7 +289,8 @@ _create_option(
         Allows you to type a variable or string by itself in a single line of
         Python code to write it to the report.
         """,
-    default_val=True)
+    default_val=True,
+)
 
 _create_option(
     "runner.installTracer",

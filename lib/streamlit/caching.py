@@ -367,10 +367,9 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     # Support setting the persist and ignore_hash parameters via
     # @st.cache(persist=True, ignore_hash=True)
     if func is None:
-        return lambda f: cache(func=f,
-                               persist=persist,
-                               ignore_hash=ignore_hash,
-                               show_spinner=show_spinner)
+        return lambda f: cache(
+            func=f, persist=persist, ignore_hash=ignore_hash, show_spinner=show_spinner
+        )
 
     @wraps(func)
     def wrapped_func(*argc, **argv):
@@ -386,10 +385,10 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
         if len(argc) == 0 and len(argv) == 0:
             message = "Running %s()." % name
         else:
-            message = 'Running %s(...).' % name
+            message = "Running %s(...)." % name
 
         def function():
-            hasher = hashlib.new('md5')
+            hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher)
             args_hasher.update([argc, argv])

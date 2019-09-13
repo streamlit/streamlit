@@ -27,7 +27,7 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import (NP_SIZE_LARGE, get_hash)
+from streamlit.hashing import NP_SIZE_LARGE, get_hash
 
 
 class HashTest(unittest.TestCase):
@@ -39,8 +39,8 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(145757624235), get_hash(145757624235))
         self.assertNotEqual(get_hash(10), get_hash(11))
         self.assertNotEqual(get_hash(-1), get_hash(1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2 ** 7 - 1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2 ** 7 + 1))
+        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 - 1))
+        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
         self.assertEqual([1, 2], [1, 2])
@@ -539,6 +539,7 @@ class CodeHashTest(unittest.TestCase):
         def g(x):
             def func(v):
                 return v * x
+
             return func
 
         def h(x):

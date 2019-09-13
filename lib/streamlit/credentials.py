@@ -28,10 +28,13 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-Activation = namedtuple('Activation', [
-    'email',  # str : the user's email.
-    'is_valid',  # boolean : whether the email is valid.
-])
+Activation = namedtuple(
+    "Activation",
+    [
+        "email",  # str : the user's email.
+        "is_valid",  # boolean : whether the email is valid.
+    ],
+)
 
 # For python 2.7
 try:
@@ -40,16 +43,18 @@ except NameError:  # pragma: nocover
     FileNotFoundError = IOError
 
 
-EMAIL_PROMPT = '''
+EMAIL_PROMPT = """
   👋 %(welcome)s
 
   If you are one of our development partners or are interested in
   getting personal technical support, please enter your email address
   below. Otherwise, you may leave the field blank.
 
-  Email''' % {'welcome': click.style('Welcome to Streamlit!', fg='green')}
+  Email""" % {
+    "welcome": click.style("Welcome to Streamlit!", fg="green")
+}
 
-TELEMETRY_TEXT = '''
+TELEMETRY_TEXT = """
   Telemetry: as an open source project, we collect summary statistics
   and metadata to understand how people are using Streamlit.
 
@@ -58,12 +63,14 @@ TELEMETRY_TEXT = '''
 
   [browser]
   gatherUsageStats = false
-'''
+"""
 
-INSTRUCTIONS_TEXT = '''
+INSTRUCTIONS_TEXT = """
   Get started by typing:
   $ %(hello)s
-''' % {'hello': click.style('streamlit hello', bold=True)}
+""" % {
+    "hello": click.style("streamlit hello", bold=True)
+}
 
 
 class Credentials(object):
@@ -98,9 +105,9 @@ class Credentials(object):
             return
 
         try:
-            with open(self._conf_file, 'r') as f:
-                data = toml.load(f).get('general')
-            self.activation = _verify_email(data.get('email'))
+            with open(self._conf_file, "r") as f:
+                data = toml.load(f).get("general")
+            self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
                 return self.activate(show_instructions=not auto_resolve)
@@ -132,7 +139,7 @@ class Credentials(object):
             _exit(str(e))
 
         if not self.activation.is_valid:
-            _exit('Activation email not valid.')
+            _exit("Activation email not valid.")
 
     @classmethod
     def reset(cls):
@@ -150,11 +157,9 @@ class Credentials(object):
 
     def save(self):
         """Save to toml file."""
-        data = {
-            'email': self.activation.email,
-        }
-        with open(self._conf_file, 'w') as f:
-            toml.dump({'general': data}, f)
+        data = {"email": self.activation.email}
+        with open(self._conf_file, "w") as f:
+            toml.dump({"general": data}, f)
 
     def activate(self, show_instructions=True):
         """Activate Streamlit.
@@ -179,9 +184,7 @@ class Credentials(object):
 
             while not activated:
 
-                email = click.prompt(
-                    text=EMAIL_PROMPT,
-                    default='', show_default=False)
+                email = click.prompt(text=EMAIL_PROMPT, default="", show_default=False)
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
@@ -213,8 +216,8 @@ def _verify_email(email):
     """
     email = email.strip()
 
-    if len(email) > 0 and email.count('@') != 1:
-        LOGGER.error('That doesn\'t look like an email :(')
+    if len(email) > 0 and email.count("@") != 1:
+        LOGGER.error("That doesn't look like an email :(")
         return Activation(None, False)
 
     return Activation(email, True)
