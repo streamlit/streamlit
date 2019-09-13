@@ -3,14 +3,9 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
-[pipenv]
-allow_prereleases = true
-
 [dev-packages]
-flake8 = "*"
 funcsigs = {version = "*",markers = "python_version < '3.0'"}
 mock = "*"
-parameterized = "*"
 pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
@@ -24,25 +19,21 @@ recommonmark = "*"
 # Packages used in unit tests:
 altair = "*"
 matplotlib = {version = "*",markers = "python_version > '3.0'"}
-scipy = "*"
+scipy = "<1.3.0"
 plotly = "*"
 chart-studio = "*"
 bokeh = "*"
 graphviz = "*"
+parameterized = "*"
 pydot = "*"
 tensorflow = "*"
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
-black = {version = "*",markers = "python_version >= '3.6'"}
-# TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
-# When you update the packages here, you have to update
-# conda/streamlit/meta.yaml as well.
-#
+
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
-
 [packages]
 astor = "*"
 base58 = "*"

@@ -1,7 +1,6 @@
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
-PY_VERSION := python-$(shell python -c 'import platform; print(platform.python_version())')
+PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
 .PHONY: help
 help:
@@ -31,12 +30,15 @@ build: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv
+	pip install pip-tools pipenv ; \
+	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]] ; then \
+		pip install black ; \
+	fi
 
 .PHONY: pipenv-install
 pipenv-install: lib/Pipfile
 	@# Runs pipenv install; doesn't update the Pipfile.lock.
-	cd lib; pipenv install --dev --pre
+	cd lib; pipenv install --dev
 
 .PHONY: pipenv-lock
 # Re-generate Pipfile.lock. This should be run when you update the Pipfile.
@@ -44,31 +46,21 @@ pipenv-lock: lib/Pipfile
 	@# Regenerates Pipfile.lock and rebuilds the virtualenv. This is rather slow.
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
 ifndef CIRCLECI
-	cd lib; rm -f Pipfile.lock; pipenv lock --dev --pre && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
+	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/python-$(PY_VERSION)
 else
 	echo "Running in CircleCI, not generating requirements."
 endif
-	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
+	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/python-$(PY_VERSION) Pipfile.lock
 ifndef CIRCLECI
 	# Dont update lockfile and install whatever is in lock.
-	cd lib; pipenv install --ignore-pipfile --dev --pre
+	cd lib; pipenv install --ignore-pipfile --dev
 else
-	cd lib; pipenv install --ignore-pipfile --dev --system --pre
+	cd lib; pipenv install --ignore-pipfile --dev --system
 endif
 
 .PHONY: pylint
 # Run Python linter.
 pylint:
-	# Linting
-	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	# cd lib; \
-	# 	flake8 \
-	# 	--ignore=E402,E128 \
-	# 	--exclude=streamlit/proto/*_pb2.py \
-	# 	$(PYTHON_MODULES) \
-	# 	tests/
-
-	# Code formating checks
 	# It requires Python 3.6.0+ to run but you can reformat
 	# Python 2 code with it, too.
 	if command -v "black" > /dev/null; then \
