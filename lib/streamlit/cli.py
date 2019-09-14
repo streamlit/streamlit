@@ -133,11 +133,14 @@ def main_run(file_or_url, args):
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
+                # flush since we are reading the file within the with block
                 fp.flush()
             except requests.exceptions.RequestException as e:
                 raise click.BadParameter(
                     ("Unable to fetch {}.\n{}".format(file_or_url, e))
                 )
+            # this is called within the with block to make sure the temp file
+            # is not deleted
             _main_run(fp.name, args)
 
     else:
