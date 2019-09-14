@@ -30,7 +30,7 @@ class CliTest(unittest.TestCase):
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
 
-        with mock.patch('streamlit.cli.bootstrap.run') as p:
-            cli._main_run('/not/a/file', None)
+        with mock.patch("streamlit.cli.bootstrap.run") as p:
+            cli._main_run("/not/a/file", None)
             p.assert_called_once()
             self.assertTrue(streamlit._is_running_with_streamlit)

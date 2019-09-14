@@ -23,8 +23,8 @@ import os
 import click
 
 # Where we expect to find the example files.
-EXAMPLE_DIR = 'examples'
-E2E_DIR = 'e2e/scripts'
+EXAMPLE_DIR = "examples"
+E2E_DIR = "e2e/scripts"
 
 # These are all the files we excliude
 EXCLUDED_FILENAMES = ()
@@ -33,8 +33,9 @@ EXCLUDED_FILENAMES = ()
 def _get_filenames(dir):
     dir = os.path.abspath(dir)
     return [
-        os.path.join(dir, filename) for filename in sorted(os.listdir(dir))
-        if filename.endswith('.py') and filename not in EXCLUDED_FILENAMES
+        os.path.join(dir, filename)
+        for filename in sorted(os.listdir(dir))
+        if filename.endswith(".py") and filename not in EXCLUDED_FILENAMES
     ]
 
 
@@ -45,17 +46,16 @@ def run_commands(section_header, commands, comment=None):
     for i, command in enumerate(commands):
         # Display the status.
         vars = {
-            'section_header': section_header,
-            'total': len(commands),
-            'command': command,
-            'v': i + 1,
+            "section_header": section_header,
+            "total": len(commands),
+            "command": command,
+            "v": i + 1,
         }
         click.secho(
-            '\nRunning %(section_header)s %(v)s/%(total)s : %(command)s' % vars,
-            bold=True)
-        click.secho(
-            '\n%(v)s/%(total)s : %(command)s' % vars,
-            fg='yellow', bold=True)
+            "\nRunning %(section_header)s %(v)s/%(total)s : %(command)s" % vars,
+            bold=True,
+        )
+        click.secho("\n%(v)s/%(total)s : %(command)s" % vars, fg="yellow", bold=True)
 
         if comment:
             click.secho(comment)
@@ -70,11 +70,11 @@ def run_commands(section_header, commands, comment=None):
 
 def main():
     filenames = _get_filenames(EXAMPLE_DIR) + _get_filenames(E2E_DIR)
-    commands = ['python %s' % filename for filename in filenames]
-    failed = run_commands('tests', commands)
+    commands = ["python %s" % filename for filename in filenames]
+    failed = run_commands("tests", commands)
 
-    click.secho('%s failed commands\n%s' % (len(failed), '\n'.join(failed)))
+    click.secho("%s failed commands\n%s" % (len(failed), "\n".join(failed)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
