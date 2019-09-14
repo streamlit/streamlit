@@ -133,6 +133,7 @@ def main_run(file_or_url, args):
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
+                fp.flush()
             except requests.exceptions.RequestException as e:
                 raise click.BadParameter(
                     ("Unable to fetch {}.\n{}".format(file_or_url, e))
