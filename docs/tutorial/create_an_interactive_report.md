@@ -227,7 +227,7 @@ slider to the report with the `st.slider()` method.
 
 1. Locate `hour_to_filter` and replace it with this code snippet:
    ```Python
-   hour_to_filter = st.slider('hour', 1, 23, 17)  # min: 0h, max: 23h, default: 17h
+   hour_to_filter = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
    ```
 2. Use the slider and watch the map update in real time.
 
@@ -310,7 +310,7 @@ hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
 st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = st.slider('hour', 1, 23, 17)
+hour_to_filter = st.slider('hour', 0, 23, 17)
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
 st.subheader('Map of all pickups at %s:00' % hour_to_filter)
