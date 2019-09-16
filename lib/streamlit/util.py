@@ -449,3 +449,7 @@ def is_namedtuple(x):
     f = getattr(t, '_fields', None)
     if not isinstance(f, tuple): return False
     return all(type(n).__name__ == 'str' for n in f)
+
+
+def is_darwin():
+    return platform.system() == 'Darwin'
