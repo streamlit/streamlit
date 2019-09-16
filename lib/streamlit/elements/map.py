@@ -98,15 +98,15 @@ def marshall(element, data, zoom=None):
 
     data = pd.DataFrame(data)
 
+    min_lat = data[lat].min()
+    max_lat = data[lat].max()
+    min_lon = data[lon].min()
+    max_lon = data[lon].max()
+
+    center_lat = (max_lat + min_lat) / 2.0
+    center_lon = (max_lon + min_lon) / 2.0
+
     if zoom is None:
-        min_lat = data[lat].min()
-        max_lat = data[lat].max()
-        min_lon = data[lon].min()
-        max_lon = data[lon].max()
-
-        center_lat = (max_lat + min_lat) / 2.0
-        center_lon = (max_lon + min_lon) / 2.0
-
         range_lon = abs(max_lon - min_lon)
         range_lat = abs(max_lat - min_lat)
 
