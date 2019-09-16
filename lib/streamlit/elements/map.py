@@ -77,7 +77,6 @@ def marshall(element, data, zoom=None):
     See DeltaGenerator.deck_gl_chart for docs.
 
     """
-    LAT_LON = ["lat", "lon"]
 
     if "lat" in data:
         lat = "lat"
