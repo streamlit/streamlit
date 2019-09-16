@@ -2,12 +2,12 @@ from datetime import date
 from datetime import time
 import streamlit as st
 
-# default = "hello"
-# if st.checkbox("Change default"):
-#     default = "goodbye"
+default = "hello"
+if st.checkbox("Change default"):
+    default = "goodbye"
 
-# text_input = st.text_input("Text Input", default)
-# st.write(text_input)
+text_input = st.text_input("Text Input", default)
+st.write(text_input)
 
 
 # default = True
@@ -58,9 +58,9 @@ import streamlit as st
 # st.write(date_input)
 
 
-default = 1
-if st.checkbox("Change default"):
-    default = 50
+# default = 1
+# if st.checkbox("Change default"):
+#     default = 50
 
-slider = st.slider("Slider", 1, 100, default)
-st.write(slider)
+# slider = st.slider("Slider", 1, 100, default)
+# st.write(slider)

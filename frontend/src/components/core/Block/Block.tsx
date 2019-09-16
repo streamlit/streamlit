@@ -206,11 +206,11 @@ class Block extends PureComponent<Props> {
       button: (el: SimpleElement) => <Button element={el} width={width} {...widgetProps} />,
       checkbox: (el: SimpleElement) => <Checkbox element={el} width={width} {...widgetProps} />,
       dateInput: (el: SimpleElement) => <DateInput element={el} width={width} {...widgetProps} />,
-      textInput: (el: SimpleElement) => <TextInput element={el} width={width} {...widgetProps} />,
       radio: (el: SimpleElement) => <Radio element={el} width={width} {...widgetProps} />,
       selectbox: (el: SimpleElement) => <Selectbox element={el} width={width} {...widgetProps} />,
       slider: (el: SimpleElement) => <Slider element={el} width={width} {...widgetProps} />,
       textArea: (el: SimpleElement) => <TextArea element={el} width={width} {...widgetProps} />,
+      textInput: (el: SimpleElement) => <TextInput key={el.get('id')} element={el} width={width} {...widgetProps} />,
       timeInput: (el: SimpleElement) => <TimeInput element={el} width={width} {...widgetProps} />,
     })
   }
