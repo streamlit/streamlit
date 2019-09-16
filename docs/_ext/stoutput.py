@@ -1,6 +1,7 @@
 from docutils import nodes
 from docutils.parsers.rst import Directive
 
+
 class StOutput(Directive):
     """Insert Streamlit report into HTML doc.
 
@@ -28,21 +29,20 @@ class StOutput(Directive):
 
         src = self.arguments[0]
 
-        if not src.startswith('https://'):
+        if not src.startswith("https://"):
             raise ValueError(
-                'Iframed URLs in docs should be HTTPS!\n'
-                '--> Culprit: %s' % src)
+                "Iframed URLs in docs should be HTTPS!\n" "--> Culprit: %s" % src
+            )
 
         if len(self.arguments) > 1:
             additional_styles = self.arguments[1]
         else:
-            additional_styles = 'height: 10rem;'
-
+            additional_styles = "height: 10rem;"
 
         node = nodes.raw(
-            rawsource='',
-            format='html',
-            text='''
+            rawsource="",
+            format="html",
+            text="""
                 <iframe
                     src="%(src)s&embed=true"
                     style="
@@ -54,9 +54,11 @@ class StOutput(Directive):
                 <sup><a href="%(src)s" target="_blank">
                     (view standalone Streamlit report)
                 </a></sup>
-            ''' % {'src': src, 'additional_styles': additional_styles})
+            """
+            % {"src": src, "additional_styles": additional_styles},
+        )
         return [node]
 
 
 def setup(app):
-    app.add_directive('output', StOutput)
+    app.add_directive("output", StOutput)

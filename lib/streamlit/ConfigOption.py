@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import datetime
@@ -25,6 +26,7 @@ import re
 import textwrap
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -84,12 +86,20 @@ class ConfigOption(object):
 
     # This is a special value for ConfigOption.where_defined which indicates
     # that the option default was not overridden.
-    DEFAULT_DEFINITION = '<default>'
+    DEFAULT_DEFINITION = "<default>"
 
     def __init__(
-            self, key, description=None, default_val=None,
-            visibility='visible', deprecated=False, deprecation_text=None,
-            expiration_date=None, replaced_by=None, config_getter=None):
+        self,
+        key,
+        description=None,
+        default_val=None,
+        visibility="visible",
+        deprecated=False,
+        deprecation_text=None,
+        expiration_date=None,
+        replaced_by=None,
+        config_getter=None,
+    ):
         """Create a ConfigOption with the given name.
 
         Parameters
@@ -122,11 +132,10 @@ class ConfigOption(object):
         """
         # Parse out the section and name.
         self.key = key
-        key_format = \
-            r'(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$'
+        key_format = r"(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$"
         match = re.match(key_format, self.key)
         assert match, 'Key "%s" has invalid format.' % self.key
-        self.section, self.name = match.group('section'), match.group('name')
+        self.section, self.name = match.group("section"), match.group("name")
 
         self.description = description
 
@@ -140,13 +149,11 @@ class ConfigOption(object):
         if self.replaced_by:
             self.deprecated = True
             if deprecation_text is None:
-                deprecation_text = 'Replaced by %s.' % self.replaced_by
+                deprecation_text = "Replaced by %s." % self.replaced_by
 
         if self.deprecated:
-            assert expiration_date, \
-                'expiration_date is required for deprecated items'
-            assert deprecation_text, \
-                'deprecation_text is required for deprecated items'
+            assert expiration_date, "expiration_date is required for deprecated items"
+            assert deprecation_text, "deprecation_text is required for deprecated items"
             self.expiration_date = expiration_date
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
@@ -169,8 +176,9 @@ class ConfigOption(object):
             Returns self, which makes testing easier. See config_test.py.
 
         """
-        assert get_val_func.__doc__, (
-            'Complex config options require doc strings for their description.')
+        assert (
+            get_val_func.__doc__
+        ), "Complex config options require doc strings for their description."
         self.description = get_val_func.__doc__
         self._get_val_func = get_val_func
         return self
@@ -198,18 +206,19 @@ class ConfigOption(object):
         else:
             self.where_defined = where_defined
 
-        if (self.deprecated and
-                self.where_defined != ConfigOption.DEFAULT_DEFINITION):
+        if self.deprecated and self.where_defined != ConfigOption.DEFAULT_DEFINITION:
 
             details = {
-                'key': self.key,
-                'file': self.where_defined,
-                'explanation': self.deprecation_text,
-                'date': self.expiration_date,
+                "key": self.key,
+                "file": self.where_defined,
+                "explanation": self.deprecation_text,
+                "date": self.expiration_date,
             }
 
             if self.is_expired():
-                raise DeprecationError(textwrap.dedent('''
+                raise DeprecationError(
+                    textwrap.dedent(
+                        """
                     ════════════════════════════════════════════════
                     %(key)s IS NO LONGER SUPPORTED.
 
@@ -217,9 +226,14 @@ class ConfigOption(object):
 
                     Please update %(file)s.
                     ════════════════════════════════════════════════
-                    ''') % details)
+                    """
+                    )
+                    % details
+                )
             else:
-                LOGGER.warning(textwrap.dedent('''
+                LOGGER.warning(
+                    textwrap.dedent(
+                        """
                     ════════════════════════════════════════════════
                     %(key)s IS DEPRECATED.
                     %(explanation)s
@@ -228,7 +242,10 @@ class ConfigOption(object):
 
                     Please update %(file)s.
                     ════════════════════════════════════════════════
-                    ''') % details)
+                    """
+                    )
+                    % details
+                )
 
     def is_expired(self):
         """Returns true if expiration_date is in the past."""
@@ -241,7 +258,7 @@ class ConfigOption(object):
 
 
 def _parse_yyyymmdd_str(date_str):
-    return datetime.datetime(*[int(token) for token in date_str.split('-')])
+    return datetime.datetime(*[int(token) for token in date_str.split("-")])
 
 
 class Error(Exception):

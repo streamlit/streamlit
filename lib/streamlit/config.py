@@ -18,23 +18,27 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import os
 import platform
 import toml
-import urllib
 import collections
 
 import click
 from blinker import Signal
+import requests
 
 from streamlit import development
 from streamlit import util
 from streamlit.ConfigOption import ConfigOption
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
+
+STREAMLIT_CREDENTIALS_URL = "https://streamlit.io/tmp/st_pub_write.json"
 
 
 # Config System Global State #
@@ -43,7 +47,7 @@ LOGGER = get_logger(__name__)
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
 _section_descriptions = collections.OrderedDict(
-    _test='Special test section just used for unit tests.',
+    _test="Special test section just used for unit tests."
 )
 
 # Stores the config options as key value pairs in a flat dict.
@@ -54,7 +58,7 @@ config_file_has_been_parsed = False
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
-_on_config_parsed = Signal(doc='Emitted when the config file is parsed.')
+_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
 
 
 def set_option(key, value):
@@ -98,14 +102,21 @@ def get_option(key):
 def _create_section(section, description):
     """Create a config section and store it globally in this module."""
     assert section not in _section_descriptions, (
-        'Cannot define section "%s" twice.' % section)
+        'Cannot define section "%s" twice.' % section
+    )
     _section_descriptions[section] = description
 
 
 def _create_option(
-        key, description=None, default_val=None, visibility='visible',
-        deprecated=False, deprecation_text=None, expiration_date=None,
-        replaced_by=None):
+    key,
+    description=None,
+    default_val=None,
+    visibility="visible",
+    deprecated=False,
+    deprecation_text=None,
+    expiration_date=None,
+    replaced_by=None,
+):
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -142,15 +153,20 @@ def _create_option(
 
     '''
     option = ConfigOption(
-        key, description=description, default_val=default_val,
-        visibility=visibility, deprecated=deprecated,
-        deprecation_text=deprecation_text, expiration_date=expiration_date,
-        replaced_by=replaced_by)
+        key,
+        description=description,
+        default_val=default_val,
+        visibility=visibility,
+        deprecated=deprecated,
+        deprecation_text=deprecation_text,
+        expiration_date=expiration_date,
+        replaced_by=replaced_by,
+    )
     assert option.section in _section_descriptions, (
-        'Section "%s" must be one of %s.' %
-        (option.section, ', '.join(_section_descriptions.keys())))
-    assert key not in _config_options, (
-        'Cannot define option "%s" twice.' % key)
+        'Section "%s" must be one of %s.'
+        % (option.section, ", ".join(_section_descriptions.keys()))
+    )
+    assert key not in _config_options, 'Cannot define option "%s" twice.' % key
     _config_options[key] = option
     return option
 
@@ -168,25 +184,25 @@ def _delete_option(key):
 
 # Config Section: Global #
 
-_create_section('global', 'Global options that apply across all of Streamlit.')
+_create_section("global", "Global options that apply across all of Streamlit.")
 
 
 _create_option(
-    'global.disableWatchdogWarning',
-    description='''
+    "global.disableWatchdogWarning",
+    description="""
         By default, Streamlit checks if the Python watchdog module is available
         and, if not, prints a warning asking for you to install it. The watchdog
         module is not required, but highly recommended. It improves Streamlit's
         ability to detect changes to files in your filesystem.
 
         If you'd like to turn off this warning, set this to True.
-        ''',
+        """,
     default_val=False)
 
 
 _create_option(
-    'global.sharingMode',
-    description='''
+    "global.sharingMode",
+    description="""
         Configure the ability to share reports to the cloud.
 
         Should be set to one of these values:
@@ -195,20 +211,22 @@ _create_option(
            will be viewable by anyone with the URL.
         - "s3" : share to S3, based on the settings under the [s3] section of
           this config file.
-        ''',
-    default_val='streamlit-public')
+        """,
+    default_val="streamlit-public",
+)
 
 
 _create_option(
-    'global.showWarningOnDirectExecution',
-    description='''
+    "global.showWarningOnDirectExecution",
+    description="""
         If True, will show a warning when you run a Streamlit-enabled script
         via "python my_script.py".
-        ''',
-    default_val=True)
+        """,
+    default_val=True,
+)
 
 
-@_create_option('global.developmentMode', visibility='hidden')
+@_create_option("global.developmentMode", visibility="hidden")
 def _global_development_mode():
     """Are we in development mode.
 
@@ -217,24 +235,24 @@ def _global_development_mode():
     """
     return (
         not util.is_pex()
-        and 'site-packages' not in __file__
-        and 'dist-packages' not in __file__
+        and "site-packages" not in __file__
+        and "dist-packages" not in __file__
     )
 
 
-@_create_option('global.logLevel')
+@_create_option("global.logLevel")
 def _global_log_level():
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
     Default: 'info'
     """
-    if get_option('global.developmentMode'):
-        return 'debug'
+    if get_option("global.developmentMode"):
+        return "debug"
     else:
-        return 'info'
+        return "info"
 
 
-@_create_option('global.unitTest', visibility='hidden')
+@_create_option("global.unitTest", visibility="hidden")
 def _global_unit_test():
     """Are we in a unit test?
 
@@ -244,81 +262,87 @@ def _global_unit_test():
 
 
 _create_option(
-    'global.useNode',
-    description='''Whether to serve static content from node. Only applies when
-        developmentMode is True.''',
-    visibility='hidden',
-    default_val=True)
+    "global.useNode",
+    description="""Whether to serve static content from node. Only applies when
+        developmentMode is True.""",
+    visibility="hidden",
+    default_val=True,
+)
 
 
 _create_option(
-    'global.metrics',
-    description='Whether to serve prometheus metrics from /metrics.',
-    visibility='hidden',
-    default_val=False)
+    "global.metrics",
+    description="Whether to serve prometheus metrics from /metrics.",
+    visibility="hidden",
+    default_val=False,
+)
 
 
 # Config Section: Client #
 
-_create_section('client', 'Settings for scripts that use Streamlit.')
+_create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
-    'client.caching',
-    description='Whether to enable st.cache.',
-    default_val=True)
+    "client.caching", description="Whether to enable st.cache.", default_val=True
+)
 
 _create_option(
-    'client.displayEnabled',
-    description='''If false, makes your Streamlit script not draw to a
-        Streamlit report.''',
-    default_val=True)
+    "client.displayEnabled",
+    description="""If false, makes your Streamlit script not draw to a
+        Streamlit report.""",
+    default_val=True,
+)
 
 
 # Config Section: Runner #
 
-_create_section('runner', 'Settings for how Streamlit executes your script')
+_create_section("runner", "Settings for how Streamlit executes your script")
 
 _create_option(
-    'runner.magicEnabled',
-    description='''
+    "runner.magicEnabled",
+    description="""
         Allows you to type a variable or string by itself in a single line of
         Python code to write it to the report.
-        ''',
-    default_val=False)
+        """,
+    default_val=True,
+)
 
 _create_option(
-    'runner.installTracer',
-    description='''
+    "runner.installTracer",
+    description="""
         Install a Python tracer to allow you to stop or pause your script at
         any point and introspect it. As a side-effect, this slows down your
         script's execution.
-        ''',
-    default_val=False)
+        """,
+    default_val=False,
+)
 
 _create_option(
-    'runner.fixMatplotlib',
-    description='''
+    "runner.fixMatplotlib",
+    description="""
         Sets the MPLBACKEND environment variable to Agg inside Streamlit to
         prevent Python crashing.
-        ''',
-    default_val=True)
+        """,
+    default_val=True,
+)
 
 # Config Section: Server #
 
-_create_section('server', 'Settings for the Streamlit server')
+_create_section("server", "Settings for the Streamlit server")
 
 
 _create_option(
-    'server.folderWatchBlacklist',
-    description='''List of folders that should not be watched for changes.
+    "server.folderWatchBlacklist",
+    description="""List of folders that should not be watched for changes.
     Relative paths will be taken as relative to the current working directory.
 
     Example: ['/home/user1/env', 'relative/path/to/folder']
-    ''',
-    default_val=[])
+    """,
+    default_val=[],
+)
 
 
-@_create_option('server.headless')
+@_create_option("server.headless")
 @util.memoize
 def _server_headless():
     """If false, will attempt to open a browser window on start.
@@ -326,19 +350,18 @@ def _server_headless():
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) server.liveSave is set.
     """
-    is_live_save_on = get_option('server.liveSave')
-    is_linux = (platform.system() == 'Linux')
-    has_display_env = (not os.getenv('DISPLAY'))
+    is_live_save_on = get_option("server.liveSave")
+    is_linux = platform.system() == "Linux"
+    has_display_env = not os.getenv("DISPLAY")
     is_running_in_editor_plugin = (
-        os.getenv('IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN') is not None)
+        os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
+    )
     return (
-        is_live_save_on or
-        (is_linux and has_display_env) or
-        is_running_in_editor_plugin
+        is_live_save_on or (is_linux and has_display_env) or is_running_in_editor_plugin
     )
 
 
-@_create_option('server.liveSave')
+@_create_option("server.liveSave")
 def _server_live_save():
     """Immediately share the report in such a way that enables live
     monitoring, and post-run analysis.
@@ -348,7 +371,7 @@ def _server_live_save():
     return False
 
 
-@_create_option('server.runOnSave')
+@_create_option("server.runOnSave")
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
@@ -357,7 +380,7 @@ def _server_run_on_save():
     return False
 
 
-@_create_option('server.port')
+@_create_option("server.port")
 def _server_port():
     """The port where the server will listen for client and browser
     connections.
@@ -367,7 +390,7 @@ def _server_port():
     return 8501
 
 
-@_create_option('server.enableCORS')
+@_create_option("server.enableCORS")
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing, for added security.
 
@@ -378,19 +401,20 @@ def _server_enable_cors():
 
 # Config Section: Browser #
 
-_create_section('browser', 'Configuration of browser front-end.')
+_create_section("browser", "Configuration of browser front-end.")
 
-@_create_option('browser.serverAddress')
+
+@_create_option("browser.serverAddress")
 def _browser_server_address():
     """Internet address of the server server that the browser should connect
     to. Can be IP address or DNS name.
 
     Default: 'localhost'
     """
-    return 'localhost'
+    return "localhost"
 
 
-@_create_option('browser.gatherUsageStats')
+@_create_option("browser.gatherUsageStats")
 def _gather_usage_stats():
     """Whether to send usage statistics to Streamlit.
 
@@ -399,47 +423,46 @@ def _gather_usage_stats():
     return True
 
 
-@_create_option('browser.serverPort')
+@_create_option("browser.serverPort")
 @util.memoize
 def _browser_server_port():
     """Port that the browser should use to connect to the server.
 
     Default: whatever value is set in server.port.
     """
-    return get_option('server.port')
+    return get_option("server.port")
 
 
 # Config Section: S3 #
 
-_create_section(
-    's3', 'Configuration for when global.sharingMode is set to "s3".')
+_create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
 
 
-@_create_option('s3.bucket')
+@_create_option("s3.bucket")
 def _s3_bucket():
     """Name of the AWS S3 bucket to save reports.
 
     Default: (unset)
     """
-    if get_option('global.sharingMode') == 'streamlit-public':
+    if get_option("global.sharingMode") == "streamlit-public":
         creds = _get_public_credentials()
-        return creds['bucket'] if creds else None
+        return creds["bucket"] if creds else None
     return None
 
 
-@_create_option('s3.url')
+@_create_option("s3.url")
 def _s3_url():
     """URL root for external view of Streamlit reports.
 
     Default: (unset)
     """
-    if get_option('global.sharingMode') == 'streamlit-public':
+    if get_option("global.sharingMode") == "streamlit-public":
         creds = _get_public_credentials()
-        return creds['url'] if creds else None
+        return creds["url"] if creds else None
     return None
 
 
-@_create_option('s3.accessKeyId', visibility='obfuscated')
+@_create_option("s3.accessKeyId", visibility="obfuscated")
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
@@ -447,13 +470,13 @@ def _s3_access_key_id():
 
     Default: (unset)
     """
-    if get_option('global.sharingMode') == 'streamlit-public':
+    if get_option("global.sharingMode") == "streamlit-public":
         creds = _get_public_credentials()
-        return creds['accessKeyId'] if creds else None
+        return creds["accessKeyId"] if creds else None
     return None
 
 
-@_create_option('s3.secretAccessKey', visibility='obfuscated')
+@_create_option("s3.secretAccessKey", visibility="obfuscated")
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
@@ -461,47 +484,51 @@ def _s3_secret_access_key():
 
     Default: (unset)
     """
-    if get_option('global.sharingMode') == 'streamlit-public':
+    if get_option("global.sharingMode") == "streamlit-public":
         creds = _get_public_credentials()
-        return creds['secretAccessKey'] if creds else None
+        return creds["secretAccessKey"] if creds else None
     return None
 
 
 _create_option(
-    's3.requireLoginToView',
-    description='''Make the shared report visible only to users who have been
+    "s3.requireLoginToView",
+    description="""Make the shared report visible only to users who have been
         granted view permission. If you are interested in this option, contact
         us at support@streamlit.io.
-        ''',
-    default_val=False)
+        """,
+    default_val=False,
+)
 
 _create_option(
-    's3.keyPrefix',
-    description='''The "subdirectory" within the S3 bucket where to save
+    "s3.keyPrefix",
+    description="""The "subdirectory" within the S3 bucket where to save
         reports.
 
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory. Use "" to mean the root directory.
-        ''',
-    default_val='')
+        """,
+    default_val="",
+)
 
 _create_option(
-    's3.region',
-    description='''AWS region where the bucket is located, e.g. "us-west-2".
+    "s3.region",
+    description="""AWS region where the bucket is located, e.g. "us-west-2".
 
         Default: (unset)
-        ''',
-    default_val=None)
+        """,
+    default_val=None,
+)
 
 _create_option(
-    's3.profile',
-    description='''AWS credentials profile to use.
+    "s3.profile",
+    description="""AWS credentials profile to use.
 
         Leave unset to use your default profile.
 
         Default: (unset)
-        ''',
-    default_val=None)  # If changing the default, change S3Storage.py too.
+        """,
+    default_val=None,
+)  # If changing the default, change S3Storage.py too.
 
 
 # TODO: Don't memoize! Otherwise, if the internet is down momentarily when this
@@ -509,17 +536,13 @@ _create_option(
 # server is up.
 @util.memoize
 def _get_public_credentials():
-    STREAMLIT_CREDENTIALS_URL = 'https://streamlit.io/tmp/st_pub_write.json'
-    LOGGER.debug('Getting remote Streamlit credentials.')
+    LOGGER.debug("Getting remote Streamlit credentials.")
     try:
-        response = urllib.request.urlopen(
-            STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
-        import ast
-        return ast.literal_eval(response.decode('utf-8'))
+        return requests.get(STREAMLIT_CREDENTIALS_URL, timeout=0.5).json()
     except Exception as e:
         LOGGER.warning(
-            'Error getting Streamlit credentials. Sharing will be '
-            'disabled. %s', e)
+            "Error getting Streamlit credentials. Sharing will be " "disabled. %s", e
+        )
         return None
 
 
@@ -575,13 +598,17 @@ def is_manually_set(option_name):
 
 def show_config():
     """Show all the config options."""
-    SKIP_SECTIONS = ('_test',)
+    SKIP_SECTIONS = ("_test",)
 
     out = []
-    out.append(_clean('''
+    out.append(
+        _clean(
+            """
         # Below are all the sections and options you can have in
         ~/.streamlit/config.toml.
-    '''))
+    """
+        )
+    )
 
     def append_desc(text):
         out.append(click.style(text, bold=True))
@@ -590,87 +617,88 @@ def show_config():
         out.append(click.style(text))
 
     def append_section(text):
-        out.append(click.style(text, bold=True, fg='green'))
+        out.append(click.style(text, bold=True, fg="green"))
 
     def append_setting(text):
-        out.append(click.style(text, fg='green'))
+        out.append(click.style(text, fg="green"))
 
     def append_newline():
-        out.append('')
+        out.append("")
 
     for section, section_description in _section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
 
         append_newline()
-        append_section('[%s]' % section)
+        append_section("[%s]" % section)
         append_newline()
 
         for key, option in _config_options.items():
             if option.section != section:
                 continue
 
-            if option.visibility == 'hidden':
+            if option.visibility == "hidden":
                 continue
 
             if option.is_expired():
                 continue
 
-            key = option.key.split('.')[1]
+            key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
             for i, txt in enumerate(description_paragraphs):
                 if i == 0:
-                    append_desc('# %s' % txt)
+                    append_desc("# %s" % txt)
                 else:
-                    append_comment('# %s' % txt)
+                    append_comment("# %s" % txt)
 
-            toml_default = toml.dumps({'default': option.default_val})
+            toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                append_comment('# Default: %s' % toml_default)
+                append_comment("# Default: %s" % toml_default)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
                 pass
 
             if option.deprecated:
-                append_comment('#')
-                append_comment('# ' + click.style('DEPRECATED.', fg='yellow'))
+                append_comment("#")
+                append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
                 append_comment(
-                    '# %s' %
-                    '\n'.join(_clean_paragraphs(option.deprecation_text)))
+                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
+                )
                 append_comment(
-                    '# This option will be removed on or after %s.'
-                    % option.expiration_date)
-                append_comment('#')
+                    "# This option will be removed on or after %s."
+                    % option.expiration_date
+                )
+                append_comment("#")
 
             option_is_manually_set = (
-                option.where_defined != ConfigOption.DEFAULT_DEFINITION)
+                option.where_defined != ConfigOption.DEFAULT_DEFINITION
+            )
 
             if option_is_manually_set:
-                append_comment(
-                    '# The value below was set in %s' % option.where_defined)
+                append_comment("# The value below was set in %s" % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
-            if (len(toml_setting) == 0 or
-                    option.visibility == 'obfuscated'):
-                toml_setting = '#%s =\n' % key
+            if len(toml_setting) == 0 or option.visibility == "obfuscated":
+                toml_setting = "#%s =\n" % key
 
-            elif option.visibility == 'obfuscated':
-                toml_setting = '%s = (value hidden)\n' % key
+            elif option.visibility == "obfuscated":
+                toml_setting = "%s = (value hidden)\n" % key
 
             append_setting(toml_setting)
 
-    click.echo('\n'.join(out))
+    click.echo("\n".join(out))
+
 
 # Load Config Files #
 
 
 # Indicates that this was defined by the user.
-_USER_DEFINED = '<user defined>'
+_USER_DEFINED = "<user defined>"
 
 
 def _set_option(key, value, where_defined):
@@ -707,8 +735,10 @@ def _update_config_with_toml(raw_toml, where_defined):
         for name, value in options.items():
             value = _maybe_read_env_variable(value)
             _set_option(
-                '%(section)s.%(name)s' % {'section': section, 'name': name},
-                value, where_defined)
+                "%(section)s.%(name)s" % {"section": section, "name": name},
+                value,
+                where_defined,
+            )
 
 
 def _maybe_read_env_variable(value):
@@ -728,13 +758,12 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if (isinstance(value, string_types) and  # noqa F821
-            value.startswith('env:')):
-        var_name = value[len('env:'):]
+    if isinstance(value, string_types) and value.startswith("env:"):  # noqa F821
+        var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
         if env_var is None:
-            LOGGER.error('No environment variable called %s' % var_name)
+            LOGGER.error("No environment variable called %s" % var_name)
         else:
             return _maybe_convert_to_number(env_var)
 
@@ -771,9 +800,9 @@ def parse_config_file(file_contents=None):
         return
 
     if file_contents:
-        config_filename = 'mock_config_file'
+        config_filename = "mock_config_file"
     else:
-        config_filename = util.get_streamlit_file_path('config.toml')
+        config_filename = util.get_streamlit_file_path("config.toml")
 
         # Parse the config file.
         if not os.path.exists(config_filename):
@@ -789,14 +818,14 @@ def parse_config_file(file_contents=None):
 
 
 def _clean_paragraphs(txt):
-    paragraphs = txt.split('\n\n')
+    paragraphs = txt.split("\n\n")
     cleaned_paragraphs = [_clean(x) for x in paragraphs]
     return cleaned_paragraphs
 
 
 def _clean(txt):
     """Replace all whitespace with a single space."""
-    return ' '.join(txt.split()).strip()
+    return " ".join(txt.split()).strip()
 
 
 def _check_conflicts():
@@ -809,45 +838,46 @@ def _check_conflicts():
     #   2. the serverPort value in manifest.json, which would work, but only
     #   exists with server.liveSave.
 
-    if get_option('global.developmentMode'):
-        assert _is_unset('server.port'), (
-            'server.port does not work when global.developmentMode is true.')
+    if get_option("global.developmentMode"):
+        assert _is_unset(
+            "server.port"
+        ), "server.port does not work when global.developmentMode is true."
 
-        assert _is_unset('browser.serverPort'), (
-            'browser.serverPort does not work when global.developmentMode is '
-            'true.')
+        assert _is_unset("browser.serverPort"), (
+            "browser.serverPort does not work when global.developmentMode is " "true."
+        )
 
     # Sharing-related conflicts
 
-    if get_option('global.sharingMode') == 's3':
-        assert is_manually_set('s3.bucket'), (
-            'When global.sharingMode is set to "s3", '
-            's3.bucket must also be set')
-        both_are_set = (
-            is_manually_set('s3.accessKeyId') and
-            is_manually_set('s3.secretAccessKey'))
-        both_are_unset = (
-            _is_unset('s3.accessKeyId') and
-            _is_unset('s3.secretAccessKey'))
+    if get_option("global.sharingMode") == "s3":
+        assert is_manually_set("s3.bucket"), (
+            'When global.sharingMode is set to "s3", ' "s3.bucket must also be set"
+        )
+        both_are_set = is_manually_set("s3.accessKeyId") and is_manually_set(
+            "s3.secretAccessKey"
+        )
+        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset("s3.secretAccessKey")
         assert both_are_set or both_are_unset, (
-            'In config.toml, s3.accessKeyId and s3.secretAccessKey must '
-            'either both be set or both be unset.')
+            "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
+            "either both be set or both be unset."
+        )
 
-    if get_option('global.sharingMode') == 'streamlit-public':
+    if get_option("global.sharingMode") == "streamlit-public":
         WARNING_STR = (
-            'In config.toml, S3 should not be configured when '
-            'global.sharingMode is set to "streamlit-public".')
-        assert _is_unset('s3.bucket'), WARNING_STR
-        assert _is_unset('s3.url'), WARNING_STR
-        assert _is_unset('s3.accessKeyId'), WARNING_STR
-        assert _is_unset('s3.secretAccessKey'), WARNING_STR
-        assert _is_unset('s3.keyPrefix'), WARNING_STR
-        assert _is_unset('s3.region'), WARNING_STR
-        assert _is_unset('s3.profile'), WARNING_STR
+            "In config.toml, S3 should not be configured when "
+            'global.sharingMode is set to "streamlit-public".'
+        )
+        assert _is_unset("s3.bucket"), WARNING_STR
+        assert _is_unset("s3.url"), WARNING_STR
+        assert _is_unset("s3.accessKeyId"), WARNING_STR
+        assert _is_unset("s3.secretAccessKey"), WARNING_STR
+        assert _is_unset("s3.keyPrefix"), WARNING_STR
+        assert _is_unset("s3.region"), WARNING_STR
+        assert _is_unset("s3.profile"), WARNING_STR
 
 
 def _set_development_mode():
-    development.is_development_mode = get_option('global.developmentMode')
+    development.is_development_mode = get_option("global.developmentMode")
 
 
 def on_config_parsed(func):

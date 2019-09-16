@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import pandas as pd
 from math import sqrt
 
@@ -42,7 +41,7 @@ ZOOM_LEVELS = [
     0.005,
     0.003,
     0.001,
-    0.0005
+    0.0005,
 ]
 
 
@@ -78,26 +77,24 @@ def marshall(element, data, zoom=None):
     See DeltaGenerator.deck_gl_chart for docs.
 
     """
-    LAT_LON = ['lat', 'lon']
+    LAT_LON = ["lat", "lon"]
 
-    if 'lat' in data:
-        lat = 'lat'
-    elif 'latitude' in data:
-        lat = 'latitude'
+    if "lat" in data:
+        lat = "lat"
+    elif "latitude" in data:
+        lat = "latitude"
     else:
-        raise Exception(
-            'Map data must contain a column named "latitude" or "lat".')
+        raise Exception('Map data must contain a column named "latitude" or "lat".')
 
-    if 'lon' in data:
-        lon = 'lon'
-    elif 'longitude' in data:
-        lon = 'longitude'
+    if "lon" in data:
+        lon = "lon"
+    elif "longitude" in data:
+        lon = "longitude"
     else:
-        raise Exception(
-            'Map data must contain a column called "longitude" or "lon".')
+        raise Exception('Map data must contain a column called "longitude" or "lon".')
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
-        raise Exception('Latitude and longitude data must be numeric.')
+        raise Exception("Latitude and longitude data must be numeric.")
 
     data = pd.DataFrame(data)
 
@@ -120,14 +117,13 @@ def marshall(element, data, zoom=None):
 
         zoom = _get_zoom_level(longitude_distance)
 
-    deck_gl.marshall(element.deck_gl_chart,
-                     viewport={
-                         'latitude': center_lat,
-                         'longitude': center_lon,
-                         'zoom': zoom,
-                         'pitch': 0,
-                     },
-                     layers=[{
-                         'type': 'ScatterplotLayer',
-                         'data': data,
-                     }])
+    deck_gl.marshall(
+        element.deck_gl_chart,
+        viewport={
+            "latitude": center_lat,
+            "longitude": center_lon,
+            "zoom": zoom,
+            "pitch": 0,
+        },
+        layers=[{"type": "ScatterplotLayer", "data": data}],
+    )

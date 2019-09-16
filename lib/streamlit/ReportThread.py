@@ -17,24 +17,27 @@ import threading
 from collections import namedtuple
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
-ReportContext = namedtuple('ReportContext', [
-    # The main DeltaGenerator for the report
-    'main_dg',
+ReportContext = namedtuple(
+    "ReportContext",
+    [
+        # The main DeltaGenerator for the report
+        "main_dg",
+        # The sidebar DeltaGenerator for the report
+        "sidebar_dg",
+        # The Widgets state object for the report
+        "widgets",
+    ],
+)
 
-    # The sidebar DeltaGenerator for the report
-    'sidebar_dg',
-
-    # The Widgets state object for the report
-    'widgets',
-])
-
-REPORT_CONTEXT_ATTR_NAME = 'streamlit_report_ctx'
+REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 
 
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
+
     def __init__(self, main_dg, sidebar_dg, widgets, target=None, name=None):
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets)
@@ -74,5 +77,5 @@ def get_report_ctx():
     thread = threading.current_thread()
     ctx = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
     if ctx is None:
-        LOGGER.warning('Thread \'%s\': missing ReportContext' % thread.name)
+        LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
     return ctx

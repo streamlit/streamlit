@@ -36,10 +36,23 @@ LOGGER = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
+def _image_has_alpha_channel(image):
+    if image.mode in ('RGBA', 'LA') or (
+            image.mode == 'P' and 'transparency' in image.info):
+        return True
+    else:
+        return False
+
+
 def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
     tmp = io.BytesIO()
-    image.save(tmp, format=format, quality=quality)
+
+    if _image_has_alpha_channel(image):
+        image.save(tmp, format='PNG', quality=quality)
+    else:
+        image.save(tmp, format=format, quality=quality)
+
     return tmp.getvalue()
 
 
@@ -48,10 +61,15 @@ def _BytesIO_to_bytes(data):
     return data.getvalue()
 
 
-def _np_array_to_bytes(array, format='JPEG'):
+def _np_array_to_bytes(array, format="JPEG"):
     tmp = io.BytesIO()
     img = Image.fromarray(array.astype(np.uint8))
-    img.save(tmp, format=format)
+
+    if _image_has_alpha_channel(img):
+        img.save(tmp, format='PNG')
+    else:
+        img.save(tmp, format=format)
+
     return tmp.getvalue()
 
 
@@ -61,11 +79,12 @@ def _4d_to_list_3d(array):
 
 def _verify_np_shape(array):
     if len(array.shape) not in (2, 3):
-        raise RuntimeError('Numpy shape has to be of length 2 or 3.')
+        raise RuntimeError("Numpy shape has to be of length 2 or 3.")
     if len(array.shape) == 3:
-        assert array.shape[-1] in (
-            1, 3, 4), 'Channel can only be 1, 3, or 4 got %d. Shape is %s' % (
-            array.shape[-1], str(array.shape))
+        assert array.shape[-1] in (1, 3, 4), (
+            "Channel can only be 1, 3, or 4 got %d. Shape is %s"
+            % (array.shape[-1], str(array.shape))
+        )
 
     # If there's only one channel, convert is to x, y
     if len(array.shape) == 3 and array.shape[-1] == 1:
@@ -79,9 +98,9 @@ def _bytes_to_b64(data, width, format):
     ext = imghdr.what(None, data)
 
     if format is None:
-        mime_type = mimetypes.guess_type('image.%s' % ext)[0]
+        mime_type = mimetypes.guess_type("image.%s" % ext)[0]
     else:
-        mime_type = 'image/' + format
+        mime_type = "image/" + format
 
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
@@ -96,11 +115,11 @@ def _bytes_to_b64(data, width, format):
             data = _PIL_to_bytes(image, format=format, quality=90)
 
             if format is None:
-                mime_type = 'image/png'
+                mime_type = "image/png"
             else:
-                mime_type = 'image/' + format
+                mime_type = "image/" + format
 
-    b64 = base64.b64encode(data).decode('utf-8')
+    b64 = base64.b64encode(data).decode("utf-8")
 
     return b64, mime_type
 
@@ -112,21 +131,20 @@ def _clip_image(image, clamp):
             data = np.clip(image, 0, 1.0)
         else:
             if np.amin(image) < 0.0 or np.amax(image) > 1.0:
-                raise RuntimeError(
-                    'Data is outside [0.0, 1.0] and clamp is not set.')
+                raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
         data = data * 255
     else:
         if clamp:
             data = np.clip(image, 0, 255)
         else:
             if np.amin(image) < 0 or np.amax(image) > 255:
-                raise RuntimeError(
-                    'Data is outside [0, 255] and clamp is not set.')
+                raise RuntimeError("Data is outside [0, 255] and clamp is not set.")
     return data
 
 
-def marshall_images(image, caption, width, proto_imgs, clamp,
-                    channels='RGB', format='JPEG'):
+def marshall_images(
+    image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG"
+):
     channels = channels.upper()
 
     # Turn single image and caption into one element list.
@@ -153,11 +171,11 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
         else:
             captions = [str(caption)]
 
-    assert type(
-        captions) == list, 'If image is a list then caption should be as well'
-    assert len(captions) == len(
-        images), 'Cannot pair %d captions with %d images.' % (len(captions),
-                                                              len(images))
+    assert type(captions) == list, "If image is a list then caption should be as well"
+    assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
+        len(captions),
+        len(images),
+    )
 
     proto_imgs.width = width
     for image, caption in zip(images, captions):
@@ -166,8 +184,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
             proto_img.caption = str(caption)
 
         # PIL Images
-        if isinstance(image, ImageFile.ImageFile) or isinstance(
-            image, Image.Image):
+        if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
             data = _PIL_to_bytes(image, format)
 
         # BytesIO
@@ -179,13 +196,14 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
             data = _verify_np_shape(image)
             data = _clip_image(data, clamp)
 
-            if channels == 'BGR':
+            if channels == "BGR":
                 if len(data.shape) == 3:
                     data = data[:, :, [2, 1, 0]]
                 else:
                     raise RuntimeError(
                         'When using `channels="BGR"`, the input image should '
-                        'have exactly 3 color channels')
+                        "have exactly 3 color channels"
+                    )
 
             data = _np_array_to_bytes(data, format=format)
 
@@ -203,7 +221,7 @@ def marshall_images(image, caption, width, proto_imgs, clamp,
             # If not, see if it's a file.
             try:
                 # If file, open and continue.
-                with open(image, 'rb') as f:
+                with open(image, "rb") as f:
                     data = f.read()
             # Ok, then it must be bytes inside a str. This happens with
             # Python2's version of open().

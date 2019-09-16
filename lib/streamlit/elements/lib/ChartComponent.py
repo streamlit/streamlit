@@ -16,6 +16,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 from streamlit import case_converters
@@ -34,7 +35,7 @@ class ChartComponent(object):
 
         """
         self._type = type
-        self._props = [(str(k), str(v)) for (k,v) in props.items()]
+        self._props = [(str(k), str(v)) for (k, v) in props.items()]
 
     @property
     def type(self):

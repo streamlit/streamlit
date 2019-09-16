@@ -36,17 +36,15 @@ def marshall(vega_lite_chart, altair_chart, width=0):
         """Altair data transformer that returns a fake named dataset with the
         object id."""
         datasets[id(data)] = data
-        return {
-            'name': str(id(data))
-        }
+        return {"name": str(id(data))}
 
-    alt.data_transformers.register('id', id_transform)
+    alt.data_transformers.register("id", id_transform)
 
-    with alt.data_transformers.enable('id'):
+    with alt.data_transformers.enable("id"):
         chart_dict = altair_chart.to_dict()
 
         # Put datasets back into the chart dict but note how they weren't
         # transformed.
-        chart_dict['datasets'] = datasets
+        chart_dict["datasets"] = datasets
 
         vega_lite.marshall(vega_lite_chart, chart_dict, width=width)
