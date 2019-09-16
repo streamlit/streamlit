@@ -174,8 +174,12 @@ _create_section('global', 'Global options that apply across all of Streamlit.')
 _create_option(
     'global.disableWatchdogWarning',
     description='''
-        If False, will show a warning if the watchdog module is not available
-        on the user's system and we fall back to the polling file watcher.
+        By default, Streamlit checks if the Python watchdog module is available
+        and, if not, prints a warning asking for you to install it. The watchdog
+        module is not required, but highly recommended. It improves Streamlit's
+        ability to detect changes to files in your filesystem.
+
+        If you'd like to turn off this warning, set this to True.
         ''',
     default_val=False)
 
