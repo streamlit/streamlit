@@ -97,8 +97,6 @@ def _bytes_to_b64(data, width, format):
     format = format.lower()
     ext = imghdr.what(None, data)
 
-    print('Format', format)
-
     if format is None:
         mime_type = mimetypes.guess_type("image.%s" % ext)[0]
     else:
@@ -233,7 +231,7 @@ def marshall_images(
         # By default, image payload is bytes
         else:
             data = image
-        print('Formato', format)
+
         (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
