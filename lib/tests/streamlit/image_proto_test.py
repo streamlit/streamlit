@@ -79,6 +79,17 @@ IMAGES = {
             "AhCugbwyc9pcSwsEHyOzWNIqiFnNjZLEJ9goJC2jsDvYAAAAAElFTkSuQmCC"
         ),
     },
+    "img_32_32_3_rgba": {
+        "pil": create_image(32, "RGBA"),
+        "np": np.array(create_image(32, "RGBA")),
+        "base64": (
+            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAt0lEQVR4nO2W3Q6AI"
+            "AiF0fX+r0w3rTkVAoFozXPTUsSPI/0UAEBI1AFGgjIb5BJ2C6ph77mequnmfQGkVj"
+            "ZxfgDac0RPgNUmwogeUGoDbICfAEzfx7J1fg5oIa543yOQQjRx/j3wBFHG2/z/AV4"
+            "IAm9X2/DzjyF219cB4sUA9FXHuJDtABIAVLX+LmQ6gASA8r/aqCwH7ioqMS5db9p8"
+            "AhCugbwyc9pcSwsEHyOzWNIqiFnNjZLEJ9goJC2jsDvYAAAAAElFTkSuQmCC"
+        ),
+    },
     "img_32_32_3_bgr": {
         "pil": create_image(32, "BGR"),
         "np": np.array(create_image(32, "BGR")),
@@ -130,6 +141,11 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "png",
             ),
             (IMAGES["img_64_64_rgb"]["np"], IMAGES["img_64_64_rgb"]["base64"], "jpeg"),
+            (
+                IMAGES["img_32_32_3_rgba"]["np"],
+                IMAGES["img_32_32_3_rgba"]["base64"],
+                "jpeg",
+            ),
         ]
     )
     def test_marshall_images(self, data_in, base64_out, format):

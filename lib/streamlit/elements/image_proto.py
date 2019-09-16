@@ -36,12 +36,19 @@ LOGGER = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
+def _image_has_alpha_channel(image):
+    if image.mode in ('RGBA', 'LA') or (
+            image.mode == 'P' and 'transparency' in image.info):
+        return True
+    else:
+        return False
+
+
 def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
     tmp = io.BytesIO()
 
-    if image.mode in ('RGBA', 'LA') or (
-            image.mode == 'P' and 'transparency' in image.info):
+    if _image_has_alpha_channel(image):
         image.save(tmp, format='PNG', quality=quality)
     else:
         image.save(tmp, format=format, quality=quality)
@@ -57,7 +64,12 @@ def _BytesIO_to_bytes(data):
 def _np_array_to_bytes(array, format="JPEG"):
     tmp = io.BytesIO()
     img = Image.fromarray(array.astype(np.uint8))
-    img.save(tmp, format=format)
+
+    if _image_has_alpha_channel(img):
+        img.save(tmp, format='PNG')
+    else:
+        img.save(tmp, format=format)
+
     return tmp.getvalue()
 
 
@@ -84,6 +96,8 @@ def _verify_np_shape(array):
 def _bytes_to_b64(data, width, format):
     format = format.lower()
     ext = imghdr.what(None, data)
+
+    print('Format', format)
 
     if format is None:
         mime_type = mimetypes.guess_type("image.%s" % ext)[0]
@@ -219,7 +233,7 @@ def marshall_images(
         # By default, image payload is bytes
         else:
             data = image
-
+        print('Formato', format)
         (b64, mime_type) = _bytes_to_b64(data, width, format)
 
         proto_img.data.base64 = b64
