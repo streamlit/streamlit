@@ -36,10 +36,23 @@ LOGGER = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
-def _PIL_to_bytes(image, format="JPEG", quality=100):
+def _image_has_alpha_channel(image):
+    if image.mode in ('RGBA', 'LA') or (
+            image.mode == 'P' and 'transparency' in image.info):
+        return True
+    else:
+        return False
+
+
+def _PIL_to_bytes(image, format='JPEG', quality=100):
     format = format.upper()
     tmp = io.BytesIO()
-    image.save(tmp, format=format, quality=quality)
+
+    if _image_has_alpha_channel(image):
+        image.save(tmp, format='PNG', quality=quality)
+    else:
+        image.save(tmp, format=format, quality=quality)
+
     return tmp.getvalue()
 
 
@@ -51,7 +64,12 @@ def _BytesIO_to_bytes(data):
 def _np_array_to_bytes(array, format="JPEG"):
     tmp = io.BytesIO()
     img = Image.fromarray(array.astype(np.uint8))
-    img.save(tmp, format=format)
+
+    if _image_has_alpha_channel(img):
+        img.save(tmp, format='PNG')
+    else:
+        img.save(tmp, format=format)
+
     return tmp.getvalue()
 
 
