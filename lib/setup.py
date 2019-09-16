@@ -11,7 +11,7 @@ requirements = convert_deps_to_pip(pfile['packages'], r=False)
 # Check whether xcode tools are available before making watchdog a
 # dependency (only if the current system is a Mac).
 if (platform.system() == 'Darwin' and
-        subprocess.call('xcode-select --version', shell=True) != 0):
+        subprocess.call(['xcode-select', '--version'], shell=False) != 0):
     try:
         requirements.remove('watchdog')
     except ValueError:
