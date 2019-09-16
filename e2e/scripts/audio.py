@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import streamlit as st
-from urllib import request
+import requests
 
 url = "https://www.w3schools.com/html/horse.ogg"
-file = request.urlopen(url).read()
+file = requests.get(url).content
 st.audio(file)

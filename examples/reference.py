@@ -21,8 +21,8 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
-import urllib
 from io import BytesIO
+import requests
 
 import streamlit as st
 
@@ -200,8 +200,8 @@ st.header("Visualizing data as images via Pillow.")
 @st.cache(persist=True)
 def read_file_from_url(url):
     try:
-        return urllib.request.urlopen(url).read()
-    except urllib.error.URLError:
+        return requests.get(url).content
+    except requests.exceptions.RequestException:
         st.error("Unable to load file from %s. " "Is the internet connected?" % url)
     except Exception as e:
         st.exception(e)

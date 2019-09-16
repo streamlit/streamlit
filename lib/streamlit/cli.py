@@ -23,13 +23,25 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import os
 import click
 
 from streamlit.credentials import Credentials
-from streamlit import config
+from streamlit import version
 
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
+
+NEW_VERSION_TEXT = """
+  %(new_version)s
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  $ %(command)s
+""" % {
+    "new_version": click.style("A new version of Streamlit is available.", fg="green"),
+    "command": click.style("pip install streamlit --upgrade", fg="white", bold=True),
+}
 
 
 @click.group()
@@ -102,15 +114,52 @@ def main_hello():
 
 
 @main.command("run")
-@click.argument("file", type=click.Path(exists=True))
+@click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file, args):
-    """Run a Python script, piping stderr to Streamlit."""
-    _main_run(file, args)
+def main_run(file_or_url, args):
+    """Run a Python script, piping stderr to Streamlit.
+    The script can be local or it can be an url. In the
+    latter case, streamlit will download the script to a
+    temporary file and runs this file.
+    """
+    from validators import url
+
+    if url(file_or_url):
+        import tempfile
+        import requests
+
+        with tempfile.NamedTemporaryFile() as fp:
+            try:
+                resp = requests.get(file_or_url)
+                resp.raise_for_status()
+                fp.write(resp.content)
+                # flush since we are reading the file within the with block
+                fp.flush()
+            except requests.exceptions.RequestException as e:
+                raise click.BadParameter(
+                    ("Unable to fetch {}.\n{}".format(file_or_url, e))
+                )
+            # this is called within the with block to make sure the temp file
+            # is not deleted
+            _main_run(fp.name, args)
+
+    else:
+        if not os.path.exists(file_or_url):
+            raise click.BadParameter("File does not exist: {}".format(file_or_url))
+        _main_run(file_or_url, args)
 
 
-def _main_run(file, args=[]):
+def _main_run(file, args=None):
+    if args is None:
+        args = []
+
+    # Check credentials.
     Credentials.get_current().check_activated(auto_resolve=True)
+
+    # Notify if streamlit is out of date.
+    if version.should_show_new_version_notice():
+        click.echo(NEW_VERSION_TEXT)
+
     import streamlit.bootstrap as bootstrap
     import sys
 
