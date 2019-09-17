@@ -69,13 +69,21 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(abs), get_hash(abs))
         self.assertNotEqual(get_hash(abs), get_hash(type))
 
-    def test_pandas(self):
+    def test_pandas_dataframe(self):
         df1 = pd.DataFrame({"foo": [12]})
         df2 = pd.DataFrame({"foo": [42]})
         df3 = pd.DataFrame({"foo": [12]})
 
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
+
+    def test_pandas_series(self):
+        series1 = pd.Series([1, 2])
+        series2 = pd.Series([1, 3])
+        series3 = pd.Series([1, 2])
+
+        self.assertEqual(get_hash(series1), get_hash(series3))
+        self.assertNotEqual(get_hash(series1), get_hash(series2))
 
     def test_numpy(self):
         np1 = np.zeros(10)

@@ -230,6 +230,9 @@ class CodeHasher:
             return b"bool:1"
         elif obj is False:
             return b"bool:0"
+        elif util.is_type(obj, "pandas.core.frame.Series"):
+            import pandas as pd
+            return pd.util.hash_pandas_object(obj).sum()
         elif util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
 
@@ -251,7 +254,8 @@ class CodeHasher:
         elif inspect.isbuiltin(obj):
             return self.to_bytes(obj.__name__)
         elif hasattr(obj, "name") and (
-            isinstance(obj, io.IOBase) or os.path.exists(obj.name)
+            isinstance(obj, io.IOBase) or
+            (isinstance(obj.name, string_types) and os.path.exists(obj.name))
         ):
             # Hash files as name + last modification date + offset.
             h = hashlib.new(self.name)
