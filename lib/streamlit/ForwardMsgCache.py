@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import hashlib
-import threading
 from weakref import WeakKeyDictionary
 
 from streamlit import config
@@ -83,12 +82,15 @@ def create_reference_msg(msg):
 
 
 class ForwardMsgCache(object):
-    """A thread-safe cache of ForwardMsgs.
+    """A cache of ForwardMsgs.
 
     Large ForwardMsgs (e.g. those containing big DataFrame payloads) are
     stored in this cache. The server can choose to send a ForwardMsg's hash,
     rather than the message itself, to a client. Clients can then
     request messages from this cache via another endpoint.
+
+    This cache is *not* thread safe. It's intended to only be accessed by
+    the server thread.
 
     """
     class Entry(object):
@@ -139,7 +141,6 @@ class ForwardMsgCache(object):
             return len(self._session_report_run_counts) > 0
 
     def __init__(self):
-        self._lock = threading.RLock()
         self._entries = {}  # Map: hash -> Entry
 
     def add_message(self, msg, session, report_run_count):
@@ -158,12 +159,11 @@ class ForwardMsgCache(object):
 
         """
         populate_hash_if_needed(msg)
-        with self._lock:
-            entry = self._entries.get(msg.hash, None)
-            if entry is None:
-                entry = ForwardMsgCache.Entry(msg)
-                self._entries[msg.hash] = entry
-            entry.add_session_ref(session, report_run_count)
+        entry = self._entries.get(msg.hash, None)
+        if entry is None:
+            entry = ForwardMsgCache.Entry(msg)
+            self._entries[msg.hash] = entry
+        entry.add_session_ref(session, report_run_count)
 
     def get_message(self, hash):
         """Return the message with the given ID if it exists in the cache.
@@ -178,9 +178,8 @@ class ForwardMsgCache(object):
         ForwardMsg | None
 
         """
-        with self._lock:
-            entry = self._entries.get(hash, None)
-            return entry.msg if entry else None
+        entry = self._entries.get(hash, None)
+        return entry.msg if entry else None
 
     def has_message_reference(self, msg, session, report_run_count):
         """Return True if a session has a reference to a message.
@@ -198,14 +197,14 @@ class ForwardMsgCache(object):
 
         """
         populate_hash_if_needed(msg)
-        with self._lock:
-            entry = self._entries.get(msg.hash, None)
-            if entry is None or not entry.has_session_ref(session):
-                return False
 
-            # Ensure we're not expired
-            age = entry.get_session_ref_age(session, report_run_count)
-            return age <= config.get_option('global.maxCachedMessageAge')
+        entry = self._entries.get(msg.hash, None)
+        if entry is None or not entry.has_session_ref(session):
+            return False
+
+        # Ensure we're not expired
+        age = entry.get_session_ref_age(session, report_run_count)
+        return age <= config.get_option('global.maxCachedMessageAge')
 
     def remove_expired_session_entries(self, session, report_run_count):
         """Remove any cached messages that have expired from the given session.
@@ -220,25 +219,24 @@ class ForwardMsgCache(object):
 
         """
         max_age = config.get_option('global.maxCachedMessageAge')
-        with self._lock:
-            # Operate on a copy of our entries dict.
-            # We may be deleting from it.
-            for msg_hash, entry in self._entries.copy().items():
-                if not entry.has_session_ref(session):
-                    continue
 
-                age = entry.get_session_ref_age(session, report_run_count)
-                if age > max_age:
-                    LOGGER.debug(
-                        'Removing expired entry [session=%s, hash=%s, age=%s]',
-                        id(session), msg_hash, age)
-                    entry.remove_session_ref(session)
-                    if not entry.has_refs():
-                        # The entry has no more references. Remove it from
-                        # the cache completely.
-                        del self._entries[msg_hash]
+        # Operate on a copy of our entries dict.
+        # We may be deleting from it.
+        for msg_hash, entry in self._entries.copy().items():
+            if not entry.has_session_ref(session):
+                continue
+
+            age = entry.get_session_ref_age(session, report_run_count)
+            if age > max_age:
+                LOGGER.debug(
+                    'Removing expired entry [session=%s, hash=%s, age=%s]',
+                    id(session), msg_hash, age)
+                entry.remove_session_ref(session)
+                if not entry.has_refs():
+                    # The entry has no more references. Remove it from
+                    # the cache completely.
+                    del self._entries[msg_hash]
 
     def clear(self):
         """Remove all entries from the cache"""
-        with self._lock:
-            self._entries.clear()
+        self._entries.clear()
