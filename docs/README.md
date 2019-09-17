@@ -108,7 +108,7 @@ files. To use it in Markdown files, though, you need to do the following:
 
     An this is Markdown again.
 
-### Location of embedded report source files
+### Location of embedded app source files
 
 Before we can use `.. output::` to embed a Streamlit app in some doc, we
 first need to create a Streamlit-powered Python script, run it, share it, and

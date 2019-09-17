@@ -6,9 +6,9 @@ video](https://streamlit.io/secret/demo/)). In this guide, we'll introduce you
 to Streamlit's core features and how they are used.
 
 The easiest way to learn how to use Streamlit is to try things out yourself. As
-you read through this guide, test each method. As long as your report is
+you read through this guide, test each method. As long as your app is
 running, every time you add a new element to your script and save, Streamlit's
-UI will ask if you'd like to rerun the report and view the changes. This allows
+UI will ask if you'd like to rerun the app and view the changes. This allows
 you to work in a fast interactive loop: you write some code, save it, review
 the output, write some more, and so on, until you’re happy with the results.
 The goal is to use Streamlit to create an interactive app for your data or model
@@ -57,11 +57,11 @@ If you're not using Conda, you have a few options:
 Now that everything's installed, let's create a new Python script and import
 Streamlit.
 
-1. Create a new Python file named `first_report.py`, then open it with your IDE
+1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
 
 2. Import Streamlit and add a title. At least one call to Streamlit is required
-   to generate a report.
+   to generate an app.
 
    ```Python
    import streamlit as st
@@ -71,28 +71,28 @@ Streamlit.
    import pandas
 
    # Don't worry, we'll explain this method in the next section. We need to
-   # make at least one call to Streamlit in order to generate a report.
-   st.title('My first report')
+   # make at least one call to Streamlit in order to generate an app.
+   st.title('My first app')
    ```
 
-3. Run your report. A new tab will open in your default browser, and you should
-   see a title. In the next few sections we'll populate the report with
+3. Run your app. A new tab will open in your default browser, and you should
+   see a title. In the next few sections we'll populate the app with
    additional text, tables, and charts.
 
    ```bash
-   $ streamlit run first_report.py
+   $ streamlit run first_app.py
    ```
 
    Running a Streamlit app is no different than any other Python script.
-   Whenever you need to view the report, you can use this command.
+   Whenever you need to view the app, you can use this command.
 
-4. You can kill the report at any time by typing **Ctrl+c** in the terminal.
+4. You can kill the app at any time by typing **Ctrl+c** in the terminal.
 
-## Add text to a report
+## Add text to an app
 
-A good report isn't just charts and data visualizations, it needs clear and
+A good app isn't just charts and data visualizations, it needs clear and
 detailed explanations. Streamlit provides a handful of methods that let you add
-titles, headers, and text to your reports.
+titles, headers, and text to your apps.
 
 ```eval_rst
 .. tip::
@@ -104,23 +104,23 @@ titles, headers, and text to your reports.
 
 ### Start with a title
 
-Most reports start with a title. With Streamlit, you'll use
-[`st.title`](api.html#streamlit.title) to add a title to your report.
+Most apps start with a title. With Streamlit, you'll use
+[`st.title`](api.html#streamlit.title) to add a title to your app.
 
 ```eval_rst
 .. tip::
-   Use `st.title` sparingly. Most reports only need one.
+   Use `st.title` sparingly. Most apps only need one.
 ```
 
 This should look familiar. You added this line below the import statement:
 
 ```python
-st.title('My first report')
+st.title('My first app')
 ```
 
 ### Organize with headers
 
-To help you organize the content of your report, there are two methods that
+To help you organize the content of your app, there are two methods that
 allow you to create headers: [`st.header()`](api.html#streamlit.header) and
 [`st.subheader()`](api.html#streamlit.subheader).
 
@@ -131,13 +131,13 @@ st.subheader("I'm not a large heading")
 
 ### Write some sentences
 
-There's more than one way to add text to your reports. Whether you're working
+There's more than one way to add text to your apps. Whether you're working
 with plain text, markdown, or want the flexibility to use both, Streamlit's got
 you covered. Let's take a look at each method and when you should use it. Don't
-forget, you need to save after adding a method to your report so that it'll
+forget, you need to save after adding a method to your app so that it'll
 show up in the browser.
 
-If you want to add some simple fixed-width text to your report use
+If you want to add some simple fixed-width text to your app use
 [`st.text()`](api.html#streamlit.text).
 
 ```python
@@ -146,18 +146,18 @@ st.text('Welcome to Streamlit.')
 
 There are times when you need more than plain text. With
 [`st.markdown`](api.html#streamlit.markdown) you can write content for your
-report in [Github-flavored markdown](https://github.github.com/gfm/). This
+app in [Github-flavored markdown](https://github.github.com/gfm/). This
 method is perfect for when you need to emphasize text with bold or italics, or
 add a link to related documentation.
 
 ```python
 st.markdown(
     '**NOTE:** Markdown is perfect for when you want to _emphasize_ elements '
-    'in your report.')
+    'in your app.')
 ```
 
 There's one more method we're going to cover that allows you to add text to a
-report. [`st.write()`](api.html##streamlit.write) is the only text method that
+app. [`st.write()`](api.html##streamlit.write) is the only text method that
 accepts multiple arguments and data types. We consider it the "Swiss Army
 knife" of Streamlit commands.
 
@@ -200,11 +200,11 @@ Streamlit methods to create interactive tables, charts, histograms, and more.
 ### Display data and tables
 
 There are a few ways to display data (tables, arrays, data frames) in Streamlit
-reports. In the previous section, you were introduced to `st.write()`, which
+apps. In the previous section, you were introduced to `st.write()`, which
 can be used to write anything from text to tables. Now let's take a look at
 methods designed specifically for visualizing data. You might be asking
 yourself, "why wouldn't I always you `st.write()`?" The main reason is that you
-can't reuse the slot in the report created by `st.write()`. Put simply, you
+can't reuse the slot in the app created by `st.write()`. Put simply, you
 can't update any elements created with `st.write()`.
 
 Let's create a data frame. In this sample, you'll use Numpy to generate a
@@ -252,13 +252,13 @@ st.table(dataframe)
 ### Draw bar charts, line charts, and maps
 
 Streamlit supports several popular data charting libraries that allow you to
-add different types of charts and data representations to your reports, like
+add different types of charts and data representations to your apps, like
 Matplotlib, Altair, Deck.Gl, and more. In this section, you'll add a bar chart,
-line chart, and a map to your report. If you'd like to see a full list of
+line chart, and a map to your app. If you'd like to see a full list of
 supported charts and libraries, see [API reference](api.html#display-charts).
 
 The [`st.bar_chart()`](api.html#streamlit.bar_chart) allows you to add bar
-charts to your report. This example uses a Pandas data frame with three columns
+charts to your app. This example uses a Pandas data frame with three columns
 as the data source.
 
 ```Python
@@ -294,12 +294,12 @@ st.map(map_data)
 
 ## Update existing elements
 
-Every time you update your report and save, Streamlit's UI will ask if you'd
-like to **rerun** the report. Then Streamlit, does a bunch of computer-sciencey
-magic to make sure your report is updated efficiently and rendered in the
+Every time you update your app and save, Streamlit's UI will ask if you'd
+like to **rerun** the app. Then Streamlit, does a bunch of computer-sciencey
+magic to make sure your app is updated efficiently and rendered in the
 browser.
 
-In this section, you'll learn how to update existing elements in a report.
+In this section, you'll learn how to update existing elements in an app.
 
 ### Replace text with text
 
@@ -317,7 +317,7 @@ my_element = st.text('Hello sun.')
 # and saves that reference. This slot can be reused.
 
 my_element.text('Goodnight moon.')
-# Replaces 'Hello sun' with 'Goodnight moon' in the report.
+# Replaces 'Hello sun' with 'Goodnight moon' in the app.
 ```
 
 ### Replace text with a data frame/chart
@@ -367,7 +367,7 @@ chart.add_rows(data2)
 
 ## Show progress
 
-When adding long running computations to a report, you can use
+When adding long running computations to an app, you can use
 [`st.progess`](api.html#streamlit.progress) to
 display status in real time.
 
@@ -399,7 +399,7 @@ st.write('...and now we\'re done!')
 ## Add interactivity with widgets
 
 With widgets, Streamlit allows you to bake interactivity directly into your
-reports with checkboxes, buttons, sliders, and more. Let's look at a few
+apps with checkboxes, buttons, sliders, and more. Let's look at a few
 samples.
 
 ```eval_rst
@@ -412,7 +412,7 @@ samples.
 ### Use a checkbox to hide/show data
 
 One use case for checkboxes is to hide or show a specific chart or section in
-a report. [`st.checkbox`](api.html#streamlit.checkbox) takes a single argument,
+an app. [`st.checkbox`](api.html#streamlit.checkbox) takes a single argument,
 which is the widget label. In this sample, the checkbox is used to toggle a
 conditional statement.
 
@@ -440,31 +440,31 @@ the data in real time.
 sample_var = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
 ```
 
-## Order the elements of a report
+## Order the elements of an app
 
 So far you've learned how to use the methods exposed by Streamlit to add new
-elements to a report. These have all been additive, with the assumption that
-you already know what you want to add to the report. What if you're unsure of
+elements to an app. These have all been additive, with the assumption that
+you already know what you want to add to the app. What if you're unsure of
 the structure, or need to add a placeholder for content that isn't quite ready?
 That's where [`st.empty()`](api.html#streamlit.empty) comes in handy. It allows
-you to add an empty slot to your report that you can update at any time.
+you to add an empty slot to your app that you can update at any time.
 
-Let's take a look at how you can use `st.empty` to add structure to a report.
+Let's take a look at how you can use `st.empty` to add structure to an app.
 
 ```Python
-## Appends a title to the report.
-st.title('Report with placeholders')
+## Appends a title to the app.
+st.title('App with placeholders')
 
-# Appends some text to the report.
+# Appends some text to the app.
 st.text('Some interesting text about your interesting project.')
 
-# Appends an empty slot to the report.
+# Appends an empty slot to the app.
 my_slot1 = st.empty()
 
-# Appends another empty slot to the report.
+# Appends another empty slot to the app.
 my_slot2 = st.empty()
 
-# Appends some more text to the report.
+# Appends some more text to the app.
 st.text('This is where you provide a killer conclusion.')
 
 # Replaces the first empty slot with a text string.
@@ -478,4 +478,4 @@ my_slot2.line_chart(numpy.random.randn(20, 2))
 
 ## What's next?
 
-- [Learn how to speed up your reports with caching](api.md#optimize-performance)
+- [Learn how to speed up your apps with caching](api.md#optimize-performance)

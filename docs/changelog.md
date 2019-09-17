@@ -103,7 +103,7 @@ If you run `$ python your_script.py` the script will execute from top to bottom,
 
 **What are the limitations of the new architecture?**
 
-- To switch Streamlit apps, first you have to kill the Streamlit server with **Ctrl-c**. Then, you can use `streamlit run` to generate the next report.
+- To switch Streamlit apps, first you have to kill the Streamlit server with **Ctrl-c**. Then, you can use `streamlit run` to generate the next app.
 - Streamlit only works when used inside Python files, not interactively from the Python REPL.
 
 **What else do I need to know?**
@@ -156,7 +156,7 @@ _Release date: May 03, 2019_
 
 - 🚣‍♀️ `st.progress()` now also accepts floats from 0.0–1.0
 - 🤯 Improved rendering of long headers in DataFrames
-- 🔐 Shared reports now default to HTTPS
+- 🔐 Shared apps now default to HTTPS
 
 ## Version 0.35.0
 
@@ -165,5 +165,5 @@ _Release date: April 26, 2019_
 **Highlights**
 
 - 📷 Bokeh support! Check out docs for `st.bokeh_chart`
-- ⚡️ Improved the size and load time of saved reports
+- ⚡️ Improved the size and load time of saved apps
 - ⚾️ Implemented better error-catching throughout the codebase

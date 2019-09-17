@@ -17,7 +17,7 @@ this API reference.
 ## Display text
 
 Streamlit apps usually start with a call to `st.title` to set the
-report's title. After that, there are 2 heading levels you can use:
+app's title. After that, there are 2 heading levels you can use:
 `st.header` and `st.subheader`.
 
 Pure text is entered with `st.text`, and Markdown with
@@ -81,7 +81,7 @@ like `st.line_chart` and `st.area_chart`.
 
 ## Display interactive widgets
 
-With widgets, Streamlit allows you to bake interactivity directly into your reports with buttons, sliders, text inputs, and more.
+With widgets, Streamlit allows you to bake interactivity directly into your apps with buttons, sliders, text inputs, and more.
 
 ```eval_rst
 .. autofunction:: streamlit.button
@@ -106,7 +106,7 @@ That's where `st.echo()` comes in.
 ```
 
 Ok so let's say you have the following file, and you want to make its
-report a little bit more self-explanatory by making that middle section
+app a little bit more self-explanatory by making that middle section
 visible in the Streamlit app:
 
 ```python
@@ -138,7 +138,7 @@ The file above creates a Streamlit app containing the words "Hi there,
 `John`", and then "Done!".
 
 Now let's use `st.echo()` to make that middle section of the code visible
-in the report:
+in the app:
 
 ```python
 import streamlit as st
@@ -174,7 +174,7 @@ It's _that_ simple!
 ## Display progress and status
 
 Streamlit provides a few methods that allow you to add animation to your
-reports. These animations include progress bars, status messages (like
+apps. These animations include progress bars, status messages (like
 warnings), and celebratory balloons.
 
 ```eval_rst
@@ -191,7 +191,7 @@ warnings), and celebratory balloons.
 ## Placeholders, help, and options
 
 There are a handful of methods that allow you to create placeholders in your
-report, provide help using doc strings, and get and modify configuration options.
+app, provide help using doc strings, and get and modify configuration options.
 
 ```eval_rst
 .. autofunction:: streamlit.empty

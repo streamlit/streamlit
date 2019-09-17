@@ -52,7 +52,7 @@ class StOutput(Directive):
                     "
                 ></iframe>
                 <sup><a href="%(src)s" target="_blank">
-                    (view standalone Streamlit report)
+                    (view standalone Streamlit app)
                 </a></sup>
             """
             % {"src": src, "additional_styles": additional_styles},
