@@ -30,7 +30,6 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 
-import streamlit as st
 from streamlit import metrics
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
@@ -201,6 +200,7 @@ class DeltaGenerator(object):
         self._path = path
 
     def __getattr__(self, name):
+        import streamlit as st
         streamlit_methods = [method_name for method_name in dir(st)
                              if callable(getattr(st, method_name))]
 
