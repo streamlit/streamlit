@@ -59,6 +59,7 @@ toml = "*"
 # 6.0 doesn't support Python 2
 tornado = ">=5.0,<6.0"
 tzlocal = "*"
+validators = "*"
 watchdog = "*"
 
 # Only Python 3.x packages
