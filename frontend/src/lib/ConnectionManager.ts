@@ -212,7 +212,7 @@ export class ConnectionManager {
         permissionError = true
       } else {
         logError(err)
-        throw new Error("Unable to fetch report.")
+        throw new Error("Unable to fetch app.")
       }
     }
 
@@ -228,7 +228,7 @@ export class ConnectionManager {
     }
 
     if (!manifest) {
-      throw new Error("Unknown error fetching report.")
+      throw new Error("Unknown error fetching app.")
     }
 
     return manifest

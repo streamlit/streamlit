@@ -25,7 +25,7 @@ How to use Streamlit in 3 seconds:
     $ streamlit run my_script.py
 
     3. Visualize your code
-    A new tab will open on your browser. That's your Streamlit report!
+    A new tab will open on your browser. That's your Streamlit App!
 
     4. Modify your code, save it, and watch changes live on your browser.
 
@@ -211,7 +211,7 @@ if not _is_running_py3():
 
 
 def write(*args):
-    """Write arguments to the report.
+    """Write arguments to the App.
 
     This is the swiss-army knife of Streamlit commands. It does different
     things depending on what you throw at it.
@@ -220,12 +220,12 @@ def write(*args):
 
         1. You can pass in multiple arguments, all of which will be written.
         2. Its behavior depends on the input types as follows.
-        3. It returns None, so it's "slot" in the report cannot be reused.
+        3. It returns None, so it's "slot" in the App cannot be reused.
 
     Parameters
     ----------
     *args : any
-        One or many objects to print to the Report.
+        One or many objects to print to the App.
 
     Arguments are handled as follows:
 
@@ -359,17 +359,17 @@ def write(*args):
 
 
 def show(*args):
-    """Write arguments to your report for debugging purposes.
+    """Write arguments to your app for debugging purposes.
 
     Show() has similar properties to write():
 
         1. You can pass in multiple arguments, all of which will be debugged.
-        2. It returns None, so it's "slot" in the report cannot be reused.
+        2. It returns None, so it's "slot" in the app cannot be reused.
 
     Parameters
     ----------
     *args : any
-        One or many objects to debug in the Report.
+        One or many objects to debug in the App.
 
     Example
     -------
@@ -468,7 +468,7 @@ _SPACES_RE = _re.compile("\\s*")
 
 @_contextlib.contextmanager
 def echo():
-    """Use in a `with` block to draw some code on the report, then execute it.
+    """Use in a `with` block to draw some code on the app, then execute it.
 
     Example
     -------
@@ -531,9 +531,9 @@ def _maybe_print_repl_warning():
                 _textwrap.dedent(
                     """
 
-                Will not generate Streamlit report
+                Will not generate Streamlit App
 
-                  To generate report, use Streamlit in a file and run it with:
+                  To generate an app, use Streamlit in a file and run it with:
                   $ streamlit run [FILE_NAME] [ARGUMENTS]
 
                 """
@@ -547,9 +547,9 @@ def _maybe_print_repl_warning():
                 _textwrap.dedent(
                     """
 
-                Will not generate Streamlit report
+                Will not generate Streamlit App
 
-                  To generate report, run this file with:
+                  To generate an App, run this file with:
                   $ streamlit run %s [ARGUMENTS]
 
                 """

@@ -73,7 +73,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               checked={this.state.wideMode}
               onChange={this.handleCheckboxChange}
             />{" "}
-            Show report in wide mode
+            Show app in wide mode
           </label>
         </ModalBody>
 

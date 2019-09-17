@@ -27,12 +27,12 @@ Use the links below to jump to a specific section:
 
 Before you get started, you're going to need a few things:
 
-* Your favorite IDE or text editor
-* [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
-* One of these package management tools:
-  * [PIP](https://pip.pypa.io/en/stable/installing/)
-  * [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
-* [Streamlit](index.md) - Follow these instructions to install Streamlit if you
+- Your favorite IDE or text editor
+- [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
+- One of these package management tools:
+  - [PIP](https://pip.pypa.io/en/stable/installing/)
+  - [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+- [Streamlit](index.md) - Follow these instructions to install Streamlit if you
   haven't already.
 
 ## Set up your virtual environment
@@ -47,9 +47,10 @@ you need help getting a virtual environment setup, see [Managing
 environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 
 If you're not using Conda, you have a few options:
-* [virtualenv](https://virtualenv.pypa.io/en/latest/)
-* [venv](https://docs.python.org/3/library/venv.html)
-* [pipenv](https://docs.pipenv.org/en/latest/)
+
+- [virtualenv](https://virtualenv.pypa.io/en/latest/)
+- [venv](https://docs.python.org/3/library/venv.html)
+- [pipenv](https://docs.pipenv.org/en/latest/)
 
 ## Import Streamlit
 
@@ -82,7 +83,7 @@ Streamlit.
    $ streamlit run first_report.py
    ```
 
-   Running a Streamlit report is no different than any other Python script.
+   Running a Streamlit app is no different than any other Python script.
    Whenever you need to view the report, you can use this command.
 
 4. You can kill the report at any time by typing **Ctrl+c** in the terminal.
@@ -303,7 +304,7 @@ In this section, you'll learn how to update existing elements in a report.
 ### Replace text with text
 
 Whenever you use a Streamlit method to place text, charts, or data into your
-Streamlit report, a reference to that element is returned. You can call methods
+Streamlit app, a reference to that element is returned. You can call methods
 on that reference to update the element with more data, or completely replace
 it with something else.
 
@@ -312,7 +313,7 @@ then update (or overwrite) that element.
 
 ```Python
 my_element = st.text('Hello sun.')
-# Draws 'Hello sun' in the Streamlit report,
+# Draws 'Hello sun' in the Streamlit app,
 # and saves that reference. This slot can be reused.
 
 my_element.text('Goodnight moon.')
@@ -327,7 +328,7 @@ Now, let's replace the text element with a dataframe.
 # You'll use time to simulate loading data
 import time
 
-# Draws 'Loading data...' in the Streamlit report.
+# Draws 'Loading data...' in the Streamlit app.
 my_second_element = st.text('Loading data...')
 
 update_dataframe = pandas.DataFrame(
@@ -477,4 +478,4 @@ my_slot2.line_chart(numpy.random.randn(20, 2))
 
 ## What's next?
 
-* [Learn how to speed up your reports with caching](api.md#optimize-performance)
+- [Learn how to speed up your reports with caching](api.md#optimize-performance)

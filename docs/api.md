@@ -16,7 +16,7 @@ this API reference.
 
 ## Display text
 
-Streamlit reports usually start with a call to `st.title` to set the
+Streamlit apps usually start with a call to `st.title` to set the
 report's title. After that, there are 2 heading levels you can use:
 `st.header` and `st.subheader`.
 
@@ -97,7 +97,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your repo
 
 ## Display code
 
-Sometimes you want your Streamlit report to contain _both_ your usual
+Sometimes you want your Streamlit app to contain _both_ your usual
 Streamlit graphic elements _and_ the code that generated those elements.
 That's where `st.echo()` comes in.
 
@@ -107,7 +107,7 @@ That's where `st.echo()` comes in.
 
 Ok so let's say you have the following file, and you want to make its
 report a little bit more self-explanatory by making that middle section
-visible in the Streamlit report:
+visible in the Streamlit app:
 
 ```python
 import streamlit as st
@@ -134,7 +134,7 @@ foo = 'bar'
 st.write('Done!')
 ```
 
-The file above creates a Streamlit report containing the words "Hi there,
+The file above creates a Streamlit app containing the words "Hi there,
 `John`", and then "Done!".
 
 Now let's use `st.echo()` to make that middle section of the code visible

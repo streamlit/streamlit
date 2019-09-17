@@ -7,7 +7,7 @@ with `streamlit run your_script.py [script args]`.
 This causes a new tab to pop up in your default web browser, connected to a
 special Streamlit server that automatically launched behind the scenes.
 
-In the browser tab lives your _Streamlit report_. The report is the canvas
+In the browser tab lives your _Streamlit app_. The app is the canvas
 where charts, text, tables, and all other elements are drawn. You can share
 reports, send someone a link, and have them open the link on any browser.
 
@@ -16,7 +16,7 @@ different element in the report. For example the
 [`st.text`](api.html#streamlit.text)
 command writes pure text to the report, and
 [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it
-— a line chart.  The swiss army knife of Streamlit commands is
+— a line chart. The swiss army knife of Streamlit commands is
 [`st.write`](api.html#streamlit.cache), which we'll get to later.
 
 ## Updating the report
@@ -42,7 +42,7 @@ and finally share your results with your peers.
 ## Appending elements to a report
 
 All drawing commands in the `streamlit` module _append_ elements to your
-Streamlit report.
+Streamlit app.
 
 ```python
 st.write('''
@@ -65,11 +65,11 @@ an object that can be used to update/redraw that element:
 
 ```python
 my_element = st.text('Hey there')
-# Draws "Hey there" in the Streamlit report,
+# Draws "Hey there" in the Streamlit app,
 # and saves that "slot" in the report so it can be reused.
 
 my_element.text('Hello world')
-# Replaces "Hey there" with "Hello world" in the Streamlit report.
+# Replaces "Hey there" with "Hello world" in the Streamlit app.
 ```
 
 You can also replace one element with another of a completely different
@@ -78,7 +78,7 @@ element gets replaced with an [`st.dataframe`](api.html#dataframe).
 
 ```python
 data_element = st.text('Loading data...')
-# Draws "Loading data..." in the Streamlit report.
+# Draws "Loading data..." in the Streamlit app.
 
 df = load_huge_dataframe_from_internet()
 

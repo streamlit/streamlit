@@ -3,7 +3,7 @@ from docutils.parsers.rst import Directive
 
 
 class StOutput(Directive):
-    """Insert Streamlit report into HTML doc.
+    """Insert Streamlit app into HTML doc.
 
     The first argument is a URL to be iframed, and the second argument
     (optional) is a string of inline styles to assign to the iframe.

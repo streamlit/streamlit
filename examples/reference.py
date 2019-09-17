@@ -37,7 +37,7 @@ with st.echo():
     st.write(
         """
         The `write` function is Streamlit\'s bread and butter. You can use
-        it to write _markdown-formatted_ text in your Streamlit report.
+        it to write _markdown-formatted_ text in your Streamlit app.
     """
     )
 
@@ -394,7 +394,7 @@ st.write(
     Every Streamlit method (except `st.write`) returns a handle
     which can be used for animation. Just call your favorite
     Streamlit function (e.g. `st.xyz()`) on the handle (e.g. `handle.xyz()`)
-    and it will update that point in the report.
+    and it will update that point in the app.
 
     Additionally, you can use `add_rows()` to append numpy arrays or
     DataFrames to existing elements.
