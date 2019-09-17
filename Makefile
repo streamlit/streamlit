@@ -94,6 +94,12 @@ pycoverage:
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
 
+.PHONY: integration-tests
+# Run Python integration tests. Currently, this is just a script that runs
+# all the e2e tests in "raw" mode and checks for non-zero exit codes.
+integration-tests:
+	python scripts/raw_run_all_examples.py
+
 .PHONY: install
 # Install Streamlit into your Python environment.
 install:
