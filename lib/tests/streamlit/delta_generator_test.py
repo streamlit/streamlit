@@ -57,13 +57,28 @@ class FakeDeltaGenerator(object):
         pass
 
     def __getattr__(self, name):
+        streamlit_methods = [method_name for method_name in dir(st)
+                             if callable(getattr(st, method_name))]
+
         def wrapper(*args, **kwargs):
-            if self._container == BlockPath.SIDEBAR:
-                raise RuntimeError("'%s' was called but "
-                                   "it's not available for sidebar" % name)
+            if name in streamlit_methods:
+                if self._container == BlockPath.SIDEBAR:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                                  "name": name
+                              }
+                else:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`DeltaGenerator` objects. Did you mean " \
+                              "`st.%(name)s()`?" % {
+                                  "name": name
+                              }
             else:
-                raise RuntimeError("'%s' was called but "
-                                   "it's not an existing method" % name)
+                message = "`%(name)s()` is not a valid Streamlit command." % {
+                    "name": name
+                }
+
+            raise AttributeError(message)
 
         return wrapper
 
@@ -119,17 +134,18 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     def test_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
-            st.nonexisting()
+            st.sidebar.non_existing()
 
         self.assertEqual(str(ctx.exception),
-                         "module 'streamlit' has no attribute 'nonexisting'")
+                         "`non_existing()` is not a valid Streamlit command.")
 
     def test_sidebar_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.write()
 
         self.assertEqual(str(ctx.exception),
-                         "'write' was called but it's not an existing method")
+                         "Method `write()` does not exist for `DeltaGenerator`"
+                         " objects. Did you mean `st.write()`?")
 
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
