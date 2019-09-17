@@ -27,7 +27,7 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import NP_SIZE_LARGE, get_hash
+from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, get_hash
 
 
 class HashTest(unittest.TestCase):
@@ -77,6 +77,11 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
+        df4 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df5 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+
+        self.assertEqual(get_hash(df4), get_hash(df5))
+
     def test_pandas_series(self):
         series1 = pd.Series([1, 2])
         series2 = pd.Series([1, 3])
@@ -84,6 +89,11 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(series1), get_hash(series3))
         self.assertNotEqual(get_hash(series1), get_hash(series2))
+
+        series4 = pd.Series(range(PANDAS_ROWS_LARGE))
+        series5 = pd.Series(range(PANDAS_ROWS_LARGE))
+
+        self.assertEqual(get_hash(series4), get_hash(series5))
 
     def test_numpy(self):
         np1 = np.zeros(10)
