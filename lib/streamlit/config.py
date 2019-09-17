@@ -256,7 +256,7 @@ _create_option(
 _create_option(
     'global.maxCachedMessageAge',
     description='''Expire cached ForwardMsgs whose age is greater than this 
-        value. A message's age is defined by how many times its report has 
+        value. A message's age is defined by how many times its script has 
         finished running since the message has been accessed.''',
     visibility='hidden',
     default_val=2)
