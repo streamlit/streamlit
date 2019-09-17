@@ -29,8 +29,26 @@ import sys
 import click
 
 # Where we expect to find the example files.
-EXAMPLE_DIR = "examples"
 E2E_DIR = "e2e/scripts"
+
+# Scripts that rely on matplotlib can't be run in Python2. matplotlib
+# dropped Py2 support, and so we don't install it in our virtualenv.
+try:
+    import matplotlib
+    EXCLUDED_FILENAMES = ()
+except ImportError:
+    EXCLUDED_FILENAMES = (
+        'empty_charts.py',
+        'pyplot.py',
+        'pyplot_kwargs.py'
+    )
+
+try:
+    # Python 3
+    from subprocess import DEVNULL
+except ImportError:
+    # Python 2
+    DEVNULL = open(os.devnull, 'wb')
 
 
 def _command_to_string(command):
@@ -45,7 +63,7 @@ def _get_filenames(dir):
     return [
         os.path.join(dir, filename)
         for filename in sorted(os.listdir(dir))
-        if filename.endswith(".py")
+        if filename.endswith(".py") and filename not in EXCLUDED_FILENAMES
     ]
 
 
@@ -67,9 +85,8 @@ def run_commands(section_header, commands):
         )
 
         # Run the command.
-        result = subprocess.call(command.split(' '),
-                                 stdout=subprocess.DEVNULL,
-                                 stderr=None)
+        result = subprocess.call(
+            command.split(' '), stdout=DEVNULL, stderr=None)
         if result != 0:
             failed_commands.append(command)
 

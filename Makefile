@@ -98,7 +98,7 @@ pycoverage:
 # Run Python integration tests. Currently, this is just a script that runs
 # all the e2e tests in "raw" mode and checks for non-zero exit codes.
 integration-tests:
-	python scripts/raw_run_all_examples.py
+	python scripts/run_bare_integration_tests.py
 
 .PHONY: install
 # Install Streamlit into your Python environment.
