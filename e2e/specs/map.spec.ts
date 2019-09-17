@@ -23,6 +23,6 @@ describe("st.map", () => {
   });
 
   it("displays a map using deck_gl", () => {
-    cy.get(".element-container .deckglchart").should("have.length", 1);
+    cy.get(".element-container .deckglchart").should("have.length", 2);
   });
 });
