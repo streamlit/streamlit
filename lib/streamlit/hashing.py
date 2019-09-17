@@ -142,6 +142,17 @@ def _key(obj, context):
     return None
 
 
+def _hashing_error_message(start):
+    return (
+        start,
+        "**More information:** to prevent unexpected behavior, Streamlit tries to detect mutations in cached objects so it can alert the user if needed. However, something went wrong while performing this check.\n\n"
+        "Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).\n\n"
+        "To stop this warning from showing in the meantime, try one of the following:\n"
+        "* **Preferred:** modify your code to avoid using this type of object.\n"
+        "* Or add the argument `ignore_cache=True` to the `st.cache` decorator.",
+    )
+
+
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
@@ -231,7 +242,9 @@ class CodeHasher:
                 return b"bool:1"
             elif obj is False:
                 return b"bool:0"
-            elif util.is_type(obj, "pandas.core.frame.DataFrame"):
+            elif util.is_type(obj, "pandas.core.frame.DataFrame") or util.is_type(
+                obj, "pandas.core.series.Series"
+            ):
                 import pandas as pd
 
                 if len(obj) >= PANDAS_ROWS_LARGE:
@@ -257,8 +270,8 @@ class CodeHasher:
             elif inspect.isbuiltin(obj):
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
-                isinstance(obj, io.IOBase) or
-                (isinstance(obj.name, string_types) and os.path.exists(obj.name))
+                isinstance(obj, io.IOBase)
+                or (isinstance(obj.name, string_types) and os.path.exists(obj.name))
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
@@ -321,9 +334,17 @@ class CodeHasher:
                     # As a last resort, we pickle the object to hash it.
                     return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
                 except:
-                    st.warning("Streamlit cannot hash an object of type %s." % type(obj))
+                    st.warning(
+                        _hashing_error_message(
+                            "Streamlit cannot hash an object of type %s." % type(obj)
+                        )
+                    )
         except:
-            st.warning("Streamlit failed to hash an object of type %s." % type(obj))
+            st.warning(
+                _hashing_error_message(
+                    "Streamlit failed to hash an object of type %s." % type(obj)
+                )
+            )
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
