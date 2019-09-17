@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import base58
@@ -31,6 +32,7 @@ import streamlit
 from streamlit import errors
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -48,14 +50,16 @@ class AbstractStorage(object):
 
         self._static_dir = static_dir
         self._static_files = static_files
-        self._release_hash = '%s-%s' % (
+        self._release_hash = "%s-%s" % (
             streamlit.__version__,
-            base58.b58encode(md5.digest()[:3]).decode("utf-8"))
+            base58.b58encode(md5.digest()[:3]).decode("utf-8"),
+        )
         self._write_lock = locks.Lock()
 
     @gen.coroutine
-    def save_report_files(self, report_id, files, progress_coroutine=None,
-            manifest_save_order=None):
+    def save_report_files(
+        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+    ):
         """Save files related to a given report.
 
         Parameters
@@ -98,13 +102,14 @@ class AbstractStorage(object):
                 report_id,
                 files,
                 progress_coroutine=progress_coroutine,
-                manifest_save_order=manifest_save_order
+                manifest_save_order=manifest_save_order,
             )
         raise gen.Return(return_value)
 
     @gen.coroutine
-    def _save_report_files(self, report_id, files, progress_coroutine=None,
-            manifest_save_order=None):
+    def _save_report_files(
+        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+    ):
         """Concrete implemetation of saving filesself.
 
         Subclasses of AbstractStorage must implement this method. See
@@ -129,11 +134,9 @@ def _get_static_dir():
 
     """
     module_dir = os.path.dirname(os.path.normpath(__file__))
-    streamlit_dir = os.path.normpath(
-        os.path.join(module_dir, '..'))
+    streamlit_dir = os.path.normpath(os.path.join(module_dir, ".."))
 
-    return os.path.normpath(
-        os.path.join(streamlit_dir, 'static'))
+    return os.path.normpath(os.path.join(streamlit_dir, "static"))
 
 
 def _get_static_files(static_dir):
@@ -167,11 +170,11 @@ def _get_static_files(static_dir):
         for filename in filenames:
             absolute_name = os.path.join(root, filename)
             relative_name = os.path.relpath(absolute_name, static_dir)
-            with open(absolute_name, 'rb') as input:
+            with open(absolute_name, "rb") as input:
                 file_data = input.read()
                 file_tuple = (relative_name, file_data)
 
-                if relative_name == 'index.html':
+                if relative_name == "index.html":
                     index_tuple = file_tuple
                 else:
                     static_files.append(file_tuple)
@@ -182,7 +185,6 @@ def _get_static_files(static_dir):
         static_files.append(index_tuple)
 
     if not static_files:
-        raise errors.NoStaticFiles(
-            'Cannot find static files. Run "make build".')
+        raise errors.NoStaticFiles('Cannot find static files. Run "make build".')
 
     return static_files, md5

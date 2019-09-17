@@ -27,22 +27,21 @@ class TimeInputTest(testutil.DeltaGeneratorTestCase):
 
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.time_input('the label')
+        st.time_input("the label")
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertLessEqual(
-            datetime.strptime(c.value, '%H:%M').time(),
-            datetime.now().time())
+            datetime.strptime(c.value, "%H:%M").time(), datetime.now().time()
+        )
 
-    @parameterized.expand([
-        (time(8, 45), '08:45'),
-        (datetime(2019, 7, 6, 21, 15), '21:15')
-    ])
+    @parameterized.expand(
+        [(time(8, 45), "08:45"), (datetime(2019, 7, 6, 21, 15), "21:15")]
+    )
     def test_value_types(self, arg_value, proto_value):
         """Test that it supports different types of values."""
-        st.time_input('the label', arg_value)
+        st.time_input("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.time_input
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertEqual(c.value, proto_value)

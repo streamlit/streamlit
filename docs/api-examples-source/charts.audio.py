@@ -1,16 +1,20 @@
+import requests
 import streamlit as st
-import urllib
+
 
 @st.cache
 def read_file_from_url(url):
-    return urllib.request.urlopen(url).read()
+    return requests.get(url).content
+
 
 file_bytes = read_file_from_url(
-    'https://streamlit.io/media/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg')
+    "https://streamlit.io/media/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg"
+)
 
-st.audio(file_bytes, format='audio/ogg')
+st.audio(file_bytes, format="audio/ogg")
 
-st.write('''
+st.write(
+    """
     #### Audio credit:
 
     Performer: _Muriel Nguyen Xuan_ and _Stéphane Magnenat_
@@ -23,4 +27,5 @@ st.write('''
     URL:
     https://upload.wikimedia.org/wikipedia/commons/c/c4/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg
 
-''')
+"""
+)

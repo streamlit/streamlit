@@ -24,8 +24,8 @@ x3 = np.random.randn(200) + 2
 
 # Group data together
 hist_data = [x1, x2, x3]
-group_labels = ['Group 1', 'Group 2', 'Group 3']
-bin_size = [.1, .25, .5]
+group_labels = ["Group 1", "Group 2", "Group 3"]
+bin_size = [0.1, 0.25, 0.5]
 
 # Create distribution plot with custom bin_size
 chart = figure_factory.create_distplot(hist_data, group_labels, bin_size)

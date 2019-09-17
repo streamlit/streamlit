@@ -15,7 +15,5 @@
 
 import streamlit as st
 
-data = {
-    'foo': 'bar'
-}
+data = {"foo": "bar"}
 st.json(data)

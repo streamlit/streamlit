@@ -45,7 +45,7 @@ def _create_widget(id, states):
 class ScriptRunnerTest(unittest.TestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
-        scriptrunner = TestScriptRunner('good_script.py')
+        scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.start()
         scriptrunner.join()
 
@@ -55,71 +55,83 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_run_script(self):
         """Tests that we can run a script to completion."""
-        scriptrunner = TestScriptRunner('good_script.py')
+        scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
-        self._assert_text_deltas(scriptrunner, ['complete!'])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, ["complete!"])
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
-        scriptrunner = TestScriptRunner('compile_error.py')
+        scriptrunner = TestScriptRunner("compile_error.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
         self._assert_text_deltas(scriptrunner, [])
 
     def test_missing_script(self):
         """Tests that we get an exception event when a script doesn't exist."""
-        scriptrunner = TestScriptRunner('i_do_not_exist.py')
+        scriptrunner = TestScriptRunner("i_do_not_exist.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
         self._assert_text_deltas(scriptrunner, [])
 
     def test_runtime_error(self):
         """Tests that we correctly handle scripts with runtime errors."""
-        scriptrunner = TestScriptRunner('runtime_error.py')
+        scriptrunner = TestScriptRunner("runtime_error.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
 
         # We'll get two deltas: one for st.empty(), and one for the exception
         # that gets thrown afterwards.
-        self._assert_text_deltas(scriptrunner, ['first'])
+        self._assert_text_deltas(scriptrunner, ["first"])
         self._assert_num_deltas(scriptrunner, 2)
 
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
-        scriptrunner = TestScriptRunner('infinite_loop.py')
+        scriptrunner = TestScriptRunner("infinite_loop.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
 
@@ -130,18 +142,21 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
-        self._assert_text_deltas(scriptrunner, ['loop_forever'])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
     def test_shutdown(self):
         """Test that we can shutdown while a script is running."""
-        scriptrunner = TestScriptRunner('infinite_loop.py')
+        scriptrunner = TestScriptRunner("infinite_loop.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
 
@@ -150,45 +165,48 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
-        self._assert_text_deltas(scriptrunner, ['loop_forever'])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
     def test_widgets(self):
         """Tests that widget values behave as expected."""
-        scriptrunner = TestScriptRunner('widgets_script.py')
+        scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
 
         # Default widget values
         time.sleep(0.1)
         self._assert_text_deltas(
-            scriptrunner,
-            ['False', 'ahoy!', '0', 'False', 'loop_forever'])
+            scriptrunner, ["False", "ahoy!", "0", "False", "loop_forever"]
+        )
 
         # Update widgets
         states = WidgetStates()
-        _create_widget('checkbox-checkbox', states).bool_value = True
-        _create_widget('text_area-text_area', states).string_value = 'matey!'
-        _create_widget('radio-radio', states).int_value = 2
-        _create_widget('button-button', states).trigger_value = True
+        _create_widget("checkbox-checkbox", states).bool_value = True
+        _create_widget("text_area-text_area", states).string_value = "matey!"
+        _create_widget("radio-radio", states).int_value = 2
+        _create_widget("button-button", states).trigger_value = True
 
         scriptrunner.enqueue_rerun(widget_state=states)
         time.sleep(0.1)
         self._assert_text_deltas(
-            scriptrunner,
-            ['True', 'matey!', '2', 'True', 'loop_forever'])
+            scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
+        )
 
         # Rerun with previous values. Our button should be reset;
         # everything else should be the same.
         scriptrunner.enqueue_rerun()
         time.sleep(0.1)
         self._assert_text_deltas(
-            scriptrunner,
-            ['True', 'matey!', '2', 'False', 'loop_forever'])
+            scriptrunner, ["True", "matey!", "2", "False", "loop_forever"]
+        )
 
         scriptrunner.enqueue_shutdown()
         scriptrunner.join()
@@ -197,7 +215,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
-        scriptrunner = TestScriptRunner('good_script.py')
+        scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.enqueue_rerun()
         scriptrunner.enqueue_rerun()
@@ -205,12 +223,15 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [
-            ScriptRunnerEvent.SCRIPT_STARTED,
-            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ScriptRunnerEvent.SHUTDOWN
-        ])
-        self._assert_text_deltas(scriptrunner, ['complete!'])
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, ["complete!"])
 
     def test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
@@ -219,11 +240,11 @@ class ScriptRunnerTest(unittest.TestCase):
         # its radio button.
         runners = []
         for ii in range(3):
-            runner = TestScriptRunner('widgets_script.py')
+            runner = TestScriptRunner("widgets_script.py")
             runners.append(runner)
 
             states = WidgetStates()
-            _create_widget('radio-radio', states).int_value = ii
+            _create_widget("radio-radio", states).int_value = ii
             runner.enqueue_rerun(widget_state=states)
 
         # Start the runners and wait a beat.
@@ -235,8 +256,8 @@ class ScriptRunnerTest(unittest.TestCase):
         # Ensure that each runner's radio value is as expected.
         for ii, runner in enumerate(runners):
             self._assert_text_deltas(
-                runner,
-                ['False', 'ahoy!', '%s' % ii, 'False', 'loop_forever'])
+                runner, ["False", "ahoy!", "%s" % ii, "False", "loop_forever"]
+            )
 
             runner.enqueue_shutdown()
 
@@ -248,11 +269,14 @@ class ScriptRunnerTest(unittest.TestCase):
 
         for runner in runners:
             self._assert_no_exceptions(runner)
-            self._assert_events(runner, [
-                ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                ScriptRunnerEvent.SHUTDOWN
-            ])
+            self._assert_events(
+                runner,
+                [
+                    ScriptRunnerEvent.SCRIPT_STARTED,
+                    ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                    ScriptRunnerEvent.SHUTDOWN,
+                ],
+            )
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
@@ -302,10 +326,10 @@ class ScriptRunnerTest(unittest.TestCase):
         self.assertEqual(
             text_deltas,
             [
-                delta.new_element.text.body for delta in scriptrunner.deltas()
-                if delta.HasField('new_element') and
-                   delta.new_element.HasField('text')
-            ]
+                delta.new_element.text.body
+                for delta in scriptrunner.deltas()
+                if delta.HasField("new_element") and delta.new_element.HasField("text")
+            ],
         )
 
 
@@ -323,21 +347,17 @@ class TestScriptRunner(ScriptRunner):
             return True
 
         self.main_dg = DeltaGenerator(enqueue_fn, container=BlockPath.MAIN)
-        self.sidebar_dg = DeltaGenerator(enqueue_fn,
-                                         container=BlockPath.SIDEBAR)
+        self.sidebar_dg = DeltaGenerator(enqueue_fn, container=BlockPath.SIDEBAR)
         self.script_request_queue = ScriptRequestQueue()
 
-        script_path = os.path.join(
-            os.path.dirname(__file__),
-            'test_data',
-            script_name)
+        script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, []),
             main_dg=self.main_dg,
             sidebar_dg=self.sidebar_dg,
             widget_states=WidgetStates(),
-            request_queue=self.script_request_queue
+            request_queue=self.script_request_queue,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
@@ -364,8 +384,8 @@ class TestScriptRunner(ScriptRunner):
 
     def enqueue_rerun(self, argv=None, widget_state=None):
         self.script_request_queue.enqueue(
-            ScriptRequest.RERUN,
-            RerunData(argv=argv, widget_state=widget_state))
+            ScriptRequest.RERUN, RerunData(argv=argv, widget_state=widget_state)
+        )
 
     def enqueue_stop(self):
         self.script_request_queue.enqueue(ScriptRequest.STOP)
@@ -386,5 +406,4 @@ class TestScriptRunner(ScriptRunner):
 
     def deltas(self):
         """Returns the delta messages in our ReportQueue"""
-        return [msg.delta for msg in self.report_queue._queue
-                if msg.HasField('delta')]
+        return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]

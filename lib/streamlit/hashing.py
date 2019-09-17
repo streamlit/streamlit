@@ -16,8 +16,7 @@
 """A hashing utility for code."""
 
 # Python 2/3 compatibility
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
 import dis
@@ -57,13 +56,12 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
-Context = namedtuple('Context', ['globals', 'cells', 'varnames'])
+Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
 
 def _is_magicmock(obj):
-    return (
-        util.is_type(obj, 'unittest.mock.MagicMock') or
-        util.is_type(obj, 'mock.mock.MagicMock')
+    return util.is_type(obj, "unittest.mock.MagicMock") or util.is_type(
+        obj, "mock.mock.MagicMock"
     )
 
 
@@ -76,50 +74,50 @@ def _get_context(func):
         cells[var] = var  # Instead of value, we use the name.
     if code.co_freevars:
         assert len(code.co_freevars) == len(func.__closure__)
-        cells.update(zip(
-            code.co_freevars,
-            map(lambda c: c.cell_contents, func.__closure__)
-        ))
+        cells.update(
+            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))
+        )
 
     varnames = {}
     if inspect.ismethod(func):
-        varnames = {'self': func.__self__}
+        varnames = {"self": func.__self__}
 
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
 def get_hash(f, context=None):
     """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher('md5')
+    hasher = CodeHasher("md5")
     hasher.update(f, context)
     return hasher.digest()
 
 
 def _int_to_bytes(i):
-    if hasattr(i, 'to_bytes'):
+    if hasattr(i, "to_bytes"):
         num_bytes = (i.bit_length() + 8) // 8
-        return i.to_bytes(num_bytes, 'little', signed=True)
+        return i.to_bytes(num_bytes, "little", signed=True)
     else:
         # For Python 2
-        return b'int:' + str(i).encode()
+        return b"int:" + str(i).encode()
 
 
 def _key(obj, context):
     """Return key for memoization."""
 
     if obj is None:
-        return b'none:'  # special value so we can hash None
+        return b"none:"  # special value so we can hash None
 
     def is_simple(obj):
         return (
-            isinstance(obj, bytes) or
-            isinstance(obj, bytearray) or
-            isinstance(obj, bytes) or
-            isinstance(obj, string_types) or
-            isinstance(obj, float) or
-            isinstance(obj, int) or
-            isinstance(obj, bool) or
-            obj is None)
+            isinstance(obj, bytes)
+            or isinstance(obj, bytearray)
+            or isinstance(obj, bytes)
+            or isinstance(obj, string_types)
+            or isinstance(obj, float)
+            or isinstance(obj, int)
+            or isinstance(obj, bool)
+            or obj is None
+        )
 
     if is_simple(obj):
         return obj
@@ -130,20 +128,35 @@ def _key(obj, context):
 
     if isinstance(obj, list):
         if all(map(is_simple, obj)):
-            return ('__l', tuple(obj))
+            return ("__l", tuple(obj))
 
-    if (util.is_type(obj, 'pandas.core.frame.DataFrame')
-            or util.is_type(obj, 'numpy.ndarray') or inspect.isbuiltin(obj) or
-            inspect.isroutine(obj) or inspect.iscode(obj)):
+    if (
+        util.is_type(obj, "pandas.core.frame.DataFrame")
+        or util.is_type(obj, "numpy.ndarray")
+        or inspect.isbuiltin(obj)
+        or inspect.isroutine(obj)
+        or inspect.iscode(obj)
+    ):
         return id(obj)
 
     return None
 
 
-class CodeHasher():
+def _hashing_error_message(start):
+    return (
+        start,
+        "\n\n**More information:** to prevent unexpected behavior, Streamlit tries to detect mutations in cached objects so it can alert the user if needed. However, something went wrong while performing this check.\n\n"
+        "Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).\n\n"
+        "To stop this warning from showing in the meantime, try one of the following:\n"
+        "* **Preferred:** modify your code to avoid using this type of object.\n"
+        "* Or add the argument `ignore_cache=True` to the `st.cache` decorator.",
+    )
+
+
+class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name='md5', hasher=None):
+    def __init__(self, name="md5", hasher=None):
         self.hashes = dict()
 
         self.name = name
@@ -200,118 +213,138 @@ class CodeHasher():
         Python's built in `hash` does not produce consistent results across
         runs."""
 
-        if _is_magicmock(obj):
-            # MagicMock can result in objects that appear to be infinitely
-            # deep, so we don't try to hash them at all.
-            return self.to_bytes(id(obj))
-        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
-            return obj
-        elif isinstance(obj, string_types):
-            return obj.encode()
-        elif isinstance(obj, float):
-            return self.to_bytes(hash(obj))
-        elif isinstance(obj, int):
-            return _int_to_bytes(obj)
-        elif isinstance(obj, list) or isinstance(obj, tuple):
-            h = hashlib.new(self.name)
-            # add type to distingush x from [x]
-            self._update(h, type(obj).__name__.encode() + b':')
-            for e in obj:
-                self._update(h, e, context)
-            return h.digest()
-        elif obj is None:
-            # Special string since hashes change between sessions.
-            # We don't use Python's `hash` since hashes are not consistent
-            # across runs.
-            return b'none:'
-        elif obj is True:
-            return b'bool:1'
-        elif obj is False:
-            return b'bool:0'
-        elif util.is_type(obj, 'pandas.core.frame.DataFrame'):
-            import pandas as pd
-            if len(obj) >= PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
-            return pd.util.hash_pandas_object(obj).sum()
-        elif util.is_type(obj, 'numpy.ndarray'):
-            h = hashlib.new(self.name)
-            self._update(h, obj.shape)
-            
-            if obj.size >= NP_SIZE_LARGE:
-                import numpy as np
-                state = np.random.RandomState(0)
-                obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
+        try:
+            if _is_magicmock(obj):
+                # MagicMock can result in objects that appear to be infinitely
+                # deep, so we don't try to hash them at all.
+                return self.to_bytes(id(obj))
+            elif isinstance(obj, bytes) or isinstance(obj, bytearray):
+                return obj
+            elif isinstance(obj, string_types):
+                return obj.encode()
+            elif isinstance(obj, float):
+                return self.to_bytes(hash(obj))
+            elif isinstance(obj, int):
+                return _int_to_bytes(obj)
+            elif isinstance(obj, list) or isinstance(obj, tuple):
+                h = hashlib.new(self.name)
+                # add type to distingush x from [x]
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj:
+                    self._update(h, e, context)
+                return h.digest()
+            elif obj is None:
+                # Special string since hashes change between sessions.
+                # We don't use Python's `hash` since hashes are not consistent
+                # across runs.
+                return b"none:"
+            elif obj is True:
+                return b"bool:1"
+            elif obj is False:
+                return b"bool:0"
+            elif util.is_type(obj, "pandas.core.frame.DataFrame") or util.is_type(
+                obj, "pandas.core.series.Series"
+            ):
+                import pandas as pd
 
-            self._update(h, obj.tobytes())
-            return h.digest()
-        elif inspect.isbuiltin(obj):
-            return self.to_bytes(obj.__name__)
-        elif hasattr(obj, 'name') and (
-                isinstance(obj, io.IOBase) or os.path.exists(obj.name)):
-            # Hash files as name + last modification date + offset.
-            h = hashlib.new(self.name)
-            self._update(h, obj.name)
-            self._update(h, os.path.getmtime(obj.name))
-            self._update(h, obj.tell())
-            return h.digest()
-        elif inspect.isroutine(obj):
-            if hasattr(obj, '__wrapped__'):
-                # Ignore the wrapper of wrapped functions.
-                return self.to_bytes(obj.__wrapped__)
+                if len(obj) >= PANDAS_ROWS_LARGE:
+                    obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
+                try:
+                    return pd.util.hash_pandas_object(obj).sum()
+                except TypeError:
+                    # Use pickle if pandas cannot hash the object for example if
+                    # it contains unhashable objects.
+                    return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+            elif util.is_type(obj, "numpy.ndarray"):
+                h = hashlib.new(self.name)
+                self._update(h, obj.shape)
 
-            if obj.__module__.startswith('streamlit'):
-                # Ignore streamlit modules even if they are in the CWD
-                # (e.g. during development).
-                return self.to_bytes('%s.%s' % (obj.__module__, obj.__name__))
+                if obj.size >= NP_SIZE_LARGE:
+                    import numpy as np
 
-            h = hashlib.new(self.name)
-            # TODO: This may be too restrictive for libraries in development.
-            if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
-                context = _get_context(obj)
-                if obj.__defaults__:
-                    self._update(h, obj.__defaults__, context)
-                h.update(self._code_to_bytes(obj.__code__, context))
-            else:
-                # Don't hash code that is not in the current working directory.
-                self._update(h, obj.__module__)
-                self._update(h, obj.__name__)
-            return h.digest()
-        elif inspect.iscode(obj):
-            return self._code_to_bytes(obj, context)
-        elif inspect.ismodule(obj):
-            # TODO: Figure out how to best show this kind of warning to the
-            # user. In the meantime, show nothing. This scenario is too common,
-            # so the current warning is quite annoying...
-            # st.warning(('Streamlit does not support hashing modules. '
-            #             'We did not hash `%s`.') % obj.__name__)
-            # TODO: Hash more than just the name for internal modules.
-            return self.to_bytes(obj.__name__)
-        elif inspect.isclass(obj):
-            # TODO: Figure out how to best show this kind of warning to the
-            # user. In the meantime, show nothing. This scenario is too common,
-            # (e.g. in every "except" statement) so the current warning is
-            # quite annoying...
-            # st.warning(('Streamlit does not support hashing classes. '
-            #             'We did not hash `%s`.') % obj.__name__)
-            # TODO: Hash more than just the name of classes.
-            return self.to_bytes(obj.__name__)
-        elif isinstance(obj, functools.partial):
-            # The return value of functools.partial is not a plain function:
-            # it's a callable object that remembers the original function plus
-            # the values you pickled into it. So here we need to special-case it.
-            h = hashlib.new(self.name)
-            self._update(h, obj.args)
-            self._update(h, obj.func)
-            self._update(h, obj.keywords)
-            return h.digest()
-        else:
-            try:
-                # As a last resort, we pickle the object to hash it.
-                return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-            except Exception:
+                    state = np.random.RandomState(0)
+                    obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
+
+                self._update(h, obj.tobytes())
+                return h.digest()
+            elif inspect.isbuiltin(obj):
+                return self.to_bytes(obj.__name__)
+            elif hasattr(obj, "name") and (
+                isinstance(obj, io.IOBase)
+                or (isinstance(obj.name, string_types) and os.path.exists(obj.name))
+            ):
+                # Hash files as name + last modification date + offset.
+                h = hashlib.new(self.name)
+                self._update(h, obj.name)
+                self._update(h, os.path.getmtime(obj.name))
+                self._update(h, obj.tell())
+                return h.digest()
+            elif inspect.isroutine(obj):
+                if hasattr(obj, "__wrapped__"):
+                    # Ignore the wrapper of wrapped functions.
+                    return self.to_bytes(obj.__wrapped__)
+
+                if obj.__module__.startswith("streamlit"):
+                    # Ignore streamlit modules even if they are in the CWD
+                    # (e.g. during development).
+                    return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
+
+                h = hashlib.new(self.name)
+                # TODO: This may be too restrictive for libraries in development.
+                if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
+                    context = _get_context(obj)
+                    if obj.__defaults__:
+                        self._update(h, obj.__defaults__, context)
+                    h.update(self._code_to_bytes(obj.__code__, context))
+                else:
+                    # Don't hash code that is not in the current working directory.
+                    self._update(h, obj.__module__)
+                    self._update(h, obj.__name__)
+                return h.digest()
+            elif inspect.iscode(obj):
+                return self._code_to_bytes(obj, context)
+            elif inspect.ismodule(obj):
                 # TODO: Figure out how to best show this kind of warning to the
-                # user.
-                st.warning('Streamlit cannot hash an object of type %s.' % type(obj))
+                # user. In the meantime, show nothing. This scenario is too common,
+                # so the current warning is quite annoying...
+                # st.warning(('Streamlit does not support hashing modules. '
+                #             'We did not hash `%s`.') % obj.__name__)
+                # TODO: Hash more than just the name for internal modules.
+                return self.to_bytes(obj.__name__)
+            elif inspect.isclass(obj):
+                # TODO: Figure out how to best show this kind of warning to the
+                # user. In the meantime, show nothing. This scenario is too common,
+                # (e.g. in every "except" statement) so the current warning is
+                # quite annoying...
+                # st.warning(('Streamlit does not support hashing classes. '
+                #             'We did not hash `%s`.') % obj.__name__)
+                # TODO: Hash more than just the name of classes.
+                return self.to_bytes(obj.__name__)
+            elif isinstance(obj, functools.partial):
+                # The return value of functools.partial is not a plain function:
+                # it's a callable object that remembers the original function plus
+                # the values you pickled into it. So here we need to special-case it.
+                h = hashlib.new(self.name)
+                self._update(h, obj.args)
+                self._update(h, obj.func)
+                self._update(h, obj.keywords)
+                return h.digest()
+            else:
+                try:
+                    # As a last resort, we pickle the object to hash it.
+                    return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                except:
+                    st.warning(
+                        _hashing_error_message(
+                            "Streamlit cannot hash an object of type %s." % type(obj)
+                        )
+                    )
+        except:
+            st.warning(
+                _hashing_error_message(
+                    "Streamlit failed to hash an object of type %s." % type(obj)
+                )
+            )
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
@@ -320,12 +353,15 @@ class CodeHasher():
         self._update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
-        consts = [n for n in code.co_consts if
-                  not isinstance(n, string_types) or not n.endswith('.<lambda>')]
+        consts = [
+            n
+            for n in code.co_consts
+            if not isinstance(n, string_types) or not n.endswith(".<lambda>")
+        ]
         self._update(h, consts, context)
 
         # Hash non-local names and functions referenced by the bytecode.
-        if hasattr(dis, 'get_instructions'):  # get_instructions is new since Python 3.4
+        if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):
                 self._update(h, ref, context)
         else:

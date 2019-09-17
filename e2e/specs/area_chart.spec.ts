@@ -19,12 +19,12 @@
 
 describe("st.area_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays an area chart", () => {
     cy.get(".element-container .stChart")
       .find("svg")
-      .should("have.attr", "height", "200")
-  })
-})
+      .should("have.attr", "height", "200");
+  });
+});

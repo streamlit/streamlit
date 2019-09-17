@@ -19,9 +19,10 @@ import pandas as pd
 import time
 import random
 
-st.title('Empty charts')
+st.title("Empty charts")
 
-st.write('''
+st.write(
+    """
     This file tests what happens when you pass an empty dataframe or `None` into
     a chart.
 
@@ -29,28 +30,26 @@ st.write('''
     for the latter is because some chart types derive their configuration from
     the dataframe you pass in at the start. So when there's no dataframe we
     cannot detect that configuration.
-''')
+"""
+)
 
-data = pd.DataFrame({
-    'a': [1, 2, 3, 4],
-    'b': [1, 3, 2, 4],
-})
+data = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]})
 
 spec = {
-    'mark': 'line',
-    'encoding': {
-        'x': {'field': 'a', 'type': 'quantitative'},
-        'y': {'field': 'b', 'type': 'quantitative'},
+    "mark": "line",
+    "encoding": {
+        "x": {"field": "a", "type": "quantitative"},
+        "y": {"field": "b", "type": "quantitative"},
     },
 }
 
-st.subheader('Here are 2 empty charts')
+st.subheader("Here are 2 empty charts")
 st.vega_lite_chart(spec)
-st.write('Below is an empty pyplot chart (i.e. just a blank image)')
+st.write("Below is an empty pyplot chart (i.e. just a blank image)")
 st.pyplot()
-st.write('...and that was it.')
+st.write("...and that was it.")
 
-st.subheader('Here are 2 filled charts')
+st.subheader("Here are 2 filled charts")
 x = st.vega_lite_chart(spec)
 x.vega_lite_chart(data, spec)
 
@@ -58,7 +57,7 @@ x = st.vega_lite_chart(spec)
 time.sleep(0.2)  # Sleep a little so the add_rows gets sent separately.
 x.add_rows(data)
 
-st.subheader('Here is 1 empty map')
+st.subheader("Here is 1 empty map")
 st.deck_gl_chart()
 
 # TODO: Implement add_rows on DeckGL
