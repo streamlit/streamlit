@@ -169,6 +169,7 @@ def _main_run(file, args=None):
     # script can handle them via sys.argv or whatever.
     # IMPORTANT: This means we should treat argv carefully inside our code!
     import sys
+
     sys.argv = [file] + list(args)
 
     bootstrap.run(file)
