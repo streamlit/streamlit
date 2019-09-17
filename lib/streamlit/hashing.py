@@ -230,6 +230,9 @@ class CodeHasher:
             return b"bool:1"
         elif obj is False:
             return b"bool:0"
+        elif util.is_type(obj, "pandas.core.frame.Series"):
+            import pandas as pd
+            return pd.util.hash_pandas_object(obj).sum()
         elif util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
 
