@@ -146,11 +146,11 @@ def _widget(f):
         ctx = get_report_ctx()
         # The widget ID is the widget type (i.e. the name "foo" of the
         # st.foo function for the widget) followed by the label, and
-        # the hash of default values (args and kwargs).
+        # the hashes of default values (args and kwargs).
         # This allows widgets of different types to have the same label,
         # and solves a bug where changing the widget type but keeping
         # the label could break things.
-        # The hash part allows to use React keys to reset widget state
+        # Hash parts allow us to use React keys to reset widget state
         # when default values change.
         widget_id = '%s-%s-%s-%s' % (
             f.__name__,
