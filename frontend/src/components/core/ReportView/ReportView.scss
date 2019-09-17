@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
+@import "src/assets/css/variables";
 
 .reportview-container {
   display: flex;
@@ -37,7 +37,7 @@
     .main {
       margin-left: 275px;
 
-      @media (max-width: 756px) {
+      @media (max-width: 746px) {
         margin-left: 0;
       }
     }
@@ -54,7 +54,7 @@
       max-width: $content-max-width;
       width: 100%;
 
-      @media (max-width: 756px) {
+      @media (max-width: 746px) {
         min-width: 0;
       }
     }
@@ -95,7 +95,7 @@
       font-size: 0.8rem;
     }
 
-    @media (max-width: 756px) {
+    @media (max-width: 746px) {
       & {
         background: $white;
         transform: translateX(-240px);
@@ -125,7 +125,9 @@
     transition: opacity 1s ease-in 0.5s;
   }
 
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
     margin: 1.5rem 0 0.5rem 0;
@@ -136,17 +138,23 @@
     line-height: 1;
   }
 
-  h4, h5, h6 {
+  h4,
+  h5,
+  h6 {
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
     line-height: 1;
   }
 
-  h1:first-child, h2:first-child, h3:first-child {
+  h1:first-child,
+  h2:first-child,
+  h3:first-child {
     margin-top: 0.5rem;
   }
 
-  h4:first-child, h5:first-child, h6:first-child {
+  h4:first-child,
+  h5:first-child,
+  h6:first-child {
     margin-top: 0;
   }
 
