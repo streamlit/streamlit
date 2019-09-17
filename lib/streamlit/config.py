@@ -247,16 +247,17 @@ _create_option(
 
 _create_option(
     'global.minCachedMessageSize',
-    description='Only cache ForwardMsgs that are >= this minimum.',
+    description='''Only cache ForwardMsgs that are greater than or equal to 
+        this minimum.''',
     visibility='hidden',
     default_val=10 * 1e3)  # 10k
 
 
 _create_option(
     'global.maxCachedMessageAge',
-    description='''Expire cached ForwardMsgs whose age is > this value.
-        A message's age is defined by how many times its report has finished
-        running since the message has been accessed.''',
+    description='''Expire cached ForwardMsgs whose age is greater than this 
+        value. A message's age is defined by how many times its report has 
+        finished running since the message has been accessed.''',
     visibility='hidden',
     default_val=2)
 
