@@ -17,7 +17,7 @@
 
 from streamlit import config
 from streamlit import util
-from streamlit.MessageCache import populate_hash_if_needed
+from streamlit.ForwardMsgCache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)

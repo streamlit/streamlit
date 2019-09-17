@@ -19,11 +19,25 @@ import {ForwardMsg, ForwardMsgMetadata} from 'autogen/proto'
 import {logMessage} from 'lib/log'
 import {BaseUriParts, buildHttpUri} from 'lib/UriUtil'
 
+class CacheEntry {
+  public readonly msg: ForwardMsg
+  public reportRunCount: number = 0
+
+  public getAge(curReportRunCount: number): number {
+    return curReportRunCount - this.reportRunCount
+  }
+
+  public constructor(msg: ForwardMsg, reportRunCount: number) {
+    this.msg = msg
+    this.reportRunCount = reportRunCount
+  }
+}
+
 /**
  * Handles ForwardMsg caching for WebsocketConnection.
  */
 export class ForwardMsgCache {
-  private readonly messages = new Map<string, ForwardMsg>()
+  private readonly messages = new Map<string, CacheEntry>()
 
   /**
    * A function that returns our server's base URI, or undefined
@@ -31,8 +45,37 @@ export class ForwardMsgCache {
    */
   private readonly getServerUri: () => BaseUriParts | undefined;
 
+  /**
+   * A counter that tracks the number of times the underyling report
+   * has been run. We use this to expire our cache entries.
+   */
+  private reportRunCount: number = 0
+
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
+  }
+
+  /**
+   * Increment our reportRunCount, and remove all entries from the cache
+   * that have expired. This should be called after the report has finished
+   * running.
+   *
+   * @param maxMessageAge Max age of a message in the cache.
+   * The "age" of a message is defined by how many times the underyling report
+   * has finished running (without a compile error) since the message was
+   * last accessed.
+   */
+  public incrementRunCount(maxMessageAge: number): void {
+    this.reportRunCount += 1
+
+    // It is safe to delete from a map during forEach iteration:
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/forEach#Description
+    this.messages.forEach((entry, hash) => {
+      if (entry.getAge(this.reportRunCount) > maxMessageAge) {
+        logMessage(`Removing expired ForwardMsg [hash=${hash}]`)
+        this.messages.delete(hash)
+      }
+    })
   }
 
   /**
@@ -53,7 +96,7 @@ export class ForwardMsgCache {
       return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.refHash)
+    let newMsg = this.getCachedMessage(msg.refHash, true)
     if (newMsg != null) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
@@ -111,22 +154,41 @@ export class ForwardMsgCache {
       return
     }
 
-    if (!msg.metadata.cacheable || this.messages.has(msg.hash)) {
-      // Don't cache messages that the server hasn't marked as
-      // cacheable, or that we've already cached.
+    if (!msg.metadata.cacheable) {
+      // Don't cache messages that the server hasn't marked as cacheable.
+      return
+    }
+
+    if (this.getCachedMessage(msg.hash, true) !== undefined) {
+      // We've already cached this message; don't need to do
+      // anything more. (Using getCachedMessage() here ensures
+      // that the message's reportRunCount value gets updated as
+      // expected.)
       return
     }
 
     logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
-    this.messages.set(msg.hash, ForwardMsg.create(msg))
+    this.messages.set(
+      msg.hash,
+      new CacheEntry(ForwardMsg.create(msg), this.reportRunCount))
   }
 
   /**
    * Return a new copy of the ForwardMsg with the given hash
    * from the cache, or undefined if no such message exists.
+   *
+   * If the message's entry exists, its reportRunCount will be
+   * updated to the current value.
    */
-  private getCachedMessage(hash: string): ForwardMsg | undefined {
+  private getCachedMessage(hash: string, updateReportRunCount: boolean): ForwardMsg | undefined {
     const cached = this.messages.get(hash)
-    return cached != null ? ForwardMsg.create(cached) : undefined
+    if (cached == null) {
+      return undefined
+    }
+
+    if (updateReportRunCount) {
+      cached.reportRunCount = this.reportRunCount
+    }
+    return ForwardMsg.create(cached.msg)
   }
 }

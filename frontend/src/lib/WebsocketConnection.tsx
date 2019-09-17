@@ -125,6 +125,11 @@ type Event =
  */
 export class WebsocketConnection {
   private readonly args: Args;
+
+  /**
+   * ForwardMessages get passed through this cache. This gets initialized
+   * once we connect to the server.
+   */
   private readonly cache: ForwardMsgCache;
 
   /**
@@ -167,8 +172,8 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number;
 
-  public constructor(args: Args) {
-    this.args = args
+  public constructor(props: Args) {
+    this.args = props
     this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm('INITIALIZED')
   }
@@ -388,6 +393,14 @@ export class WebsocketConnection {
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
     this.websocket.send(buffer)
+  }
+
+  /**
+   * Called when our report has finished running. Calls through
+   * to the ForwardMsgCache, to handle cached entry expiry.
+   */
+  public incrementMessageCacheRunCount(maxMessageAge: number): void {
+    this.cache.incrementRunCount(maxMessageAge)
   }
 
   private async handleMessage(data: any): Promise<void> {

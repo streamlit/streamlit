@@ -32,13 +32,22 @@ message ForwardMsg {
   // of ForwardMsg de-duping.
   ForwardMsgMetadata metadata = 2;
 
+  // Values for the 'report_finished` type
+  enum ReportFinishedStatus {
+    // The report compiled and ran.
+    FINISHED_SUCCESSFULLY = 0;
+
+    // The report failed to compile
+    FINISHED_WITH_COMPILE_ERROR = 1;
+  }
+
   oneof type {
     // Report lifecycle messages.
 
     Initialize initialize = 3;
     NewReport new_report = 4;
     Delta delta = 5;
-    bool report_finished = 6;
+    ReportFinishedStatus report_finished = 6;
 
     // Upload progress messages.
 

@@ -33,6 +33,7 @@ import { ConnectionState } from 'lib/ConnectionState'
 import { ReportRunState } from 'lib/ReportRunState'
 import { SessionEventDispatcher } from 'lib/SessionEventDispatcher'
 import { applyDelta } from 'lib/DeltaParser'
+import {ForwardMsg} from 'autogen/proto'
 
 import { RERUN_PROMPT_MODAL_DIALOG } from 'lib/baseconsts'
 import { SessionInfo } from 'lib/SessionInfo'
@@ -175,8 +176,9 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
-        reportFinished: () => this.handleReportFinished(),
-        uploadReportProgress: progress => this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
+        reportFinished: status => this.handleReportFinished(status),
+        uploadReportProgress: progress =>
+          this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url => this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
@@ -194,6 +196,7 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
+      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
     })
 
     MetricsManager.current.initialize({
@@ -311,18 +314,25 @@ class App extends PureComponent {
 
   /**
    * Handler for ForwardMsg.reportFinished messages
+   * @param status the ReportFinishedStatus that the report finished with
    */
-  handleReportFinished() {
-    // When a script finishes running, we clear any stale elements left over
-    // from its previous run - unless our script had a fatal error during
-    // execution.
-    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+  handleReportFinished(status) {
+    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
       this.setState(({ elements, reportId }) => ({
         elements: {
           main: this.clearOldElements(elements.main, reportId),
           sidebar: this.clearOldElements(elements.sidebar, reportId),
         },
       }))
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      this.connectionManager.incrementMessageCacheRunCount(
+        SessionInfo.current.maxCachedMessageAge)
     }
   }
 
