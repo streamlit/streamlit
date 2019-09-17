@@ -117,8 +117,13 @@ class ForwardMsgCache(object):
 
             """
             prev_run_count = self._session_report_run_counts.get(session, 0)
-            run_count = max(prev_run_count, report_run_count)
-            self._session_report_run_counts[session] = run_count
+            if report_run_count < prev_run_count:
+                LOGGER.error(
+                    'New report_run_count (%s) is < prev_run_count (%s). '
+                    'This should never happen!' %
+                    (report_run_count, prev_run_count))
+                report_run_count = prev_run_count
+            self._session_report_run_counts[session] = report_run_count
 
         def has_session_ref(self, session):
             return session in self._session_report_run_counts
