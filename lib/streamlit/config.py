@@ -24,11 +24,11 @@ setup_2_3_shims(globals())
 import os
 import platform
 import toml
-import urllib
 import collections
 
 import click
 from blinker import Signal
+import requests
 
 from streamlit import development
 from streamlit import util
@@ -37,6 +37,8 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+STREAMLIT_CREDENTIALS_URL = "https://streamlit.io/tmp/st_pub_write.json"
 
 
 # Config System Global State #
@@ -521,13 +523,9 @@ _create_option(
 # server is up.
 @util.memoize
 def _get_public_credentials():
-    STREAMLIT_CREDENTIALS_URL = "https://streamlit.io/tmp/st_pub_write.json"
     LOGGER.debug("Getting remote Streamlit credentials.")
     try:
-        response = urllib.request.urlopen(STREAMLIT_CREDENTIALS_URL, timeout=0.5).read()
-        import ast
-
-        return ast.literal_eval(response.decode("utf-8"))
+        return requests.get(STREAMLIT_CREDENTIALS_URL, timeout=0.5).json()
     except Exception as e:
         LOGGER.warning(
             "Error getting Streamlit credentials. Sharing will be " "disabled. %s", e
