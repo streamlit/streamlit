@@ -60,6 +60,8 @@ interface Props {
 
   // Wide mode
   wide: boolean
+
+  mode: "regular" | "wide" | "embedded"
 }
 
 /**
@@ -69,8 +71,20 @@ class ReportView extends PureComponent<Props> {
   private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
 
   public render = (): ReactNode => {
+    const {
+      mode,
+      elements,
+      reportId,
+      reportRunState,
+      showStaleElementIndicator,
+      widgetMgr,
+      widgetsDisabled,
+    } = this.props
+
     const reportViewClassName = classNames("reportview-container", {
-      "--wide": this.props.wide,
+      "--wide": mode === "wide",
+      "--regular": mode === "regular",
+      "--embedded": mode === "embedded",
       "--with-sidebar": this.hasSidebar(),
     })
 
@@ -81,14 +95,12 @@ class ReportView extends PureComponent<Props> {
             <section className="sidebar">
               <div className="block-container">
                 <Block
-                  elements={this.props.elements.sidebar}
-                  reportId={this.props.reportId}
-                  reportRunState={this.props.reportRunState}
-                  showStaleElementIndicator={
-                    this.props.showStaleElementIndicator
-                  }
-                  widgetMgr={this.props.widgetMgr}
-                  widgetsDisabled={this.props.widgetsDisabled}
+                  elements={elements.sidebar}
+                  reportId={reportId}
+                  reportRunState={reportRunState}
+                  showStaleElementIndicator={showStaleElementIndicator}
+                  widgetMgr={widgetMgr}
+                  widgetsDisabled={widgetsDisabled}
                 />
               </div>
             </section>
@@ -96,14 +108,12 @@ class ReportView extends PureComponent<Props> {
           <section className="main">
             <div className="block-container">
               <Block
-                elements={this.props.elements.main}
-                reportId={this.props.reportId}
-                reportRunState={this.props.reportRunState}
-                showStaleElementIndicator={
-                  this.props.showStaleElementIndicator
-                }
-                widgetMgr={this.props.widgetMgr}
-                widgetsDisabled={this.props.widgetsDisabled}
+                elements={elements.main}
+                reportId={reportId}
+                reportRunState={reportRunState}
+                showStaleElementIndicator={showStaleElementIndicator}
+                widgetMgr={widgetMgr}
+                widgetsDisabled={widgetsDisabled}
               />
             </div>
           </section>

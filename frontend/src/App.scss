@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
-
+@import "src/assets/css/variables";
 
 body.embedded {
   overflow: hidden;
@@ -42,9 +41,15 @@ iframe {
   margin: 0;
 }
 
-
 .streamlit-container {
-  &.streamlit-container {
+  &.streamlit-embedded {
+    width: unset;
+    max-width: unset;
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+
+  &.streamlit-regular {
     margin: 80px auto;
   }
 
@@ -53,13 +58,6 @@ iframe {
     width: unset;
     max-width: unset;
   }
-}
-
-.streamlit-embedded .streamlit-container {
-  width: unset;
-  max-width: unset;
-  padding-left: 0px;
-  padding-right: 0px;
 }
 
 code {
