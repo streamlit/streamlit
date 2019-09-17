@@ -204,14 +204,14 @@ class Block extends PureComponent<Props> {
       video: (el: SimpleElement) => <Video element={el} width={width} />,
       // Widgets
       button: (el: SimpleElement) => <Button element={el} width={width} {...widgetProps} />,
-      checkbox: (el: SimpleElement) => <Checkbox element={el} width={width} {...widgetProps} />,
-      dateInput: (el: SimpleElement) => <DateInput element={el} width={width} {...widgetProps} />,
-      radio: (el: SimpleElement) => <Radio element={el} width={width} {...widgetProps} />,
-      selectbox: (el: SimpleElement) => <Selectbox element={el} width={width} {...widgetProps} />,
-      slider: (el: SimpleElement) => <Slider element={el} width={width} {...widgetProps} />,
-      textArea: (el: SimpleElement) => <TextArea element={el} width={width} {...widgetProps} />,
+      checkbox: (el: SimpleElement) => <Checkbox key={el.get('id')} element={el} width={width} {...widgetProps} />,
+      dateInput: (el: SimpleElement) => <DateInput key={el.get('id')} element={el} width={width} {...widgetProps} />,
+      radio: (el: SimpleElement) => <Radio key={el.get('id')} element={el} width={width} {...widgetProps} />,
+      selectbox: (el: SimpleElement) => <Selectbox key={el.get('id')} element={el} width={width} {...widgetProps} />,
+      slider: (el: SimpleElement) => <Slider key={el.get('id')} element={el} width={width} {...widgetProps} />,
+      textArea: (el: SimpleElement) => <TextArea key={el.get('id')} element={el} width={width} {...widgetProps} />,
       textInput: (el: SimpleElement) => <TextInput key={el.get('id')} element={el} width={width} {...widgetProps} />,
-      timeInput: (el: SimpleElement) => <TimeInput element={el} width={width} {...widgetProps} />,
+      timeInput: (el: SimpleElement) => <TimeInput key={el.get('id')} element={el} width={width} {...widgetProps} />,
     })
   }
 

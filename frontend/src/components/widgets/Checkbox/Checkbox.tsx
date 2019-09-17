@@ -41,13 +41,8 @@ class Checkbox extends React.PureComponent<Props, State> {
     value: this.props.element.get('default'),
   }
 
-  public componentDidUpdate = (prevProps: Props): void => {
-    // Reset the widget state when the default value changes
-    const oldDefaultValue: boolean = prevProps.element.get('default')
-    const newDefaultValue: boolean = this.props.element.get('default')
-    if (oldDefaultValue !== newDefaultValue) {
-      this.setState({ value: newDefaultValue }, this.setWidgetValue)
-    }
+  public componentDidMount(): void {
+    this.setWidgetValue()
   }
 
   private setWidgetValue = (): void => {

@@ -46,7 +46,7 @@ class TextInput extends React.PureComponent<Props, State> {
     value: this.props.element.get('default'),
   }
 
-  public componentDidMount() {
+  public componentDidMount(): void {
     this.setWidgetValue()
   }
 

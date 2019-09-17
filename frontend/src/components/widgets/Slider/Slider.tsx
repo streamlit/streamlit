@@ -17,7 +17,7 @@
 
 import React from 'react'
 import { Slider as UISlider } from 'baseui/slider'
-import { Map as ImmutableMap, List } from 'immutable'
+import { Map as ImmutableMap } from 'immutable'
 import { WidgetStateManager } from 'lib/WidgetStateManager'
 import { sliderOverrides } from 'lib/widgetTheme'
 import { debounce } from 'lib/utils'
@@ -49,25 +49,17 @@ class Slider extends React.PureComponent<Props, State> {
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
   }
 
-  public componentDidUpdate = (prevProps: Props): void => {
-    // Reset the widget state when the default value changes
-    const oldDefaultValue: List<number> = prevProps.element.get('default')
-    const newDefaultValue: List<number> = this.props.element.get('default')
-    if (!oldDefaultValue.equals(newDefaultValue)) {
-      this.setState({ value: newDefaultValue.toJS() }, this.setWidgetValue)
-    }
-  }
-
-  public componentDidMount = () => {
+  public componentDidMount = (): void => {
     // Attach click event listener to slider knobs.
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
       knobs.forEach(knob => knob.addEventListener('click', this.handleClick))
     }
+    this.setWidgetValue()
   }
 
-  public componentWillUnmount = () => {
+  public componentWillUnmount = (): void => {
     // Remove click event listener from slider knobs.
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
