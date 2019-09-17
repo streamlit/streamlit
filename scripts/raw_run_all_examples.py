@@ -20,6 +20,8 @@ Uses `python [script]` as opposed to `streamlit run [script]`.
 """
 
 import os
+import subprocess
+
 import click
 
 # Where we expect to find the example files.
@@ -28,6 +30,13 @@ E2E_DIR = "e2e/scripts"
 
 # These are all the files we excliude
 EXCLUDED_FILENAMES = ()
+
+
+def _command_to_string(command):
+    if isinstance(command, list):
+        return " ".join(command)
+    else:
+        return command
 
 
 def _get_filenames(dir):
@@ -39,7 +48,7 @@ def _get_filenames(dir):
     ]
 
 
-def run_commands(section_header, commands, comment=None):
+def run_commands(section_header, commands):
     """Run a list of commands, displaying them within the given section."""
     failed_commands = []
 
@@ -48,20 +57,18 @@ def run_commands(section_header, commands, comment=None):
         vars = {
             "section_header": section_header,
             "total": len(commands),
-            "command": command,
+            "command": _command_to_string(command),
             "v": i + 1,
         }
         click.secho(
             "\nRunning %(section_header)s %(v)s/%(total)s : %(command)s" % vars,
             bold=True,
         )
-        click.secho("\n%(v)s/%(total)s : %(command)s" % vars, fg="yellow", bold=True)
-
-        if comment:
-            click.secho(comment)
 
         # Run the command.
-        result = os.system(command)
+        result = subprocess.call(command.split(' '),
+                                 stdout=subprocess.DEVNULL,
+                                 stderr=None)
         if result != 0:
             failed_commands.append(command)
 
@@ -73,7 +80,13 @@ def main():
     commands = ["python %s" % filename for filename in filenames]
     failed = run_commands("tests", commands)
 
-    click.secho("%s failed commands\n%s" % (len(failed), "\n".join(failed)))
+    if len(failed) == 0:
+        click.secho("All tests succeeded!", fg="green", bold=True)
+    else:
+        click.secho(
+            "\n".join(_command_to_string(command) for command in failed),
+            fg="red")
+        click.secho("\n%s failed tests" % len(failed), fg="red", bold=True)
 
 
 if __name__ == "__main__":
