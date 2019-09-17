@@ -14,22 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Runs all the scripts in the examples and e2e folders.
+"""
+Runs all the scripts in the e2e/scripts folder in "raw" mode - that is,
+using `python [script]` as opposed to `streamlit run [script]`.
 
-Uses `python [script]` as opposed to `streamlit run [script]`.
+If any script exits with a non-zero status, this will also exit
+with a non-zero status.
 """
 
 import os
 import subprocess
+import sys
 
 import click
 
 # Where we expect to find the example files.
 EXAMPLE_DIR = "examples"
 E2E_DIR = "e2e/scripts"
-
-# These are all the files we excliude
-EXCLUDED_FILENAMES = ()
 
 
 def _command_to_string(command):
@@ -44,7 +45,7 @@ def _get_filenames(dir):
     return [
         os.path.join(dir, filename)
         for filename in sorted(os.listdir(dir))
-        if filename.endswith(".py") and filename not in EXCLUDED_FILENAMES
+        if filename.endswith(".py")
     ]
 
 
@@ -76,17 +77,19 @@ def run_commands(section_header, commands):
 
 
 def main():
-    filenames = _get_filenames(EXAMPLE_DIR) + _get_filenames(E2E_DIR)
+    filenames = _get_filenames(E2E_DIR)
     commands = ["python %s" % filename for filename in filenames]
-    failed = run_commands("tests", commands)
+    failed = run_commands("raw scripts", commands)
 
     if len(failed) == 0:
-        click.secho("All tests succeeded!", fg="green", bold=True)
+        click.secho("All scripts succeeded!", fg="green", bold=True)
+        sys.exit(0)
     else:
         click.secho(
             "\n".join(_command_to_string(command) for command in failed),
             fg="red")
-        click.secho("\n%s failed tests" % len(failed), fg="red", bold=True)
+        click.secho("\n%s failed scripts" % len(failed), fg="red", bold=True)
+        sys.exit(-1)
 
 
 if __name__ == "__main__":
