@@ -280,7 +280,7 @@ class DataFrame extends React.PureComponent<Props, State> {
       rowHeight,
       headerHeight,
       border,
-      height: height || 300,
+      height: Math.min(rows * rowHeight + border, height || 300),
       elementWidth,
       columnWidth,
       headerWidth,
