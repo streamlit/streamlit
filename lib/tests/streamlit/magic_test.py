@@ -149,7 +149,7 @@ def yield_func():
         self._testCode(CODE_YIELD_FROM_STATEMENT, 0)
 
     def test_async_function_statement(self):
-        """Test with async function definitions"""
+        """Test async function definitions"""
         CODE_ASYNC_FUNCTION = """
 async def myfunc(a):
     a
@@ -157,7 +157,7 @@ async def myfunc(a):
         self._testCode(CODE_ASYNC_FUNCTION, 1)
 
     def test_async_with_statement(self):
-        """Test with async function definitions"""
+        """Test 'async with' statements"""
         CODE_ASYNC_WITH = """
 async def myfunc(a):
     async with None:
@@ -166,7 +166,7 @@ async def myfunc(a):
         self._testCode(CODE_ASYNC_WITH, 1)
 
     def test_async_for_statement(self):
-        """Test with async function definitions"""
+        """Test 'async for' statements"""
         CODE_ASYNC_FOR = """
 async def myfunc(a):
     async for _ in None:
