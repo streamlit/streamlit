@@ -19,12 +19,14 @@
 from __future__ import absolute_import, division, print_function
 
 import ast
+import contextlib
 import hashlib
 import inspect
 import os
 import shutil
 import struct
 import textwrap
+import threading
 from collections import namedtuple
 from functools import wraps
 
@@ -66,6 +68,47 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
 
 # The in memory cache.
 _mem_cache = {}  # type: Dict[string, CacheEntry]
+
+
+# A thread local integer that's incremented when we enter @st.cache,
+# and decremented on exit.
+class WithinCachedFunctionCounter(threading.local):
+    def __init__(self):
+        self.val = 0
+
+
+_within_cached_function_counter = WithinCachedFunctionCounter()
+
+
+def is_within_cached_function():
+    """True when an @st.cache function has been entered in the current thread.
+
+    DeltaGenerator methods call this to check that they're not being called
+    from within @st.cache.
+
+    Returns
+    -------
+    bool
+
+    """
+    return _within_cached_function_counter.val > 0
+
+
+@contextlib.contextmanager
+def _within_cached_function():
+    _within_cached_function_counter.val += 1
+    try:
+        yield
+    finally:
+        if _within_cached_function_counter.val > 0:
+            _within_cached_function_counter.val -= 1
+        else:
+            # Sanity check. This should not be possible.
+            raise RuntimeError(
+                "_is_caching_counter was mutated outside of the "
+                "_increment_is_caching_counter() contextmanager. "
+                "Don't do this!"
+            )
 
 
 class _AddCopy(ast.NodeTransformer):
@@ -376,6 +419,7 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
+
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
             return func(*argc, **argv)
@@ -409,7 +453,8 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
                     key, persist, ignore_hash, func, caller_frame
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
-                return_value = func(*argc, **argv)
+                with _within_cached_function():
+                    return_value = func(*argc, **argv)
 
                 args_hasher_after = CodeHasher("md5")
                 args_hasher_after.update([argc, argv])
@@ -418,7 +463,15 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
                 _write_to_cache(key, return_value, persist, ignore_hash, args_mutated)
 
             if args_mutated:
+                # If we're inside a _nested_ cached function, our
+                # _within_cached_function_counter will be non-zero. Temporarily
+                # reset the counter for the purposes of calling st.warning,
+                # so that st.warning does not itself complain about being
+                # called from within a cached function.
+                counter_val = _within_cached_function_counter.val
+                _within_cached_function_counter.val = 0
                 st.warning(_build_args_mutated_message(func))
+                _within_cached_function_counter.val = counter_val
             return return_value
 
         if show_spinner:

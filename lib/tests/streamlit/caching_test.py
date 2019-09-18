@@ -14,17 +14,21 @@
 # limitations under the License.
 
 """st.caching unit tests."""
-
-import inspect
+import threading
 import unittest
 
 from mock import patch
 
 import streamlit as st
+from streamlit import caching
 from streamlit.caching import _build_args_mutated_message
+from streamlit.caching import is_within_cached_function
 
 
 class CacheTest(unittest.TestCase):
+    def tearDown(self):
+        st.caching._within_cached_function_counter.val = 0
+
     def test_simple(self):
         @st.cache
         def foo():
@@ -84,6 +88,73 @@ class CacheTest(unittest.TestCase):
         f([1, 2])
 
         warning.assert_called_with(_build_args_mutated_message(f))
+
+    def test_is_within_cached_function(self):
+        # By default, we're not within @st.cache
+        self.assertFalse(is_within_cached_function())
+
+        @st.cache
+        def f():
+            # This should be true when we're in a cache function
+            return is_within_cached_function()
+
+        was_within_cached_function = f()
+        self.assertTrue(was_within_cached_function)
+        self.assertFalse(is_within_cached_function())
+
+        # Test nested st.cache functions
+        @st.cache
+        def outer():
+            @st.cache
+            def inner():
+                return is_within_cached_function()
+
+            return inner()
+
+        was_within_cached_function = outer()
+        self.assertTrue(was_within_cached_function)
+        self.assertFalse(is_within_cached_function())
+
+        # Test st.cache functions that raise errors
+        with self.assertRaises(RuntimeError):
+
+            @st.cache
+            def cached_raise_error():
+                self.assertTrue(is_within_cached_function())
+                raise RuntimeError("avast!")
+
+            cached_raise_error()
+        self.assertFalse(is_within_cached_function())
+
+    def test_caching_counter(self):
+        """Test that _within_cached_function_counter behaves properly in
+        multiple threads."""
+
+        def get_counter():
+            return caching._within_cached_function_counter.val
+
+        def set_counter(val):
+            caching._within_cached_function_counter.val = val
+
+        self.assertEqual(0, get_counter())
+        set_counter(1)
+        self.assertEqual(1, get_counter())
+
+        values_in_thread = []
+
+        def thread_test():
+            values_in_thread.append(get_counter())
+            set_counter(55)
+            values_in_thread.append(get_counter())
+
+        thread = threading.Thread(target=thread_test)
+        thread.start()
+        thread.join()
+
+        self.assertEqual([0, 55], values_in_thread)
+
+        # The other thread should not have modified the main thread
+        self.assertEqual(1, get_counter())
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__
