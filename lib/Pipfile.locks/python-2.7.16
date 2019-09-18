@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7bee468f99f73482f1de199726667b47d5cec2b5082c16afc93b70e2c23c0323"
+            "sha256": "050ddcd46b0820532c0e29664d9288b98980ec742a0dfa6ed06d506122948fb1"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -661,14 +661,6 @@
             ],
             "version": "==3.0.2"
         },
-        "keras": {
-            "hashes": [
-                "sha256:a0d6ecf1d71cd0b85ea1da27ea7314a9d4723f5b468b7cedd87dcad0a491b354",
-                "sha256:ff7db814756d9106c273afc4bd798f48924fa66f9328157a4b722d535baef363"
-            ],
-            "index": "pypi",
-            "version": "==2.3.0"
-        },
         "keras-applications": {
             "hashes": [
                 "sha256:5579f9a12bcde9748f4a12233925a59b93b73ae6947409ff34aa2ba258189fe5",
@@ -908,7 +900,7 @@
                 "sha256:2156525d6576d21c4dcaddfa427fae887ef89a7a9de5cbfe0728b3aafa78427e",
                 "sha256:446014523bb9be5c28128c4d2a10ad6bb60769e78bd85658fe44a450674e0ef8"
             ],
-            "markers": "python_version == '3.4.*' or python_version < '3'",
+            "markers": "python_version < '3.6'",
             "version": "==2.3.4"
         },
         "pillow": {
