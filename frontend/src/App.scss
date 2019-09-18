@@ -42,22 +42,16 @@ iframe {
 }
 
 .streamlit-container {
-  &.streamlit-embedded {
-    width: unset;
-    max-width: unset;
-    padding-left: 0px;
-    padding-right: 0px;
-  }
+  margin: 80px auto;
+  width: unset;
+  max-width: unset;
+}
 
-  &.streamlit-regular {
-    margin: 80px auto;
-  }
-
-  &.streamlit-wide {
-    margin-top: 80px;
-    width: unset;
-    max-width: unset;
-  }
+.streamlit-embedded .streamlit-container {
+  width: unset;
+  max-width: unset;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 code {

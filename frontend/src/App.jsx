@@ -16,7 +16,7 @@
  */
 
 import React, { Fragment, PureComponent } from "react"
-import { Container } from "reactstrap"
+import { Col, Container, Row } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
@@ -638,36 +638,16 @@ class App extends PureComponent {
     this.userLoginResolver.reject(`Error signing in. ${msg}`)
   }
 
-  getStreamlitMode = () => {
-    if (isEmbeddedInIFrame()) {
-      return "embedded"
-    }
-
-    const { userSettings } = this.state
-
-    if (userSettings.wideMode) {
-      return "wide"
-    }
-
-    return "regular"
-  }
-
   render() {
-    const {
-      dialog,
-      connectionState,
-      reportRunState,
-      elements,
-      reportId,
-    } = this.state
+    const outerDivClass = classNames("stApp", {
+      "streamlit-embedded": isEmbeddedInIFrame(),
+      "streamlit-wide": this.state.userSettings.wideMode,
+    })
+
     const dialogProps = {
-      ...dialog,
+      ...this.state.dialog,
       onClose: this.closeDialog,
     }
-    const containerClassName = classNames(
-      "streamlit-container",
-      `streamlit-${this.getStreamlitMode()}`
-    )
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
@@ -675,7 +655,7 @@ class App extends PureComponent {
     // focused: A way to force focus behaviour
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
-        <div className="stApp">
+        <div className={outerDivClass}>
           {/* The tabindex below is required for testing. */}
           <header tabIndex="-1">
             <div className="decoration" />
@@ -685,9 +665,9 @@ class App extends PureComponent {
             <div className="toolbar">
               <StatusWidget
                 ref={this.statusWidgetRef}
-                connectionState={connectionState}
+                connectionState={this.state.connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={reportRunState}
+                reportRunState={this.state.reportRunState}
                 rerunReport={this.rerunScript}
                 stopReport={this.stopReport}
               />
@@ -703,7 +683,7 @@ class App extends PureComponent {
             </div>
           </header>
 
-          <Container className={containerClassName}>
+          <Container className="streamlit-container">
             {this.state.showLoginBox ? (
               <LoginBox
                 onSuccess={this.onLogInSuccess}
@@ -711,15 +691,17 @@ class App extends PureComponent {
               />
             ) : (
               <ReportView
-                mode={this.getStreamlitMode()}
-                elements={elements}
-                reportId={reportId}
-                reportRunState={reportRunState}
+                wide={this.state.userSettings.wideMode}
+                elements={this.state.elements}
+                reportId={this.state.reportId}
+                reportRunState={this.state.reportRunState}
                 showStaleElementIndicator={
-                  connectionState !== ConnectionState.STATIC
+                  this.state.connectionState !== ConnectionState.STATIC
                 }
                 widgetMgr={this.widgetMgr}
-                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                widgetsDisabled={
+                  this.state.connectionState !== ConnectionState.CONNECTED
+                }
               />
             )}
 
