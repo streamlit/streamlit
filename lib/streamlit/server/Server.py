@@ -142,8 +142,27 @@ class Server(object):
 
         LOGGER.debug("Starting server...")
         app = self._create_app()
+
+        def start_listening(rotate=True):
+            port = config.get_option("server.port")
+            try:
+                app.listen(port)
+            except OSError as e:
+                ADDRESS_ALREADY_IN_USE = 48
+                if config.is_manually_set("server.port"):
+                    raise
+                if e.errno == ADDRESS_ALREADY_IN_USE :
+                    LOGGER.debug("Port %s already in use, trying next available one", port)
+                    next_port = port + 1
+                    if next_port == 3000:
+                        next_port = next_port + 1
+                    config._set_option("server.port", next_port, "server initialization")
+                    start_listening()
+
+        start_listening()
+
         port = config.get_option("server.port")
-        app.listen(port)
+
         LOGGER.debug("Server started on port %s", port)
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
