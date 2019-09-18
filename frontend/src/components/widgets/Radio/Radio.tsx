@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Radio as UIRadio, RadioGroup } from 'baseui/radio'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { radioOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { radioOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,12 +33,12 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number;
+  value: number
 }
 
 class Radio extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get('default'),
+    value: this.props.element.get("default"),
   }
 
   public componentDidMount(): void {
@@ -46,7 +46,7 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setIntValue(widgetId, this.state.value)
   }
 
@@ -57,12 +57,12 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get('label')
-    let options = this.props.element.get('options')
+    const label = this.props.element.get("label")
+    let options = this.props.element.get("options")
     let disabled = this.props.disabled
 
     if (options.size === 0) {
-      options = ['No options to select.']
+      options = ["No options to select."]
       disabled = true
     }
 
@@ -74,17 +74,15 @@ class Radio extends React.PureComponent<Props, State> {
           value={this.state.value.toString()}
           disabled={disabled}
         >
-          {
-            options.map((option: string, index: number) => (
-              <UIRadio
-                key={index}
-                value={index.toString()}
-                overrides={radioOverrides}
-              >
-                {option}
-              </UIRadio>
-            ))
-          }
+          {options.map((option: string, index: number) => (
+            <UIRadio
+              key={index}
+              value={index.toString()}
+              overrides={radioOverrides}
+            >
+              {option}
+            </UIRadio>
+          ))}
         </RadioGroup>
       </div>
     )

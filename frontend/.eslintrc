@@ -1,0 +1,70 @@
+{
+  "env": {
+    // allow using browser-defined globals like `window` and `document`
+    "browser": true,
+    "es6": true
+  },
+  "extends": [
+    // Uses the recommended rules from @eslint-plugin-react
+    "plugin:react/recommended",
+    // Uses the recommended rules from the @typescript-eslint/eslint-plugin
+    "plugin:@typescript-eslint/recommended",
+    // Uses eslint-config-prettier to disable ESLint rules
+    // from @typescript-eslint/eslint-plugin that would conflict with prettier
+    "prettier/@typescript-eslint",
+    // Enables eslint-plugin-prettier and eslint-config-prettier.
+    // This will display prettier errors as ESLint errors.
+    // Make sure this is always the last configuration in the extends array.
+    "plugin:prettier/recommended"
+  ],
+  // Specifies the ESLint parser
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true // Allows for the parsing of JSX
+    },
+    // Allows for the parsing of modern ECMAScript features
+    "ecmaVersion": 2018,
+    // Allows for the use of imports
+    "sourceType": "module"
+  },
+  // Place to specify ESLint rules.
+  // Can be used to overwrite rules specified from the extended configs
+  "rules": {
+    // Use `const` or `let` instead of `var`
+    "no-var": "error",
+    // We don't use PropTypes
+    "react/prop-types": "off",
+    // We don't escape entities
+    "react/no-unescaped-entities": "off",
+    // Some of these are being caught erroneously
+    "@typescript-eslint/camelcase": "off",
+    // Console statements are currently allowed,
+    // but we may want to reconsider this!
+    "@typescript-eslint/no-console": "off",
+    // Empty interfaces are ok
+    "@typescript-eslint/no-empty-interface": "off",
+    // We prefer not using `any`, but don't disallow it
+    "@typescript-eslint/no-explicit-any": "off",
+    // Don't warn about unused function params
+    "@typescript-eslint/no-unused-vars": ["warn", { "args": "none" }],
+    // It's safe to use functions before they're defined
+    "@typescript-eslint/no-use-before-define": [
+      "warn",
+      { "functions": false }
+    ],
+    // Functions must have return types, but we allow
+    // inline function expressions to omit them
+    "@typescript-eslint/explicit-function-return-type": [
+      "warn",
+      { "allowExpressions": true }
+    ]
+  },
+  "settings": {
+    "react": {
+      // Tells eslint-plugin-react to automatically detect
+      // the version of React to use
+      "version": "detect"
+    }
+  }
+}

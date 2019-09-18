@@ -15,35 +15,35 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Textarea as UITextArea } from 'baseui/textarea'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
+import React from "react"
+import { Textarea as UITextArea } from "baseui/textarea"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
-  dirty: boolean;
+  dirty: boolean
 
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string;
+  value: string
 }
 
 class TextArea extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
-    value: this.props.element.get('default'),
+    value: this.props.element.get("default"),
   }
 
   public componentDidMount(): void {
@@ -51,7 +51,7 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
     this.setState({ dirty: false })
   }
@@ -70,14 +70,14 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === 'Enter' && e.ctrlKey && this.state.dirty) {
+    if (e.key === "Enter" && e.ctrlKey && this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
 
     return (
       <div className="Widget stTextArea" style={style}>
@@ -89,11 +89,9 @@ class TextArea extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={this.props.disabled}
         />
-        {
-          this.state.dirty
-            ? <div className="instructions">Press Ctrl+Enter to apply</div>
-            : null
-        }
+        {this.state.dirty ? (
+          <div className="instructions">Press Ctrl+Enter to apply</div>
+        ) : null}
       </div>
     )
   }

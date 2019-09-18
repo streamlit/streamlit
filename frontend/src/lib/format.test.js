@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import * as format from './format'
+import * as format from "./format"
 
-test('class Duration constructor', () => {
+test("class Duration constructor", () => {
   const duration = new format.Duration(1234)
   expect(duration.getTime()).toBe(1234)
 })

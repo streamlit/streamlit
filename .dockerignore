@@ -1,0 +1,11 @@
+.dockerignore
+docker
+Dockerfile
+docker-compose.yml
+.git
+.gitignore
+frontend/node_modules
+frontend/cypress/mochawesome
+frontend/mochawesome-report
+frontend/mochawesome.json
+venv

@@ -38,6 +38,7 @@ How these classes work together
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import os
@@ -50,6 +51,7 @@ from watchdog import events
 from watchdog.observers import Observer
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -61,7 +63,7 @@ class EventBasedFileWatcher(object):
         """Close the EventBasedFileWatcher singleton."""
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.close()
-        LOGGER.debug('Watcher closed')
+        LOGGER.debug("Watcher closed")
 
     def __init__(self, file_path, on_file_changed):
         """Constructor.
@@ -82,7 +84,7 @@ class EventBasedFileWatcher(object):
 
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.watch_file(file_path, on_file_changed)
-        LOGGER.debug('Watcher created for %s', file_path)
+        LOGGER.debug("Watcher created for %s", file_path)
 
     def close(self):
         """Stop watching the file system."""
@@ -102,7 +104,7 @@ class _MultiFileWatcher(object):
         Instantiates one if necessary.
         """
         if cls._singleton is None:
-            LOGGER.debug('No singleton. Registering one.')
+            LOGGER.debug("No singleton. Registering one.")
             _MultiFileWatcher()
 
         return _MultiFileWatcher._singleton
@@ -111,7 +113,7 @@ class _MultiFileWatcher(object):
     def __new__(cls):
         """Constructor."""
         if _MultiFileWatcher._singleton is not None:
-            raise RuntimeError('Use .get_singleton() instead')
+            raise RuntimeError("Use .get_singleton() instead")
         return super(_MultiFileWatcher, cls).__new__(cls)
 
     def __init__(self):
@@ -152,7 +154,8 @@ class _MultiFileWatcher(object):
                 self._folder_handlers[folder_path] = folder_handler
 
                 folder_handler.watch = self._observer.schedule(
-                    folder_handler, folder_path, recursive=False)
+                    folder_handler, folder_path, recursive=False
+                )
 
             folder_handler.add_file_change_listener(file_path, callback)
 
@@ -175,8 +178,10 @@ class _MultiFileWatcher(object):
 
             if folder_handler is None:
                 LOGGER.debug(
-                    'Cannot stop watching path, because it is already not being '
-                    'watched. %s', folder_path)
+                    "Cannot stop watching path, because it is already not being "
+                    "watched. %s",
+                    folder_path,
+                )
                 return
 
             folder_handler.remove_file_change_listener(file_path, callback)
@@ -191,10 +196,11 @@ class _MultiFileWatcher(object):
             if len(self._folder_handlers) != 0:
                 self._folder_handlers = {}
                 LOGGER.debug(
-                    'Stopping observer thread even though there is a non-zero '
-                    'number of event observers!')
+                    "Stopping observer thread even though there is a non-zero "
+                    "number of event observers!"
+                )
             else:
-                LOGGER.debug('Stopping observer thread')
+                LOGGER.debug("Stopping observer thread")
 
             self._observer.stop()
             self._observer.join(timeout=5)
@@ -202,6 +208,7 @@ class _MultiFileWatcher(object):
 
 class WatchedFile(object):
     """Emits notifications when a single file is modified."""
+
     def __init__(self, md5, modification_time):
         self.md5 = md5
         self.modification_time = modification_time
@@ -240,8 +247,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             if watched_file is None:
                 md5 = util.calc_md5_with_blocking_retries(file_path)
                 modification_time = os.stat(file_path).st_mtime
-                watched_file = WatchedFile(
-                    md5=md5, modification_time=modification_time)
+                watched_file = WatchedFile(md5=md5, modification_time=modification_time)
                 self._watched_files[file_path] = watched_file
 
             watched_file.on_file_changed.connect(callback, weak=False)
@@ -293,8 +299,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_CREATED:
             file_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
-            LOGGER.debug(
-                'Move event: src %s; dest %s', event.src_path, event.dest_path)
+            LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
             file_path = event.dest_path
         else:
             LOGGER.debug("Don't care about event type %s", event.event_type),
@@ -305,23 +310,23 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         file_info = self._watched_files.get(file_path, None)
         if file_info is None:
             LOGGER.debug(
-                'Ignoring file %s.\nWatched_files: %s',
-                file_path, self._watched_files)
+                "Ignoring file %s.\nWatched_files: %s", file_path, self._watched_files
+            )
             return
 
         modification_time = os.stat(file_path).st_mtime
         if modification_time == file_info.modification_time:
-            LOGGER.debug('File timestamp did not change: %s', file_path)
+            LOGGER.debug("File timestamp did not change: %s", file_path)
             return
 
         file_info.modification_time = modification_time
 
         new_md5 = util.calc_md5_with_blocking_retries(file_path)
         if new_md5 == file_info.md5:
-            LOGGER.debug('File MD5 did not change: %s', file_path)
+            LOGGER.debug("File MD5 did not change: %s", file_path)
             return
 
-        LOGGER.debug('File MD5 changed: %s', file_path)
+        LOGGER.debug("File MD5 changed: %s", file_path)
         file_info.md5 = new_md5
         file_info.on_file_changed.send(file_path)
 

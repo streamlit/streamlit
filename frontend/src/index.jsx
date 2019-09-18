@@ -15,21 +15,23 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import ReactDOM from 'react-dom'
-import App from './App'
+import React from "react"
+import ReactDOM from "react-dom"
+import App from "./App"
 
-import { Client as Styletron } from 'styletron-engine-atomic'
-import { Provider as StyletronProvider } from 'styletron-react'
-import { LightTheme, BaseProvider } from 'baseui'
+import { Client as Styletron } from "styletron-engine-atomic"
+import { Provider as StyletronProvider } from "styletron-react"
+import { LightTheme, BaseProvider } from "baseui"
+
+import { SCSS_VARS } from "autogen/scssVariables"
 
 const engine = new Styletron()
 
 ReactDOM.render(
   <StyletronProvider value={engine}>
-    <BaseProvider theme={LightTheme}>
+    <BaseProvider theme={LightTheme} zIndex={SCSS_VARS["$z-index-popup-menu"]}>
       <App />
     </BaseProvider>
   </StyletronProvider>,
-  document.getElementById('root')
+  document.getElementById("root")
 )

@@ -64,6 +64,7 @@ Or, with syntax sugar type-specific builders::
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 from streamlit import case_converters
@@ -73,6 +74,7 @@ import streamlit.elements.lib.chart_config as chart_config
 import streamlit.elements.lib.dict_builder as dict_builder
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 current_module = __import__(__name__)
@@ -107,8 +109,10 @@ class Chart(object):
 
         """
         import pandas as pd
-        assert type in chart_config.CHART_TYPES_SNAKE, \
+
+        assert type in chart_config.CHART_TYPES_SNAKE, (
             'Did not recognize "%s" type.' % type
+        )
         self._data = data_frame_proto.convert_anything_to_df(data)
         self._type = type
         self._width = width
@@ -156,8 +160,7 @@ class Chart(object):
         (specified via ForEachColumn), and their children can use special
         identifiers such as ColumnAtCurrentIndex, and ValueCycler.
         """
-        required_components = chart_config.REQUIRED_COMPONENTS.get(
-            self._type, None)
+        required_components = chart_config.REQUIRED_COMPONENTS.get(self._type, None)
 
         if required_components is None:
             return
@@ -204,7 +207,7 @@ class Chart(object):
         if value == dict_builder.CURRENT_COLUMN_NAME:
             i = currCycle
             if i >= len(self._data.columns):
-                raise IndexError('Index %s out of bounds' % i)
+                raise IndexError("Index %s out of bounds" % i)
             return self._data.columns[i]
 
         elif value == dict_builder.INDEX_COLUMN_NAME:
@@ -243,11 +246,12 @@ def register_component(component_name, implemented):
     c = Chart(myData, 'line_chart').foo_bar(stuff='yes!').baz()
 
     """
+
     def append_component_method(self, **props):
         if implemented:
             self.append_component(component_name, props)
         else:
-            raise NotImplementedError(component_name + ' not implemented.')
+            raise NotImplementedError(component_name + " not implemented.")
         return self  # For builder-style chaining.
 
     setattr(Chart, component_name, append_component_method)
@@ -255,8 +259,7 @@ def register_component(component_name, implemented):
 
 # Add methods to Chart class, for each component in CHART_COMPONENTS.
 for component_name, implemented in chart_config.CHART_COMPONENTS.items():
-    register_component(
-        case_converters.to_snake_case(component_name), implemented)
+    register_component(case_converters.to_snake_case(component_name), implemented)
 
 
 def register_type_builder(chart_type):
@@ -274,7 +277,7 @@ def register_type_builder(chart_type):
     chart_type_snake = case_converters.to_snake_case(chart_type)
 
     def type_builder(data, **kwargs):
-        kwargs.pop('type', None)  # Ignore 'type' key from kwargs, if exists.
+        kwargs.pop("type", None)  # Ignore 'type' key from kwargs, if exists.
         return Chart(data, type=chart_type_snake, **kwargs)
 
     setattr(current_module, chart_type, type_builder)

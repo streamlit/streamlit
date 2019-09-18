@@ -15,35 +15,35 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Input as UIInput } from 'baseui/input'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
+import React from "react"
+import { Input as UIInput } from "baseui/input"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
-  dirty: boolean;
+  dirty: boolean
 
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string;
+  value: string
 }
 
 class TextInput extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
-    value: this.props.element.get('default'),
+    value: this.props.element.get("default"),
   }
 
   public componentDidMount(): void {
@@ -51,7 +51,7 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
     this.setState({ dirty: false })
   }
@@ -70,13 +70,13 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter' && this.state.dirty) {
+    if (e.key === "Enter" && this.state.dirty) {
       this.setWidgetValue()
     }
   }
 
   public render = (): React.ReactNode => {
-    const label: string = this.props.element.get('label')
+    const label: string = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
@@ -89,11 +89,9 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={this.props.disabled}
         />
-        {
-          this.state.dirty
-            ? <div className="instructions">Press Enter to apply</div>
-            : null
-        }
+        {this.state.dirty ? (
+          <div className="instructions">Press Enter to apply</div>
+        ) : null}
       </div>
     )
   }

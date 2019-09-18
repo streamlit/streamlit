@@ -3,7 +3,7 @@
 If you've made it this far, you probably have an idea of what you can do with
 Streamlit (if you don't, watch [this
 video](https://streamlit.io/secret/demo/)). In this guide, we'll introduce you
-to Streamlit's core features and how they are used to create a report.
+to Streamlit's core features and how they are used.
 
 The easiest way to learn how to use Streamlit is to try things out yourself. As
 you read through this guide, test each method. As long as your report is
@@ -11,8 +11,9 @@ running, every time you add a new element to your script and save, Streamlit's
 UI will ask if you'd like to rerun the report and view the changes. This allows
 you to work in a fast interactive loop: you write some code, save it, review
 the output, write some more, and so on, until you’re happy with the results.
-The goal is to use Streamlit to review your code, debug it, perfect it, and
-share it. What's drawn in the report is completely up to you.
+The goal is to use Streamlit to create an interactive app for your data or model
+and along the way to use Streamlit to review, debug, perfect, and share your
+code.
 
 Use the links below to jump to a specific section:
 
@@ -26,12 +27,12 @@ Use the links below to jump to a specific section:
 
 Before you get started, you're going to need a few things:
 
-* Your favorite IDE or text editor
-* [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
-* One of these package management tools:
-  * [PIP](https://pip.pypa.io/en/stable/installing/)
-  * [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
-* [Streamlit](index.md) - Follow these instructions to install Streamlit if you
+- Your favorite IDE or text editor
+- [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
+- One of these package management tools:
+  - [PIP](https://pip.pypa.io/en/stable/installing/)
+  - [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+- [Streamlit](index.md) - Follow these instructions to install Streamlit if you
   haven't already.
 
 ## Set up your virtual environment
@@ -46,9 +47,10 @@ you need help getting a virtual environment setup, see [Managing
 environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 
 If you're not using Conda, you have a few options:
-* [virtualenv](https://virtualenv.pypa.io/en/latest/)
-* [venv](https://docs.python.org/3/library/venv.html)
-* [pipenv](https://docs.pipenv.org/en/latest/)
+
+- [virtualenv](https://virtualenv.pypa.io/en/latest/)
+- [venv](https://docs.python.org/3/library/venv.html)
+- [pipenv](https://docs.pipenv.org/en/latest/)
 
 ## Import Streamlit
 
@@ -476,4 +478,4 @@ my_slot2.line_chart(numpy.random.randn(20, 2))
 
 ## What's next?
 
-* [Learn how to speed up your reports with caching](api/index.md#optimize-performance)
+- [Learn how to speed up your reports with caching](api.md#optimize-performance)

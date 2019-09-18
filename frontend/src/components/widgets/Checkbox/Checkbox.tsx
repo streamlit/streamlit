@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Checkbox as UICheckbox } from 'baseui/checkbox'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { checkboxOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { checkboxOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -33,12 +33,12 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: boolean;
+  value: boolean
 }
 
 class Checkbox extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get('default'),
+    value: this.props.element.get("default"),
   }
 
   public componentDidMount(): void {
@@ -46,7 +46,7 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setBoolValue(widgetId, this.state.value)
   }
 
@@ -56,16 +56,16 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
       <div className="Widget row-widget stCheckbox" style={style}>
         <UICheckbox
-          overrides={checkboxOverrides}
           checked={this.state.value}
-          onChange={this.onChange}
           disabled={this.props.disabled}
+          onChange={this.onChange}
+          overrides={checkboxOverrides}
         >
           {label}
         </UICheckbox>

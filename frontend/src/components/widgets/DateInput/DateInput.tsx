@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import moment from 'moment'
-import { Datepicker as UIDatePicker } from 'baseui/datepicker'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { datePickerOverrides } from 'lib/widgetTheme'
+import React from "react"
+import moment from "moment"
+import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { datePickerOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -34,12 +34,12 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string;
+  value: string
 }
 
 class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get('default'),
+    value: this.props.element.get("default"),
   }
 
   public componentDidMount(): void {
@@ -47,7 +47,7 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value)
   }
 
@@ -58,17 +58,17 @@ class DateInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get('label')
+    const label = this.props.element.get("label")
 
     return (
       <div className="Widget stDateInput" style={style}>
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          value={stringToDate(this.state.value)}
-          onChange={this.handleChange}
           disabled={this.props.disabled}
+          onChange={this.handleChange}
           overrides={datePickerOverrides}
+          value={stringToDate(this.state.value)}
         />
       </div>
     )
@@ -76,11 +76,11 @@ class DateInput extends React.PureComponent<Props, State> {
 }
 
 function dateToString(date: Date): string {
-  return moment(date).format('YYYY/MM/DD')
+  return moment(date).format("YYYY/MM/DD")
 }
 
 function stringToDate(value: string): Date {
-  return moment(value, 'YYYY/MM/DD').toDate()
+  return moment(value, "YYYY/MM/DD").toDate()
 }
 
 export default DateInput

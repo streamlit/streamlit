@@ -1,0 +1,34 @@
+version: "3.7"
+services:
+  streamlit:
+    image: streamlit_circleci
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: ../e2e
+        target: /home/circleci/repo/e2e
+      - type: bind
+        source: ../frontend/cypress
+        target: /home/circleci/repo/frontend/cypress
+      - type: bind
+        source: ../frontend/mochawesome-report
+        target: /home/circleci/repo/frontend/mochawesome-report
+      - type: bind
+        source: ../frontend/src
+        target: /home/circleci/repo/frontend/src
+      - type: bind
+        source: ../lib/streamlit
+        target: /home/circleci/repo/lib/streamlit
+      - type: volume
+        source: hard_source_webpack_plugin_cache
+        target: /home/circleci/repo/frontend/node_modules/.cache/hard-source
+        volume:
+          nocopy: true
+
+volumes:
+  hard_source_webpack_plugin_cache:
+# TODO
+# multi stage builds
+# update image and container names

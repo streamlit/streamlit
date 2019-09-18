@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Slider as UISlider } from 'baseui/slider'
-import { Map as ImmutableMap } from 'immutable'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { sliderOverrides } from 'lib/widgetTheme'
-import { debounce } from 'lib/utils'
+import React from "react"
+import { Slider as UISlider } from "baseui/slider"
+import { Map as ImmutableMap } from "immutable"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { sliderOverrides } from "lib/widgetTheme"
+import { debounce } from "lib/utils"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -34,14 +34,14 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number[];
+  value: number[]
 }
 
 class Slider extends React.PureComponent<Props, State> {
   private sliderRef = React.createRef<HTMLDivElement>()
   private setWidgetValue: () => void
   public state: State = {
-    value: this.props.element.get('default').toJS(),
+    value: this.props.element.get("default").toJS(),
   }
 
   public constructor(props: Props) {
@@ -54,7 +54,7 @@ class Slider extends React.PureComponent<Props, State> {
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob => knob.addEventListener('click', this.handleClick))
+      knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
     }
     this.setWidgetValue()
   }
@@ -64,12 +64,14 @@ class Slider extends React.PureComponent<Props, State> {
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob => knob.removeEventListener('click', this.handleClick))
+      knobs.forEach(knob =>
+        knob.removeEventListener("click", this.handleClick)
+      )
     }
   }
 
   private setWidgetValueRaw = (): void => {
-    const widgetId: string = this.props.element.get('id')
+    const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
@@ -78,12 +80,12 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private handleClick = (e: Event): void => {
-    (e.target as HTMLElement).focus()
+    ;(e.target as HTMLElement).focus()
   }
 
   private get value(): number[] {
-    const min = this.props.element.get('min')
-    const max = this.props.element.get('max')
+    const min = this.props.element.get("min")
+    const max = this.props.element.get("max")
     const value = this.state.value
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
@@ -108,10 +110,10 @@ class Slider extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get('label')
-    const min = this.props.element.get('min')
-    const max = this.props.element.get('max')
-    const step = this.props.element.get('step')
+    const label = this.props.element.get("label")
+    const min = this.props.element.get("min")
+    const max = this.props.element.get("max")
+    const step = this.props.element.get("step")
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
