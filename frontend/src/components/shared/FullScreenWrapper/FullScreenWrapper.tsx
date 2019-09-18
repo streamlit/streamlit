@@ -66,6 +66,11 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   onClick = () => {
     const { expanded } = this.state
+    if (expanded) {
+      document.body.style.overflow = "unset"
+    } else {
+      document.body.style.overflow = "hidden"
+    }
     this.setState({ expanded: !expanded })
   }
 
