@@ -101,6 +101,11 @@ from streamlit.caching import cache  # noqa: F401
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
 
+# This is set to True inside cli._main_run(), and is False otherwise.
+# If False, we should assume that DeltaGenerator functions are effectively
+# no-ops, and adapt gracefully.
+_is_running_with_streamlit = False
+
 
 def _set_log_level():
     _logger.set_log_level(_config.get_option("global.logLevel").upper())

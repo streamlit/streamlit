@@ -37,19 +37,20 @@ MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 
 def _image_has_alpha_channel(image):
-    if image.mode in ('RGBA', 'LA') or (
-            image.mode == 'P' and 'transparency' in image.info):
+    if image.mode in ("RGBA", "LA") or (
+        image.mode == "P" and "transparency" in image.info
+    ):
         return True
     else:
         return False
 
 
-def _PIL_to_bytes(image, format='JPEG', quality=100):
+def _PIL_to_bytes(image, format="JPEG", quality=100):
     format = format.upper()
     tmp = io.BytesIO()
 
     if _image_has_alpha_channel(image):
-        image.save(tmp, format='PNG', quality=quality)
+        image.save(tmp, format="PNG", quality=quality)
     else:
         image.save(tmp, format=format, quality=quality)
 
@@ -66,7 +67,7 @@ def _np_array_to_bytes(array, format="JPEG"):
     img = Image.fromarray(array.astype(np.uint8))
 
     if _image_has_alpha_channel(img):
-        img.save(tmp, format='PNG')
+        img.save(tmp, format="PNG")
     else:
         img.save(tmp, format=format)
 

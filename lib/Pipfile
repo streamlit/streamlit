@@ -46,7 +46,6 @@ click = ">=7.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
-numpy = "*"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
 pillow = "!=5.1.0"
 # Set protobuf version based on the protoc version on the release machine
@@ -64,8 +63,10 @@ watchdog = "*"
 # Only Python 3.x packages
 [python3]
 pandas = "*"
+numpy = "*"
 
 # Only Python 2.x packages
 [python2]
 futures = "*"
 pandas = "<0.25.0"
+numpy = "<1.17.0"
