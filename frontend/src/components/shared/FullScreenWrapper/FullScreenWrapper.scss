@@ -1,0 +1,32 @@
+.streamlit-container .stFullScreenFrame--expanded {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+  overflow: auto;
+  background: white;
+  z-index: 1000;
+  padding: 30px;
+  padding-top: 80px;
+}
+
+.streamlit-container .stFullScreenFrame .stButton-enter {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 1;
+  display: none;
+}
+
+.streamlit-container .stFullScreenFrame:hover .stButton-enter {
+  display: block;
+}
+
+.streamlit-container .stFullScreenFrame--expanded .stButton-exit {
+  position: absolute;
+  right: 30px;
+  top: 30px;
+  z-index: 1;
+  display: block;
+}

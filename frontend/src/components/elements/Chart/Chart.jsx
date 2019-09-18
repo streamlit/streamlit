@@ -111,12 +111,12 @@ const SUPPORTED_INDEX_TYPES = new Set([
 
 class Chart extends React.PureComponent {
   render() {
-    const { element, width } = this.props
+    const { element, width, height } = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
     const chartDims = {
       width: (element.get("width") || width) + chartXOffset,
-      height: element.get("height") || 200,
+      height: element.get("height") || height || 200,
     }
 
     // Convert the data into a format that Recharts understands.

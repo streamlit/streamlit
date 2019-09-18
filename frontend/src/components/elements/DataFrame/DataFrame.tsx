@@ -26,7 +26,6 @@ import {
   getSortedDataRowIndices,
 } from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
-import { ElementDimensionSpec } from "autogen/proto"
 import "./DataFrame.scss"
 
 /**
@@ -51,7 +50,7 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number
-  elementDimensionSpec: ElementDimensionSpec
+  height?: number
   element: ImmutableMap<string, any>
 }
 
@@ -113,6 +112,10 @@ interface CellRenderer {
  * Functional element representing a DataFrame.
  */
 class DataFrame extends React.PureComponent<Props, State> {
+  static defaultProps: {
+    height: 300
+  }
+
   private multiGridRef = React.createRef<MultiGrid>()
 
   public constructor(props: Props) {
@@ -235,7 +238,7 @@ class DataFrame extends React.PureComponent<Props, State> {
    * Returns rendering dimensions for this DataFrame
    */
   private getDimensions(cellContentsGetter: CellContentsGetter): Dimensions {
-    const { element, width, elementDimensionSpec } = this.props
+    const { element, width, height } = this.props
 
     const {
       headerRows,
@@ -249,14 +252,6 @@ class DataFrame extends React.PureComponent<Props, State> {
     const rowHeight = 25
     const headerHeight = rowHeight * headerRows
     const border = 3
-    const height =
-      border +
-      Math.min(
-        rows * rowHeight,
-        elementDimensionSpec && elementDimensionSpec.height > 0
-          ? elementDimensionSpec.height
-          : 300
-      )
 
     let { elementWidth, columnWidth, headerWidth } = getWidths(
       cols,
@@ -285,7 +280,7 @@ class DataFrame extends React.PureComponent<Props, State> {
       rowHeight,
       headerHeight,
       border,
-      height,
+      height: height || 300,
       elementWidth,
       columnWidth,
       headerWidth,

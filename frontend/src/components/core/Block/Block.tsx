@@ -29,6 +29,7 @@ import { ForwardMsgMetadata } from "autogen/proto"
 import Chart from "components/elements/Chart/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
+import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
@@ -218,13 +219,19 @@ class Block extends PureComponent<Props> {
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />
       ),
-      chart: (el: SimpleElement) => <Chart element={el} width={width} />,
+      chart: (el: SimpleElement) => (
+        <FullScreenWrapper width={width}>
+          {({ width, height }) => (
+            <Chart element={el} width={width} height={height} />
+          )}
+        </FullScreenWrapper>
+      ),
       dataFrame: (el: SimpleElement) => (
-        <DataFrame
-          element={el}
-          width={width}
-          elementDimensionSpec={metadata.elementDimensionSpec}
-        />
+        <FullScreenWrapper width={width}>
+          {({ width, height }) => (
+            <DataFrame element={el} width={width} height={height} />
+          )}
+        </FullScreenWrapper>
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
@@ -253,7 +260,13 @@ class Block extends PureComponent<Props> {
           style={{ width }}
         />
       ),
-      table: (el: SimpleElement) => <Table element={el} width={width} />,
+      table: (el: SimpleElement) => (
+        <FullScreenWrapper width={width}>
+          {({ width, height }) => (
+            <Table element={el} width={width} height={height} />
+          )}
+        </FullScreenWrapper>
+      ),
       text: (el: SimpleElement) => <Text element={el} width={width} />,
       vegaLiteChart: (el: SimpleElement) => (
         <VegaLiteChart element={el} width={width} />
