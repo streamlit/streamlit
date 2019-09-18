@@ -15,7 +15,7 @@
 # limitations under the License.
 
 """
-Runs all the scripts in the e2e/scripts folder in "raw" mode - that is,
+Runs all the scripts in the e2e/scripts folder in "bare" mode - that is,
 using `python [script]` as opposed to `streamlit run [script]`.
 
 If any script exits with a non-zero status, this will also exit
@@ -96,7 +96,7 @@ def run_commands(section_header, commands):
 def main():
     filenames = _get_filenames(E2E_DIR)
     commands = ["python %s" % filename for filename in filenames]
-    failed = run_commands("raw scripts", commands)
+    failed = run_commands("bare scripts", commands)
 
     if len(failed) == 0:
         click.secho("All scripts succeeded!", fg="green", bold=True)
