@@ -534,7 +534,7 @@ class ReportSession(object):
         url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved running report", url)
+            util.print_url("Saved running app", url)
 
         raise tornado.gen.Return(url)
 
@@ -546,7 +546,7 @@ class ReportSession(object):
         )
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved final report", url)
+            util.print_url("Saved final app", url)
 
         raise tornado.gen.Return(url)
 

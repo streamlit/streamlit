@@ -6,6 +6,6 @@
    :titlesonly:
    :glob:
 
-   create_an_interactive_report
+   create_an_interactive_app
    run_streamlit_remotely
 ```
