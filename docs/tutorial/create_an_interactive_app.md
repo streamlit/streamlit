@@ -17,7 +17,7 @@ widgets, like a slider, to filter results.
   is available below <#let-s-put-it-all-together>`_.
 ```
 
-## Create a report
+## Create an app
 
 1. The first step is to create a new Python script. Let's call it
    `uber_pickups.py`.
@@ -28,7 +28,7 @@ widgets, like a slider, to filter results.
    import pandas as pd
    import numpy as np
    ```
-3. Every good report has a title, so let's add one:
+3. Every good app has a title, so let's add one:
    ```Python
    st.title('Uber pickups in NYC')
    ```
@@ -36,12 +36,12 @@ widgets, like a slider, to filter results.
    ```Bash
    $ streamlit run uber_pickups.py
    ```
-5. As usual, the report should automatically open in a new tab in your
+5. As usual, the app should automatically open in a new tab in your
    browser.
 
 ## Fetch some data
 
-Now that you have a report, the next thing you'll need to do is fetch the Uber
+Now that you have an app, the next thing you'll need to do is fetch the Uber
 dataset for pickups and drop-offs in New York City.
 
 1. Let's start by writing a function to load the data. Add this code to your
@@ -77,13 +77,13 @@ dataset for pickups and drop-offs in New York City.
    data_load_state.text('Loading data...done!')
    ```
 
-   You'll see a few buttons in the upper-right corner of your report asking if
-   you'd like to rerun the report. Choose **Always rerun**, and you'll see your
+   You'll see a few buttons in the upper-right corner of your app asking if
+   you'd like to rerun the app. Choose **Always rerun**, and you'll see your
    changes automatically each time you save.
 
 Ok, that's underwhelming...
 
-It turns out that it takes a long time to download data, and load 10,000 lines into a dataframe. Converting the date column into datetime isn’t a quick job either. You don’t want to reload the data each time the report is updated – luckily Streamlit allows you to cache the data.
+It turns out that it takes a long time to download data, and load 10,000 lines into a dataframe. Converting the date column into datetime isn’t a quick job either. You don’t want to reload the data each time the app is updated – luckily Streamlit allows you to cache the data.
 
 ## Magical caching
 
@@ -94,7 +94,7 @@ It turns out that it takes a long time to download data, and load 10,000 lines i
    def load_data(nrows):
    ```
 
-2. Then save the script, and Streamlit will automatically rerun your report. Since this is the first time you’re running the script with `@st.cache`, you won't see anything change. Let’s tweak your file a little bit more so that you can see the power of caching.
+2. Then save the script, and Streamlit will automatically rerun your app. Since this is the first time you’re running the script with `@st.cache`, you won't see anything change. Let’s tweak your file a little bit more so that you can see the power of caching.
 3. Replace the line `st.write('Done!')` with this:
    ```python
    st.write('Done! (using st.cache)')
@@ -134,7 +134,7 @@ Now that you know how caching with Streamlit works, let’s get back to the Uber
 
 It's always a good idea to take a look at the raw data you're working with
 before you start working with it. Let's add a subheader and a printout of the
-raw data to the report:
+raw data to the app:
 
 ```Python
 st.subheader('Raw data')
@@ -152,7 +152,7 @@ it isn't doing what you expect you can use a specialized command like
 
 Alternatively, you could use a specialized statement, like
 [`st.dataframe()`](../api.html#streamlit.dataframe), to add a specific
-dataset to your report.
+dataset to your app.
 
 ## Draw a histogram
 
@@ -173,7 +173,7 @@ what Uber's busiest hours are in New York City.
    ```Python
    st.bar_chart(hist_values)
    ```
-4. Save your script. This histogram should show up in your report right away.
+4. Save your script. This histogram should show up in your app right away.
    After a quick review, it looks like the busiest time is 17:00 (5 P.M.).
 
 To draw this diagram we used Streamlit's native `bar_chart()` method, but it's
@@ -228,7 +228,7 @@ the [`st.deckgl_chart`](../api.html#streamlit.deck_gl_chart).
 In the last section, when you drew the map, the time used to filter results was
 hardcoded into the script, but what if we wanted to let a reader dynamically
 filter the data in real time? Using Streamlit's widgets you can. Let's add a
-slider to the report with the `st.slider()` method.
+slider to the app with the `st.slider()` method.
 
 1. Locate `hour_to_filter` and replace it with this code snippet:
    ```Python
@@ -238,10 +238,10 @@ slider to the report with the `st.slider()` method.
 
 ## Use a button to toggle data
 
-Sliders are just one way to dynamically change the composition of your report.
+Sliders are just one way to dynamically change the composition of your app.
 Let's use the [`st.checkbox`](api.html#streamlit.checkbox) function to add a
-checkbox to your report. We'll use this checkbox to show/hide the raw data
-table at the top of your report.
+checkbox to your app. We'll use this checkbox to show/hide the raw data
+table at the top of your app.
 
 1. Locate these lines:
 
@@ -260,11 +260,11 @@ table at the top of your report.
 We're sure you've got your own ideas. When you're done with this tutorial,
 check out all the widgets that Streamlit exposes in our [API reference](../api.md).
 
-## Share the report
+## Share the app
 
 That's it, you've made it to the end. The last thing to do is share your
-findings. Locate the hamburger menu in the upper-right corner of the report
-and select **Share report**.
+findings. Locate the hamburger menu in the upper-right corner of the app
+and select **Share app**.
 
 ```eval_rst
 .. warning::
@@ -276,12 +276,12 @@ and select **Share report**.
 ## Let's put it all together
 
 So you've made it to the end. Here's the complete script for our interactive
-report.
+app.
 
 ```eval_rst
 .. tip::
   If you've skipped ahead, after you've created your script, the command to run
-  Streamlit is `streamlit run [report name]`.
+  Streamlit is `streamlit run [app name]`.
 ```
 
 ```Python

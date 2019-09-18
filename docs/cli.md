@@ -21,13 +21,14 @@ Below are a few of the most useful commands accepted by Streamlit CLI:
 $ streamlit run your_script.py [script args]
 ```
 
-Runs your report. At any time you can kill the server with **Ctrl+c**. This is useful when making config changes or changing reports/scripts.
+Runs your app. At any time you can kill the server with **Ctrl+c**. This is useful when making config changes or changing apps/scripts.
 
 ## \-\-version
 
 ```bash
 $ streamlit --version
 ```
+
 Shows the version of Streamlit in your current Python environment.
 
 ## docs
@@ -35,6 +36,7 @@ Shows the version of Streamlit in your current Python environment.
 ```bash
 $ streamlit docs
 ```
+
 Opens Streamlit's documentation (i.e. this website) in a web browser.
 
 ## hello
@@ -42,7 +44,8 @@ Opens Streamlit's documentation (i.e. this website) in a web browser.
 ```bash
 $ streamlit hello
 ```
-Opens Streamlit's Hello World report in a web browser. This is useful for
+
+Opens Streamlit's Hello World app in a web browser. This is useful for
 testing Streamlit.
 
 ## config show
@@ -50,6 +53,7 @@ testing Streamlit.
 ```bash
 $ streamlit config show
 ```
+
 Shows all config options for Streamlit, as well as their current values.
 
 ## cache clear
@@ -57,4 +61,5 @@ Shows all config options for Streamlit, as well as their current values.
 ```bash
 $ streamlit cache clear
 ```
+
 Clears the [Streamlit cache](/api/index.md#optimize-performance).

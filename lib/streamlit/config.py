@@ -203,11 +203,11 @@ _create_option(
 _create_option(
     "global.sharingMode",
     description="""
-        Configure the ability to share reports to the cloud.
+        Configure the ability to share apps to the cloud.
 
         Should be set to one of these values:
         - "off" : turn off sharing.
-        - "streamlit-public" : share to Streamlit's public cloud. Shared reports
+        - "streamlit-public" : share to Streamlit's public cloud. Shared apps
            will be viewable by anyone with the URL.
         - "s3" : share to S3, based on the settings under the [s3] section of
           this config file.
@@ -289,7 +289,7 @@ _create_option(
 _create_option(
     "client.displayEnabled",
     description="""If false, makes your Streamlit script not draw to a
-        Streamlit report.""",
+        Streamlit app.""",
     default_val=True,
 )
 
@@ -302,7 +302,7 @@ _create_option(
     "runner.magicEnabled",
     description="""
         Allows you to type a variable or string by itself in a single line of
-        Python code to write it to the report.
+        Python code to write it to the app.
         """,
     default_val=True,
 )
@@ -363,7 +363,7 @@ def _server_headless():
 
 @_create_option("server.liveSave")
 def _server_live_save():
-    """Immediately share the report in such a way that enables live
+    """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
 
     Default: false
@@ -440,7 +440,7 @@ _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".
 
 @_create_option("s3.bucket")
 def _s3_bucket():
-    """Name of the AWS S3 bucket to save reports.
+    """Name of the AWS S3 bucket to save apps.
 
     Default: (unset)
     """
@@ -452,7 +452,7 @@ def _s3_bucket():
 
 @_create_option("s3.url")
 def _s3_url():
-    """URL root for external view of Streamlit reports.
+    """URL root for external view of Streamlit apps.
 
     Default: (unset)
     """
@@ -492,7 +492,7 @@ def _s3_secret_access_key():
 
 _create_option(
     "s3.requireLoginToView",
-    description="""Make the shared report visible only to users who have been
+    description="""Make the shared app visible only to users who have been
         granted view permission. If you are interested in this option, contact
         us at support@streamlit.io.
         """,
@@ -502,7 +502,7 @@ _create_option(
 _create_option(
     "s3.keyPrefix",
     description="""The "subdirectory" within the S3 bucket where to save
-        reports.
+        apps.
 
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory. Use "" to mean the root directory.

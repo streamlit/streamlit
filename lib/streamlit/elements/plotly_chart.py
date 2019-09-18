@@ -37,7 +37,7 @@ LOGGER = get_logger(__name__)
 
 SHARING_MODES = set(
     [
-        # This means the plot will be sent to the Streamlit report rather than to
+        # This means the plot will be sent to the Streamlit app rather than to
         # Plotly.
         "streamlit",
         # The three modes below are for plots that should be hosted in Plotly.

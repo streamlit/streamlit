@@ -312,7 +312,7 @@ class DeltaGenerator(object):
         -------
         >>> st.balloons()
 
-        ...then watch your report and get ready for a celebration!
+        ...then watch your app and get ready for a celebration!
 
         """
         element.balloons.type = Balloons_pb2.Balloons.DEFAULT
@@ -999,10 +999,10 @@ class DeltaGenerator(object):
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
-            directly in the Streamlit report, which means it works offline too.
+            directly in the Streamlit app, which means it works offline too.
             This is the default.
-            Use any other sharing mode to send the report to Plotly's servers,
-            and embed the result into the Streamlit report. See
+            Use any other sharing mode to send the app to Plotly's servers,
+            and embed the result into the Streamlit app. See
             https://plot.ly/python/privacy/ for more. Note that these sharing
             modes require a Plotly account.
 
@@ -1288,7 +1288,7 @@ class DeltaGenerator(object):
         Returns
         -------
         bool
-            If the button was clicked on the last run of the report.
+            If the button was clicked on the last run of the app.
 
         Example
         -------
@@ -1821,7 +1821,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def empty(self, element):
-        """Add a placeholder to the report.
+        """Add a placeholder to the app.
 
         The placeholder can be filled any time by calling methods on the return
         value.
@@ -2052,7 +2052,7 @@ class DeltaGenerator(object):
         ...    columns=('col %d' % i for i in range(20)))
         ...
         >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit report contains the data for
+        >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
         You can do the same thing with plots. For example, if you want to add
@@ -2061,7 +2061,7 @@ class DeltaGenerator(object):
         >>> # Assuming df1 and df2 from the example above still exist...
         >>> my_chart = st.line_chart(df1)
         >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit report contains the data for
+        >>> # Now the chart shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
         And for plots whose datasets are named, you can pass the data with a
