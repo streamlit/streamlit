@@ -15,6 +15,8 @@
 
 import logging
 import threading
+import sys
+import signal
 from enum import Enum
 
 import tornado.concurrent
@@ -143,21 +145,29 @@ class Server(object):
         LOGGER.debug("Starting server...")
         app = self._create_app()
 
+        class PortAlradyInUse(Exception):
+            pass
+
         def start_listening(rotate=True):
             port = config.get_option("server.port")
             try:
                 app.listen(port)
             except OSError as e:
                 ADDRESS_ALREADY_IN_USE = 48
-                if config.is_manually_set("server.port"):
-                    raise
-                if e.errno == ADDRESS_ALREADY_IN_USE :
-                    LOGGER.debug("Port %s already in use, trying next available one", port)
-                    next_port = port + 1
-                    if next_port == 3000:
-                        next_port = next_port + 1
-                    config._set_option("server.port", next_port, "server initialization")
-                    start_listening()
+                if e.errno == ADDRESS_ALREADY_IN_USE:
+                    if config.is_manually_set("server.port"):
+                        LOGGER.debug(
+                            "Port %s already in use, trying next available one", port
+                        )
+                        port += 1
+                        if port == 3000: port += 1 # save the 3000
+                        config._set_option(
+                            "server.port", port, "server initialization"
+                        )
+                        start_listening()
+                    else:
+                        LOGGER.error("Port %s is already in use", port)
+                        sys.exit(signal.NSIG)
 
         start_listening()
 
