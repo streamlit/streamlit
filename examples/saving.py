@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test saving a Streamlit report."""
+"""Test saving a Streamlit app."""
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
@@ -27,4 +27,4 @@ import random
 st.subheader("Test Saving")
 
 r = random.randint(0, 2 ** 32)
-st.write("**Please save this report and check for this number: `%s`.**" % r)
+st.write("**Please save this app and check for this number: `%s`.**" % r)

@@ -94,7 +94,7 @@ def _on_server_start(server):
 
 
 def _print_url():
-    title_message = "You can now view your Streamlit report in your browser."
+    title_message = "You can now view your Streamlit app in your browser."
     named_urls = []
 
     if config.is_manually_set("browser.serverAddress"):
@@ -125,7 +125,7 @@ def _print_url():
 
 
 def run(script_path):
-    """Run a script in a separate thread and start a server for the report.
+    """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
 
