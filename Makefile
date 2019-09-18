@@ -159,6 +159,13 @@ devel-docs: docs
 publish-docs: docs
 	cd docs/_build; \
 		aws s3 sync \
+				--acl public-read html s3://streamlit.io/docs/ \
+				--profile streamlit
+
+  # For now, continue publishing to secret/docs.
+	# TODO: Remove after 2020-01-01
+	cd docs/_build; \
+		aws s3 sync \
 				--acl public-read html s3://streamlit.io/secret/docs/ \
 				--profile streamlit
 
@@ -169,12 +176,14 @@ publish-docs: docs
 	@#     contains("www.streamlit.io")) | \
 	@#     .Id'
 
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths \
-				'/secret/docs/*' \
-				'/secret/docs/tutorial/*' \
-			--profile streamlit
+	aws cloudfront create-invalidation \
+		--distribution-id=E5G9JPT7IOJDV \
+		--paths \
+			'/docs/*' \
+			'/docs/tutorial/*' \
+			'/secret/docs/*' \
+			'/secret/docs/tutorial/*' \
+		--profile streamlit
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
