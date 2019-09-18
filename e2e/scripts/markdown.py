@@ -16,3 +16,5 @@
 import streamlit as st
 
 st.markdown("This **markdown** is awesome!")
+
+st.markdown("This html in <div>markdown</div> is escaped!")

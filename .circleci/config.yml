@@ -262,6 +262,14 @@ jobs:
           when: always
 
       #################################################################
+      # Run integration tests
+      #################################################################
+      - run:
+          name: Run integration tests.
+          command: |
+            make integration-tests
+
+      #################################################################
       # Run frontend tests. (Only executed in the Python 3 job.)
       #################################################################
       - run:

@@ -22,5 +22,15 @@ describe("st.sidebar", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("is missing a test", () => {});
+  it("handles z-index of date input popover", () => {
+    cy.get(".sidebar .stDateInput").should("have.length", 2);
+
+    cy.get(".sidebar .stDateInput")
+      .first()
+      .click();
+
+    cy.get(".sidebar").matchImageSnapshot("date-popover-sidebar", {
+      force: true
+    });
+  });
 });
