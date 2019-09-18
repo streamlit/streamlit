@@ -16,7 +16,6 @@
 import threading
 from collections import namedtuple
 
-import streamlit
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -84,3 +83,7 @@ def get_report_ctx():
         # bits that are irrelevant when not connected to a report.
         LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
     return ctx
+
+
+# Avoid circular dependencies in Python 2
+import streamlit
