@@ -30,24 +30,23 @@ INIT_MSG = ForwardMsg()
 INIT_MSG.initialize.config.sharing_enabled = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
-TEXT_DELTA_MSG1.delta.new_element.text.body = 'text1'
+TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
 
 TEXT_DELTA_MSG2 = ForwardMsg()
-TEXT_DELTA_MSG2.delta.new_element.text.body = 'text2'
+TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
 
 DF_DELTA_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
-    {'col1': [0, 1, 2], 'col2': [10, 11, 12]},
-    DF_DELTA_MSG.delta.new_element.data_frame)
+    {"col1": [0, 1, 2], "col2": [10, 11, 12]}, DF_DELTA_MSG.delta.new_element.data_frame
+)
 
 ADD_ROWS_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
-    {'col1': [3, 4, 5], 'col2': [13, 14, 15]},
-    ADD_ROWS_MSG.delta.add_rows.data)
+    {"col1": [3, 4, 5], "col2": [13, 14, 15]}, ADD_ROWS_MSG.delta.add_rows.data
+)
 
 
 class ReportQueueTest(unittest.TestCase):
-
     def test_simple_enqueue(self):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
@@ -73,7 +72,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(len(queue), 2)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].metadata.delta_id, 0)
-        self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
+        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
 
     def test_enqueue_three(self):
         rq = ReportQueue()
@@ -91,9 +90,9 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].metadata.delta_id, 0)
-        self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
+        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(queue[2].metadata.delta_id, 1)
-        self.assertEqual(queue[2].delta.new_element.text.body, 'text2')
+        self.assertEqual(queue[2].delta.new_element.text.body, "text2")
 
     def test_replace_element(self):
         rq = ReportQueue()
@@ -111,7 +110,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(len(queue), 2)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].metadata.delta_id, 0)
-        self.assertEqual(queue[1].delta.new_element.text.body, 'text2')
+        self.assertEqual(queue[1].delta.new_element.text.body, "text2")
 
     def test_simple_add_rows(self):
         rq = ReportQueue()
@@ -132,7 +131,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].metadata.delta_id, 0)
-        self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
+        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(queue[2].metadata.delta_id, 1)
         col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
         col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
@@ -160,7 +159,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(queue[1].metadata.delta_id, 0)
-        self.assertEqual(queue[1].delta.new_element.text.body, 'text1')
+        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(queue[2].metadata.delta_id, 1)
         col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
         col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
@@ -200,19 +199,15 @@ class ReportQueueTest(unittest.TestCase):
 
         def assert_deltas(container, path, idx):
             self.assertEqual(0, queue[idx].metadata.delta_id)
-            self.assertEqual(container,
-                             queue[idx].metadata.parent_block.container)
+            self.assertEqual(container, queue[idx].metadata.parent_block.container)
             self.assertEqual(path, queue[idx].metadata.parent_block.path)
-            self.assertEqual('text1', queue[idx].delta.new_element.text.body)
+            self.assertEqual("text1", queue[idx].delta.new_element.text.body)
 
             self.assertEqual(1, queue[idx + 1].metadata.delta_id)
-            self.assertEqual(container,
-                             queue[idx + 1].metadata.parent_block.container)
+            self.assertEqual(container, queue[idx + 1].metadata.parent_block.container)
             self.assertEqual(path, queue[idx + 1].metadata.parent_block.path)
-            col0 = queue[idx + 1] \
-                .delta.new_element.data_frame.data.cols[0].int64s.data
-            col1 = queue[idx + 1] \
-                .delta.new_element.data_frame.data.cols[1].int64s.data
+            col0 = queue[idx + 1].delta.new_element.data_frame.data.cols[0].int64s.data
+            col1 = queue[idx + 1].delta.new_element.data_frame.data.cols[1].int64s.data
             self.assertEqual([0, 1, 2, 3, 4, 5], col0)
             self.assertEqual([10, 11, 12, 13, 14, 15], col1)
 

@@ -16,18 +16,19 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 from copy import deepcopy
 
-CURRENT_COLUMN_NAME = '__current_column_name__'
-_CURRENT_COLUMN_NUMBER = '__current_column_number__'
-_CURRENT_COLUMN_TYPE = '__current_column_type__'
-INDEX_COLUMN_NAME = '__index_column_name__'
+CURRENT_COLUMN_NAME = "__current_column_name__"
+_CURRENT_COLUMN_NUMBER = "__current_column_number__"
+_CURRENT_COLUMN_TYPE = "__current_column_type__"
+INDEX_COLUMN_NAME = "__index_column_name__"
 
 # Column name used to designate the dataframe index in JavaScript.
 # Must match dataFrameProto.js
-INDEX_COLUMN_DESIGNATOR = '(index)'
+INDEX_COLUMN_DESIGNATOR = "(index)"
 
 
 class DictBuilder(object):
@@ -72,30 +73,29 @@ class DictBuilder(object):
                 curr_out_value = _NoValue
 
             value = _get_merged_spec_item(
-                df, user_params, spec_value, curr_out_value, curr_col_index)
+                df, user_params, spec_value, curr_out_value, curr_col_index
+            )
 
             if value is not _NoChange:
                 out[k] = value
 
-        return {
-            k: v for (k, v) in out.items()
-            if v is not _NoValue
-        }
+        return {k: v for (k, v) in out.items() if v is not _NoValue}
 
 
-def _get_merged_spec_item(df, user_params, spec_value, curr_out_value,
-        curr_col_index):
+def _get_merged_spec_item(df, user_params, spec_value, curr_out_value, curr_col_index):
 
     # Handle container items and other ultra magic stuff.
     # (these need to be merged with curr_out_value, if any)
 
     if type(spec_value) is DictBuilder:
         return _handle_dict_builder_spec(
-            df, user_params, spec_value, curr_out_value, curr_col_index)
+            df, user_params, spec_value, curr_out_value, curr_col_index
+        )
 
     elif type(spec_value) is list:
         return _handle_list_spec(
-            df, user_params, spec_value, curr_out_value, curr_col_index)
+            df, user_params, spec_value, curr_out_value, curr_col_index
+        )
 
     # Handle simple items.
     # (for these, the value passed by the user takes precedence)
@@ -129,23 +129,27 @@ def _get_merged_spec_item(df, user_params, spec_value, curr_out_value,
         return _NoChange
 
 
-def _handle_for_each_spec(df, user_params, for_each_column, curr_out_value,
-        curr_col_index):
+def _handle_for_each_spec(
+    df, user_params, for_each_column, curr_out_value, curr_col_index
+):
     spec_value = for_each_column.content_to_repeat
     return [
         _get_merged_spec_item(df, user_params, spec_value, curr_out_value, i)
-        for i in range(len(df.columns))]
+        for i in range(len(df.columns))
+    ]
 
 
-def _handle_dict_builder_spec(df, user_params, spec_value, curr_out_value,
-        curr_col_index):
+def _handle_dict_builder_spec(
+    df, user_params, spec_value, curr_out_value, curr_col_index
+):
     if spec_value.is_shallow:
         if curr_out_value is _NoValue:
             return spec_value.build(
                 df,
                 user_params=user_params,
                 spec_override=_NoValue,
-                curr_col_index=curr_col_index)
+                curr_col_index=curr_col_index,
+            )
         else:
             return curr_out_value
 
@@ -154,22 +158,24 @@ def _handle_dict_builder_spec(df, user_params, spec_value, curr_out_value,
             df,
             user_params=user_params,
             spec_override=curr_out_value,
-            curr_col_index=curr_col_index)
+            curr_col_index=curr_col_index,
+        )
 
 
-def _handle_list_spec(df, user_params, spec_value, curr_out_value,
-        curr_col_index):
+def _handle_list_spec(df, user_params, spec_value, curr_out_value, curr_col_index):
     parsed_spec_list = []
 
     for spec_item in spec_value:
         if type(spec_item) is ForEachColumn:
-            items = _handle_for_each_spec(df, user_params, spec_item, _NoValue,
-                    curr_col_index)
+            items = _handle_for_each_spec(
+                df, user_params, spec_item, _NoValue, curr_col_index
+            )
             parsed_spec_list += items
 
         else:
-            item = _get_merged_spec_item(df, user_params, spec_item, _NoValue,
-                    curr_col_index)
+            item = _get_merged_spec_item(
+                df, user_params, spec_item, _NoValue, curr_col_index
+            )
             parsed_spec_list.append(item)
 
     if type(curr_out_value) is list:
@@ -214,6 +220,7 @@ class ValueCycler(object):
     This is used within a ForEachColumn to specify values that should be cycled
     through, as we iterate through the columns.
     """
+
     def __init__(self, *items):
         self._items = items
 
@@ -225,32 +232,32 @@ class ColorCycler(ValueCycler):
     """
     Cycles some pretty colors.
     """
+
     def __init__(self):
         super(ColorCycler, self).__init__(
-            '#e41a1c',
-            '#377eb8',
-            '#4daf4a',
-            '#984ea3',
-            '#ff7f00',
-            '#bbbb33',
-            '#a65628',
-            '#f781bf')
+            "#e41a1c",
+            "#377eb8",
+            "#4daf4a",
+            "#984ea3",
+            "#ff7f00",
+            "#bbbb33",
+            "#a65628",
+            "#f781bf",
+        )
 
 
 def _get_first_match(available_names, wanted_names):
     for name in available_names:
         if name.lower() in wanted_names:
             return name
-    raise ValueError(
-        'Data must have column with one of these names: %s'
-        % wanted_names)
+    raise ValueError("Data must have column with one of these names: %s" % wanted_names)
 
 
 # See https://github.com/altair-viz/altair/blob/ed9eab81bba5074cdb94284d64846ba262a4ef97/altair/utils/core.py
 def _guess_column_type(df, i):
     dtype = df.dtypes[i]
 
-    if type(dtype).__name__ == 'int64':
-        return 'ordinal'
+    if type(dtype).__name__ == "int64":
+        return "ordinal"
 
-    return 'quantitative'
+    return "quantitative"

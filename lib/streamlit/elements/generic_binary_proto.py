@@ -17,6 +17,7 @@
 from __future__ import print_function, division, unicode_literals, absolute_import
 from future.types import newbytes
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import io
@@ -45,10 +46,10 @@ def marshall(proto, data):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         b64encodable = data.read()
-    elif type(data).__name__ == 'ndarray':
+    elif type(data).__name__ == "ndarray":
         b64encodable = data
     else:
-        raise RuntimeError('Invalid binary data format: %s' % type(data))
+        raise RuntimeError("Invalid binary data format: %s" % type(data))
 
     data_b64 = base64.b64encode(b64encodable)
-    proto.data = data_b64.decode('utf-8')
+    proto.data = data_b64.decode("utf-8")

@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import json
@@ -27,6 +28,7 @@ import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -35,11 +37,12 @@ def marshall(proto, spec=None, **kwargs):
 
     See DeltaGenerator.deck_gl_chart for docs.
     """
-    if 'data' in kwargs:
+    if "data" in kwargs:
         # TODO: Remove this check after 2019-11-28.
         raise Exception(
-            'The `data` parameter is deprecated. Use `st.map` or'
-            'specify a spec dict in `st.deck_gl_chart`.')
+            "The `data` parameter is deprecated. Use `st.map` or"
+            "specify a spec dict in `st.deck_gl_chart`."
+        )
 
     data = []
 
@@ -50,34 +53,32 @@ def marshall(proto, spec=None, **kwargs):
     # This only works for string keys, but kwarg keys are strings anyways.
     spec = dict(spec, **dicttools.unflatten(kwargs))
 
-    if 'layers' not in spec:
-        spec['layers'] = []
+    if "layers" not in spec:
+        spec["layers"] = []
 
         # Syntax sugar: if no layers defined and data is passed at the top
         # level, create a scatterplot layer with the top-level data by default.
         if data is not None:
-            spec['layers'].append({
-                'data': data,
-                'type': 'ScatterplotLayer',
-            })
+            spec["layers"].append({"data": data, "type": "ScatterplotLayer"})
 
-    for layer in spec['layers']:
+    for layer in spec["layers"]:
         # Don't add layers that have no data.
-        if 'data' not in layer:
+        if "data" not in layer:
             continue
 
         # Remove DataFrame because it's not JSON-serializable
-        data = layer.pop('data')
+        data = layer.pop("data")
 
         layer_proto = proto.layers.add()
         fixed_layer = case_converters.convert_dict_keys(
-            case_converters.to_lower_camel_case, layer)
+            case_converters.to_lower_camel_case, layer
+        )
         layer_proto.spec = json.dumps(fixed_layer)
         # TODO: If several layers use the same data frame, the data gets resent
         # for each layer. Need to improve this.
         data_frame_proto.marshall_data_frame(data, layer_proto.data)
 
-    del spec['layers']
+    del spec["layers"]
 
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.

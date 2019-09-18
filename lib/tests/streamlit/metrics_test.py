@@ -35,7 +35,7 @@ class MetricsTest(unittest.TestCase):
 
     def tearDown(self):
         """Cleanup metrics client."""
-        config.set_option('global.metrics', False)
+        config.set_option("global.metrics", False)
         streamlit.metrics.Client._singleton = None
         client = streamlit.metrics.Client.get_current()
         client.toggle_metrics()
@@ -56,28 +56,28 @@ class MetricsTest(unittest.TestCase):
 
         with pytest.raises(RuntimeError) as e:
             streamlit.metrics.Client()
-        msg = 'Client already initialized. Use .get_current() instead'
+        msg = "Client already initialized. Use .get_current() instead"
         self.assertEqual(msg, str(e.value))
 
     def test_enabled_metrics_no_prometheus(self):
         """Test streamlit.metrics.Client.toggle_metrics no prometheus."""
-        config.set_option('global.metrics', True)
+        config.set_option("global.metrics", True)
 
         client = streamlit.metrics.Client.get_current()
         if sys.version_info <= (3, 0):
-            builtin_import = '__builtin__.__import__'
+            builtin_import = "__builtin__.__import__"
         else:
-            builtin_import = 'builtins.__import__'
+            builtin_import = "builtins.__import__"
 
         with pytest.raises(ImportError) as e:
             with patch(builtin_import, side_effect=ImportError):
                 client.toggle_metrics()
-        msg = 'prometheus-client is not installed. pip install prometheus-client'
+        msg = "prometheus-client is not installed. pip install prometheus-client"
         self.assertEqual(msg, str(e.value))
 
     def test_enabled_metrics(self):
         """Test streamlit.metrics.toggle_metrics enabled."""
-        config.set_option('global.metrics', True)
+        config.set_option("global.metrics", True)
         client = streamlit.metrics.Client.get_current()
         client._metrics = {}
 
@@ -91,27 +91,26 @@ class MetricsTest(unittest.TestCase):
 
         client.toggle_metrics()
 
-        client.get('unittest_counter').inc()
-        client.get('unittest_counter_labels').labels('some_label')
-        client.get('unittest_gauge').set(42)
+        client.get("unittest_counter").inc()
+        client.get("unittest_counter_labels").labels("some_label")
+        client.get("unittest_gauge").set(42)
 
         truth = [
-            'unittest_counter_total 1.0',
+            "unittest_counter_total 1.0",
             'unittest_counter_labels_total{label="some_label"} 0.0',
-            'unittest_gauge 42.0',
+            "unittest_gauge 42.0",
         ]
         lines = client.generate_latest().splitlines()
         metrics = [
-            x.decode('utf-8') for x in lines
-            if x.decode('utf-8').startswith('unit')
+            x.decode("utf-8") for x in lines if x.decode("utf-8").startswith("unit")
         ]
-        metrics = [str(x) for x in metrics if '_created' not in x]
+        metrics = [str(x) for x in metrics if "_created" not in x]
         self.assertEqual(sorted(truth), sorted(metrics))
 
     def test_disabled_metrics_check_value(self):
         """Test streamlit.metrics.Client.toggle_metrics disabled check value."""
-        with patch('streamlit.metrics.MockMetric', spec=True) as mock_metric:
-            config.set_option('global.metrics', False)
+        with patch("streamlit.metrics.MockMetric", spec=True) as mock_metric:
+            config.set_option("global.metrics", False)
             client = streamlit.metrics.Client.get_current()
             client._metrics = {}
 
@@ -126,12 +125,12 @@ class MetricsTest(unittest.TestCase):
             client.toggle_metrics()
 
             # Test that handler in Server.py will return nothing.
-            self.assertEqual(client.generate_latest(), '')
+            self.assertEqual(client.generate_latest(), "")
 
-            client.get('unittest_counter').inc()
-            client.get('unittest_counter_labels').labels('some_label')
-            client.get('unittest_gauge').set(42)
-            client.get('unittest_gauge').dec()
+            client.get("unittest_counter").inc()
+            client.get("unittest_counter_labels").labels("some_label")
+            client.get("unittest_gauge").set(42)
+            client.get("unittest_gauge").dec()
 
             calls = [
                 call(),  # Constructor
@@ -139,7 +138,7 @@ class MetricsTest(unittest.TestCase):
                 call(),  # unittest_counter_labels
                 call(),  # unittest_gauge
                 call().inc(),
-                call().labels('some_label'),
+                call().labels("some_label"),
                 call().set(42),
                 call().dec(),
             ]
@@ -147,7 +146,7 @@ class MetricsTest(unittest.TestCase):
 
     def test_disabled_metrics(self):
         """Test streamlit.metrics.Client.toggle_metrics disabled."""
-        config.set_option('global.metrics', False)
+        config.set_option("global.metrics", False)
         client = streamlit.metrics.Client.get_current()
         client._metrics = {}
 
@@ -161,10 +160,10 @@ class MetricsTest(unittest.TestCase):
 
         client.toggle_metrics()
 
-        client.get('unittest_counter').inc()
-        client.get('unittest_counter_labels').labels('some_label')
-        client.get('unittest_gauge').set(42)
-        client.get('unittest_gauge').dec()
+        client.get("unittest_counter").inc()
+        client.get("unittest_counter_labels").labels("some_label")
+        client.get("unittest_gauge").set(42)
+        client.get("unittest_gauge").dec()
 
         # Purposely not testing anything, just verifying the calls
         # actually work.

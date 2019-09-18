@@ -1,4 +1,4 @@
-# Tutorial: Create your first interactive report
+# Tutorial: Create your first interactive app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/secret/docs/#install-streamlit) and
@@ -6,7 +6,7 @@ run through the basics in our [get started guide](../getting_started.md). If
 not, now is a good time to take a look.
 
 In this tutorial, you're going to use Streamlit's core features to
-create an interactive report; exploring a public Uber dataset for pickups and
+create an interactive app; exploring a public Uber dataset for pickups and
 drop-offs in New York City. When you're finished, you'll know how to fetch
 and cache data, draw charts, plot information on a map, and use interactive
 widgets, like a slider, to filter results.
@@ -44,24 +44,27 @@ widgets, like a slider, to filter results.
 Now that you have a report, the next thing you'll need to do is fetch the Uber
 dataset for pickups and drop-offs in New York City.
 
- 1. Let's start by writing a function to load the data. Add this code to your
-    script:
-    ```Python
-    DATE_COLUMN = 'date/time'
-    DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
-             'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
+1. Let's start by writing a function to load the data. Add this code to your
+   script:
 
-    def load_data(nrows):
-        data = pd.read_csv(DATA_URL, nrows=nrows)
-        lowercase = lambda x: str(x).lower()
-        data.rename(lowercase, axis='columns', inplace=True)
-        data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
-        return data
-    ```
-    You'll notice that `load_data` is a plain old function that downloads some
-    date, puts it in a Pandas dataframe, and converts the date column from text
-    to datetime. The function accepts a single parameter (`nrows`), which
-    specifies the number of rows that you want to load into the dataframe.
+   ```Python
+   DATE_COLUMN = 'date/time'
+   DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
+            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
+
+   def load_data(nrows):
+       data = pd.read_csv(DATA_URL, nrows=nrows)
+       lowercase = lambda x: str(x).lower()
+       data.rename(lowercase, axis='columns', inplace=True)
+       data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
+       return data
+   ```
+
+   You'll notice that `load_data` is a plain old function that downloads some
+   date, puts it in a Pandas dataframe, and converts the date column from text
+   to datetime. The function accepts a single parameter (`nrows`), which
+   specifies the number of rows that you want to load into the dataframe.
+
 2. Now let's test the function and review the output. Below your function, add
    these lines:
 
@@ -73,6 +76,7 @@ dataset for pickups and drop-offs in New York City.
    # Notify the reader that the data was successfully loaded.
    data_load_state.text('Loading data...done!')
    ```
+
    You'll see a few buttons in the upper-right corner of your report asking if
    you'd like to rerun the report. Choose **Always rerun**, and you'll see your
    changes automatically each time you save.
@@ -89,7 +93,8 @@ It turns out that it takes a long time to download data, and load 10,000 lines i
    @st.cache
    def load_data(nrows):
    ```
-2. Then save the script, and Streamlit will automatically rerun your report. Since this is the first time you’re running the script with `@st.cache `, you won't see anything change. Let’s tweak your file a little bit more so that you can see the power of caching.
+
+2. Then save the script, and Streamlit will automatically rerun your report. Since this is the first time you’re running the script with `@st.cache`, you won't see anything change. Let’s tweak your file a little bit more so that you can see the power of caching.
 3. Replace the line `st.write('Done!')` with this:
    ```python
    st.write('Done! (using st.cache)')
@@ -106,7 +111,7 @@ When you mark a function with Streamlit’s cache annotation, it tells Streamlit
 2. Code, variables, and files that the function depends on
 3. The input parameters that you called the function with
 
-If this is the first time Streamlit has seen these items, with these exact values, and in this exact combination, it runs the function and stores the result in a local cache. The next time the function is called, if the three values haven't changed, then  Streamlit knows it can skip executing the function altogether. Instead, it reads the output from the local cache and passes it on to the caller -- like magic.
+If this is the first time Streamlit has seen these items, with these exact values, and in this exact combination, it runs the function and stores the result in a local cache. The next time the function is called, if the three values haven't changed, then Streamlit knows it can skip executing the function altogether. Instead, it reads the output from the local cache and passes it on to the caller -- like magic.
 
 "But, wait a second," you’re saying to yourself, "this sounds too good to be true. What are the limitations of all this awesomesauce?"
 
@@ -194,7 +199,7 @@ function to overlay the data on a map of New York City.
    st.map(data)
    ```
 3. Save your script. The map is fully interactive. Give it a try by panning or
-zooming in a bit.
+   zooming in a bit.
 
 After drawing your histogram, you determined that the busiest hour for Uber
 pickups was 17:00. Let's redraw the map to show the concentration of pickups
@@ -239,6 +244,7 @@ checkbox to your report. We'll use this checkbox to show/hide the raw data
 table at the top of your report.
 
 1. Locate these lines:
+
    ```Python
    st.subheader('Raw data')
    st.write(data)
@@ -310,7 +316,7 @@ hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
 st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = st.slider('hour', 17, 1, 24, 1)
+hour_to_filter = st.slider('hour', 0, 23, 17)
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
 st.subheader('Map of all pickups at %s:00' % hour_to_filter)

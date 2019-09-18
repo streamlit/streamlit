@@ -58,8 +58,7 @@ class Client(object):
 
     def __init__(self):
         if Client._singleton is not None:
-            raise RuntimeError(
-                'Client already initialized. Use .get_current() instead')
+            raise RuntimeError("Client already initialized. Use .get_current() instead")
 
         Client._singleton = self
 
@@ -74,16 +73,17 @@ class Client(object):
     def toggle_metrics(self):
         self._metrics = {}
 
-        if config.get_option('global.metrics'):
+        if config.get_option("global.metrics"):
             try:
                 import prometheus_client
             except ImportError as e:
                 raise ImportError(
-                    'prometheus-client is not installed. pip install prometheus-client'
+                    "prometheus-client is not installed. pip install prometheus-client"
                 )
             self.generate_latest = prometheus_client.generate_latest
 
-            existing_metrics = prometheus_client.registry.REGISTRY._names_to_collectors.keys(
+            existing_metrics = (
+                prometheus_client.registry.REGISTRY._names_to_collectors.keys()
             )
 
             for kind, metric, doc, labels in self._raw_metrics:
@@ -92,6 +92,6 @@ class Client(object):
                 p = getattr(prometheus_client, kind)
                 self._metrics[metric] = p(metric, doc, labels)
         else:
-            self.generate_latest = lambda: ''
+            self.generate_latest = lambda: ""
             for _, metric, _, _ in self._raw_metrics:
                 self._metrics[metric] = MockMetric()

@@ -44,7 +44,7 @@ def serialize_forward_msg(msg):
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        _convert_msg_to_exception_msg(msg, RuntimeError('Data too large'))
+        _convert_msg_to_exception_msg(msg, RuntimeError("Data too large"))
         msg_str = msg.SerializeToString()
 
     return msg_str
@@ -82,7 +82,7 @@ def is_url_from_allowed_origins(url):
         True if URL is accepted. False otherwise.
 
     """
-    if not config.get_option('server.enableCORS'):
+    if not config.get_option("server.enableCORS"):
         # Allow everything when CORS is disabled.
         return True
 
@@ -90,9 +90,9 @@ def is_url_from_allowed_origins(url):
 
     allowed_domains = [
         # Check localhost first.
-        'localhost',
-        '0.0.0.0',
-        '127.0.0.1',
+        "localhost",
+        "0.0.0.0",
+        "127.0.0.1",
         # Try to avoid making unecessary HTTP requests by checking if the user
         # manually specified a server address.
         _get_server_address_if_manually_set,
@@ -100,7 +100,7 @@ def is_url_from_allowed_origins(url):
         # Then try the options that depend on HTTP requests or opening sockets.
         util.get_internal_ip,
         util.get_external_ip,
-        lambda: config.get_option('s3.bucket'),
+        lambda: config.get_option("s3.bucket"),
     ]
 
     for allowed_domain in allowed_domains:
@@ -117,10 +117,10 @@ def is_url_from_allowed_origins(url):
 
 
 def _get_server_address_if_manually_set():
-    if config.is_manually_set('browser.serverAddress'):
-        return util.get_hostname(config.get_option('browser.serverAddress'))
+    if config.is_manually_set("browser.serverAddress"):
+        return util.get_hostname(config.get_option("browser.serverAddress"))
 
 
 def _get_s3_url_host_if_manually_set():
-    if config.is_manually_set('s3.url'):
-        return util.get_hostname(config.get_option('s3.url'))
+    if config.is_manually_set("s3.url"):
+        return util.get_hostname(config.get_option("s3.url"))
