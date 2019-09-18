@@ -1,4 +1,6 @@
+import platform
 import setuptools
+import subprocess
 
 from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
@@ -14,6 +16,15 @@ else:
     packages.update(pipfile["python3"])
 requirements = convert_deps_to_pip(packages, r=False)
 
+
+# Check whether xcode tools are available before making watchdog a
+# dependency (only if the current system is a Mac).
+if (platform.system() == 'Darwin' and
+        subprocess.call(['xcode-select', '--version'], shell=False) != 0):
+    try:
+        requirements.remove('watchdog')
+    except ValueError:
+        pass
 
 def readme():
     with open("README.md") as f:

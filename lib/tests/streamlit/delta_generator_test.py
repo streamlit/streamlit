@@ -33,6 +33,7 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
     _clean_up_sig,
@@ -54,6 +55,32 @@ class FakeDeltaGenerator(object):
     def __init__(self):
         """Constructor."""
         pass
+
+    def __getattr__(self, name):
+        streamlit_methods = [method_name for method_name in dir(st)
+                             if callable(getattr(st, method_name))]
+
+        def wrapper(*args, **kwargs):
+            if name in streamlit_methods:
+                if self._container == BlockPath.SIDEBAR:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                                  "name": name
+                              }
+                else:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`DeltaGenerator` objects. Did you mean " \
+                              "`st.%(name)s()`?" % {
+                                  "name": name
+                              }
+            else:
+                message = "`%(name)s()` is not a valid Streamlit command." % {
+                    "name": name
+                }
+
+            raise AttributeError(message)
+
+        return wrapper
 
     def fake_text(self, element, body):
         """Fake text delta generator."""
@@ -104,6 +131,21 @@ class MockQueue(object):
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
+
+    def test_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.non_existing()
+
+        self.assertEqual(str(ctx.exception),
+                         "`non_existing()` is not a valid Streamlit command.")
+
+    def test_sidebar_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.write()
+
+        self.assertEqual(str(ctx.exception),
+                         "Method `write()` does not exist for `DeltaGenerator`"
+                         " objects. Did you mean `st.write()`?")
 
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
