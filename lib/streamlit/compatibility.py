@@ -37,9 +37,9 @@ def setup_2_3_shims(caller_globals):
     python 3.
     """
     if is_running_py3():
-        caller_globals['dict_types'] = (type({}),)
-        caller_globals['string_types'] = (type(''),)
-        caller_globals['native_dict'] = _dict
+        caller_globals["dict_types"] = (type({}),)
+        caller_globals["string_types"] = (type(""),)
+        caller_globals["native_dict"] = _dict
     else:
         # These are the symbols we will export to the calling package.
         export_symbols = []
@@ -47,38 +47,50 @@ def setup_2_3_shims(caller_globals):
         # Override basic types.
         native_dict = _dict
         from builtins import range, map, str, dict, object, zip, int
+
         export_symbols += [
-            'range', 'map', 'str', 'dict', 'object', 'zip', 'int',
-            'native_dict']
+            "range",
+            "map",
+            "str",
+            "dict",
+            "object",
+            "zip",
+            "int",
+            "native_dict",
+        ]
 
         # Oerride the open function.
         from io import open
-        export_symbols += ['open']
+
+        export_symbols += ["open"]
 
         from six import string_types
-        export_symbols += ['string_types']
+
+        export_symbols += ["string_types"]
 
         # Export these symbols to the calling function's symbol table.
         for symbol in export_symbols:
             caller_globals[symbol] = locals()[symbol]
 
         # Special Cases
-        caller_globals['FileNotFoundError'] = IOError
-        caller_globals['dict_types'] = (dict, type({}))
+        caller_globals["FileNotFoundError"] = IOError
+        caller_globals["dict_types"] = (dict, type({}))
 
         # Before we can call future.stanard_library, we need to make sure we're not
         # overriding any of the packages that it monkey patches or this can cause
         # some screwyness.
-        illegal_package_names = ['urllib', 'test', 'dbm']
-        current_directory_files = os.listdir('.')
+        illegal_package_names = ["urllib", "test", "dbm"]
+        current_directory_files = os.listdir(".")
         for illegal_package_name in illegal_package_names:
-            illegal_source_file = illegal_package_name + '.py'
-            assert illegal_source_file not in current_directory_files, \
-                'File "%s" overrides a built-in package name.' \
-                ' Please rename it.' % illegal_source_file
+            illegal_source_file = illegal_package_name + ".py"
+            assert illegal_source_file not in current_directory_files, (
+                'File "%s" overrides a built-in package name.'
+                " Please rename it." % illegal_source_file
+            )
 
         # Do a bunch of dark monkey patching magic.
         from future.standard_library import install_aliases
+
         install_aliases()
 
 

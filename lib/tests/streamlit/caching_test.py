@@ -33,7 +33,7 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
-    @patch.object(st, 'warning')
+    @patch.object(st, "warning")
     def test_args(self, warning):
         called = [False]
 
@@ -57,7 +57,7 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_not_called()
 
-    @patch.object(st, 'warning')
+    @patch.object(st, "warning")
     def test_mutate_return(self, warning):
         @st.cache
         def f():
@@ -73,7 +73,7 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_called()
 
-    @patch.object(st, 'warning')
+    @patch.object(st, "warning")
     def test_mutate_args(self, warning):
         @st.cache
         def f(x):
@@ -119,7 +119,7 @@ class CachingObjectTest(unittest.TestCase):
 
             self.assertEqual(c.value, val)
 
-    @patch.object(st, 'warning')
+    @patch.object(st, "warning")
     def off_test_mutate(self, warning):
         for _ in range(2):
             c = st.Cache()

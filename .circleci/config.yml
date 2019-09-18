@@ -90,32 +90,32 @@ jobs:
       - restore_cache:
           name: Restore /opt/conda from cache
           keys:
-          - v12-opt-conda-{{ checksum "~/python_version.md5" }}
+            - v12-opt-conda-{{ checksum "~/python_version.md5" }}
 
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-          - v12-python-venv-{{ checksum "~/python_version.md5" }}
+            - v12-python-venv-{{ checksum "~/python_version.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
-          - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+            - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache:
           name: Restore protobufs from cache
           keys:
-          - v12-protobuf-{{ checksum "~/protobuf.md5" }}
+            - v12-protobuf-{{ checksum "~/protobuf.md5" }}
 
       - restore_cache: &restore_make
           name: Restore make from cache
           keys:
-          - v12_make.bin-{{ checksum "~/make.md5" }}
+            - v12_make.bin-{{ checksum "~/make.md5" }}
 
       - restore_cache: &restore_dot
           name: Restore dot from cache
           keys:
-          - v12_dot.bin-{{ checksum "~/dot.md5" }}
+            - v12_dot.bin-{{ checksum "~/dot.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -157,7 +157,6 @@ jobs:
           key: v12_dot.bin-{{ checksum "~/dot.md5" }}
           paths:
             - dot.bin
-
 
       #################################################################
       # Run 'make init'
@@ -244,6 +243,7 @@ jobs:
           name: Run linters.
           command: |
             make jslint
+            make pylint
 
       - store_test_results:
           path: frontend/test-reports
@@ -260,6 +260,14 @@ jobs:
       - store_test_results:
           path: lib/test-reports
           when: always
+
+      #################################################################
+      # Run integration tests
+      #################################################################
+      - run:
+          name: Run integration tests.
+          command: |
+            make integration-tests
 
       #################################################################
       # Run frontend tests. (Only executed in the Python 3 job.)

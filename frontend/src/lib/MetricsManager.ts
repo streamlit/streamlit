@@ -34,8 +34,6 @@ interface DeltaCounter {
 
 type Event = [string, object]
 
-type SendFunction = (evName: string, evData: object) => void
-
 export class MetricsManager {
   private initialized = false
 
@@ -72,9 +70,12 @@ export class MetricsManager {
     this.actuallySendMetrics = gatherUsageStats
 
     if (this.actuallySendMetrics || IS_SHARED_REPORT) {
-      this.identify(SessionInfo.current.installationId, {
-        authoremail: SessionInfo.current.authorEmail,
-      })
+      // Only record the user's email if they entered a non-empty one.
+      const userTraits: any = {}
+      if (SessionInfo.current.authorEmail !== "") {
+        userTraits["authoremail"] = SessionInfo.current.authorEmail
+      }
+      this.identify(SessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
 

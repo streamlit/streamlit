@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""version unit test."""
+
+import unittest
+
+import mock
+import requests_mock
+
+from streamlit import version
+from streamlit.version import PYPI_STREAMLIT_URL
+from streamlit.version import get_installed_streamlit_version
+from streamlit.version import get_latest_streamlit_version
+from streamlit.version import should_show_new_version_notice
+
+
+class VersionTest(unittest.TestCase):
+    def test_get_installed_streamlit_version(self):
+        self.assertIsInstance(get_installed_streamlit_version(), str)
+
+    def test_get_latest_streamlit_version(self):
+        with requests_mock.mock() as m:
+            m.get(PYPI_STREAMLIT_URL, json={"info": {"version": "1.2.3"}})
+            self.assertEqual("1.2.3", get_latest_streamlit_version())
+
+    def test_should_show_new_version_notice(self):
+        # Skip the check
+        with mock.patch("streamlit.version.get_latest_streamlit_version") as get_latest:
+            version.CHECK_PYPI_PROBABILITY = 0
+            self.assertFalse(should_show_new_version_notice())
+            get_latest.assert_not_called()
+
+        # Check - outdated
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
+
+            version.CHECK_PYPI_PROBABILITY = 1
+            get_installed.side_effect = ["1.0.0"]
+            get_latest.side_effect = ["1.2.3"]
+
+            self.assertTrue(should_show_new_version_notice())
+            get_installed.assert_called_once()
+            get_latest.assert_called_once()
+
+        # Check - up-to-date
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
+
+            version.CHECK_PYPI_PROBABILITY = 1
+            get_installed.side_effect = ["1.2.3"]
+            get_latest.side_effect = ["1.2.3"]
+
+            self.assertFalse(should_show_new_version_notice())
+            get_installed.assert_called_once()
+            get_latest.assert_called_once()
+
+        # Check - error
+        with mock.patch(
+            "streamlit.version.get_latest_streamlit_version"
+        ) as get_latest, mock.patch(
+            "streamlit.version.get_installed_streamlit_version"
+        ) as get_installed:
+
+            version.CHECK_PYPI_PROBABILITY = 1
+            get_installed.side_effect = ["1.2.3"]
+            get_latest.side_effect = RuntimeError("apocalypse!")
+
+            self.assertFalse(should_show_new_version_notice())
+            get_installed.assert_called_once()
+            get_latest.assert_called_once()

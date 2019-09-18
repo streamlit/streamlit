@@ -28,65 +28,59 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.multiselectbox('the label', ('m', 'f'))
+        st.multiselectbox("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.multiselectbox
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
 
-    @parameterized.expand([
-        (('m', 'f'), ['m', 'f']),
-        (['male', 'female'], ['male', 'female']),
-        (np.array(['m', 'f']), ['m', 'f']),
-        (pd.Series(np.array(['male', 'female'])), ['male', 'female']),
-    ])
+    @parameterized.expand(
+        [
+            (("m", "f"), ["m", "f"]),
+            (["male", "female"], ["male", "female"]),
+            (np.array(["m", "f"]), ["m", "f"]),
+            (pd.Series(np.array(["male", "female"])), ["male", "female"]),
+        ]
+    )
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        st.multiselectbox('the label', options)
+        st.multiselectbox("the label", options)
 
         c = self.get_delta_from_queue().new_element.multiselectbox
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""
-        arg_options = ['some str', 123, None, {}]
-        proto_options = ['some str', '123', 'None', '{}']
+        arg_options = ["some str", 123, None, {}]
+        proto_options = ["some str", "123", "None", "{}"]
 
-        st.multiselectbox('the label', arg_options)
+        st.multiselectbox("the label", arg_options)
 
         c = self.get_delta_from_queue().new_element.multiselectbox
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
         """Test that it formats options."""
-        arg_options = [{'name': 'john', 'height': 180},
-                       {'name': 'lisa', 'height': 200}]
-        proto_options = ['john', 'lisa']
+        arg_options = [{"name": "john", "height": 180}, {"name": "lisa", "height": 200}]
+        proto_options = ["john", "lisa"]
 
-        st.multiselectbox('the label', arg_options,
-                     format_func=lambda x: x['name'])
+        st.multiselectbox("the label", arg_options, format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.multiselectbox
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
-    @parameterized.expand([
-        ((),),
-        ([],),
-        (np.array([]),),
-        (pd.Series(np.array([])),),
-    ])
+    @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.multiselectbox('the label', options)
+        st.multiselectbox("the label", options)
 
         c = self.get_delta_from_queue().new_element.multiselectbox
-        self.assertEqual(c.label, 'the label')
+        self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
-

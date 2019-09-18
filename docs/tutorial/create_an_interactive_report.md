@@ -1,4 +1,4 @@
-# Tutorial: Create your first interactive report
+# Tutorial: Create your first interactive app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/secret/docs/#install-streamlit) and
@@ -6,7 +6,7 @@ run through the basics in our [get started guide](../getting_started.md). If
 not, now is a good time to take a look.
 
 In this tutorial, you're going to use Streamlit's core features to
-create an interactive report; exploring a public Uber dataset for pickups and
+create an interactive app; exploring a public Uber dataset for pickups and
 drop-offs in New York City. When you're finished, you'll know how to fetch
 and cache data, draw charts, plot information on a map, and use interactive
 widgets, like a slider, to filter results.
@@ -310,7 +310,7 @@ hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
 st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = st.slider('hour', 17, 1, 24, 1)
+hour_to_filter = st.slider('hour', 0, 23, 17)
 filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
 st.subheader('Map of all pickups at %s:00' % hour_to_filter)

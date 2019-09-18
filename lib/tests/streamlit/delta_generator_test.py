@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import json
@@ -32,9 +33,12 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
-from streamlit.DeltaGenerator import DeltaGenerator, _wraps_with_cleaned_sig, \
-        _clean_up_sig, _with_element
-from streamlit.ReportQueue import ReportQueue
+from streamlit.proto.BlockPath_pb2 import BlockPath
+from streamlit.DeltaGenerator import (
+    _wraps_with_cleaned_sig,
+    _clean_up_sig,
+    _with_element,
+)
 from tests import testutil
 import streamlit as st
 
@@ -52,6 +56,32 @@ class FakeDeltaGenerator(object):
         """Constructor."""
         pass
 
+    def __getattr__(self, name):
+        streamlit_methods = [method_name for method_name in dir(st)
+                             if callable(getattr(st, method_name))]
+
+        def wrapper(*args, **kwargs):
+            if name in streamlit_methods:
+                if self._container == BlockPath.SIDEBAR:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                                  "name": name
+                              }
+                else:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`DeltaGenerator` objects. Did you mean " \
+                              "`st.%(name)s()`?" % {
+                                  "name": name
+                              }
+            else:
+                message = "`%(name)s()` is not a valid Streamlit command." % {
+                    "name": name
+                }
+
+            raise AttributeError(message)
+
+        return wrapper
+
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
@@ -68,7 +98,7 @@ class FakeDeltaGenerator(object):
 
     def fake_text_raise_exception(self, element, body):
         """Fake text that raises exception."""
-        raise Exception('Exception in fake_text_raise_exception')
+        raise Exception("Exception in fake_text_raise_exception")
 
     def exception(self, e):
         """Create fake exception handler.
@@ -102,49 +132,61 @@ class MockQueue(object):
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
 
+    def test_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.non_existing()
+
+        self.assertEqual(str(ctx.exception),
+                         "`non_existing()` is not a valid Streamlit command.")
+
+    def test_sidebar_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.write()
+
+        self.assertEqual(str(ctx.exception),
+                         "Method `write()` does not exist for `DeltaGenerator`"
+                         " objects. Did you mean `st.write()`?")
+
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = (
-            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text))
-        wrapped = wrapped_function.keywords.get('wrapped')
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
+        wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.
-        self.assertEqual(
-            wrapped.__module__, 'delta_generator_test')
-        self.assertEqual(wrapped.__name__, 'fake_text')
-        self.assertEqual(wrapped.__doc__, 'Fake text delta generator.')
+        self.assertEqual(wrapped.__module__, "delta_generator_test")
+        self.assertEqual(wrapped.__name__, "fake_text")
+        self.assertEqual(wrapped.__doc__, "Fake text delta generator.")
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_text)
-        self.assertEqual(str(sig), '(self, element, body)')
+        self.assertEqual(str(sig), "(self, element, body)")
 
         # Check clean signature
         sig = signature(wrapped)
-        self.assertEqual(str(sig), '(body)')
+        self.assertEqual(str(sig), "(body)")
 
     def test_clean_up_sig(self):
         wrapped = _clean_up_sig(FakeDeltaGenerator.fake_dataframe)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_dataframe)
-        self.assertEqual(
-            str(sig), '(self, element, arg0, data=None)', str(sig))
+        self.assertEqual(str(sig), "(self, element, arg0, data=None)", str(sig))
 
         # Check cleaned signature.
         # On python2 it looks like: '(self, *args, **kwargs)'
         if sys.version_info >= (3, 0):
             sig = signature(wrapped)
-            self.assertEqual('(arg0, data=None)', str(sig))
+            self.assertEqual("(arg0, data=None)", str(sig))
 
         # Check cleaned output.
         dg = FakeDeltaGenerator()
-        result = wrapped(dg, 'foo', data='bar')
-        self.assertEqual(result, (None, 'foo', 'bar'))
+        result = wrapped(dg, "foo", data="bar")
+        self.assertEqual(result, (None, "foo", "bar"))
 
     def test_with_element(self):
         wrapped = _with_element(FakeDeltaGenerator.fake_text)
 
         dg = FakeDeltaGenerator()
-        data = 'some_text'
+        data = "some_text"
         # This would really look like st.text(data) but since we're
         # testng the wrapper, it looks like this.
         element = wrapped(dg, data)
@@ -154,17 +196,16 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         wrapped = _with_element(FakeDeltaGenerator.fake_text_raise_exception)
 
         dg = FakeDeltaGenerator()
-        data = 'some_text'
+        data = "some_text"
         with self.assertRaises(Exception) as ctx:
             wrapped(dg, data)
 
-        self.assertTrue(
-            'Exception in fake_text_raise_exception' in str(ctx.exception))
+        self.assertTrue("Exception in fake_text_raise_exception" in str(ctx.exception))
 
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, 'TypeError')
+        self.assertEqual(c.type, "TypeError")
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
@@ -195,7 +236,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         dg = self.new_delta_generator()
         self.assertEqual(0, dg._id)
 
-        test_data = 'some test data'
+        test_data = "some test data"
         # Use FakeDeltaGenerator.fake_text cause if we use
         # DeltaGenerator.text, it calls enqueue_new_element_delta
         # automatically.  Ideally I should unwrap it.
@@ -215,7 +256,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         dg = self.new_delta_generator(id=123, is_root=False)
         self.assertEqual(123, dg._id)
 
-        test_data = 'some test data'
+        test_data = "some test data"
         # Use FakeDeltaGenerator.fake_text cause if we use
         # DeltaGenerator.text, it calls enqueue_new_element_delta
         # automatically.  Ideally I should unwrap it.
@@ -238,40 +279,38 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
     def test_generic_text(self):
         """Test Text generic str(body) stuff."""
         test_data = {
-            'text': Text.PLAIN,
-            'error': Text.ERROR,
-            'warning': Text.WARNING,
-            'info': Text.INFO,
-            'success': Text.SUCCESS,
+            "text": Text.PLAIN,
+            "error": Text.ERROR,
+            "warning": Text.WARNING,
+            "info": Text.INFO,
+            "success": Text.SUCCESS,
         }
 
         # Test with string input.
-        input_data = '    Some string  '
-        cleaned_data = 'Some string'
+        input_data = "    Some string  "
+        cleaned_data = "Some string"
         for name, format in test_data.items():
             method = getattr(st, name)
             method(input_data)
 
             element = self.get_delta_from_queue().new_element
-            self.assertEqual(cleaned_data, getattr(element, 'text').body)
-            self.assertEqual(format, getattr(element, 'text').format)
+            self.assertEqual(cleaned_data, getattr(element, "text").body)
+            self.assertEqual(format, getattr(element, "text").format)
 
         # Test with non-string input.
         input_data = 123
-        cleaned_data = '123'
+        cleaned_data = "123"
         for name, format in test_data.items():
             method = getattr(st, name)
             method(input_data)
 
             element = self.get_delta_from_queue().new_element
-            self.assertEqual(str(cleaned_data), getattr(element, 'text').body)
-            self.assertEqual(format, getattr(element, 'text').format)
+            self.assertEqual(str(cleaned_data), getattr(element, "text").body)
+            self.assertEqual(format, getattr(element, "text").format)
 
     def test_json_object(self):
         """Test Text.JSON object."""
-        json_data = {
-            'key': 'value',
-        }
+        json_data = {"key": "value"}
 
         # Testing python object
         st.json(json_data)
@@ -284,7 +323,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
     def test_json_string(self):
         """Test Text.JSON string."""
-        json_string = u'{"key": "value"}'
+        json_string = '{"key": "value"}'
 
         # Testing JSON string
         st.json(json_string)
@@ -302,27 +341,27 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         if sys.version_info >= (3, 0):
-            self.assertEqual('"<class \'module\'>"', element.text.body)
+            self.assertEqual("\"<class 'module'>\"", element.text.body)
         else:
-            self.assertEqual('"<type \'module\'>"', element.text.body)
+            self.assertEqual("\"<type 'module'>\"", element.text.body)
         self.assertEqual(Text.JSON, element.text.format)
 
     def test_markdown(self):
         """Test Text.MARKDOWN."""
-        test_string = '    data         '
+        test_string = "    data         "
 
         st.markdown(test_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(u'data', element.text.body)
+        self.assertEqual("data", element.text.body)
         self.assertEqual(Text.MARKDOWN, element.text.format)
 
     def test_code(self):
         """Test st.code()"""
         code = "print('Hello, %s!' % 'Streamlit')"
-        expected_body = '```python\n%s\n```' % code
+        expected_body = "```python\n%s\n```" % code
 
-        st.code(code, language='python')
+        st.code(code, language="python")
         element = self.get_delta_from_queue().new_element
 
         # st.code() creates a MARKDOWN text object that wraps
@@ -367,7 +406,7 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
                 st.progress(value)
 
         with self.assertRaises(TypeError):
-            st.progress('some string')
+            st.progress("some string")
 
 
 class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
@@ -375,34 +414,34 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
     def test_line_chart(self):
         """Test dg.line_chart."""
-        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
         dg = st.line_chart(data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, 'LineChart')
+        self.assertEqual(element.chart.type, "LineChart")
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
 
     def test_area_chart(self):
         """Test dg.area_chart."""
-        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
         dg = st.area_chart(data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, 'AreaChart')
+        self.assertEqual(element.chart.type, "AreaChart")
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""
-        data = pd.DataFrame([[20, 30, 50]], columns=['a', 'b', 'c'])
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
         dg = st.bar_chart(data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, 'BarChart')
+        self.assertEqual(element.chart.type, "BarChart")
         self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
         self.assertEqual(len(element.chart.components), 8)
 
@@ -413,8 +452,8 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
     def test_image_from_url(self):
         """Tests dg.image with single and multiple image URLs"""
 
-        url = 'https://streamlit.io/an_image.png'
-        caption = 'ahoy!'
+        url = "https://streamlit.io/an_image.png"
+        caption = "ahoy!"
 
         # single URL
         dg = st.image(url, caption=caption, width=200)
@@ -435,10 +474,9 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         """Tests that the number of images and captions must match, or
         an exception is generated"""
 
-        url = 'https://streamlit.io/an_image.png'
-        caption = 'ahoy!'
+        url = "https://streamlit.io/an_image.png"
+        caption = "ahoy!"
 
         with self.assertRaises(Exception) as ctx:
             st.image([url] * 5, caption=[caption] * 2)
-        self.assertTrue(
-            'Cannot pair 2 captions with 5 images.' in str(ctx.exception))
+        self.assertTrue("Cannot pair 2 captions with 5 images." in str(ctx.exception))

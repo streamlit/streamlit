@@ -78,10 +78,8 @@ class LoggerTest(unittest.TestCase):
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
         streamlit.logger.init_tornado_logs()
-        loggers = [x for x in streamlit.logger.LOGGERS.keys()
-                   if 'tornado.' in x]
-        truth = ['tornado.access', 'tornado.application',
-                 'tornado.general']
+        loggers = [x for x in streamlit.logger.LOGGERS.keys() if "tornado." in x]
+        truth = ["tornado.access", "tornado.application", "tornado.general"]
         self.assertEqual(sorted(truth), sorted(loggers))
 
     # Need to fix this test:
