@@ -95,6 +95,14 @@
       font-size: 0.8rem;
     }
 
+    .Widget {
+      color: inherit;
+
+      label {
+        color: inherit;
+      }
+    }
+
     @media (max-width: 746px) {
       & {
         background: $white;
@@ -108,6 +116,11 @@
         transition: transform 150ms, box-shadow 150ms;
         z-index: $z-index-sidebar;
       }
+    }
+
+    @media (min-width: 747px) {
+      background-color: #31353d;
+      color: #b8bfce;
     }
   }
 

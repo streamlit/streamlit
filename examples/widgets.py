@@ -19,6 +19,9 @@ from datetime import date
 
 st.title("Interactive Widgets")
 
+st.sidebar.title('SIDEBAR')
+st.sidebar.text_area("Comments", "Streamlit is awesomeness!")
+
 st.subheader("Checkbox")
 w1 = st.checkbox("I am human", True)
 st.write(w1)
