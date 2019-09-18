@@ -48,7 +48,7 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     """Simplify the function signature by removing arguments from it.
 
-    Removes arguments the first N arguments from function signature (where N is
+    Removes the first N arguments from function signature (where N is
     num_args_to_remove). This is useful since function signatures are visible
     in our user-facing docs, and many methods in DeltaGenerator have arguments
     that users have no access to.
