@@ -48,9 +48,9 @@
     width: 100%;
     flex-direction: column;
     align-items: center;
+    padding: 0 15px 0 15px;
 
     .block-container {
-      min-width: $content-min-width;
       max-width: $content-max-width;
       width: 100%;
 
