@@ -73,7 +73,7 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
 
-        # Convert expression nodes to st.write
+        # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
             value = _get_st_write_from_expr(node, i, parent_type=type(tree))
             if value is not None:
@@ -144,6 +144,10 @@ def _get_st_write_from_expr(node, i, parent_type):
         and type(node.value) is ast.Str
         and parent_type in (ast.FunctionDef, ast.Module)
     ):
+        return None
+
+    # Don't change yield nodes
+    if type(node.value) is ast.Yield or type(node.value) is ast.YieldFrom:
         return None
 
     # If tuple, call st.write on the 0th element (rather than the
