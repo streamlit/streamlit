@@ -62,7 +62,7 @@ class ReportSession(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, script_path, script_argv, command_line):
         """Initialize the ReportSession.
 
         Parameters
@@ -76,13 +76,16 @@ class ReportSession(object):
         script_argv : list of str
             Command-line arguments to run the script with.
 
+        command_line : str
+            Command line as input by the user
+
         """
         # Each ReportSession gets a unique ID
         self.id = ReportSession._next_id
         ReportSession._next_id += 1
 
         self._ioloop = ioloop
-        self._report = Report(script_path, script_argv)
+        self._report = Report(script_path, script_argv, command_line)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
@@ -372,15 +375,18 @@ class ReportSession(object):
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email
 
+        imsg.command_line = self._report.command_line
+
         self.enqueue(msg)
 
+    # if run from url set the correct command line and correct name
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
         msg = ForwardMsg()
         msg.new_report.id = self._report.report_id
-        msg.new_report.command_line.extend(self._report.argv)
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
+
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):

@@ -131,7 +131,7 @@ def _print_url():
     click.secho("")
 
 
-def run(script_path):
+def run(script_path, command_line):
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
@@ -139,6 +139,7 @@ def run(script_path):
     Parameters
     ----------
     script_path : str
+    command_line : str
 
     """
     _fix_sys_path(script_path)
@@ -151,7 +152,7 @@ def run(script_path):
     ioloop = tornado.ioloop.IOLoop.current()
 
     # Create and start the server.
-    server = Server(ioloop, script_path, sys.argv)
+    server = Server(ioloop, script_path, sys.argv, command_line)
     server.add_preheated_report_session()
     server.start(_on_server_start)
 

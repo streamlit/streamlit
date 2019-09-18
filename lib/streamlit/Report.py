@@ -53,7 +53,7 @@ class Report(object):
         port = _get_browser_address_bar_port()
         return "http://%(host_ip)s:%(port)s" % {"host_ip": host_ip, "port": port}
 
-    def __init__(self, script_path, argv):
+    def __init__(self, script_path, argv, command_line):
         """Constructor.
 
         Parameters
@@ -64,13 +64,23 @@ class Report(object):
         argv : list of str
             Command-line arguments to run the script with.
 
+        command_line : string
+            Command line as input by the user
+
         """
-        basename = os.path.basename(script_path)
 
         self.script_path = os.path.abspath(script_path)
         self.script_folder = os.path.dirname(self.script_path)
         self.argv = argv
-        self.name = os.path.splitext(basename)[0]
+        self.command_line = command_line
+
+        if len(command_line.split()) > 2:
+            # Extract script name in a command line of the form
+            # streamlit run script.py
+            basename = os.path.basename(command_line.split()[2])
+            self.name = os.path.splitext(basename)[0]
+        else:
+            self.name = "script"
 
         # The master queue contains all messages that comprise the report.
         # If the user chooses to share a saved version of the report,

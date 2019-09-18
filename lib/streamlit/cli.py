@@ -127,6 +127,7 @@ def main_run(file_or_url, args):
     latter case, streamlit will download the script to a
     temporary file and runs this file.
     """
+
     from validators import url
 
     if url(file_or_url):
@@ -155,6 +156,11 @@ def main_run(file_or_url, args):
 
 
 def _main_run(file, args=None):
+    # make a copy before we modify it
+    import sys
+
+    command_line = " ".join(sys.argv)
+
     if args is None:
         args = []
 
@@ -175,7 +181,7 @@ def _main_run(file, args=None):
 
     sys.argv = [file] + list(args)
 
-    bootstrap.run(file)
+    bootstrap.run(file, command_line)
 
 
 # DEPRECATED

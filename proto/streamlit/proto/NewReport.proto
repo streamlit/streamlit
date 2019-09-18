@@ -21,8 +21,8 @@ message NewReport {
   // The report ID
   string id = 1;
 
-  // The command line that launched this report.
-  repeated string command_line = 2;
+  // The command line that launched this report. (Legacy - plan to remove this)
+  repeated string args = 2;
 
   // The basename of the script that launched this report. Example: "foo.py"
   string name = 3;
