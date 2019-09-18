@@ -7,10 +7,12 @@ async_loop = asyncio.new_event_loop()
 
 
 magic = None
+
+
 def prep_magic(name):
     global magic
     magic = "_%s_" % name
-    st.markdown('**%s** expected:' % name)
+    st.markdown("**%s** expected:" % name)
 
 
 prep_magic("no block")
@@ -44,12 +46,16 @@ while ii < 1:
     ii += 1
 
 prep_magic("WITH block")
+
+
 @contextlib.contextmanager
 def context_mgr():
     try:
         yield
     finally:
         pass
+
+
 with context_mgr():
     magic
 
@@ -72,25 +78,39 @@ finally:
     magic
 
 prep_magic("FUNCTION block")
+
+
 def func():
     magic
+
+
 func()
 
 prep_magic("ASYNC FUNCTION block")
+
+
 async def async_func():
     magic
+
+
 async_loop.run_until_complete(async_func())
 
 prep_magic("ASYNC FOR block")
+
+
 async def async_for():
     async def async_iter():
         yield
 
     async for _ in async_iter():
         magic
+
+
 async_loop.run_until_complete(async_for())
 
 prep_magic("ASYNC WITH block")
+
+
 async def async_with():
     @contextlib.asynccontextmanager
     async def async_context_mgr():
@@ -98,8 +118,11 @@ async def async_with():
             yield
         finally:
             pass
+
     async with async_context_mgr():
         magic
+
+
 async_loop.run_until_complete(async_with())
 
-st.info('done')
+st.info("done")
