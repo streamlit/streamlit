@@ -53,6 +53,7 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             node_type is ast.FunctionDef
             or node_type is ast.With
             or node_type is ast.For
+            or node_type is ast.While
         ):
             _modify_ast_subtree(node)
 
