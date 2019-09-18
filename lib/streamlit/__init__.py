@@ -25,7 +25,7 @@ How to use Streamlit in 3 seconds:
     $ streamlit run my_script.py
 
     3. Visualize your code
-    A new tab will open on your browser. That's your Streamlit App!
+    A new tab will open on your browser. That's your Streamlit app!
 
     4. Modify your code, save it, and watch changes live on your browser.
 
@@ -211,7 +211,7 @@ if not _is_running_py3():
 
 
 def write(*args):
-    """Write arguments to the App.
+    """Write arguments to the app.
 
     This is the swiss-army knife of Streamlit commands. It does different
     things depending on what you throw at it.
@@ -531,7 +531,7 @@ def _maybe_print_repl_warning():
                 _textwrap.dedent(
                     """
 
-                Will not generate Streamlit App
+                Will not generate Streamlit app
 
                   To generate an app, use Streamlit in a file and run it with:
                   $ streamlit run [FILE_NAME] [ARGUMENTS]

@@ -452,7 +452,7 @@ def _s3_bucket():
 
 @_create_option("s3.url")
 def _s3_url():
-    """URL root for external view of Streamlit Apps.
+    """URL root for external view of Streamlit apps.
 
     Default: (unset)
     """
