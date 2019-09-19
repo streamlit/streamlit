@@ -19,6 +19,7 @@
 from __future__ import absolute_import
 
 
+from streamlit.elements.data_frame_proto import convert_anything_to_df
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
@@ -26,7 +27,7 @@ import pandas as pd
 
 def generate_chart(chart_type, data):
     if not isinstance(data, pd.DataFrame):
-        data = pd.DataFrame(data)
+        data = convert_anything_to_df(data)
 
     data = pd.melt(data.reset_index(), id_vars=['index'])
 

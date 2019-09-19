@@ -2103,6 +2103,7 @@ class DeltaGenerator(object):
         # the data structure otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
         if self._delta_type in ('line_chart', 'bar_chart', 'area_chart'):
+            data = data_frame_proto.convert_anything_to_df(data)
             data = pd.melt(data.reset_index(), id_vars=['index'])
 
         msg = ForwardMsg_pb2.ForwardMsg()
