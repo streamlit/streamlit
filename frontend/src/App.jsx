@@ -445,7 +445,7 @@ class App extends PureComponent {
       } else {
         this.openDialog({
           type: "warning",
-          title: "Error sharing report",
+          title: "Error sharing app",
           msg: (
             <Fragment>
               <div>You do not have sharing configured.</div>
@@ -459,7 +459,7 @@ class App extends PureComponent {
         })
       }
     } else {
-      logError("Cannot save report when disconnected from server")
+      logError("Cannot save app when disconnected from server")
     }
   }
 
@@ -527,7 +527,7 @@ class App extends PureComponent {
   /** Requests that the server stop running the report */
   stopReport() {
     if (!this.isServerConnected()) {
-      logError("Cannot stop report when disconnected from server.")
+      logError("Cannot stop app when disconnected from server.")
       return
     }
 

@@ -58,9 +58,9 @@ export class ScriptChangedDialog extends PureComponent<Props> {
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <BasicDialog onClose={this.props.onClose}>
-          <ModalHeader toggle={this.props.onClose}>Report changed</ModalHeader>
+          <ModalHeader toggle={this.props.onClose}>App changed</ModalHeader>
           <ModalBody>
-            <div>The source files for this report have changed on disk.</div>
+            <div>The source files for this app have changed on disk.</div>
           </ModalBody>
           <ModalFooter>
             <Button

@@ -19,19 +19,18 @@
 
 describe("st.markdown", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays a markdown", () => {
-    cy.get(".element-container")
-      .should('have.length', 2)
+    cy.get(".element-container").should("have.length", 2);
 
     cy.get(".element-container .stText p")
       .first()
-      .contains("This markdown is awesome!")
+      .contains("This markdown is awesome!");
 
     cy.get(".element-container .stText p")
       .last()
-      .contains("This html in <div>markdown</div> is escaped!")
-  })
-})
+      .contains("This html in <div>markdown</div> is escaped!");
+  });
+});

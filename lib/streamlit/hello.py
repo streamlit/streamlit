@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A "Hello World" report."""
+"""A "Hello World" app."""
 
 import streamlit as st
 import numpy as np
@@ -24,7 +24,7 @@ def run():
     st.title("Hello Streamlit!")
     st.write(
         """
-        This is an example **Streamlit** report.
+        This is an example **Streamlit** app.
 
         If this is your first time using Streamlit, welcome! You may want to
         take a look at our
