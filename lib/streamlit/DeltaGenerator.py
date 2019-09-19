@@ -26,6 +26,7 @@ import functools
 import json
 import random
 import textwrap
+import pandas as pd
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -76,6 +77,11 @@ def _remove_self_from_sig(method):
     return wrapped_method
 
 
+def _get_last_index(data):
+    print(data)
+    return data.loc[:, ['index', 'variable']].groupby('variable').last()
+
+
 def _with_element(method):
     """Wrap function and pass a NewElement proto to be filled.
 
@@ -99,10 +105,19 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
+        delta_type = method.__name__
+        last_index = None
+
+        if delta_type in ('line_chart', 'bar_chart', 'area_chart'):
+            data = args[0]
+            if isinstance(data, pd.DataFrame):
+                last_index = data.index[-1]
+
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, method.__name__)
+        return dg._enqueue_new_element_delta(marshall_element, delta_type,
+                                             last_index)
 
     return wrapped_method
 
@@ -157,7 +172,8 @@ class DeltaGenerator(object):
                  id=0,
                  delta_type=None,
                  is_root=True,
-                 container=BlockPath_pb2.BlockPath.MAIN, path=()):
+                 container=BlockPath_pb2.BlockPath.MAIN,
+                 path=(), last_index=None):
         """Constructor.
 
         Parameters
@@ -173,6 +189,7 @@ class DeltaGenerator(object):
         self._enqueue = enqueue
         self._id = id
         self._delta_type = delta_type
+        self._last_index = last_index
         self._is_root = is_root
         self._container = container
         self._path = path
@@ -211,6 +228,7 @@ class DeltaGenerator(object):
         self._id = 0
 
     def _enqueue_new_element_delta(self, marshall_element, delta_type,
+                                   last_index,
                                    elementWidth=None,
                                    elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
@@ -263,9 +281,10 @@ class DeltaGenerator(object):
         if self._is_root:
             output_dg = DeltaGenerator(
                 self._enqueue, msg.metadata.delta_id, delta_type,
-                is_root=False)
+                is_root=False, last_index=last_index)
         else:
-            self.delta_type = delta_type
+            self._delta_type = delta_type
+            self._last_index = last_index
             output_dg = self
 
         kind = msg.delta.new_element.WhichOneof("type")
@@ -2103,6 +2122,7 @@ class DeltaGenerator(object):
         # the data structure otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
         if self._delta_type in ('line_chart', 'bar_chart', 'area_chart'):
+            print('index', self._last_index)
             data = data_frame_proto.convert_anything_to_df(data)
             data = pd.melt(data.reset_index(), id_vars=['index'])
 
