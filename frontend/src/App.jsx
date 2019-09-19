@@ -16,7 +16,7 @@
  */
 
 import React, { Fragment, PureComponent } from "react"
-import { Col, Container, Row } from "reactstrap"
+import { Container } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
