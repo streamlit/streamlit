@@ -169,12 +169,12 @@ publish-docs: docs
 				--acl public-read html s3://streamlit.io/secret/docs/ \
 				--profile streamlit
 
-	@# The line below uses the distribution ID obtained with
-	@# $ aws cloudfront list-distributions | \
-	@#     jq '.DistributionList.Items[] | \
-	@#     select(.Aliases.Items[0] | \
-	@#     contains("www.streamlit.io")) | \
-	@#     .Id'
+	# The line below uses the distribution ID obtained with
+	# $ aws cloudfront list-distributions | \
+	#     jq '.DistributionList.Items[] | \
+	#     select(.Aliases.Items[0] | \
+	#     contains("www.streamlit.io")) | \
+	#     .Id'
 
 	aws cloudfront create-invalidation \
 		--distribution-id=E5G9JPT7IOJDV \
