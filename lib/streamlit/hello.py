@@ -16,55 +16,120 @@
 """A "Hello World" app."""
 
 import streamlit as st
-import numpy as np
-import time
+import inspect
+from collections import OrderedDict
 
 
-def run():
-    st.title("Hello Streamlit!")
-    st.write(
-        """
-        This is an example **Streamlit** app.
-
-        If this is your first time using Streamlit, welcome! You may want to
-        take a look at our
-        [tutorials and documentation](https://streamlit.io/docs) next.
-        And feel free to ask us questions any time at
-        [help@streamlit.io](mailto:help@streamlit.io).
-
-        To celebrate this magic moment, below we're generating a bunch of
-        random numbers in a loop for around 10 seconds. Enjoy!
+def demo_1():
     """
-    )
+    This demo shows how you can use Streamlit to format text in a few different
+    ways.
+    """
+    st.title("Hello 🌍🌍🌍🌍🌍!!!!")
+    st.header("This is a header...")
+    st.subheader("... and this is a subheader")
+    st.write("We can write down something...")
+    st.text("...as monospaced text...")
+    st.markdown("... or maybe with _*markdown*_.")
 
+
+def demo_2():
+    """
+    In this demo, we ask you to enter your name in the input box below and,
+    if you want, your last name as well. Streamlit will
+    print it out with a number of repetitions given by a slider that you can
+    control.
+    """
+    first_name = st.text_input('First name')
+    if st.checkbox('Add your last name'):
+        last_name = st.text_input('Last name')
+        full_name = [first_name, last_name]
+    else:
+        full_name = [first_name]
+    repetitions = st.slider('Repetitions', 1, 100, 10)
+    st.write(' '.join(full_name * repetitions))
+
+
+def demo_3():
+    """
+    This demo shows how to use Streamlit to implement a progress bar.
+    """
+    import time
     progress_bar = st.progress(0)
-    status_text = st.empty()
-    chart = st.line_chart(np.random.randn(10, 1))
-
-    for i in range(1, 101):
-        # Update progress bar.
-        progress_bar.progress(i)
-
-        new_rows = np.random.randn(10, 1)
-
-        # Update status text.
-        status_text.text("The latest random number is: %s" % new_rows[-1, 0])
-
-        # Append data to the chart.
-        chart.add_rows(new_rows)
-
-        # Pretend we're doing some computation that takes time.
+    progress_text = st.text('0%')
+    for percent_complete in range(1, 101):
+        progress_bar.progress(percent_complete)
+        progress_text.text('%d%%' % percent_complete)
         time.sleep(0.1)
+    st.success('Complete!')
 
-    status_text.text("Done!")
-    st.balloons()
 
+def demo_4():
+    """
+    <Demo Demo>.
+    """
+
+
+def demo_5():
+    """
+    <Demo Demo>.
+    """
+
+
+DEMOS = OrderedDict({
+    'Text Formatting': demo_1,
+    'Print Your Name': demo_2,
+    'Progress Bar': demo_3,
+    '<Something>': demo_4,
+    '<Else>': demo_5,
+})
+
+
+# def get_docstring
+def run():
+    st.title("Welcome to Streamlit!")
     st.write(
         """
-        PS: Want to know how we did this?
-        [You can learn about it here.](https://streamlit.io/docs/core_mechanics.html)
-    """
+        Streamlit is the best way to create bespoke apps.
+        """
     )
+
+    demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
+    demo = DEMOS[demo_name]
+
+    st.markdown('## %s Demo' % demo_name)
+    st.write(inspect.getdoc(demo))
+    st.write('### Code')
+    sourcelines, n_lines = inspect.getsourcelines(demo)
+    sourcelines = reset_indentation(remove_docstring(sourcelines))
+    st.code("".join(sourcelines))
+    if st.sidebar.checkbox("Run demo"):
+        st.write("---\n### Execution")
+        demo()
+
+
+# This function parses the lines of the function and removes the docstring
+# if found.
+def remove_docstring(lines):
+    if len(lines) < 3 and "\"\"\"" not in lines[1]:
+        return lines
+    #  lines[2] is the first line of the docstring, past the inital """
+    index = 2
+    while "\"\"\"" not in lines[index]:
+        index += 1
+        # limit to ~100 lines
+        if index > 100:
+            return lines
+    # lined[index] is the closing """
+    return lines[index + 1:]
+
+
+# This function remove the common leading indentation from a code block
+def reset_indentation(lines):
+    if len(lines) == 0:
+        return []
+    spaces = len(lines[0]) - len(lines[0].lstrip())
+    return [line[spaces:] if len(line) > spaces else "\n" for line in lines]
 
 
 if __name__ == "__main__":
