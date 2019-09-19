@@ -690,9 +690,6 @@ class DeltaGenerator(object):
 
         >>> st.dataframe(df, 200, 100)
 
-        .. output::
-           Same as before but width and height are constrained as specified
-
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
