@@ -20,6 +20,21 @@ import inspect
 from collections import OrderedDict
 
 
+def intro():
+    st.markdown(
+        """
+## Intro...
+
+text text text text text text text text text text text text text text text text
+text text text text text text text text text text text text text text text text
+text text text text text text text text text text text text text text text text
+text text text text text text text text text text text text text text text text
+text text text text text text text text text text text text text text text text
+text text text text text text text text text text text text text text text text
+"""
+    )
+
+
 def demo_1():
     """
     This demo shows how you can use Streamlit to format text in a few different
@@ -35,19 +50,13 @@ def demo_1():
 
 def demo_2():
     """
-    In this demo, we ask you to enter your name in the input box below and,
-    if you want, your last name as well. Streamlit will
-    print it out with a number of repetitions given by a slider that you can
-    control.
+    In this demo, we ask you to enter your name in the input box below.
+    Streamlit will print it out with a number of repetitions given by a
+    slider that you can control.
     """
-    first_name = st.text_input("First name")
-    if st.checkbox("Add your last name"):
-        last_name = st.text_input("Last name")
-        full_name = [first_name, last_name]
-    else:
-        full_name = [first_name]
+    name = st.text_input("First name")
     repetitions = st.slider("Repetitions", 1, 100, 10)
-    st.write(" ".join(full_name * repetitions))
+    st.write(" ".join(name * repetitions))
 
 
 def demo_3():
@@ -69,16 +78,19 @@ def demo_4():
     """
     <Demo Demo>.
     """
+    st.write("something")
 
 
 def demo_5():
     """
     <Demo Demo>.
     """
+    st.write("something")
 
 
 DEMOS = OrderedDict(
     {
+        "---": intro,
         "Text Formatting": demo_1,
         "Print Your Name": demo_2,
         "Progress Bar": demo_3,
@@ -97,17 +109,20 @@ def run():
         """
     )
 
-    demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
+    demo_name = st.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
-    st.markdown("## %s Demo" % demo_name)
-    st.write(inspect.getdoc(demo))
-    st.write("### Code")
-    sourcelines, n_lines = inspect.getsourcelines(demo)
-    sourcelines = reset_indentation(remove_docstring(sourcelines))
-    st.code("".join(sourcelines))
-    if st.sidebar.checkbox("Run demo"):
-        st.write("---\n### Execution")
+    if demo_name != "---":
+        st.markdown("## %s Demo" % demo_name)
+        st.write(inspect.getdoc(demo))
+        st.write("### Code")
+        sourcelines, n_lines = inspect.getsourcelines(demo)
+        sourcelines = reset_indentation(remove_docstring(sourcelines))
+        st.code("".join(sourcelines))
+        if st.checkbox("Run %s Demo" % demo_name):
+            st.write("---\n### Execution")
+            demo()
+    else:
         demo()
 
 
