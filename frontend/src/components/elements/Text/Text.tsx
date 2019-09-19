@@ -50,6 +50,15 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   </a>
 )
 
+const linkReferenceHasParens = (reference: any): any => {
+  if (!reference.href) {
+    return `[ ${reference.children[0].props.children} ]`
+    // return `[${get(reference.children[0], 'props.children', '')}]`
+  }
+
+  return <a href={reference.$ref}>{reference.children}</a>
+}
+
 interface Props {
   width: number
   element: ImmutableMap<string, any>
@@ -66,6 +75,7 @@ class Text extends React.PureComponent<Props> {
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
+      linkReference: linkReferenceHasParens,
     }
 
     switch (format) {
@@ -117,11 +127,7 @@ class Text extends React.PureComponent<Props> {
             style={{ width }}
           >
             <div className="markdown-text-container">
-              <ReactMarkdown
-                source={body}
-                escapeHtml={false}
-                renderers={renderers}
-              />
+              <ReactMarkdown source={body} renderers={renderers} />
             </div>
           </div>
         )
