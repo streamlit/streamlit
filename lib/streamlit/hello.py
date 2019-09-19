@@ -40,14 +40,14 @@ def demo_2():
     print it out with a number of repetitions given by a slider that you can
     control.
     """
-    first_name = st.text_input('First name')
-    if st.checkbox('Add your last name'):
-        last_name = st.text_input('Last name')
+    first_name = st.text_input("First name")
+    if st.checkbox("Add your last name"):
+        last_name = st.text_input("Last name")
         full_name = [first_name, last_name]
     else:
         full_name = [first_name]
-    repetitions = st.slider('Repetitions', 1, 100, 10)
-    st.write(' '.join(full_name * repetitions))
+    repetitions = st.slider("Repetitions", 1, 100, 10)
+    st.write(" ".join(full_name * repetitions))
 
 
 def demo_3():
@@ -55,13 +55,14 @@ def demo_3():
     This demo shows how to use Streamlit to implement a progress bar.
     """
     import time
+
     progress_bar = st.progress(0)
-    progress_text = st.text('0%')
+    progress_text = st.text("0%")
     for percent_complete in range(1, 101):
         progress_bar.progress(percent_complete)
-        progress_text.text('%d%%' % percent_complete)
+        progress_text.text("%d%%" % percent_complete)
         time.sleep(0.1)
-    st.success('Complete!')
+    st.success("Complete!")
 
 
 def demo_4():
@@ -76,13 +77,15 @@ def demo_5():
     """
 
 
-DEMOS = OrderedDict({
-    'Text Formatting': demo_1,
-    'Print Your Name': demo_2,
-    'Progress Bar': demo_3,
-    '<Something>': demo_4,
-    '<Else>': demo_5,
-})
+DEMOS = OrderedDict(
+    {
+        "Text Formatting": demo_1,
+        "Print Your Name": demo_2,
+        "Progress Bar": demo_3,
+        "<Something>": demo_4,
+        "<Else>": demo_5,
+    }
+)
 
 
 # def get_docstring
@@ -97,9 +100,9 @@ def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
-    st.markdown('## %s Demo' % demo_name)
+    st.markdown("## %s Demo" % demo_name)
     st.write(inspect.getdoc(demo))
-    st.write('### Code')
+    st.write("### Code")
     sourcelines, n_lines = inspect.getsourcelines(demo)
     sourcelines = reset_indentation(remove_docstring(sourcelines))
     st.code("".join(sourcelines))
@@ -111,17 +114,17 @@ def run():
 # This function parses the lines of the function and removes the docstring
 # if found.
 def remove_docstring(lines):
-    if len(lines) < 3 and "\"\"\"" not in lines[1]:
+    if len(lines) < 3 and '"""' not in lines[1]:
         return lines
     #  lines[2] is the first line of the docstring, past the inital """
     index = 2
-    while "\"\"\"" not in lines[index]:
+    while '"""' not in lines[index]:
         index += 1
         # limit to ~100 lines
         if index > 100:
             return lines
     # lined[index] is the closing """
-    return lines[index + 1:]
+    return lines[index + 1 :]
 
 
 # This function remove the common leading indentation from a code block
