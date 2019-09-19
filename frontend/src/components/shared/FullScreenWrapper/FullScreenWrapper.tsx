@@ -58,20 +58,29 @@ class FullScreenWrapper extends PureComponent<Props, State> {
   componentDidMount() {
     this.updateWindowDimensions()
     window.addEventListener("resize", this.updateWindowDimensions)
+    document.addEventListener("keydown", this.escFunction, false)
   }
 
   componentWillUnmount() {
     window.removeEventListener("resize", this.updateWindowDimensions)
+    document.removeEventListener("keydown", this.escFunction, false)
   }
 
-  onClick = () => {
+  escFunction = (event: any) => {
     const { expanded } = this.state
-    if (expanded) {
-      document.body.style.overflow = "unset"
-    } else {
-      document.body.style.overflow = "hidden"
+    if (event.keyCode === 27 && expanded) {
+      this.zoomOut()
     }
-    this.setState({ expanded: !expanded })
+  }
+
+  zoomIn = () => {
+    document.body.style.overflow = "hidden"
+    this.setState({ expanded: true })
+  }
+
+  zoomOut = () => {
+    document.body.style.overflow = "unset"
+    this.setState({ expanded: false })
   }
 
   updateWindowDimensions = () => {
@@ -93,7 +102,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
             outline
             size="sm"
             color="info"
-            onClick={this.onClick}
+            onClick={this.zoomOut}
           >
             <svg className="icon" viewBox="0 0 8 8">
               <use href={openIconic + "#fullscreen-exit"} />
@@ -105,7 +114,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
             outline
             size="sm"
             color="info"
-            onClick={this.onClick}
+            onClick={this.zoomIn}
           >
             <svg className="icon" viewBox="0 0 8 8">
               <use href={openIconic + "#fullscreen-enter"} />
