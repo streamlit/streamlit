@@ -145,16 +145,13 @@ class Server(object):
         LOGGER.debug("Starting server...")
         app = self._create_app()
 
-        class PortAlradyInUse(Exception):
-            pass
-
-        def start_listening(rotate=True):
+        def start_listening(call_count=0):
             port = config.get_option("server.port")
             try:
                 app.listen(port)
             except OSError as e:
-                ADDRESS_ALREADY_IN_USE = 48
-                if e.errno == ADDRESS_ALREADY_IN_USE:
+                ADDRESS_ALREADY_IN_USE_ERROR_CODE = 48
+                if e.errno == ADDRESS_ALREADY_IN_USE_ERROR_CODE and call_count < 100:
                     if config.is_manually_set("server.port"):
                         LOGGER.debug(
                             "Port %s already in use, trying next available one", port
@@ -164,10 +161,12 @@ class Server(object):
                         config._set_option(
                             "server.port", port, "server initialization"
                         )
-                        start_listening()
+                        start_listening(call_count+1)
                     else:
                         LOGGER.error("Port %s is already in use", port)
                         sys.exit(signal.NSIG)
+                else:
+                    raise
 
         start_listening()
 
