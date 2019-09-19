@@ -25,7 +25,7 @@ def demo_1():
     This demo shows how you can use Streamlit to format text in a few different
     ways.
     """
-    st.title("Hello 🌍🌍🌍🌍🌍!!!!")
+    st.title("✨✨✨ Hello 🌍!!!! ✨✨✨")
     st.header("This is a header...")
     st.subheader("... and this is a subheader")
     st.write("We can write down something...")
