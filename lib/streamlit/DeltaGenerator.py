@@ -1507,6 +1507,7 @@ class DeltaGenerator(object):
         max_value=None,
         value=None,
         step=None,
+        format=None,
     ):
         """Display a slider widget.
 
@@ -1527,6 +1528,9 @@ class DeltaGenerator(object):
         step : int/float
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
+        format : str
+            Printf/Python format string.
+            
 
         Returns
         -------
@@ -1547,6 +1551,7 @@ class DeltaGenerator(object):
         >>> st.write('Values:', values)
 
         """
+
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
@@ -1639,12 +1644,32 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
 
+        # Set format default.
+        if format is None:
+            if all_ints:
+                format = "%d"
+            else:
+                format = "%0.2f"
+       
+       # Generate disaplay values.
+        if single_value: 
+            display_value = format % (current_value)
+        else:
+            display_value = list(map(lambda v: format % (v), current_value))
+        display_min = format % (min_value)
+        display_max = format % (max_value)
+
         element.slider.label = label
         element.slider.value[:] = [
             current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
+        element.slider.display_value[:] = [
+            display_value] if single_value else display_value
+        element.slider.display_min = display_min
+        element.slider.display_max = display_max
+        
         return current_value if single_value else tuple(current_value)
 
     @_widget

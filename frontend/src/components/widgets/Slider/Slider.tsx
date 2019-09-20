@@ -123,6 +123,29 @@ class Slider extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
+  renderThumbValue = (data: { $thumbIndex: number }) => {
+    const { element } = this.props
+    const displayValue = element.get("displayValue").toArray()
+    const thumbValueStyle = sliderOverrides.ThumbValue.style(
+      this.props.disabled
+    ) as React.CSSProperties
+
+    return <div style={thumbValueStyle}>{displayValue[data.$thumbIndex]}</div>
+  }
+
+  renderTickBar = () => {
+    const { element } = this.props
+    const displayMin = element.get("displayMin")
+    const displayMax = element.get("displayMax")
+
+    return (
+      <div style={sliderOverrides.TickBar.style}>
+        <div style={sliderOverrides.TickBarItem.style}>{displayMin}</div>
+        <div style={sliderOverrides.TickBarItem.style}>{displayMax}</div>
+      </div>
+    )
+  }
+
   public render(): React.ReactNode {
     const { element, width } = this.props
     const label = element.get("label")
@@ -141,7 +164,11 @@ class Slider extends React.PureComponent<Props, State> {
           value={this.valueOrDefault}
           onChange={this.handleChange}
           disabled={this.props.disabled}
-          overrides={sliderOverrides}
+          overrides={{
+            ...sliderOverrides,
+            ThumbValue: this.renderThumbValue,
+            TickBar: this.renderTickBar,
+          }}
         />
       </div>
     )
