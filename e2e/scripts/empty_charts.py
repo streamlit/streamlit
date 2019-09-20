@@ -33,7 +33,7 @@ st.pyplot()
 # 1 empty map
 st.deck_gl_chart()
 
-# 9 errors
+# 6 errors
 try:
     st.vega_lite_chart({})
 except Exception as e:
@@ -56,21 +56,6 @@ except Exception as e:
 
 try:
     st.altair_chart()
-except Exception as e:
-    st.write(e)
-
-try:
-    st.line_chart()
-except Exception as e:
-    st.write(e)
-
-try:
-    st.area_chart()
-except Exception as e:
-    st.write(e)
-
-try:
-    st.bar_chart()
 except Exception as e:
     st.write(e)
 

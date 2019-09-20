@@ -26,6 +26,9 @@ import pandas as pd
 
 
 def generate_chart(chart_type, data):
+    if data is None:
+        data = {"": []}
+
     if not isinstance(data, pd.DataFrame):
         data = convert_anything_to_df(data)
 

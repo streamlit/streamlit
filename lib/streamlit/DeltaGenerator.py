@@ -105,7 +105,7 @@ def _with_element(method):
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         delta_type = method.__name__
-        last_index = None
+        last_index = -1
 
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
@@ -714,7 +714,7 @@ class DeltaGenerator(object):
                                                elementHeight=height)
 
     @_with_element
-    def line_chart(self, element, data, width=0, height=0):
+    def line_chart(self, element, data=None, width=0, height=0):
         """Display a line chart.
 
         Parameters
@@ -748,7 +748,7 @@ class DeltaGenerator(object):
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def area_chart(self, element, data, width=0, height=0):
+    def area_chart(self, element, data=None, width=0, height=0):
         """Display a area chart.
 
         Parameters
@@ -780,7 +780,7 @@ class DeltaGenerator(object):
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def bar_chart(self, element, data, width=0, height=0):
+    def bar_chart(self, element, data=None, width=0, height=0):
         """Display a bar chart.
 
         Parameters
