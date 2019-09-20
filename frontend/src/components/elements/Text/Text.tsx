@@ -42,6 +42,11 @@ interface LinkProps {
   children: ReactElement
 }
 
+interface LinkReferenceProps {
+  href: string
+  children: [ReactElement]
+}
+
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 const linkWithTargetBlank = (props: LinkProps): ReactElement => (
@@ -50,13 +55,17 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   </a>
 )
 
-const linkReferenceHasParens = (reference: any): any => {
-  if (!reference.href) {
-    return `[${reference.children[0].props.children}]`
-    // return `[${get(reference.children[0], 'props.children', '')}]`
+const linkReferenceHasParens = (props: LinkReferenceProps): any => {
+  console.log(props)
+  if (!props.href) {
+    return props.children.length ? `[${props.children[0].props.children}]` : ""
   }
 
-  return <a href={reference.$ref}>{reference.children}</a>
+  return (
+    <a href={props.href} target="_blank" rel="noopener noreferrer">
+      {props.children}
+    </a>
+  )
 }
 
 interface Props {

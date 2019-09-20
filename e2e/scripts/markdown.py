@@ -21,4 +21,6 @@ st.markdown("This html in <div>markdown</div> is escaped!")
 
 st.markdown("[text]")
 
-st.markdown("[link](href \"The best search engine for privacy\")")
+st.markdown("[link](href)")
+
+st.markdown("[][]")

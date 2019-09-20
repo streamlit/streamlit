@@ -24,7 +24,7 @@ describe("st.markdown", () => {
 
   it("displays a markdown", () => {
     cy.get(".element-container .stText p").then(els => {
-      cy.wrap(els).should("have.length", 4);
+      cy.wrap(els).should("have.length", 5);
 
       expect(els[0].textContent).to.eq("This markdown is awesome!");
       expect(els[1].textContent).to.eq(
@@ -32,6 +32,7 @@ describe("st.markdown", () => {
       );
       expect(els[2].textContent).to.eq("[text]");
       expect(els[3].textContent).to.eq("link");
+      expect(els[4].textContent).to.eq("");
 
       cy.wrap(els[2])
         .find("a")
