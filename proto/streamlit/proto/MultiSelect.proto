@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-message Multiselectbox {
+message MultiSelect {
   string id = 1;
   string label = 2;
   repeated int32 default = 3;

@@ -1335,7 +1335,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def multiselectbox(self, element, ui_value, label, options,
+    def multiselect(self, element, ui_value, label, options,
                        format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -1358,7 +1358,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> options = st.multiselectbox(
+        >>> options = st.multiselect(
         ...     'What are your favorite colors',
         ...     ('Green', 'Yellow', 'Red', 'Blue'))
         >>>
@@ -1368,9 +1368,9 @@ class DeltaGenerator(object):
 
         current_value = ui_value.value if ui_value is not None else []
 
-        element.multiselectbox.label = label
-        element.multiselectbox.default[:] = current_value
-        element.multiselectbox.options[:] = [str(format_func(opt)) for opt in
+        element.multiselect.label = label
+        element.multiselect.default[:] = current_value
+        element.multiselect.options[:] = [str(format_func(opt)) for opt in
                                              options]
         return [options[i] for i in current_value]
 

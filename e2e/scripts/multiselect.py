@@ -16,11 +16,11 @@
 import streamlit as st
 
 options = ("male", "female")
-i1 = st.multiselectbox("selectbox 1", options)
+i1 = st.multiselect("selectbox 1", options)
 st.write("value 1:", i1)
 
-i2 = st.multiselectbox("selectbox 2", options, format_func=lambda x: x.capitalize())
+i2 = st.multiselect("selectbox 2", options, format_func=lambda x: x.capitalize())
 st.write("value 2:", i2)
 
-i3 = st.multiselectbox("selectbox 3", [])
+i3 = st.multiselect("selectbox 3", [])
 st.write("value 3:", i3)

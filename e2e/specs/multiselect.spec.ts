@@ -17,17 +17,17 @@
 
 /// <reference types="cypress" />
 
-describe("st.multiselectbox", () => {
+describe("st.multiselect", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
   });
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiselectbox").should("have.length", 3);
+      cy.get(".stMultiSelect").should("have.length", 3);
 
-      cy.get(".stMultiselectbox").each((el, idx) => {
-        cy.wrap(el).matchImageSnapshot("multiselectbox" + idx);
+      cy.get(".stMultiSelect").each((el, idx) => {
+        cy.wrap(el).matchImageSnapshot("multiselect" + idx);
       });
     });
 
@@ -37,14 +37,14 @@ describe("st.multiselectbox", () => {
 
     describe("when there are valid options", () => {
       it("should show the correct placeholder", () => {
-        cy.get(".stMultiselectbox")
+        cy.get(".stMultiSelect")
           .first()
           .should("have.text", "selectbox 1searchChoose an option");
       });
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
-        cy.get(".stMultiselectbox")
+        cy.get(".stMultiSelect")
           .last()
           .should("have.text", "selectbox 3searchNo options to select.");
       });
@@ -53,7 +53,7 @@ describe("st.multiselectbox", () => {
 
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
-      cy.get(".stMultiselectbox")
+      cy.get(".stMultiSelect")
         .eq(0)
         .then(el => {
           cy.wrap(el)
@@ -63,14 +63,14 @@ describe("st.multiselectbox", () => {
             .should("have.length", 2)
             .should("have.text", "malefemale")
             .each((el, idx) => {
-              cy.wrap(el).matchImageSnapshot("multiselectbox-dropdown-" + idx);
+              cy.wrap(el).matchImageSnapshot("multiselect-dropdown-" + idx);
             });
         });
     });
   });
 
   function selectOption(idx) {
-    cy.get(".stMultiselectbox")
+    cy.get(".stMultiSelect")
       .eq(1)
       .find("input")
       .click();
@@ -83,13 +83,13 @@ describe("st.multiselectbox", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
-      cy.get(".stMultiselectbox span")
+      cy.get(".stMultiSelect span")
         .eq(1)
         .should("have.text", "Female");
-      cy.get(".stMultiselectbox")
+      cy.get(".stMultiSelect")
         .eq(1)
         .then(el => {
-          cy.wrap(el).matchImageSnapshot("multiselectbox-selection");
+          cy.wrap(el).matchImageSnapshot("multiselect-selection");
         });
     });
 

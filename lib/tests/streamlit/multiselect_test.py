@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""multiselectbox unit tests."""
+"""multiselect unit tests."""
 
 import numpy as np
 import pandas as pd
@@ -24,13 +24,13 @@ from tests import testutil
 
 
 class SelectboxTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall multiselectbox protos."""
+    """Test ability to marshall multiselect protos."""
 
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.multiselectbox("the label", ("m", "f"))
+        st.multiselect("the label", ("m", "f"))
 
-        c = self.get_delta_from_queue().new_element.multiselectbox
+        c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
 
@@ -44,9 +44,9 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     )
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        st.multiselectbox("the label", options)
+        st.multiselect("the label", options)
 
-        c = self.get_delta_from_queue().new_element.multiselectbox
+        c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
@@ -56,9 +56,9 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        st.multiselectbox("the label", arg_options)
+        st.multiselect("the label", arg_options)
 
-        c = self.get_delta_from_queue().new_element.multiselectbox
+        c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
@@ -68,9 +68,9 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         arg_options = [{"name": "john", "height": 180}, {"name": "lisa", "height": 200}]
         proto_options = ["john", "lisa"]
 
-        st.multiselectbox("the label", arg_options, format_func=lambda x: x["name"])
+        st.multiselect("the label", arg_options, format_func=lambda x: x["name"])
 
-        c = self.get_delta_from_queue().new_element.multiselectbox
+        c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
@@ -78,9 +78,9 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.multiselectbox("the label", options)
+        st.multiselect("the label", options)
 
-        c = self.get_delta_from_queue().new_element.multiselectbox
+        c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
