@@ -102,7 +102,7 @@ DATASET_URL = (
 
 def demo_5():
     """
-    Discover which movies scored a gross revenue within a range!
+    Discover the gross revenue of a movie of your liking!
     Note that the network loading and preprocessing of the data is cached
     by using Streamlit st.cache annotation.
     """
@@ -110,19 +110,15 @@ def demo_5():
 
     @st.cache
     def load_dataframe_from_url():
-        df = pd.read_csv(DATASET_URL).transform(
+        return pd.read_csv(DATASET_URL).transform(
             {"title": lambda x: x, "revenue": lambda x: round(x / 1000 / 1000)}
         )
-        return df[df.revenue > 1]
 
     df = load_dataframe_from_url()
-
     movie = st.text_input("Search movie titles")
-
     df = df[df.title.str.contains(movie, case=False)].sort_values(
         ascending=False, by="revenue"
     )
-
     st.markdown("#### Result dataframe for %d movie(s)" % df.shape[0])
     st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
 
