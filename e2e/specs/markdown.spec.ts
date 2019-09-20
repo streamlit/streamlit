@@ -24,7 +24,7 @@ describe("st.markdown", () => {
 
   it("displays a markdown", () => {
     cy.get(".element-container .stText p").then(els => {
-      cy.wrap(els).should("have.length", 5);
+      expect(els.length).to.eq(5);
 
       expect(els[0].textContent).to.eq("This markdown is awesome!");
       expect(els[1].textContent).to.eq(
