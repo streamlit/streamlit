@@ -157,11 +157,10 @@ class Server(object):
                             "Port %s already in use, trying next available one", port
                         )
                         port += 1
-                        if port == 3000: port += 1 # save the 3000
-                        config._set_option(
-                            "server.port", port, "server initialization"
-                        )
-                        start_listening(call_count+1)
+                        if port == 3000:
+                            port += 1  # save the 3000
+                        config._set_option("server.port", port, "server initialization")
+                        start_listening(call_count + 1)
                     else:
                         LOGGER.error("Port %s is already in use", port)
                         sys.exit(signal.NSIG)
