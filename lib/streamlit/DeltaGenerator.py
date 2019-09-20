@@ -716,13 +716,6 @@ class DeltaGenerator(object):
                                                elementWidth=width,
                                                elementHeight=height)
 
-    # TODO: Either remove this or make it public. This is only used in the
-    # mnist demo right now.
-    @_with_element
-    def _native_chart(self, element, chart):
-        """Display a chart."""
-        chart.marshall(element.chart)
-
     @_with_element
     def line_chart(self, element, data, width=0, height=0):
         """Display a line chart.
