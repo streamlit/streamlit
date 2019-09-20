@@ -55,9 +55,9 @@ def demo_2():
     Streamlit will print it out with a number of repetitions given by a
     slider that you can control.
     """
-    name = st.text_input("First name")
+    name = st.text_input("Your name")
     repetitions = st.slider("Repetitions", 1, 100, 10)
-    st.write(" ".join(name * repetitions))
+    st.write(name + "".join((" %s" % name) * (repetitions - 1)))
 
 
 def demo_3():
