@@ -16,9 +16,6 @@
 import streamlit as st
 import pandas as pd
 
-import time
-import random
-
 data = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]})
 
 spec = {
@@ -74,11 +71,6 @@ except Exception as e:
 
 try:
     st.bar_chart()
-except Exception as e:
-    st.write(e)
-
-try:
-    st._native_chart()
 except Exception as e:
     st.write(e)
 

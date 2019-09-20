@@ -92,13 +92,6 @@ describe("handles empty charts", () => {
       );
 
     cy.get(".stException .message")
-      .eq(8)
-      .should(
-        "have.text",
-        "TypeError: _native_chart() missing 1 required positional argument: 'chart'"
-      );
-
-    cy.get(".stException .message")
       .eq(9)
       .should(
         "have.text",
