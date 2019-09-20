@@ -104,7 +104,7 @@ class FakeDeltaGenerator(object):
         """
         self._exception_msg = str(e)
 
-    def _enqueue_new_element_delta(self, marshall_element, delta_type):
+    def _enqueue_new_element_delta(self, marshall_element, delta_type, last_index):
         """Fake enqueue new element delta.
 
         The real DeltaGenerator method actually enqueues the deltas but

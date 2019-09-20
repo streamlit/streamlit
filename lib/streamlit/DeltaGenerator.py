@@ -45,6 +45,8 @@ LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
+DELTAS_WHICH_USE_DATAFRAME = ('line_chart', 'area_chart', 'bar_chart')
+
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     """Simplify the function signature by removing arguments from it.
@@ -108,10 +110,10 @@ def _with_element(method):
         delta_type = method.__name__
         last_index = None
 
-        if delta_type in ('line_chart', 'bar_chart', 'area_chart'):
+        if delta_type in DELTAS_WHICH_USE_DATAFRAME:
             data = args[0]
             if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1]
+                last_index = data.index[-1] if data.index.size > 0 else 0
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -171,9 +173,10 @@ class DeltaGenerator(object):
                  enqueue,
                  id=0,
                  delta_type=None,
+                 last_index=None,
                  is_root=True,
                  container=BlockPath_pb2.BlockPath.MAIN,
-                 path=(), last_index=None):
+                 path=()):
         """Constructor.
 
         Parameters
@@ -228,7 +231,7 @@ class DeltaGenerator(object):
         self._id = 0
 
     def _enqueue_new_element_delta(self, marshall_element, delta_type,
-                                   last_index,
+                                   last_index=None,
                                    elementWidth=None,
                                    elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
@@ -273,6 +276,7 @@ class DeltaGenerator(object):
             if elementHeight is not None:
                 msg.metadata.element_dimension_spec.height = elementHeight
 
+
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
             return value_or_dg(rv, self)
@@ -280,14 +284,15 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.metadata.delta_id, delta_type,
-                is_root=False, last_index=last_index)
+                self._enqueue, msg.metadata.delta_id, delta_type, last_index,
+                is_root=False)
         else:
             self._delta_type = delta_type
             self._last_index = last_index
             output_dg = self
 
         kind = msg.delta.new_element.WhichOneof("type")
+
         m = metrics.Client.get("streamlit_enqueue_deltas_total")
         m.labels(kind).inc()
         msg_was_enqueued = self._enqueue(msg)
@@ -2121,10 +2126,20 @@ class DeltaGenerator(object):
         # As we are using vega_lite for these deltas we have to reshape
         # the data structure otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
-        if self._delta_type in ('line_chart', 'bar_chart', 'area_chart'):
-            print('index', self._last_index)
+        if self._delta_type in DELTAS_WHICH_USE_DATAFRAME:
             data = data_frame_proto.convert_anything_to_df(data)
+
+            old_stop = data.index.stop
+            old_step = data.index.step
+
+            print('PRUEBOTA', self._last_index, old_stop, old_step)
+            start = self._last_index + old_step
+            stop = self._last_index + old_step + old_stop
+
+            data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             data = pd.melt(data.reset_index(), id_vars=['index'])
+
+            self._last_index = stop
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.parent_block.container = self._container

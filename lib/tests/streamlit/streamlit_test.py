@@ -29,7 +29,6 @@ import numpy as np
 import pandas as pd
 
 from streamlit import __version__
-from streamlit.elements.Chart import Chart
 from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Text_pb2 import Text
 from tests import testutil
@@ -573,23 +572,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, "some warning")
         self.assertEqual(el.text.format, Text.WARNING)
-
-    def test_st_native_chart(self):
-        """Test st._native_chart."""
-        df = pd.DataFrame([[10, 20, 30]], columns=['a', 'b', 'c'])
-        chart = Chart(df, 'line_chart', width=640, height=480)
-        st._native_chart(chart)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.chart.type, "LineChart")
-        self.assertEqual(el.chart.width, 640)
-        self.assertEqual(el.chart.height, 480)
-        self.assertEqual(
-            el.chart.data.columns.plain_index.data.strings.data, ["a", "b", "c"]
-        )
-        data = json.loads(json_format.MessageToJson(el.chart.data.data))
-        result = [x["int64s"]["data"][0] for x in data["cols"]]
-        self.assertEqual(result, ["10", "20", "30"])
 
     def test_st_text_exception(self):
         """Test st._text_exception."""
