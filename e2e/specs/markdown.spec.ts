@@ -23,14 +23,23 @@ describe("st.markdown", () => {
   });
 
   it("displays a markdown", () => {
-    cy.get(".element-container").should("have.length", 2);
+    cy.get(".element-container .stText p").then(els => {
+      cy.wrap(els).should("have.length", 4);
 
-    cy.get(".element-container .stText p")
-      .first()
-      .contains("This markdown is awesome!");
+      expect(els[0].textContent).to.eq("This markdown is awesome!");
+      expect(els[1].textContent).to.eq(
+        "This html in <div>markdown</div> is escaped!"
+      );
+      expect(els[2].textContent).to.eq("[text]");
+      expect(els[3].textContent).to.eq("link");
 
-    cy.get(".element-container .stText p")
-      .last()
-      .contains("This html in <div>markdown</div> is escaped!");
+      cy.wrap(els[2])
+        .find("a")
+        .should("not.exist");
+
+      cy.wrap(els[3])
+        .find("a")
+        .should("have.attr", "href");
+    });
   });
 });

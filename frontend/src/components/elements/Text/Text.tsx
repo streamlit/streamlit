@@ -52,7 +52,7 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
 
 const linkReferenceHasParens = (reference: any): any => {
   if (!reference.href) {
-    return `[ ${reference.children[0].props.children} ]`
+    return `[${reference.children[0].props.children}]`
     // return `[${get(reference.children[0], 'props.children', '')}]`
   }
 
