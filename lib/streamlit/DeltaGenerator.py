@@ -45,7 +45,9 @@ LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
-DELTAS_WHICH_USE_DATAFRAME = ('line_chart', 'area_chart', 'bar_chart')
+# List of Streamlit commands that perform a Pandas "melt" operation on
+# input dataframes.
+DELTAS_TYPES_THAT_MELT_DATAFRAMES = ('line_chart', 'area_chart', 'bar_chart')
 
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
@@ -79,11 +81,6 @@ def _remove_self_from_sig(method):
     return wrapped_method
 
 
-def _get_last_index(data):
-    print(data)
-    return data.loc[:, ['index', 'variable']].groupby('variable').last()
-
-
 def _with_element(method):
     """Wrap function and pass a NewElement proto to be filled.
 
@@ -110,7 +107,7 @@ def _with_element(method):
         delta_type = method.__name__
         last_index = None
 
-        if delta_type in DELTAS_WHICH_USE_DATAFRAME and len(args) > 0:
+        if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
                 last_index = data.index[-1] if data.index.size > 0 else 0
@@ -2120,7 +2117,7 @@ class DeltaGenerator(object):
         # As we are using vega_lite for these deltas we have to reshape
         # the data structure otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
-        if self._delta_type in DELTAS_WHICH_USE_DATAFRAME:
+        if self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
             if not isinstance(data, pd.DataFrame):
                 data = data_frame_proto.convert_anything_to_df(data)
 
