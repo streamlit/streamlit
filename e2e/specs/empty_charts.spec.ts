@@ -92,7 +92,7 @@ describe("handles empty charts", () => {
       );
 
     cy.get(".stException .message")
-      .eq(9)
+      .eq(8)
       .should(
         "have.text",
         "TypeError: map() missing 1 required positional argument: 'data'"

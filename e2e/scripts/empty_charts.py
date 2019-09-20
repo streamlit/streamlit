@@ -33,7 +33,7 @@ st.pyplot()
 # 1 empty map
 st.deck_gl_chart()
 
-# 10 errors
+# 9 errors
 try:
     st.vega_lite_chart({})
 except Exception as e:
