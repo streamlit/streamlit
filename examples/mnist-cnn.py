@@ -53,8 +53,8 @@ class MyCallback(keras.callbacks.Callback):
 
     def on_train_begin(self, logs=None):
         st.header("Summary")
-        empty_chart = pd.DataFrame({"loss": [], "acc": []})
-        self._summary_chart = st.area_chart(empty_chart)
+        df = pd.DataFrame({"loss": [], "acc": []})
+        self._summary_chart = st.area_chart(df)
         self._summary_stats = st.text("%8s :  0" % "epoch")
         st.header("Training Log")
 
@@ -62,8 +62,8 @@ class MyCallback(keras.callbacks.Callback):
         self._ts = time.time()
         self._epoch = epoch
         st.subheader("Epoch %s" % epoch)
-        empty_chart = pd.DataFrame({"loss": [], "acc": []})
-        self._epoch_chart = st.line_chart(empty_chart)
+        df = pd.DataFrame({"loss": [], "acc": []})
+        self._epoch_chart = st.line_chart(df)
         self._epoch_progress = st.info("No stats yet.")
         self._epoch_summary = st.empty()
 
