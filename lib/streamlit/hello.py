@@ -110,37 +110,17 @@ def demo_5():
 
     @st.cache
     def load_dataframe_from_url():
-        df = pd.read_csv(DATASET_URL)
-        df = pd.DataFrame(
-            {
-                "title": df.title,
-                "revenue": df.revenue.map(lambda x: float(round(x / 1000.0 / 1000.0))),
-            }
-        )
-        return df[df.revenue > 0]
-
+        df = pd.read_csv(DATASET_URL)\
+            .transform({'title': lambda x: x, 'revenue': lambda x: round(x / 1000 / 1000)})
+        return df[df.revenue > 1]
     df = load_dataframe_from_url()
 
-    (min_value, max_value) = st.slider(
-        "Revenue Range [$1M]",
-        min_value=df.revenue.min(),
-        max_value=df.revenue.max(),
-        value=(df.revenue.min(), df.revenue.max()),
-    )
+    movie = st.text_input('Search movie titles')
 
-    df = df[df.revenue.between(min_value, max_value)].sort_values(
-        ascending=False, by="revenue"
-    )
+    df = df[df.title.str.contains(movie, case=False)].sort_values(ascending=False, by="revenue")
 
-    if df.shape[0] > 0:
-        st.markdown(
-            "#### Result dataframe for %d movie%s"
-            % (df.shape[0], "s" if df.shape[0] > 1 else "")
-        )
-        st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
-    else:
-        st.warning("No movie found with a revenue in this range")
-
+    st.markdown("#### Result dataframe for %d movie(s)" % df.shape[0])
+    st.dataframe(df.rename(columns={'title': 'Title', 'revenue': 'Revenue [$1M]'}))
 
 DEMOS = OrderedDict(
     {
