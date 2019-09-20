@@ -2121,10 +2121,15 @@ class DeltaGenerator(object):
         # the data structure otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
         if self._delta_type in DELTAS_WHICH_USE_DATAFRAME:
-            data = data_frame_proto.convert_anything_to_df(data)
+            if not isinstance(data, pd.DataFrame):
+                data = data_frame_proto.convert_anything_to_df(data)
+
+            old_step = data.index.step
+
+            # We have to drop the predefined index
+            data = data.reset_index(drop=True)
 
             old_stop = data.index.stop
-            old_step = data.index.step
 
             start = self._last_index + old_step
             stop = self._last_index + old_step + old_stop

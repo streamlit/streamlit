@@ -23,8 +23,6 @@ setup_2_3_shims(globals())
 
 import streamlit as st
 from streamlit import config
-from streamlit.elements.Chart import Chart
-from streamlit.ReportThread import get_report_ctx
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -35,7 +33,6 @@ import keras
 import math
 import numpy as np
 import pandas as pd
-import sys
 import time
 
 # https://kobkrit.com/using-allow-growth-memory-option-in-tensorflow-and-keras-dc8c8081bc96
