@@ -16,6 +16,7 @@
 """A "Hello World" app."""
 
 import streamlit as st
+import numpy as np
 import inspect
 from collections import OrderedDict
 
@@ -65,37 +66,90 @@ def demo_3():
     """
     import time
 
-    progress_bar = st.progress(0)
     progress_text = st.text("0%")
+    progress_bar = st.progress(0)
+    success = st.empty()
     for percent_complete in range(1, 101):
-        progress_bar.progress(percent_complete)
         progress_text.text("%d%%" % percent_complete)
+        progress_bar.progress(percent_complete)
         time.sleep(0.1)
-    st.success("Complete!")
+    progress_bar.empty()
+    success.success("Complete!")
+    st.button("Re-run")
 
 
 def demo_4():
     """
-    <Demo Demo>.
+    Use the slider in the sidebar to mix your favorite color up.
     """
-    st.write("something")
+    red = st.sidebar.slider("Red", 0, 255, 0)
+    green = st.sidebar.slider("Green", 0, 255, 128)
+    blue = st.sidebar.slider("Blue", 0, 255, 0)
+    array = np.zeros([512, 512, 3], dtype=np.uint8)
+    array[:, :, 0].fill(red)
+    array[:, :, 1].fill(green)
+    array[:, :, 2].fill(blue)
+    st.markdown("#### RGB color (%d, %d, %d)" % (red, green, blue))
+    st.image(array)
+
+
+# Data for demo_5 derived from
+# https://www.kaggle.com/rounakbanik/the-movies-dataset
+DATASET_URL = (
+    "https://streamlit-demo-data.s3-us-west-2.amazonaws.com/movies-revenue.csv.gz"
+)
 
 
 def demo_5():
     """
-    <Demo Demo>.
+    Discover which movies scored a gross revenue within a range!
+    Note that the network loading and preprocessing of the data is cached
+    by using Streamlit st.cache annotation.
     """
-    st.write("something")
+    import pandas as pd
+
+    @st.cache
+    def load_dataframe_from_url():
+        df = pd.read_csv(DATASET_URL)
+        df = pd.DataFrame(
+            {
+                "title": df.title,
+                "revenue": df.revenue.map(lambda x: float(round(x / 1000.0 / 1000.0))),
+            }
+        )
+        return df[df.revenue > 0]
+
+    df = load_dataframe_from_url()
+
+    (min_value, max_value) = st.slider(
+        "Revenue Range [$1M]",
+        min_value=df.revenue.min(),
+        max_value=df.revenue.max(),
+        value=(df.revenue.min(), df.revenue.max()),
+    )
+
+    df = df[df.revenue.between(min_value, max_value)].sort_values(
+        ascending=False, by="revenue"
+    )
+
+    if df.shape[0] > 0:
+        st.markdown(
+            "#### Result dataframe for %d movie%s"
+            % (df.shape[0], "s" if df.shape[0] > 1 else "")
+        )
+        st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
+    else:
+        st.warning("No movie found with a revenue in this range")
 
 
 DEMOS = OrderedDict(
     {
         "---": intro,
-        "Text Formatting": demo_1,
-        "Print Your Name": demo_2,
-        "Progress Bar": demo_3,
-        "<Something>": demo_4,
-        "<Else>": demo_5,
+        "Basic Text": demo_1,
+        "Simple Interaction": demo_2,
+        "Animation": demo_3,
+        "Sidebar": demo_4,
+        "Caching": demo_5,
     }
 )
 
