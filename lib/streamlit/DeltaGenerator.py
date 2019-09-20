@@ -110,7 +110,7 @@ def _with_element(method):
         delta_type = method.__name__
         last_index = None
 
-        if delta_type in DELTAS_WHICH_USE_DATAFRAME:
+        if delta_type in DELTAS_WHICH_USE_DATAFRAME and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
                 last_index = data.index[-1] if data.index.size > 0 else 0
