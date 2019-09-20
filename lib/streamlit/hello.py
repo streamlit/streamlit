@@ -135,7 +135,6 @@ DEMOS = OrderedDict(
 )
 
 
-# def get_docstring
 def run():
     st.title("Welcome to Streamlit!")
     st.write(
