@@ -713,7 +713,8 @@ class DeltaGenerator(object):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
         return self._enqueue_new_element_delta(set_data_frame, 'dataframe',
-                                               width, height)
+                                               elementWidth=width,
+                                               elementHeight=height)
 
     # TODO: Either remove this or make it public. This is only used in the
     # mnist demo right now.
@@ -2132,7 +2133,6 @@ class DeltaGenerator(object):
             old_stop = data.index.stop
             old_step = data.index.step
 
-            print('PRUEBOTA', self._last_index, old_stop, old_step)
             start = self._last_index + old_step
             stop = self._last_index + old_step + old_stop
 
