@@ -16,8 +16,9 @@ different element in the app. For example the
 [`st.text`](api.html#streamlit.text)
 command writes pure text to the app, and
 [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it
-— a line chart. The swiss army knife of Streamlit commands is
-[`st.write`](api.html#streamlit.cache), which we'll get to later.
+— a line chart. The swiss army knife of Streamlit commands are our [magic
+commands](api.html#magic-commands) and [`st.write`](api.html#streamlit.cache), which
+we'll get to later.
 
 ## Updating the app
 
@@ -45,11 +46,11 @@ All drawing commands in the `streamlit` module _append_ elements to your
 Streamlit app.
 
 ```python
-st.write('''
+'''
     We analyze the stock market using some tried-and-true _FooBarian_ model
     analysis, with parameters _blorg_ and _bleep_ set to `0` and `1`
     initially.  Then we optimize them by _frobnicating_ the _plumbus_.
-''')
+'''
 # Appends a paragraph to the app.
 
 my_data = np.random.randn(100, 2)
@@ -60,8 +61,9 @@ st.line_chart(my_data)
 
 ## Redrawing/replacing elements in an app
 
-All of Streamlit's drawing commands (with the exception of `st.write`) return
-an object that can be used to update/redraw that element:
+All of Streamlit's drawing commands (with the exception of `st.write` and
+interactive widgets) return an object that can be used to update/redraw that
+element:
 
 ```python
 my_element = st.text('Hey there')
