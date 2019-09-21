@@ -58,7 +58,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # but the version number so we can throw any valid PEP440 version in
 # there.
 PYTHON = {
-    "lib/setup.py": r"(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)",
+    "lib/setup.py": r"(?P<pre>.*version=\").*(?P<post>\",  # PEP-440$)",
     "docs/troubleshooting.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
     "scripts/conda/meta.yaml": r'(?P<pre>.* version = ").*(?P<post>" %}$)',
 }
