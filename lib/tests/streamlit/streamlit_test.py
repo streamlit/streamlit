@@ -64,8 +64,8 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to off
         self.assertEqual("off", st.get_option("global.sharingMode"))
 
-        st.set_option("global.sharingMode", "streamlit-public")
-        self.assertEqual("streamlit-public", st.get_option("global.sharingMode"))
+        st.set_option("global.sharingMode", "s3")
+        self.assertEqual("s3", st.get_option("global.sharingMode"))
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
