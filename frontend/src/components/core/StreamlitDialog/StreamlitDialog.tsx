@@ -148,7 +148,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <BasicDialog onClose={props.onClose}>
         <ModalBody>
-          <div className="streamlit-container">
+          <div>
             Are you sure you want to clear the <code>@st.cache</code> function
             cache?
           </div>
