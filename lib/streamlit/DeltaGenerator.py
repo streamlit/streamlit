@@ -263,7 +263,8 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.metadata.delta_id, is_root=False
+                self._enqueue, msg.metadata.delta_id, is_root=False,
+                container=self._container
             )
         else:
             output_dg = self
