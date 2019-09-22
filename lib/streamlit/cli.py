@@ -102,7 +102,6 @@ def main_docs():
 @main.command("hello")
 def main_hello():
     """Runs the Hello World script."""
-    print("Showing Hello World script in browser...")
     import streamlit.hello
 
     filename = streamlit.hello.__file__
