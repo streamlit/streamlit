@@ -215,7 +215,7 @@ if not _is_running_py3():
     _HELP_TYPES = tuple(_HELP_TYPES)
 
 
-def write(*args):
+def write(*args, **kwargs):
     """Write arguments to the app.
 
     This is the swiss-army knife of Streamlit commands. It does different
@@ -232,21 +232,45 @@ def write(*args):
     *args : any
         One or many objects to print to the App.
 
-    Arguments are handled as follows:
+        Arguments are handled as follows:
 
-        - write(string)     : Prints the formatted Markdown string.
-        - write(data_frame) : Displays the DataFrame as a table.
-        - write(error)      : Prints an exception specially.
-        - write(func)       : Displays information about a function.
-        - write(module)     : Displays information about the module.
-        - write(dict)       : Displays dict in an interactive widget.
-        - write(obj)        : The default is to print str(obj).
-        - write(mpl_fig)    : Displays a Matplotlib figure.
-        - write(altair)     : Displays an Altair chart.
-        - write(keras)      : Displays a Keras model.
-        - write(graphviz)   : Displays a Graphviz graph.
-        - write(plotly_fig) : Displays a Plotly figure.
-        - write(bokeh_fig)  : Displays a Bokeh figure.
+            - write(string)     : Prints the formatted Markdown string.
+            - write(data_frame) : Displays the DataFrame as a table.
+            - write(error)      : Prints an exception specially.
+            - write(func)       : Displays information about a function.
+            - write(module)     : Displays information about the module.
+            - write(dict)       : Displays dict in an interactive widget.
+            - write(obj)        : The default is to print str(obj).
+            - write(mpl_fig)    : Displays a Matplotlib figure.
+            - write(altair)     : Displays an Altair chart.
+            - write(keras)      : Displays a Keras model.
+            - write(graphviz)   : Displays a Graphviz graph.
+            - write(plotly_fig) : Displays a Plotly figure.
+            - write(bokeh_fig)  : Displays a Bokeh figure.
+
+    unsafe_allow_html : bool
+        This is a keyword-only argument that defaults to False.
+
+        By default, any HTML tags found in strings will be escaped and
+        therefore treated as pure text. This behavior may be turned off by
+        setting this argument to True.
+
+        That said, *we strongly advise* against it*. It is hard to write secure
+        HTML, so by using this argument you may be compromising your users'
+        security. For more information, see:
+
+        https://github.com/streamlit/streamlit/issues/152
+
+        *Also note that `unsafe_allow_html` is a temporary measure and may be
+        removed from Streamlit at any time.*
+
+        If you decide to turn on HTML anyway, we ask you to please tell us your
+        exact use case here:
+
+        https://discuss.streamlit.io/t/96
+
+        This will help us come up with safe APIs that allow you to do what you
+        want.
 
     Example
     -------
@@ -302,12 +326,19 @@ def write(*args):
        height: 200px
 
     """
+    # Python2 doesn't support this syntax
+    #   def write(*args, unsafe_allow_html=False)
+    # so we do this instead:
+    unsafe_allow_html = kwargs.get('unsafe_allow_html', False)
+
     try:
         string_buffer = []
 
         def flush_buffer():
             if string_buffer:
-                markdown(" ".join(string_buffer))  # noqa: F821
+                markdown(
+                    " ".join(string_buffer),
+                    unsafe_allow_html=unsafe_allow_html)  # noqa: F821
                 string_buffer[:] = []
 
         for arg in args:
