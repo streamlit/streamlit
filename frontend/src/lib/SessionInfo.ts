@@ -42,13 +42,13 @@ export class SessionInfo {
    * - So we throw a loud error when some code tries to use it before it's
    *   initialized.
    */
-  private static singleton?: SessionInfo;
+  private static singleton?: SessionInfo
 
   public static get current(): SessionInfo {
     if (!SessionInfo.singleton) {
       throw new Error("Tried to use SessionInfo before it was initialized")
     }
-    return SessionInfo.singleton;
+    return SessionInfo.singleton
   }
 
   public static set current(sm: SessionInfo) {
@@ -66,10 +66,10 @@ export class SessionInfo {
     authorEmail,
     maxCachedMessageAge,
   }: Args) {
-    this.streamlitVersion = streamlitVersion;
-    this.pythonVersion = pythonVersion;
-    this.installationId = installationId;
-    this.authorEmail = authorEmail;
-    this.maxCachedMessageAge = maxCachedMessageAge;
+    this.streamlitVersion = streamlitVersion
+    this.pythonVersion = pythonVersion
+    this.installationId = installationId
+    this.authorEmail = authorEmail
+    this.maxCachedMessageAge = maxCachedMessageAge
   }
 }

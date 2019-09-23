@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 import React, { Fragment, PureComponent } from "react"
 import { Container } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
@@ -53,7 +52,7 @@ import "assets/css/header.scss"
 
 class App extends PureComponent {
   constructor(props) {
-    super(props);
+    super(props)
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
@@ -67,9 +66,9 @@ class App extends PureComponent {
       showLoginBox: false,
       userSettings: {
         wideMode: false,
-        runOnSave: false
-      }
-    };
+        runOnSave: false,
+      },
+    }
 
     // Bind event handlers.
     this.closeDialog = this.closeDialog.bind(this)
@@ -124,8 +123,8 @@ class App extends PureComponent {
       getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
-      connectionStateChanged: this.handleConnectionStateChanged
-    });
+      connectionStateChanged: this.handleConnectionStateChanged,
+    })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
@@ -142,7 +141,7 @@ class App extends PureComponent {
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
 
-    this.setState({ connectionState: newState });
+    this.setState({ connectionState: newState })
 
     if (newState === ConnectionState.CONNECTED) {
       logMessage(
@@ -154,7 +153,7 @@ class App extends PureComponent {
   }
 
   showError(errorNode) {
-    logError(errorNode);
+    logError(errorNode)
 
     this.openDialog({
       type: "warning",
@@ -170,13 +169,13 @@ class App extends PureComponent {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj, name, funcs) => {
-      const whichOne = obj[name];
+      const whichOne = obj[name]
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne]);
+        return funcs[whichOne](obj[whichOne])
       } else {
-        throw new Error(`Cannot handle ${name} "${whichOne}".`);
+        throw new Error(`Cannot handle ${name} "${whichOne}".`)
       }
-    };
+    }
 
     try {
       dispatchProto(msgProto, "type", {
@@ -189,10 +188,10 @@ class App extends PureComponent {
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url =>
-          this.openDialog({ url, type: DialogType.UPLOADED })
+          this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
-      this.showError(err.message);
+      this.showError(err.message)
     }
   }
 
@@ -206,23 +205,23 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
-      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge
-    });
+      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
+    })
 
     MetricsManager.current.initialize({
-      gatherUsageStats: initializeMsg.config.gatherUsageStats
-    });
+      gatherUsageStats: initializeMsg.config.gatherUsageStats,
+    })
 
     MetricsManager.current.enqueue("createReport", {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
     this.setState({
-      sharingEnabled: initializeMsg.config.sharingEnabled
-    });
+      sharingEnabled: initializeMsg.config.sharingEnabled,
+    })
 
-    const initialState = initializeMsg.sessionState;
-    this.handleSessionStateChanged(initialState);
+    const initialState = initializeMsg.sessionState
+    this.handleSessionStateChanged(initialState)
   }
 
   /**
@@ -241,7 +240,7 @@ class App extends PureComponent {
       ) {
         // If the report is running, we change our ReportRunState only
         // if we don't have a pending stop request
-        reportRunState = ReportRunState.RUNNING;
+        reportRunState = ReportRunState.RUNNING
 
         // If the scriptCompileError dialog is open and the report starts
         // running, close it.
@@ -259,7 +258,7 @@ class App extends PureComponent {
         // If the report is not running, we change our ReportRunState only
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
-        reportRunState = ReportRunState.NOT_RUNNING;
+        reportRunState = ReportRunState.NOT_RUNNING
 
         MetricsManager.current.enqueue(
           "deltaStats",
@@ -270,7 +269,7 @@ class App extends PureComponent {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: stateChangeProto.runOnSave
+          runOnSave: stateChangeProto.runOnSave,
         },
         dialog,
         reportRunState,
@@ -296,8 +295,8 @@ class App extends PureComponent {
     ) {
       this.openDialog({
         type: DialogType.SCRIPT_CHANGED,
-        onRerun: this.rerunScript
-      });
+        onRerun: this.rerunScript,
+      })
     }
   }
 
@@ -306,22 +305,22 @@ class App extends PureComponent {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto) {
-    const name = newReportProto.name;
-    const scriptPath = newReportProto.scriptPath;
+    const name = newReportProto.name
+    const scriptPath = newReportProto.scriptPath
 
-    document.title = `${name} · Streamlit`;
+    document.title = `${name} · Streamlit`
 
-    MetricsManager.current.clearDeltaCounter();
+    MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport", {
       // Create a hash that uniquely identifies this "project" so we can tell
       // how many projects are being created with Streamlit while still keeping
       // possibly-sensitive info like the scriptPath outside of our metrics
       // services.
-      reportHash: hashString(SessionInfo.current.installationId + scriptPath)
-    });
+      reportHash: hashString(SessionInfo.current.installationId + scriptPath),
+    })
 
-    SessionInfo.current.commandLine = newReportProto.commandLine;
+    SessionInfo.current.commandLine = newReportProto.commandLine
 
     this.setState({
       reportId: newReportProto.id,
@@ -342,16 +341,16 @@ class App extends PureComponent {
       this.setState(({ elements, reportId }) => ({
         elements: {
           main: this.clearOldElements(elements.main, reportId),
-          sidebar: this.clearOldElements(elements.sidebar, reportId)
-        }
-      }));
+          sidebar: this.clearOldElements(elements.sidebar, reportId),
+        },
+      }))
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
       // the cache.
       this.connectionManager.incrementMessageCacheRunCount(
         SessionInfo.current.maxCachedMessageAge
-      );
+      )
     }
   }
 
@@ -364,19 +363,19 @@ class App extends PureComponent {
     return elements
       .map(element => {
         if (element instanceof List) {
-          const clearedElements = this.clearOldElements(element, reportId);
-          return clearedElements.size > 0 ? clearedElements : null;
+          const clearedElements = this.clearOldElements(element, reportId)
+          return clearedElements.size > 0 ? clearedElements : null
         }
         return element.get("reportId") === reportId ? element : null
       })
-      .filter(element => element !== null);
-  };
+      .filter(element => element !== null)
+  }
 
   /**
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps) {
-    this.setState({ dialog: dialogProps });
+    this.setState({ dialog: dialogProps })
   }
 
   /**
@@ -391,17 +390,17 @@ class App extends PureComponent {
     // related to the modal-close animation taking too long.
     document.body.classList.remove("modal-open")
 
-    this.setState({ dialog: undefined });
+    this.setState({ dialog: undefined })
   }
 
   /**
    * Saves a UserSettings object.
    */
   saveSettings(newSettings) {
-    const prevRunOnSave = this.state.userSettings.runOnSave;
-    const runOnSave = newSettings.runOnSave;
+    const prevRunOnSave = this.state.userSettings.runOnSave
+    const runOnSave = newSettings.runOnSave
 
-    this.setState({ userSettings: newSettings });
+    this.setState({ userSettings: newSettings })
 
     if (prevRunOnSave !== runOnSave && this.isServerConnected()) {
       this.sendBackMsg({ type: "setRunOnSave", setRunOnSave: runOnSave })
@@ -428,7 +427,7 @@ class App extends PureComponent {
         },
       }))
     }
-  };
+  }
 
   /**
    * Used by e2e tests to test disabling widgets
@@ -466,8 +465,8 @@ class App extends PureComponent {
                 setup sharing.
               </div>
             </Fragment>
-          )
-        });
+          ),
+        })
       }
     } else {
       logError("Cannot save app when disconnected from server")
@@ -486,8 +485,8 @@ class App extends PureComponent {
         rerunCallback: this.rerunScript,
 
         // This will be called if enter is pressed.
-        defaultAction: this.rerunScript
-      });
+        defaultAction: this.rerunScript,
+      })
     } else {
       logError("Cannot rerun script when disconnected from server.")
     }
@@ -501,7 +500,7 @@ class App extends PureComponent {
    * to enable runOnSave for this report.
    */
   rerunScript(alwaysRunOnSave = false) {
-    this.closeDialog();
+    this.closeDialog()
 
     if (!this.isServerConnected()) {
       logError("Cannot rerun script when disconnected from server.")
@@ -513,12 +512,12 @@ class App extends PureComponent {
       this.state.reportRunState === ReportRunState.RERUN_REQUESTED
     ) {
       // Don't queue up multiple rerunScript requests
-      return;
+      return
     }
 
     MetricsManager.current.enqueue("rerunScript")
 
-    this.setState({ reportRunState: ReportRunState.RERUN_REQUESTED });
+    this.setState({ reportRunState: ReportRunState.RERUN_REQUESTED })
 
     // Note: `rerunScript` is incorrectly called in some places.
     // We can remove `=== true` after adding type information
@@ -526,7 +525,7 @@ class App extends PureComponent {
       // Update our run-on-save setting *before* calling rerunScript.
       // The rerunScript message currently blocks all BackMsgs from
       // being processed until the script has completed executing.
-      this.saveSettings({ ...this.state.userSettings, runOnSave: true });
+      this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
     this.sendBackMsg({
@@ -547,7 +546,7 @@ class App extends PureComponent {
       this.state.reportRunState === ReportRunState.STOP_REQUESTED
     ) {
       // Don't queue up multiple stopReport requests
-      return;
+      return
     }
 
     this.sendBackMsg({ type: "stopReport", stopReport: true })
@@ -564,8 +563,8 @@ class App extends PureComponent {
         confirmCallback: this.clearCache,
 
         // This will be called if enter is pressed.
-        defaultAction: this.clearCache
-      });
+        defaultAction: this.clearCache,
+      })
     } else {
       logError("Cannot clear cache: disconnected from server")
     }
@@ -575,7 +574,7 @@ class App extends PureComponent {
    * Asks the server to clear the st_cache
    */
   clearCache() {
-    this.closeDialog();
+    this.closeDialog()
     if (this.isServerConnected()) {
       MetricsManager.current.enqueue("clearCache")
       this.sendBackMsg({ type: "clearCache", clearCache: true })
@@ -589,18 +588,18 @@ class App extends PureComponent {
    */
   sendBackMsg = msg => {
     if (this.connectionManager) {
-      logMessage(msg);
-      this.connectionManager.sendMessage(msg);
+      logMessage(msg)
+      this.connectionManager.sendMessage(msg)
     } else {
-      logError(`Not connected. Cannot send back message: ${msg}`);
+      logError(`Not connected. Cannot send back message: ${msg}`)
     }
-  };
+  }
 
   /**
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errNode) {
-    this.showError(errNode);
+    this.showError(errNode)
   }
 
   /**
@@ -618,34 +617,34 @@ class App extends PureComponent {
       isOpen: true,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
-      onSave: this.saveSettings
-    });
+      onSave: this.saveSettings,
+    })
   }
 
   aboutCallback() {
     this.openDialog({
       type: DialogType.ABOUT,
-      onClose: this.closeDialog
-    });
+      onClose: this.closeDialog,
+    })
   }
 
   async getUserLogin() {
-    this.setState({ showLoginBox: true });
-    const idToken = await this.userLoginResolver.promise;
-    this.setState({ showLoginBox: false });
-    return idToken;
+    this.setState({ showLoginBox: true })
+    const idToken = await this.userLoginResolver.promise
+    this.setState({ showLoginBox: false })
+    return idToken
   }
 
   onLogInSuccess({ accessToken, idToken }) {
     if (accessToken) {
-      this.userLoginResolver.resolve(idToken);
+      this.userLoginResolver.resolve(idToken)
     } else {
       this.userLoginResolver.reject("Error signing in.")
     }
   }
 
   onLogInError(msg) {
-    this.userLoginResolver.reject(`Error signing in. ${msg}`);
+    this.userLoginResolver.reject(`Error signing in. ${msg}`)
   }
 
   render() {
@@ -656,8 +655,8 @@ class App extends PureComponent {
 
     const dialogProps = {
       ...this.state.dialog,
-      onClose: this.closeDialog
-    };
+      onClose: this.closeDialog,
+    }
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
@@ -719,8 +718,8 @@ class App extends PureComponent {
           </Container>
         </div>
       </HotKeys>
-    );
+    )
   }
 }
 
-export default App;
+export default App

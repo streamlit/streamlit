@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "lib/baseconsts";
+import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "lib/baseconsts"
 
 /**
  * host:port tuple
  */
 export interface BaseUriParts {
-  host: string;
-  port: number;
+  host: string
+  port: number
 }
 
 /**
@@ -32,9 +32,9 @@ export function getWindowBaseUriParts(): BaseUriParts {
   // If dev, always connect to 8501, since window.location.port is the Node
   // server's port 3000.
   // If changed, also change config.py
-  const host = window.location.hostname;
-  const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port);
-  return { host, port };
+  const host = window.location.hostname
+  const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port)
+  return { host, port }
 }
 
 /**
@@ -44,8 +44,8 @@ export function buildWsUri(
   { host, port }: BaseUriParts,
   path: string
 ): string {
-  const protocol = isHttps() ? "wss" : "ws";
-  return `${protocol}://${host}:${port}/${path}`;
+  const protocol = isHttps() ? "wss" : "ws"
+  return `${protocol}://${host}:${port}/${path}`
 }
 
 /**
@@ -55,13 +55,13 @@ export function buildHttpUri(
   { host, port }: BaseUriParts,
   path: string
 ): string {
-  const protocol = isHttps() ? "https" : "http";
-  return `${protocol}://${host}:${port}/${path}`;
+  const protocol = isHttps() ? "https" : "http"
+  return `${protocol}://${host}:${port}/${path}`
 }
 
 /**
  * True if we're connected to the host via HTTPS.
  */
 function isHttps(): boolean {
-  return window.location.href.startsWith("https://");
+  return window.location.href.startsWith("https://")
 }

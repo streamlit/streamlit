@@ -55,7 +55,7 @@ const WEBSOCKET_TIMEOUT_MS = 1000
  * This constant is the link to the documentation.
  */
 const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
-  "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS";
+  "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (connectionState: ConnectionState) => void
@@ -125,7 +125,7 @@ export class WebsocketConnection {
    * ForwardMessages get passed through this cache. This gets initialized
    * once we connect to the server.
    */
-  private readonly cache: ForwardMsgCache;
+  private readonly cache: ForwardMsgCache
 
   /**
    * Index to the URI in uriList that we're going to try to connect to.
@@ -186,29 +186,29 @@ export class WebsocketConnection {
 
   // This should only be called inside stepFsm().
   private setFsmState(state: ConnectionState): void {
-    logMessage(LOG, `New state: ${state}`);
-    this.state = state;
-    this.args.onConnectionStateChange(state);
+    logMessage(LOG, `New state: ${state}`)
+    this.state = state
+    this.args.onConnectionStateChange(state)
 
     // Perform actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
-        this.pingServer();
-        break;
+        this.pingServer()
+        break
 
       case ConnectionState.CONNECTING:
-        this.connectToWebSocket();
-        break;
+        this.connectToWebSocket()
+        break
 
       case ConnectionState.CONNECTED:
       case ConnectionState.INITIAL:
       default:
-        break;
+        break
     }
   }
 
   private stepFsm(event: Event): void {
-    logMessage(LOG, `State: ${this.state}; Event: ${event}`);
+    logMessage(LOG, `State: ${this.state}; Event: ${event}`)
 
     // Anything combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
@@ -219,7 +219,7 @@ export class WebsocketConnection {
           this.setFsmState(ConnectionState.CONNECTING)
           return
         }
-        break;
+        break
 
       case ConnectionState.CONNECTING:
         if (event === "CONNECTION_SUCCEEDED") {
@@ -233,24 +233,24 @@ export class WebsocketConnection {
           this.setFsmState(ConnectionState.PINGING_SERVER)
           return
         }
-        break;
+        break
 
       case ConnectionState.CONNECTED:
         if (event === "CONNECTION_CLOSED" || event === "CONNECTION_ERROR") {
           this.setFsmState(ConnectionState.PINGING_SERVER)
           return
         }
-        break;
+        break
 
       case ConnectionState.PINGING_SERVER:
         if (event === "SERVER_PING_SUCCEEDED") {
           this.setFsmState(ConnectionState.CONNECTING)
           return
         }
-        break;
+        break
 
       default:
-        break;
+        break
     }
 
     throw new Error(
@@ -278,7 +278,7 @@ export class WebsocketConnection {
     const uri = buildWsUri(
       this.args.baseUriPartsList[this.uriIndex],
       WEBSOCKET_STREAM_PATH
-    );
+    )
 
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
@@ -289,27 +289,27 @@ export class WebsocketConnection {
     logMessage(LOG, "creating WebSocket")
     this.websocket = new WebSocket(uri)
 
-    this.setConnectionTimeout(uri);
+    this.setConnectionTimeout(uri)
 
-    const localWebsocket = this.websocket;
-    const checkWebsocket = (): boolean => localWebsocket === this.websocket;
+    const localWebsocket = this.websocket
+    const checkWebsocket = (): boolean => localWebsocket === this.websocket
 
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
           // TODO: do something reasonable here, beyond simply logging.
           //  Lots of stuff is likely to be broken!
-          logError(LOG, reason);
-        });
+          logError(LOG, reason)
+        })
       }
-    };
+    }
 
     this.websocket.onopen = () => {
       if (checkWebsocket()) {
         logMessage(LOG, "WebSocket onopen")
         this.stepFsm("CONNECTION_SUCCEEDED")
       }
-    };
+    }
 
     this.websocket.onclose = () => {
       if (checkWebsocket()) {
@@ -317,7 +317,7 @@ export class WebsocketConnection {
         this.cancelConnectionAttempt()
         this.stepFsm("CONNECTION_CLOSED")
       }
-    };
+    }
 
     this.websocket.onerror = () => {
       if (checkWebsocket()) {
@@ -325,7 +325,7 @@ export class WebsocketConnection {
         this.cancelConnectionAttempt()
         this.stepFsm("CONNECTION_ERROR")
       }
-    };
+    }
   }
 
   private setConnectionTimeout(uri: string): void {
@@ -335,11 +335,11 @@ export class WebsocketConnection {
       throw new Error("WS timeout is already set")
     }
 
-    const localWebsocket = this.websocket;
+    const localWebsocket = this.websocket
 
     this.wsConnectionTimeoutId = window.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
-        return;
+        return
       }
 
       if (this.wsConnectionTimeoutId == null) {
@@ -362,8 +362,8 @@ export class WebsocketConnection {
         this.cancelConnectionAttempt()
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
-    }, WEBSOCKET_TIMEOUT_MS);
-    logMessage(LOG, `Set WS timeout ${this.wsConnectionTimeoutId}`);
+    }, WEBSOCKET_TIMEOUT_MS)
+    logMessage(LOG, `Set WS timeout ${this.wsConnectionTimeoutId}`)
   }
 
   private cancelConnectionAttempt(): void {
@@ -374,14 +374,14 @@ export class WebsocketConnection {
     // CONNECTION_TIMED_OUT and a CONNECTION_ERROR.
 
     if (this.websocket) {
-      this.websocket.close();
-      this.websocket = undefined;
+      this.websocket.close()
+      this.websocket = undefined
     }
 
     if (this.wsConnectionTimeoutId != null) {
-      logMessage(LOG, `Clearing WS timeout ${this.wsConnectionTimeoutId}`);
-      window.clearTimeout(this.wsConnectionTimeoutId);
-      this.wsConnectionTimeoutId = undefined;
+      logMessage(LOG, `Clearing WS timeout ${this.wsConnectionTimeoutId}`)
+      window.clearTimeout(this.wsConnectionTimeoutId)
+      this.wsConnectionTimeoutId = undefined
     }
   }
 
@@ -391,11 +391,11 @@ export class WebsocketConnection {
    */
   public sendMessage(obj: IBackMsg): void {
     if (!this.websocket) {
-      return;
+      return
     }
-    const msg = BackMsg.create(obj);
-    const buffer = BackMsg.encode(msg).finish();
-    this.websocket.send(buffer);
+    const msg = BackMsg.create(obj)
+    const buffer = BackMsg.encode(msg).finish()
+    this.websocket.send(buffer)
   }
 
   /**
@@ -403,7 +403,7 @@ export class WebsocketConnection {
    * to the ForwardMsgCache, to handle cached entry expiry.
    */
   public incrementMessageCacheRunCount(maxMessageAge: number): void {
-    this.cache.incrementRunCount(maxMessageAge);
+    this.cache.incrementRunCount(maxMessageAge)
   }
 
   private async handleMessage(data: any): Promise<void> {
@@ -456,36 +456,36 @@ function doHealthPing(
   let tryTimestamp = Date.now()
 
   // Hoist the connect() declaration.
-  let connect = (): void => {};
+  let connect = (): void => {}
 
   const retryImmediately = (): void => {
-    uriNumber++;
+    uriNumber++
     if (uriNumber >= uriList.length) {
-      uriNumber = 0;
+      uriNumber = 0
     }
 
-    connect();
-  };
+    connect()
+  }
 
   // Make sure we don't retry faster than timeoutMs. This is required because
   // in some cases things fail very quickly, and all our fast retries end up
   // bogging down the browser.
   const retry = (errorNode: React.ReactNode): void => {
-    const tryDuration = (Date.now() - tryTimestamp) / 1000;
-    const retryTimeout = tryDuration < timeoutMs ? timeoutMs - tryDuration : 0;
+    const tryDuration = (Date.now() - tryTimestamp) / 1000
+    const retryTimeout = tryDuration < timeoutMs ? timeoutMs - tryDuration : 0
 
-    retryCallback(totalTries, errorNode);
+    retryCallback(totalTries, errorNode)
 
-    window.setTimeout(retryImmediately, retryTimeout);
-  };
+    window.setTimeout(retryImmediately, retryTimeout)
+  }
 
   // Using XHR because it supports timeouts.
   // The location of this declaration matters, as XMLHttpRequests can lead to a
   // memory leak when initialized inside a callback. See
   // https://stackoverflow.com/a/40532229 for more info.
-  const xhr = new XMLHttpRequest();
+  const xhr = new XMLHttpRequest()
 
-  xhr.timeout = timeoutMs;
+  xhr.timeout = timeoutMs
 
   const retryWhenTheresNoResponse = (): void => {
     const uri = uriList[uriNumber]
@@ -542,7 +542,7 @@ function doHealthPing(
           `and response "${xhr.responseText}".`
       )
     }
-  };
+  }
 
   xhr.ontimeout = e => {
     retry("Connection timed out.")
@@ -555,15 +555,15 @@ function doHealthPing(
     xhr.open("GET", uri, true)
 
     if (uriNumber === 0) {
-      totalTries++;
+      totalTries++
     }
 
-    xhr.send(null);
-  };
+    xhr.send(null)
+  }
 
-  connect();
+  connect()
 
-  return resolver.promise;
+  return resolver.promise
 }
 
 /**
@@ -571,9 +571,9 @@ function doHealthPing(
  */
 function readFileAsync(data: any): Promise<string | ArrayBuffer | null> {
   return new Promise<any>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(data);
-  });
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsArrayBuffer(data)
+  })
 }

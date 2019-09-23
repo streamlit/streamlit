@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-import { ForwardMsg, ForwardMsgMetadata } from "autogen/proto";
-import { logMessage } from "lib/log";
-import { BaseUriParts, buildHttpUri } from "lib/UriUtil";
+import { ForwardMsg, ForwardMsgMetadata } from "autogen/proto"
+import { logMessage } from "lib/log"
+import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
 class CacheEntry {
-  public readonly msg: ForwardMsg;
-  public reportRunCount: number = 0;
+  public readonly msg: ForwardMsg
+  public reportRunCount: number = 0
 
   public getAge(curReportRunCount: number): number {
-    return curReportRunCount - this.reportRunCount;
+    return curReportRunCount - this.reportRunCount
   }
 
   public constructor(msg: ForwardMsg, reportRunCount: number) {
-    this.msg = msg;
-    this.reportRunCount = reportRunCount;
+    this.msg = msg
+    this.reportRunCount = reportRunCount
   }
 }
 
@@ -37,22 +37,22 @@ class CacheEntry {
  * Handles ForwardMsg caching for WebsocketConnection.
  */
 export class ForwardMsgCache {
-  private readonly messages = new Map<string, CacheEntry>();
+  private readonly messages = new Map<string, CacheEntry>()
 
   /**
    * A function that returns our server's base URI, or undefined
    * if we're not connected.
    */
-  private readonly getServerUri: () => BaseUriParts | undefined;
+  private readonly getServerUri: () => BaseUriParts | undefined
 
   /**
    * A counter that tracks the number of times the underyling report
    * has been run. We use this to expire our cache entries.
    */
-  private reportRunCount: number = 0;
+  private reportRunCount: number = 0
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri;
+    this.getServerUri = getServerUri
   }
 
   /**
@@ -66,16 +66,16 @@ export class ForwardMsgCache {
    * last accessed.
    */
   public incrementRunCount(maxMessageAge: number): void {
-    this.reportRunCount += 1;
+    this.reportRunCount += 1
 
     // It is safe to delete from a map during forEach iteration:
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/forEach#Description
     this.messages.forEach((entry, hash) => {
       if (entry.getAge(this.reportRunCount) > maxMessageAge) {
-        logMessage(`Removing expired ForwardMsg [hash=${hash}]`);
-        this.messages.delete(hash);
+        logMessage(`Removing expired ForwardMsg [hash=${hash}]`)
+        this.messages.delete(hash)
       }
-    });
+    })
   }
 
   /**
@@ -90,25 +90,25 @@ export class ForwardMsgCache {
    *   server, cache it, and return it.
    */
   public async processMessagePayload(msg: ForwardMsg): Promise<ForwardMsg> {
-    this.maybeCacheMessage(msg);
+    this.maybeCacheMessage(msg)
 
     if (msg.type !== "refHash") {
-      return msg;
+      return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.refHash, true);
+    let newMsg = this.getCachedMessage(msg.refHash, true)
     if (newMsg != null) {
-      logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`);
+      logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
       // Cache miss: fetch from the server
-      logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`);
-      newMsg = await this.fetchMessagePayload(msg.refHash);
-      this.maybeCacheMessage(newMsg);
+      logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
+      newMsg = await this.fetchMessagePayload(msg.refHash)
+      this.maybeCacheMessage(newMsg)
     }
 
     // Copy the metadata from the refMsg into our new message
-    newMsg.metadata = ForwardMsgMetadata.create(msg.metadata);
-    return newMsg;
+    newMsg.metadata = ForwardMsgMetadata.create(msg.metadata)
+    return newMsg
   }
 
   /**
@@ -119,31 +119,31 @@ export class ForwardMsgCache {
    * caches should generally be in sync.
    */
   private async fetchMessagePayload(hash: string): Promise<ForwardMsg> {
-    const serverURI = this.getServerUri();
+    const serverURI = this.getServerUri()
     if (serverURI === undefined) {
       throw new Error(
         "Cannot retrieve uncached message: not connected to a server"
-      );
+      )
     }
 
-    const url = buildHttpUri(serverURI, `message?hash=${hash}`);
-    const rsp = await fetch(url);
+    const url = buildHttpUri(serverURI, `message?hash=${hash}`)
+    const rsp = await fetch(url)
     if (!rsp.ok) {
       // `fetch` doesn't reject for bad HTTP statuses, so
       // we explicitly check for that.
       throw new Error(
         `Failed to retrieve ForwardMsg (hash=${hash}): ${rsp.statusText}`
-      );
+      )
     }
 
-    const data = await rsp.arrayBuffer();
-    const arrayBuffer = new Uint8Array(data);
+    const data = await rsp.arrayBuffer()
+    const arrayBuffer = new Uint8Array(data)
     try {
-      return ForwardMsg.decode(arrayBuffer);
+      return ForwardMsg.decode(arrayBuffer)
     } catch (e) {
       throw new Error(
         `Failed to decode ForwardMsg (hash=${hash}): ${e.message}`
-      );
+      )
     }
   }
 
@@ -156,12 +156,12 @@ export class ForwardMsgCache {
       // may have `metadata.cacheable` set, but this is
       // only because they carry the metadata for the messages
       // they refer to.
-      return;
+      return
     }
 
     if (!msg.metadata.cacheable) {
       // Don't cache messages that the server hasn't marked as cacheable.
-      return;
+      return
     }
 
     if (this.getCachedMessage(msg.hash, true) !== undefined) {
@@ -169,14 +169,14 @@ export class ForwardMsgCache {
       // anything more. (Using getCachedMessage() here ensures
       // that the message's reportRunCount value gets updated as
       // expected.)
-      return;
+      return
     }
 
-    logMessage(`Caching ForwardMsg [hash=${msg.hash}]`);
+    logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
     this.messages.set(
       msg.hash,
       new CacheEntry(ForwardMsg.create(msg), this.reportRunCount)
-    );
+    )
   }
 
   /**
@@ -190,14 +190,14 @@ export class ForwardMsgCache {
     hash: string,
     updateReportRunCount: boolean
   ): ForwardMsg | undefined {
-    const cached = this.messages.get(hash);
+    const cached = this.messages.get(hash)
     if (cached == null) {
-      return undefined;
+      return undefined
     }
 
     if (updateReportRunCount) {
-      cached.reportRunCount = this.reportRunCount;
+      cached.reportRunCount = this.reportRunCount
     }
-    return ForwardMsg.create(cached.msg);
+    return ForwardMsg.create(cached.msg)
   }
 }

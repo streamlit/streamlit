@@ -25,7 +25,7 @@ import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 import { configureCredentials, getObject } from "./s3helper"
 import { logError } from "./log"
-import { getWindowBaseUriParts } from "lib/UriUtil";
+import { getWindowBaseUriParts } from "lib/UriUtil"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
@@ -65,22 +65,22 @@ export class ConnectionManager {
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
   public constructor(props: Props) {
-    this.props = props;
+    this.props = props
 
     // This method returns a promise, but we don't care about its result.
-    this.connect();
+    this.connect()
   }
 
   /**
    * Indicates whether we're connected to the server.
    */
   public isConnected(): boolean {
-    return this.connectionState === ConnectionState.CONNECTED;
+    return this.connectionState === ConnectionState.CONNECTED
   }
 
   // A "static" connection is the one that runs in S3
   public isStaticConnection(): boolean {
-    return this.connectionState === ConnectionState.STATIC;
+    return this.connectionState === ConnectionState.STATIC
   }
 
   public sendMessage(obj: any): void {
@@ -88,7 +88,7 @@ export class ConnectionManager {
       this.connection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      logError(`Cannot send message when server is disconnected: ${obj}`);
+      logError(`Cannot send message when server is disconnected: ${obj}`)
     }
   }
 
@@ -99,7 +99,7 @@ export class ConnectionManager {
   public incrementMessageCacheRunCount(maxMessageAge: number): void {
     // StaticConnection does not use a MessageCache.
     if (this.connection instanceof WebsocketConnection) {
-      this.connection.incrementMessageCacheRunCount(maxMessageAge);
+      this.connection.incrementMessageCacheRunCount(maxMessageAge)
     }
   }
 
@@ -110,10 +110,10 @@ export class ConnectionManager {
         const reportId = query.id as string
         this.connection = await this.connectBasedOnManifest(reportId)
       } else {
-        this.connection = await this.connectToRunningServer();
+        this.connection = await this.connectToRunningServer()
       }
     } catch (err) {
-      logError(err.message);
+      logError(err.message)
       this.setConnectionState(
         ConnectionState.DISCONNECTED_FOREVER,
         err.message
@@ -126,33 +126,33 @@ export class ConnectionManager {
     errMsg?: string
   ): void => {
     if (this.connectionState !== connectionState) {
-      this.connectionState = connectionState;
-      this.props.connectionStateChanged(connectionState);
+      this.connectionState = connectionState
+      this.props.connectionStateChanged(connectionState)
     }
 
     if (errMsg || connectionState === ConnectionState.DISCONNECTED_FOREVER) {
       this.props.onConnectionError(errMsg || "unknown")
     }
-  };
+  }
 
   private showRetryError = (
     totalRetries: number,
     latestError: ReactNode
   ): void => {
     if (totalRetries === RETRY_COUNT_FOR_WARNING) {
-      this.props.onConnectionError(latestError);
+      this.props.onConnectionError(latestError)
     }
-  };
+  }
 
   private connectToRunningServer(): WebsocketConnection {
-    const baseUriParts = getWindowBaseUriParts();
+    const baseUriParts = getWindowBaseUriParts()
 
     return new WebsocketConnection({
       baseUriPartsList: [baseUriParts],
       onMessage: this.props.onMessage,
       onConnectionStateChange: s => this.setConnectionState(s),
-      onRetry: this.showRetryError
-    });
+      onRetry: this.showRetryError,
+    })
   }
 
   /**
@@ -190,8 +190,8 @@ export class ConnectionManager {
       baseUriPartsList,
       onMessage: this.props.onMessage,
       onConnectionStateChange: s => this.setConnectionState(s),
-      onRetry: this.showRetryError
-    });
+      onRetry: this.showRetryError,
+    })
   }
 
   private connectToStaticReportFromManifest(
@@ -202,8 +202,8 @@ export class ConnectionManager {
       manifest,
       reportId,
       onMessage: this.props.onMessage,
-      onConnectionStateChange: s => this.setConnectionState(s)
-    });
+      onConnectionStateChange: s => this.setConnectionState(s),
+    })
   }
 
   private async fetchManifestWithPossibleLogin(
@@ -213,7 +213,7 @@ export class ConnectionManager {
     let permissionError = false
 
     try {
-      manifest = await fetchManifest(reportId);
+      manifest = await fetchManifest(reportId)
     } catch (err) {
       if (err.message === "PermissionError") {
         permissionError = true
@@ -224,10 +224,10 @@ export class ConnectionManager {
     }
 
     if (permissionError) {
-      const idToken = await this.props.getUserLogin();
+      const idToken = await this.props.getUserLogin()
       try {
-        await configureCredentials(idToken);
-        manifest = await fetchManifest(reportId);
+        await configureCredentials(idToken)
+        manifest = await fetchManifest(reportId)
       } catch (err) {
         logError(err)
         throw new Error("Unable to log in.")
@@ -238,14 +238,14 @@ export class ConnectionManager {
       throw new Error("Unknown error fetching app.")
     }
 
-    return manifest;
+    return manifest
   }
 }
 
 async function fetchManifest(reportId: string): Promise<any> {
   const { hostname, pathname } = url.parse(window.location.href, true)
   if (pathname == null) {
-    throw new Error(`No pathname in URL ${window.location.href}`);
+    throw new Error(`No pathname in URL ${window.location.href}`)
   }
 
   // IMPORTANT: The bucket name must match the host name!
