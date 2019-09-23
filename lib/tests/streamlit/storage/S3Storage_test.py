@@ -31,20 +31,6 @@ class S3StorageTest(unittest.TestCase):
         set_option("global.sharingMode", "off")
 
     @patch("streamlit.storage.AbstractStorage._get_static_files")
-    @patch("streamlit.config._get_public_credentials")
-    def test_public_url(self, creds, static_files):
-        creds.return_value = {
-            "bucket": "share.streamlit.io",
-            "url": "https://share.streamlit.io/",
-            "accessKeyId": "ACCESS_KEY_ID",
-            "secretAccessKey": "SECRERT_ACCESS_KEY",
-        }
-        static_files.return_value = [("index.html", "some data")], hashlib.md5()
-        set_option("global.sharingMode", "streamlit-public")
-        s3 = S3Storage()
-        self.assertEqual(s3._url, "https://share.streamlit.io/")
-
-    @patch("streamlit.storage.AbstractStorage._get_static_files")
     def test_private_url(self, static_files):
         static_files.return_value = [("index.html", "some data")], hashlib.md5()
 

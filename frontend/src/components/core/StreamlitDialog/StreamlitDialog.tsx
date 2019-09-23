@@ -148,7 +148,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <BasicDialog onClose={props.onClose}>
         <ModalBody>
-          <div className="streamlit-container">
+          <div>
             Are you sure you want to clear the <code>@st.cache</code> function
             cache?
           </div>
@@ -278,7 +278,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Saving report...</div>
+        <div className="streamlit-upload-first-line">Saving app...</div>
         <div>
           <Progress animated value={props.progress} />
         </div>
@@ -300,7 +300,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Report saved to:</div>
+        <div className="streamlit-upload-first-line">App saved to:</div>
         <div id="streamlit-upload-url"> {props.url} </div>
       </ModalBody>
       <ModalFooter>

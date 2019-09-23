@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
-
+@import "src/assets/css/variables";
 
 #vg-tooltip-element td {
   border: none;
@@ -23,4 +22,9 @@
 
 .vega-actions {
   z-index: $z-index-popup-menu;
+}
+
+// Fix weird floating button height issue in Vega Lite.
+.vega-embed summary {
+  height: auto !important;
 }

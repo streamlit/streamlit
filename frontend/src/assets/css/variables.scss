@@ -16,50 +16,50 @@
 // like multi-line comments)
 
 // Overwrite some basic colors.
-$white:      #FFFFFF;
-$gray-050:   #F6F8F9;
-$gray-100:   #F0F3F9;
-$gray-200:   #E6E9EF;
-$gray-300:   $gray-200;  // We don't need a million grays!
-$gray-400:   $gray-200;
-$gray-500:   #C2C7D0;
-$gray-600:   $gray-500;
-$gray-700:   #768096;
-$gray-800:   #313742;
-$gray-900:   #101620;
-$black:      $gray-900;
-$red:        #F63366;
-$yellow:     #FFB40A;
-$blue:       #2979E9;
-$green:      #199939;
+$white: #ffffff;
+$gray-050: #f6f8f9;
+$gray-100: #f0f3f9;
+$gray-200: #e6e9ef;
+$gray-300: $gray-200; // We don't need a million grays!
+$gray-400: $gray-200;
+$gray-500: #c2c7d0;
+$gray-600: $gray-500;
+$gray-700: #768096;
+$gray-800: #313742;
+$gray-900: #101620;
+$black: $gray-900;
+$red: #f63366;
+$yellow: #ffb40a;
+$blue: #2979e9;
+$green: #199939;
 
 // Custom color for our own use.
-$gray-faint:    $gray-050;
+$gray-faint: $gray-050;
 $gray-lightest: $gray-100;
-$gray-lighter:  $gray-200;
-$gray-light:    $gray-500;
-$gray:          $gray-700;
-$gray-dark:     $gray-800;
-$yellow-light:  #FFFD80;
+$gray-lighter: $gray-200;
+$gray-light: $gray-500;
+$gray: $gray-700;
+$gray-dark: $gray-800;
+$yellow-light: #fffd80;
 
 // Overwrite some theme colors.
-$primary:    $red;
-$secondary:  $gray;
-$light:      $gray-100;
-$dark:       $gray;
+$primary: $red;
+$secondary: $gray;
+$light: $gray-100;
+$dark: $gray;
 
 $primary-a50: change-color($primary, $alpha: 0.5);
 
 // Overwrite some theme fonts settings.
-$font-family-sans-serif: 'IBM Plex Sans', sans-serif;
-$font-family-monospace:  'IBM Plex Mono', monospace;
+$font-family-sans-serif: "IBM Plex Sans", sans-serif;
+$font-family-monospace: "IBM Plex Mono", monospace;
 
 // This should equal 17px since 1rem == 16px.
 // (Can't set actual pixels here because it breaks bootstrap)
-$font-size-base:    1rem;
+$font-size-base: 1rem;
 
-$font-size-sm:      0.8rem;
-$line-height-base:  1.6;
+$font-size-sm: 0.8rem;
+$line-height-base: 1.6;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
@@ -73,6 +73,10 @@ $z-index-header: 100;
 $z-index-sidebar: 99;
 
 // Custom values for our own use.
-$m1-2-font-size-sm: $font-size-sm / 2;  // m1-2 = multiply by 1/2
-$m2-3-font-size-sm: $font-size-sm * 2 / 3;  // m2-3 = multiply by 2/3
-$m1-2-font-size-base: $font-size-base / 2;  // m1-2 = multiply by 1/2
+$m1-2-font-size-sm: $font-size-sm / 2; // m1-2 = multiply by 1/2
+$m2-3-font-size-sm: $font-size-sm * 2 / 3; // m2-3 = multiply by 2/3
+$m1-2-font-size-base: $font-size-base / 2; // m1-2 = multiply by 1/2
+
+// Layout sizing
+$sidebar-width: 250px;
+$content-max-width: 730px;

@@ -44,7 +44,10 @@ def _set_up_signal_handler():
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGQUIT, signal_handler)
+    if sys.platform == 'win32':
+      signal.signal(signal.SIGBREAK, signal_handler)
+    else:
+      signal.signal(signal.SIGQUIT, signal_handler)
 
 
 def _fix_sys_path(script_path):
@@ -57,10 +60,14 @@ def _fix_sys_path(script_path):
 
 
 def _fix_matplotlib_crash():
-    """
+    """Set Matplotlib backend to avoid a crash.
+
     The default Matplotlib backend crashes Python for most MacOS users.
     So here we set a safer backend as a fix. Users can always disable this
     behavior by setting the config runner.fixMatplotlib = false.
+
+    This fix is OS-independent. We didn't see a good reason to make this
+    Mac-only. Consistency within Streamlit seemed more important.
     """
     if config.get_option("runner.fixMatplotlib"):
         os.environ["MPLBACKEND"] = "Agg"
@@ -94,7 +101,7 @@ def _on_server_start(server):
 
 
 def _print_url():
-    title_message = "You can now view your Streamlit report in your browser."
+    title_message = "You can now view your Streamlit app in your browser."
     named_urls = []
 
     if config.is_manually_set("browser.serverAddress"):
@@ -115,7 +122,7 @@ def _print_url():
         ]
 
     click.secho("")
-    click.secho("  %s" % title_message, fg="green")
+    click.secho("  %s" % title_message, fg="blue", bold=True)
     click.secho("")
 
     for url_name, url in named_urls:
@@ -125,7 +132,7 @@ def _print_url():
 
 
 def run(script_path):
-    """Run a script in a separate thread and start a server for the report.
+    """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
 

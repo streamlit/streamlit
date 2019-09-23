@@ -38,7 +38,7 @@ class Report(object):
 
     @classmethod
     def get_url(cls, host_ip):
-        """Get the URL for any report served at the given host_ip.
+        """Get the URL for any app served at the given host_ip.
 
         Parameters
         ----------
@@ -59,7 +59,7 @@ class Report(object):
         Parameters
         ----------
         script_path : str
-            Path of the Python file from which this report is generated.
+            Path of the Python file from which this app is generated.
 
         argv : list of str
             Command-line arguments to run the script with.

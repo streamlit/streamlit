@@ -7,69 +7,71 @@ with `streamlit run your_script.py [script args]`.
 This causes a new tab to pop up in your default web browser, connected to a
 special Streamlit server that automatically launched behind the scenes.
 
-In the browser tab lives your _Streamlit report_. The report is the canvas
+In the browser tab lives your _Streamlit app_. The app is the canvas
 where charts, text, tables, and all other elements are drawn. You can share
-reports, send someone a link, and have them open the link on any browser.
+apps, send someone a link, and have them open the link on any browser.
 
-What exactly gets drawn in the report is up to you. Each command draws a
-different element in the report. For example the
+What exactly gets drawn in the app is up to you. Each command draws a
+different element in the app. For example the
 [`st.text`](api.html#streamlit.text)
-command writes pure text to the report, and
+command writes pure text to the app, and
 [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it
-— a line chart.  The swiss army knife of Streamlit commands is
-[`st.write`](api.html#streamlit.cache), which we'll get to later.
+— a line chart. The swiss army knife of Streamlit commands are our [magic
+commands](api.html#magic-commands) and [`st.write`](api.html#streamlit.cache), which
+we'll get to later.
 
-## Updating the report
+## Updating the app
 
-Every time you want to update your report, you just save your script
-and the Streamlit server will automatically notice it and update the report
+Every time you want to update your app, you just save your script
+and the Streamlit server will automatically notice it and update the app
 as needed.
 
 What happens behind the scenes every time you save the file is Streamlit
 re-executes the entire Python script normally, from top to bottom. And
-then it does a bunch of computer-sciencey magic to make sure the report
+then it does a bunch of computer-sciencey magic to make sure the app
 gets updated in an optimal way. (Skipping ahead a bit, if you're interested
 in this kind of stuff, take a look at the
 [`st.cache`](api.html#streamlit.cache) command for additional ways to
-optimize your reports.)
+optimize your apps.)
 
 In sum, Streamlit allows you to work in a fast interactive loop: that is, you
 type some code, save, type some more, save, type type, save, and so on,
 until you're happy with the results. The idea is to use the Streamlit
-report as a place where you can understand your code, debug it, perfect it,
+app as a place where you can understand your code, debug it, perfect it,
 and finally share your results with your peers.
 
-## Appending elements to a report
+## Appending elements to an app
 
 All drawing commands in the `streamlit` module _append_ elements to your
-Streamlit report.
+Streamlit app.
 
 ```python
-st.write('''
+'''
     We analyze the stock market using some tried-and-true _FooBarian_ model
     analysis, with parameters _blorg_ and _bleep_ set to `0` and `1`
     initially.  Then we optimize them by _frobnicating_ the _plumbus_.
-''')
-# Appends a paragraph to the report.
+'''
+# Appends a paragraph to the app.
 
 my_data = np.random.randn(100, 2)
 
 st.line_chart(my_data)
-# Appends a chart to the report.
+# Appends a chart to the app.
 ```
 
-## Redrawing/replacing elements in a report
+## Redrawing/replacing elements in an app
 
-All of Streamlit's drawing commands (with the exception of `st.write`) return
-an object that can be used to update/redraw that element:
+All of Streamlit's drawing commands (with the exception of `st.write` and
+interactive widgets) return an object that can be used to update/redraw that
+element:
 
 ```python
 my_element = st.text('Hey there')
-# Draws "Hey there" in the Streamlit report,
-# and saves that "slot" in the report so it can be reused.
+# Draws "Hey there" in the Streamlit app,
+# and saves that "slot" in the app so it can be reused.
 
 my_element.text('Hello world')
-# Replaces "Hey there" with "Hello world" in the Streamlit report.
+# Replaces "Hey there" with "Hello world" in the Streamlit app.
 ```
 
 You can also replace one element with another of a completely different
@@ -78,7 +80,7 @@ element gets replaced with an [`st.dataframe`](api.html#dataframe).
 
 ```python
 data_element = st.text('Loading data...')
-# Draws "Loading data..." in the Streamlit report.
+# Draws "Loading data..." in the Streamlit app.
 
 df = load_huge_dataframe_from_internet()
 
@@ -92,20 +94,20 @@ Streamlit as explained in the _Animating elements_ section, below.
 ## Inserting elements out of order
 
 You can use the [`st.empty`](api.html#streamlit.empty) command so you can
-"save" a slot in your report for use later on.
+"save" a slot in your app for use later on.
 
 ```python
 st.text('This will appear first')
-# Appends some text to the report.
+# Appends some text to the app.
 
 my_slot1 = st.empty()
-# Appends an empty slot to the report. We'll use this later.
+# Appends an empty slot to the app. We'll use this later.
 
 my_slot2 = st.empty()
 # Appends another empty slot.
 
 st.text('This will appear last')
-# Appends some more text to the report.
+# Appends some more text to the app.
 
 my_slot1.text('This will appear second')
 # Replaces the first empty slot with a text string.
@@ -116,7 +118,7 @@ my_slot2.line_chart(np.random.randn(20, 2))
 
 ## Appending data to a chart or table.
 
-In Streamlit, you can not only replace entire elements in your report, but also
+In Streamlit, you can not only replace entire elements in your app, but also
 modify the data behind those elements. Here is how:
 
 ```python
@@ -142,7 +144,7 @@ chart.add_rows(data2)
 ## Animating elements
 
 If you put together all the tools you learned about above you can create
-compelling animations using Streamlit. Just replace elements in the report or
+compelling animations using Streamlit. Just replace elements in the app or
 update their data every so often. For example:
 
 ```python
