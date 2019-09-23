@@ -21,11 +21,6 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
       # PIP
       $ pip install --upgrade streamlit
-
-   .. code-block:: bash
-
-      # Conda
-      $ conda update streamlit
 ```
 
 ## Version 0.46.0
