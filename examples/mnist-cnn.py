@@ -69,7 +69,8 @@ class MyCallback(keras.callbacks.Callback):
         self._epoch_summary = st.empty()
 
     def on_batch_end(self, batch, logs=None):
-        rows = pd.DataFrame([[logs["loss"], logs["acc"]]], columns=["loss", "acc"])
+        rows = pd.DataFrame(
+            [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"])
         if batch % 10 == 0:
             self._epoch_chart.add_rows(rows)
         if batch % 100 == 99:
@@ -78,8 +79,8 @@ class MyCallback(keras.callbacks.Callback):
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
         ts = time.time() - self._ts
         self._epoch_summary.text(
-            "loss: %(loss)7.5f | acc: %(acc)7.5f | ts: %(ts)d"
-            % {"loss": logs["loss"], "acc": logs["acc"], "ts": ts}
+            "loss: %(loss)7.5f | accuracy: %(accuracy)7.5f | ts: %(ts)d"
+            % {"loss": logs["loss"], "accuracy": logs["accuracy"], "ts": ts}
         )
 
     def on_epoch_end(self, epoch, logs=None):
@@ -98,7 +99,7 @@ class MyCallback(keras.callbacks.Callback):
         )
 
     def _create_chart(self, type="line", height=0):
-        empty_data = pd.DataFrame(columns=["loss", "acc"])
+        empty_data = pd.DataFrame(columns=["loss", "accuracy"])
         epoch_chart = Chart(empty_data, "%s_chart" % type, height=height)
         epoch_chart.y_axis(
             type="number", y_axis_id="loss_axis", allow_data_overflow="true"
@@ -121,7 +122,7 @@ class MyCallback(keras.callbacks.Callback):
         )
         getattr(epoch_chart, type)(
             type="monotone",
-            data_key="acc",
+            data_key="accuracy",
             stroke="#82ca9d",
             fill="#82ca9d",
             dot="false",
@@ -171,7 +172,8 @@ model.add(Flatten())
 model.add(Dense(8, activation="relu"))
 model.add(Dense(num_classes, activation="softmax"))
 
-model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+model.compile(
+    loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
 
 show_terminal_output = not config.get_option("server.liveSave")
 model.fit(

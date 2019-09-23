@@ -22,15 +22,25 @@ describe("st.markdown", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays a markdown", () => {
-    cy.get(".element-container").should("have.length", 2);
+  beforeEach(() => {
+    cy.get(".element-container").should("have.length", 3);
+  });
 
+  it("displays markdown", () => {
     cy.get(".element-container .stText p")
       .first()
       .contains("This markdown is awesome!");
+  });
 
+  it("escapes HTML", () => {
+    cy.get(".element-container .stText p")
+      .eq(1)
+      .contains("This <b>HTML tag</b> is escaped!");
+  });
+
+  it("allows HTML if defined explicitly", () => {
     cy.get(".element-container .stText p")
       .last()
-      .contains("This html in <div>markdown</div> is escaped!");
+      .contains("This HTML tag is not escaped!");
   });
 });
