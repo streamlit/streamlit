@@ -48,7 +48,7 @@ except ImportError:
 
 # magic.py uses the async keyword, which is Python 3.6+
 if IS_PYTHON_2:
-    EXCLUDED_FILENAMES |= "magic.py"
+    EXCLUDED_FILENAMES.add("magic.py")
 
 # DEVNULL support
 try:
