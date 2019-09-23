@@ -38,7 +38,10 @@ class BokehChart extends React.PureComponent<Props> {
 
   private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
-    const plot = data.doc.roots.references.find((e: any) => e.type === "Plot")
+    const plot =
+      data.doc && data.doc.roots && data.doc.roots.references
+        ? data.doc.roots.references.find((e: any) => e.type === "Plot")
+        : undefined
     if (plot) {
       if (!plot.attributes.plot_width) {
         plot.attributes.plot_width = this.props.width
