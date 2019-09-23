@@ -21,11 +21,11 @@ services:
       - type: bind
         source: ../lib/streamlit
         target: /home/circleci/repo/lib/streamlit
-      - type: volume
-        source: hard_source_webpack_plugin_cache
-        target: /home/circleci/repo/frontend/node_modules/.cache/hard-source
-        volume:
-          nocopy: true
+#      - type: volume
+#        source: hard_source_webpack_plugin_cache
+#        target: /home/circleci/repo/frontend/node_modules/.cache/hard-source
+#        volume:
+#          nocopy: true
 
 volumes:
   hard_source_webpack_plugin_cache:

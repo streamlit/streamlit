@@ -362,7 +362,7 @@ class DeltaGenerator(object):
         element.text.format = Text_pb2.Text.PLAIN
 
     @_with_element
-    def markdown(self, element, body):
+    def markdown(self, element, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
 
         Parameters
@@ -370,6 +370,28 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+
+        unsafe_allow_html : bool
+            By default, any HTML tags found in the body will be escaped and
+            therefore treated as pure text. This behavior may be turned off by
+            setting this argument to True.
+
+            That said, we *strongly advise against it*. It is hard to write
+            secure HTML, so by using this argument you may be compromising your
+            users' security. For more information, see:
+
+            https://github.com/streamlit/streamlit/issues/152
+
+            *Also note that `unsafe_allow_html` is a temporary measure and may
+            be removed from Streamlit at any time.*
+
+            If you decide to turn on HTML anyway, we ask you to please tell us
+            your exact use case here:
+
+            https://discuss.streamlit.io/t/96
+
+            This will help us come up with safe APIs that allow you to do what
+            you want.
 
         Example
         -------
@@ -382,6 +404,7 @@ class DeltaGenerator(object):
         """
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.MARKDOWN
+        element.text.allow_html = unsafe_allow_html
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -1349,7 +1372,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def multiselectbox(self, element, ui_value, label, options,
+    def multiselect(self, element, ui_value, label, options,
                        format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -1372,7 +1395,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> options = st.multiselectbox(
+        >>> options = st.multiselect(
         ...     'What are your favorite colors',
         ...     ('Green', 'Yellow', 'Red', 'Blue'))
         >>>
@@ -1382,9 +1405,9 @@ class DeltaGenerator(object):
 
         current_value = ui_value.value if ui_value is not None else []
 
-        element.multiselectbox.label = label
-        element.multiselectbox.default[:] = current_value
-        element.multiselectbox.options[:] = [str(format_func(opt)) for opt in
+        element.multiselect.label = label
+        element.multiselect.default[:] = current_value
+        element.multiselect.options[:] = [str(format_func(opt)) for opt in
                                              options]
         return [options[i] for i in current_value]
 

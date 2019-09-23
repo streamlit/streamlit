@@ -61,13 +61,13 @@ class MyCallback(keras.callbacks.Callback):
         self._ts = time.time()
         self._epoch = epoch
         st.subheader("Epoch %s" % epoch)
-        df = pd.DataFrame({"loss": [], "acc": []})
         self._epoch_chart = st.line_chart()
         self._epoch_progress = st.info("No stats yet.")
         self._epoch_summary = st.empty()
 
     def on_batch_end(self, batch, logs=None):
-        rows = pd.DataFrame([[logs["loss"], logs["acc"]]], columns=["loss", "acc"])
+        rows = pd.DataFrame(
+            [[logs["loss"], logs["acc"]]], columns=["loss", "acc"])
         if batch % 10 == 0:
             self._epoch_chart.add_rows({"loss": [logs["loss"]],
                                         "acc": [logs["acc"]]})
@@ -77,8 +77,8 @@ class MyCallback(keras.callbacks.Callback):
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
         ts = time.time() - self._ts
         self._epoch_summary.text(
-            "loss: %(loss)7.5f | acc: %(acc)7.5f | ts: %(ts)d"
-            % {"loss": logs["loss"], "acc": logs["acc"], "ts": ts}
+            "loss: %(loss)7.5f | accuracy: %(accuracy)7.5f | ts: %(ts)d"
+            % {"loss": logs["loss"], "accuracy": logs["acc"], "ts": ts}
         )
 
     def on_epoch_end(self, epoch, logs=None):
@@ -95,7 +95,6 @@ class MyCallback(keras.callbacks.Callback):
             "%(epoch)8s :  %(epoch)s\n%(summary)s"
             % {"epoch": epoch, "summary": summary}
         )
-
 
 st.title("MNIST CNN")
 
@@ -135,7 +134,8 @@ model.add(Flatten())
 model.add(Dense(8, activation="relu"))
 model.add(Dense(num_classes, activation="softmax"))
 
-model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+model.compile(
+    loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
 
 show_terminal_output = not config.get_option("server.liveSave")
 model.fit(

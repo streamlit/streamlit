@@ -22,6 +22,10 @@ describe("st.plotly_chart", () => {
     cy.visit("http://localhost:3000/");
   });
 
+  beforeEach(() => {
+    cy.get(".element-container").should("have.length", 1);
+  });
+
   it("displays a plotly chart", () => {
     cy.get(".element-container .stPlotlyChart")
       .find(".modebar-btn--logo")

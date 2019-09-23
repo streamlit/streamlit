@@ -43,9 +43,9 @@ class MagicTest(unittest.TestCase):
             if type(node) is ast.Call and "streamlit" in ast.dump(node.func):
                 count += 1
         self.assertEqual(
-            count,
             expected_count,
-            ("There must be at least {} streamlit nodes," "but found {}").format(
+            count,
+            ("There must be exactly {} streamlit nodes, but found {}").format(
                 expected_count, count
             ),
         )
@@ -122,3 +122,54 @@ with None:
     a
 """
         self._testCode(CODE_WITH_STATEMENT, 1)
+
+    def test_while_statement(self):
+        """Test that 'yield' expressions do not get magicked"""
+        CODE_WHILE_STATEMENT = """
+a = 10
+while True:
+    a
+"""
+        self._testCode(CODE_WHILE_STATEMENT, 1)
+
+    def test_yield_statement(self):
+        """Test that 'yield' expressions do not get magicked"""
+        CODE_YIELD_STATEMENT = """
+def yield_func():
+    yield
+"""
+        self._testCode(CODE_YIELD_STATEMENT, 0)
+
+    def test_yield_from_statement(self):
+        """Test that 'yield from' expressions do not get magicked"""
+        CODE_YIELD_FROM_STATEMENT = """
+def yield_func():
+    yield from None
+"""
+        self._testCode(CODE_YIELD_FROM_STATEMENT, 0)
+
+    def test_async_function_statement(self):
+        """Test async function definitions"""
+        CODE_ASYNC_FUNCTION = """
+async def myfunc(a):
+    a
+"""
+        self._testCode(CODE_ASYNC_FUNCTION, 1)
+
+    def test_async_with_statement(self):
+        """Test 'async with' statements"""
+        CODE_ASYNC_WITH = """
+async def myfunc(a):
+    async with None:
+        a
+"""
+        self._testCode(CODE_ASYNC_WITH, 1)
+
+    def test_async_for_statement(self):
+        """Test 'async for' statements"""
+        CODE_ASYNC_FOR = """
+async def myfunc(a):
+    async for _ in None:
+        a
+"""
+        self._testCode(CODE_ASYNC_FOR, 1)

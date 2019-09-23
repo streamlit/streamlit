@@ -63,8 +63,8 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to off
         self.assertEqual("off", st.get_option("global.sharingMode"))
 
-        st.set_option("global.sharingMode", "streamlit-public")
-        self.assertEqual("streamlit-public", st.get_option("global.sharingMode"))
+        st.set_option("global.sharingMode", "s3")
+        self.assertEqual("s3", st.get_option("global.sharingMode"))
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
@@ -490,7 +490,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         data = [trace0]
 
-        with patch("streamlit.elements.plotly_chart.ply.plot") as plot_patch:
+        with patch("streamlit.elements.plotly_chart."
+                   "_plot_to_url_or_load_cached_url") as plot_patch:
             plot_patch.return_value = "the_url"
             st.plotly_chart(data, sharing="public")
 
