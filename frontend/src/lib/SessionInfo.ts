@@ -23,7 +23,6 @@ interface Args {
   maxCachedMessageAge: number;
 }
 
-
 export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
   public readonly streamlitVersion: string;
@@ -42,31 +41,34 @@ export class SessionInfo {
    * - So we throw a loud error when some code tries to use it before it's
    *   initialized.
    */
-  private static singleton?: SessionInfo
+  private static singleton?: SessionInfo;
 
   public static get current(): SessionInfo {
     if (!SessionInfo.singleton) {
-      throw new Error('Tried to use SessionInfo before it was initialized')
+      throw new Error("Tried to use SessionInfo before it was initialized");
     }
-    return SessionInfo.singleton
+    return SessionInfo.singleton;
   }
 
   public static set current(sm: SessionInfo) {
-    SessionInfo.singleton = sm
+    SessionInfo.singleton = sm;
   }
 
   public static isSet(): boolean {
-    return SessionInfo.singleton != null
+    return SessionInfo.singleton != null;
   }
 
   public constructor({
-    streamlitVersion, pythonVersion, installationId, authorEmail,
-    maxCachedMessageAge,
+    streamlitVersion,
+    pythonVersion,
+    installationId,
+    authorEmail,
+    maxCachedMessageAge
   }: Args) {
-    this.streamlitVersion = streamlitVersion
-    this.pythonVersion = pythonVersion
-    this.installationId = installationId
-    this.authorEmail = authorEmail
-    this.maxCachedMessageAge = maxCachedMessageAge
+    this.streamlitVersion = streamlitVersion;
+    this.pythonVersion = pythonVersion;
+    this.installationId = installationId;
+    this.authorEmail = authorEmail;
+    this.maxCachedMessageAge = maxCachedMessageAge;
   }
 }

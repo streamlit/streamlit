@@ -17,48 +17,51 @@
 
 /// <reference types="cypress" />
 
-describe('st.vega_lite_chart', () => {
+describe("st.vega_lite_chart", () => {
   before(() => {
-    cy.visit('http://localhost:3000/')
+    cy.visit("http://localhost:3000/");
 
     // Force our header to scroll with the page, rather than
     // remaining fixed. This prevents us from occasionally getting
     // the little multi-colored ribbon at the top of our screenshots.
-    cy.get('.stApp > header').invoke('css', 'position', 'absolute')
-  })
+    cy.get(".stApp > header").invoke("css", "position", "absolute");
+  });
 
-  it('displays charts on the DOM', () => {
-    cy.get('.element-container .stVegaLiteChart')
-      .find('canvas')
-      .should('have.class', 'marks')
-  })
+  it("displays charts on the DOM", () => {
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .should("have.class", "marks");
+  });
 
-  it('sets the correct chart width', () => {
-    cy.get('.stVegaLiteChart canvas')
-      .eq(0).should('have.css', 'width', '692px')
+  it("sets the correct chart width", () => {
+    cy.get(".stVegaLiteChart canvas")
+      .eq(0)
+      .should("have.css", "width", "692px");
 
-    cy.get('.stVegaLiteChart canvas')
-      .eq(1).should('have.css', 'width', '692px')
+    cy.get(".stVegaLiteChart canvas")
+      .eq(1)
+      .should("have.css", "width", "692px");
 
-    cy.get('.stVegaLiteChart canvas')
+    cy.get(".stVegaLiteChart canvas")
       .eq(2)
-      .should('have.css', 'width')
-      .and((width) => {
+      .should("have.css", "width")
+      .and(width => {
         // Tests run on mac expect 292px while running on linux expects 294px
-        if (width != '292px' && width != '294px') {
-          throw new Error('Expected width to be 292px or 294px')
+        if (width != "292px" && width != "294px") {
+          throw new Error("Expected width to be 292px or 294px");
         }
-      })
+      });
 
-    cy.get('.stVegaLiteChart canvas')
-      .eq(3).should('have.css', 'width', '500px')
-  })
+    cy.get(".stVegaLiteChart canvas")
+      .eq(3)
+      .should("have.css", "width", "500px");
+  });
 
-  it('supports different ways to get the same plot', () => {
-    cy.get('.stVegaLiteChart')
+  it("supports different ways to get the same plot", () => {
+    cy.get(".stVegaLiteChart")
       .filter(idx => idx >= 4 && idx <= 7)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot()
-      })
-  })
-})
+        cy.wrap(el).matchImageSnapshot();
+      });
+  });
+});

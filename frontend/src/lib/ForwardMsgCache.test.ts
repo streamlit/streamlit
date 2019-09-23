@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import {ForwardMsg} from 'autogen/proto'
-import fetchMock from 'fetch-mock'
-import {ForwardMsgCache} from 'lib/ForwardMessageCache'
-import {buildHttpUri} from 'lib/UriUtil'
+import { ForwardMsg } from "autogen/proto";
+import fetchMock from "fetch-mock";
+import { ForwardMsgCache } from "lib/ForwardMessageCache";
+import { buildHttpUri } from "lib/UriUtil";
 
-const MOCK_SERVER_URI = {host: 'streamlit.mock', port: 80}
+const MOCK_SERVER_URI = { host: "streamlit.mock", port: 80 };
 
 interface MockCache {
   cache: ForwardMsgCache;
@@ -28,23 +28,26 @@ interface MockCache {
 }
 
 function createCache(): MockCache {
-  const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
+  const cache = new ForwardMsgCache(() => MOCK_SERVER_URI);
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
-    cache['getCachedMessage'](hash, false)
+    cache["getCachedMessage"](hash, false);
 
-  return {cache, getCachedMessage}
+  return { cache, getCachedMessage };
 }
 
 /**
  * Create a mock ForwardMsg with the given hash
  */
-function createForwardMsg(hash: string, cacheable: boolean = true): ForwardMsg {
+function createForwardMsg(
+  hash: string,
+  cacheable: boolean = true
+): ForwardMsg {
   return ForwardMsg.fromObject({
     hash: hash,
     metadata: { cacheable: cacheable, deltaId: 0 },
-    reportUploaded: hash,
-  })
+    reportUploaded: hash
+  });
 }
 
 /**
@@ -52,10 +55,10 @@ function createForwardMsg(hash: string, cacheable: boolean = true): ForwardMsg {
  */
 function createRefMsg(msg: ForwardMsg): ForwardMsg {
   return ForwardMsg.fromObject({
-    hash: 'reference',
+    hash: "reference",
     metadata: msg.metadata,
-    refHash: msg.hash,
-  })
+    refHash: msg.hash
+  });
 }
 
 /**
@@ -65,16 +68,16 @@ function createRefMsg(msg: ForwardMsg): ForwardMsg {
 function mockGetMessageResponse(msg: ForwardMsg): void {
   const response = {
     status: 200,
-    headers: {'Content-Type': 'application/octet-stream'},
-    body: ForwardMsg.encode(msg).finish(),
-  }
+    headers: { "Content-Type": "application/octet-stream" },
+    body: ForwardMsg.encode(msg).finish()
+  };
 
   const options = {
-    query: {'hash': msg.hash},
-    method: 'get',
-  }
+    query: { hash: msg.hash },
+    method: "get"
+  };
 
-  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, 'message'), response, options)
+  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, "message"), response, options);
 }
 
 /**
@@ -82,85 +85,85 @@ function mockGetMessageResponse(msg: ForwardMsg): void {
  * ForwardMsg with a 404.
  */
 function mockMissingMessageResponse(msg: ForwardMsg): void {
-  const response = {status: 404}
+  const response = { status: 404 };
   const options = {
-    query: {'hash': msg.hash},
-    method: 'get',
-  }
+    query: { hash: msg.hash },
+    method: "get"
+  };
 
-  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, 'message'), response, options)
+  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, "message"), response, options);
 }
 
-beforeEach(() => fetchMock.config.sendAsJson = false)
-afterEach(() => fetchMock.restore())
+beforeEach(() => (fetchMock.config.sendAsJson = false));
+afterEach(() => fetchMock.restore());
 
-test('caches messages correctly', async () => {
-  const {cache, getCachedMessage} = createCache()
+test("caches messages correctly", async () => {
+  const { cache, getCachedMessage } = createCache();
 
   // Cacheable messages should be cached
-  const msg1 = createForwardMsg('Cacheable', true)
-  await cache.processMessagePayload(msg1)
-  expect(getCachedMessage('Cacheable')).toEqual(msg1)
+  const msg1 = createForwardMsg("Cacheable", true);
+  await cache.processMessagePayload(msg1);
+  expect(getCachedMessage("Cacheable")).toEqual(msg1);
 
   // Uncacheable ones shouldn't!
-  const msg2 = createForwardMsg('Uncacheable', false)
-  await cache.processMessagePayload(msg2)
-  expect(getCachedMessage('Uncacheable')).toBeUndefined()
+  const msg2 = createForwardMsg("Uncacheable", false);
+  await cache.processMessagePayload(msg2);
+  expect(getCachedMessage("Uncacheable")).toBeUndefined();
 
   // Ref messages should never be cached
-  const msg3 = createForwardMsg('Cacheable', true)
-  msg3.metadata.deltaId = 2
-  const ref = createRefMsg(msg3)
-  const unreferenced = await cache.processMessagePayload(ref)
-  expect(getCachedMessage(ref.hash)).toBeUndefined()
-  expect(unreferenced).toEqual(msg3)
+  const msg3 = createForwardMsg("Cacheable", true);
+  msg3.metadata.deltaId = 2;
+  const ref = createRefMsg(msg3);
+  const unreferenced = await cache.processMessagePayload(ref);
+  expect(getCachedMessage(ref.hash)).toBeUndefined();
+  expect(unreferenced).toEqual(msg3);
 
   // Test that our uncached messages are copies
-  expect(unreferenced).not.toBe(msg3)
-})
+  expect(unreferenced).not.toBe(msg3);
+});
 
-test('fetches uncached messages from server', async () => {
-  const msg = createForwardMsg('Cacheable', true)
-  const refMsg = createRefMsg(msg)
+test("fetches uncached messages from server", async () => {
+  const msg = createForwardMsg("Cacheable", true);
+  const refMsg = createRefMsg(msg);
 
   // Mock response: /message?hash=Cacheable -> msg
-  mockGetMessageResponse(msg)
+  mockGetMessageResponse(msg);
 
-  const {cache, getCachedMessage} = createCache()
+  const { cache, getCachedMessage } = createCache();
 
   // processMessagePayload on a reference message whose
   // original version does *not* exist in our local cache. We
   // should hit the server's /message endpoint to fetch it.
-  await expect(cache.processMessagePayload(refMsg)).resolves.toEqual(msg)
+  await expect(cache.processMessagePayload(refMsg)).resolves.toEqual(msg);
 
   // The fetched message should now be cached
-  expect(getCachedMessage('Cacheable')).toEqual(msg)
-})
+  expect(getCachedMessage("Cacheable")).toEqual(msg);
+});
 
-test('errors when uncached message is not on server', async () => {
-  const msg = createForwardMsg('Cacheable', true)
-  const refMsg = createRefMsg(msg)
+test("errors when uncached message is not on server", async () => {
+  const msg = createForwardMsg("Cacheable", true);
+  const refMsg = createRefMsg(msg);
 
   // Mock response: /message?hash=Cacheable -> 404
-  mockMissingMessageResponse(msg)
+  mockMissingMessageResponse(msg);
 
-  const {cache} = createCache()
-  await expect(cache.processMessagePayload(refMsg)).rejects.toThrow()
-})
+  const { cache } = createCache();
+  await expect(cache.processMessagePayload(refMsg)).rejects.toThrow();
+});
 
-test('removes expired messages', () => {
-  const {cache, getCachedMessage} = createCache()
-  const msg = createForwardMsg('Cacheable', true)
+test("removes expired messages", () => {
+  const { cache, getCachedMessage } = createCache();
+  const msg = createForwardMsg("Cacheable", true);
 
   // Add the message to the cache
-  cache['maybeCacheMessage'](msg)
-  expect(getCachedMessage(msg.hash)).toEqual(msg)
+  cache["maybeCacheMessage"](msg);
+  expect(getCachedMessage(msg.hash)).toEqual(msg);
 
   // Increment our age. Our message should still exist.
-  cache.incrementRunCount(1)
-  expect(getCachedMessage(msg.hash)).toEqual(msg)
+  cache.incrementRunCount(1);
+  expect(getCachedMessage(msg.hash)).toEqual(msg);
 
   // Bump our age over the expiration threshold.
-  cache.incrementRunCount(1)
-  expect(getCachedMessage(msg.hash)).toBeUndefined()
-})
+  cache.incrementRunCount(1);
+  expect(getCachedMessage(msg.hash)).toBeUndefined();
+});

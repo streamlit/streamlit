@@ -15,67 +15,80 @@
  * limitations under the License.
  */
 
-import CopyToClipboard from 'react-copy-to-clipboard'
-import React, { ReactElement, ReactNode} from 'react'
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Progress } from 'reactstrap'
-import { HotKeys } from 'react-hotkeys'
+import CopyToClipboard from "react-copy-to-clipboard";
+import React, { ReactElement, ReactNode } from "react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Progress
+} from "reactstrap";
+import { HotKeys } from "react-hotkeys";
 
-import { ScriptChangedDialog, Props as ScriptChangedProps } from 'components/core/StreamlitDialog/ScriptChangedDialog'
-import { Exception } from 'autogen/proto'
-import { Props as SettingsDialogProps, SettingsDialog } from './SettingsDialog'
-import { SessionInfo } from 'lib/SessionInfo'
+import {
+  ScriptChangedDialog,
+  Props as ScriptChangedProps
+} from "components/core/StreamlitDialog/ScriptChangedDialog";
+import { Exception } from "autogen/proto";
+import {
+  Props as SettingsDialogProps,
+  SettingsDialog
+} from "./SettingsDialog";
+import { SessionInfo } from "lib/SessionInfo";
 
-import './StreamlitDialog.scss'
+import "./StreamlitDialog.scss";
 
 type PlainEventHandler = () => void;
 
 type DialogProps =
-  AboutProps |
-  ClearCacheProps |
-  RerunScriptProps |
-  SettingsProps |
-  ScriptChangedProps |
-  ScriptCompileErrorProps |
-  UploadProgressProps |
-  UploadedProps |
-  WarningProps;
+  | AboutProps
+  | ClearCacheProps
+  | RerunScriptProps
+  | SettingsProps
+  | ScriptChangedProps
+  | ScriptCompileErrorProps
+  | UploadProgressProps
+  | UploadedProps
+  | WarningProps;
 
 export enum DialogType {
-  ABOUT = 'about',
-  CLEAR_CACHE = 'clearCache',
-  RERUN_SCRIPT = 'rerunScript',
-  SETTINGS = 'settings',
-  SCRIPT_CHANGED = 'scriptChanged',
-  SCRIPT_COMPILE_ERROR = 'scriptCompileError',
-  UPLOAD_PROGRESS = 'uploadProgress',
-  UPLOADED = 'uploaded',
-  WARNING = 'warning',
+  ABOUT = "about",
+  CLEAR_CACHE = "clearCache",
+  RERUN_SCRIPT = "rerunScript",
+  SETTINGS = "settings",
+  SCRIPT_CHANGED = "scriptChanged",
+  SCRIPT_COMPILE_ERROR = "scriptCompileError",
+  UPLOAD_PROGRESS = "uploadProgress",
+  UPLOADED = "uploaded",
+  WARNING = "warning"
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
     case DialogType.ABOUT:
-      return aboutDialog(dialogProps)
+      return aboutDialog(dialogProps);
     case DialogType.CLEAR_CACHE:
-      return clearCacheDialog(dialogProps)
+      return clearCacheDialog(dialogProps);
     case DialogType.RERUN_SCRIPT:
-      return rerunScriptDialog(dialogProps)
+      return rerunScriptDialog(dialogProps);
     case DialogType.SETTINGS:
-      return settingsDialog(dialogProps)
+      return settingsDialog(dialogProps);
     case DialogType.SCRIPT_CHANGED:
-      return <ScriptChangedDialog {...dialogProps}/>
+      return <ScriptChangedDialog {...dialogProps} />;
     case DialogType.SCRIPT_COMPILE_ERROR:
-      return scriptCompileErrorDialog(dialogProps)
+      return scriptCompileErrorDialog(dialogProps);
     case DialogType.UPLOAD_PROGRESS:
-      return uploadProgressDialog(dialogProps)
+      return uploadProgressDialog(dialogProps);
     case DialogType.UPLOADED:
-      return uploadedDialog(dialogProps)
+      return uploadedDialog(dialogProps);
     case DialogType.WARNING:
-      return warningDialog(dialogProps)
+      return warningDialog(dialogProps);
     case undefined:
-      return noDialog(dialogProps)
+      return noDialog(dialogProps);
     default:
-      return typeNotRecognizedDialog(dialogProps)
+      return typeNotRecognizedDialog(dialogProps);
   }
 }
 
@@ -93,16 +106,20 @@ function aboutDialog(props: AboutProps): ReactElement {
       <ModalHeader toggle={props.onClose}>About</ModalHeader>
       <ModalBody>
         <div>
-          Streamlit v{SessionInfo.current.streamlitVersion}<br/>
-          <a href="https://streamlit.io">https://streamlit.io</a><br/>
+          Streamlit v{SessionInfo.current.streamlitVersion}
+          <br />
+          <a href="https://streamlit.io">https://streamlit.io</a>
+          <br />
           Copyright 2019 Streamlit Inc. All rights reserved.
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button outline color="primary" onClick={props.onClose}>Close</Button>
+        <Button outline color="primary" onClick={props.onClose}>
+          Close
+        </Button>
       </ModalFooter>
     </BasicDialog>
-  )
+  );
 }
 
 interface ClearCacheProps {
@@ -125,8 +142,8 @@ interface ClearCacheProps {
  */
 function clearCacheDialog(props: ClearCacheProps): ReactElement {
   const keyHandlers = {
-    'enter': () => props.defaultAction(),
-  }
+    enter: () => props.defaultAction()
+  };
 
   // Not sure exactly why attach is necessary on the HotKeys
   // component here but it's not working without it
@@ -135,16 +152,21 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
       <BasicDialog onClose={props.onClose}>
         <ModalBody>
           <div className="streamlit-container">
-            Are you sure you want to clear the <code>@st.cache</code> function cache?
+            Are you sure you want to clear the <code>@st.cache</code> function
+            cache?
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
-          <Button outline color="primary" onClick={props.confirmCallback}>Clear cache</Button>
+          <Button outline color="secondary" onClick={props.onClose}>
+            Cancel
+          </Button>{" "}
+          <Button outline color="primary" onClick={props.confirmCallback}>
+            Clear cache
+          </Button>
         </ModalFooter>
       </BasicDialog>
     </HotKeys>
-  )
+  );
 }
 
 interface RerunScriptProps {
@@ -171,8 +193,8 @@ interface RerunScriptProps {
  */
 function rerunScriptDialog(props: RerunScriptProps): ReactElement {
   const keyHandlers = {
-    'enter': () => props.defaultAction(),
-  }
+    enter: () => props.defaultAction()
+  };
 
   // Not sure exactly why attach is necessary on the HotKeys
   // component here but it's not working without it
@@ -186,17 +208,25 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
               autoFocus
               className="command-line"
               value={props.getCommandLine()}
-              onChange={(event) => props.setCommandLine(event.target.value)}
+              onChange={event => props.setCommandLine(event.target.value)}
             />
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button outline color="secondary" onClick={props.onClose}>Cancel</Button>{' '}
-          <Button outline color="primary" onClick={() => props.rerunCallback()}>Rerun</Button>
+          <Button outline color="secondary" onClick={props.onClose}>
+            Cancel
+          </Button>{" "}
+          <Button
+            outline
+            color="primary"
+            onClick={() => props.rerunCallback()}
+          >
+            Rerun
+          </Button>
         </ModalFooter>
       </BasicDialog>
     </HotKeys>
-  )
+  );
 }
 
 interface ScriptCompileErrorProps {
@@ -205,20 +235,26 @@ interface ScriptCompileErrorProps {
   onClose: PlainEventHandler;
 }
 
-function scriptCompileErrorDialog(props: ScriptCompileErrorProps): ReactElement {
+function scriptCompileErrorDialog(
+  props: ScriptCompileErrorProps
+): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalHeader toggle={props.onClose}>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <pre><code>{props.exception.message}</code></pre>
+          <pre>
+            <code>{props.exception.message}</code>
+          </pre>
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button outline color="primary" onClick={props.onClose}>Close</Button>
+        <Button outline color="primary" onClick={props.onClose}>
+          Close
+        </Button>
       </ModalFooter>
     </BasicDialog>
-  )
+  );
 }
 
 interface SettingsProps extends SettingsDialogProps {
@@ -229,9 +265,7 @@ interface SettingsProps extends SettingsDialogProps {
  * Shows the settings dialog.
  */
 function settingsDialog(props: SettingsProps): ReactElement {
-  return (
-    <SettingsDialog {...props}/>
-  )
+  return <SettingsDialog {...props} />;
 }
 
 interface UploadProgressProps {
@@ -247,15 +281,13 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">
-          Saving report...
-        </div>
+        <div className="streamlit-upload-first-line">Saving report...</div>
         <div>
-          <Progress animated value={props.progress}/>
+          <Progress animated value={props.progress} />
         </div>
       </ModalBody>
     </BasicDialog>
-  )
+  );
 }
 
 interface UploadedProps {
@@ -271,19 +303,19 @@ function uploadedDialog(props: UploadedProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">
-          Report saved to:
-        </div>
+        <div className="streamlit-upload-first-line">Report saved to:</div>
         <div id="streamlit-upload-url"> {props.url} </div>
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={props.url} onCopy={props.onClose}>
           <Button outline>Copy to clipboard</Button>
-        </CopyToClipboard>{' '}
-        <Button outline onClick={props.onClose}>Done</Button>
+        </CopyToClipboard>{" "}
+        <Button outline onClick={props.onClose}>
+          Done
+        </Button>
       </ModalFooter>
     </BasicDialog>
-  )
+  );
 }
 
 interface WarningProps {
@@ -302,30 +334,34 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalHeader>{props.title}</ModalHeader>
       <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
-        <Button outline onClick={props.onClose}>Done</Button>
+        <Button outline onClick={props.onClose}>
+          Done
+        </Button>
       </ModalFooter>
     </BasicDialog>
-  )
+  );
 }
 
-export function BasicDialog({children, onClose}: { children?: ReactNode; onClose?: PlainEventHandler }): ReactElement {
-  const isOpen = children !== undefined
+export function BasicDialog({
+  children,
+  onClose
+}: {
+  children?: ReactNode;
+  onClose?: PlainEventHandler;
+}): ReactElement {
+  const isOpen = children !== undefined;
   return (
-    <Modal
-      isOpen={isOpen}
-      toggle={onClose}
-      className="streamlit-dialog"
-    >
+    <Modal isOpen={isOpen} toggle={onClose} className="streamlit-dialog">
       {children}
     </Modal>
-  )
+  );
 }
 
 /**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
-function noDialog({onClose}: { onClose: PlainEventHandler }): ReactElement {
-  return <BasicDialog onClose={onClose}/>
+function noDialog({ onClose }: { onClose: PlainEventHandler }): ReactElement {
+  return <BasicDialog onClose={onClose} />;
 }
 
 interface NotRecognizedProps {
@@ -341,5 +377,5 @@ function typeNotRecognizedDialog(props: NotRecognizedProps): ReactElement {
     <BasicDialog onClose={props.onClose}>
       <ModalBody>{`Dialog type "${props.type}" not recognized.`}</ModalBody>
     </BasicDialog>
-  )
+  );
 }

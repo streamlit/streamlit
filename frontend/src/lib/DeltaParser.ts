@@ -19,18 +19,18 @@ import {
   BlockPath,
   Delta,
   ForwardMsgMetadata,
-  NamedDataSet,
-} from 'autogen/proto'
-import {List, Map as ImmutableMap} from 'immutable'
-import {addRows} from 'lib/dataFrameProto'
-import {dispatchOneOf, toImmutableProto} from 'lib/immutableProto'
-import {MetricsManager} from 'lib/MetricsManager'
-import {requireNonNull} from 'lib/utils'
+  NamedDataSet
+} from "autogen/proto";
+import { List, Map as ImmutableMap } from "immutable";
+import { addRows } from "lib/dataFrameProto";
+import { dispatchOneOf, toImmutableProto } from "lib/immutableProto";
+import { MetricsManager } from "lib/MetricsManager";
+import { requireNonNull } from "lib/utils";
 
-type Container = 'main' | 'sidebar'
-type SimpleElement = ImmutableMap<string, any>
-type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> { }
+type Container = "main" | "sidebar";
+type SimpleElement = ImmutableMap<string, any>;
+type Element = SimpleElement | BlockElement;
+interface BlockElement extends List<Element> {}
 
 interface Elements {
   main: BlockElement;
@@ -38,56 +38,74 @@ interface Elements {
 }
 
 export function applyDelta(
-  elements: Elements, reportId: string,
-  deltaMsg: Delta, metadata: ForwardMsgMetadata): Elements {
+  elements: Elements,
+  reportId: string,
+  deltaMsg: Delta,
+  metadata: ForwardMsgMetadata
+): Elements {
+  const delta = toImmutableProto(Delta, deltaMsg);
+  const parentBlock = requireNonNull(metadata.parentBlock);
+  const parentBlockPath = requireNonNull(parentBlock.path);
+  const parentBlockContainer = requireNonNull(parentBlock.container);
 
-  const delta = toImmutableProto(Delta, deltaMsg)
-  const parentBlock = requireNonNull(metadata.parentBlock)
-  const parentBlockPath = requireNonNull(parentBlock.path)
-  const parentBlockContainer = requireNonNull(parentBlock.container)
+  const container =
+    parentBlockContainer === BlockPath.Container.MAIN ? "main" : "sidebar";
+  const deltaPath = [...parentBlockPath, metadata.deltaId];
 
-  const container = parentBlockContainer === BlockPath.Container.MAIN ? 'main' : 'sidebar'
-  const deltaPath = [...parentBlockPath, metadata.deltaId]
-
-  dispatchOneOf(delta, 'type', {
+  dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      elements[container] = elements[container]
-        .setIn(deltaPath, handleNewElementMessage(container, element, reportId, metadata))
+      elements[container] = elements[container].setIn(
+        deltaPath,
+        handleNewElementMessage(container, element, reportId, metadata)
+      );
     },
     newBlock: () => {
-      elements[container] = elements[container]
-        .updateIn(deltaPath, element => handleNewBlockMessage(container, element))
+      elements[container] = elements[container].updateIn(deltaPath, element =>
+        handleNewBlockMessage(container, element)
+      );
     },
     addRows: (namedDataSet: NamedDataSet) => {
-      elements[container] = elements[container]
-        .updateIn(deltaPath, element => handleAddRowsMessage(container, element, namedDataSet))
-    },
-  })
+      elements[container] = elements[container].updateIn(deltaPath, element =>
+        handleAddRowsMessage(container, element, namedDataSet)
+      );
+    }
+  });
 
-  return elements
+  return elements;
 }
 
-function handleNewElementMessage(container: Container, element: SimpleElement, reportId: string,
-  metadata: ForwardMsgMetadata): SimpleElement {
-  MetricsManager.current.incrementDeltaCounter(container)
-  MetricsManager.current.incrementDeltaCounter(element.get('type'))
+function handleNewElementMessage(
+  container: Container,
+  element: SimpleElement,
+  reportId: string,
+  metadata: ForwardMsgMetadata
+): SimpleElement {
+  MetricsManager.current.incrementDeltaCounter(container);
+  MetricsManager.current.incrementDeltaCounter(element.get("type"));
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
-  return element.set('reportId', reportId).set('metadata', metadata)
+  return element.set("reportId", reportId).set("metadata", metadata);
 }
 
-function handleNewBlockMessage(container: Container, element: BlockElement): BlockElement {
-  MetricsManager.current.incrementDeltaCounter(container)
-  MetricsManager.current.incrementDeltaCounter('new block')
+function handleNewBlockMessage(
+  container: Container,
+  element: BlockElement
+): BlockElement {
+  MetricsManager.current.incrementDeltaCounter(container);
+  MetricsManager.current.incrementDeltaCounter("new block");
   if (element instanceof List) {
-    return element
+    return element;
   }
-  return List()
+  return List();
 }
 
-function handleAddRowsMessage(container: Container, element: SimpleElement, namedDataSet: NamedDataSet): SimpleElement {
-  MetricsManager.current.incrementDeltaCounter(container)
-  MetricsManager.current.incrementDeltaCounter('add rows')
-  return addRows(element, namedDataSet)
+function handleAddRowsMessage(
+  container: Container,
+  element: SimpleElement,
+  namedDataSet: NamedDataSet
+): SimpleElement {
+  MetricsManager.current.incrementDeltaCounter(container);
+  MetricsManager.current.incrementDeltaCounter("add rows");
+  return addRows(element, namedDataSet);
 }
