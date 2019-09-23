@@ -99,7 +99,6 @@ def demo_4():
     st.image(blurred)
 
 
-
 # Data for demo_5 derived from
 # https://www.kaggle.com/rounakbanik/the-movies-dataset
 DATASET_URL = (
