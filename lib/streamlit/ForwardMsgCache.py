@@ -40,11 +40,11 @@ def populate_hash_if_needed(msg):
         to do this.)
 
     """
-    if msg.hash == '':
+    if msg.hash == "":
         # Move the message's metadata aside. It's not part of the
         # hash calculation.
         metadata = msg.metadata
-        msg.ClearField('metadata')
+        msg.ClearField("metadata")
 
         # MD5 is good enough for what we need, which is uniqueness.
         hasher = hashlib.md5()
@@ -93,6 +93,7 @@ class ForwardMsgCache(object):
     the server thread.
 
     """
+
     class Entry(object):
         """Cache entry.
 
@@ -100,6 +101,7 @@ class ForwardMsgCache(object):
         that we've sent the cached message to.
 
         """
+
         def __init__(self, msg):
             self.msg = msg
             # {ReportSession -> report_run_count}
@@ -119,9 +121,9 @@ class ForwardMsgCache(object):
             prev_run_count = self._session_report_run_counts.get(session, 0)
             if report_run_count < prev_run_count:
                 LOGGER.error(
-                    'New report_run_count (%s) is < prev_run_count (%s). '
-                    'This should never happen!' %
-                    (report_run_count, prev_run_count))
+                    "New report_run_count (%s) is < prev_run_count (%s). "
+                    "This should never happen!" % (report_run_count, prev_run_count)
+                )
                 report_run_count = prev_run_count
             self._session_report_run_counts[session] = report_run_count
 
@@ -209,7 +211,7 @@ class ForwardMsgCache(object):
 
         # Ensure we're not expired
         age = entry.get_session_ref_age(session, report_run_count)
-        return age <= config.get_option('global.maxCachedMessageAge')
+        return age <= config.get_option("global.maxCachedMessageAge")
 
     def remove_expired_session_entries(self, session, report_run_count):
         """Remove any cached messages that have expired from the given session.
@@ -223,7 +225,7 @@ class ForwardMsgCache(object):
             The number of times the session's report has run
 
         """
-        max_age = config.get_option('global.maxCachedMessageAge')
+        max_age = config.get_option("global.maxCachedMessageAge")
 
         # Operate on a copy of our entries dict.
         # We may be deleting from it.
@@ -234,8 +236,11 @@ class ForwardMsgCache(object):
             age = entry.get_session_ref_age(session, report_run_count)
             if age > max_age:
                 LOGGER.debug(
-                    'Removing expired entry [session=%s, hash=%s, age=%s]',
-                    id(session), msg_hash, age)
+                    "Removing expired entry [session=%s, hash=%s, age=%s]",
+                    id(session),
+                    msg_hash,
+                    age,
+                )
                 entry.remove_session_ref(session)
                 if not entry.has_refs():
                     # The entry has no more references. Remove it from

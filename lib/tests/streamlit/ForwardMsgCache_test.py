@@ -37,7 +37,9 @@ class ForwardMsgCacheTest(unittest.TestCase):
         self.assertEqual(populate_hash_if_needed(msg1), populate_hash_if_needed(msg2))
 
         msg3 = _create_dataframe_msg([2, 3, 4])
-        self.assertNotEqual(populate_hash_if_needed(msg1), populate_hash_if_needed(msg3))
+        self.assertNotEqual(
+            populate_hash_if_needed(msg1), populate_hash_if_needed(msg3)
+        )
 
     def test_delta_metadata(self):
         """Test that delta metadata doesn't change the hash"""
@@ -60,8 +62,7 @@ class ForwardMsgCacheTest(unittest.TestCase):
         cache.add_message(msg, session, 0)
 
         self.assertTrue(cache.has_message_reference(msg, session, 0))
-        self.assertFalse(
-            cache.has_message_reference(msg, _create_mock_session(), 0))
+        self.assertFalse(cache.has_message_reference(msg, _create_mock_session(), 0))
 
     def test_get_message(self):
         """Test MessageCache.get_message"""
@@ -90,7 +91,7 @@ class ForwardMsgCacheTest(unittest.TestCase):
 
     def test_message_expiration(self):
         """Test MessageCache's expiration logic"""
-        config._set_option('global.maxCachedMessageAge', 1, 'test')
+        config._set_option("global.maxCachedMessageAge", 1, "test")
 
         cache = ForwardMsgCache()
         session1 = _create_mock_session()

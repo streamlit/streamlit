@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import math
@@ -30,6 +31,7 @@ from streamlit import errors
 from streamlit.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -38,22 +40,23 @@ class FileStorage(AbstractStorage):
 
     def __init__(self):
         """Constructor."""
-        LOGGER.debug('FileStorage __init__')
+        LOGGER.debug("FileStorage __init__")
         super(FileStorage, self).__init__()
-        LOGGER.debug('FileStorage post super')
+        LOGGER.debug("FileStorage post super")
         self._dir = self._mkdir()
-        LOGGER.debug('mkdir')
+        LOGGER.debug("mkdir")
 
     def _mkdir(self):
         cwd = os.getcwd()
-        reports_dir = os.path.join(cwd, 'streamlit-storage')
+        reports_dir = os.path.join(cwd, "streamlit-storage")
         if not os.path.exists(reports_dir):
             os.mkdir(reports_dir)
         return reports_dir
 
     @gen.coroutine
-    def _save_report_files(self, report_id, files, progress_coroutine=None,
-            manifest_save_order=None):
+    def _save_report_files(
+        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+    ):
         """Save files related to a given report.
 
         See AbstractStorage for docs.
@@ -68,18 +71,17 @@ class FileStorage(AbstractStorage):
                 report_path = os.path.dirname(full_filename)
                 _recursively_create_folder(report_path)
 
-            LOGGER.debug('Writing file %s', full_filename)
+            LOGGER.debug("Writing file %s", full_filename)
 
-            with open(full_filename, 'wb') as f:
+            with open(full_filename, "wb") as f:
                 f.write(data)
 
                 if progress_coroutine:
-                    yield progress_coroutine(
-                        math.ceil(100 * (i + 1) / len(files)))
+                    yield progress_coroutine(math.ceil(100 * (i + 1) / len(files)))
                 else:
                     yield
 
-        LOGGER.debug('Done writing files!')
+        LOGGER.debug("Done writing files!")
         raise gen.Return(report_path)
 
 

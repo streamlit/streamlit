@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import inspect
@@ -40,15 +41,15 @@ def set_log_level(level):
 
     if isinstance(level, str):
         level = level.upper()
-    if level == 'CRITICAL' or level == logging.CRITICAL:
+    if level == "CRITICAL" or level == logging.CRITICAL:
         log_level = logging.CRITICAL
-    elif level == 'ERROR' or level == logging.ERROR:
+    elif level == "ERROR" or level == logging.ERROR:
         log_level = logging.ERROR
-    elif level == 'WARNING' or level == logging.WARNING:
+    elif level == "WARNING" or level == logging.WARNING:
         log_level = logging.WARNING
-    elif level == 'INFO' or level == logging.INFO:
+    elif level == "INFO" or level == logging.INFO:
         log_level = logging.INFO
-    elif level == 'DEBUG' or level == logging.DEBUG:
+    elif level == "DEBUG" or level == logging.DEBUG:
         log_level = logging.DEBUG
     else:
         msg = 'undefined log level "%s"' % level
@@ -65,7 +66,7 @@ def set_log_level(level):
 def setup_formatter(logger):
     """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
-    if hasattr(logger, 'streamlit_console_handler'):
+    if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()
@@ -73,10 +74,9 @@ def setup_formatter(logger):
     if development.is_development_mode:
         logging.Formatter.converter = time.gmtime
         formatter = logging.Formatter(
-            fmt=(
-                '%(asctime)s.%(msecs)03d %(levelname) -7s '
-                '%(name)s: %(message)s'),
-            datefmt='%Y-%m-%dT%H:%M:%SZ')
+            fmt=("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"),
+            datefmt="%Y-%m-%dT%H:%M:%SZ",
+        )
         logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
@@ -88,13 +88,13 @@ def init_tornado_logs():
     global LOGGER
 
     # http://www.tornadoweb.org/en/stable/log.html
-    logs = ['access', 'application', 'general']
+    logs = ["access", "application", "general"]
     for log in logs:
-        name = 'tornado.%s' % log
+        name = "tornado.%s" % log
         get_logger(name)
 
     logger = get_logger(__name__)
-    logger.debug('Initialized tornado logs')
+    logger.debug("Initialized tornado logs")
 
 
 def get_logger(name):
@@ -113,7 +113,7 @@ def get_logger(name):
     if name in LOGGERS.keys():
         return LOGGERS[name]
 
-    if name == 'root':
+    if name == "root":
         logger = logging.getLogger()
     else:
         logger = logging.getLogger(name)
