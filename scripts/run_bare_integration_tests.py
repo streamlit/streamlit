@@ -40,11 +40,11 @@ EXCLUDED_FILENAMES = set()
 try:
     import matplotlib
 except ImportError:
-    EXCLUDED_FILENAMES |= [
+    EXCLUDED_FILENAMES |= set([
         'empty_charts.py',
         'pyplot.py',
         'pyplot_kwargs.py'
-    ]
+    ])
 
 # magic.py uses the async keyword, which is Python 3.6+
 if IS_PYTHON_2:
