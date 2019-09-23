@@ -157,14 +157,16 @@ st.markdown(
 ```
 
 There's one more method we're going to cover that allows you to add text to a
-app. [`st.write()`](api.html##streamlit.write) is the only text method that
-accepts multiple arguments and data types. We consider it the "Swiss Army
-knife" of Streamlit commands.
+app. [`st.write()`](api.html#streamlit.write) is the only text method that
+accepts multiple arguments and data types. Along with [magic
+commands](api.html#magic-commands), [`st.write()`](api.html#streamlit.write) is
+the "Swiss Army knife" of Streamlit commands.
 
-You can pass almost anything to `st.write()`: text, data, Matplotlib figures,
-Altair charts, and more. Don't worry, Streamlit will figure it our and render
-it the right way. While powerful, there are limitations, so we encourage you to
-review the [API reference](api.html#streamlit.write).
+You can pass almost anything to [`st.write`](api.html#streamlit.write): text,
+data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit will
+figure it our and render it the right way. While powerful, there are
+limitations, so we encourage you to review the [API
+reference](api.html#streamlit.write).
 
 Let's take a look at how you can use `st.write()` to display text and a Pandas
 data frame:
@@ -183,6 +185,29 @@ st.write(pandas.DataFrame({
 }))
 ```
 
+## Write to your app without any Streamlit command
+
+Streamlit supports "[magic commands](api.html#magic-commands)" that allow you
+to write to your app without calling any `st.something()` method. This means
+you don't usually have to write [`st.write`](api.html#streamlit.write) at all!
+So the code above could be replaced with:
+
+```python
+"Here's our first attempt at using data to create a table:"
+
+df = pandas.DataFrame({
+  'first column': [1, 2, 3, 4],
+  'second column': [10, 20, 30, 40]
+})
+
+df
+```
+
+How it works is simple: any time Streamlit sees a variable or a literal value
+on its own line, it automatically writes that to your app using
+[`st.write`](api.html#streamlit.write). For more information, refer to the
+documentation on [magic commands](api.html#magic-commands).
+
 ## Visualize data
 
 Text is great, but Streamlit's strength is the ability to quickly manipulate
@@ -200,16 +225,25 @@ Streamlit methods to create interactive tables, charts, histograms, and more.
 ### Display data and tables
 
 There are a few ways to display data (tables, arrays, data frames) in Streamlit
-apps. In the previous section, you were introduced to `st.write()`, which
-can be used to write anything from text to tables. Now let's take a look at
-methods designed specifically for visualizing data. You might be asking
-yourself, "why wouldn't I always you `st.write()`?" The main reason is that you
-can't reuse the slot in the app created by `st.write()`. Put simply, you
-can't update any elements created with `st.write()`.
+apps. In the previous section, you were introduced to _magic_ and `st.write()`,
+which can be used to write anything from text to tables. Now let's take a look
+at methods designed specifically for visualizing data. You might be asking
+yourself, "why wouldn't I always use `st.write()`?" Two reasons:
 
-Let's create a data frame. In this sample, you'll use Numpy to generate a
-random sample, and the [`st.dataframe()`](api.html#streamlit.dataframe) method
-to draw the interactive table.
+1. Magic and `st.write` inspect the type of the data you passed in, and then
+   decide how to best draw it in the app. But sometimes you want to draw it
+   another way. For example, instead of drawing a dataframe as an interactive
+   table, you may want to draw it as a static table by using `st.table(df)`.
+2. The second reason is that other methods return an object that can be used
+   to modify it by adding data or replacing it with a completely different
+   element.
+3. Finally, if you use a more specific Streamlit method you can pass additional
+   arguments to customize its behavior.
+
+For example, let's create a data frame and change its formatting with a Pandas
+Styler object. In this sample, you'll use Numpy to generate a random sample,
+and the [`st.dataframe()`](api.html#streamlit.dataframe) method to draw the
+interactive table.
 
 ```eval_rst
 .. note::
@@ -381,7 +415,7 @@ import time
 Now, let's create a progress bar:
 
 ```Python
-st.write('Starting a long computation...')
+'Starting a long computation...'
 
 # Add a placeholder
 latest_iteration = st.empty()
@@ -393,7 +427,7 @@ for i in range(101):
   bar.progress(i + 1)
   time.sleep(0.1)
 
-st.write('...and now we\'re done!')
+'...and now we\'re done!'
 ```
 
 ## Add interactivity with widgets

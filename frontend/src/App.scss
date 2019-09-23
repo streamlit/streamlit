@@ -99,6 +99,11 @@ pre {
   height: 0.9rem;
 }
 
+.bash::before {
+  content: "$";
+  margin-right: 1ex;
+}
+
 // Utility class for underlining first letter in a text
 .underlineFirstLetter::first-letter {
   text-decoration: underline;
