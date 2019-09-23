@@ -178,12 +178,30 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        enqueue : callable
-            Function that (maybe) enqueues ForwardMsg's and returns True if
+        enqueue: callable or None
+          Function that (maybe) enqueues ForwardMsg's and returns True if
             enqueued or False if not.
-        id : int
-            ID for deltas, or None to create the root DeltaGenerator (which
+        id: int or None
+          ID for deltas, or None to create the root DeltaGenerator (which
             produces DeltaGenerators with incrementing IDs)
+        delta_type: string or None
+          The name of the element passed in Element.proto's oneof.
+          This is needed so we can transform dataframes for some elements when
+          performing an `add_rows`.
+        last_index: int or None
+          The last index of the DataFrame for the element this DeltaGenerator
+          created. Only applies to elements that transform dataframes,
+          like line charts.
+        is_root: bool
+          If True, this will behave like a root DeltaGenerator which an
+          auto-incrementing ID (in which case, `id` should be None).
+          If False, this will have a fixed ID as determined
+          by the `id` argument.
+        container: BlockPath
+          The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
+        path: tuple of ints
+          The full path of this DeltaGenerator, consisting of the IDs of
+          all ancestors. The 0th item is the topmost ancestor.
 
         """
         self._enqueue = enqueue
@@ -281,8 +299,12 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.metadata.delta_id, delta_type, last_index,
-                is_root=False)
+                enqueue=self._enqueue,
+                id=msg.metadata.delta_id,
+                delta_type=delta_type,
+                last_index=last_index,
+                is_root=False
+            )
         else:
             self._delta_type = delta_type
             self._last_index = last_index
