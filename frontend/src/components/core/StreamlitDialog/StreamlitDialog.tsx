@@ -15,32 +15,29 @@
  * limitations under the License.
  */
 
-import CopyToClipboard from "react-copy-to-clipboard";
-import React, { ReactElement, ReactNode } from "react";
+import CopyToClipboard from "react-copy-to-clipboard"
+import React, { ReactElement, ReactNode } from "react"
 import {
   Button,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
-  Progress
-} from "reactstrap";
-import { HotKeys } from "react-hotkeys";
+  Progress,
+} from "reactstrap"
+import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
-  Props as ScriptChangedProps
-} from "components/core/StreamlitDialog/ScriptChangedDialog";
-import { Exception } from "autogen/proto";
-import {
-  Props as SettingsDialogProps,
-  SettingsDialog
-} from "./SettingsDialog";
-import { SessionInfo } from "lib/SessionInfo";
+  Props as ScriptChangedProps,
+} from "components/core/StreamlitDialog/ScriptChangedDialog"
+import { Exception } from "autogen/proto"
+import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
+import { SessionInfo } from "lib/SessionInfo"
 
-import "./StreamlitDialog.scss";
+import "./StreamlitDialog.scss"
 
-type PlainEventHandler = () => void;
+type PlainEventHandler = () => void
 
 type DialogProps =
   | AboutProps
@@ -51,7 +48,7 @@ type DialogProps =
   | ScriptCompileErrorProps
   | UploadProgressProps
   | UploadedProps
-  | WarningProps;
+  | WarningProps
 
 export enum DialogType {
   ABOUT = "about",
@@ -62,41 +59,41 @@ export enum DialogType {
   SCRIPT_COMPILE_ERROR = "scriptCompileError",
   UPLOAD_PROGRESS = "uploadProgress",
   UPLOADED = "uploaded",
-  WARNING = "warning"
+  WARNING = "warning",
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
     case DialogType.ABOUT:
-      return aboutDialog(dialogProps);
+      return aboutDialog(dialogProps)
     case DialogType.CLEAR_CACHE:
-      return clearCacheDialog(dialogProps);
+      return clearCacheDialog(dialogProps)
     case DialogType.RERUN_SCRIPT:
-      return rerunScriptDialog(dialogProps);
+      return rerunScriptDialog(dialogProps)
     case DialogType.SETTINGS:
-      return settingsDialog(dialogProps);
+      return settingsDialog(dialogProps)
     case DialogType.SCRIPT_CHANGED:
-      return <ScriptChangedDialog {...dialogProps} />;
+      return <ScriptChangedDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
-      return scriptCompileErrorDialog(dialogProps);
+      return scriptCompileErrorDialog(dialogProps)
     case DialogType.UPLOAD_PROGRESS:
-      return uploadProgressDialog(dialogProps);
+      return uploadProgressDialog(dialogProps)
     case DialogType.UPLOADED:
-      return uploadedDialog(dialogProps);
+      return uploadedDialog(dialogProps)
     case DialogType.WARNING:
-      return warningDialog(dialogProps);
+      return warningDialog(dialogProps)
     case undefined:
-      return noDialog(dialogProps);
+      return noDialog(dialogProps)
     default:
-      return typeNotRecognizedDialog(dialogProps);
+      return typeNotRecognizedDialog(dialogProps)
   }
 }
 
 interface AboutProps {
-  type: DialogType.ABOUT;
+  type: DialogType.ABOUT
 
   /** Callback to close the dialog */
-  onClose: PlainEventHandler;
+  onClose: PlainEventHandler
 }
 
 /** About Dialog */
@@ -119,19 +116,19 @@ function aboutDialog(props: AboutProps): ReactElement {
         </Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 interface ClearCacheProps {
-  type: DialogType.CLEAR_CACHE;
+  type: DialogType.CLEAR_CACHE
   /** callback to send the clear_cache request to the Proxy */
-  confirmCallback: () => void;
+  confirmCallback: () => void
 
   /** callback to close the dialog */
-  onClose: PlainEventHandler;
+  onClose: PlainEventHandler
 
   /** callback to run the default action */
-  defaultAction: () => void;
+  defaultAction: () => void
 }
 
 /**
@@ -142,8 +139,8 @@ interface ClearCacheProps {
  */
 function clearCacheDialog(props: ClearCacheProps): ReactElement {
   const keyHandlers = {
-    enter: () => props.defaultAction()
-  };
+    enter: () => props.defaultAction(),
+  }
 
   // Not sure exactly why attach is necessary on the HotKeys
   // component here but it's not working without it
@@ -151,7 +148,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <BasicDialog onClose={props.onClose}>
         <ModalBody>
-          <div className="streamlit-container">
+          <div>
             Are you sure you want to clear the <code>@st.cache</code> function
             cache?
           </div>
@@ -166,26 +163,26 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
         </ModalFooter>
       </BasicDialog>
     </HotKeys>
-  );
+  )
 }
 
 interface RerunScriptProps {
-  type: DialogType.RERUN_SCRIPT;
+  type: DialogType.RERUN_SCRIPT
 
   /** Callback to get the script's command line */
-  getCommandLine: () => string | string[];
+  getCommandLine: () => string | string[]
 
   /** Callback to set the script's command line */
-  setCommandLine: (value: string) => void;
+  setCommandLine: (value: string) => void
 
   /** Callback to rerun the script */
-  rerunCallback: () => void;
+  rerunCallback: () => void
 
   /** Callback to close the dialog */
-  onClose: PlainEventHandler;
+  onClose: PlainEventHandler
 
   /** Callback to run the default action */
-  defaultAction: () => void;
+  defaultAction: () => void
 }
 
 /**
@@ -193,8 +190,8 @@ interface RerunScriptProps {
  */
 function rerunScriptDialog(props: RerunScriptProps): ReactElement {
   const keyHandlers = {
-    enter: () => props.defaultAction()
-  };
+    enter: () => props.defaultAction(),
+  }
 
   // Not sure exactly why attach is necessary on the HotKeys
   // component here but it's not working without it
@@ -226,13 +223,13 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
         </ModalFooter>
       </BasicDialog>
     </HotKeys>
-  );
+  )
 }
 
 interface ScriptCompileErrorProps {
-  type: DialogType.SCRIPT_COMPILE_ERROR;
-  exception: Exception;
-  onClose: PlainEventHandler;
+  type: DialogType.SCRIPT_COMPILE_ERROR
+  exception: Exception
+  onClose: PlainEventHandler
 }
 
 function scriptCompileErrorDialog(
@@ -254,24 +251,24 @@ function scriptCompileErrorDialog(
         </Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 interface SettingsProps extends SettingsDialogProps {
-  type: DialogType.SETTINGS;
+  type: DialogType.SETTINGS
 }
 
 /**
  * Shows the settings dialog.
  */
 function settingsDialog(props: SettingsProps): ReactElement {
-  return <SettingsDialog {...props} />;
+  return <SettingsDialog {...props} />
 }
 
 interface UploadProgressProps {
-  type: DialogType.UPLOAD_PROGRESS;
-  progress?: string | number;
-  onClose: PlainEventHandler;
+  type: DialogType.UPLOAD_PROGRESS
+  progress?: string | number
+  onClose: PlainEventHandler
 }
 
 /**
@@ -281,19 +278,19 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Saving report...</div>
+        <div className="streamlit-upload-first-line">Saving app...</div>
         <div>
           <Progress animated value={props.progress} />
         </div>
       </ModalBody>
     </BasicDialog>
-  );
+  )
 }
 
 interface UploadedProps {
-  type: DialogType.UPLOADED;
-  url: string;
-  onClose: PlainEventHandler;
+  type: DialogType.UPLOADED
+  url: string
+  onClose: PlainEventHandler
 }
 
 /**
@@ -303,7 +300,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Report saved to:</div>
+        <div className="streamlit-upload-first-line">App saved to:</div>
         <div id="streamlit-upload-url"> {props.url} </div>
       </ModalBody>
       <ModalFooter>
@@ -315,14 +312,14 @@ function uploadedDialog(props: UploadedProps): ReactElement {
         </Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 interface WarningProps {
-  type: DialogType.WARNING;
-  title: string;
-  msg: ReactNode;
-  onClose: PlainEventHandler;
+  type: DialogType.WARNING
+  title: string
+  msg: ReactNode
+  onClose: PlainEventHandler
 }
 
 /**
@@ -339,34 +336,34 @@ function warningDialog(props: WarningProps): ReactElement {
         </Button>
       </ModalFooter>
     </BasicDialog>
-  );
+  )
 }
 
 export function BasicDialog({
   children,
-  onClose
+  onClose,
 }: {
-  children?: ReactNode;
-  onClose?: PlainEventHandler;
+  children?: ReactNode
+  onClose?: PlainEventHandler
 }): ReactElement {
-  const isOpen = children !== undefined;
+  const isOpen = children !== undefined
   return (
     <Modal isOpen={isOpen} toggle={onClose} className="streamlit-dialog">
       {children}
     </Modal>
-  );
+  )
 }
 
 /**
  * Returns an empty dictionary, indicating that no object is to be displayed.
  */
 function noDialog({ onClose }: { onClose: PlainEventHandler }): ReactElement {
-  return <BasicDialog onClose={onClose} />;
+  return <BasicDialog onClose={onClose} />
 }
 
 interface NotRecognizedProps {
-  type: string;
-  onClose: PlainEventHandler;
+  type: string
+  onClose: PlainEventHandler
 }
 
 /**
@@ -377,5 +374,5 @@ function typeNotRecognizedDialog(props: NotRecognizedProps): ReactElement {
     <BasicDialog onClose={props.onClose}>
       <ModalBody>{`Dialog type "${props.type}" not recognized.`}</ModalBody>
     </BasicDialog>
-  );
+  )
 }

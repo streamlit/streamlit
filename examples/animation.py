@@ -18,12 +18,14 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import streamlit as st
 import numpy as np
 import time
 import pandas as pd
+
 # import shapefile
 
 st.empty()
@@ -33,8 +35,8 @@ for i in range(100):
     time.sleep(0.1)
 n_elts = int(time.time() * 10) % 5 + 3
 for i in range(n_elts):
-    st.text('.' * i)
+    st.text("." * i)
 st.write(n_elts)
 for i in range(n_elts):
-    st.text('.' * i)
-st.success('done')
+    st.text("." * i)
+st.success("done")

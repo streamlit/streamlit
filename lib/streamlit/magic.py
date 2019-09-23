@@ -53,6 +53,10 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             node_type is ast.FunctionDef
             or node_type is ast.With
             or node_type is ast.For
+            or node_type is ast.While
+            or node_type is ast.AsyncFunctionDef
+            or node_type is ast.AsyncWith
+            or node_type is ast.AsyncFor
         ):
             _modify_ast_subtree(node)
 
@@ -69,7 +73,7 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
 
-        # Convert expression nodes to st.write
+        # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
             value = _get_st_write_from_expr(node, i, parent_type=type(tree))
             if value is not None:
@@ -142,6 +146,10 @@ def _get_st_write_from_expr(node, i, parent_type):
     ):
         return None
 
+    # Don't change yield nodes
+    if type(node.value) is ast.Yield or type(node.value) is ast.YieldFrom:
+        return None
+
     # If tuple, call st.write on the 0th element (rather than the
     # whole tuple). This allows us to add a comma at the end of a statement
     # to turn it into an expression that should be st-written. Ex:
@@ -155,9 +163,9 @@ def _get_st_write_from_expr(node, i, parent_type):
         args = [node.value]
         st_write = _build_st_write_call(args)
 
-    # st.write all variables, and also print the variable's name.
+    # st.write all variables.
     elif type(node.value) is ast.Name:
-        args = [ast.Str(s="**%s**" % node.value.id), node.value]
+        args = [node.value]
         st_write = _build_st_write_call(args)
 
     # st.write everything else

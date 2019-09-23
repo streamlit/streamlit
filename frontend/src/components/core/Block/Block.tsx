@@ -15,91 +15,92 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode, Suspense } from "react";
-import { Progress } from "reactstrap";
-import { AutoSizer } from "react-virtualized";
-import { List, Map as ImmutableMap } from "immutable";
-import { dispatchOneOf } from "lib/immutableProto";
-import { ReportRunState } from "lib/ReportRunState";
-import { WidgetStateManager } from "lib/WidgetStateManager";
-import { makeElementWithInfoText } from "lib/utils";
-import { ForwardMsgMetadata } from "autogen/proto";
+import React, { PureComponent, ReactNode, Suspense } from "react"
+import { Progress } from "reactstrap"
+import { AutoSizer } from "react-virtualized"
+import { List, Map as ImmutableMap } from "immutable"
+import { dispatchOneOf } from "lib/immutableProto"
+import { ReportRunState } from "lib/ReportRunState"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { makeElementWithInfoText } from "lib/utils"
+import { ForwardMsgMetadata } from "autogen/proto"
 
 // Load (non-lazy) elements.
-import Chart from "components/elements/Chart/";
-import DocString from "components/elements/DocString/";
-import ErrorBoundary from "components/shared/ErrorBoundary/";
-import ExceptionElement from "components/elements/ExceptionElement/";
-import Table from "components/elements/Table/";
-import Text from "components/elements/Text/";
+import Chart from "components/elements/Chart/"
+import DocString from "components/elements/DocString/"
+import ErrorBoundary from "components/shared/ErrorBoundary/"
+import ExceptionElement from "components/elements/ExceptionElement/"
+import Table from "components/elements/Table/"
+import Text from "components/elements/Text/"
 
 // Lazy-load elements.
-const Audio = React.lazy(() => import("components/elements/Audio/"));
-const Balloons = React.lazy(() => import("components/elements/Balloons/"));
-const BokehChart = React.lazy(() => import("components/elements/BokehChart/"));
-const DataFrame = React.lazy(() => import("components/elements/DataFrame/"));
+const Audio = React.lazy(() => import("components/elements/Audio/"))
+const Balloons = React.lazy(() => import("components/elements/Balloons/"))
+const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
+const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlChart = React.lazy(() =>
   import("components/elements/DeckGlChart/")
-);
-const ImageList = React.lazy(() => import("components/elements/ImageList/"));
+)
+const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
-);
+)
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
-);
+)
 const VegaLiteChart = React.lazy(() =>
   import("components/elements/VegaLiteChart/")
-);
-const Video = React.lazy(() => import("components/elements/Video/"));
+)
+const Video = React.lazy(() => import("components/elements/Video/"))
 
 // Lazy-load widgets.
-const Button = React.lazy(() => import("components/widgets/Button/"));
-const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"));
-const DateInput = React.lazy(() => import("components/widgets/DateInput/"));
-const Radio = React.lazy(() => import("components/widgets/Radio/"));
-const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"));
-const Slider = React.lazy(() => import("components/widgets/Slider/"));
-const TextArea = React.lazy(() => import("components/widgets/TextArea/"));
-const TextInput = React.lazy(() => import("components/widgets/TextInput/"));
-const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"));
+const Button = React.lazy(() => import("components/widgets/Button/"))
+const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
+const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
+const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
+const Radio = React.lazy(() => import("components/widgets/Radio/"))
+const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
+const Slider = React.lazy(() => import("components/widgets/Slider/"))
+const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
+const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
+const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 
-type SimpleElement = ImmutableMap<string, any>;
-type StElement = SimpleElement | BlockElement;
+type SimpleElement = ImmutableMap<string, any>
+type StElement = SimpleElement | BlockElement
 interface BlockElement extends List<StElement> {}
 
 interface Props {
-  elements: BlockElement;
-  reportId: string;
-  reportRunState: ReportRunState;
-  showStaleElementIndicator: boolean;
-  widgetMgr: WidgetStateManager;
-  widgetsDisabled: boolean;
+  elements: BlockElement
+  reportId: string
+  reportRunState: ReportRunState
+  showStaleElementIndicator: boolean
+  widgetMgr: WidgetStateManager
+  widgetsDisabled: boolean
 }
 
 class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.getElements();
+    const elementsToRender = this.getElements()
 
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
       .map((element: StElement, index: number): ReactNode | null => {
         if (element instanceof List) {
-          return this.renderBlock(element as BlockElement, index, width);
+          return this.renderBlock(element as BlockElement, index, width)
         } else {
           return this.renderElementWithErrorBoundary(
             element as SimpleElement,
             index,
             width
-          );
+          )
         }
       })
-      .filter((node: ReactNode | null): ReactNode => node != null);
-  };
+      .filter((node: ReactNode | null): ReactNode => node != null)
+  }
 
   private getElements = (): BlockElement => {
-    let elementsToRender = this.props.elements;
+    let elementsToRender = this.props.elements
     if (this.props.reportRunState === ReportRunState.RUNNING) {
       // (BUG #739) When the report is running, use our most recent list
       // of rendered elements as placeholders for any empty elements we encounter.
@@ -107,25 +108,25 @@ class Block extends PureComponent<Props> {
         (element: StElement, index: number): StElement => {
           if (element instanceof ImmutableMap) {
             // Repeat the old element if we encounter st.empty()
-            const isEmpty = (element as SimpleElement).get("type") === "empty";
-            return isEmpty ? elementsToRender.get(index, element) : element;
+            const isEmpty = (element as SimpleElement).get("type") === "empty"
+            return isEmpty ? elementsToRender.get(index, element) : element
           }
-          return element;
+          return element
         }
-      );
+      )
     }
-    return elementsToRender;
-  };
+    return elementsToRender
+  }
 
   private isElementStale(element: SimpleElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
-      return true;
+      return true
     } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return element.get("reportId") !== this.props.reportId;
+      return element.get("reportId") !== this.props.reportId
     } else {
-      return false;
+      return false
     }
   }
 
@@ -145,7 +146,7 @@ class Block extends PureComponent<Props> {
           widgetsDisabled={this.props.widgetsDisabled}
         />
       </div>
-    );
+    )
   }
 
   private renderElementWithErrorBoundary(
@@ -153,20 +154,20 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const component = this.renderElement(element, index, width);
+    const component = this.renderElement(element, index, width)
 
     if (!component) {
       // Do not transform an empty element into a ReactNode.
-      return null;
+      return null
     }
 
     const isStale =
       this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement);
+      this.isElementStale(element as SimpleElement)
 
     const className = isStale
       ? "element-container stale-element"
-      : "element-container";
+      : "element-container"
 
     return (
       <div key={index} className={className} style={{ width }}>
@@ -183,7 +184,7 @@ class Block extends PureComponent<Props> {
           </Suspense>
         </ErrorBoundary>
       </div>
-    );
+    )
   }
 
   private renderElement = (
@@ -192,15 +193,15 @@ class Block extends PureComponent<Props> {
     width: number
   ): ReactNode | undefined => {
     if (!element) {
-      throw new Error("Transmission error.");
+      throw new Error("Transmission error.")
     }
 
     const widgetProps = {
       widgetMgr: this.props.widgetMgr,
-      disabled: this.props.widgetsDisabled
-    };
+      disabled: this.props.widgetsDisabled,
+    }
 
-    const metadata = element.get("metadata") as ForwardMsgMetadata;
+    const metadata = element.get("metadata") as ForwardMsgMetadata
 
     // Modify width using the value from the spec as passed with the message when applicable
     if (
@@ -208,7 +209,7 @@ class Block extends PureComponent<Props> {
       metadata.elementDimensionSpec &&
       metadata.elementDimensionSpec.width > 0
     ) {
-      width = Math.min(metadata.elementDimensionSpec.width, width);
+      width = Math.min(metadata.elementDimensionSpec.width, width)
     }
 
     return dispatchOneOf(element, "type", {
@@ -239,6 +240,9 @@ class Block extends PureComponent<Props> {
         <GraphVizChart element={el} index={index} width={width} />
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
+      multiselect: (el: SimpleElement) => (
+        <Multiselect element={el} width={width} {...widgetProps} />
+      ),
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),
@@ -282,15 +286,15 @@ class Block extends PureComponent<Props> {
       ),
       timeInput: (el: SimpleElement) => (
         <TimeInput element={el} width={width} {...widgetProps} />
-      )
-    });
-  };
+      ),
+    })
+  }
 
   public render = () => (
     <AutoSizer disableHeight={true}>
       {({ width }) => this.renderElements(width)}
     </AutoSizer>
-  );
+  )
 }
 
-export default Block;
+export default Block

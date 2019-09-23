@@ -15,38 +15,44 @@
  * limitations under the License.
  */
 
-import React, {ReactNode, ReactElement} from 'react'
-import ReactJson from 'react-json-view'
-import ReactMarkdown from 'react-markdown'
-import {Map as ImmutableMap} from 'immutable'
-import CodeBlock from '../CodeBlock'
-import {Text as TextProto} from 'autogen/proto'
-import './Text.scss'
+import React, { ReactNode, ReactElement } from "react"
+import ReactJson from "react-json-view"
+import ReactMarkdown from "react-markdown"
+import { Map as ImmutableMap } from "immutable"
+import CodeBlock from "../CodeBlock"
+import { Text as TextProto } from "autogen/proto"
+import "./Text.scss"
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
   switch (format) {
-    case TextProto.Format.ERROR:    return 'alert-danger'
-    case TextProto.Format.WARNING:  return 'alert-warning'
-    case TextProto.Format.INFO:     return 'alert-info'
-    case TextProto.Format.SUCCESS:  return 'alert-success'
+    case TextProto.Format.ERROR:
+      return "alert-danger"
+    case TextProto.Format.WARNING:
+      return "alert-warning"
+    case TextProto.Format.INFO:
+      return "alert-info"
+    case TextProto.Format.SUCCESS:
+      return "alert-success"
   }
   return undefined
 }
 
 interface LinkProps {
-  href: string;
-  children: ReactElement;
+  href: string
+  children: ReactElement
 }
 
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 const linkWithTargetBlank = (props: LinkProps): ReactElement => (
-  <a href={props.href} target="_blank" rel="noopener noreferrer">{props.children}</a>
+  <a href={props.href} target="_blank" rel="noopener noreferrer">
+    {props.children}
+  </a>
 )
 
 interface Props {
-  width: number;
-  element: ImmutableMap<string, any>;
+  width: number
+  element: ImmutableMap<string, any>
 }
 
 /**
@@ -54,9 +60,9 @@ interface Props {
  */
 class Text extends React.PureComponent<Props> {
   public render(): ReactNode {
-    const {element, width} = this.props
-    const body = element.get('body')
-    const format = element.get('format')
+    const { element, width } = this.props
+    const body = element.get("body")
+    const format = element.get("format")
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
@@ -66,7 +72,7 @@ class Text extends React.PureComponent<Props> {
       // Plain, fixed width text.
       case TextProto.Format.PLAIN:
         return (
-          <div className="fixed-width stText" style={{width}}>
+          <div className="fixed-width stText" style={{ width }}>
             {body}
           </div>
         )
@@ -74,8 +80,12 @@ class Text extends React.PureComponent<Props> {
       // Markdown.
       case TextProto.Format.MARKDOWN:
         return (
-          <div className="markdown-text-container stText" style={{width}}>
-            <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
+          <div className="markdown-text-container stText" style={{ width }}>
+            <ReactMarkdown
+              source={body}
+              renderers={renderers}
+              escapeHtml={!element.get("allowHtml")}
+            />
           </div>
         )
 
@@ -85,18 +95,18 @@ class Text extends React.PureComponent<Props> {
         try {
           bodyObject = JSON.parse(body)
         } catch (e) {
-          const pos = parseInt(e.message.replace(/[^0-9]/g, ''), 10)
+          const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
           e.message += `\n${body.substr(0, pos + 1)} ← here`
           throw e
         }
         return (
-          <div className="json-text-container stText" style={{width}}>
+          <div className="json-text-container stText" style={{ width }}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
               displayObjectSize={false}
               name={false}
-              style={{font: ''}}  // Unset so we can style via a CSS file.
+              style={{ font: "" }} // Unset so we can style via a CSS file.
             />
           </div>
         )
@@ -106,15 +116,22 @@ class Text extends React.PureComponent<Props> {
       case TextProto.Format.INFO:
       case TextProto.Format.SUCCESS:
         return (
-          <div className={`alert ${getAlertCSSClass(format)} stText`} style={{width}}>
+          <div
+            className={`alert ${getAlertCSSClass(format)} stText`}
+            style={{ width }}
+          >
             <div className="markdown-text-container">
-              <ReactMarkdown source={body} escapeHtml={false} renderers={renderers} />
+              <ReactMarkdown
+                source={body}
+                escapeHtml={false}
+                renderers={renderers}
+              />
             </div>
           </div>
         )
       // Default
       default:
-        throw new Error(`Invalid Text format:${element.get('format')}`)
+        throw new Error(`Invalid Text format:${element.get("format")}`)
     }
   }
 }

@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import ErrorElement from 'components/shared/ErrorElement/'
-import {logError} from 'lib/log'
+import React from "react"
+import ErrorElement from "components/shared/ErrorElement/"
+import { logError } from "lib/log"
 
 export interface Props {
-  width?: number;
+  width?: number
 }
 
 export interface State {
-  error?: Error | null;
+  error?: Error | null
 }
 
 /**
@@ -48,7 +48,7 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const {error} = this.state
+    const { error } = this.state
 
     if (error) {
       return (

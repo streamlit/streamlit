@@ -1,7 +1,6 @@
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
-PY_VERSION := python-$(shell python -c 'import platform; print(platform.python_version())')
+PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
 .PHONY: help
 help:
@@ -31,7 +30,10 @@ build: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv
+	pip install pip-tools pipenv ; \
+	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]] ; then \
+		pip install black ; \
+	fi
 
 .PHONY: pipenv-install
 pipenv-install: lib/Pipfile
@@ -44,11 +46,11 @@ pipenv-lock: lib/Pipfile
 	@# Regenerates Pipfile.lock and rebuilds the virtualenv. This is rather slow.
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
 ifndef CIRCLECI
-	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
+	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/python-$(PY_VERSION)
 else
 	echo "Running in CircleCI, not generating requirements."
 endif
-	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
+	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/python-$(PY_VERSION) Pipfile.lock
 ifndef CIRCLECI
 	# Dont update lockfile and install whatever is in lock.
 	cd lib; pipenv install --ignore-pipfile --dev
@@ -59,14 +61,15 @@ endif
 .PHONY: pylint
 # Run Python linter.
 pylint:
-	# Linting
-	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; \
-		flake8 \
-		--ignore=E402,E128 \
-		--exclude=streamlit/proto/*_pb2.py \
-		$(PYTHON_MODULES) \
-		tests/
+	# It requires Python 3.6.0+ to run but you can reformat
+	# Python 2 code with it, too.
+	if command -v "black" > /dev/null; then \
+		black --check docs/ ; \
+		black --check examples/ ; \
+		black --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
+		black --check lib/tests/ --exclude=compile_error.py ; \
+		black --check e2e/scripts/ ; \
+	fi
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -90,6 +93,12 @@ pycoverage:
 			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
+
+.PHONY: integration-tests
+# Run Python integration tests. Currently, this is just a script that runs
+# all the e2e tests in "bare" mode and checks for non-zero exit codes.
+integration-tests:
+	python scripts/run_bare_integration_tests.py
 
 .PHONY: install
 # Install Streamlit into your Python environment.
@@ -148,6 +157,13 @@ devel-docs: docs
 .PHONY: publish-docs
 # Build docs and push to prod.
 publish-docs: docs
+	cd docs/_build; \
+		aws s3 sync \
+				--acl public-read html s3://streamlit.io/docs/ \
+				--profile streamlit
+
+  # For now, continue publishing to secret/docs.
+	# TODO: Remove after 2020-01-01
 	cd docs/_build; \
 		aws s3 sync \
 				--acl public-read html s3://streamlit.io/secret/docs/ \
@@ -219,6 +235,7 @@ scssvars: react-init
 # Lint the JS code.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -226,7 +243,6 @@ jslint:
 			--ext .ts \
 			--ext .tsx \
 			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
@@ -317,9 +333,31 @@ headers:
 	./scripts/add_license_headers.py \
 		lib/streamlit \
 		lib/tests \
+		e2e/scripts \
+		e2e/specs \
 		frontend/src \
-		frontend/cypress/integration \
 		frontend/public \
 		proto \
 		examples \
 		scripts
+
+.PHONY: build-circleci
+# Build docker image that mirrors circleci
+build-circleci:
+	docker build -t streamlit_circleci -f e2e/Dockerfile .
+
+.PHONY: run-circleci
+# Run circleci image with volume mounts
+run-circleci:
+	mkdir -p frontend/mochawesome-report
+	docker-compose \
+		-f e2e/docker-compose.yml \
+		run \
+		--rm \
+		--name streamlit_circleci \
+		streamlit
+
+.PHONY: connect-circleci
+# Connect to running circleci container
+connect-circleci:
+	docker exec -it streamlit_circleci /bin/bash

@@ -33,12 +33,8 @@ import subprocess
 import sys
 import urllib
 
-try:
-    import urllib.request  # for Python3
-except ImportError:
-    pass
-
 import click
+import requests
 
 from streamlit.logger import get_logger
 
@@ -164,8 +160,8 @@ def memoize(func):
 
 def _make_blocking_http_get(url, timeout=5):
     try:
-        return urllib.request.urlopen(url, timeout=timeout).read()
-    except Exception:
+        return requests.get(url, timeout=timeout).text
+    except Exception as e:
         return None
 
 
@@ -194,7 +190,7 @@ def get_external_ip():
             HELP_DOC,
         )
     else:
-        _external_ip = response.decode("utf-8").strip()
+        _external_ip = response.strip()
 
     return _external_ip
 
@@ -427,7 +423,7 @@ def get_streamlit_file_path(*filepath):
 
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
-    click.secho("  %s: " % title, nl=False)
+    click.secho("  %s: " % title, nl=False, fg='blue')
     click.secho(url, bold=True)
 
 
@@ -451,3 +447,7 @@ def is_namedtuple(x):
     if not isinstance(f, tuple):
         return False
     return all(type(n).__name__ == "str" for n in f)
+
+
+def is_darwin():
+    return platform.system() == "Darwin"

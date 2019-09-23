@@ -15,44 +15,44 @@
  * limitations under the License.
  */
 
-import React from "react";
-import { Map as ImmutableMap } from "immutable";
-import { MultiGrid } from "react-virtualized";
-import DataFrameCell from "./DataFrameCell";
-import { SortDirection } from "./SortDirection";
+import React from "react"
+import { Map as ImmutableMap } from "immutable"
+import { MultiGrid } from "react-virtualized"
+import DataFrameCell from "./DataFrameCell"
+import { SortDirection } from "./SortDirection"
 import {
   dataFrameGet,
   dataFrameGetDimensions,
-  getSortedDataRowIndices
-} from "lib/dataFrameProto";
-import { toFormattedString } from "lib/format";
-import { ElementDimensionSpec } from "autogen/proto";
-import "./DataFrame.scss";
+  getSortedDataRowIndices,
+} from "lib/dataFrameProto"
+import { toFormattedString } from "lib/format"
+import { ElementDimensionSpec } from "autogen/proto"
+import "./DataFrame.scss"
 
 /**
  * Size of the optional sort icon displayed in column headers
  */
-const SORT_ICON_WIDTH_PX = 10;
+const SORT_ICON_WIDTH_PX = 10
 
 /**
  * Minimum size of a dataframe cell.
  */
-const MIN_CELL_WIDTH_PX = 25;
+const MIN_CELL_WIDTH_PX = 25
 
 /**
  * Maximum size of a dataframe cell.
  */
-const MAX_CELL_WIDTH_PX = 200;
+const MAX_CELL_WIDTH_PX = 200
 
 /**
  * Maximum size of a dataframe cell in a 1-column dataframe.
  */
-const MAX_LONELY_CELL_WIDTH_PX = 400;
+const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
-  width: number;
-  elementDimensionSpec: ElementDimensionSpec;
-  element: ImmutableMap<string, any>;
+  width: number
+  elementDimensionSpec: ElementDimensionSpec
+  element: ImmutableMap<string, any>
 }
 
 interface State {
@@ -60,63 +60,63 @@ interface State {
    * If true, then the user manually clicked on a column header to sort the
    * table.
    */
-  sortedByUser: boolean;
+  sortedByUser: boolean
 
   /**
    * Index of the column on which the table is sorted.
    * (Column 0 = row indices).
    */
-  sortColumn: number;
+  sortColumn: number
 
   /** Sort direction for table sorting. */
-  sortDirection: SortDirection;
+  sortDirection: SortDirection
 }
 
 interface Dimensions {
-  rowHeight: number;
-  headerHeight: number;
-  border: number;
-  height: number;
-  elementWidth: number;
-  columnWidth: ({ index }: { index: number }) => number;
-  headerWidth: number;
+  rowHeight: number
+  headerHeight: number
+  border: number
+  height: number
+  elementWidth: number
+  columnWidth: ({ index }: { index: number }) => number
+  headerWidth: number
 }
 
 interface CellContents {
-  classes: string;
-  styles: object;
-  contents: string;
+  classes: string
+  styles: object
+  contents: string
 }
 
 interface CellContentsGetter {
-  (columnIndex: number, rowIndex: number): CellContents;
+  (columnIndex: number, rowIndex: number): CellContents
 }
 
 interface ComputedWidths {
-  elementWidth: number;
-  columnWidth: ({ index }: { index: number }) => number;
-  headerWidth: number;
+  elementWidth: number
+  columnWidth: ({ index }: { index: number }) => number
+  headerWidth: number
 }
 
 interface CellRendererInput {
-  columnIndex: number;
-  key: string;
-  rowIndex: number;
-  style: object;
+  columnIndex: number
+  key: string
+  rowIndex: number
+  style: object
 }
 
 interface CellRenderer {
-  (input: CellRendererInput): React.ReactNode;
+  (input: CellRendererInput): React.ReactNode
 }
 
 /**
  * Functional element representing a DataFrame.
  */
 class DataFrame extends React.PureComponent<Props, State> {
-  private multiGridRef = React.createRef<MultiGrid>();
+  private multiGridRef = React.createRef<MultiGrid>()
 
   public constructor(props: Props) {
-    super(props);
+    super(props)
     this.state = {
       /**
        * If true, then the user manually clicked on a column header to sort the
@@ -131,10 +131,10 @@ class DataFrame extends React.PureComponent<Props, State> {
       sortColumn: 0,
 
       /** Sort direction for table sorting. */
-      sortDirection: SortDirection.ASCENDING
-    };
+      sortDirection: SortDirection.ASCENDING,
+    }
 
-    this.toggleSortOrder = this.toggleSortOrder.bind(this);
+    this.toggleSortOrder = this.toggleSortOrder.bind(this)
   }
 
   /**
@@ -147,23 +147,23 @@ class DataFrame extends React.PureComponent<Props, State> {
       columnIndex,
       key,
       rowIndex,
-      style: baseStyle
+      style: baseStyle,
     }: CellRendererInput): React.ReactNode => {
       const {
         classes,
         styles: additionalStyles,
-        contents
-      } = cellContentsGetter(columnIndex, rowIndex);
+        contents,
+      } = cellContentsGetter(columnIndex, rowIndex)
       const headerClickedCallback =
-        rowIndex === 0 ? this.toggleSortOrder : undefined;
+        rowIndex === 0 ? this.toggleSortOrder : undefined
       const sortDirection =
         columnIndex === this.state.sortColumn
           ? this.state.sortDirection
-          : undefined;
+          : undefined
 
       // Merge our base styles with any additional cell-specific
       // styles returned by the cellContentsGetter
-      const styles = { ...baseStyle, ...additionalStyles };
+      const styles = { ...baseStyle, ...additionalStyles }
 
       return (
         <DataFrameCell
@@ -177,8 +177,8 @@ class DataFrame extends React.PureComponent<Props, State> {
           columnSortDirection={sortDirection}
           headerClickedCallback={headerClickedCallback}
         />
-      );
-    };
+      )
+    }
   }
 
   /**
@@ -186,20 +186,20 @@ class DataFrame extends React.PureComponent<Props, State> {
    * Changes the sort order of the table.
    */
   private toggleSortOrder(columnIndex: number): void {
-    let sortDirection = SortDirection.ASCENDING;
+    let sortDirection = SortDirection.ASCENDING
     if (this.state.sortColumn === columnIndex) {
       // Clicking the same header toggles between ascending and descending
       sortDirection =
         this.state.sortDirection !== SortDirection.ASCENDING
           ? SortDirection.ASCENDING
-          : SortDirection.DESCENDING;
+          : SortDirection.DESCENDING
     }
 
     this.setState({
       sortColumn: columnIndex,
       sortDirection,
-      sortedByUser: true
-    });
+      sortedByUser: true,
+    })
   }
 
   /**
@@ -207,48 +207,48 @@ class DataFrame extends React.PureComponent<Props, State> {
    * given its sortColumn and sortDirection.
    */
   private getDataRowIndices(): number[] {
-    const { element } = this.props;
-    const { sortColumn, sortDirection } = this.state;
-    const { headerCols, dataRows } = dataFrameGetDimensions(element);
+    const { element } = this.props
+    const { sortColumn, sortDirection } = this.state
+    const { headerCols, dataRows } = dataFrameGetDimensions(element)
 
-    const sortAscending = sortDirection !== SortDirection.DESCENDING;
+    const sortAscending = sortDirection !== SortDirection.DESCENDING
 
     // If we're sorting a header column, our sorted row indices are just the
     // row indices themselves (reversed, if SortDirection == DESCENDING)
     if (sortColumn < headerCols) {
-      let rowIndices = new Array(dataRows);
+      const rowIndices = new Array(dataRows)
       for (let i = 0; i < dataRows; i += 1) {
-        rowIndices[i] = sortAscending ? i : dataRows - (i + 1);
+        rowIndices[i] = sortAscending ? i : dataRows - (i + 1)
       }
 
-      return rowIndices;
+      return rowIndices
     }
 
     return getSortedDataRowIndices(
       element,
       sortColumn - headerCols,
       sortAscending
-    );
+    )
   }
 
   /**
    * Returns rendering dimensions for this DataFrame
    */
   private getDimensions(cellContentsGetter: CellContentsGetter): Dimensions {
-    const { element, width, elementDimensionSpec } = this.props;
+    const { element, width, elementDimensionSpec } = this.props
 
     const {
       headerRows,
       headerCols,
       dataRows,
       cols,
-      rows
-    } = dataFrameGetDimensions(element);
+      rows,
+    } = dataFrameGetDimensions(element)
 
     // Rendering constants.
-    const rowHeight = 25;
-    const headerHeight = rowHeight * headerRows;
-    const border = 3;
+    const rowHeight = 25
+    const headerHeight = rowHeight * headerRows
+    const border = 3
     const height =
       border +
       Math.min(
@@ -256,7 +256,7 @@ class DataFrame extends React.PureComponent<Props, State> {
         elementDimensionSpec && elementDimensionSpec.height > 0
           ? elementDimensionSpec.height
           : 300
-      );
+      )
 
     let { elementWidth, columnWidth, headerWidth } = getWidths(
       cols,
@@ -265,19 +265,19 @@ class DataFrame extends React.PureComponent<Props, State> {
       headerRows,
       width - border,
       cellContentsGetter
-    );
+    )
 
     // Add space for the "empty" text when the table is empty.
-    const EMPTY_WIDTH = 60; // px
+    const EMPTY_WIDTH = 60 // px
     if (dataRows === 0 && elementWidth < EMPTY_WIDTH) {
-      elementWidth = EMPTY_WIDTH;
-      headerWidth = EMPTY_WIDTH;
-      let totalWidth = 0;
+      elementWidth = EMPTY_WIDTH
+      headerWidth = EMPTY_WIDTH
+      let totalWidth = 0
       for (let i = 0; i < cols; i++) {
-        totalWidth += columnWidth({ index: i });
+        totalWidth += columnWidth({ index: i })
       }
       if (totalWidth < EMPTY_WIDTH) {
-        columnWidth = () => EMPTY_WIDTH / cols;
+        columnWidth = () => EMPTY_WIDTH / cols
       }
     }
 
@@ -288,8 +288,8 @@ class DataFrame extends React.PureComponent<Props, State> {
       height,
       elementWidth,
       columnWidth,
-      headerWidth
-    };
+      headerWidth,
+    }
   }
 
   /**
@@ -299,14 +299,14 @@ class DataFrame extends React.PureComponent<Props, State> {
   private recomputeSizeIfNeeded(): void {
     setTimeout(() => {
       if (this.multiGridRef.current != null) {
-        this.multiGridRef.current.recomputeGridSize();
+        this.multiGridRef.current.recomputeGridSize()
       }
-    }, 0);
+    }, 0)
   }
 
   public render(): React.ReactNode {
     // Get the properties.
-    const { element } = this.props;
+    const { element } = this.props
 
     // Calculate the dimensions of this array.
     const {
@@ -314,10 +314,10 @@ class DataFrame extends React.PureComponent<Props, State> {
       headerCols,
       dataRows,
       cols,
-      rows
-    } = dataFrameGetDimensions(element);
+      rows,
+    } = dataFrameGetDimensions(element)
 
-    const sortedDataRowIndices = this.getDataRowIndices();
+    const sortedDataRowIndices = this.getDataRowIndices()
 
     // Get the cell renderer.
     const cellContentsGetter = getCellContentsGetter(
@@ -325,8 +325,8 @@ class DataFrame extends React.PureComponent<Props, State> {
       headerRows,
       headerCols,
       sortedDataRowIndices
-    );
-    const cellRenderer = this.getCellRenderer(cellContentsGetter);
+    )
+    const cellRenderer = this.getCellRenderer(cellContentsGetter)
 
     // Determine our rendering dimensions
     const {
@@ -336,13 +336,13 @@ class DataFrame extends React.PureComponent<Props, State> {
       height,
       elementWidth,
       columnWidth,
-      headerWidth
-    } = this.getDimensions(cellContentsGetter);
+      headerWidth,
+    } = this.getDimensions(cellContentsGetter)
 
     // Since this is a PureComponent, finding ourselves in this method
     // means that the props have changed, so we should force a rerender of the
     // widths.
-    this.recomputeSizeIfNeeded();
+    this.recomputeSizeIfNeeded()
 
     // Put it all together.
     return (
@@ -371,19 +371,19 @@ class DataFrame extends React.PureComponent<Props, State> {
           className="fixup fixup-top-right"
           style={{
             width: border,
-            height: headerHeight
+            height: headerHeight,
           }}
         />
         <div
           className="fixup fixup-bottom-left"
           style={{
             width: headerWidth,
-            height: border
+            height: border,
           }}
         />
         {dataRows === 0 ? <div className="empty-dataframe">empty</div> : null}
       </div>
-    );
+    )
   }
 }
 
@@ -413,35 +413,35 @@ function getCellContentsGetter(
     if (sortedDataRowIndices != null && rowIndex >= headerRows) {
       // If we have a sortedDataRowIndices Array, it contains a mapping of row indices for
       // all *data* (non-header) rows.
-      const sortIdx = rowIndex - headerRows;
+      const sortIdx = rowIndex - headerRows
       if (sortIdx >= 0 && sortIdx < sortedDataRowIndices.length) {
-        rowIndex = sortedDataRowIndices[sortIdx];
-        rowIndex += headerRows;
+        rowIndex = sortedDataRowIndices[sortIdx]
+        rowIndex += headerRows
       } else {
         console.warn(
           `Bad sortedDataRowIndices (` +
             `rowIndex=${rowIndex}, ` +
             `headerRows=${headerRows}, ` +
             `sortedDataRowIndices.length=${sortedDataRowIndices.length}`
-        );
+        )
       }
     }
 
-    let { contents, styles, type } = dataFrameGet(
+    const { contents, styles, type } = dataFrameGet(
       element,
       columnIndex,
       rowIndex
-    );
+    )
 
     // All table elements have class 'dataframe'.
-    let classes = `dataframe ${type}`;
+    const classes = `dataframe ${type}`
 
     // Format floating point numbers nicely.
-    contents = toFormattedString(contents);
+    const fsContents = toFormattedString(contents)
 
     // Put it all together
-    return { classes, styles, contents };
-  };
+    return { classes, styles, contents: fsContents }
+  }
 }
 
 /**
@@ -457,72 +457,72 @@ function getWidths(
 ): ComputedWidths {
   // Calculate column width based on character count alone.
   let columnWidth = ({ index }: { index: number }): number => {
-    const colIndex = index;
-    const fontSize = 10;
-    const charWidth = (fontSize * 8) / 10;
-    const padding = 14 + SORT_ICON_WIDTH_PX; // 14 for whitespace; an extra 10 for the optional sort arrow icon
-    const minWidth = MIN_CELL_WIDTH_PX;
+    const colIndex = index
+    const fontSize = 10
+    const charWidth = (fontSize * 8) / 10
+    const padding = 14 + SORT_ICON_WIDTH_PX // 14 for whitespace; an extra 10 for the optional sort arrow icon
+    const minWidth = MIN_CELL_WIDTH_PX
     const maxWidth =
       cols > 2 // 2 because 1 column is the index.
         ? MAX_CELL_WIDTH_PX
-        : MAX_LONELY_CELL_WIDTH_PX;
+        : MAX_LONELY_CELL_WIDTH_PX
 
     // Set the colWidth to the maximum width of a column.
-    const maxRows = 100;
-    let colWidth = minWidth;
+    const maxRows = 100
+    let colWidth = minWidth
     for (let i = 0; i < Math.min(rows, maxRows); i++) {
-      let rowIndex = -1;
+      let rowIndex = -1
       if (i < headerRows) {
         // Always measure all the header rows.
-        rowIndex = i;
+        rowIndex = i
       } else if (rows > maxRows) {
         // If there are a lot of rows, then pick some at random.
-        rowIndex = Math.floor(Math.random() * rows);
+        rowIndex = Math.floor(Math.random() * rows)
       } else {
         // Otherwise, just measure every row.
-        rowIndex = i;
+        rowIndex = i
       }
-      const contents = cellContentsGetter(colIndex, rowIndex).contents;
-      const nChars = contents ? contents.length : 0;
-      const cellWidth = nChars * charWidth + padding;
+      const contents = cellContentsGetter(colIndex, rowIndex).contents
+      const nChars = contents ? contents.length : 0
+      const cellWidth = nChars * charWidth + padding
       if (cellWidth > maxWidth) {
-        return maxWidth;
+        return maxWidth
       } else if (cellWidth > colWidth) {
-        colWidth = cellWidth;
+        colWidth = cellWidth
       }
     }
-    return colWidth;
-  };
+    return colWidth
+  }
 
   // Increase column with if the table is somewhat narrow (but not super narrow)
 
-  let tableWidth = 0;
-  let headerWidth = 0;
+  let tableWidth = 0
+  let headerWidth = 0
 
   for (let colIndex = 0; colIndex < cols; colIndex++) {
-    const colWidth = columnWidth({ index: colIndex });
-    tableWidth += colWidth;
+    const colWidth = columnWidth({ index: colIndex })
+    tableWidth += colWidth
     if (colIndex < headerCols) {
-      headerWidth += colWidth;
+      headerWidth += colWidth
     } else if (tableWidth >= width) {
       // No need to continue. We already know the followign "if" condition will fail.
-      break;
+      break
     }
   }
 
-  let elementWidth = Math.min(tableWidth, width);
+  let elementWidth = Math.min(tableWidth, width)
 
   if (tableWidth > width * (2 / 3) && tableWidth < width) {
     const widthArray = Array.from(
       { length: cols },
       (_, colIndex) =>
         columnWidth({ index: colIndex }) + (width - tableWidth) / cols
-    );
-    columnWidth = ({ index }) => widthArray[index];
-    elementWidth = width;
+    )
+    columnWidth = ({ index }) => widthArray[index]
+    elementWidth = width
   }
 
-  return { elementWidth, columnWidth, headerWidth };
+  return { elementWidth, columnWidth, headerWidth }
 }
 
-export default DataFrame;
+export default DataFrame

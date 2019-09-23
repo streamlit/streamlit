@@ -18,7 +18,6 @@
 import functools
 import sys
 import tempfile
-import timeit
 import unittest
 
 import altair as alt
@@ -28,13 +27,7 @@ import pytest
 from mock import MagicMock
 
 import streamlit as st
-from streamlit.hashing import (
-    NP_SAMPLE_SIZE,
-    NP_SIZE_LARGE,
-    PANDAS_ROWS_LARGE,
-    PANDAS_SAMPLE_SIZE,
-    get_hash,
-)
+from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, get_hash
 
 
 class HashTest(unittest.TestCase):
@@ -76,7 +69,7 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(abs), get_hash(abs))
         self.assertNotEqual(get_hash(abs), get_hash(type))
 
-    def test_pandas(self):
+    def test_pandas_dataframe(self):
         df1 = pd.DataFrame({"foo": [12]})
         df2 = pd.DataFrame({"foo": [42]})
         df3 = pd.DataFrame({"foo": [12]})
@@ -84,41 +77,23 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
-    def test_pandas_sample(self):
-        """Test the performance of hashing a large dataframe or a sample of said
-        dataframe."""
+        df4 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df5 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
 
-        df = pd.DataFrame(np.random.randn(PANDAS_ROWS_LARGE, 4), columns=list("ABCD"))
+        self.assertEqual(get_hash(df4), get_hash(df5))
 
-        def full():
-            return pd.util.hash_pandas_object(df).sum()
+    def test_pandas_series(self):
+        series1 = pd.Series([1, 2])
+        series2 = pd.Series([1, 3])
+        series3 = pd.Series([1, 2])
 
-        def sample():
-            return pd.util.hash_pandas_object(
-                df.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
-            ).sum()
+        self.assertEqual(get_hash(series1), get_hash(series3))
+        self.assertNotEqual(get_hash(series1), get_hash(series2))
 
-        t_full = timeit.Timer(full).timeit(number=10)
-        t_sample = timeit.Timer(sample).timeit(number=10)
+        series4 = pd.Series(range(PANDAS_ROWS_LARGE))
+        series5 = pd.Series(range(PANDAS_ROWS_LARGE))
 
-        self.assertGreater(t_full, t_sample)
-
-    def test_numpy_sample(self):
-        """Test the performance of hashing a large matrices."""
-
-        arr_large = np.random.randn(NP_SIZE_LARGE - 1)
-        arr_too_large = np.random.randn(NP_SIZE_LARGE)
-
-        def full():
-            return get_hash(arr_large)
-
-        def sample():
-            return get_hash(arr_too_large)
-
-        t_full = timeit.Timer(full).timeit(number=10)
-        t_sample = timeit.Timer(sample).timeit(number=10)
-
-        self.assertGreater(t_full, t_sample)
+        self.assertEqual(get_hash(series4), get_hash(series5))
 
     def test_numpy(self):
         np1 = np.zeros(10)

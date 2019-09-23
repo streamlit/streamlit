@@ -15,35 +15,35 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from 'react'
-import { List, Map as ImmutableMap } from 'immutable'
+import React, { PureComponent, ReactNode } from "react"
+import { List, Map as ImmutableMap } from "immutable"
+import classNames from "classnames"
 
-import Block from 'components/core/Block/'
-import { ReportRunState } from 'lib/ReportRunState'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
+import Block from "components/core/Block/"
+import { ReportRunState } from "lib/ReportRunState"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import { Col, Row } from 'reactstrap'
-import { ThemeProvider } from 'baseui'
-import { widgetTheme } from 'lib/widgetTheme'
-import './ReportView.scss'
-import './Widget.scss'
+import { ThemeProvider } from "baseui"
+import { widgetTheme } from "lib/widgetTheme"
+import "./ReportView.scss"
+import "./Widget.scss"
 
 type SimpleElement = ImmutableMap<string, any>
 type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> { }
+interface BlockElement extends List<Element> {}
 
 interface Elements {
-  main: BlockElement;
-  sidebar: BlockElement;
+  main: BlockElement
+  sidebar: BlockElement
 }
 
 interface Props {
-  elements: Elements;
+  elements: Elements
 
   // The unique ID for the most recent run of the report.
-  reportId: string;
+  reportId: string
 
-  reportRunState: ReportRunState;
+  reportRunState: ReportRunState
 
   /**
    * If true, "stale" elements (that is, elements that were created during a previous
@@ -51,47 +51,66 @@ interface Props {
    *
    * (When we're viewing a shared report, this is set to false.)
    */
-  showStaleElementIndicator: boolean;
+  showStaleElementIndicator: boolean
 
-  widgetMgr: WidgetStateManager;
+  widgetMgr: WidgetStateManager
 
   // Disable the widgets when not connected to the server.
-  widgetsDisabled: boolean;
+  widgetsDisabled: boolean
+
+  // Wide mode
+  wide: boolean
 }
 
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 class ReportView extends PureComponent<Props> {
-  public render = (): ReactNode => (
-    <ThemeProvider theme={widgetTheme}>
-      <Row>
-        {
-          !this.props.elements.sidebar.isEmpty() &&
-          <Col className="sidebar">
-            <Block
-              elements={this.props.elements.sidebar}
-              reportId={this.props.reportId}
-              reportRunState={this.props.reportRunState}
-              showStaleElementIndicator={this.props.showStaleElementIndicator}
-              widgetMgr={this.props.widgetMgr}
-              widgetsDisabled={this.props.widgetsDisabled}
-            />
-          </Col>
-        }
-        <Col className="main">
-          <Block
-            elements={this.props.elements.main}
-            reportId={this.props.reportId}
-            reportRunState={this.props.reportRunState}
-            showStaleElementIndicator={this.props.showStaleElementIndicator}
-            widgetMgr={this.props.widgetMgr}
-            widgetsDisabled={this.props.widgetsDisabled}
-          />
-        </Col>
-      </Row>
-    </ThemeProvider>
-  )
+  private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
+
+  public render = (): ReactNode => {
+    const reportViewClassName = classNames("reportview-container", {
+      "--wide": this.props.wide,
+      "--with-sidebar": this.hasSidebar(),
+    })
+
+    return (
+      <ThemeProvider theme={widgetTheme}>
+        <div className={reportViewClassName}>
+          {this.hasSidebar() && (
+            <section className="sidebar">
+              <div className="block-container">
+                <Block
+                  elements={this.props.elements.sidebar}
+                  reportId={this.props.reportId}
+                  reportRunState={this.props.reportRunState}
+                  showStaleElementIndicator={
+                    this.props.showStaleElementIndicator
+                  }
+                  widgetMgr={this.props.widgetMgr}
+                  widgetsDisabled={this.props.widgetsDisabled}
+                />
+              </div>
+            </section>
+          )}
+          <section className="main">
+            <div className="block-container">
+              <Block
+                elements={this.props.elements.main}
+                reportId={this.props.reportId}
+                reportRunState={this.props.reportRunState}
+                showStaleElementIndicator={
+                  this.props.showStaleElementIndicator
+                }
+                widgetMgr={this.props.widgetMgr}
+                widgetsDisabled={this.props.widgetsDisabled}
+              />
+            </div>
+          </section>
+        </div>
+      </ThemeProvider>
+    )
+  }
 }
 
 export default ReportView

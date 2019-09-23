@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from './Slider'
+export { default } from "./Slider"

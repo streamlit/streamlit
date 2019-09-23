@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from 'react'
-import PropTypes from 'prop-types'
+import React, { PureComponent } from "react"
+import PropTypes from "prop-types"
 
-import { GoogleLogin } from 'react-google-login'
-
+import { GoogleLogin } from "react-google-login"
 
 //const GOOGLE_CLIENT_ID =
 // '121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com';
-const GOOGLE_CLIENT_ID = '230319206599-p4ol9d1ef0otk7o1eetaornovisu0925.apps.googleusercontent.com'
-
+const GOOGLE_CLIENT_ID =
+  "230319206599-p4ol9d1ef0otk7o1eetaornovisu0925.apps.googleusercontent.com"
 
 class LoginBox extends PureComponent {
   constructor(props) {
@@ -53,11 +52,11 @@ class LoginBox extends PureComponent {
     return (
       <div>
         <h1>Permission required</h1>
-        { this.state.loginInProgress ?
+        {this.state.loginInProgress ? (
           <div>
             <p>Please wait...</p>
           </div>
-          :
+        ) : (
           <div>
             <p>
               Want in? Ask the owner for access, or sign into a different
@@ -71,7 +70,7 @@ class LoginBox extends PureComponent {
               onFailure={this.onFailure}
             />
           </div>
-        }
+        )}
       </div>
     )
   }
@@ -83,8 +82,8 @@ class LoginBox extends PureComponent {
   onSuccess(googleUser) {
     const authResult = googleUser.getAuthResponse()
     this.props.onSuccess({
-      accessToken: authResult['access_token'],
-      idToken: authResult['id_token'],
+      accessToken: authResult["access_token"],
+      idToken: authResult["id_token"],
     })
   }
 

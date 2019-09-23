@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-import React, {PureComponent} from 'react'
+import React, { PureComponent } from "react"
 import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
-} from 'reactstrap'
-import openIconic from 'assets/img/open-iconic.svg'
-import './MainMenu.scss'
+} from "reactstrap"
+import openIconic from "assets/img/open-iconic.svg"
+import "./MainMenu.scss"
 
-const ONLINE_DOCS_URL = '//streamlit.io/secret/docs'
+const ONLINE_DOCS_URL = "https://streamlit.io/secret/docs"
+const COMMUNITY_URL = "https://discuss.streamlit.io"
+const TEAMS_URL = "https://streamlit.io/teams"
+const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 class MainMenu extends PureComponent {
   /**
@@ -39,7 +42,7 @@ class MainMenu extends PureComponent {
   }
 
   toggle() {
-    this.setState(({dropdownOpen}) => ({
+    this.setState(({ dropdownOpen }) => ({
       dropdownOpen: !dropdownOpen,
     }))
   }
@@ -53,57 +56,62 @@ class MainMenu extends PureComponent {
       >
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <svg className="icon" viewBox="0 0 8 8">
-            <use href={openIconic + '#menu'} />
+            <use href={openIconic + "#menu"} />
           </svg>
         </DropdownToggle>
 
         <DropdownMenu right>
           <DropdownItem
             disabled={!this.props.isServerConnected()}
-            onClick={() => this.props.quickRerunCallback()}>
+            onClick={() => this.props.quickRerunCallback()}
+          >
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
             disabled={!this.props.isServerConnected()}
-            onClick={this.props.rerunCallback}>
+            onClick={this.props.rerunCallback}
+          >
             <span>Edit command</span>
             <span className="shortcut">&#x21e7;R</span>
           </DropdownItem>
 
           <DropdownItem
             disabled={!this.props.isServerConnected()}
-            onClick={this.props.clearCacheCallback}>
+            onClick={this.props.clearCacheCallback}
+          >
             <span>Clear cache</span>
             <span className="shortcut">C</span>
           </DropdownItem>
 
-          <DropdownItem divider/>
+          <DropdownItem divider />
 
-          <DropdownItem
-            disabled={!this.props.isServerConnected()}
-            onClick={this.props.saveCallback}>
-            Share report
-          </DropdownItem>
-
-          <DropdownItem divider/>
-
-          <DropdownItem
-            onClick={() => this.props.settingsCallback()}>
-            Settings
-          </DropdownItem>
-
-          <DropdownItem
-            onClick={() => window.open(ONLINE_DOCS_URL, '_blank')}>
+          <DropdownItem onClick={() => window.open(ONLINE_DOCS_URL, "_blank")}>
             Documentation
           </DropdownItem>
 
-          <DropdownItem
-            onClick={() => this.props.aboutCallback()}>
-            About
+          <DropdownItem onClick={() => window.open(COMMUNITY_URL, "_blank")}>
+            Community
           </DropdownItem>
 
+          <DropdownItem onClick={() => window.open(BUG_URL, "_blank")}>
+            Report a bug
+          </DropdownItem>
+
+          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
+            Streamlit for teams
+          </DropdownItem>
+
+          <DropdownItem divider />
+
+          <DropdownItem onClick={() => this.props.settingsCallback()}>
+            Settings
+          </DropdownItem>
+
+          <DropdownItem onClick={() => this.props.aboutCallback()}>
+            About
+          </DropdownItem>
         </DropdownMenu>
       </Dropdown>
     )

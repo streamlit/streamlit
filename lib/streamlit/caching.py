@@ -157,7 +157,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         "2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. "
         "This is an escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html)."
+        "(https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html)."
     )
 
     return message.format(
@@ -212,7 +212,7 @@ def _build_args_mutated_message(func):
         "When decorating a function with `@st.cache`, the arguments should not be mutated inside "
         "the function body, as that breaks the caching mechanism. Please update the code of "
         "`{name}` to bypass the mutation.\n\n"
-        "See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/caching_mapping_more.html) for more info."
+        "See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html) for more info."
     )
 
     return message.format(name=func.__name__)
@@ -310,7 +310,7 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
         _write_to_disk_cache(key, value, args_mutated)
 
 
-def cache(func=None, persist=False, ignore_hash=False):
+def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     """Function decorator to memoize function executions.
 
     Parameters
@@ -326,6 +326,10 @@ def cache(func=None, persist=False, ignore_hash=False):
     ignore_hash : boolean
         Disable hashing return values. These hash values are otherwise
         used to validate that return values are not mutated.
+
+    show_spinner : boolean
+        Enable the spinner. Default is True to show a spinner when there is
+        a cache miss.
 
     Example
     -------
@@ -363,7 +367,9 @@ def cache(func=None, persist=False, ignore_hash=False):
     # Support setting the persist and ignore_hash parameters via
     # @st.cache(persist=True, ignore_hash=True)
     if func is None:
-        return lambda f: cache(func=f, persist=persist, ignore_hash=ignore_hash)
+        return lambda f: cache(
+            func=f, persist=persist, ignore_hash=ignore_hash, show_spinner=show_spinner
+        )
 
     @wraps(func)
     def wrapped_func(*argc, **argv):
@@ -380,7 +386,9 @@ def cache(func=None, persist=False, ignore_hash=False):
             message = "Running %s()." % name
         else:
             message = "Running %s(...)." % name
-        with st.spinner(message):
+
+
+        def function():
             hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher)
@@ -412,8 +420,13 @@ def cache(func=None, persist=False, ignore_hash=False):
 
             if args_mutated:
                 st.warning(_build_args_mutated_message(func))
+            return return_value
 
-        return return_value
+        if show_spinner:
+            with st.spinner(message):
+                return function()
+        else:
+            return function()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.

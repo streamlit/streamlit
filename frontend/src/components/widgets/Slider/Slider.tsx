@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { Slider as UISlider } from 'baseui/slider'
-import { Map as ImmutableMap } from 'immutable'
-import { debounce } from 'lib/utils'
-import { WidgetStateManager } from 'lib/WidgetStateManager'
-import { sliderOverrides } from 'lib/widgetTheme'
+import React from "react"
+import { Slider as UISlider } from "baseui/slider"
+import { Map as ImmutableMap } from "immutable"
+import { debounce } from "lib/utils"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { sliderOverrides } from "lib/widgetTheme"
 
 interface Props {
-  disabled: boolean;
-  element: ImmutableMap<string, any>;
-  widgetMgr: WidgetStateManager;
-  width: number;
+  disabled: boolean
+  element: ImmutableMap<string, any>
+  widgetMgr: WidgetStateManager
+  width: number
 }
 
 interface State {
@@ -34,11 +34,11 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, it's undefined.
    */
-  value?: number[];
+  value?: number[]
 }
 
 interface SliderValue {
-  value: number[];
+  value: number[]
 }
 
 class Slider extends React.PureComponent<Props, State> {
@@ -56,7 +56,7 @@ class Slider extends React.PureComponent<Props, State> {
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob => knob.addEventListener('click', this.handleClick))
+      knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
     }
   }
 
@@ -65,7 +65,9 @@ class Slider extends React.PureComponent<Props, State> {
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob => knob.removeEventListener('click', this.handleClick))
+      knobs.forEach(knob =>
+        knob.removeEventListener("click", this.handleClick)
+      )
     }
   }
 
@@ -74,11 +76,12 @@ class Slider extends React.PureComponent<Props, State> {
    * if the user hasn't interacted with it yet.
    */
   private get valueOrDefault(): number[] {
-    const min = this.props.element.get('min')
-    const max = this.props.element.get('max')
-    const value = this.state.value === undefined
-      ? this.props.element.get('value').toArray()
-      : this.state.value
+    const min = this.props.element.get("min")
+    const max = this.props.element.get("max")
+    const value =
+      this.state.value === undefined
+        ? this.props.element.get("value").toArray()
+        : this.state.value
 
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
@@ -104,7 +107,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private handleClick = (e: Event): void => {
-    (e.target as HTMLElement).focus()
+    ;(e.target as HTMLElement).focus()
   }
 
   private handleChange = ({ value }: SliderValue): void => {
@@ -114,18 +117,18 @@ class Slider extends React.PureComponent<Props, State> {
 
   private setWidgetValueRaw(): void {
     if (!this.state.value) {
-      throw new Error('Assert error: value is undefined')
+      throw new Error("Assert error: value is undefined")
     }
-    const widgetId = this.props.element.get('id')
+    const widgetId = this.props.element.get("id")
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
   public render(): React.ReactNode {
     const { element, width } = this.props
-    const label = element.get('label')
-    const min = element.get('min')
-    const max = element.get('max')
-    const step = element.get('step')
+    const label = element.get("label")
+    const min = element.get("min")
+    const max = element.get("max")
+    const step = element.get("step")
     const style = { width }
 
     return (

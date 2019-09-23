@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-import React from 'react'
-import { embed as BokehEmbed } from 'bokehjs'
-import { Map as ImmutableMap } from 'immutable'
+import React from "react"
+import { embed as BokehEmbed } from "bokehjs"
+import { Map as ImmutableMap } from "immutable"
 
 interface Props {
-  width: number;
-  element: ImmutableMap<string, any>;
-  index: number;
+  width: number
+  element: ImmutableMap<string, any>
+  index: number
 }
 
 class BokehChart extends React.PureComponent<Props> {
-  private chartId = 'bokeh-chart-' + this.props.index;
+  private chartId = "bokeh-chart-" + this.props.index
 
   private getChartData = (): any => {
-    const figure = this.props.element.get('figure')
+    const figure = this.props.element.get("figure")
     return JSON.parse(figure)
   }
 

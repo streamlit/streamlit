@@ -1,4 +1,4 @@
-# Tutorial: Running Streamlit remotely
+# Tutorial: Run Streamlit remotely
 
 When you run Streamlit remotely you can still use your local web browser to
 see the results. Be it on AWS, GCS, a Docker instance, or some other remote
@@ -62,7 +62,6 @@ port-forwarding you should open your browser at <http://localhost:8501>.
 If you see the Streamlit Hello page, everything is working! Otherwise, check
 out the [Troubleshooting page](/troubleshooting).
 
-
 ## Run your own code remotely
 
 Now that you know streamlig is working, let's try your actual code. First,
@@ -75,11 +74,11 @@ $ streamlit run my_script.py
 And that's it! Now your browser should show your script at
 <http://localhost:8501>.
 
-
 ## How to edit your remote script
 
-When actively working on a Streamlit report remotely, there are three ways to
+When actively working on a Streamlit app remotely, there are three ways to
 edit your remote code:
+
 1. If you use [VS Code](https://code.visualstudio.com/docs/remote/ssh) or the
    paid version of
    [PyCharm](https://www.jetbrains.com/help/pycharm/creating-a-remote-server-configuration.html),
@@ -92,13 +91,14 @@ edit your remote code:
 
 To get started, install SSHFS using one of the following methods:
 
-* On a Mac:
+- On a Mac:
+
   ```bash
   $ brew cask install osxfuse
   $ brew install sshfs
   ```
 
-* On Ubuntu:
+- On Ubuntu:
   ```bash
   $ sudo apt-get update
   $ sudo apt-get install sshfs

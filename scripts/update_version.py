@@ -50,7 +50,7 @@ import sys
 
 import packaging.version
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Warning: Advanced regex foo.
 # If another file has a version number that needs updating, add it here.
@@ -58,17 +58,11 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # but the version number so we can throw any valid PEP440 version in
 # there.
 PYTHON = {
-    'lib/setup.py':
-        r'(?P<pre>.*version=\').*(?P<post>\',  # PEP-440$)',
-    'docs/troubleshooting.md':
-        r'(?P<pre>.*number printed is `).*(?P<post>`.$)',
-    'scripts/conda/meta.yaml':
-        r'(?P<pre>.* version = ").*(?P<post>" %}$)',
+    "lib/setup.py": r"(?P<pre>.*version=\").*(?P<post>\",  # PEP-440$)",
+    "docs/troubleshooting.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
 }
 
-NODE = {
-    'frontend/package.json': r'(?P<pre>^  "version": ").*(?P<post>",$)',
-}
+NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
 
 
 def verify_pep440(version):
@@ -84,7 +78,7 @@ def verify_pep440(version):
     try:
         return packaging.version.Version(version)
     except packaging.version.InvalidVersion as e:
-        raise(e)
+        raise (e)
 
 
 def update_files(data, python=True):
@@ -92,7 +86,7 @@ def update_files(data, python=True):
 
     if len(sys.argv) != 2:
         e = Exception('Specify PEP440 version: "%s 1.2.3"' % sys.argv[0])
-        raise(e)
+        raise (e)
 
     version = verify_pep440(sys.argv[1])
 
@@ -107,11 +101,10 @@ def update_files(data, python=True):
         for line in fileinput.input(filename, inplace=1):
             if pattern.match(line.rstrip()):
                 matched = True
-            line = re.sub(regex, r'\g<pre>%s\g<post>' % version, line.rstrip())
+            line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())
             print(line)
         if not matched:
-            logging.error('In file "%s", did not find regex "%s"',
-                          filename, regex)
+            logging.error('In file "%s", did not find regex "%s"', filename, regex)
 
 
 def main():
@@ -121,5 +114,5 @@ def main():
     update_files(NODE, python=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

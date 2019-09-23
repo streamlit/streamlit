@@ -18,32 +18,34 @@
 import {
   BasicDialog,
   DialogType,
-} from 'components/core/StreamlitDialog/StreamlitDialog'
-import React, {PureComponent, ReactNode} from 'react'
-import {HotKeys} from 'react-hotkeys'
-import {Button, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
+} from "components/core/StreamlitDialog/StreamlitDialog"
+import React, { PureComponent, ReactNode } from "react"
+import { HotKeys } from "react-hotkeys"
+import { Button, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
 
 export interface Props {
-  type: DialogType.SCRIPT_CHANGED;
+  type: DialogType.SCRIPT_CHANGED
 
   /** Called to close the dialog without rerunning the report. */
-  onClose: () => void;
+  onClose: () => void
 
   /**
    * Called when the user chooses to re-run the report in response to its source file changing.
    * @param alwaysRerun if true, also change the run-on-save setting for this report
    */
-  onRerun: (alwaysRerun: boolean) => void;
+  onRerun: (alwaysRerun: boolean) => void
 }
 
 export class ScriptChangedDialog extends PureComponent<Props> {
-  private readonly keyHandlers: { [key: string]: (keyEvent?: KeyboardEvent) => void }
+  private readonly keyHandlers: {
+    [key: string]: (keyEvent?: KeyboardEvent) => void
+  }
 
   public constructor(props: Props) {
     super(props)
 
     this.keyHandlers = {
-      'a': this.alwaysRerun,
+      a: this.alwaysRerun,
       // No handler for 'r' since it's handled by app.jsx and precedence
       // isn't working when multiple components handle the same key
       // 'r': this.rerun,
@@ -56,24 +58,25 @@ export class ScriptChangedDialog extends PureComponent<Props> {
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <BasicDialog onClose={this.props.onClose}>
-          <ModalHeader toggle={this.props.onClose}>Report changed</ModalHeader>
+          <ModalHeader toggle={this.props.onClose}>App changed</ModalHeader>
           <ModalBody>
-            <div>The source files for this report have changed on disk.</div>
+            <div>The source files for this app have changed on disk.</div>
           </ModalBody>
           <ModalFooter>
             <Button
               className="underlineFirstLetter"
               outline
               color="secondary"
-              onClick={this.alwaysRerun}>
+              onClick={this.alwaysRerun}
+            >
               Always rerun
-            </Button>
-            {' '}
+            </Button>{" "}
             <Button
               className="underlineFirstLetter"
               outline
               color="primary"
-              onClick={this.rerun}>
+              onClick={this.rerun}
+            >
               Rerun
             </Button>
           </ModalFooter>

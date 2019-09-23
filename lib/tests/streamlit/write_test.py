@@ -47,7 +47,8 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.markdown") as p:
             st.write("more", "strings", "to", "pass")
 
-            p.assert_called_once_with("more strings to pass")
+            p.assert_called_once_with(
+                "more strings to pass", unsafe_allow_html=False)
 
     def test_dataframe(self):
         """Test st.write with dataframe."""
@@ -158,9 +159,9 @@ class StreamlitWriteTest(unittest.TestCase):
         st.write("here is a dict", {"a": 1, "b": 2}, " and that is all")
 
         expected_calls = [
-            call.markdown("here is a dict"),
+            call.markdown("here is a dict", unsafe_allow_html=False),
             call.json({"a": 1, "b": 2}),
-            call.markdown(" and that is all"),
+            call.markdown(" and that is all", unsafe_allow_html=False),
         ]
         self.assertEqual(manager.mock_calls, expected_calls)
 
@@ -174,7 +175,8 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.markdown") as p:
             st.write(SomeObject())
 
-            p.assert_called_once_with(u"`1 * 2 - 3 = 4 \\`ok\\` !`")
+            p.assert_called_once_with(
+                u"`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False)
 
     def test_exception(self):
         """Test st.write that raises an exception."""

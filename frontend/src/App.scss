@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
-
+@import "src/assets/css/variables";
 
 body.embedded {
   overflow: hidden;
@@ -23,11 +22,6 @@ body.embedded {
 
 body.embedded:hover {
   overflow: auto;
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
 }
 
 a,
@@ -47,14 +41,11 @@ iframe {
   margin: 0;
 }
 
-.streamlit-regular .streamlit-container {
+.streamlit-container {
   margin: 80px auto;
-}
-
-.streamlit-wide .streamlit-container {
-  margin-top: 80px;
   width: unset;
   max-width: unset;
+  padding: 0;
 }
 
 .streamlit-embedded .streamlit-container {
@@ -106,6 +97,11 @@ pre {
 .icon {
   width: 0.9rem;
   height: 0.9rem;
+}
+
+.bash::before {
+  content: "$";
+  margin-right: 1ex;
 }
 
 // Utility class for underlining first letter in a text

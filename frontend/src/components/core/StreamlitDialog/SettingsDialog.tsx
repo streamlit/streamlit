@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import * as React from 'react'
-import {ChangeEvent, PureComponent, ReactNode} from 'react'
-import {Button, Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap'
-import {UserSettings} from './UserSettings'
+import * as React from "react"
+import { ChangeEvent, PureComponent, ReactNode } from "react"
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import { UserSettings } from "./UserSettings"
 
 export interface Props {
-  isServerConnected: boolean;
-  onClose: () => void;
-  onSave: (settings: UserSettings) => void;
-  settings: UserSettings;
+  isServerConnected: boolean
+  onClose: () => void
+  onSave: (settings: UserSettings) => void
+  settings: UserSettings
 }
 
 /**
@@ -37,10 +37,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     super(props)
 
     // Holds the settings that will be saved when the "save" button is clicked.
-    this.state = {...this.props.settings}
+    this.state = { ...this.props.settings }
 
     // Holds the actual settings that Streamlit is using.
-    this._settings = {...this.props.settings}
+    this._settings = { ...this.props.settings }
   }
 
   public render = (): ReactNode => {
@@ -50,7 +50,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
         toggle={this.handleCancelButtonClick}
         onOpened={this.handleDialogOpen}
       >
-        <ModalHeader toggle={this.handleCancelButtonClick}>Settings</ModalHeader>
+        <ModalHeader toggle={this.handleCancelButtonClick}>
+          Settings
+        </ModalHeader>
 
         <ModalBody>
           <label>
@@ -60,20 +62,18 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               name="runOnSave"
               checked={this.state.runOnSave && this.props.isServerConnected}
               onChange={this.handleCheckboxChange}
-            />
-            {' '}
+            />{" "}
             Run on save
           </label>
-          <br/>
+          <br />
           <label>
             <input
               type="checkbox"
               name="wideMode"
               checked={this.state.wideMode}
               onChange={this.handleCheckboxChange}
-            />
-            {' '}
-            Show report in wide mode
+            />{" "}
+            Show app in wide mode
           </label>
         </ModalBody>
 
@@ -81,13 +81,11 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
           <Button
             outline
             color="secondary"
-            onClick={this.handleCancelButtonClick}>
+            onClick={this.handleCancelButtonClick}
+          >
             Cancel
           </Button>
-          <Button
-            outline
-            color="primary"
-            onClick={this.handleSaveButtonClick}>
+          <Button outline color="primary" onClick={this.handleSaveButtonClick}>
             Save
           </Button>
         </ModalFooter>
@@ -96,14 +94,14 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleDialogOpen = () => {
-    this.setState({...this._settings})
+    this.setState({ ...this._settings })
   }
 
   private changeSingleSetting = (name: string, value: boolean) => {
     // TypeScript doesn't currently have a good solution for setState with
     // a dynamic key name:
     // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
-    this.setState(state => ({...state, [name]: value}))
+    this.setState(state => ({ ...state, [name]: value }))
   }
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +115,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleSaveButtonClick = () => {
-    this._settings = {...this.state}
+    this._settings = { ...this.state }
     this.props.onSave(this._settings)
     this.props.onClose()
   }

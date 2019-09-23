@@ -4,10 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-flake8 = "*"
 funcsigs = {version = "*",markers = "python_version < '3.0'"}
 mock = "*"
-parameterized = "*"
 pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
@@ -21,24 +19,23 @@ recommonmark = "*"
 # Packages used in unit tests:
 altair = "*"
 matplotlib = {version = "*",markers = "python_version > '3.0'"}
-scipy = "*"
+scipy = "<1.3.0"
 plotly = "*"
 chart-studio = "*"
 bokeh = "*"
 graphviz = "*"
+parameterized = "*"
 pydot = "*"
 tensorflow = "*"
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
-# TODO(armando): Automate syncing of requirements to conda/streamlit/meta.yaml
-# When you update the packages here, you have to update
-# conda/streamlit/meta.yaml as well.
-#
+requests-mock = "*"
+
+
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
-
 [packages]
 astor = "*"
 base58 = "*"
@@ -49,18 +46,27 @@ click = ">=7.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
-# specifically concurrent.futures in python2
-futures = {version = "*",markers = "python_version < '3.0'"}
-numpy = "*"
-pandas = ">=0.18.0"
 # 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
 pillow = "!=5.1.0"
-# Set protobuf version based on the protoc version on the release machine (i.e.
-# Thiago's machine)
+# Set protobuf version based on the protoc version on the release machine
+# (i.e. Thiago's machine)
 protobuf = ">=3.6.0"
+requests = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
 # 6.0 doesn't support Python 2
 tornado = ">=5.0,<6.0"
 tzlocal = "*"
+validators = "*"
 watchdog = "*"
+
+# Only Python 3.x packages
+[python3]
+pandas = "*"
+numpy = "*"
+
+# Only Python 2.x packages
+[python2]
+futures = "*"
+pandas = "<0.25.0"
+numpy = "<1.17.0"
