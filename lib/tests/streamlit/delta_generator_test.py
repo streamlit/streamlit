@@ -33,13 +33,12 @@ except ImportError:
 
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
-    DeltaGenerator,
     _wraps_with_cleaned_sig,
-    _clean_up_sig,
+    _remove_self_from_sig,
     _with_element,
 )
-from streamlit.ReportQueue import ReportQueue
 from tests import testutil
 import streamlit as st
 
@@ -57,19 +56,40 @@ class FakeDeltaGenerator(object):
         """Constructor."""
         pass
 
+    def __getattr__(self, name):
+        streamlit_methods = [method_name for method_name in dir(st)
+                             if callable(getattr(st, method_name))]
+
+        def wrapper(*args, **kwargs):
+            if name in streamlit_methods:
+                if self._container == BlockPath.SIDEBAR:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                                  "name": name
+                              }
+                else:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`DeltaGenerator` objects. Did you mean " \
+                              "`st.%(name)s()`?" % {
+                                  "name": name
+                              }
+            else:
+                message = "`%(name)s()` is not a valid Streamlit command." % {
+                    "name": name
+                }
+
+            raise AttributeError(message)
+
+        return wrapper
+
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
         element.text.format = Text.PLAIN
 
-    def fake_dataframe(self, element, arg0, data=None):
-        """Fake dataframe.
-
-        In the real dataframe, element is set to _ but in reality the
-        decorator passes None in to what would be the element, so I want to
-        verify that None is indeed getting passed in.
-        """
-        return (element, arg0, data)
+    def fake_dataframe(self, arg0, data=None):
+        """Fake dataframe."""
+        return (arg0, data)
 
     def fake_text_raise_exception(self, element, body):
         """Fake text that raises exception."""
@@ -107,8 +127,24 @@ class MockQueue(object):
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.DeltaGenerator methods."""
 
+    def test_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.non_existing()
+
+        self.assertEqual(str(ctx.exception),
+                         "`non_existing()` is not a valid Streamlit command.")
+
+    def test_sidebar_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar.write()
+
+        self.assertEqual(str(ctx.exception),
+                         "Method `write()` does not exist for `DeltaGenerator`"
+                         " objects. Did you mean `st.write()`?")
+
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text)
+        wrapped_function = (
+            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2))
         wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.
@@ -124,12 +160,12 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         sig = signature(wrapped)
         self.assertEqual(str(sig), "(body)")
 
-    def test_clean_up_sig(self):
-        wrapped = _clean_up_sig(FakeDeltaGenerator.fake_dataframe)
+    def test_remove_self_from_sig(self):
+        wrapped = _remove_self_from_sig(FakeDeltaGenerator.fake_dataframe)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_dataframe)
-        self.assertEqual(str(sig), "(self, element, arg0, data=None)", str(sig))
+        self.assertEqual(str(sig), "(self, arg0, data=None)", str(sig))
 
         # Check cleaned signature.
         # On python2 it looks like: '(self, *args, **kwargs)'
@@ -140,7 +176,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         # Check cleaned output.
         dg = FakeDeltaGenerator()
         result = wrapped(dg, "foo", data="bar")
-        self.assertEqual(result, (None, "foo", "bar"))
+        self.assertEqual(result, ("foo", "bar"))
 
     def test_with_element(self):
         wrapped = _with_element(FakeDeltaGenerator.fake_text)

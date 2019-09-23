@@ -264,6 +264,7 @@ class ConfigTest(unittest.TestCase):
                 u"client.caching",
                 u"client.displayEnabled",
                 u"global.developmentMode",
+                u"global.disableWatchdogWarning",
                 u"global.logLevel",
                 u"global.metrics",
                 u"global.sharingMode",
@@ -361,16 +362,6 @@ class ConfigTest(unittest.TestCase):
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must either both be set or both be unset.",
         )
 
-    def test_check_conflicts_5(self):
-        with pytest.raises(AssertionError) as e:
-            config._set_option("global.sharingMode", "streamlit-public", "test")
-            config._set_option("s3.profile", "some.profile", "test")
-            config._check_conflicts()
-        self.assertEqual(
-            str(e.value),
-            'In config.toml, S3 should not be configured when global.sharingMode is set to "streamlit-public".',
-        )
-
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
@@ -437,26 +428,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(None, config.get_option("s3.accessKeyId"))
         self.assertEqual(None, config.get_option("s3.url"))
         self.assertEqual(None, config.get_option("s3.bucket"))
-        with patch("streamlit.config._get_public_credentials") as p:
-            p.return_value = {}
-            config.set_option("global.sharingMode", "streamlit-public")
-            self.assertEqual(None, config.get_option("s3.secretAccessKey"))
-            self.assertEqual(None, config.get_option("s3.accessKeyId"))
-            self.assertEqual(None, config.get_option("s3.url"))
-            self.assertEqual(None, config.get_option("s3.bucket"))
-
-        with patch("streamlit.config._get_public_credentials") as p:
-            p.return_value = {
-                "secretAccessKey": "sekrit",
-                "accessKeyId": "sekrit2",
-                "url": "http://test.url",
-                "bucket": "some.bucket",
-            }
-            config.set_option("global.sharingMode", "streamlit-public")
-            self.assertEqual("sekrit", config.get_option("s3.secretAccessKey"))
-            self.assertEqual("sekrit2", config.get_option("s3.accessKeyId"))
-            self.assertEqual("http://test.url", config.get_option("s3.url"))
-            self.assertEqual("some.bucket", config.get_option("s3.bucket"))
 
     def test_browser_server_port(self):
         config.set_option("server.port", 1234)

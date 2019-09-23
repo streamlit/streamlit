@@ -18,14 +18,6 @@
 import json
 import urllib.parse
 
-try:
-    # Plotly 4 changed its main package.
-    import chart_studio.plotly as ply
-except ImportError:
-    import plotly.plotly as ply
-
-import plotly.tools
-import plotly.utils
 from six import string_types
 
 from streamlit import caching
@@ -37,7 +29,7 @@ LOGGER = get_logger(__name__)
 
 SHARING_MODES = set(
     [
-        # This means the plot will be sent to the Streamlit report rather than to
+        # This means the plot will be sent to the Streamlit app rather than to
         # Plotly.
         "streamlit",
         # The three modes below are for plots that should be hosted in Plotly.
@@ -58,6 +50,8 @@ def marshall(proto, figure_or_data, width, height, sharing, **kwargs):
     # for their main parameter. I don't like the name, but its best to keep
     # it in sync with what Plotly calls it.
 
+    import plotly.tools
+
     if util.is_type(figure_or_data, "matplotlib.figure.Figure"):
         figure = plotly.tools.mpl_to_plotly(figure_or_data)
 
@@ -73,6 +67,8 @@ def marshall(proto, figure_or_data, width, height, sharing, **kwargs):
     proto.height = height
 
     if sharing == "streamlit":
+        import plotly.utils
+
         config = dict(kwargs.get("config", {}))
         # Copy over some kwargs to config dict. Plotly does the same in plot().
         config.setdefault("showLink", kwargs.get("show_link", False))
@@ -95,6 +91,12 @@ def _plot_to_url_or_load_cached_url(*args, **kwargs):
     This is so we don't unecessarily upload data to Plotly's SASS if nothing
     changed since the previous upload.
     """
+    try:
+        # Plotly 4 changed its main package.
+        import chart_studio.plotly as ply
+    except ImportError:
+        import plotly.plotly as ply
+
     return ply.plot(*args, **kwargs)
 
 

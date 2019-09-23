@@ -25,7 +25,7 @@ How to use Streamlit in 3 seconds:
     $ streamlit run my_script.py
 
     3. Visualize your code
-    A new tab will open on your browser. That's your Streamlit report!
+    A new tab will open on your browser. That's your Streamlit app!
 
     4. Modify your code, save it, and watch changes live on your browser.
 
@@ -101,6 +101,11 @@ from streamlit.caching import cache  # noqa: F401
 # Delta generator with no queue so it can't send anything out.
 _NULL_DELTA_GENERATOR = _DeltaGenerator(None)
 
+# This is set to True inside cli._main_run(), and is False otherwise.
+# If False, we should assume that DeltaGenerator functions are effectively
+# no-ops, and adapt gracefully.
+_is_running_with_streamlit = False
+
 
 def _set_log_level():
     _logger.set_log_level(_config.get_option("global.logLevel").upper())
@@ -159,7 +164,7 @@ json = _with_dg(_DeltaGenerator.json)  # noqa: E221
 line_chart = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
 map = _with_dg(_DeltaGenerator.map)  # noqa: E221
 markdown = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
-multiselectbox = _with_dg(_DeltaGenerator.multiselectbox)  # noqa: E221
+multiselect = _with_dg(_DeltaGenerator.multiselect)  # noqa: E221
 plotly_chart = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
@@ -210,8 +215,8 @@ if not _is_running_py3():
     _HELP_TYPES = tuple(_HELP_TYPES)
 
 
-def write(*args):
-    """Write arguments to the report.
+def write(*args, **kwargs):
+    """Write arguments to the app.
 
     This is the swiss-army knife of Streamlit commands. It does different
     things depending on what you throw at it.
@@ -220,28 +225,52 @@ def write(*args):
 
         1. You can pass in multiple arguments, all of which will be written.
         2. Its behavior depends on the input types as follows.
-        3. It returns None, so it's "slot" in the report cannot be reused.
+        3. It returns None, so it's "slot" in the App cannot be reused.
 
     Parameters
     ----------
     *args : any
-        One or many objects to print to the Report.
+        One or many objects to print to the App.
 
-    Arguments are handled as follows:
+        Arguments are handled as follows:
 
-        - write(string)     : Prints the formatted Markdown string.
-        - write(data_frame) : Displays the DataFrame as a table.
-        - write(error)      : Prints an exception specially.
-        - write(func)       : Displays information about a function.
-        - write(module)     : Displays information about the module.
-        - write(dict)       : Displays dict in an interactive widget.
-        - write(obj)        : The default is to print str(obj).
-        - write(mpl_fig)    : Displays a Matplotlib figure.
-        - write(altair)     : Displays an Altair chart.
-        - write(keras)      : Displays a Keras model.
-        - write(graphviz)   : Displays a Graphviz graph.
-        - write(plotly_fig) : Displays a Plotly figure.
-        - write(bokeh_fig)  : Displays a Bokeh figure.
+            - write(string)     : Prints the formatted Markdown string.
+            - write(data_frame) : Displays the DataFrame as a table.
+            - write(error)      : Prints an exception specially.
+            - write(func)       : Displays information about a function.
+            - write(module)     : Displays information about the module.
+            - write(dict)       : Displays dict in an interactive widget.
+            - write(obj)        : The default is to print str(obj).
+            - write(mpl_fig)    : Displays a Matplotlib figure.
+            - write(altair)     : Displays an Altair chart.
+            - write(keras)      : Displays a Keras model.
+            - write(graphviz)   : Displays a Graphviz graph.
+            - write(plotly_fig) : Displays a Plotly figure.
+            - write(bokeh_fig)  : Displays a Bokeh figure.
+
+    unsafe_allow_html : bool
+        This is a keyword-only argument that defaults to False.
+
+        By default, any HTML tags found in strings will be escaped and
+        therefore treated as pure text. This behavior may be turned off by
+        setting this argument to True.
+
+        That said, *we strongly advise* against it*. It is hard to write secure
+        HTML, so by using this argument you may be compromising your users'
+        security. For more information, see:
+
+        https://github.com/streamlit/streamlit/issues/152
+
+        *Also note that `unsafe_allow_html` is a temporary measure and may be
+        removed from Streamlit at any time.*
+
+        If you decide to turn on HTML anyway, we ask you to please tell us your
+        exact use case here:
+
+        https://discuss.streamlit.io/t/96
+
+        This will help us come up with safe APIs that allow you to do what you
+        want.
 
     Example
     -------
@@ -297,12 +326,19 @@ def write(*args):
        height: 200px
 
     """
+    # Python2 doesn't support this syntax
+    #   def write(*args, unsafe_allow_html=False)
+    # so we do this instead:
+    unsafe_allow_html = kwargs.get('unsafe_allow_html', False)
+
     try:
         string_buffer = []
 
         def flush_buffer():
             if string_buffer:
-                markdown(" ".join(string_buffer))  # noqa: F821
+                markdown(
+                    " ".join(string_buffer),
+                    unsafe_allow_html=unsafe_allow_html)  # noqa: F821
                 string_buffer[:] = []
 
         for arg in args:
@@ -359,17 +395,17 @@ def write(*args):
 
 
 def show(*args):
-    """Write arguments to your report for debugging purposes.
+    """Write arguments to your app for debugging purposes.
 
     Show() has similar properties to write():
 
         1. You can pass in multiple arguments, all of which will be debugged.
-        2. It returns None, so it's "slot" in the report cannot be reused.
+        2. It returns None, so it's "slot" in the app cannot be reused.
 
     Parameters
     ----------
     *args : any
-        One or many objects to debug in the Report.
+        One or many objects to debug in the App.
 
     Example
     -------
@@ -468,7 +504,7 @@ _SPACES_RE = _re.compile("\\s*")
 
 @_contextlib.contextmanager
 def echo():
-    """Use in a `with` block to draw some code on the report, then execute it.
+    """Use in a `with` block to draw some code on the app, then execute it.
 
     Example
     -------
@@ -531,9 +567,9 @@ def _maybe_print_repl_warning():
                 _textwrap.dedent(
                     """
 
-                Will not generate Streamlit report
+                Will not generate Streamlit app
 
-                  To generate report, use Streamlit in a file and run it with:
+                  To generate an app, use Streamlit in a file and run it with:
                   $ streamlit run [FILE_NAME] [ARGUMENTS]
 
                 """
@@ -547,9 +583,9 @@ def _maybe_print_repl_warning():
                 _textwrap.dedent(
                     """
 
-                Will not generate Streamlit report
+                Will not generate Streamlit App
 
-                  To generate report, run this file with:
+                  To generate an App, run this file with:
                   $ streamlit run %s [ARGUMENTS]
 
                 """

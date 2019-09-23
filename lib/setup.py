@@ -1,4 +1,6 @@
+import platform
 import setuptools
+import subprocess
 
 from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
@@ -15,6 +17,15 @@ else:
 requirements = convert_deps_to_pip(packages, r=False)
 
 
+# Check whether xcode tools are available before making watchdog a
+# dependency (only if the current system is a Mac).
+if (platform.system() == 'Darwin' and
+        subprocess.call(['xcode-select', '--version'], shell=False) != 0):
+    try:
+        requirements.remove('watchdog')
+    except ValueError:
+        pass
+
 def readme():
     with open("README.md") as f:
         return f.read()
@@ -22,8 +33,8 @@ def readme():
 
 setuptools.setup(
     name="streamlit",
-    version="0.45.0",  # PEP-440
-    description="Magical developer tool for machine learning engineers",
+    version="0.46.0",  # PEP-440
+    description="Frontend library for machine learning engineers",
     long_description=readme(),
     url="https://streamlit.io",
     author="Streamlit Inc",

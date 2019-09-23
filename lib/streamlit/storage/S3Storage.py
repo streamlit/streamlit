@@ -63,12 +63,6 @@ class S3Storage(AbstractStorage):
         self._key_prefix = config.get_option("s3.keyPrefix")
         self._region = config.get_option("s3.region")
 
-        if config.get_option("global.sharingMode") == "streamlit-public":
-            assert self._bucketname is not None, (
-                "Error fetching public credentials. "
-                "Are you connected to the internet?"
-            )
-
         user = os.getenv("USER", None)
 
         if self._url and "{USER}" in self._url:

@@ -274,7 +274,7 @@ class Block extends PureComponent<Props> {
           {({ width, height }) => <ImageList element={el} width={width} />}
         </FullScreenWrapper>
       ),
-      multiselectbox: (el: SimpleElement) => (
+      multiselect: (el: SimpleElement) => (
         <Multiselect element={el} width={width} {...widgetProps} />
       ),
       plotlyChart: (el: SimpleElement) => (

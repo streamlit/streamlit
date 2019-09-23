@@ -423,7 +423,7 @@ def get_streamlit_file_path(*filepath):
 
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
-    click.secho("  %s: " % title, nl=False)
+    click.secho("  %s: " % title, nl=False, fg='blue')
     click.secho(url, bold=True)
 
 
@@ -447,3 +447,7 @@ def is_namedtuple(x):
     if not isinstance(f, tuple):
         return False
     return all(type(n).__name__ == "str" for n in f)
+
+
+def is_darwin():
+    return platform.system() == "Darwin"

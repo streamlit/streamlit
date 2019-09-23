@@ -16,7 +16,8 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -44,15 +45,17 @@ LOGGER = get_logger(__name__)
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 
-def _wraps_with_cleaned_sig(wrapped):
-    """Simplify the function signature by removing "self" and "element".
+def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
+    """Simplify the function signature by removing arguments from it.
 
-    Removes "self" and "element" from function signature, since signatures are
-    visible in our user-facing docs and these elements make no sense to the
-    user.
+    Removes the first N arguments from function signature (where N is
+    num_args_to_remove). This is useful since function signatures are visible
+    in our user-facing docs, and many methods in DeltaGenerator have arguments
+    that users have no access to.
     """
-    # By passing (None, None), we're removing (self, element) from *args
-    fake_wrapped = functools.partial(wrapped, None, None)
+    # By passing (None, ...), we're removing (arg1, ...) from *args
+    args_to_remove = (None,) * num_args_to_remove
+    fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
 
     # These fields are used by wraps(), but in Python 2 partial() does not
@@ -63,35 +66,12 @@ def _wraps_with_cleaned_sig(wrapped):
     return functools.wraps(fake_wrapped)
 
 
-def _clean_up_sig(method):
-    """Cleanup function signature.
+def _remove_self_from_sig(method):
+    """Remove the `self` argument from `method`'s signature."""
 
-    This passes 'None' into the `element` argument of the wrapped function.
-
-    The reason this function exists is to allow us to use
-    `@_wraps_with_cleaned_sig` in functions like `st.dataframe`, which do not
-    take an element as input.
-
-    Contrast this with the `_with_element()` function, below, which creates an
-    actual Element proto, passes it into the function, and takes care of
-    enqueueing the element later.
-
-    So if you have some function
-        @_clean_up_sig
-        def some_function(self, unused_element_argument, stuff):
-    then the wrapped version of `some_function` can be called like this by
-    the user:
-        dg.some_function(stuff)
-
-    and its signature (introspected in st.help or IPython's `?` magic command)
-    will correctly reflect the above.  Meanwhile, when the user calls the
-    function as above, the wrapped function will be called this way:
-        dg.some_function(None, stuff)
-    """
-
-    @_wraps_with_cleaned_sig(method)
+    @_wraps_with_cleaned_sig(method, 1)  # Remove self from sig.
     def wrapped_method(self, *args, **kwargs):
-        return method(self, None, *args, **kwargs)
+        return method(self, *args, **kwargs)
 
     return wrapped_method
 
@@ -117,18 +97,18 @@ def _with_element(method):
 
     """
 
-    @_wraps_with_cleaned_sig(method)
-    def wrapped_method(self, *args, **kwargs):
+    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    def wrapped_method(dg, *args, **kwargs):
         def marshall_element(element):
-            return method(self, element, *args, **kwargs)
+            return method(dg, element, *args, **kwargs)
 
-        return self._enqueue_new_element_delta(marshall_element)
+        return dg._enqueue_new_element_delta(marshall_element)
 
     return wrapped_method
 
 
-def _widget(f):
-    @_wraps_with_cleaned_sig(f)
+def _widget(method):
+    @_wraps_with_cleaned_sig(method, 3)  # Remove self, element, ui_value.
     @_with_element
     def wrapper(dg, element, *args, **kwargs):
         # All of this label-parsing code only exists so we can throw a pretty
@@ -141,7 +121,7 @@ def _widget(f):
             label = args[0]
             args = args[1:]
         else:
-            raise TypeError("%s must have a label" % f.__name__)
+            raise TypeError("%s must have a label" % method.__name__)
 
         ctx = get_report_ctx()
         # The widget ID is the widget type (i.e. the name "foo" of the
@@ -149,13 +129,13 @@ def _widget(f):
         # This allows widgets of different types to have the same label,
         # and solves a bug where changing the widget type but keeping
         # the label could break things.
-        widget_id = "%s-%s" % (f.__name__, label)
+        widget_id = "%s-%s" % (method.__name__, label)
 
-        el = getattr(element, f.__name__)
+        el = getattr(element, method.__name__)
         el.id = widget_id
 
         ui_value = ctx.widgets.get_widget_value(widget_id) if ctx else None
-        return f(dg, element, ui_value, label, *args, **kwargs)
+        return method(dg, element, ui_value, label, *args, **kwargs)
 
     return wrapper
 
@@ -197,6 +177,33 @@ class DeltaGenerator(object):
         self._is_root = is_root
         self._container = container
         self._path = path
+
+    def __getattr__(self, name):
+        import streamlit as st
+        streamlit_methods = [method_name for method_name in dir(st)
+                             if callable(getattr(st, method_name))]
+
+        def wrapper(*args, **kwargs):
+            if name in streamlit_methods:
+                if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                                  "name": name
+                              }
+                else:
+                    message = "Method `%(name)s()` does not exist for " \
+                              "`DeltaGenerator` objects. Did you mean " \
+                              "`st.%(name)s()`?" % {
+                                  "name": name
+                              }
+            else:
+                message = "`%(name)s()` is not a valid Streamlit command." % {
+                    "name": name
+                }
+
+            raise AttributeError(message)
+
+        return wrapper
 
     # Protected (should be used only by Streamlit, not by users).
     def _reset(self):
@@ -305,7 +312,7 @@ class DeltaGenerator(object):
         -------
         >>> st.balloons()
 
-        ...then watch your report and get ready for a celebration!
+        ...then watch your app and get ready for a celebration!
 
         """
         element.balloons.type = Balloons_pb2.Balloons.DEFAULT
@@ -329,11 +336,12 @@ class DeltaGenerator(object):
            height: 50px
 
         """
+
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.PLAIN
 
     @_with_element
-    def markdown(self, element, body):
+    def markdown(self, element, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
 
         Parameters
@@ -341,6 +349,28 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+
+        unsafe_allow_html : bool
+            By default, any HTML tags found in the body will be escaped and
+            therefore treated as pure text. This behavior may be turned off by
+            setting this argument to True.
+
+            That said, we *strongly advise against it*. It is hard to write
+            secure HTML, so by using this argument you may be compromising your
+            users' security. For more information, see:
+
+            https://github.com/streamlit/streamlit/issues/152
+
+            *Also note that `unsafe_allow_html` is a temporary measure and may
+            be removed from Streamlit at any time.*
+
+            If you decide to turn on HTML anyway, we ask you to please tell us
+            your exact use case here:
+
+            https://discuss.streamlit.io/t/96
+
+            This will help us come up with safe APIs that allow you to do what
+            you want.
 
         Example
         -------
@@ -353,6 +383,7 @@ class DeltaGenerator(object):
         """
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.MARKDOWN
+        element.text.allow_html = unsafe_allow_html
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -607,7 +638,8 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.exception_proto as exception_proto
 
-        exception_proto.marshall(element.exception, exception, exception_traceback)
+        exception_proto.marshall(element.exception, exception,
+                                 exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -624,8 +656,8 @@ class DeltaGenerator(object):
         element.exception.message = message
         element.exception.stack_trace.extend(stack_trace)
 
-    @_clean_up_sig
-    def dataframe(self, _, data=None, width=None, height=None):
+    @_remove_self_from_sig
+    def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -659,9 +691,6 @@ class DeltaGenerator(object):
            height: 330px
 
         >>> st.dataframe(df, 200, 100)
-
-        .. output::
-           Same as before but width and height are constrained as specified
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -792,7 +821,8 @@ class DeltaGenerator(object):
         chart.marshall(element.chart)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0,
+                        **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -847,7 +877,8 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, width, **kwargs)
+        vega_lite.marshall(element.vega_lite_chart, data, spec, width,
+                           **kwargs)
 
     @_with_element
     def altair_chart(self, element, altair_chart, width=0):
@@ -963,7 +994,8 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0, sharing="streamlit", **kwargs
+        self, element, figure_or_data, width=0, height=0, sharing="streamlit",
+        **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -990,10 +1022,10 @@ class DeltaGenerator(object):
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
-            directly in the Streamlit report, which means it works offline too.
+            directly in the Streamlit app, which means it works offline too.
             This is the default.
-            Use any other sharing mode to send the report to Plotly's servers,
-            and embed the result into the Streamlit report. See
+            Use any other sharing mode to send the app to Plotly's servers,
+            and embed the result into the Streamlit app. See
             https://plot.ly/python/privacy/ for more. Note that these sharing
             modes require a Plotly account.
 
@@ -1042,7 +1074,8 @@ class DeltaGenerator(object):
         import streamlit.elements.plotly_chart as plotly_chart
 
         plotly_chart.marshall(
-            element.plotly_chart, figure_or_data, width, height, sharing, **kwargs
+            element.plotly_chart, figure_or_data, width, height, sharing,
+            **kwargs
         )
 
     @_with_element
@@ -1278,7 +1311,7 @@ class DeltaGenerator(object):
         Returns
         -------
         bool
-            If the button was clicked on the last run of the report.
+            If the button was clicked on the last run of the app.
 
         Example
         -------
@@ -1325,7 +1358,8 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def multiselectbox(self, element, ui_value, label, options, format_func=str):
+    def multiselect(self, element, ui_value, label, options,
+                       format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1347,7 +1381,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> options = st.multiselectbox(
+        >>> options = st.multiselect(
         ...     'What are your favorite colors',
         ...     ('Green', 'Yellow', 'Red', 'Blue'))
         >>>
@@ -1357,13 +1391,15 @@ class DeltaGenerator(object):
 
         current_value = ui_value.value if ui_value is not None else []
 
-        element.multiselectbox.label = label
-        element.multiselectbox.default[:] = current_value
-        element.multiselectbox.options[:] = [str(format_func(opt)) for opt in options]
+        element.multiselect.label = label
+        element.multiselect.default[:] = current_value
+        element.multiselect.options[:] = [str(format_func(opt)) for opt in
+                                             options]
         return [options[i] for i in current_value]
 
     @_widget
-    def radio(self, element, ui_value, label, options, index=0, format_func=str):
+    def radio(self, element, ui_value, label, options, index=0,
+              format_func=str):
         """Display a radio button widget.
 
         Parameters
@@ -1397,10 +1433,12 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
+            raise TypeError(
+                "Radio Value has invalid type: %s" % type(index).__name__)
 
         if len(options) and not 0 <= index < len(options):
-            raise ValueError("Radio index must be between 0 and length of options")
+            raise ValueError(
+                "Radio index must be between 0 and length of options")
 
         current_value = ui_value if ui_value is not None else index
 
@@ -1410,7 +1448,8 @@ class DeltaGenerator(object):
         return options[current_value] if len(options) else NoValue
 
     @_widget
-    def selectbox(self, element, ui_value, label, options, index=0, format_func=str):
+    def selectbox(self, element, ui_value, label, options, index=0,
+                  format_func=str):
         """Display a select widget.
 
         Parameters
@@ -1446,13 +1485,15 @@ class DeltaGenerator(object):
             )
 
         if len(options) and not 0 <= index < len(options):
-            raise ValueError("Selectbox index must be between 0 and length of options")
+            raise ValueError(
+                "Selectbox index must be between 0 and length of options")
 
         current_value = ui_value if ui_value is not None else index
 
         element.selectbox.label = label
         element.selectbox.value = current_value
-        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+        element.selectbox.options[:] = [str(format_func(opt)) for opt in
+                                        options]
         return options[current_value] if len(options) else NoValue
 
     @_widget
@@ -1581,7 +1622,8 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise ValueError(
+                    "The value and/or arguments are out of range.")
 
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
@@ -1597,7 +1639,8 @@ class DeltaGenerator(object):
             current_value = current_value[0] if single_value else current_value
 
         element.slider.label = label
-        element.slider.value[:] = [current_value] if single_value else current_value
+        element.slider.value[:] = [
+            current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
@@ -1696,7 +1739,8 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError("The type of the value should be either datetime or time.")
+            raise TypeError(
+                "The type of the value should be either datetime or time.")
 
         # Convert datetime to time
         if isinstance(value, datetime):
@@ -1742,7 +1786,8 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError("The type of the value should be either datetime or date.")
+            raise TypeError(
+                "The type of the value should be either datetime or date.")
 
         # Convert datetime to date
         if isinstance(value, datetime):
@@ -1799,7 +1844,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def empty(self, element):
-        """Add a placeholder to the report.
+        """Add a placeholder to the app.
 
         The placeholder can be filled any time by calling methods on the return
         value.
@@ -2030,7 +2075,7 @@ class DeltaGenerator(object):
         ...    columns=('col %d' % i for i in range(20)))
         ...
         >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit report contains the data for
+        >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
         You can do the same thing with plots. For example, if you want to add
@@ -2039,7 +2084,7 @@ class DeltaGenerator(object):
         >>> # Assuming df1 and df2 from the example above still exist...
         >>> my_chart = st.line_chart(df1)
         >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit report contains the data for
+        >>> # Now the chart shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
         And for plots whose datasets are named, you can pass the data with a

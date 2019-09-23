@@ -38,8 +38,6 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-STREAMLIT_CREDENTIALS_URL = "https://streamlit.io/tmp/st_pub_write.json"
-
 
 # Config System Global State #
 
@@ -188,18 +186,29 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 
 
 _create_option(
+    "global.disableWatchdogWarning",
+    description="""
+        By default, Streamlit checks if the Python watchdog module is available
+        and, if not, prints a warning asking for you to install it. The watchdog
+        module is not required, but highly recommended. It improves Streamlit's
+        ability to detect changes to files in your filesystem.
+
+        If you'd like to turn off this warning, set this to True.
+        """,
+    default_val=False)
+
+
+_create_option(
     "global.sharingMode",
     description="""
-        Configure the ability to share reports to the cloud.
+        Configure the ability to share apps to the cloud.
 
         Should be set to one of these values:
         - "off" : turn off sharing.
-        - "streamlit-public" : share to Streamlit's public cloud. Shared reports
-           will be viewable by anyone with the URL.
         - "s3" : share to S3, based on the settings under the [s3] section of
           this config file.
         """,
-    default_val="streamlit-public",
+    default_val="off",
 )
 
 
@@ -276,7 +285,7 @@ _create_option(
 _create_option(
     "client.displayEnabled",
     description="""If false, makes your Streamlit script not draw to a
-        Streamlit report.""",
+        Streamlit app.""",
     default_val=True,
 )
 
@@ -289,7 +298,7 @@ _create_option(
     "runner.magicEnabled",
     description="""
         Allows you to type a variable or string by itself in a single line of
-        Python code to write it to the report.
+        Python code to write it to the app.
         """,
     default_val=True,
 )
@@ -350,7 +359,7 @@ def _server_headless():
 
 @_create_option("server.liveSave")
 def _server_live_save():
-    """Immediately share the report in such a way that enables live
+    """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
 
     Default: false
@@ -427,25 +436,19 @@ _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".
 
 @_create_option("s3.bucket")
 def _s3_bucket():
-    """Name of the AWS S3 bucket to save reports.
+    """Name of the AWS S3 bucket to save apps.
 
     Default: (unset)
     """
-    if get_option("global.sharingMode") == "streamlit-public":
-        creds = _get_public_credentials()
-        return creds["bucket"] if creds else None
     return None
 
 
 @_create_option("s3.url")
 def _s3_url():
-    """URL root for external view of Streamlit reports.
+    """URL root for external view of Streamlit apps.
 
     Default: (unset)
     """
-    if get_option("global.sharingMode") == "streamlit-public":
-        creds = _get_public_credentials()
-        return creds["url"] if creds else None
     return None
 
 
@@ -457,9 +460,6 @@ def _s3_access_key_id():
 
     Default: (unset)
     """
-    if get_option("global.sharingMode") == "streamlit-public":
-        creds = _get_public_credentials()
-        return creds["accessKeyId"] if creds else None
     return None
 
 
@@ -471,15 +471,12 @@ def _s3_secret_access_key():
 
     Default: (unset)
     """
-    if get_option("global.sharingMode") == "streamlit-public":
-        creds = _get_public_credentials()
-        return creds["secretAccessKey"] if creds else None
     return None
 
 
 _create_option(
     "s3.requireLoginToView",
-    description="""Make the shared report visible only to users who have been
+    description="""Make the shared app visible only to users who have been
         granted view permission. If you are interested in this option, contact
         us at support@streamlit.io.
         """,
@@ -489,7 +486,7 @@ _create_option(
 _create_option(
     "s3.keyPrefix",
     description="""The "subdirectory" within the S3 bucket where to save
-        reports.
+        apps.
 
         S3 calls paths "keys" which is why the keyPrefix is like a
         subdirectory. Use "" to mean the root directory.
@@ -516,21 +513,6 @@ _create_option(
         """,
     default_val=None,
 )  # If changing the default, change S3Storage.py too.
-
-
-# TODO: Don't memoize! Otherwise, if the internet is down momentarily when this
-# function is first called then we'll have no credentials forever while the
-# server is up.
-@util.memoize
-def _get_public_credentials():
-    LOGGER.debug("Getting remote Streamlit credentials.")
-    try:
-        return requests.get(STREAMLIT_CREDENTIALS_URL, timeout=0.5).json()
-    except Exception as e:
-        LOGGER.warning(
-            "Error getting Streamlit credentials. Sharing will be " "disabled. %s", e
-        )
-        return None
 
 
 def get_where_defined(key):
@@ -848,19 +830,6 @@ def _check_conflicts():
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
             "either both be set or both be unset."
         )
-
-    if get_option("global.sharingMode") == "streamlit-public":
-        WARNING_STR = (
-            "In config.toml, S3 should not be configured when "
-            'global.sharingMode is set to "streamlit-public".'
-        )
-        assert _is_unset("s3.bucket"), WARNING_STR
-        assert _is_unset("s3.url"), WARNING_STR
-        assert _is_unset("s3.accessKeyId"), WARNING_STR
-        assert _is_unset("s3.secretAccessKey"), WARNING_STR
-        assert _is_unset("s3.keyPrefix"), WARNING_STR
-        assert _is_unset("s3.region"), WARNING_STR
-        assert _is_unset("s3.profile"), WARNING_STR
 
 
 def _set_development_mode():
