@@ -26,9 +26,12 @@ spec = {
     },
 }
 
-# 2 empty charts
+# 5 empty charts
 st.vega_lite_chart(spec)
 st.pyplot()
+st.line_chart()
+st.bar_chart()
+st.area_chart()
 
 # 1 empty map
 st.deck_gl_chart()

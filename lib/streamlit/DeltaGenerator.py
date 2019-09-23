@@ -2137,8 +2137,8 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
-        # As we are using vega_lite for these deltas we have to reshape
-        # the data structure otherwise the input data and the actual data used
+        # For some delta types we have to reshape the data structure
+        # otherwise the input data and the actual data used
         # by vega_lite will be different and it will throw an error.
         if self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
             if not isinstance(data, pd.DataFrame):

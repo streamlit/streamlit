@@ -24,7 +24,9 @@ describe("handles empty charts", () => {
 
   it("gracefully handles no data", () => {
     // vega lite
-    cy.get(".stVegaLiteChart").matchImageSnapshot("empty-vega-lite-chart");
+    cy.get(".element-container .stVegaLiteChart").each((el, i) => {
+      cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+    });
 
     // pyplot
     cy.get(".stImage > img").should("have.attr", "src");

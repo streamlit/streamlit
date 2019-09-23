@@ -67,10 +67,10 @@ class MyCallback(keras.callbacks.Callback):
 
     def on_batch_end(self, batch, logs=None):
         rows = pd.DataFrame(
-            [[logs["loss"], logs["acc"]]], columns=["loss", "acc"])
+            [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"])
         if batch % 10 == 0:
             self._epoch_chart.add_rows({"loss": [logs["loss"]],
-                                        "acc": [logs["acc"]]})
+                                        "accuracy": [logs["accuracy"]]})
         if batch % 100 == 99:
             self._summary_chart.add_rows(rows)
         percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
@@ -78,7 +78,7 @@ class MyCallback(keras.callbacks.Callback):
         ts = time.time() - self._ts
         self._epoch_summary.text(
             "loss: %(loss)7.5f | accuracy: %(accuracy)7.5f | ts: %(ts)d"
-            % {"loss": logs["loss"], "accuracy": logs["acc"], "ts": ts}
+            % {"loss": logs["loss"], "accuracy": logs["accuracy"], "ts": ts}
         )
 
     def on_epoch_end(self, epoch, logs=None):
