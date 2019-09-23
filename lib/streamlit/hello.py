@@ -75,22 +75,29 @@ def demo_3():
         time.sleep(0.1)
     progress_bar.empty()
     success.success("Complete!")
+    st.balloons()
     st.button("Re-run")
 
 
 def demo_4():
     """
-    Use the slider in the sidebar to mix your favorite color up.
+    Blur the image! Use the slider in the sidebar to control the amount of
+    blur.
     """
-    red = st.sidebar.slider("Red", 0, 255, 0)
-    green = st.sidebar.slider("Green", 0, 255, 128)
-    blue = st.sidebar.slider("Blue", 0, 255, 0)
-    array = np.zeros([512, 512, 3], dtype=np.uint8)
-    array[:, :, 0].fill(red)
-    array[:, :, 1].fill(green)
-    array[:, :, 2].fill(blue)
-    st.markdown("#### RGB color (%d, %d, %d)" % (red, green, blue))
-    st.image(array)
+    from PIL import Image, ImageFilter
+
+    @st.cache(show_spinner=False)
+    def blur(image):
+        return image.filter(ImageFilter.BLUR)
+
+    blurs = st.sidebar.slider("How much blur?", 0, 100, 0)
+    image = Image.open("bridge.jpg")
+    st.markdown("#### Image blurred %d times" % blurs)
+    blurred = image
+    for i in range(blurs):
+        blurred = blur(blurred)
+    st.image(blurred)
+
 
 
 # Data for demo_5 derived from
