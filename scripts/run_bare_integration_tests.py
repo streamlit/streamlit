@@ -28,21 +28,29 @@ import sys
 
 import click
 
+IS_PYTHON_2 = sys.version_info[0] == 2
+
 # Where we expect to find the example files.
 E2E_DIR = "e2e/scripts"
+
+EXCLUDED_FILENAMES = set()
 
 # Scripts that rely on matplotlib can't be run in Python2. matplotlib
 # dropped Py2 support, and so we don't install it in our virtualenv.
 try:
     import matplotlib
-    EXCLUDED_FILENAMES = ()
 except ImportError:
-    EXCLUDED_FILENAMES = (
+    EXCLUDED_FILENAMES |= [
         'empty_charts.py',
         'pyplot.py',
         'pyplot_kwargs.py'
-    )
+    ]
 
+# magic.py uses the async keyword, which is Python 3.6+
+if IS_PYTHON_2:
+    EXCLUDED_FILENAMES |= "magic.py"
+
+# DEVNULL support
 try:
     # Python 3
     from subprocess import DEVNULL
