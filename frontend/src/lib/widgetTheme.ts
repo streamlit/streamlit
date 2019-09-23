@@ -85,7 +85,7 @@ export const sliderOverrides = {
       color: $disabled ? gray : primary,
       top: "-22px",
       position: "absolute" as "absolute",
-      whiteSpace: "nowrap" as "nowrap",
+      whiteSpace: "nowrap",
       backgroundColor: "transparent",
       lineHeight: 1.6,
       fontWeight: "normal" as "normal",

@@ -21,6 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { debounce } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
+var sprintf = require("sprintf-js").sprintf
 
 interface Props {
   disabled: boolean
@@ -123,25 +124,32 @@ class Slider extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
-  renderThumbValue = (data: { $thumbIndex: number }) => {
+  renderThumbValue = (data: { $thumbIndex: number; $value: any }) => {
     const { element } = this.props
-    const displayValue = element.get("displayValue").toArray()
+    const format = element.get("format")
     const thumbValueStyle = sliderOverrides.ThumbValue.style(
       this.props.disabled
     ) as React.CSSProperties
-
-    return <div style={thumbValueStyle}>{displayValue[data.$thumbIndex]}</div>
+    return (
+      <div style={thumbValueStyle}>
+        {sprintf(format, data.$value[data.$thumbIndex])}
+      </div>
+    )
   }
 
   renderTickBar = () => {
     const { element } = this.props
-    const displayMin = element.get("displayMin")
-    const displayMax = element.get("displayMax")
-
+    const format = element.get("format")
+    const max = element.get("max")
+    const min = element.get("min")
     return (
       <div style={sliderOverrides.TickBar.style}>
-        <div style={sliderOverrides.TickBarItem.style}>{displayMin}</div>
-        <div style={sliderOverrides.TickBarItem.style}>{displayMax}</div>
+        <div style={sliderOverrides.TickBarItem.style}>
+          {sprintf(format, min)}
+        </div>
+        <div style={sliderOverrides.TickBarItem.style}>
+          {sprintf(format, max)}
+        </div>
       </div>
     )
   }
@@ -166,6 +174,7 @@ class Slider extends React.PureComponent<Props, State> {
           disabled={this.props.disabled}
           overrides={{
             ...sliderOverrides,
+            // @Dani:here is doc about how override subcomponents:  https://baseweb.design/components/slider/
             ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
           }}

@@ -56,6 +56,7 @@
     "react-virtualized": "^9.21.0",
     "reactstrap": "^8.0.1",
     "recharts": "^1.6.2",
+    "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.1",
     "styletron-react": "^5.2.1",
     "typed-signals": "^1.0.5",

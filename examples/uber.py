@@ -42,7 +42,7 @@ data = load_data(100000)
 st.subheader("Pickups by hour")
 st.bar_chart(np.histogram(data[DATE_TIME].dt.hour, bins=24, range=(0, 24))[0])
 
-hour = st.sidebar.slider("Hour to look at", 0, 23)
+hour = st.sidebar.slider("Hour to look at", 0, 23, format="%d hs")
 
 data = data[data[DATE_TIME].dt.hour == hour]
 

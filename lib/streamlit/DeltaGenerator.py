@@ -1651,24 +1651,13 @@ class DeltaGenerator(object):
             else:
                 format = "%0.2f"
        
-       # Generate disaplay values.
-        if single_value: 
-            display_value = format % (current_value)
-        else:
-            display_value = list(map(lambda v: format % (v), current_value))
-        display_min = format % (min_value)
-        display_max = format % (max_value)
-
         element.slider.label = label
         element.slider.value[:] = [
             current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
-        element.slider.display_value[:] = [
-            display_value] if single_value else display_value
-        element.slider.display_min = display_min
-        element.slider.display_max = display_max
+        element.slider.format = format        
         
         return current_value if single_value else tuple(current_value)
 
