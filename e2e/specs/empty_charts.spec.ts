@@ -74,27 +74,6 @@ describe("handles empty charts", () => {
       .eq(5)
       .should(
         "have.text",
-        "TypeError: line_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(6)
-      .should(
-        "have.text",
-        "TypeError: area_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(7)
-      .should(
-        "have.text",
-        "TypeError: bar_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(8)
-      .should(
-        "have.text",
         "TypeError: map() missing 1 required positional argument: 'data'"
       );
   });
