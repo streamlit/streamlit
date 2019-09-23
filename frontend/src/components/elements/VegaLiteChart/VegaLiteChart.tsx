@@ -35,6 +35,7 @@ const DEFAULT_DATA_NAME = "source"
  * Horizontal space needed for the embed actions button.
  */
 const EMBED_PADDING = 38
+const DEFAULT_HEIGHT = 200
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
@@ -48,6 +49,7 @@ const SUPPORTED_INDEX_TYPES = new Set([
 
 interface Props {
   width: number
+  height: number | undefined
   element: ImmutableMap<string, any>
 }
 
@@ -122,6 +124,14 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
     if (prevProps.width !== this.props.width && this.specWidth === 0) {
       this.vegaView.width(this.props.width - EMBED_PADDING)
+    }
+
+    if (prevProps.height !== this.props.height) {
+      if (this.props.height === undefined) {
+        this.vegaView.height(DEFAULT_HEIGHT - EMBED_PADDING)
+      } else {
+        this.vegaView.height(this.props.height - EMBED_PADDING)
+      }
     }
 
     const prevData = prevElement.get("data")

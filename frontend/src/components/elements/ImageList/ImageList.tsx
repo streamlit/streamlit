@@ -64,6 +64,9 @@ class ImageList extends React.PureComponent<Props> {
       throw Error(`Invalid image width: ${protoWidth}`)
     }
 
+    console.log("===")
+    console.log(width)
+    console.log(imgWidth)
     return (
       <div style={{ width }}>
         {element

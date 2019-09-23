@@ -1,22 +1,26 @@
+@import "src/assets/css/variables";
+
 .streamlit-container .stFullScreenFrame--expanded {
   position: fixed;
-  top: 0px;
-  left: 0px;
-  bottom: 0px;
-  right: 0px;
-  overflow: auto;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
   background: white;
   z-index: 1000;
-  padding: 30px;
-  padding-top: 80px;
+  padding: $fullscreen-padding;
+  padding-top: $fullscreen-padding-top;
+  overflow: auto;
 }
 
 .streamlit-container .stFullScreenFrame .stButton-enter {
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: $fullscreen-padding;
+  top: $fullscreen-padding;
   z-index: 1;
   display: none;
+  width: $fullscreen-button;
+  height: $fullscreen-button;
 }
 
 .streamlit-container .stFullScreenFrame:hover .stButton-enter {
@@ -24,9 +28,11 @@
 }
 
 .streamlit-container .stFullScreenFrame--expanded .stButton-exit {
-  position: absolute;
-  right: 30px;
-  top: 30px;
+  position: fixed;
+  right: $fullscreen-padding;
+  top: $fullscreen-padding;
   z-index: 1;
   display: block;
+  width: $fullscreen-button;
+  height: $fullscreen-button;
 }

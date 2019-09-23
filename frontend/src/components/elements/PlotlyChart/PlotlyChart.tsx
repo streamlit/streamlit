@@ -27,6 +27,7 @@ import Plot from "react-plotly.js"
 
 interface Props {
   width: number
+  height: number | undefined
   element: ImmutableMap<string, any>
 }
 
@@ -37,7 +38,11 @@ class PlotlyChart extends React.PureComponent<Props> {
     const el = this.props.element
 
     const height: number =
-      el.get("height") > 0 ? el.get("height") : DEFAULT_HEIGHT
+      el.get("height") > 0
+        ? el.get("height")
+        : this.props.height
+        ? this.props.height
+        : DEFAULT_HEIGHT
 
     const width: number =
       el.get("width") > 0 ? el.get("width") : this.props.width
@@ -65,6 +70,9 @@ class PlotlyChart extends React.PureComponent<Props> {
   ): React.ReactNode => {
     const spec = JSON.parse(figure.get("spec"))
     const config = JSON.parse(figure.get("config"))
+    spec.layout.width = width
+    spec.layout.height = height
+
     return (
       <Plot
         className="stPlotlyChart"

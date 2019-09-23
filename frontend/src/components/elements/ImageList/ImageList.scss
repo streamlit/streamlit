@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
+@import "src/assets/css/variables";
 
 .streamlit-container .image-container {
   display: inline-flex;
   flex-direction: column;
   margin-right: $font-size-sm;
+}
+
+.streamlit-container .image-container:last-child {
+  margin-right: 0;
 }
 
 .streamlit-container .caption {

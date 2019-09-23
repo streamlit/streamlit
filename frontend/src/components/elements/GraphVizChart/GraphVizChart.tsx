@@ -24,6 +24,7 @@ import "./GraphVizChart.scss"
 
 interface Props {
   width: number
+  height: number | undefined
   element: ImmutableMap<string, any>
   index: number
 }
@@ -62,8 +63,17 @@ class GraphVizChart extends React.PureComponent<Props> {
       // Override or reset the graph height
       if (this.props.element.get("height")) {
         graph.height(this.props.element.get("height"))
+      } else if (this.props.height) {
+        graph.height(this.props.height)
       } else if (this.originalHeight) {
         graph.height(this.originalHeight)
+      }
+
+      // Override or reset the graph width
+      if (this.props.element.get("width")) {
+        graph.width(this.props.element.get("width"))
+      } else {
+        graph.width(this.props.width)
       }
     } catch (error) {
       logError(error)
@@ -80,12 +90,13 @@ class GraphVizChart extends React.PureComponent<Props> {
 
   public render = (): React.ReactNode => {
     const width: number = this.props.element.get("width") || this.props.width
-
+    const height: number =
+      this.props.element.get("height") || this.props.height
     return (
       <div
         className="graphviz stGraphVizChart"
         id={this.chartId}
-        style={{ width }}
+        style={{ width, height }}
       />
     )
   }

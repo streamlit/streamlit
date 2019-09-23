@@ -21,9 +21,12 @@ import { Map as ImmutableMap } from "immutable"
 
 interface Props {
   width: number
+  height: number | undefined
   element: ImmutableMap<string, any>
   index: number
 }
+
+const DEFAULT_HEIGHT = 400
 
 class BokehChart extends React.PureComponent<Props> {
   private chartId = "bokeh-chart-" + this.props.index
@@ -35,6 +38,13 @@ class BokehChart extends React.PureComponent<Props> {
 
   private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
+    const plot = data.doc.roots.references.find((e: any) => e.type === "Plot")
+    if (plot) {
+      plot.attributes.plot_width = this.props.width
+      plot.attributes.plot_height = this.props.height
+        ? this.props.height
+        : DEFAULT_HEIGHT
+    }
     if (chart !== null) {
       this.removeAllChildNodes(chart)
       BokehEmbed.embed_item(data, this.chartId)
@@ -61,7 +71,7 @@ class BokehChart extends React.PureComponent<Props> {
     <div
       id={this.chartId}
       className="stBokehChart"
-      style={{ width: this.props.width }}
+      style={{ width: this.props.width, height: this.props.height }}
     />
   )
 }
