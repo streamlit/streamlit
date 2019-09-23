@@ -169,19 +169,21 @@ publish-docs: docs
 				--acl public-read html s3://streamlit.io/secret/docs/ \
 				--profile streamlit
 
-	@# The line below uses the distribution ID obtained with
-	@# $ aws cloudfront list-distributions | \
-	@#     jq '.DistributionList.Items[] | \
-	@#     select(.Aliases.Items[0] | \
-	@#     contains("www.streamlit.io")) | \
-	@#     .Id'
+	# The line below uses the distribution ID obtained with
+	# $ aws cloudfront list-distributions | \
+	#     jq '.DistributionList.Items[] | \
+	#     select(.Aliases.Items[0] | \
+	#     contains("www.streamlit.io")) | \
+	#     .Id'
 
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths \
-				'/secret/docs/*' \
-				'/secret/docs/tutorial/*' \
-			--profile streamlit
+	aws cloudfront create-invalidation \
+		--distribution-id=E5G9JPT7IOJDV \
+		--paths \
+			'/docs/*' \
+			'/docs/tutorial/*' \
+			'/secret/docs/*' \
+			'/secret/docs/tutorial/*' \
+		--profile streamlit
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
@@ -274,45 +276,6 @@ loc:
 distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)
-
-.PHONY: prepare-conda-repo
-prepare-conda-repo:
-	mkdir -p /var/tmp/streamlit-conda
-	aws s3 sync \
-			s3://repo.streamlit.io/streamlit-forge/ \
-			/var/tmp/streamlit-conda/streamlit-forge/ \
-			--profile streamlit
-
-.PHONY: conda-packages
-conda-packages:
-	cd scripts; \
-		./create_conda_packages.sh
-
-.PHONY: serve-conda-packages
-serve-conda-packages:
-	cd /var/tmp/streamlit-conda; \
-		python -m SimpleHTTPServer 8000 || python -m http.server 8000
-
-.PHONY: conda-dev-env
-conda-dev-env:
-	conda env create -f scripts/conda/test_conda_env.yml
-
-.PHONY: clean-conda-dev-env
-clean-conda-dev-env:
-	conda env remove -n streamlit-dev
-
-.PHONY: distribute-conda-packages
-distribute-conda-packages:
-	aws s3 sync \
-		/var/tmp/streamlit-conda/streamlit-forge/ \
-		s3://repo.streamlit.io/streamlit-forge/ \
-		--acl public-read \
-		--profile streamlit
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E3V3HGGB52ZUA0 \
-		--paths '/*' \
-		--profile streamlit
 
 .PHONY: notices
 # Rebuild the NOTICES file.
