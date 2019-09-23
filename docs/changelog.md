@@ -29,16 +29,16 @@ _Release date: September 19, 2019_
 
 **Highlights:**
 
-- Magic commands! Use `st.write` without typing `st.write`. See
+- ✨ Magic commands! Use `st.write` without typing `st.write`. See
   https://streamlit.io/docs/api.html#magic-commands
-- New `st.multiselect` widget.
-- Deactivated our private Conda repo. We fixed install issues and now you can
-  just pip install, even in Conda!
-- Multiple bug fixes and additional polish in preparation for our launch!
+- 🎛️ New `st.multiselect` widget.
+- 🐍 Fixed numerous install issues so now you can use `pip install streamlit`
+  even in Conda! We've therefore deactivated our Conda repo.
+- 🐞 Multiple bug fixes and additional polish in preparation for our launch!
 
 **Breaking change:**
 
-- HTML tags are now blacklisted in `st.write`/`st.markdown` by default. More
+- 🛡️ HTML tags are now blacklisted in `st.write`/`st.markdown` by default. More
   information and a temporary work-around at:
   https://github.com/streamlit/streamlit/issues/152
 
