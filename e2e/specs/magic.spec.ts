@@ -22,7 +22,7 @@ describe("streamlit magic", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays markdown", () => {
+  it("displays expected text", () => {
     const expected = [
       "no block",
       "IF",
