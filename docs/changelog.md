@@ -28,6 +28,25 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ conda update streamlit
 ```
 
+## Version 0.46.0
+
+_Release date: September 19, 2019_
+
+**Highlights:**
+
+- Magic commands! Use `st.write` without typing `st.write`. See
+  https://streamlit.io/docs/api.html#magic-commands
+- New `st.multiselect` widget.
+- Deactivated our private Conda repo. We fixed install issues and now you can
+  just pip install, even in Conda!
+- Multiple bug fixes and additional polish in preparation for our launch!
+
+**Breaking change:**
+
+- HTML tags are now blacklisted in `st.write`/`st.markdown` by default. More
+  information and a temporary work-around at:
+  https://github.com/streamlit/streamlit/issues/152
+
 ## Version 0.45.0
 
 _Release date: August 28, 2019_

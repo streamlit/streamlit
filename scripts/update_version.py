@@ -60,7 +60,6 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PYTHON = {
     "lib/setup.py": r"(?P<pre>.*version=\").*(?P<post>\",  # PEP-440$)",
     "docs/troubleshooting.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
-    "scripts/conda/meta.yaml": r'(?P<pre>.* version = ").*(?P<post>" %}$)',
 }
 
 NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
