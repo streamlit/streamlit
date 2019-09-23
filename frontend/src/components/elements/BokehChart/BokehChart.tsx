@@ -40,10 +40,14 @@ class BokehChart extends React.PureComponent<Props> {
     const chart = document.getElementById(this.chartId)
     const plot = data.doc.roots.references.find((e: any) => e.type === "Plot")
     if (plot) {
-      plot.attributes.plot_width = this.props.width
-      plot.attributes.plot_height = this.props.height
-        ? this.props.height
-        : DEFAULT_HEIGHT
+      if (!plot.attributes.plot_width) {
+        plot.attributes.plot_width = this.props.width
+      }
+      if (!plot.attributes.plot_height) {
+        plot.attributes.plot_height = this.props.height
+          ? this.props.height
+          : DEFAULT_HEIGHT
+      }
     }
     if (chart !== null) {
       this.removeAllChildNodes(chart)
