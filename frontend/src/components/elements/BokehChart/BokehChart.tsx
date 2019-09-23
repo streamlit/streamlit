@@ -39,7 +39,7 @@ class BokehChart extends React.PureComponent<Props> {
   private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
     const plot =
-      data.doc && data.doc.roots && data.doc.roots.references
+      data && data.doc && data.doc.roots && data.doc.roots.references
         ? data.doc.roots.references.find((e: any) => e.type === "Plot")
         : undefined
     if (plot) {
