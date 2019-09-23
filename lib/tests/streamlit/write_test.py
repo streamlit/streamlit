@@ -47,7 +47,8 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.markdown") as p:
             st.write("more", "strings", "to", "pass")
 
-            p.assert_called_once_with("more strings to pass", unsafe_allow_html=False)
+            p.assert_called_once_with(
+                "more strings to pass", unsafe_allow_html=False)
 
     def test_dataframe(self):
         """Test st.write with dataframe."""
@@ -175,8 +176,7 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(SomeObject())
 
             p.assert_called_once_with(
-                u"`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
-            )
+                u"`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False)
 
     def test_exception(self):
         """Test st.write that raises an exception."""

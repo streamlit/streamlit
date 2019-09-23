@@ -44,10 +44,10 @@ def _set_up_signal_handler():
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    if sys.platform == "win32":
-        signal.signal(signal.SIGBREAK, signal_handler)
+    if sys.platform == 'win32':
+      signal.signal(signal.SIGBREAK, signal_handler)
     else:
-        signal.signal(signal.SIGQUIT, signal_handler)
+      signal.signal(signal.SIGQUIT, signal_handler)
 
 
 def _fix_sys_path(script_path):
