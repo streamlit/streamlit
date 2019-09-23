@@ -57,22 +57,23 @@ class FakeDeltaGenerator(object):
         pass
 
     def __getattr__(self, name):
-        streamlit_methods = [method_name for method_name in dir(st)
-                             if callable(getattr(st, method_name))]
+        streamlit_methods = [
+            method_name for method_name in dir(st) if callable(getattr(st, method_name))
+        ]
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
                 if self._container == BlockPath.SIDEBAR:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                    )
                 else:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`DeltaGenerator` objects. Did you mean " \
-                              "`st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`DeltaGenerator` objects. Did you mean "
+                        "`st.%(name)s()`?" % {"name": name}
+                    )
             else:
                 message = "`%(name)s()` is not a valid Streamlit command." % {
                     "name": name
@@ -131,20 +132,22 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.non_existing()
 
-        self.assertEqual(str(ctx.exception),
-                         "`non_existing()` is not a valid Streamlit command.")
+        self.assertEqual(
+            str(ctx.exception), "`non_existing()` is not a valid Streamlit command."
+        )
 
     def test_sidebar_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.write()
 
-        self.assertEqual(str(ctx.exception),
-                         "Method `write()` does not exist for `DeltaGenerator`"
-                         " objects. Did you mean `st.write()`?")
+        self.assertEqual(
+            str(ctx.exception),
+            "Method `write()` does not exist for `DeltaGenerator`"
+            " objects. Did you mean `st.write()`?",
+        )
 
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = (
-            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2))
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
         wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.

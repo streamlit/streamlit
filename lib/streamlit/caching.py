@@ -387,7 +387,6 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
         else:
             message = "Running %s(...)." % name
 
-
         def function():
             hasher = hashlib.new("md5")
 

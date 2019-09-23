@@ -195,7 +195,8 @@ _create_option(
 
         If you'd like to turn off this warning, set this to True.
         """,
-    default_val=False)
+    default_val=False,
+)
 
 
 _create_option(

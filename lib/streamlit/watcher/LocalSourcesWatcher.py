@@ -28,6 +28,7 @@ from streamlit import config
 from streamlit import util
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 try:
@@ -39,15 +40,18 @@ except ImportError:
     # Fallback that doesn't use watchdog.
     from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
-    if not config.get_option('global.disableWatchdogWarning'):
-        msg = '\n  $ xcode-select --install' if util.is_darwin() else ''
+    if not config.get_option("global.disableWatchdogWarning"):
+        msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
 
-        LOGGER.warning("""
+        LOGGER.warning(
+            """
   For better performance, install the Watchdog module:
   %s
   $ pip install watchdog
 
-        """ % msg)
+        """
+            % msg
+        )
 
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
