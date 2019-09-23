@@ -128,7 +128,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(ds.type, "<type 'function'>")
         else:
             self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(*args)")
+        self.assertEqual(ds.signature, "(*args, **kwargs)")
         self.assertTrue(ds.doc_string.startswith("Write arguments to the"))
 
     def test_builtin_func(self):
