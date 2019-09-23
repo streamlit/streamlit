@@ -33,8 +33,8 @@ jobs:
       #################################################################
       # Pre Cache Steps
       #################################################################
-      - run: &set_env_vars
-          name: set environment variables if in conda.
+      - run: &set_env_vars_if_in_conda
+          name: Set environment variables if in conda
           command: |
             if conda info; then
               echo "Conda found, setting variables."
@@ -49,8 +49,8 @@ jobs:
               md5sum make.bin > ~/make.md5
             fi
 
-      - run: &install_graphviz
-          name: install graphviz ie dot
+      - run: &get_dot_checksum
+          name: Get dot checksum
           command: |
             echo 'export SUDO="sudo"' >> $BASH_ENV
             if [ -f /usr/bin/dot ] ; then
@@ -66,13 +66,13 @@ jobs:
           # We use the python Pipfile.lock as the cache key and also
           # the hash of the current python.
           # If dependencies haven't changed then use the cache.
-          name: Create python cache key.
+          name: Create Python cache key
           command: |
             md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
             md5sum $(which python) >> ~/python_version.md5
 
       - run: &create_yarn_cache_key
-          name: Create yarn cache key.
+          name: Create Yarn cache key
           command: |
             md5sum frontend/yarn.lock > ~/yarn.lock.md5
 
@@ -80,7 +80,7 @@ jobs:
           # There is no lock file for the protobufs so we run a checksum
           # across all the protos and save that to a file to use as
           # cache key.
-          name: Create checksum for all protobufs
+          name: Checksum all protobufs
           command: |
             md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
 
@@ -121,7 +121,7 @@ jobs:
       # Pre Make commands
       #################################################################
       - run: &install_make
-          name: install make
+          name: Install make
           command: |
             if [ -s make.bin ] ; then
               echo "make.bin does exists and is non zero"
@@ -140,12 +140,12 @@ jobs:
             - make.bin
 
       - run: &install_dot
-          name: install dot
+          name: Install dot
           command: |
             if [ -s dot.bin ] ; then
-              echo "dot.bin does exists and is non zero"
+              echo "dot.bin exists and is non zero"
             else
-              echo "/usr/bin/dot doesnt exist, installing"
+              echo "/usr/bin/dot doesn't exist, installing"
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y graphviz
               cp -f /usr/bin/dot dot.bin
@@ -161,8 +161,8 @@ jobs:
       #################################################################
       # Run 'make init'
       #################################################################
-      - run: &install_nvm
-          name: Install NVM ie nodejs
+      - run: &install_nodejs
+          name: Install NVM, Node.js, and Yarn
           command: |
             if [ ! -d ~/.nvm ] ; then
               # install nodejs via nvm
@@ -180,7 +180,7 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv if necessary.
+          name: Run make pipenv-lock and create virtualenv if necessary
           command: |
             if echo ${CIRCLE_JOB} | egrep -qi conda ; then
               echo 'In conda, not creating virtualenv'
@@ -240,7 +240,7 @@ jobs:
       # Run linters
       #################################################################
       - run:
-          name: Run linters.
+          name: Run linters
           command: |
             make jslint
             make pylint
@@ -253,7 +253,7 @@ jobs:
       # Run make pycoverage
       #################################################################
       - run:
-          name: Run python tests.
+          name: Run python tests
           command: |
             make pycoverage
 
@@ -265,7 +265,7 @@ jobs:
       # Run integration tests
       #################################################################
       - run:
-          name: Run integration tests.
+          name: Run integration tests
           command: |
             make integration-tests
 
@@ -273,7 +273,7 @@ jobs:
       # Run frontend tests. (Only executed in the Python 3 job.)
       #################################################################
       - run:
-          name: Run frontend tests.
+          name: Run frontend tests
           command: |
             if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
               echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
@@ -334,10 +334,10 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
-          <<: *set_env_vars
+          <<: *set_env_vars_if_in_conda
 
       - run:
-          <<: *install_graphviz
+          <<: *get_dot_checksum
 
       - run:
           name: Create python cache key.
@@ -373,7 +373,7 @@ jobs:
           <<: *install_dot
 
       - run:
-          <<: *install_nvm
+          <<: *install_nodejs
 
       - run:
           <<: *activate_virtualenv
