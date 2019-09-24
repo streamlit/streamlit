@@ -23,4 +23,5 @@ message Slider {
   float min = 4;
   float max = 5;
   float step = 6;
+  string format = 7;
 }
