@@ -303,6 +303,7 @@ class DeltaGenerator(object):
                 id=msg.metadata.delta_id,
                 delta_type=delta_type,
                 last_index=last_index,
+                container=self._container,
                 is_root=False
             )
         else:

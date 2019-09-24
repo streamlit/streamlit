@@ -33,4 +33,8 @@ describe("st.sidebar", () => {
       force: true
     });
   });
+
+  it("handles overwriting elements", () => {
+    cy.get(".sidebar .stText").contains("overwritten");
+  });
 });
