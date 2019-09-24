@@ -37,6 +37,7 @@ def from_data_file(filename):
     url = os.path.join(dirname, "data", filename)
     return pd.read_json(url)
 
+
 # Grab some data
 bart_stop_stats = copy.deepcopy(from_data_file("bart_stop_stats.json"))
 bart_path_stats = from_data_file("bart_path_stats.json")
