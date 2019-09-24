@@ -55,15 +55,18 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
   </a>
 )
 
+// Handle rendering a link through a reference, ex [text](href)
+// Don't convert to a link if only `[text]` and missing `(href)`
 const linkReferenceHasParens = (props: LinkReferenceProps): any => {
-  console.log(props)
-  if (!props.href) {
-    return props.children.length ? `[${props.children[0].props.children}]` : ""
+  const { href, children } = props
+
+  if (!href) {
+    return children.length ? `[${children[0].props.children}]` : ""
   }
 
   return (
-    <a href={props.href} target="_blank" rel="noopener noreferrer">
-      {props.children}
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
     </a>
   )
 }
