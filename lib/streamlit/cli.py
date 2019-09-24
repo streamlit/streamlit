@@ -36,13 +36,17 @@ LOG_LEVELS = ["error", "warning", "info", "debug"]
 
 NEW_VERSION_TEXT = """
   %(new_version)s
+
   See what's new at https://discuss.streamlit.io/c/announcements
 
   Enter the following command to upgrade:
-  $ %(command)s
+  %(prompt)s %(command)s
 """ % {
-    "new_version": click.style("A new version of Streamlit is available.", fg="green"),
-    "command": click.style("pip install streamlit --upgrade", fg="white", bold=True),
+    "new_version": click.style(
+        "A new version of Streamlit is available.", fg="blue", bold=True),
+    "prompt": click.style("$", fg="blue"),
+    "command": click.style(
+        "pip install streamlit --upgrade", bold=True),
 }
 
 

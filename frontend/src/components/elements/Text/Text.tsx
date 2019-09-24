@@ -42,11 +42,6 @@ interface LinkProps {
   children: ReactElement
 }
 
-interface LinkReferenceProps {
-  href: string
-  children: [ReactElement]
-}
-
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 const linkWithTargetBlank = (props: LinkProps): ReactElement => (
@@ -54,22 +49,6 @@ const linkWithTargetBlank = (props: LinkProps): ReactElement => (
     {props.children}
   </a>
 )
-
-// Handle rendering a link through a reference, ex [text](href)
-// Don't convert to a link if only `[text]` and missing `(href)`
-const linkReferenceHasParens = (props: LinkReferenceProps): any => {
-  const { href, children } = props
-
-  if (!href) {
-    return children.length ? `[${children[0].props.children}]` : ""
-  }
-
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
-  )
-}
 
 interface Props {
   width: number
@@ -87,7 +66,6 @@ class Text extends React.PureComponent<Props> {
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
     }
 
     switch (format) {
@@ -143,7 +121,11 @@ class Text extends React.PureComponent<Props> {
             style={{ width }}
           >
             <div className="markdown-text-container">
-              <ReactMarkdown source={body} renderers={renderers} />
+              <ReactMarkdown
+                source={body}
+                escapeHtml={true}
+                renderers={renderers}
+              />
             </div>
           </div>
         )
