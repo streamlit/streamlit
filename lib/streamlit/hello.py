@@ -215,7 +215,7 @@ def demo_fractals():
             M[np.abs(Z) > 2] = False
             N[M] = i
 
-        plot.image(1.0 - (N / N.max()), clamp=True)
+        plot.image(1.0 - (N / N.max()), use_column_width=True)
     st.button("Re-run")
 
 
