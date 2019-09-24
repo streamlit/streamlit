@@ -89,7 +89,9 @@ def demo_3():
     st.balloons()
     st.button("Re-run")
 
+
 IMAGE_URL = "https://unsplash.com/photos/k0rVudBoB4c/download?force=true"
+
 
 def demo_4():
     """
