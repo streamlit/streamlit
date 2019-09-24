@@ -17,6 +17,7 @@ import logging
 import threading
 import sys
 import signal
+import errno
 from enum import Enum
 
 import tornado.concurrent
@@ -87,6 +88,33 @@ class State(Enum):
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
+def start_listening(app, call_count=0):
+    """makes the server start listening at the configured port.
+    In case the port is already taken it tries listening to the next available port.
+    It will error after a 100 attempts."""
+    port = config.get_option("server.port")
+    try:
+        app.listen(port)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            if call_count >= 100:
+                raise Exception("Port %s already in use, were unable to find a free port after a hundred attempts", port)
+            if config.is_manually_set("server.port"):
+                LOGGER.debug(
+                    "Port %s already in use, trying next available one", port
+                )
+                port += 1
+                # save port 3000 because it is used for the development server in the front end
+                if port == 3000:
+                    port += 1
+
+                config._set_option("server.port", port, "server initialization")
+                start_listening(app, call_count + 1)
+            else:
+                LOGGER.error("Port %s is already in use", port)
+                sys.exit(signal.NSIG)
+        else:
+            raise
 
 class Server(object):
 
@@ -143,31 +171,9 @@ class Server(object):
             raise RuntimeError("Server has already been started")
 
         LOGGER.debug("Starting server...")
+
         app = self._create_app()
-
-        def start_listening(call_count=0):
-            port = config.get_option("server.port")
-            try:
-                app.listen(port)
-            except OSError as e:
-                ADDRESS_ALREADY_IN_USE_ERROR_CODE = 48
-                if e.errno == ADDRESS_ALREADY_IN_USE_ERROR_CODE and call_count < 100:
-                    if config.is_manually_set("server.port"):
-                        LOGGER.debug(
-                            "Port %s already in use, trying next available one", port
-                        )
-                        port += 1
-                        if port == 3000:
-                            port += 1  # save the 3000
-                        config._set_option("server.port", port, "server initialization")
-                        start_listening(call_count + 1)
-                    else:
-                        LOGGER.error("Port %s is already in use", port)
-                        sys.exit(signal.NSIG)
-                else:
-                    raise
-
-        start_listening()
+        start_listening(app)
 
         port = config.get_option("server.port")
 

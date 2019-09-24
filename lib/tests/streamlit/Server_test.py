@@ -18,9 +18,11 @@
 import unittest
 
 import mock
+import pytest
 import tornado.testing
 import tornado.web
 import tornado.websocket
+import errno
 from mock import MagicMock
 from mock import patch
 from tornado import gen
@@ -32,6 +34,7 @@ from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
+from streamlit.server.Server import start_listening
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -304,6 +307,58 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._is_healthy = False
         response = self.fetch("/healthz")
         self.assertEqual(503, response.code)
+
+
+class PortRotateAHundredTest(unittest.TestCase):
+    """Tests port rotates up to a hundred times then sys exits"""
+
+    def get_app(self):
+        app = mock.MagicMock()
+
+        def listen(port):
+            raise OSError(errno.EADDRINUSE, "test", "asd")
+
+        app.listen = listen
+        return app
+
+    def test_rotates_a_hundred_ports(self):
+        app = self.get_app()
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            start_listening(app)
+            assert pytest_wrapped_e.type == SystemExit
+            assert pytest_wrapped_e.value.code == 42
+
+        assert app.listen.call_count == 100
+
+
+class PortRotateOneTest(unittest.TestCase):
+    """Tests port rotates one port"""
+
+    which_port = mock.Mock()
+
+    def get_app(self):
+        app = mock.MagicMock()
+
+        def listen(port):
+            if not port: # or port < 8502:
+                raise OSError(errno.EADDRINUSE, "test", "asd")
+            else:
+                PortRotateOneTest.which_port(port)
+
+        app.listen = listen
+        return app
+
+    @mock.patch('streamlit.config.is_manually_set')
+    @mock.patch('streamlit.config._set_option')
+    def test_rotates_one_port(self, patched__set_option, patched_is_manually_set):
+        app = self.get_app()
+
+        patched_is_manually_set.return_value = True
+
+        start_listening(app)
+
+        PortRotateOneTest.which_port.assert_called_with(8501)
+        patched__set_option.assert_called_with("server.port", 8502, "server initialization")
 
 
 class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
