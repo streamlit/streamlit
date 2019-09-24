@@ -100,7 +100,7 @@ def _with_element(method):
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(dg, method.__name__)
+        caching.maybe_show_cached_st_function_warning(dg)
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -125,9 +125,6 @@ def _widget(method):
             args = args[1:]
         else:
             raise TypeError("%s must have a label" % method.__name__)
-
-        # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(dg, method.__name__)
 
         ctx = get_report_ctx()
         # The widget ID is the widget type (i.e. the name "foo" of the

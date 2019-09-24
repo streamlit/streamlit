@@ -149,6 +149,20 @@ class CacheTest(unittest.TestCase):
         st.text("foo")
         warning.assert_not_called()
 
+        # Test st.cache functions with widgets
+        @st.cache
+        def cached_widget():
+            st.button("Press me!")
+
+        cached_widget()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
     def test_caching_counter(self):
         """Test that _within_cached_function_counter behaves properly in
         multiple threads."""

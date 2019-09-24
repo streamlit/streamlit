@@ -38,6 +38,16 @@ from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
 
+CACHED_ST_FUNCTION_WARNING = (
+    "Your script writes to the browser from within a cached function. "
+    'This code will only be called when we detect a cache "miss", which '
+    "can lead to unexpected results.\n\n"
+    "How to resolve this warning:\n\n"
+    "Move the streamlit function call outside the cached function.\n"
+    "Or, if you know what you're doing, use"
+    "@st.cache(suppress_st_warning=True) to suppress the warning."
+)
+
 
 try:
     # cPickle, if available, is much faster than pickle.
@@ -105,24 +115,14 @@ def _suppress_cached_st_function_warning():
         _cache_info.suppress_st_function_warning -= 1
 
 
-def _show_cached_st_function_warning(dg, func_name):
-    message = (
-        "Your code calls st.%(function_name)s from inside a cached function. "
-        "This means that st.%(function_name)s will only be called when we "
-        'detect a cache "miss".\n\n'
-        "How to resolve this:\n\n"
-        "Move the st.%(function_name)s call outside the cached function.\n"
-        "Or, if you know what you're doing, use "
-        "@st.cache(suppress_st_warning=True) to suppress this warning."
-    ) % {"function_name": func_name}
-
+def _show_cached_st_function_warning(dg):
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with _suppress_cached_st_function_warning():
-        dg.warning(message)
+        dg.warning(CACHED_ST_FUNCTION_WARNING)
 
 
-def maybe_show_cached_st_function_warning(dg, func_name):
+def maybe_show_cached_st_function_warning(dg):
     """If appropriate, warn about calling st.foo inside @cache.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
@@ -134,16 +134,12 @@ def maybe_show_cached_st_function_warning(dg, func_name):
     dg : DeltaGenerator
         The DeltaGenerator to publish the warning to.
 
-    func_name : str
-        The name of the st function being called. Used to give more
-        specific feedback to the user about how to solve the situation.
-
     """
     if (
         _cache_info.within_cached_func > 0
         and _cache_info.suppress_st_function_warning <= 0
     ):
-        _show_cached_st_function_warning(dg, func_name)
+        _show_cached_st_function_warning(dg)
 
 
 class _AddCopy(ast.NodeTransformer):
