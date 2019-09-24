@@ -35,7 +35,7 @@ text text text text text text text text text text text text text text text text
     )
 
 
-def demo_1():
+def demo_random_numbers():
     """
     Welcome to Streamlit! we're generating a bunch of random numbers in a loop
     for around 10 seconds. Enjoy!.
@@ -60,7 +60,7 @@ def demo_1():
     st.button("Re-run")
 
 
-def demo_11():
+def demo_sinc():
     """
     Welcome to Streamlit! we're generating a bunch of random numbers in a loop
     for around 10 seconds. Enjoy!.
@@ -85,7 +85,7 @@ def demo_11():
     st.button("Re-run")
 
 
-def demo_2():
+def demo_repetitions():
     """
     In this demo, we ask you to enter your name in the input box below.
     Streamlit will print it out with a number of repetitions given by a
@@ -96,7 +96,7 @@ def demo_2():
     st.write(name + "".join((" %s" % name) * (repetitions - 1)))
 
 
-def demo_22():
+def demo_bart_vs_bikes():
     """
     Bart vs bikes!
     """
@@ -164,7 +164,7 @@ def demo_22():
     )
 
 
-def demo_3():
+def demo_progress_bar():
     """
     This demo shows how to use Streamlit to implement a progress bar.
     """
@@ -188,37 +188,58 @@ counter = 0
 
 # https://tomroelandts.com/articles/how-to-compute-colorful-fractals-using-numpy-and-matplotlib
 # https://en.wikipedia.org/wiki/Julia_set
-def demo_31():
+def demo_fractals():
     """
     Fractal! This small app allow you to explore the Julia sets.
     """
     import numpy as np
     import matplotlib.pyplot as plt
 
-    parm = st.slider("Iterations", 0, 250, 100, 10)
-    c = st.selectbox(
-        "Polynomial constant", [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j]
-    )
+    def fig2data(fig):
+        """
+        @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
+        @param fig a matplotlib figure
+        @return a numpy 3D array of RGBA values
+        """
+        # draw the renderer
+        fig.canvas.draw()
+
+        # Get the RGBA buffer from the figure
+        w, h = fig.canvas.get_width_height()
+        buf = np.fromstring(fig.canvas.tostring_argb(), dtype=np.uint8)
+        buf.shape = (w, h, 3)
+
+        # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
+        # buf = np.roll(buf, 3, axis=2)
+        return buf
+
+    iterations = st.slider("Iterations", 0, 250, 100, 10)
+    # c = st.selectbox(
+    #     "Polynomial constant", [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j]
+    # )
+
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
-    Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
-
-    C = np.full((n, m), c)
-    M = np.full((n, m), True, dtype=bool)
-    N = np.zeros((n, m))
-
-    for i in range(parm):
-        Z[M] = Z[M] * Z[M] + C[M]
-        M[np.abs(Z) > 2] = False
-        N[M] = i
-
+    plot = st.pyplot()
     plt.axis("off")
-    plt.imshow(np.flipud(N), cmap="hot")
-    st.pyplot()
+    for a in np.linspace(0.0, 2 * np.pi, 15):
+        c = 0.7885 * np.exp(1j * a)
+        Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
+        C = np.full((n, m), c)
+        M = np.full((n, m), True, dtype=bool)
+        N = np.zeros((n, m))
+
+        for i in range(iterations):
+            Z[M] = Z[M] * Z[M] + C[M]
+            M[np.abs(Z) > 2] = False
+            N[M] = i
+
+        plt.imshow(np.flipud(N), cmap="hot")
+        plot.pyplot()
 
 
-def demo_4():
+def demo_deformation():
     """
     <...>.
     """
@@ -300,7 +321,7 @@ def demo_4():
     src_grid = distort_grid(dst_grid, p1)
     mesh = grid_to_mesh(src_grid, dst_grid)
     im = image.transform(image.size, Image.MESH, mesh)
-    st.image(im)
+    st.image(im, use_column_width=True)
 
 
 # Data for demo_5 derived from
@@ -310,7 +331,7 @@ DATASET_URL = (
 )
 
 
-def demo_5():
+def demo_movies():
     """
     Discover the gross revenue of a movie of your liking!
     Note that the network loading and preprocessing of the data is cached
@@ -336,11 +357,11 @@ def demo_5():
 DEMOS = OrderedDict(
     {
         "---": intro,
-        "Number Generator": demo_11,
-        "Bart vs Bikes": demo_22,
-        "Fractals": demo_31,
-        "Sidebar": demo_4,
-        "Caching": demo_5,
+        "Number Generator": demo_random_numbers,
+        "Bart vs Bikes": demo_bart_vs_bikes,
+        "Fractals": demo_fractals,
+        "Image Deformation": demo_deformation,
+        "Movies": demo_movies,
     }
 )
 
