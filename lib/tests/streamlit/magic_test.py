@@ -115,7 +115,7 @@ myfunc(a)
         self._testCode(CODE_FUNCTION_CALL, 1)
 
     def test_with_statement(self):
-        """Test with 'with' statements"""
+        """Test 'with' statements"""
         CODE_WITH_STATEMENT = """
 a = 10
 with None:
@@ -124,7 +124,7 @@ with None:
         self._testCode(CODE_WITH_STATEMENT, 1)
 
     def test_while_statement(self):
-        """Test that 'yield' expressions do not get magicked"""
+        """Test 'while' statements"""
         CODE_WHILE_STATEMENT = """
 a = 10
 while True:

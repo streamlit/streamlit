@@ -23,8 +23,6 @@ setup_2_3_shims(globals())
 
 import streamlit as st
 from streamlit import config
-from streamlit.elements.Chart import Chart
-from streamlit.ReportThread import get_report_ctx
 
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
@@ -35,7 +33,6 @@ import keras
 import math
 import numpy as np
 import pandas as pd
-import sys
 import time
 
 # https://kobkrit.com/using-allow-growth-memory-option-in-tensorflow-and-keras-dc8c8081bc96
@@ -56,7 +53,7 @@ class MyCallback(keras.callbacks.Callback):
 
     def on_train_begin(self, logs=None):
         st.header("Summary")
-        self._summary_chart = self._create_chart("area", 300)
+        self._summary_chart = st.area_chart()
         self._summary_stats = st.text("%8s :  0" % "epoch")
         st.header("Training Log")
 
@@ -64,7 +61,7 @@ class MyCallback(keras.callbacks.Callback):
         self._ts = time.time()
         self._epoch = epoch
         st.subheader("Epoch %s" % epoch)
-        self._epoch_chart = self._create_chart("line")
+        self._epoch_chart = st.line_chart()
         self._epoch_progress = st.info("No stats yet.")
         self._epoch_summary = st.empty()
 
@@ -72,7 +69,8 @@ class MyCallback(keras.callbacks.Callback):
         rows = pd.DataFrame(
             [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"])
         if batch % 10 == 0:
-            self._epoch_chart.add_rows(rows)
+            self._epoch_chart.add_rows({"loss": [logs["loss"]],
+                                        "accuracy": [logs["accuracy"]]})
         if batch % 100 == 99:
             self._summary_chart.add_rows(rows)
         percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
@@ -97,42 +95,6 @@ class MyCallback(keras.callbacks.Callback):
             "%(epoch)8s :  %(epoch)s\n%(summary)s"
             % {"epoch": epoch, "summary": summary}
         )
-
-    def _create_chart(self, type="line", height=0):
-        empty_data = pd.DataFrame(columns=["loss", "accuracy"])
-        epoch_chart = Chart(empty_data, "%s_chart" % type, height=height)
-        epoch_chart.y_axis(
-            type="number", y_axis_id="loss_axis", allow_data_overflow="true"
-        )
-        epoch_chart.y_axis(
-            type="number",
-            orientation="right",
-            y_axis_id="acc_axis",
-            allow_data_overflow="true",
-        )
-        epoch_chart.cartesian_grid(stroke_dasharray="3 3")
-        epoch_chart.legend()
-        getattr(epoch_chart, type)(
-            type="monotone",
-            data_key="loss",
-            stroke="rgb(44,125,246)",
-            fill="rgb(44,125,246)",
-            dot="false",
-            y_axis_id="loss_axis",
-        )
-        getattr(epoch_chart, type)(
-            type="monotone",
-            data_key="accuracy",
-            stroke="#82ca9d",
-            fill="#82ca9d",
-            dot="false",
-            y_axis_id="acc_axis",
-        )
-        # HACK: Use get_report_ctx() to grab root delta generator in an i9e
-        # world.
-        # TODO: Make this file not need _native_chart
-        return get_report_ctx().main_dg._native_chart(epoch_chart)
-
 
 st.title("MNIST CNN")
 

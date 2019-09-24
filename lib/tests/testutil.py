@@ -23,6 +23,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportThread import REPORT_CONTEXT_ATTR_NAME
 from streamlit.ReportThread import ReportContext
 from streamlit.widgets import Widgets
+from streamlit.proto.BlockPath_pb2 import BlockPath
 
 
 def build_mock_config_get_option(overrides_dict):
@@ -53,7 +54,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
         if override_root:
             main_dg = self.new_delta_generator()
-            sidebar_dg = self.new_delta_generator()
+            sidebar_dg = self.new_delta_generator(container=BlockPath.SIDEBAR)
             setattr(
                 threading.current_thread(),
                 REPORT_CONTEXT_ATTR_NAME,

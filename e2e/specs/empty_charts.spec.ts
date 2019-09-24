@@ -24,7 +24,9 @@ describe("handles empty charts", () => {
 
   it("gracefully handles no data", () => {
     // vega lite
-    cy.get(".stVegaLiteChart").matchImageSnapshot("empty-vega-lite-chart");
+    cy.get(".element-container .stVegaLiteChart").each((el, i) => {
+      cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+    });
 
     // pyplot
     cy.get(".stImage > img").should("have.attr", "src");
@@ -72,34 +74,6 @@ describe("handles empty charts", () => {
 
     cy.get(".stException .message")
       .eq(5)
-      .should(
-        "have.text",
-        "TypeError: line_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(6)
-      .should(
-        "have.text",
-        "TypeError: area_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(7)
-      .should(
-        "have.text",
-        "TypeError: bar_chart() missing 1 required positional argument: 'data'"
-      );
-
-    cy.get(".stException .message")
-      .eq(8)
-      .should(
-        "have.text",
-        "TypeError: _native_chart() missing 1 required positional argument: 'chart'"
-      );
-
-    cy.get(".stException .message")
-      .eq(9)
       .should(
         "have.text",
         "TypeError: map() missing 1 required positional argument: 'data'"
