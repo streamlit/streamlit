@@ -83,6 +83,7 @@
     "@types/react-virtualized": "^9.21.3",
     "@types/reactstrap": "^8.0.1",
     "@types/recharts": "^1.1.20",
+    "@types/sprintf-js": "^1.1.2",
     "@types/styletron-engine-atomic": "^1.1.0",
     "@types/styletron-react": "^5.0.1",
     "@types/styletron-standard": "^2.0.0",

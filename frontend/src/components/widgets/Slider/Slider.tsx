@@ -21,7 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { debounce } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
-var sprintf = require("sprintf-js").sprintf
+import { sprintf } from "sprintf-js"
 
 interface Props {
   disabled: boolean
@@ -142,14 +142,12 @@ class Slider extends React.PureComponent<Props, State> {
     const format = element.get("format")
     const max = element.get("max")
     const min = element.get("min")
+    const tickBarItemStyle = sliderOverrides.TickBarItem
+      .style as React.CSSProperties
     return (
       <div style={sliderOverrides.TickBar.style}>
-        <div style={sliderOverrides.TickBarItem.style}>
-          {sprintf(format, min)}
-        </div>
-        <div style={sliderOverrides.TickBarItem.style}>
-          {sprintf(format, max)}
-        </div>
+        <div style={tickBarItemStyle}>{sprintf(format, min)}</div>
+        <div style={tickBarItemStyle}>{sprintf(format, max)}</div>
       </div>
     )
   }
@@ -174,7 +172,6 @@ class Slider extends React.PureComponent<Props, State> {
           disabled={this.props.disabled}
           overrides={{
             ...sliderOverrides,
-            // @Dani:here is doc about how override subcomponents:  https://baseweb.design/components/slider/
             ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
           }}

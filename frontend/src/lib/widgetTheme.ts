@@ -84,11 +84,11 @@ export const sliderOverrides = {
       paddingBottom: smallTextMargin,
       color: $disabled ? gray : primary,
       top: "-22px",
-      position: "absolute" as "absolute",
+      position: "absolute",
       whiteSpace: "nowrap",
       backgroundColor: "transparent",
-      lineHeight: 1.6,
-      fontWeight: "normal" as "normal",
+      lineHeight: lineHeightBase,
+      fontWeight: "normal",
     }),
   },
   TickBar: {
@@ -104,8 +104,8 @@ export const sliderOverrides = {
   },
   TickBarItem: {
     style: {
-      lineHeight: 1.6,
-      fontWeight: "normal" as "normal",
+      lineHeight: lineHeightBase,
+      fontWeight: "normal",
       fontSize: labelFontSize,
       fontFamily: fontFamilyMono,
     },

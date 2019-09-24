@@ -1513,22 +1513,22 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        label : str
+        label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float
+        min_value : int/float or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 otherwise.
-        max_value : int/float
+        max_value : int/float or None
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
-        value : int/float or a tuple/list of int/float
+        value : int/float or a tuple/list of int/float or None
             The value of this widget when it first renders. In case the value
             is passed as a tuple/list a range slider will be used.
             Defaults to min_value.
-        step : int/float
+        step : int/float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
-        format : str
+        format : str or None
             Printf/Python format string.
             
 
@@ -1650,6 +1650,10 @@ class DeltaGenerator(object):
                 format = "%d"
             else:
                 format = "%0.2f"
+        # It would be great if we could guess the number of decimal places from
+        # the step`argument, but this would only be meaningful if step were a decimal. 
+        # As a possible improvement we could make this function accept decimals 
+        # and/or use some heuristics for floats.
        
         element.slider.label = label
         element.slider.value[:] = [
