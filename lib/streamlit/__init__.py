@@ -329,7 +329,7 @@ def write(*args, **kwargs):
     # Python2 doesn't support this syntax
     #   def write(*args, unsafe_allow_html=False)
     # so we do this instead:
-    unsafe_allow_html = kwargs.get('unsafe_allow_html', False)
+    unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
     try:
         string_buffer = []
@@ -337,8 +337,8 @@ def write(*args, **kwargs):
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer),
-                    unsafe_allow_html=unsafe_allow_html)  # noqa: F821
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html
+                )  # noqa: F821
                 string_buffer[:] = []
 
         for arg in args:
@@ -474,7 +474,15 @@ def spinner(text="In progress..."):
 
     """
     display_message_lock = None
-    message = empty()
+
+    # @st.cache optionally uses spinner for long-running computations.
+    # Normally, streamlit warns the user when they call st functions
+    # from within an @st.cache'd function. But we do *not* want to show
+    # these warnings for spinner's message, so we create and mutate this
+    # message delta within the "suppress_cached_st_function_warning"
+    # context.
+    with caching._suppress_cached_st_function_warning():
+        message = empty()
 
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
@@ -486,7 +494,8 @@ def spinner(text="In progress..."):
         def set_message():
             with display_message_lock:
                 if display_message:
-                    message.warning(str(text))
+                    with caching._suppress_cached_st_function_warning():
+                        message.warning(str(text))
 
         add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
@@ -496,7 +505,8 @@ def spinner(text="In progress..."):
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        message.empty()
+        with caching._suppress_cached_st_function_warning():
+            message.empty()
 
 
 _SPACES_RE = _re.compile("\\s*")

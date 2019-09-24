@@ -70,45 +70,80 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
 _mem_cache = {}  # type: Dict[string, CacheEntry]
 
 
-# A thread local integer that's incremented when we enter @st.cache,
-# and decremented on exit.
-class WithinCachedFunctionCounter(threading.local):
+# A thread-local counter that's incremented when we enter @st.cache
+# and decremented when we exit.
+class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.val = 0
+        self.within_cached_func = 0
+        self.suppress_st_function_warning = 0
 
 
-_within_cached_function_counter = WithinCachedFunctionCounter()
-
-
-def is_within_cached_function():
-    """True when an @st.cache function has been entered in the current thread.
-
-    DeltaGenerator methods call this to check that they're not being called
-    from within @st.cache.
-
-    Returns
-    -------
-    bool
-
-    """
-    return _within_cached_function_counter.val > 0
+_cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
 def _within_cached_function():
-    _within_cached_function_counter.val += 1
+    """A context manager that increments the "within_cached_func" counter
+    for the current thread.
+    """
+    _cache_info.within_cached_func += 1
     try:
         yield
     finally:
-        if _within_cached_function_counter.val > 0:
-            _within_cached_function_counter.val -= 1
-        else:
-            # Sanity check. This should not be possible.
-            raise RuntimeError(
-                "_is_caching_counter was mutated outside of the "
-                "_increment_is_caching_counter() contextmanager. "
-                "Don't do this!"
-            )
+        _cache_info.within_cached_func -= 1
+
+
+@contextlib.contextmanager
+def _suppress_cached_st_function_warning():
+    """A context manager that increments the "suppress_st_function_warning"
+    counter for the current thread.
+    """
+    _cache_info.suppress_st_function_warning += 1
+    try:
+        yield
+    finally:
+        _cache_info.suppress_st_function_warning -= 1
+
+
+def _show_cached_st_function_warning(dg, func_name):
+    message = (
+        "Your code calls st.%(function_name)s from inside a cached function. "
+        "This means that st.%(function_name)s will only be called when we "
+        'detect a cache "miss".\n\n'
+        "How to resolve this:\n\n"
+        "Move the st.%(function_name)s call outside the cached function.\n"
+        "Or, if you know what you're doing, use "
+        "@st.cache(suppress_st_warning=True) to suppress this warning."
+    ) % {"function_name": func_name}
+
+    # Avoid infinite recursion by suppressing additional cached
+    # function warnings from within the cached function warning.
+    with _suppress_cached_st_function_warning():
+        dg.warning(message)
+
+
+def maybe_show_cached_st_function_warning(dg, func_name):
+    """If appropriate, warn about calling st.foo inside @cache.
+
+    DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+    the user when they're calling st.foo() from within a function that is
+    wrapped in @st.cache.
+
+    Parameters
+    ----------
+    dg : DeltaGenerator
+        The DeltaGenerator to publish the warning to.
+
+    func_name : str
+        The name of the st function being called. Used to give more
+        specific feedback to the user about how to solve the situation.
+
+    """
+    if (
+        _cache_info.within_cached_func > 0
+        and _cache_info.suppress_st_function_warning <= 0
+    ):
+        _show_cached_st_function_warning(dg, func_name)
 
 
 class _AddCopy(ast.NodeTransformer):
@@ -353,7 +388,13 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
         _write_to_disk_cache(key, value, args_mutated)
 
 
-def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
+def cache(
+    func=None,
+    persist=False,
+    ignore_hash=False,
+    show_spinner=True,
+    suppress_st_warning=False,
+):
     """Function decorator to memoize function executions.
 
     Parameters
@@ -373,6 +414,10 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     show_spinner : boolean
         Enable the spinner. Default is True to show a spinner when there is
         a cache miss.
+
+    suppress_st_warning : boolean
+        Suppress warnings about calling streamlit functions from within
+        the cached function.
 
     Example
     -------
@@ -407,11 +452,15 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     ...     return data
 
     """
-    # Support setting the persist and ignore_hash parameters via
+    # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, ignore_hash=True)
     if func is None:
         return lambda f: cache(
-            func=f, persist=persist, ignore_hash=ignore_hash, show_spinner=show_spinner
+            func=f,
+            persist=persist,
+            ignore_hash=ignore_hash,
+            show_spinner=show_spinner,
+            suppress_st_warning=suppress_st_warning,
         )
 
     @wraps(func)
@@ -454,7 +503,11 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 with _within_cached_function():
-                    return_value = func(*argc, **argv)
+                    if suppress_st_warning:
+                        with _suppress_cached_st_function_warning():
+                            return_value = func(*argc, **argv)
+                    else:
+                        return_value = func(*argc, **argv)
 
                 args_hasher_after = CodeHasher("md5")
                 args_hasher_after.update([argc, argv])
@@ -464,14 +517,10 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
 
             if args_mutated:
                 # If we're inside a _nested_ cached function, our
-                # _within_cached_function_counter will be non-zero. Temporarily
-                # reset the counter for the purposes of calling st.warning,
-                # so that st.warning does not itself complain about being
-                # called from within a cached function.
-                counter_val = _within_cached_function_counter.val
-                _within_cached_function_counter.val = 0
-                st.warning(_build_args_mutated_message(func))
-                _within_cached_function_counter.val = counter_val
+                # _within_cached_function_counter will be non-zero.
+                # Suppress the warning about this.
+                with _suppress_cached_st_function_warning():
+                    st.warning(_build_args_mutated_message(func))
             return return_value
 
         if show_spinner:

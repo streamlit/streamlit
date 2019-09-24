@@ -22,12 +22,11 @@ from mock import patch
 import streamlit as st
 from streamlit import caching
 from streamlit.caching import _build_args_mutated_message
-from streamlit.caching import is_within_cached_function
 
 
 class CacheTest(unittest.TestCase):
     def tearDown(self):
-        st.caching._within_cached_function_counter.val = 0
+        st.caching._cache_info.val = 0
 
     def test_simple(self):
         @st.cache
@@ -89,52 +88,73 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_called_with(_build_args_mutated_message(f))
 
-    def test_is_within_cached_function(self):
-        # By default, we're not within @st.cache
-        self.assertFalse(is_within_cached_function())
+    @patch("streamlit.caching._show_cached_st_function_warning")
+    def test_cached_st_function_warning(self, warning):
+        st.text("foo")
+        warning.assert_not_called()
 
         @st.cache
-        def f():
-            # This should be true when we're in a cache function
-            return is_within_cached_function()
+        def cached_func():
+            st.text("Inside cached func")
 
-        was_within_cached_function = f()
-        self.assertTrue(was_within_cached_function)
-        self.assertFalse(is_within_cached_function())
+        cached_func()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test warning suppression
+        @st.cache(suppress_st_warning=True)
+        def suppressed_cached_func():
+            st.text("No warnings here!")
+
+        suppressed_cached_func()
+
+        warning.assert_not_called()
 
         # Test nested st.cache functions
         @st.cache
         def outer():
             @st.cache
             def inner():
-                return is_within_cached_function()
+                st.text("Inside nested cached func")
 
             return inner()
 
-        was_within_cached_function = outer()
-        self.assertTrue(was_within_cached_function)
-        self.assertFalse(is_within_cached_function())
+        outer()
+        warning.assert_called_once()
+
+        warning.reset_mock()
 
         # Test st.cache functions that raise errors
         with self.assertRaises(RuntimeError):
 
             @st.cache
             def cached_raise_error():
-                self.assertTrue(is_within_cached_function())
+                st.text("About to throw")
                 raise RuntimeError("avast!")
 
             cached_raise_error()
-        self.assertFalse(is_within_cached_function())
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
 
     def test_caching_counter(self):
         """Test that _within_cached_function_counter behaves properly in
         multiple threads."""
 
         def get_counter():
-            return caching._within_cached_function_counter.val
+            return caching._cache_info.within_cached_func
 
         def set_counter(val):
-            caching._within_cached_function_counter.val = val
+            caching._cache_info.within_cached_func = val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
