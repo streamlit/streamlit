@@ -26,7 +26,10 @@ from streamlit.caching import _build_args_mutated_message
 
 class CacheTest(unittest.TestCase):
     def tearDown(self):
-        st.caching._cache_info.val = 0
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        st.caching._cache_info.within_cached_func = 0
+        st.caching._cache_info.suppress_st_function_warning = 0
 
     def test_simple(self):
         @st.cache
