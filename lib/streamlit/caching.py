@@ -39,7 +39,7 @@ from streamlit.logger import get_logger
 setup_2_3_shims(globals())
 
 CACHED_ST_FUNCTION_WARNING = (
-    "Your script writes to the browser from within a cached function. "
+    "Your script writes to your Streamlit app from within a cached function. "
     'This code will only be called when we detect a cache "miss", which '
     "can lead to unexpected results.\n\n"
     "How to resolve this warning:\n\n"
