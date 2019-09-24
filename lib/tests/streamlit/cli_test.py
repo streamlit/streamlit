@@ -101,8 +101,9 @@ class CliTest(unittest.TestCase):
 
     def test_run_with_spaces(self):
         """streamlit run succeeds if an existing file is passed"""
-        with patch("validators.url", return_value=False),\
-             patch("os.path.exists", return_value=True):
+        with patch("validators.url", return_value=False), patch(
+            "os.path.exists", return_value=True
+        ):
 
             result = self.runner.invoke(cli, ["run", "file space name", "arg1", "arg2"])
         self.assertEqual(0, result.exit_code)
