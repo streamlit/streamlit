@@ -59,6 +59,7 @@ def demo_1():
     success.success("Complete!")
     st.button("Re-run")
 
+
 def demo_11():
     """
     Welcome to Streamlit! we're generating a bunch of random numbers in a loop
@@ -94,6 +95,7 @@ def demo_2():
     repetitions = st.slider("Repetitions", 1, 100, 10)
     st.write(name + "".join((" %s" % name) * (repetitions - 1)))
 
+
 def demo_22():
     """
     Bart vs bikes!
@@ -104,7 +106,9 @@ def demo_22():
 
     @st.cache
     def from_data_file(filename):
-        dirname = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
+        dirname = (
+            "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
+        )
         url = os.path.join(dirname, "data", filename)
         return pd.read_json(url)
 
@@ -120,8 +124,7 @@ def demo_22():
     bart_stop_stats.insert(0, "name", bart_stop_names)
 
     st.deck_gl_chart(
-        viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11,
-                  "pitch": 50},
+        viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
         layers=[
             {
                 # Plot number of bike rentals throughtout the city
@@ -159,6 +162,7 @@ def demo_22():
             },
         ],
     )
+
 
 def demo_3():
     """
@@ -205,28 +209,43 @@ def demo_4():
 
         def getmesh(self, im):
             x, y = im.size
-            return [(
+            return [
+                (
                     (p1, p2, x + self.p1, y + self.p1),
-                    (p1, p2, x + self.p1, p2, x + self.p1, y + self.p1, y + self.p1, p2),
-                )]
+                    (
+                        p1,
+                        p2,
+                        x + self.p1,
+                        p2,
+                        x + self.p1,
+                        y + self.p1,
+                        y + self.p1,
+                        p2,
+                    ),
+                )
+            ]
 
     import numpy as np
     from PIL import Image
 
     def quad_as_rect(quad):
-        if quad[0] != quad[2]: return False
-        if quad[1] != quad[7]: return False
-        if quad[4] != quad[6]: return False
-        if quad[3] != quad[5]: return False
+        if quad[0] != quad[2]:
+            return False
+        if quad[1] != quad[7]:
+            return False
+        if quad[4] != quad[6]:
+            return False
+        if quad[3] != quad[5]:
+            return False
         return True
 
     def quad_to_rect(quad):
-        assert (len(quad) == 8)
-        assert (quad_as_rect(quad))
+        assert len(quad) == 8
+        assert quad_as_rect(quad)
         return (quad[0], quad[1], quad[4], quad[3])
 
     def shape_to_rect(shape):
-        assert (len(shape) == 2)
+        assert len(shape) == 2
         return (0, 0, shape[0], shape[1])
 
     def griddify(rect, w_div, h_div):
@@ -252,8 +271,7 @@ def demo_4():
         y_min = np.min(new_grid[:, :, 1])
         x_max = np.max(new_grid[:, :, 0])
         y_max = np.max(new_grid[:, :, 1])
-        new_grid += np.random.randint(- max_shift, max_shift + 1,
-                                      new_grid.shape)
+        new_grid += np.random.randint(-max_shift, max_shift + 1, new_grid.shape)
         # new_grid += np.full(new_grid.shape, -max_shift)
         new_grid[:, :, 0] = np.maximum(x_min, new_grid[:, :, 0])
         new_grid[:, :, 1] = np.maximum(y_min, new_grid[:, :, 1])
@@ -262,24 +280,33 @@ def demo_4():
         return new_grid
 
     def grid_to_mesh(src_grid, dst_grid):
-        assert (src_grid.shape == dst_grid.shape)
+        assert src_grid.shape == dst_grid.shape
         mesh = []
         for i in range(src_grid.shape[0] - 1):
             for j in range(src_grid.shape[1] - 1):
-                src_quad = [src_grid[i, j, 0], src_grid[i, j, 1],
-                            src_grid[i + 1, j, 0], src_grid[i + 1, j, 1],
-                            src_grid[i + 1, j + 1, 0],
-                            src_grid[i + 1, j + 1, 1],
-                            src_grid[i, j + 1, 0], src_grid[i, j + 1, 1]]
-                dst_quad = [dst_grid[i, j, 0], dst_grid[i, j, 1],
-                            dst_grid[i + 1, j, 0], dst_grid[i + 1, j, 1],
-                            dst_grid[i + 1, j + 1, 0],
-                            dst_grid[i + 1, j + 1, 1],
-                            dst_grid[i, j + 1, 0], dst_grid[i, j + 1, 1]]
+                src_quad = [
+                    src_grid[i, j, 0],
+                    src_grid[i, j, 1],
+                    src_grid[i + 1, j, 0],
+                    src_grid[i + 1, j, 1],
+                    src_grid[i + 1, j + 1, 0],
+                    src_grid[i + 1, j + 1, 1],
+                    src_grid[i, j + 1, 0],
+                    src_grid[i, j + 1, 1],
+                ]
+                dst_quad = [
+                    dst_grid[i, j, 0],
+                    dst_grid[i, j, 1],
+                    dst_grid[i + 1, j, 0],
+                    dst_grid[i + 1, j, 1],
+                    dst_grid[i + 1, j + 1, 0],
+                    dst_grid[i + 1, j + 1, 1],
+                    dst_grid[i, j + 1, 0],
+                    dst_grid[i, j + 1, 1],
+                ]
                 dst_rect = quad_to_rect(dst_quad)
                 mesh.append([dst_rect, src_quad])
         return mesh
-
 
     # image = load_image()
     p1 = st.sidebar.slider("Parm1", 0, 100, 0, 10)
@@ -302,6 +329,7 @@ def demo_4():
     mesh = grid_to_mesh(src_grid, dst_grid)
     im = image.transform(image.size, Image.MESH, mesh)
     st.image(im)
+
 
 # Data for demo_5 derived from
 # https://www.kaggle.com/rounakbanik/the-movies-dataset
