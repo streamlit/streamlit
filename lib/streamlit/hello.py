@@ -196,8 +196,9 @@ def demo_31():
     import matplotlib.pyplot as plt
 
     parm = st.slider("Iterations", 0, 250, 100, 10)
-    c = st.selectbox("Polynomial constant",
-                     [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j])
+    c = st.selectbox(
+        "Polynomial constant", [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j]
+    )
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
@@ -212,8 +213,8 @@ def demo_31():
         M[np.abs(Z) > 2] = False
         N[M] = i
 
-    plt.axis('off')
-    plt.imshow(np.flipud(N), cmap='hot')
+    plt.axis("off")
+    plt.imshow(np.flipud(N), cmap="hot")
     st.pyplot()
 
 
