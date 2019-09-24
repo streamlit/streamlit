@@ -184,13 +184,43 @@ def demo_3():
 
 
 IMAGE_URL = "https://unsplash.com/photos/k0rVudBoB4c/download?force=true"
+counter = 0
+
+# https://tomroelandts.com/articles/how-to-compute-colorful-fractals-using-numpy-and-matplotlib
+# https://en.wikipedia.org/wiki/Julia_set
+def demo_31():
+    """
+    Fractal! This small app allow you to explore the Julia sets.
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    parm = st.slider("Iterations", 0, 250, 100, 10)
+    c = st.selectbox("Polynomial constant",
+                     [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j])
+    m, n, s = 480, 320, 300
+    x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
+    y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
+    Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
+
+    C = np.full((n, m), c)
+    M = np.full((n, m), True, dtype=bool)
+    N = np.zeros((n, m))
+
+    for i in range(parm):
+        Z[M] = Z[M] * Z[M] + C[M]
+        M[np.abs(Z) > 2] = False
+        N[M] = i
+
+    plt.axis('off')
+    plt.imshow(np.flipud(N), cmap='hot')
+    st.pyplot()
 
 
 def demo_4():
     """
     <...>.
     """
-    from PIL import Image, ImageFilter, ImageOps
     import requests
     from io import BytesIO
 
@@ -198,55 +228,8 @@ def demo_4():
     def load_image():
         return Image.open(BytesIO(requests.get(IMAGE_URL).content))
 
-    @st.cache
-    def blur(image):
-        return image.filter(ImageFilter.BLUR)
-
-    class BasicDeformer:
-        def __init__(self, p1, p2):
-            self.p1 = p1
-            self.p2 = p2
-
-        def getmesh(self, im):
-            x, y = im.size
-            return [
-                (
-                    (p1, p2, x + self.p1, y + self.p1),
-                    (
-                        p1,
-                        p2,
-                        x + self.p1,
-                        p2,
-                        x + self.p1,
-                        y + self.p1,
-                        y + self.p1,
-                        p2,
-                    ),
-                )
-            ]
-
     import numpy as np
     from PIL import Image
-
-    def quad_as_rect(quad):
-        if quad[0] != quad[2]:
-            return False
-        if quad[1] != quad[7]:
-            return False
-        if quad[4] != quad[6]:
-            return False
-        if quad[3] != quad[5]:
-            return False
-        return True
-
-    def quad_to_rect(quad):
-        assert len(quad) == 8
-        assert quad_as_rect(quad)
-        return (quad[0], quad[1], quad[4], quad[3])
-
-    def shape_to_rect(shape):
-        assert len(shape) == 2
-        return (0, 0, shape[0], shape[1])
 
     def griddify(rect, w_div, h_div):
         w = rect[2] - rect[0]
@@ -272,7 +255,6 @@ def demo_4():
         x_max = np.max(new_grid[:, :, 0])
         y_max = np.max(new_grid[:, :, 1])
         new_grid += np.random.randint(-max_shift, max_shift + 1, new_grid.shape)
-        # new_grid += np.full(new_grid.shape, -max_shift)
         new_grid[:, :, 0] = np.maximum(x_min, new_grid[:, :, 0])
         new_grid[:, :, 1] = np.maximum(y_min, new_grid[:, :, 1])
         new_grid[:, :, 0] = np.minimum(x_max, new_grid[:, :, 0])
@@ -304,27 +286,16 @@ def demo_4():
                     dst_grid[i, j + 1, 0],
                     dst_grid[i, j + 1, 1],
                 ]
-                dst_rect = quad_to_rect(dst_quad)
+                dst_rect = (dst_quad[0], dst_quad[1], dst_quad[4], dst_quad[3])
                 mesh.append([dst_rect, src_quad])
         return mesh
 
-    # image = load_image()
-    p1 = st.sidebar.slider("Parm1", 0, 100, 0, 10)
-    # p2 = st.sidebar.slider("Parm2", 0, 100, 0)
-    # image = Image.open("markus-spiske.jpg")
+    p1 = st.sidebar.slider("Parm1", 0, 100, 0, 1)
     image = Image.open("maarten-van-den-heuvel.jpg")
-    # image = ImageOps.deform(image, BasicDeformer(p1, p2))
-    # # st.markdown("#### Image blurred %d times" % blurs)
-    # blurred = image
-    # # for i in range(blurs):
-    # #     blurred = blur(blurred)
-    # # st.image(blur(image, blurs))
-    # st.image(blurred)
 
     rect = (0, 0, 1024, 576)
     # dst_grid = griddify(shape_to_rect(image.size), 4, 4)
     dst_grid = griddify(rect, 4, 4)
-    st.write(dst_grid)
     src_grid = distort_grid(dst_grid, p1)
     mesh = grid_to_mesh(src_grid, dst_grid)
     im = image.transform(image.size, Image.MESH, mesh)
@@ -366,7 +337,7 @@ DEMOS = OrderedDict(
         "---": intro,
         "Number Generator": demo_11,
         "Bart vs Bikes": demo_22,
-        "Animation": demo_3,
+        "Fractals": demo_31,
         "Sidebar": demo_4,
         "Caching": demo_5,
     }
