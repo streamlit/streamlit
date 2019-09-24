@@ -195,35 +195,15 @@ def demo_fractals():
     import numpy as np
     import matplotlib.pyplot as plt
 
-    def fig2data(fig):
-        """
-        @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
-        @param fig a matplotlib figure
-        @return a numpy 3D array of RGBA values
-        """
-        # draw the renderer
-        fig.canvas.draw()
-
-        # Get the RGBA buffer from the figure
-        w, h = fig.canvas.get_width_height()
-        buf = np.fromstring(fig.canvas.tostring_argb(), dtype=np.uint8)
-        buf.shape = (w, h, 3)
-
-        # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
-        # buf = np.roll(buf, 3, axis=2)
-        return buf
-
-    iterations = st.slider("Iterations", 0, 250, 100, 10)
-    # c = st.selectbox(
-    #     "Polynomial constant", [-0.4 + 0.6j, 0.285 + 0.01j, -0.8 + 0.156j, -0.8j]
-    # )
+    iterations = st.slider("Iterations", 1, 100, 70, 1)
 
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
     plot = st.pyplot()
     plt.axis("off")
-    for a in np.linspace(0.0, 2 * np.pi, 15):
+
+    for a in np.linspace(0.0, 4 * np.pi, 100):
         c = 0.7885 * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
@@ -235,8 +215,8 @@ def demo_fractals():
             M[np.abs(Z) > 2] = False
             N[M] = i
 
-        plt.imshow(np.flipud(N), cmap="hot")
-        plot.pyplot()
+        plot.image(1.0 - (N/ N.max()), clamp=True)
+    st.button("Re-run")
 
 
 def demo_deformation():
