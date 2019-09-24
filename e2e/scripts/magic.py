@@ -1,10 +1,17 @@
+"""File docstring. Should not be printed."""
+
 import asyncio
 import contextlib
 
 async_loop = asyncio.new_event_loop()
 
-
+# Standalone statements should be printed
 "no block"
+
+a = "printed"
+"This should be", a
+
+# Standalone statements within blocks should be printed
 
 if True:
     "IF"
@@ -91,3 +98,20 @@ async def async_with():
 
 
 async_loop.run_until_complete(async_with())
+
+# Docstrings should never be printed
+
+def docstrings():
+    """Docstring. Should not be printed."""
+    def nested():
+        """Multiline docstring.
+        Should not be printed."""
+        pass
+
+    class Foo(object):
+        """Class docstring. Should not be printed."""
+        pass
+
+    nested()
+
+docstrings()

@@ -25,6 +25,7 @@ describe("streamlit magic", () => {
   it("displays expected text", () => {
     const expected = [
       "no block",
+      "This should be printed",
       "IF",
       "ELIF",
       "ELSE",
@@ -40,8 +41,12 @@ describe("streamlit magic", () => {
       "ASYNC WITH"
     ];
 
+    const selector = ".element-container > .stText > p";
+
+    cy.get(selector).should("have.length", expected.length);
+
     expected.forEach((text, index) => {
-      cy.get(".element-container > .stText > p")
+      cy.get(selector)
         .eq(index)
         .contains(text);
     });
