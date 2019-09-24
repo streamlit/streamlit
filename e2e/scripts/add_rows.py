@@ -142,6 +142,12 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             .interactive()
         )
 
+# Testing add_rows from an empty chart
+empty_chart = st.line_chart()
+
+for i in range(3):
+    empty_chart.add_rows({"a": [i], "b": [i]})
+
 # Test that add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.
 dataframe_el = st.dataframe(df1)

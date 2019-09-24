@@ -20,9 +20,10 @@
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  align-items: flex-start;
-  align-content: stretch;
+  align-items: stretch;
+  align-content: flex-start;
   width: 100%;
+  height: 100%;
 
   &.--wide {
     .main {
@@ -35,10 +36,16 @@
 
   &.--with-sidebar {
     .main {
-      margin-left: 250px;
+      //margin-left: 250px;
 
-      @media (max-width: 746px) {
-        margin-left: 0;
+      //@media (max-width: 746px) {
+      //  margin-left: 0;
+      //}
+    }
+
+    &.--collapsed {
+      .sidebar {
+        margin-left: -270px;
       }
     }
   }
@@ -48,7 +55,7 @@
     width: 100%;
     flex-direction: column;
     align-items: center;
-    padding: 0 15px 0 15px;
+    padding: 80px 15px 0 15px;
 
     .block-container {
       max-width: $content-max-width;
@@ -61,15 +68,34 @@
   }
 
   .sidebar {
-    position: fixed;
+    position: relative;
     top: 0;
     left: 0;
     bottom: 0;
     width: $sidebar-width;
-    padding: 5rem 15px 15px 15px;
     overflow-x: hidden;
     overflow-y: auto;
     z-index: $z-index-sidebar;
+    background-color: #31353d;
+    color: #b8bfce !important;
+    flex-shrink: 0;
+    padding: 5rem 45px 15px 15px;
+
+    transition: all ease-in 0.2s;
+
+    .collapsable-control {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      display: flex;
+      background: #3a3f48;
+      box-shadow: 0px -1px 5px #282c33;
+      border: 1px solid #464a52;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+    }
 
     h1 {
       font-size: 1.5rem;
@@ -101,26 +127,6 @@
       label {
         color: inherit;
       }
-    }
-
-    @media (max-width: 746px) {
-      & {
-        background: $white;
-        transform: translateX(-240px);
-        z-index: 0;
-      }
-
-      &:hover {
-        transform: translateX(0);
-        box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.1);
-        transition: transform 150ms, box-shadow 150ms;
-        z-index: $z-index-sidebar;
-      }
-    }
-
-    @media (min-width: 747px) {
-      background-color: #31353d;
-      color: #b8bfce;
     }
   }
 

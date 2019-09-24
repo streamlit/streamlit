@@ -10,7 +10,6 @@ Below are a few problems our users have seen, and ways they solved them in the
 past. If what you're looking for is not on this page, let us know at
 [help@streamlit.io](mailto:help@streamlit.io).
 
-
 ## First things to try...
 
 We try to fix bugs quickly, so many times a problem will go away when you
@@ -22,7 +21,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.45.0`.
+...and then verify that the version number printed is `0.46.0`.
 
 **Try reproducing the issue now.**
 
@@ -42,11 +41,11 @@ environment.
 One more thing to try: sometimes the browser caches Streamlit's JavaScript code
 too aggressively. There are two ways to address it:
 
-1) Try pressing `Ctrl-Shift-R` or `⌘-Shift-R` to do a hard refresh in
-Chrome/Firefox.
+1. Try pressing `Ctrl-Shift-R` or `⌘-Shift-R` to do a hard refresh in
+   Chrome/Firefox.
 
-2) Try using Streamlit on another port. This way the browser starts the page
-with a brand new cache. For that, add this to `~/.streamlit/config.toml`:
+2. Try using Streamlit on another port. This way the browser starts the page
+   with a brand new cache. For that, add this to `~/.streamlit/config.toml`:
 
 ```ini
 [server]
@@ -56,23 +55,23 @@ port=8765
 See if you can reproduce your bug again now. If the answer is _yes_,
 continue reading this page or [contact us](mailto:help@streamlit.io).
 
-
-## Remote operation: report URL doesn't load
+## Remote operation: app URL doesn't load
 
 You ran `streamlit hello` or `streamlit run my_script.py` and it printed out
-the URL where you should find your report --- but it doesn't seem to work when
+the URL where you should find your app --- but it doesn't seem to work when
 you open that link in a browser!
 
 When running Streamlit remotely, the number one culprit for this is the
 Streamlit port not being opened on your machine/instance.
 
 The fix depends on your setup. Below are two example fixes:
-* **"Normal" remote server**: Check the firewall settings.
-* **AWS**: First, click on your instance in the [AWS
-Console](https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Instances:sort=instanceId).
-Then scroll down and click on _Security Groups_ → _Inbound_ → _Edit_. Next, add
-a _Custom TCP_ rule that allows the _Port Range_ `8501` with _Source_
-`0.0.0.0/0`.
+
+- **"Normal" remote server**: Check the firewall settings.
+- **AWS**: First, click on your instance in the [AWS
+  Console](https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Instances:sort=instanceId).
+  Then scroll down and click on _Security Groups_ → _Inbound_ → _Edit_. Next, add
+  a _Custom TCP_ rule that allows the _Port Range_ `8501` with _Source_
+  `0.0.0.0/0`.
 
 ## Using Streamlit with Pex
 
@@ -88,6 +87,7 @@ $ pex streamlit foo bar -o mypexbinary.pex
 ...which means you can do things like:
 
 - Running an interactive console:
+
   ```bash
   $ ./mypexbinary.pex
   >>> import streamlit as st
@@ -95,6 +95,7 @@ $ pex streamlit foo bar -o mypexbinary.pex
   ```
 
 - Running a script:
+
   ```bash
   $ ./mypexbinary.pex myscript.py
   ```
@@ -116,3 +117,4 @@ $ pip install --upgrade streamlit==0.37 # <- To downgrade Streamlit!
 
 ```bash
 $ conda install streamlit=0.37
+```

@@ -42,10 +42,14 @@ iframe {
 }
 
 .streamlit-container {
-  margin: 80px auto;
-  width: unset;
-  max-width: unset;
+  margin: 0;
+  position: absolute;
+  height: 100%;
+  width: 100%;
   padding: 0;
+  top: 0;
+  left: 0;
+  max-width: unset;
 }
 
 .streamlit-embedded .streamlit-container {
@@ -97,6 +101,11 @@ pre {
 .icon {
   width: 0.9rem;
   height: 0.9rem;
+}
+
+.bash::before {
+  content: "$";
+  margin-right: 1ex;
 }
 
 // Utility class for underlining first letter in a text

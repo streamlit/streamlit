@@ -86,8 +86,10 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(self.enqueue, container=BlockPath.SIDEBAR)
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue,
+                                       container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue,
+                                          container=BlockPath.SIDEBAR)
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -534,7 +536,7 @@ class ReportSession(object):
         url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved running report", url)
+            util.print_url("Saved running app", url)
 
         raise tornado.gen.Return(url)
 
@@ -546,7 +548,7 @@ class ReportSession(object):
         )
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved final report", url)
+            util.print_url("Saved final app", url)
 
         raise tornado.gen.Return(url)
 

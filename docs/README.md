@@ -16,12 +16,12 @@ on this below).
 
 ## File and folder structure
 
-* `conf.py` This is Sphinx's configuration file.
-* `_build/` This is where the generated documentation goes.
-* `_ext/` This is where custom extensions to ReStructuredText are placed.
-* `_templates/` Not used right now, but if we ever decide to use custom
+- `conf.py` This is Sphinx's configuration file.
+- `_build/` This is where the generated documentation goes.
+- `_ext/` This is where custom extensions to ReStructuredText are placed.
+- `_templates/` Not used right now, but if we ever decide to use custom
   templates, this is where they should go.
-* `_static/` Not used right now, but if we ever decide to use custom
+- `_static/` Not used right now, but if we ever decide to use custom
   templates, this is where their static files (CSS, etc) should go.
 
 ## Building
@@ -40,7 +40,6 @@ $ make devel-docs
 
 The docs will be viewable at http://localhost:8000. **Note that any time you
 modify the source files you'll need to manually rebuild the docs.**
-
 
 ## Publishing
 
@@ -69,17 +68,16 @@ This is used often in our documentation in order to do things like generating
 our table of contents and automatically generating documentation for our Python
 modules.
 
-
-## Embedding Streamlit reports
+## Embedding Streamlit apps
 
 It's a good idea to make sure our docs have plenty of example code and their
-results.  Rather than showing the results using a boring static image, you can
-embed a Streamlit report right in the documentation. To do this, just use our
+results. Rather than showing the results using a boring static image, you can
+embed a Streamlit app right in the documentation. To do this, just use our
 custom directive, called `output`:
 
 ```rst
 .. output::
-   [URL to Streamlit report]
+   [URL to Streamlit app]
    [inline styles to pass to the <iframe> tag]
 ```
 
@@ -110,9 +108,9 @@ files. To use it in Markdown files, though, you need to do the following:
 
     An this is Markdown again.
 
-### Location of embedded report source files
+### Location of embedded app source files
 
-Before we can use `.. output::` to embed a Streamlit report in some doc, we
+Before we can use `.. output::` to embed a Streamlit app in some doc, we
 first need to create a Streamlit-powered Python script, run it, share it, and
 take note of its shared URL. To make these scripts easier to find, we place
 them in the same folder as the file that references them, and name them using

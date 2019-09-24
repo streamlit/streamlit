@@ -26,8 +26,10 @@ setup_2_3_shims(globals())
 import os
 import click
 
+import streamlit
 from streamlit.credentials import Credentials
 from streamlit import version
+import streamlit.bootstrap as bootstrap
 
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
@@ -100,7 +102,6 @@ def main_docs():
 @main.command("hello")
 def main_hello():
     """Runs the Hello World script."""
-    print("Showing Hello World script in browser...")
     import streamlit.hello
 
     filename = streamlit.hello.__file__
@@ -153,6 +154,9 @@ def _main_run(file, args=None):
     if args is None:
         args = []
 
+    # Set a global flag indicating that we're "within" streamlit.
+    streamlit._is_running_with_streamlit = True
+
     # Check credentials.
     Credentials.get_current().check_activated(auto_resolve=True)
 
@@ -160,12 +164,11 @@ def _main_run(file, args=None):
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 
-    import streamlit.bootstrap as bootstrap
-    import sys
-
     # We don't use args ourselves. We just allow people to pass them so their
     # script can handle them via sys.argv or whatever.
     # IMPORTANT: This means we should treat argv carefully inside our code!
+    import sys
+
     sys.argv = [file] + list(args)
 
     bootstrap.run(file)

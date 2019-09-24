@@ -23,8 +23,8 @@ describe("st.line_chart", () => {
   });
 
   it("displays a line chart", () => {
-    cy.get(".element-container .stChart")
-      .find("svg")
-      .should("have.attr", "height", "200");
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .should("have.css", "height", "200px");
   });
 });

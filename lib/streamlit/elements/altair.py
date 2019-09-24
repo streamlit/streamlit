@@ -19,10 +19,31 @@
 from __future__ import absolute_import
 
 
+from streamlit.elements.data_frame_proto import convert_anything_to_df
 import streamlit.elements.vega_lite as vega_lite
+import altair as alt
+import pandas as pd
 
 
-def marshall(vega_lite_chart, altair_chart, width=0):
+def generate_chart(chart_type, data):
+    if data is None:
+        data = {"": []}
+
+    if not isinstance(data, pd.DataFrame):
+        data = convert_anything_to_df(data)
+
+    data = pd.melt(data.reset_index(), id_vars=['index'])
+
+    chart = getattr(alt.Chart(data), 'mark_' + chart_type)().encode(
+        alt.X('index', title=''),
+        alt.Y('value', title=''),
+        alt.Color('variable', title=''),
+        alt.Tooltip(['index', 'value', 'variable'])).interactive()
+
+    return chart
+
+
+def marshall(vega_lite_chart, altair_chart, width=0, **kwargs):
     import altair as alt
 
     # Normally altair_chart.to_dict() would transform the dataframe used by the
@@ -47,4 +68,4 @@ def marshall(vega_lite_chart, altair_chart, width=0):
         # transformed.
         chart_dict["datasets"] = datasets
 
-        vega_lite.marshall(vega_lite_chart, chart_dict, width=width)
+        vega_lite.marshall(vega_lite_chart, chart_dict, width=width, **kwargs)

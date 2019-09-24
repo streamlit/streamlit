@@ -14,17 +14,53 @@ this API reference.
     :depth: 1
 ```
 
+## Magic commands
+
+Magic commands are a feature in Streamlit that allows you to write markdown and
+data to your app with very few keypresses. Here's an example:
+
+```python
+# Draw a title and some text to the app:
+'''
+# This is the document title
+
+This is some _markdown_.
+'''
+
+df = pandas.DataFrame({'col1': [1,2,3]})
+df  # <-- Draw the dataframe
+
+x = 10
+'x', x  # <-- Draw the string 'x' and then the value of x
+```
+
+How it works is simple: any time Streamlit sees either a variable or literal
+value on its own line, it automatically writes that to your app using
+[`st.write`](api.html#streamlit.write) (which you'll learn about later).
+
+Also, magic is smart enough to ignore docstrings. That is, it ignores the
+strings at the top of files and functions.
+
+If you prefer to call Streamlit commands more explicitly, you can always turn
+magic off in your `~/.streamlit/config.toml` with the following setting:
+
+```toml
+[runner]
+magicEnabled = false
+```
+
 ## Display text
 
-Streamlit reports usually start with a call to `st.title` to set the
-report's title. After that, there are 2 heading levels you can use:
+Streamlit apps usually start with a call to `st.title` to set the
+app's title. After that, there are 2 heading levels you can use:
 `st.header` and `st.subheader`.
 
 Pure text is entered with `st.text`, and Markdown with
 `st.markdown`.
 
 We also offer a "swiss-army knife" command called `st.write`, which accepts
-multiple arguments, and multiple data types.
+multiple arguments, and multiple data types. And as described above, you can
+also use [magic commands](api.html#magic-commands) in place of `st.write`.
 
 ```eval_rst
 .. autofunction:: streamlit.text
@@ -81,7 +117,7 @@ like `st.line_chart` and `st.area_chart`.
 
 ## Display interactive widgets
 
-With widgets, Streamlit allows you to bake interactivity directly into your reports with buttons, sliders, text inputs, and more.
+With widgets, Streamlit allows you to bake interactivity directly into your apps with buttons, sliders, text inputs, and more.
 
 ```eval_rst
 .. autofunction:: streamlit.button
@@ -97,7 +133,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your repo
 
 ## Display code
 
-Sometimes you want your Streamlit report to contain _both_ your usual
+Sometimes you want your Streamlit app to contain _both_ your usual
 Streamlit graphic elements _and_ the code that generated those elements.
 That's where `st.echo()` comes in.
 
@@ -106,8 +142,8 @@ That's where `st.echo()` comes in.
 ```
 
 Ok so let's say you have the following file, and you want to make its
-report a little bit more self-explanatory by making that middle section
-visible in the Streamlit report:
+app a little bit more self-explanatory by making that middle section
+visible in the Streamlit app:
 
 ```python
 import streamlit as st
@@ -134,11 +170,11 @@ foo = 'bar'
 st.write('Done!')
 ```
 
-The file above creates a Streamlit report containing the words "Hi there,
+The file above creates a Streamlit app containing the words "Hi there,
 `John`", and then "Done!".
 
 Now let's use `st.echo()` to make that middle section of the code visible
-in the report:
+in the app:
 
 ```python
 import streamlit as st
@@ -174,7 +210,7 @@ It's _that_ simple!
 ## Display progress and status
 
 Streamlit provides a few methods that allow you to add animation to your
-reports. These animations include progress bars, status messages (like
+apps. These animations include progress bars, status messages (like
 warnings), and celebratory balloons.
 
 ```eval_rst
@@ -191,7 +227,7 @@ warnings), and celebratory balloons.
 ## Placeholders, help, and options
 
 There are a handful of methods that allow you to create placeholders in your
-report, provide help using doc strings, and get and modify configuration options.
+app, provide help using doc strings, and get and modify configuration options.
 
 ```eval_rst
 .. autofunction:: streamlit.empty

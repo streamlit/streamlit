@@ -232,6 +232,10 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
     const spec = JSON.parse(el.get("spec"))
 
+    if (spec.width === 0) {
+      spec.width = this.props.width - EMBED_PADDING
+    }
+
     if (spec.datasets) {
       throw new Error("Datasets should not be passed as part of the spec")
     }
@@ -258,13 +262,8 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
       }
     }
 
-    this.specWidth = spec.width
-
-    if (this.specWidth === 0) {
-      view.width(this.props.width - EMBED_PADDING)
-    }
-
     this.vegaView = view
+
     await view.runAsync()
 
     // Fix bug where the "..." menu button overlaps with charts where width is

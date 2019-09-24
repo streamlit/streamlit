@@ -24,6 +24,7 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
+import { ChevronRight, ChevronLeft } from "baseui/icon"
 import { widgetTheme } from "lib/widgetTheme"
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -66,12 +67,26 @@ interface Props {
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 class ReportView extends PureComponent<Props> {
+  state = {
+    collapsedSidebar: false,
+  }
+
   private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
 
+  private toggleCollapse = (): void => {
+    const { collapsedSidebar } = this.state
+
+    this.setState({ collapsedSidebar: !collapsedSidebar })
+  }
+
   public render = (): ReactNode => {
+    const { wide } = this.props
+    const { collapsedSidebar } = this.state
+
     const reportViewClassName = classNames("reportview-container", {
-      "--wide": this.props.wide,
+      "--wide": wide,
       "--with-sidebar": this.hasSidebar(),
+      "--collapsed": collapsedSidebar,
     })
 
     return (
@@ -90,6 +105,13 @@ class ReportView extends PureComponent<Props> {
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
                 />
+              </div>
+              <div
+                className="collapsable-control"
+                onClick={this.toggleCollapse}
+              >
+                {collapsedSidebar && <ChevronRight size={30} />}
+                {!collapsedSidebar && <ChevronLeft size={30} />}
               </div>
             </section>
           )}
