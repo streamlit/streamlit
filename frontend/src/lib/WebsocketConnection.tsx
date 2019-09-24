@@ -15,12 +15,14 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from "react"
-import Resolver from "lib/Resolver"
-import { SessionInfo } from "lib/SessionInfo"
+import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
 import { ConnectionState } from "lib/ConnectionState"
-import { ForwardMsg, BackMsg, IBackMsg } from "autogen/proto"
-import { logMessage, logWarning, logError } from "lib/log"
+import { ForwardMsgCache } from "lib/ForwardMessageCache"
+import { logError, logMessage, logWarning } from "lib/log"
+import Resolver from "lib/Resolver"
+import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
+import { SessionInfo } from "lib/SessionInfo"
+import React, { Fragment } from "react"
 
 /**
  * Name of the logger.
@@ -31,6 +33,11 @@ const LOG = "WebsocketConnection"
  * The path where we should ping (via HTTP) to see if the server is up.
  */
 const SERVER_PING_PATH = "healthz"
+
+/**
+ * The path of the server's websocket endpoint.
+ */
+const WEBSOCKET_STREAM_PATH = "stream"
 
 /**
  * Wait this long between pings, in millis.
@@ -49,11 +56,6 @@ const WEBSOCKET_TIMEOUT_MS = 1000
  */
 const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
   "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
-
-interface BaseUriParts {
-  host: string
-  port: number
-}
 
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (connectionState: ConnectionState) => void
@@ -120,6 +122,12 @@ export class WebsocketConnection {
   private readonly args: Args
 
   /**
+   * ForwardMessages get passed through this cache. This gets initialized
+   * once we connect to the server.
+   */
+  private readonly cache: ForwardMsgCache
+
+  /**
    * Index to the URI in uriList that we're going to try to connect to.
    */
   private uriIndex = 0
@@ -149,7 +157,7 @@ export class WebsocketConnection {
   /**
    * The WebSocket object we're connecting with.
    */
-  private websocket?: WebSocket | null
+  private websocket?: WebSocket
 
   /**
    * WebSocket objects don't support retries, so we have to implement them
@@ -157,11 +165,23 @@ export class WebsocketConnection {
    * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
    * needed.
    */
-  private wsConnectionTimeoutId?: number | null
+  private wsConnectionTimeoutId?: number
 
-  public constructor(args: Args) {
-    this.args = args
+  public constructor(props: Args) {
+    this.args = props
+    this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm("INITIALIZED")
+  }
+
+  /**
+   * Return the BaseUriParts for the server we're connected to,
+   * if we are connected to a server.
+   */
+  public getBaseUriParts(): BaseUriParts | undefined {
+    if (this.state === ConnectionState.CONNECTED) {
+      return this.args.baseUriPartsList[this.uriIndex]
+    }
+    return undefined
   }
 
   // This should only be called inside stepFsm().
@@ -255,7 +275,10 @@ export class WebsocketConnection {
   }
 
   private connectToWebSocket(): void {
-    const uri = buildWsUri(this.args.baseUriPartsList[this.uriIndex])
+    const uri = buildWsUri(
+      this.args.baseUriPartsList[this.uriIndex],
+      WEBSOCKET_STREAM_PATH
+    )
 
     if (this.websocket != null) {
       // This should never happen. We set the websocket to null in both FSM
@@ -269,14 +292,15 @@ export class WebsocketConnection {
     this.setConnectionTimeout(uri)
 
     const localWebsocket = this.websocket
-
-    const checkWebsocket = (): boolean => {
-      return localWebsocket === this.websocket
-    }
+    const checkWebsocket = (): boolean => localWebsocket === this.websocket
 
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
-        this.handleMessage(event.data)
+        this.handleMessage(event.data).catch(reason => {
+          // TODO: do something reasonable here, beyond simply logging.
+          //  Lots of stuff is likely to be broken!
+          logError(LOG, reason)
+        })
       }
     }
 
@@ -351,13 +375,13 @@ export class WebsocketConnection {
 
     if (this.websocket) {
       this.websocket.close()
-      this.websocket = null
+      this.websocket = undefined
     }
 
     if (this.wsConnectionTimeoutId != null) {
       logMessage(LOG, `Clearing WS timeout ${this.wsConnectionTimeoutId}`)
       window.clearTimeout(this.wsConnectionTimeoutId)
-      this.wsConnectionTimeoutId = null
+      this.wsConnectionTimeoutId = undefined
     }
   }
 
@@ -374,45 +398,46 @@ export class WebsocketConnection {
     this.websocket.send(buffer)
   }
 
-  private handleMessage(data: any): void {
+  /**
+   * Called when our report has finished running. Calls through
+   * to the ForwardMsgCache, to handle cached entry expiry.
+   */
+  public incrementMessageCacheRunCount(maxMessageAge: number): void {
+    this.cache.incrementRunCount(maxMessageAge)
+  }
+
+  private async handleMessage(data: any): Promise<void> {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex
     this.nextMessageIndex += 1
 
     // Read in the message data.
-    const reader = new FileReader()
-    reader.readAsArrayBuffer(data)
-    reader.onloadend = () => {
-      if (this.messageQueue == null) {
-        logError(LOG, "No message queue.")
-        return
-      }
+    const result = await readFileAsync(data)
+    if (this.messageQueue == null) {
+      throw new Error("No message queue.")
+    }
 
-      const result = reader.result
-      if (result == null || typeof result === "string") {
-        logError(LOG, `Unexpected result from FileReader: ${result}.`)
-        return
-      }
+    if (result == null || typeof result === "string") {
+      throw new Error(`Unexpected result from FileReader: ${result}.`)
+    }
 
-      const resultArray = new Uint8Array(result)
-      this.messageQueue[messageIndex] = ForwardMsg.decode(resultArray)
-      while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
-        const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-        this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-        delete this.messageQueue[dispatchMessageIndex]
-        this.lastDispatchedMessageIndex = dispatchMessageIndex
-      }
+    const resultArray = new Uint8Array(result)
+    const msg = ForwardMsg.decode(resultArray)
+    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
+      msg
+    )
+
+    // Dispatch any pending messages in the queue. This may *not* result
+    // in our just-decoded message being dispatched: if there are other
+    // messages that were received earlier than this one but are being
+    // downloaded, our message won't be sent until they're done.
+    while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
+      const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
+      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
+      delete this.messageQueue[dispatchMessageIndex]
+      this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
   }
-}
-
-function buildWsUri({ host, port }: BaseUriParts): string {
-  const protocol = window.location.href.startsWith("https://") ? "wss" : "ws"
-  return `${protocol}://${host}:${port}/stream`
-}
-
-function buildHttpUri({ host, port }: BaseUriParts, path: string): string {
-  return `//${host}:${port}/${path}`
 }
 
 /**
@@ -539,4 +564,16 @@ function doHealthPing(
   connect()
 
   return resolver.promise
+}
+
+/**
+ * Wrap FileReader.readAsArrayBuffer in a Promise.
+ */
+function readFileAsync(data: any): Promise<string | ArrayBuffer | null> {
+  return new Promise<any>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsArrayBuffer(data)
+  })
 }
