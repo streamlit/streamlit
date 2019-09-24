@@ -33,26 +33,16 @@ jobs:
       #################################################################
       # Pre Cache Steps
       #################################################################
-      - run: &set_env_vars_if_in_conda
-          name: Set environment variables if in conda
-          command: |
-            if conda info; then
-              echo "Conda found, setting variables."
-              ./scripts/anaconda_version.sh >> $BASH_ENV
-              echo 'export SUDO=""' >> $BASH_ENV
-              touch make.bin
-              md5sum make.bin > ~/make.md5
-              rm -f make.bin
-            else
-              echo 'export SUDO="sudo"' >> $BASH_ENV
-              cp -f /usr/bin/make make.bin
-              md5sum make.bin > ~/make.md5
-            fi
-
-      - run: &get_dot_checksum
-          name: Get dot checksum
+      - run: &get_make_checksum
+          name: Get 'make' checksum
           command: |
             echo 'export SUDO="sudo"' >> $BASH_ENV
+            cp -f /usr/bin/make make.bin
+            md5sum make.bin > ~/make.md5
+
+      - run: &get_dot_checksum
+          name: Get 'dot' checksum
+          command: |
             if [ -f /usr/bin/dot ] ; then
               cp -f /usr/bin/dot dot.bin
               md5sum dot.bin > ~/dot.md5
@@ -87,11 +77,6 @@ jobs:
       #################################################################
       # Restore from cache
       #################################################################
-      - restore_cache:
-          name: Restore /opt/conda from cache
-          keys:
-            - v12-opt-conda-{{ checksum "~/python_version.md5" }}
-
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
@@ -124,9 +109,9 @@ jobs:
           name: Install make
           command: |
             if [ -s make.bin ] ; then
-              echo "make.bin does exists and is non zero"
+              echo "make.bin exists; not installing"
             else
-              echo "/usr/bin/make doesnt exist, installing"
+              echo "/usr/bin/make doesn't exist; installing"
               apt-get update -y
               apt-get install -y make
               cp -f /usr/bin/make make.bin
@@ -180,38 +165,24 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv if necessary
+          name: Run make pipenv-lock and create virtualenv
           command: |
-            if echo ${CIRCLE_JOB} | egrep -qi conda ; then
-              echo 'In conda, not creating virtualenv'
-              if pip freeze | grep -qi pipenv ; then
-                echo 'skipping make setup and make pipenv-lock'
+            echo 'Checking for virtualenv'
+            if [ ! -d venv ] ; then
+              if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
+                pip install virtualenv
+                python -m virtualenv venv
               else
-                # pip install psutil requires gcc.
-                apt-get update -y
-                apt-get install -y build-essential
-                make setup
-                make pipenv-lock
+                python -m venv venv
               fi
-              mkdir -p venv
+              source venv/bin/activate
+              make setup
+              make pipenv-lock
+              deactivate
             else
-              echo 'Not in conda, checking for virtualenv'
-              if [ ! -d venv ] ; then
-                if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-                  pip install virtualenv
-                  python -m virtualenv venv
-                else
-                  python -m venv venv
-                fi
-                source venv/bin/activate
-                make setup
-                make pipenv-lock
-                deactivate
-              else
-                echo 'Virtualenv already exists, not creating'
-              fi
-              echo 'source venv/bin/activate' >> $BASH_ENV
+              echo 'Virtualenv already exists, not creating'
             fi
+            echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &make_develop
           name: Run make develop
@@ -284,11 +255,6 @@ jobs:
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
       #################################################################
-      - save_cache:
-          name: Save /opt/conda to cache
-          key: v12-opt-conda-{{ checksum "~/python_version.md5" }}
-          paths:
-            - /opt/conda
 
       - save_cache:
           name: Save virtualenv to cache
@@ -334,7 +300,7 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
-          <<: *set_env_vars_if_in_conda
+          <<: *get_make_checksum
 
       - run:
           <<: *get_dot_checksum
