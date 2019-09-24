@@ -39,10 +39,7 @@ function createCache(): MockCache {
 /**
  * Create a mock ForwardMsg with the given hash
  */
-function createForwardMsg(
-  hash: string,
-  cacheable: boolean = true
-): ForwardMsg {
+function createForwardMsg(hash: string, cacheable = true): ForwardMsg {
   return ForwardMsg.fromObject({
     hash: hash,
     metadata: { cacheable: cacheable, deltaId: 0 },

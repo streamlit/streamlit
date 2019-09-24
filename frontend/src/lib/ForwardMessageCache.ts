@@ -21,7 +21,7 @@ import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
 class CacheEntry {
   public readonly msg: ForwardMsg
-  public reportRunCount: number = 0
+  public reportRunCount = 0
 
   public getAge(curReportRunCount: number): number {
     return curReportRunCount - this.reportRunCount
@@ -49,7 +49,7 @@ export class ForwardMsgCache {
    * A counter that tracks the number of times the underyling report
    * has been run. We use this to expire our cache entries.
    */
-  private reportRunCount: number = 0
+  private reportRunCount = 0
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
