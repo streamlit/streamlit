@@ -16,7 +16,6 @@
 """A "Hello World" app."""
 
 import streamlit as st
-import numpy as np
 import inspect
 from collections import OrderedDict
 
@@ -38,15 +37,27 @@ text text text text text text text text text text text text text text text text
 
 def demo_1():
     """
-    This demo shows how you can use Streamlit to format text in a few different
-    ways.
+    Welcome to Streamlit! we're generating a bunch of random numbers in a loop
+    for around 10 seconds. Enjoy!.
     """
-    st.title("✨✨✨ Hello 🌍!!!! ✨✨✨")
-    st.header("This is a header...")
-    st.subheader("... and this is a subheader")
-    st.write("We can write down something...")
-    st.text("...as monospaced text...")
-    st.markdown("... or maybe with _*markdown*_.")
+    import time
+    import numpy as np
+
+    progress_bar, success = None, None
+    status_text = st.empty()
+    chart = st.line_chart(np.random.randn(10, 1))
+    for i in range(1, 101):
+        new_rows = np.random.randn(10, 1)
+        status_text.text("The latest random number is: %s" % new_rows[-1, 0])
+        chart.add_rows(new_rows)
+        if progress_bar is None:
+            progress_bar = st.progress(0)
+            success = st.empty()
+        progress_bar.progress(i)
+        time.sleep(0.1)
+    progress_bar.empty()
+    success.success("Complete!")
+    st.button("Re-run")
 
 
 def demo_2():
@@ -78,6 +89,7 @@ def demo_3():
     st.balloons()
     st.button("Re-run")
 
+IMAGE_URL = "https://unsplash.com/photos/k0rVudBoB4c/download?force=true"
 
 def demo_4():
     """
@@ -85,17 +97,32 @@ def demo_4():
     blur.
     """
     from PIL import Image, ImageFilter
+    import requests
+    from io import BytesIO
 
     @st.cache(show_spinner=False)
+    def load_image():
+        return Image.open(BytesIO(requests.get(IMAGE_URL).content))
+
+    @st.cache
     def blur(image):
         return image.filter(ImageFilter.BLUR)
 
+    # @st.cache
+    # def blur(image, n):
+    #     blurred = image
+    #     for i in range(n):
+    #         blurred = blurred.filter(ImageFilter.BLUR)
+    #     return blurred
+
+    # image = load_image()
     blurs = st.sidebar.slider("How much blur?", 0, 100, 0)
-    image = Image.open("bridge.jpg")
+    image = Image.open("markus-spiske.jpg")
     st.markdown("#### Image blurred %d times" % blurs)
     blurred = image
     for i in range(blurs):
         blurred = blur(blurred)
+    # st.image(blur(image, blurs))
     st.image(blurred)
 
 
@@ -132,7 +159,7 @@ def demo_5():
 DEMOS = OrderedDict(
     {
         "---": intro,
-        "Basic Text": demo_1,
+        "Number Generator": demo_1,
         "Simple Interaction": demo_2,
         "Animation": demo_3,
         "Sidebar": demo_4,
@@ -155,13 +182,12 @@ def run():
     if demo_name != "---":
         st.markdown("## %s Demo" % demo_name)
         st.write(inspect.getdoc(demo))
-        st.write("### Code")
+        st.markdown("---")
+        demo()
+        st.markdown("---\n ### Code")
         sourcelines, n_lines = inspect.getsourcelines(demo)
         sourcelines = reset_indentation(remove_docstring(sourcelines))
         st.code("".join(sourcelines))
-        if st.checkbox("Run %s Demo" % demo_name):
-            st.write("---\n### Execution")
-            demo()
     else:
         demo()
 
