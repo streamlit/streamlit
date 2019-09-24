@@ -17,7 +17,6 @@
 
 import React, { PureComponent } from "react"
 
-import { Button } from "reactstrap"
 import openIconic from "assets/img/open-iconic.svg"
 
 import "./FullScreenWrapper.scss"
@@ -105,12 +104,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     const { expanded, fullwidth, fullheight } = this.state
     const { children, width } = this.props
 
-    let buttonClassName = "stButton-enter"
+    let buttonClassName = "overlayBtn stButton-enter"
     let buttonImage = "#fullscreen-enter"
     let buttonOnClick = this.zoomIn
     let buttonTitle = "View fullscreen"
+
     if (expanded) {
-      buttonClassName = "stButton-exit"
+      buttonClassName = "overlayBtn stButton-exit"
       buttonImage = "#fullscreen-exit"
       buttonOnClick = this.zoomOut
       buttonTitle = "Exit fullscreen"
@@ -118,18 +118,15 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
     return (
       <div className={`stFullScreenFrame${expanded ? "--expanded" : ""}`}>
-        <Button
+        <button
           className={buttonClassName}
-          outline
-          size="sm"
-          color="info"
           onClick={buttonOnClick}
           title={buttonTitle}
         >
           <svg className="icon" viewBox="0 0 8 8">
             <use href={openIconic + buttonImage} />
           </svg>
-        </Button>
+        </button>
         {expanded
           ? children({ width: fullwidth, height: fullheight })
           : children({ width })}

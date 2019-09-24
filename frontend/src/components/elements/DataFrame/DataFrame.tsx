@@ -251,7 +251,7 @@ class DataFrame extends React.PureComponent<Props, State> {
     // Rendering constants.
     const rowHeight = 25
     const headerHeight = rowHeight * headerRows
-    const border = 3
+    const border = 2
 
     let { elementWidth, columnWidth, headerWidth } = getWidths(
       cols,
@@ -500,7 +500,7 @@ function getWidths(
     if (colIndex < headerCols) {
       headerWidth += colWidth
     } else if (tableWidth >= width) {
-      // No need to continue. We already know the followign "if" condition will fail.
+      // No need to continue. We already know the following "if" condition will fail.
       break
     }
   }

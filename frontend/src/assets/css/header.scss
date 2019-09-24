@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
-
+@import "src/assets/css/variables";
 
 header {
   position: fixed;
@@ -27,7 +26,12 @@ header {
 }
 
 .streamlit-wide header {
-  background-image: linear-gradient(180deg, #ffffff 25%, rgba(255, 255, 255, 0.5) 75%, transparent);
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 25%,
+    rgba(255, 255, 255, 0.5) 75%,
+    transparent
+  );
 }
 
 header .decoration {
@@ -36,7 +40,7 @@ header .decoration {
   right: 0;
   left: 0;
   height: 2px;
-  background-image: linear-gradient(90deg, #F63366, #FFFD80);
+  background-image: linear-gradient(90deg, #f63366, #fffd80);
   z-index: $z-index-header;
 }
 
@@ -44,7 +48,7 @@ header > nav {
   position: absolute;
   top: 0;
   left: 1rem;
-  height: 3.5rem;
+  height: $header-height;
   display: flex;
   flex-direction: row;
   align-items: center;

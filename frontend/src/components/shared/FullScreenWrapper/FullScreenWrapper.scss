@@ -1,38 +1,51 @@
 @import "src/assets/css/variables";
 
-.streamlit-container .stFullScreenFrame--expanded {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: white;
-  z-index: 1000;
-  padding: $fullscreen-padding;
-  padding-top: $fullscreen-padding-top;
-  overflow: auto;
+.reportview-container .element-container {
+  .stFullScreenFrame--expanded {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: white;
+    z-index: 1000;
+    padding: $fullscreen-padding;
+    padding-top: $fullscreen-padding-top;
+    overflow: auto;
+    display: flex; // To avoid extra spaces that lead to scrollbars.
+
+    .overlayBtn {
+      top: 0.5rem;
+      right: 1rem;
+      opacity: 0.5;
+    }
+  }
+
+  .stFullScreenFrame:hover {
+    .overlayBtn {
+      opacity: $overlayBtn-opacity-visible;
+    }
+
+    .overlayBtn:hover {
+      opacity: $overlayBtn-opacity-active;
+    }
+  }
 }
 
-.streamlit-container .stFullScreenFrame .stButton-enter {
-  position: absolute;
-  right: $fullscreen-padding;
-  top: $fullscreen-padding;
-  z-index: 1;
-  display: none;
-  width: $fullscreen-button;
-  height: $fullscreen-button;
-}
+.streamlit-wide {
+  .reportview-container .element-container {
+    .stFullScreenFrame--expanded {
+      .overlayBtn {
+        top: 0.5rem;
+        right: 1.25rem;
+        opacity: 0.5;
 
-.streamlit-container .stFullScreenFrame:hover .stButton-enter {
-  display: block;
-}
-
-.streamlit-container .stFullScreenFrame--expanded .stButton-exit {
-  position: fixed;
-  right: $fullscreen-padding;
-  top: $fullscreen-padding;
-  z-index: 1;
-  display: block;
-  width: $fullscreen-button;
-  height: $fullscreen-button;
+        &:active,
+        &:focus,
+        &:hover {
+          opacity: $overlayBtn-opacity-active;
+        }
+      }
+    }
+  }
 }

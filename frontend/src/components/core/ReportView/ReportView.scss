@@ -118,6 +118,38 @@
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: relative;
+
+    &:hover {
+      .overlayBtn {
+        opacity: $overlayBtn-opacity-visible;
+      }
+    }
+
+    .overlayBtn {
+      opacity: 0;
+      padding: $m1-2-font-size-sm/2 $m1-2-font-size-sm;
+      position: absolute;
+      right: -$overlayBtn-width;
+      top: -0.375rem; // Align with Vega-Lite button.
+      display: flex;
+      flex-align: center;
+      justify-content: center;
+      height: $overlayBtn-height;
+      width: $overlayBtn-width;
+      transition: opacity 300ms;
+      z-index: 99;
+      border: none;
+      background: none;
+      color: $black;
+      border-radius: $btn-border-radius;
+
+      &:active,
+      &:focus,
+      &:hover {
+        opacity: $overlayBtn-opacity-active;
+        outline: none;
+      }
+    }
   }
 
   .stale-element {
@@ -229,5 +261,13 @@
     border-bottom: 1px solid $gray-light;
     margin: 2em 0;
     padding: 0;
+  }
+}
+
+.streamlit-wide .reportview-container .element-container {
+  .overlayBtn {
+    right: 0;
+    top: 0;
+    background: #fff;
   }
 }

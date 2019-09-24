@@ -54,7 +54,7 @@ class MainMenu extends PureComponent {
         isOpen={this.state.dropdownOpen}
         toggle={() => this.toggle()}
       >
-        <DropdownToggle outline color="secondary" id="MainMenuButton">
+        <DropdownToggle outline color="secondary" id="MainMenuBtn">
           <svg className="icon" viewBox="0 0 8 8">
             <use href={openIconic + "#menu"} />
           </svg>
