@@ -358,7 +358,7 @@ class Server(object):
             if PREHEATED_REPORT_SESSION in self._session_infos:
                 assert len(self._session_infos) == 1
                 LOGGER.debug("Reusing preheated context for ws %s", ws)
-                session = self._session_infos[PREHEATED_REPORT_SESSION]
+                session = self._session_infos[PREHEATED_REPORT_SESSION].session
                 del self._session_infos[PREHEATED_REPORT_SESSION]
             else:
                 LOGGER.debug("Creating new context for ws %s", ws)

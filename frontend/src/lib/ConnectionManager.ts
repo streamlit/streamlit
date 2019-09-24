@@ -19,7 +19,7 @@ import url from "url"
 
 import { ConnectionState } from "./ConnectionState"
 import { ForwardMsg } from "autogen/proto"
-import { IS_DEV_ENV, IS_SHARED_REPORT, WEBSOCKET_PORT_DEV } from "./baseconsts"
+import { IS_SHARED_REPORT } from "./baseconsts"
 import { ReactNode } from "react"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
