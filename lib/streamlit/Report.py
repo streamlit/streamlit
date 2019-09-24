@@ -53,7 +53,7 @@ class Report(object):
         port = _get_browser_address_bar_port()
         return "http://%(host_ip)s:%(port)s" % {"host_ip": host_ip, "port": port}
 
-    def __init__(self, script_path, argv, command_line):
+    def __init__(self, script_path, command_line):
         """Constructor.
 
         Parameters
@@ -61,26 +61,15 @@ class Report(object):
         script_path : str
             Path of the Python file from which this app is generated.
 
-        argv : list of str
-            Command-line arguments to run the script with.
-
         command_line : string
             Command line as input by the user
 
         """
+        basename = os.path.basename(script_path)
 
         self.script_path = os.path.abspath(script_path)
         self.script_folder = os.path.dirname(self.script_path)
-        self.argv = argv
-        self.command_line = command_line
-
-        if len(command_line.split()) > 2:
-            # Extract script name in a command line of the form
-            # streamlit run script.py
-            basename = os.path.basename(command_line.split()[2])
-            self.name = os.path.splitext(basename)[0]
-        else:
-            self.name = "script"
+        self.name = os.path.splitext(basename)[0]
 
         # The master queue contains all messages that comprise the report.
         # If the user chooses to share a saved version of the report,
@@ -97,33 +86,6 @@ class Report(object):
 
     def get_debug(self):
         return {"master queue": self._master_queue.get_debug()}
-
-    def parse_argv_from_command_line(self, cmd_line_str):
-        """Parses an argv dict for this script from a command line string.
-
-        Parameters
-        ----------
-        cmd_line_str : str
-            The string to parse.
-
-        Returns
-        -------
-        dict
-            An argv dict, suitable for executing this Report with.
-
-        """
-        import shlex
-
-        cmd_line_list = shlex.split(cmd_line_str)
-        new_script_path = os.path.abspath(cmd_line_list[0])
-
-        if new_script_path != self.script_path:
-            raise ValueError(
-                "Cannot change script from %s to %s"
-                % (self.script_path, cmd_line_list[0])
-            )
-
-        self.argv = cmd_line_list
 
     def enqueue(self, msg):
         self._master_queue.enqueue(msg)

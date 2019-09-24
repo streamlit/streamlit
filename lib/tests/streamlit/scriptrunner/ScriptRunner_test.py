@@ -355,7 +355,7 @@ class TestScriptRunner(ScriptRunner):
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
-            report=Report(script_path, [], "test command line"),
+            report=Report(script_path, "test command line"),
             main_dg=self.main_dg,
             sidebar_dg=self.sidebar_dg,
             widget_states=WidgetStates(),

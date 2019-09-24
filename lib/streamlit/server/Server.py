@@ -98,14 +98,13 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, ioloop, script_path, script_argv, command_line):
+    def __init__(self, ioloop, script_path, command_line):
         """Create the server. It won't be started yet.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
         script_path : str
-        script_argv : List[str]
         command_line : str
 
         """
@@ -118,7 +117,6 @@ class Server(object):
 
         self._ioloop = ioloop
         self._script_path = script_path
-        self._script_argv = script_argv
         self._command_line = command_line
 
         # Mapping of WebSocket->SessionInfo.
@@ -367,7 +365,6 @@ class Server(object):
                 session = ReportSession(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv,
                     command_line=self._command_line,
                 )
 

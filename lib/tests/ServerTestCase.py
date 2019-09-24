@@ -40,7 +40,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # Create a Server, and patch its _on_stopped function
         # to no-op. This prevents it from shutting down the
         # ioloop when it stops.
-        self.server = Server(self.io_loop, "/not/a/script.py", [], "test command line")
+        self.server = Server(self.io_loop, "/not/a/script.py", "test command line")
         self.server._on_stopped = mock.MagicMock()
         app = self.server._create_app()
         return app

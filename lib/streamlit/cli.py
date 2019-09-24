@@ -121,7 +121,7 @@ def main_hello():
 @main.command("run")
 @click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args):
+def main_run(file_or_url, args=None):
     """Run a Python script, piping stderr to Streamlit.
     The script can be local or it can be an url. In the
     latter case, streamlit will download the script to a
@@ -147,22 +147,20 @@ def main_run(file_or_url, args):
                 )
             # this is called within the with block to make sure the temp file
             # is not deleted
-            _main_run(fp.name, args)
+            _main_run(fp.name)
 
     else:
         if not os.path.exists(file_or_url):
             raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url, args)
+        _main_run(file_or_url)
 
 
-def _main_run(file, args=None):
+def _main_run(file):
     # make a copy before we modify it
     import sys
+    import subprocess
 
-    command_line = " ".join(sys.argv)
-
-    if args is None:
-        args = []
+    command_line = subprocess.list2cmdline(sys.argv)
 
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
@@ -173,13 +171,6 @@ def _main_run(file, args=None):
     # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
-
-    # We don't use args ourselves. We just allow people to pass them so their
-    # script can handle them via sys.argv or whatever.
-    # IMPORTANT: This means we should treat argv carefully inside our code!
-    import sys
-
-    sys.argv = [file] + list(args)
 
     bootstrap.run(file, command_line)
 

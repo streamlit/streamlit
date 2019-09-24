@@ -152,7 +152,7 @@ def run(script_path, command_line):
     ioloop = tornado.ioloop.IOLoop.current()
 
     # Create and start the server.
-    server = Server(ioloop, script_path, sys.argv, command_line)
+    server = Server(ioloop, script_path, command_line)
     server.add_preheated_report_session()
     server.start(_on_server_start)
 
