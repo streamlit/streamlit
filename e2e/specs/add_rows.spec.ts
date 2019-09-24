@@ -35,8 +35,7 @@ describe("st.add_rows", () => {
   it("works for all elements that support it", () => {
     cy.get(".element-container .stTable").should("have.length", 3);
     cy.get(".element-container .stDataFrame").should("have.length", 4);
-    cy.get(".element-container .stChart").should("have.length", 3);
-    cy.get(".element-container .stVegaLiteChart").should("have.length", 12);
+    cy.get(".element-container .stVegaLiteChart").should("have.length", 16);
   });
 
   it("raises an exception when the shapes don't match", () => {
@@ -54,9 +53,6 @@ describe("st.add_rows", () => {
   });
 
   it("correctly adds rows to charts", () => {
-    cy.get(".element-container .stChart").each((el, i) => {
-      cy.get(el).matchImageSnapshot(`stChart-${i}`);
-    });
     cy.get(".element-container .stVegaLiteChart").each((el, i) => {
       cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
     });

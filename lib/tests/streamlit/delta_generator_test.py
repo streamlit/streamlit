@@ -104,7 +104,7 @@ class FakeDeltaGenerator(object):
         """
         self._exception_msg = str(e)
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, delta_type, last_index):
         """Fake enqueue new element delta.
 
         The real DeltaGenerator method actually enqueues the deltas but
@@ -225,7 +225,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_new_element_delta_null(self):
         # Test "Null" Delta generators
         dg = self.new_delta_generator(None)
-        new_dg = dg._enqueue_new_element_delta(None)
+        new_dg = dg._enqueue_new_element_delta(None, None)
         self.assertEqual(dg, new_dg)
 
     def test_enqueue_new_element_delta(self):
@@ -241,7 +241,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._id)
 
@@ -261,7 +261,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
         self.assertEqual(dg, new_dg)
 
         msg = self.get_message_from_queue()
@@ -412,34 +412,38 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         """Test dg.line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.line_chart(data)
+        st.line_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "LineChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec['mark'], 'line')
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_area_chart(self):
         """Test dg.area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.area_chart(data)
+        st.area_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "AreaChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec['mark'], 'area')
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.bar_chart(data)
+        st.bar_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "BarChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+
+        self.assertEqual(chart_spec['mark'], 'bar')
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
@@ -452,7 +456,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         caption = "ahoy!"
 
         # single URL
-        dg = st.image(url, caption=caption, width=200)
+        st.image(url, caption=caption, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.imgs.width, 200)
         self.assertEqual(len(element.imgs.imgs), 1)
@@ -460,7 +464,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.imgs.imgs[0].caption, caption)
 
         # multiple URLs
-        dg = st.image([url] * 5, caption=[caption] * 5, width=200)
+        st.image([url] * 5, caption=[caption] * 5, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(len(element.imgs.imgs), 5)
         self.assertEqual(element.imgs.imgs[4].url, url)

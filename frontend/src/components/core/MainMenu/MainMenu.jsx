@@ -95,14 +95,12 @@ class MainMenu extends PureComponent {
             Community
           </DropdownItem>
 
-          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
-            Streamlit for teams
-          </DropdownItem>
-
-          <DropdownItem divider />
-
           <DropdownItem onClick={() => window.open(BUG_URL, "_blank")}>
             Report a bug
+          </DropdownItem>
+
+          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
+            Streamlit for teams
           </DropdownItem>
 
           <DropdownItem divider />

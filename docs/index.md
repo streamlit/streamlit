@@ -4,7 +4,7 @@
    :maxdepth: 2
    :hidden:
 
-   Home <https://streamlit.io/secret/docs/>
+   Home <https://streamlit.io/docs/>
    getting_started
    tutorial/index
 

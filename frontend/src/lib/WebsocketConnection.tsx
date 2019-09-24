@@ -478,7 +478,7 @@ function doHealthPing(
             just restart it in your terminal:
           </p>
           <pre>
-            <code>$ streamlit run {scriptname}</code>
+            <code className="bash">streamlit run {scriptname}</code>
           </pre>
         </Fragment>
       )

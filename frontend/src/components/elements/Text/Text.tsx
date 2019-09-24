@@ -103,7 +103,11 @@ class Text extends React.PureComponent<Props> {
       case TextProto.Format.MARKDOWN:
         return (
           <div className="markdown-text-container stText" style={{ width }}>
-            <ReactMarkdown source={body} renderers={renderers} />
+            <ReactMarkdown
+              source={body}
+              renderers={renderers}
+              escapeHtml={!element.get("allowHtml")}
+            />
           </div>
         )
 
