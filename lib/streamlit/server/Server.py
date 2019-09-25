@@ -88,11 +88,14 @@ class State(Enum):
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
+
 class ExceededRetries(Exception):
     pass
 
+
 def server_port_is_manually_set():
     return config.is_manually_set("server.port")
+
 
 def start_listening(app, call_count=0):
     """makes the server start listening at the configured port.
@@ -104,11 +107,12 @@ def start_listening(app, call_count=0):
     except OSError as e:
         if e.errno == errno.EADDRINUSE:
             if call_count >= 100:
-                raise ExceededRetries("Port %s already in use, were unable to find a free port after a hundred attempts", port)
-            if server_port_is_manually_set():
-                LOGGER.debug(
-                    "Port %s already in use, trying to use the next one", port
+                raise ExceededRetries(
+                    "Port %s already in use, were unable to find a free port after a hundred attempts",
+                    port,
                 )
+            if server_port_is_manually_set():
+                LOGGER.debug("Port %s already in use, trying to use the next one", port)
                 port += 1
                 # save port 3000 because it is used for the development server in the front end
                 if port == 3000:
@@ -121,6 +125,7 @@ def start_listening(app, call_count=0):
                 sys.exit(signal.NSIG)
         else:
             raise
+
 
 class Server(object):
 

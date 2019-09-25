@@ -48,6 +48,7 @@ from streamlit.server.server_util import serialize_forward_msg
 from tests.ServerTestCase import ServerTestCase
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 def _create_dataframe_msg(df, id=1):
@@ -348,9 +349,11 @@ class PortRotateOneTest(unittest.TestCase):
 
         return app
 
-    @mock.patch('streamlit.server.Server.config._set_option')
-    @mock.patch('streamlit.server.Server.server_port_is_manually_set')
-    def test_rotates_one_port(self, patched_server_port_is_manually_set, patched__set_option):
+    @mock.patch("streamlit.server.Server.config._set_option")
+    @mock.patch("streamlit.server.Server.server_port_is_manually_set")
+    def test_rotates_one_port(
+        self, patched_server_port_is_manually_set, patched__set_option
+    ):
         app = self.get_app()
 
         patched_server_port_is_manually_set.return_value = True
@@ -359,7 +362,9 @@ class PortRotateOneTest(unittest.TestCase):
 
             PortRotateOneTest.which_port.assert_called_with(8502)
 
-            patched__set_option.assert_called_with("server.port", 8501, "server initialization")
+            patched__set_option.assert_called_with(
+                "server.port", 8501, "server initialization"
+            )
 
 
 class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
