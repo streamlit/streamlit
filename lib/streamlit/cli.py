@@ -128,15 +128,13 @@ def main_run(file_or_url, args=None):
     temporary file and runs this file.
     """
     import subprocess
-
-    command_line = subprocess.list2cmdline(
-        [
+    cmd_line_as_list = [
             click.get_current_context().parent.command_path,
             click.get_current_context().command.name,
             file_or_url,
-            *args,
         ]
-    )
+    cmd_line_as_list.extend(args)
+    command_line = subprocess.list2cmdline(cmd_line_as_list)
 
     from validators import url
 
