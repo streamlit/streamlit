@@ -127,6 +127,15 @@ def main_run(file_or_url, args=None):
     latter case, streamlit will download the script to a
     temporary file and runs this file.
     """
+    import subprocess
+
+    command_line = subprocess.list2cmdline(
+        [
+            click.get_current_context().parent.command_path,
+            click.get_current_context().command.name,
+            file_or_url,
+            *args
+        ])
 
     from validators import url
 
@@ -147,21 +156,15 @@ def main_run(file_or_url, args=None):
                 )
             # this is called within the with block to make sure the temp file
             # is not deleted
-            _main_run(fp.name)
+            _main_run(fp.name, command_line)
 
     else:
         if not os.path.exists(file_or_url):
             raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url)
+        _main_run(file_or_url, command_line)
 
 
-def _main_run(file):
-    # make a copy before we modify it
-    import sys
-    import subprocess
-
-    command_line = subprocess.list2cmdline(sys.argv)
-
+def _main_run(file, command_line):
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
 

@@ -98,3 +98,20 @@ class CliTest(unittest.TestCase):
 
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
+
+    def test_run_spaces(self):
+        """The correct command line should be passed downstream"""
+        with patch("validators.url", return_value=False), \
+             patch("os.path.exists", return_value=True):
+            with patch( "streamlit.cli._main_run") as mock_main_run:
+
+                result = self.runner.invoke(cli, [
+                    "run",
+                    "some script.py",
+                    "argument with space",
+                    "argument with another space"])
+                mock_main_run.assert_called_with(
+                    'some script.py',
+                    'test run "some script.py" "argument with space" "argument with another space"'
+                )
+        self.assertEqual(0, result.exit_code)
