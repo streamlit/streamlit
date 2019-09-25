@@ -112,12 +112,14 @@ class ReportView extends PureComponent<Props> {
               </div>
             </section>
           )}
-          <span
-            className="sidebar-collapse-control"
-            onClick={this.toggleCollapse}
-          >
-            <Icon type="account-login" />
-          </span>
+          {this.hasSidebar() && (
+            <span
+              className="sidebar-collapse-control"
+              onClick={this.toggleCollapse}
+            >
+              <Icon type="account-login" />
+            </span>
+          )}
           <section className="main">
             <div className="block-container">
               <Block
