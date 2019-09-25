@@ -67,7 +67,9 @@ class LocalSourcesWatcher(object):
         self._folder_blacklist = config.get_option("server.folderWatchBlacklist")
 
         # Blacklist some additional folders, using glob syntax.
-        self._folder_blacklist.extend(["**/.*", "**/anaconda*", "**/miniconda*"])
+        self._folder_blacklist.extend(
+            ["**/.*", "**/anaconda2", "**/anaconda3", "**/miniconda2", "**/miniconda3"]
+        )
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}

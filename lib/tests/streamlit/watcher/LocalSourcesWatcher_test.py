@@ -24,6 +24,7 @@ from mock import patch
 from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
+from streamlit.watcher.LocalSourcesWatcher import _file_is_in_folder
 
 
 class FileIsInFolderTest(unittest.TestCase):
@@ -65,12 +66,10 @@ if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
     import test_data.misbehaved_module as MISBEHAVED_MODULE
-    import test_data.miniconda3.dummy_miniconda_module as MINICONDA_MODULE
 else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-    import tests.streamlit.watcher.test_data.miniconda3.dummy_miniconda_module as MINICONDA_MODULE
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, [])
@@ -82,12 +81,7 @@ DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
-        modules = [
-            "DUMMY_MODULE_1",
-            "DUMMY_MODULE_2",
-            "MISBEHAVED_MODULE",
-            "MINICONDA_MODULE",
-        ]
+        modules = ["DUMMY_MODULE_1", "DUMMY_MODULE_2", "MISBEHAVED_MODULE"]
 
         the_globals = globals()
 
@@ -222,24 +216,27 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         config.set_option("server.folderWatchBlacklist", prev_blacklist)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_auto_blacklist(self, fob):
+    def test_auto_blacklist(self, _):
         prev_blacklist = config.get_option("server.folderWatchBlacklist")
         config.set_option("server.folderWatchBlacklist", [])
 
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
-        lso.update_watched_modules()
 
-        # Called for test_data/__init__.py and test_data/not_a_real_script.py
-        self.assertEqual(2, fob.call_count)
+        def is_blacklisted(filepath):
+            return any(
+                _file_is_in_folder(filepath, blacklisted_folder)
+                for blacklisted_folder in lso._folder_blacklist
+            )
 
-        # The miniconda module is in a package called "miniconda3", which is
-        # automatically blacklsited by LocalSourcesWatcher
-        sys.modules["MINICONDA_MODULE"] = MINICONDA_MODULE
-        fob.reset_mock()
+        self.assertFalse(is_blacklisted("/foo/not_blacklisted/script.py"))
 
-        lso.update_watched_modules()
-
-        fob.assert_not_called()
+        self.assertTrue(is_blacklisted("/foo/miniconda2/script.py"))
+        self.assertTrue(is_blacklisted("/foo/miniconda3/script.py"))
+        self.assertTrue(is_blacklisted("/foo/anaconda2/script.py"))
+        self.assertTrue(is_blacklisted("/foo/anaconda3/script.py"))
+        self.assertTrue(is_blacklisted("/foo/.virtualenv/script.py"))
+        self.assertTrue(is_blacklisted("/foo/.venv/script.py"))
+        self.assertTrue(is_blacklisted("/foo/.random_hidden_folder/script.py"))
 
         # Reset the config object.
         config.set_option("server.folderWatchBlacklist", prev_blacklist)
