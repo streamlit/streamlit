@@ -134,8 +134,9 @@ def main_run(file_or_url, args=None):
             click.get_current_context().parent.command_path,
             click.get_current_context().command.name,
             file_or_url,
-            *args
-        ])
+            *args,
+        ]
+    )
 
     from validators import url
 
