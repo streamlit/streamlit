@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import sys
+from enum import Enum
 
 import tornado.gen
 import tornado.ioloop
@@ -86,8 +86,10 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(self.enqueue, container=BlockPath.SIDEBAR)
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue,
+                                       container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue,
+                                          container=BlockPath.SIDEBAR)
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -265,14 +267,18 @@ class ReportSession(object):
             if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
                 self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-            self._enqueue_report_finished_message()
+            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+            self._enqueue_report_finished_message(
+                ForwardMsg.FINISHED_SUCCESSFULLY
+                if script_succeeded
+                else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+            )
 
             if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_final_report_and_quit)
-
-            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
             if script_succeeded:
                 # When a script completes successfully, we update our
@@ -338,14 +344,21 @@ class ReportSession(object):
         imsg = msg.initialize
 
         imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
-        LOGGER.debug(
-            "New browser connection: sharing_enabled=%s", imsg.config.sharing_enabled
-        )
 
         imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
+
+        imsg.config.max_cached_message_age = config.get_option(
+            "global.maxCachedMessageAge"
+        )
+
         LOGGER.debug(
-            "New browser connection: gather_usage_stats=%s",
+            "New browser connection: "
+            "gather_usage_stats=%s, "
+            "sharing_enabled=%s, "
+            "max_cached_message_age=%s",
             imsg.config.gather_usage_stats,
+            imsg.config.sharing_enabled,
+            imsg.config.max_cached_message_age,
         )
 
         imsg.environment_info.streamlit_version = __version__
@@ -370,9 +383,16 @@ class ReportSession(object):
         msg.new_report.script_path = self._report.script_path
         self.enqueue(msg)
 
-    def _enqueue_report_finished_message(self):
+    def _enqueue_report_finished_message(self, status):
+        """Enqueues a report_finished ForwardMsg.
+
+        Parameters
+        ----------
+        status : ReportFinishedStatus
+
+        """
         msg = ForwardMsg()
-        msg.report_finished = True
+        msg.report_finished = status
         self.enqueue(msg)
 
     def handle_rerun_script_request(

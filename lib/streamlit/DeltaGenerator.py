@@ -25,6 +25,7 @@ import functools
 import json
 import random
 import textwrap
+import pandas as pd
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -43,6 +44,10 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
+
+# List of Streamlit commands that perform a Pandas "melt" operation on
+# input dataframes.
+DELTAS_TYPES_THAT_MELT_DATAFRAMES = ('line_chart', 'area_chart', 'bar_chart')
 
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
@@ -102,10 +107,19 @@ def _with_element(method):
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg)
 
+        delta_type = method.__name__
+        last_index = -1
+
+        if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
+            data = args[0]
+            if isinstance(data, pd.DataFrame):
+                last_index = data.index[-1] if data.index.size > 0 else 0
+
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element)
+        return dg._enqueue_new_element_delta(marshall_element, delta_type,
+                                             last_index)
 
     return wrapped_method
 
@@ -155,28 +169,48 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(
-        self,
-        enqueue,
-        id=0,
-        is_root=True,
-        container=BlockPath_pb2.BlockPath.MAIN,
-        path=(),
-    ):
+    def __init__(self,
+                 enqueue,
+                 id=0,
+                 delta_type=None,
+                 last_index=None,
+                 is_root=True,
+                 container=BlockPath_pb2.BlockPath.MAIN,
+                 path=()):
         """Constructor.
 
         Parameters
         ----------
-        enqueue : callable
-            Function that (maybe) enqueues ForwardMsg's and returns True if
+        enqueue: callable or None
+          Function that (maybe) enqueues ForwardMsg's and returns True if
             enqueued or False if not.
-        id : int
-            ID for deltas, or None to create the root DeltaGenerator (which
+        id: int or None
+          ID for deltas, or None to create the root DeltaGenerator (which
             produces DeltaGenerators with incrementing IDs)
+        delta_type: string or None
+          The name of the element passed in Element.proto's oneof.
+          This is needed so we can transform dataframes for some elements when
+          performing an `add_rows`.
+        last_index: int or None
+          The last index of the DataFrame for the element this DeltaGenerator
+          created. Only applies to elements that transform dataframes,
+          like line charts.
+        is_root: bool
+          If True, this will behave like a root DeltaGenerator which an
+          auto-incrementing ID (in which case, `id` should be None).
+          If False, this will have a fixed ID as determined
+          by the `id` argument.
+        container: BlockPath
+          The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
+        path: tuple of ints
+          The full path of this DeltaGenerator, consisting of the IDs of
+          all ancestors. The 0th item is the topmost ancestor.
 
         """
         self._enqueue = enqueue
         self._id = id
+        self._delta_type = delta_type
+        self._last_index = last_index
         self._is_root = is_root
         self._container = container
         self._path = path
@@ -216,9 +250,10 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(
-        self, marshall_element, elementWidth=None, elementHeight=None
-    ):
+    def _enqueue_new_element_delta(self, marshall_element, delta_type,
+                                   last_index=None,
+                                   elementWidth=None,
+                                   elementHeight=None):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -261,6 +296,7 @@ class DeltaGenerator(object):
             if elementHeight is not None:
                 msg.metadata.element_dimension_spec.height = elementHeight
 
+
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
             return value_or_dg(rv, self)
@@ -268,12 +304,20 @@ class DeltaGenerator(object):
         # Figure out if we need to create a new ID for this element.
         if self._is_root:
             output_dg = DeltaGenerator(
-                self._enqueue, msg.metadata.delta_id, is_root=False
+                enqueue=self._enqueue,
+                id=msg.metadata.delta_id,
+                delta_type=delta_type,
+                last_index=last_index,
+                container=self._container,
+                is_root=False
             )
         else:
+            self._delta_type = delta_type
+            self._last_index = last_index
             output_dg = self
 
         kind = msg.delta.new_element.WhichOneof("type")
+
         m = metrics.Client.get("streamlit_enqueue_deltas_total")
         m.labels(kind).inc()
         msg_was_enqueued = self._enqueue(msg)
@@ -715,17 +759,12 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame, width, height)
-
-    # TODO: Either remove this or make it public. This is only used in the
-    # mnist demo right now.
-    @_with_element
-    def _native_chart(self, element, chart):
-        """Display a chart."""
-        chart.marshall(element.chart)
+        return self._enqueue_new_element_delta(set_data_frame, 'dataframe',
+                                               elementWidth=width,
+                                               elementHeight=height)
 
     @_with_element
-    def line_chart(self, element, data, width=0, height=0):
+    def line_chart(self, element, data=None, width=0, height=0):
         """Display a line chart.
 
         Parameters
@@ -753,13 +792,13 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
 
-        chart = Chart(data, type="line_chart", width=width, height=height)
-        chart.marshall(element.chart)
+        import streamlit.elements.altair as altair
+        chart = altair.generate_chart('line', data)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def area_chart(self, element, data, width=0, height=0):
+    def area_chart(self, element, data=None, width=0, height=0):
         """Display a area chart.
 
         Parameters
@@ -786,13 +825,12 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
-
-        chart = Chart(data, type="area_chart", width=width, height=height)
-        chart.marshall(element.chart)
+        import streamlit.elements.altair as altair
+        chart = altair.generate_chart('area', data)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def bar_chart(self, element, data, width=0, height=0):
+    def bar_chart(self, element, data=None, width=0, height=0):
         """Display a bar chart.
 
         Parameters
@@ -819,10 +857,9 @@ class DeltaGenerator(object):
             height: 200px
 
         """
-        from streamlit.elements.Chart import Chart
-
-        chart = Chart(data, type="bar_chart", width=width, height=height)
-        chart.marshall(element.chart)
+        import streamlit.elements.altair as altair
+        chart = altair.generate_chart('bar', data)
+        altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
     def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
@@ -1498,26 +1535,30 @@ class DeltaGenerator(object):
         max_value=None,
         value=None,
         step=None,
+        format=None,
     ):
         """Display a slider widget.
 
         Parameters
         ----------
-        label : str
+        label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float
+        min_value : int/float or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 otherwise.
-        max_value : int/float
+        max_value : int/float or None
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
-        value : int/float or a tuple/list of int/float
+        value : int/float or a tuple/list of int/float or None
             The value of this widget when it first renders. In case the value
             is passed as a tuple/list a range slider will be used.
             Defaults to min_value.
-        step : int/float
+        step : int/float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
+        format : str or None
+            Printf/Python format string.
+
 
         Returns
         -------
@@ -1538,6 +1579,7 @@ class DeltaGenerator(object):
         >>> st.write('Values:', values)
 
         """
+
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
@@ -1547,7 +1589,8 @@ class DeltaGenerator(object):
         range_value = isinstance(value, (list, tuple)) and len(value) == 2
         if not single_value and not range_value:
             raise ValueError(
-                "The value should either be an int/float or a list/tuple of int/float"
+                "The value should either be an int/float or a list/tuple of "
+                "int/float"
             )
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
@@ -1629,11 +1672,24 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
 
+        # Set format default.
+        if format is None:
+            if all_ints:
+                format = "%d"
+            else:
+                format = "%0.2f"
+        # It would be great if we could guess the number of decimal places from
+        # the step`argument, but this would only be meaningful if step were a decimal.
+        # As a possible improvement we could make this function accept decimals
+        # and/or use some heuristics for floats.
+
         element.slider.label = label
         element.slider.value[:] = [current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
+        element.slider.format = format
+
         return current_value if single_value else tuple(current_value)
 
     @_widget
@@ -2095,6 +2151,7 @@ class DeltaGenerator(object):
         assert not self._is_root, "Only existing elements can add_rows."
 
         import streamlit.elements.data_frame_proto as data_frame_proto
+        import pandas as pd
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
@@ -2108,6 +2165,28 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
+
+        # For some delta types we have to reshape the data structure
+        # otherwise the input data and the actual data used
+        # by vega_lite will be different and it will throw an error.
+        if self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
+            if not isinstance(data, pd.DataFrame):
+                data = data_frame_proto.convert_anything_to_df(data)
+
+            old_step = data.index.step
+
+            # We have to drop the predefined index
+            data = data.reset_index(drop=True)
+
+            old_stop = data.index.stop
+
+            start = self._last_index + old_step
+            stop = self._last_index + old_step + old_stop
+
+            data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
+            data = pd.melt(data.reset_index(), id_vars=['index'])
+
+            self._last_index = stop
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.parent_block.container = self._container

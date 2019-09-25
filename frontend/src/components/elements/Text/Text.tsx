@@ -123,7 +123,7 @@ class Text extends React.PureComponent<Props> {
             <div className="markdown-text-container">
               <ReactMarkdown
                 source={body}
-                escapeHtml={false}
+                escapeHtml={true}
                 renderers={renderers}
               />
             </div>

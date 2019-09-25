@@ -83,6 +83,12 @@ export const sliderOverrides = {
       fontSize: labelFontSize,
       paddingBottom: smallTextMargin,
       color: $disabled ? gray : primary,
+      top: "-22px",
+      position: "absolute",
+      whiteSpace: "nowrap",
+      backgroundColor: "transparent",
+      lineHeight: lineHeightBase,
+      fontWeight: "normal",
     }),
   },
   TickBar: {
@@ -91,6 +97,17 @@ export const sliderOverrides = {
       paddingLeft: 0,
       paddingRight: 0,
       paddingTop: smallTextMargin,
+      justifyContent: "space-between",
+      alignItems: "center",
+      display: "flex",
+    },
+  },
+  TickBarItem: {
+    style: {
+      lineHeight: lineHeightBase,
+      fontWeight: "normal",
+      fontSize: labelFontSize,
+      fontFamily: fontFamilyMono,
     },
   },
   Track: {
