@@ -659,9 +659,6 @@ class App extends PureComponent {
           {/* The tabindex below is required for testing. */}
           <header tabIndex="-1">
             <div className="decoration" />
-            <nav>
-              <a href="//streamlit.io">Streamlit</a>
-            </nav>
             <div className="toolbar">
               <StatusWidget
                 ref={this.statusWidgetRef}

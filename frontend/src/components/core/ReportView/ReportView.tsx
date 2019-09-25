@@ -20,11 +20,11 @@ import { List, Map as ImmutableMap } from "immutable"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
+import Icon from "components/core/Icon"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
-import { ChevronRight, ChevronLeft } from "baseui/icon"
 import { widgetTheme } from "lib/widgetTheme"
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -94,6 +94,10 @@ class ReportView extends PureComponent<Props> {
         <div className={reportViewClassName}>
           {this.hasSidebar() && (
             <section className="sidebar">
+              <span onClick={this.toggleCollapse} className="sidebar-close">
+                <Icon type="x" />
+              </span>
+
               <div className="block-container">
                 <Block
                   elements={this.props.elements.sidebar}
@@ -106,15 +110,14 @@ class ReportView extends PureComponent<Props> {
                   widgetsDisabled={this.props.widgetsDisabled}
                 />
               </div>
-              <div
-                className="collapsable-control"
-                onClick={this.toggleCollapse}
-              >
-                {collapsedSidebar && <ChevronRight size={30} />}
-                {!collapsedSidebar && <ChevronLeft size={30} />}
-              </div>
             </section>
           )}
+          <span
+            className="sidebar-collapse-control"
+            onClick={this.toggleCollapse}
+          >
+            <Icon type="account-login" />
+          </span>
           <section className="main">
             <div className="block-container">
               <Block

@@ -35,17 +35,12 @@
   }
 
   &.--with-sidebar {
-    .main {
-      //margin-left: 250px;
-
-      //@media (max-width: 746px) {
-      //  margin-left: 0;
-      //}
-    }
-
     &.--collapsed {
       .sidebar {
-        margin-left: -270px;
+        margin-left: -$sidebar-width;
+      }
+      .sidebar-collapse-control {
+        left: 0;
       }
     }
   }
@@ -56,6 +51,8 @@
     flex-direction: column;
     align-items: center;
     padding: 80px 15px 0 15px;
+    min-width: 546px;
+    overflow: hidden;
 
     .block-container {
       max-width: $content-max-width;
@@ -79,21 +76,19 @@
     background-color: #31353d;
     color: #b8bfce !important;
     flex-shrink: 0;
-    padding: 5rem 45px 15px 15px;
+    padding: 5rem 15px 15px 15px;
+    box-shadow: 0px -1px 5px #282c33;
 
     transition: all ease-in 0.2s;
 
-    .collapsable-control {
+    .sidebar-close {
       position: absolute;
-      top: 0;
-      right: 0;
-      height: 100%;
-      display: flex;
-      background: #3a3f48;
-      box-shadow: 0px -1px 5px #282c33;
-      border: 1px solid #464a52;
-      flex-direction: column;
-      justify-content: center;
+      top: 10px;
+      right: 10px;
+      fill: #bdbdbd;
+      height: 20px;
+      width: 20px;
+      z-index: 1;
       cursor: pointer;
     }
 
@@ -127,6 +122,37 @@
       label {
         color: inherit;
       }
+    }
+  }
+
+  .sidebar-collapse-control {
+    position: fixed;
+    top: 10px;
+    left: -40px;
+    cursor: pointer;
+    z-index: $z-index-sidebar - 1;
+
+    color: #fff;
+    background-color: rgb(52, 58, 64);
+    border-radius: 0 4px 4px 0px;
+    width: 35px;
+
+    transition: all 0.3s ease;
+    transition-delay: 0.3s;
+
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    border: 1px solid #343a40;
+    fill: white;
+
+    &:hover {
+      color: #fff;
+      background-color: #23272b;
+      border-color: #1d2124;
     }
   }
 
