@@ -114,6 +114,7 @@ def _create_option(
     deprecation_text=None,
     expiration_date=None,
     replaced_by=None,
+    type_=str
 ):
     '''Create a ConfigOption and store it globally in this module.
 
@@ -159,6 +160,7 @@ def _create_option(
         deprecation_text=deprecation_text,
         expiration_date=expiration_date,
         replaced_by=replaced_by,
+        type_=type_
     )
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.'
@@ -196,6 +198,7 @@ _create_option(
         If you'd like to turn off this warning, set this to True.
         """,
     default_val=False,
+    type_=bool,
 )
 
 
@@ -220,10 +223,11 @@ _create_option(
         via "python my_script.py".
         """,
     default_val=True,
+    type_=bool,
 )
 
 
-@_create_option("global.developmentMode", visibility="hidden")
+@_create_option("global.developmentMode", visibility="hidden", type_=bool)
 def _global_development_mode():
     """Are we in development mode.
 
@@ -249,7 +253,7 @@ def _global_log_level():
         return "info"
 
 
-@_create_option("global.unitTest", visibility="hidden")
+@_create_option("global.unitTest", visibility="hidden", type_=bool)
 def _global_unit_test():
     """Are we in a unit test?
 
@@ -264,6 +268,7 @@ _create_option(
         developmentMode is True.""",
     visibility="hidden",
     default_val=True,
+    type_=bool,
 )
 
 
@@ -272,25 +277,28 @@ _create_option(
     description="Whether to serve prometheus metrics from /metrics.",
     visibility="hidden",
     default_val=False,
+    type_=bool,
 )
 
 
 _create_option(
     "global.minCachedMessageSize",
-    description="""Only cache ForwardMsgs that are greater than or equal to 
+    description="""Only cache ForwardMsgs that are greater than or equal to
         this minimum.""",
     visibility="hidden",
     default_val=10 * 1e3,
+    type_=int,
 )  # 10k
 
 
 _create_option(
     "global.maxCachedMessageAge",
-    description="""Expire cached ForwardMsgs whose age is greater than this 
-        value. A message's age is defined by how many times its script has 
+    description="""Expire cached ForwardMsgs whose age is greater than this
+        value. A message's age is defined by how many times its script has
         finished running since the message has been accessed.""",
     visibility="hidden",
     default_val=2,
+    type_=int,
 )
 
 
@@ -299,7 +307,10 @@ _create_option(
 _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
-    "client.caching", description="Whether to enable st.cache.", default_val=True
+    "client.caching",
+    description="Whether to enable st.cache.",
+    default_val=True,
+    type_=bool,
 )
 
 _create_option(
@@ -307,6 +318,7 @@ _create_option(
     description="""If false, makes your Streamlit script not draw to a
         Streamlit app.""",
     default_val=True,
+    type_=bool,
 )
 
 
@@ -321,6 +333,7 @@ _create_option(
         Python code to write it to the app.
         """,
     default_val=True,
+    type_=bool,
 )
 
 _create_option(
@@ -331,6 +344,7 @@ _create_option(
         script's execution.
         """,
     default_val=False,
+    type_=bool,
 )
 
 _create_option(
@@ -340,6 +354,7 @@ _create_option(
         prevent Python crashing.
         """,
     default_val=True,
+    type_=bool,
 )
 
 # Config Section: Server #
@@ -358,7 +373,7 @@ _create_option(
 )
 
 
-@_create_option("server.headless")
+@_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
     """If false, will attempt to open a browser window on start.
@@ -377,7 +392,7 @@ def _server_headless():
     )
 
 
-@_create_option("server.liveSave")
+@_create_option("server.liveSave", type_=bool)
 def _server_live_save():
     """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
@@ -387,7 +402,7 @@ def _server_live_save():
     return False
 
 
-@_create_option("server.runOnSave")
+@_create_option("server.runOnSave", type_=bool)
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
@@ -396,7 +411,7 @@ def _server_run_on_save():
     return False
 
 
-@_create_option("server.port")
+@_create_option("server.port", type_=int)
 def _server_port():
     """The port where the server will listen for client and browser
     connections.
@@ -406,7 +421,7 @@ def _server_port():
     return 8501
 
 
-@_create_option("server.enableCORS")
+@_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing, for added security.
 
@@ -430,7 +445,7 @@ def _browser_server_address():
     return "localhost"
 
 
-@_create_option("browser.gatherUsageStats")
+@_create_option("browser.gatherUsageStats", type_=bool)
 def _gather_usage_stats():
     """Whether to send usage statistics to Streamlit.
 
@@ -439,7 +454,7 @@ def _gather_usage_stats():
     return True
 
 
-@_create_option("browser.serverPort")
+@_create_option("browser.serverPort", type_=int)
 @util.memoize
 def _browser_server_port():
     """Port that the browser should use to connect to the server.
@@ -501,6 +516,7 @@ _create_option(
         us at support@streamlit.io.
         """,
     default_val=False,
+    type_=bool,
 )
 
 _create_option(

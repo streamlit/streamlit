@@ -47,8 +47,6 @@ NEW_VERSION_TEXT = """
     "command": click.style("pip install streamlit --upgrade", fg="white", bold=True),
 }
 
-OPTION_UNSET = "OPTION_UNSET"
-
 
 @click.group()
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
@@ -122,20 +120,24 @@ def configurator_options(func):
     """
     decorator that composes the existing config options as options for click lib
     """
-    config_key_value_pairs = [[k, _config._config_options[k]] for k in _config._config_options]
+    config_key_value_pairs = [
+        [k, _config._config_options[k]] for k in _config._config_options
+    ]
 
     for key, value in config_key_value_pairs:
-        option = key.replace(".", "-")
+        option = "--{}".format(key)
         param = key.replace(".", "_")
         description = value.description
         if value.deprecated:
-            description += '\n %s - %s'.format(value.deprecation_text, value.deprecation_date)
+            description += "\n {} - {}".format(
+                value.deprecation_text, value.deprecation_date
+            )
 
         config_option = click.option(
-            "--" + option.replace(".", "-"),
-            param.replace(".", "_"),
-            default=OPTION_UNSET,
-            help=description
+            option,
+            param,
+            help=description,
+            type=value.type
         )
         func = config_option(func)
     return func
@@ -153,12 +155,24 @@ def main_run(file_or_url, args, **kwargs):
     """
     from validators import url
 
-    # read through all option configs that are set and call set_option
-    # to override default/file configs
+    # read through all option configs that are set via cmd option param
+    # and call set_option to override default/file configs
     for config_option in kwargs:
-        if kwargs[config_option] != OPTION_UNSET:
+        if kwargs[config_option] is not None:
+            config_option_def_key = config_option.replace("_", ".")
+            value = kwargs[config_option]
+            config_option_def = _config._config_options[config_option_def_key]
+            # special consideration to cast string to bool
+            if config_option_def.type == bool:
+                if value.lower() in ['true', '1', 't', 'y', 'yes']:
+                    value = True
+                else:
+                    value = False
+            else:
+                value = config_option_def.type(value)
+
             _config._set_option(
-                config_option.replace("_", "."),
+                config_option_def_key,
                 kwargs[config_option],
                 "cli call option",
             )
