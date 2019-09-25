@@ -23,6 +23,8 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+from streamlit import config as _config
+
 import os
 import click
 
@@ -44,6 +46,8 @@ NEW_VERSION_TEXT = """
     "new_version": click.style("A new version of Streamlit is available.", fg="green"),
     "command": click.style("pip install streamlit --upgrade", fg="white", bold=True),
 }
+
+OPTION_UNSET = "OPTION_UNSET"
 
 
 @click.group()
@@ -114,16 +118,53 @@ def main_hello():
     _main_run(filename)
 
 
+def get_config_as_parameter_pairs():
+    """
+    makes up a list with existing comnfig options formated as options for click
+    """
+
+    all_config_keys = list(_config._config_options)
+    return [[key.replace(".", "-"), key.replace(".", "_")] for key in all_config_keys]
+
+
+def configurator_options(func):
+    """
+    decorator that composes the existing config options as options for click
+    """
+    all_key_parameter_pairs = get_config_as_parameter_pairs()
+
+    for option, param in all_key_parameter_pairs:
+        config_option = click.option(
+            "--" + option.replace(".", "-"),
+            param.replace(".", "_"),
+            default=OPTION_UNSET,
+        )
+        func = config_option(func)
+    return func
+
+
 @main.command("run")
+@configurator_options
 @click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args):
+def main_run(file_or_url, args, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
     The script can be local or it can be an url. In the
     latter case, streamlit will download the script to a
     temporary file and runs this file.
     """
     from validators import url
+
+    # read through all option configs that are set and call set_option
+    # to override default/file configs
+    for config_option in kwargs:
+        if kwargs[config_option] != OPTION_UNSET:
+            print(" call  _config._set_option with values:", config_option.replace("_", "."), kwargs[config_option])
+            _config._set_option(
+                config_option.replace("_", "."),
+                kwargs[config_option],
+                "cli call option",
+            )
 
     if url(file_or_url):
         import tempfile
@@ -228,9 +269,7 @@ def config():
 @config.command("show")
 def config_show():
     """Show all of Streamlit's config settings."""
-    from streamlit import config
-
-    config.show_config()
+    _config.show_config()
 
 
 # SUBCOMMAND: activate
