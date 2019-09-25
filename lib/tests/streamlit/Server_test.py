@@ -27,7 +27,9 @@ from mock import MagicMock
 from mock import patch
 from tornado import gen
 
+import streamlit.server.Server
 from streamlit import config
+from streamlit.server.Server import server_port_is_manually_set
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
@@ -35,6 +37,7 @@ from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
 from streamlit.server.Server import start_listening
+from streamlit.server.Server import ExceededRetries
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -44,6 +47,8 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
 from tests.ServerTestCase import ServerTestCase
 
+from streamlit.logger import get_logger
+LOGGER = get_logger(__name__)
 
 def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
@@ -310,15 +315,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class PortRotateAHundredTest(unittest.TestCase):
-    """Tests port rotates up to a hundred times then sys exits"""
+    """Tests port rotation handles a hundred attempts then sys exits"""
 
     def get_app(self):
         app = mock.MagicMock()
 
-        def listen(port):
-            raise OSError(errno.EADDRINUSE, "test", "asd")
+        app.listen = mock.Mock()
+        app.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
 
-        app.listen = listen
         return app
 
     def test_rotates_a_hundred_ports(self):
@@ -326,9 +330,9 @@ class PortRotateAHundredTest(unittest.TestCase):
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             start_listening(app)
             assert pytest_wrapped_e.type == SystemExit
-            assert pytest_wrapped_e.value.code == 42
+            assert pytest_wrapped_e.value.code == errno.EADDRINUSE
 
-        assert app.listen.call_count == 100
+            assert app.listen.call_count == 100
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -339,26 +343,23 @@ class PortRotateOneTest(unittest.TestCase):
     def get_app(self):
         app = mock.MagicMock()
 
-        def listen(port):
-            if not port: # or port < 8502:
-                raise OSError(errno.EADDRINUSE, "test", "asd")
-            else:
-                PortRotateOneTest.which_port(port)
+        app.listen = mock.Mock()
+        app.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
 
-        app.listen = listen
         return app
 
-    @mock.patch('streamlit.config.is_manually_set')
-    @mock.patch('streamlit.config._set_option')
-    def test_rotates_one_port(self, patched__set_option, patched_is_manually_set):
+    @mock.patch('streamlit.server.Server.config._set_option')
+    @mock.patch('streamlit.server.Server.server_port_is_manually_set')
+    def test_rotates_one_port(self, patched_server_port_is_manually_set, patched__set_option):
         app = self.get_app()
 
-        patched_is_manually_set.return_value = True
+        patched_server_port_is_manually_set.return_value = True
+        with pytest.raises(ExceededRetries) as pytest_wrapped_e:
+            start_listening(app)
 
-        start_listening(app)
+            PortRotateOneTest.which_port.assert_called_with(8502)
 
-        PortRotateOneTest.which_port.assert_called_with(8501)
-        patched__set_option.assert_called_with("server.port", 8502, "server initialization")
+            patched__set_option.assert_called_with("server.port", 8501, "server initialization")
 
 
 class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
