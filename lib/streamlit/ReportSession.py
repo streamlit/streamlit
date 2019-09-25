@@ -373,14 +373,12 @@ class ReportSession(object):
 
         self.enqueue(msg)
 
-    # if run from url set the correct command line and correct name
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
         msg = ForwardMsg()
         msg.new_report.id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
-
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):

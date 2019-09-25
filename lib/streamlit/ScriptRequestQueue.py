@@ -36,7 +36,7 @@ RerunData = namedtuple(
     [
         # WidgetStates protobuf to run the script with. If this is None, the
         # widget_state from the most recent run of the script will be used instead.
-        "widget_state"
+        "widget_state",
     ],
 )
 
