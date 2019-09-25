@@ -44,7 +44,7 @@ CACHED_ST_FUNCTION_WARNING = (
     "can lead to unexpected results.\n\n"
     "How to resolve this warning:\n\n"
     "Move the streamlit function call outside the cached function.\n"
-    "Or, if you know what you're doing, use"
+    "Or, if you know what you're doing, use "
     "@st.cache(suppress_st_warning=True) to suppress the warning."
 )
 
