@@ -487,24 +487,12 @@ function doHealthPing(
 
   xhr.timeout = timeoutMs
 
-  // Shorten the command line by removing the path leading to the
-  // streamlit executable.
-  function getFriendlyCommandLine(): string {
-    const commandLine = SessionInfo.current.commandLine
-    const index = commandLine.indexOf("streamlit")
-    if (index >= 0 && index + "streamlit".length < commandLine.length) {
-      const rest = commandLine.slice(index + "streamlit".length).trimStart()
-      return `streamlit ${rest}`
-    }
-    return commandLine
-  }
-
   const retryWhenTheresNoResponse = (): void => {
     const uri = new URL(uriList[uriNumber])
 
     if (uri.hostname == "localhost") {
       const commandLine = SessionInfo.isSet()
-        ? getFriendlyCommandLine()
+        ? SessionInfo.current.commandLine
         : "streamlit run yourscript.py"
       retry(
         <Fragment>
