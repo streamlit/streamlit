@@ -15,6 +15,8 @@
 
 import sys
 import unittest
+
+import matplotlib
 from mock import patch
 
 try:
@@ -30,6 +32,27 @@ from streamlit.Report import Report
 from tests import testutil
 
 report = Report("the/path", ["arg0", "arg1"])
+
+
+class BootstrapTest(unittest.TestCase):
+    @patch("streamlit.bootstrap.tornado.ioloop")
+    @patch("streamlit.bootstrap.Server")
+    def test_fix_matplotlib_crash(self, _1, _2):
+        """Test that bootstrap.run sets the matplotlib backend to
+        "Agg" if config.runner.fixMatplotlib=True.
+        """
+        matplotlib.use("tkagg")
+
+        config._set_option("runner.fixMatplotlib", True, "test")
+        bootstrap.run("/not/a/script")
+        self.assertEqual("agg", matplotlib.get_backend().lower())
+
+        # Reset
+        matplotlib.use("tkagg")
+
+        config._set_option("runner.fixMatplotlib", False, "test")
+        bootstrap.run("/not/a/script")
+        self.assertEqual("tkagg", matplotlib.get_backend().lower())
 
 
 class BootstrapPrintTest(unittest.TestCase):
