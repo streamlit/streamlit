@@ -50,7 +50,7 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number
-  height?: number
+  height: number | undefined
   element: ImmutableMap<string, any>
 }
 
@@ -108,14 +108,11 @@ interface CellRenderer {
   (input: CellRendererInput): React.ReactNode
 }
 
+const DEFAULT_HEIGHT = 300
 /**
  * Functional element representing a DataFrame.
  */
 class DataFrame extends React.PureComponent<Props, State> {
-  static defaultProps: {
-    height: 300
-  }
-
   private multiGridRef = React.createRef<MultiGrid>()
 
   public constructor(props: Props) {
@@ -280,7 +277,7 @@ class DataFrame extends React.PureComponent<Props, State> {
       rowHeight,
       headerHeight,
       border,
-      height: Math.min(rows * rowHeight + border, height || 300),
+      height: Math.min(rows * rowHeight + border, height || DEFAULT_HEIGHT),
       elementWidth,
       columnWidth,
       headerWidth,

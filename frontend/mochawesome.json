@@ -1,0 +1,283 @@
+{
+  "stats": {
+    "suites": 2,
+    "tests": 8,
+    "passes": 0,
+    "pending": 0,
+    "failures": 2,
+    "start": "2019-09-24T20:39:21.189Z",
+    "end": "2019-09-24T20:39:21.189Z",
+    "duration": 37268,
+    "testsRegistered": 8,
+    "passPercent": 0,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 6,
+    "hasSkipped": true
+  },
+  "results": [
+    {
+      "uuid": "93115180-79d6-48b2-a8f3-7693bfa1dc8a",
+      "title": "",
+      "fullFile": "",
+      "file": "",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "d991e0d8-053f-4bbf-b487-4e0976bf79c4",
+          "title": "st.add_rows",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "works for all elements that support it",
+              "fullTitle": "st.add_rows works for all elements that support it",
+              "timedOut": null,
+              "duration": 766,
+              "state": "failed",
+              "speed": null,
+              "pass": false,
+              "fail": true,
+              "pending": false,
+              "context": "\"assets/add_rows.spec.ts/st.add_rows -- works for all elements that support it (failed).png\"",
+              "code": "cy.get(\".element-container .stTable\").should(\"have.length\", 3);\ncy.get(\".element-container .stDataFrame\").should(\"have.length\", 4);\ncy.get(\".element-container .stChart\").should(\"have.length\", 3);\ncy.get(\".element-container .stVegaLiteChart\").should(\"have.length\", 12);",
+              "err": {
+                "message": "CypressError: cy.visit() failed trying to load:\n\nhttp://localhost:3000/\n\nWe attempted to make an http request to this URL but the request failed without a response.\n\nWe received this error at the network level:\n\n  > Error: connect ECONNREFUSED 127.0.0.1:3000\n\nCommon situations why this would fail:\n  - you don't have internet access\n  - you forgot to run / boot your web server\n  - your web server isn't accessible\n  - you have weird network configuration settings on your computer\n\nThe stack trace for this error is:\n\nError: connect ECONNREFUSED 127.0.0.1:3000\n    at Object._errnoException (util.js:1024:11)\n    at _exceptionWithHostPort (util.js:1046:20)\n    at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1182:14)\n\n\nBecause this error occurred during a 'before all' hook we are skipping the remaining tests in the current suite: 'st.add_rows'",
+                "estack": "CypressError: cy.visit() failed trying to load:\n\nhttp://localhost:3000/\n\nWe attempted to make an http request to this URL but the request failed without a response.\n\nWe received this error at the network level:\n\n  > Error: connect ECONNREFUSED 127.0.0.1:3000\n\nCommon situations why this would fail:\n  - you don't have internet access\n  - you forgot to run / boot your web server\n  - your web server isn't accessible\n  - you have weird network configuration settings on your computer\n\nThe stack trace for this error is:\n\nError: connect ECONNREFUSED 127.0.0.1:3000\n    at Object._errnoException (util.js:1024:11)\n    at _exceptionWithHostPort (util.js:1046:20)\n    at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1182:14)\n\n\nBecause this error occurred during a 'before all' hook we are skipping the remaining tests in the current suite: 'st.add_rows'\n    at Object.cypressErr (http://localhost:59645/__cypress/runner/cypress_runner.js:85348:11)\n    at Object.throwErr (http://localhost:59645/__cypress/runner/cypress_runner.js:85303:18)\n    at Object.throwErrByPath (http://localhost:59645/__cypress/runner/cypress_runner.js:85335:17)\n    at http://localhost:59645/__cypress/runner/cypress_runner.js:73981:31\n    at visitFailedByErr (http://localhost:59645/__cypress/runner/cypress_runner.js:73499:12)\n    at http://localhost:59645/__cypress/runner/cypress_runner.js:73980:22\n    at tryCatcher (http://localhost:59645/__cypress/runner/cypress_runner.js:118962:23)\n    at Promise._settlePromiseFromHandler (http://localhost:59645/__cypress/runner/cypress_runner.js:116898:31)\n    at Promise._settlePromise (http://localhost:59645/__cypress/runner/cypress_runner.js:116955:18)\n    at Promise._settlePromise0 (http://localhost:59645/__cypress/runner/cypress_runner.js:117000:10)\n    at Promise._settlePromises (http://localhost:59645/__cypress/runner/cypress_runner.js:117075:18)\n    at Async../node_modules/bluebird/js/release/async.js.Async._drainQueue (http://localhost:59645/__cypress/runner/cypress_runner.js:113687:16)\n    at Async../node_modules/bluebird/js/release/async.js.Async._drainQueues (http://localhost:59645/__cypress/runner/cypress_runner.js:113697:10)\n    at Async.drainQueues (http://localhost:59645/__cypress/runner/cypress_runner.js:113571:14)\n    at <anonymous>",
+                "diff": null
+              },
+              "uuid": "5f6f15fe-b05d-41e8-b5f6-e79f3ddfc13b",
+              "parentUUID": "d991e0d8-053f-4bbf-b487-4e0976bf79c4",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "raises an exception when the shapes don't match",
+              "fullTitle": "st.add_rows raises an exception when the shapes don't match",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stException\")\n  .should(\"have.length\", 1)\n  .contains(\"Dataframes have incompatible shapes\");",
+              "err": {},
+              "uuid": "7f39ea6a-dbc7-4de4-a2aa-d5ffe304c0b8",
+              "parentUUID": "d991e0d8-053f-4bbf-b487-4e0976bf79c4",
+              "isHook": false,
+              "skipped": true
+            },
+            {
+              "title": "correctly adds rows to tables and dataframes",
+              "fullTitle": "st.add_rows correctly adds rows to tables and dataframes",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stTable tr\").should(\"have.length\", 10);\ncy.get(\".element-container .stDataFrame .col-header\").should(\n  \"have.length\",\n  7\n);",
+              "err": {},
+              "uuid": "0bd8aace-8c82-4af2-8c7e-d9160c9a2cd6",
+              "parentUUID": "d991e0d8-053f-4bbf-b487-4e0976bf79c4",
+              "isHook": false,
+              "skipped": true
+            },
+            {
+              "title": "correctly adds rows to charts",
+              "fullTitle": "st.add_rows correctly adds rows to charts",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stChart\").each((el, i) => {\n  cy.get(el).matchImageSnapshot(`stChart-${i}`);\n});\ncy.get(\".element-container .stVegaLiteChart\").each((el, i) => {\n  cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);\n});",
+              "err": {},
+              "uuid": "6e1d2dba-9586-4a41-8041-d48e5f5bc824",
+              "parentUUID": "d991e0d8-053f-4bbf-b487-4e0976bf79c4",
+              "isHook": false,
+              "skipped": true
+            }
+          ],
+          "suites": [],
+          "passes": [],
+          "failures": ["5f6f15fe-b05d-41e8-b5f6-e79f3ddfc13b"],
+          "pending": [],
+          "skipped": [
+            "7f39ea6a-dbc7-4de4-a2aa-d5ffe304c0b8",
+            "0bd8aace-8c82-4af2-8c7e-d9160c9a2cd6",
+            "6e1d2dba-9586-4a41-8041-d48e5f5bc824"
+          ],
+          "duration": 766,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    },
+    {
+      "uuid": "ca8f3ff3-fefc-4321-bfbe-dc0e59ab8bc5",
+      "title": "",
+      "fullFile": "",
+      "file": "",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "118467ec-bb2a-43eb-806b-f8dbcc995184",
+          "title": "st.add_rows",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "works for all elements that support it",
+              "fullTitle": "st.add_rows works for all elements that support it",
+              "timedOut": null,
+              "duration": 36502,
+              "state": "failed",
+              "speed": null,
+              "pass": false,
+              "fail": true,
+              "pending": false,
+              "context": "\"assets/add_rows.spec.ts/st.add_rows -- works for all elements that support it (failed).png\"",
+              "code": "cy.get(\".element-container .stTable\").should(\"have.length\", 3);\ncy.get(\".element-container .stDataFrame\").should(\"have.length\", 4);\ncy.get(\".element-container .stChart\").should(\"have.length\", 3);\ncy.get(\".element-container .stVegaLiteChart\").should(\"have.length\", 12);",
+              "err": {
+                "message": "CypressError: cy.visit() failed trying to load:\n\nhttp://localhost:3000/\n\nWe attempted to make an http request to this URL but the request failed without a response.\n\nWe received this error at the network level:\n\n  > Error: ESOCKETTIMEDOUT\n\nCommon situations why this would fail:\n  - you don't have internet access\n  - you forgot to run / boot your web server\n  - your web server isn't accessible\n  - you have weird network configuration settings on your computer\n\nThe stack trace for this error is:\n\nError: ESOCKETTIMEDOUT\n    at ClientRequest.<anonymous> (/Users/daniel.caminos/Library/Caches/Cypress/3.4.1/Cypress.app/Contents/Resources/app/packages/server/node_modules/request/request.js:816:19)\n    at Object.onceWrapper (events.js:313:30)\n    at emitNone (events.js:106:13)\n    at ClientRequest.emit (events.js:208:7)\n    at Socket.emitTimeout (_http_client.js:708:34)\n    at Object.onceWrapper (events.js:313:30)\n    at emitNone (events.js:106:13)\n    at Socket.emit (events.js:208:7)\n    at Socket._onTimeout (net.js:407:8)\n    at ontimeout (timers.js:475:11)\n    at tryOnTimeout (timers.js:310:5)\n    at Timer.listOnTimeout (timers.js:270:5)\n\n\nBecause this error occurred during a 'before all' hook we are skipping the remaining tests in the current suite: 'st.add_rows'",
+                "estack": "CypressError: cy.visit() failed trying to load:\n\nhttp://localhost:3000/\n\nWe attempted to make an http request to this URL but the request failed without a response.\n\nWe received this error at the network level:\n\n  > Error: ESOCKETTIMEDOUT\n\nCommon situations why this would fail:\n  - you don't have internet access\n  - you forgot to run / boot your web server\n  - your web server isn't accessible\n  - you have weird network configuration settings on your computer\n\nThe stack trace for this error is:\n\nError: ESOCKETTIMEDOUT\n    at ClientRequest.<anonymous> (/Users/daniel.caminos/Library/Caches/Cypress/3.4.1/Cypress.app/Contents/Resources/app/packages/server/node_modules/request/request.js:816:19)\n    at Object.onceWrapper (events.js:313:30)\n    at emitNone (events.js:106:13)\n    at ClientRequest.emit (events.js:208:7)\n    at Socket.emitTimeout (_http_client.js:708:34)\n    at Object.onceWrapper (events.js:313:30)\n    at emitNone (events.js:106:13)\n    at Socket.emit (events.js:208:7)\n    at Socket._onTimeout (net.js:407:8)\n    at ontimeout (timers.js:475:11)\n    at tryOnTimeout (timers.js:310:5)\n    at Timer.listOnTimeout (timers.js:270:5)\n\n\nBecause this error occurred during a 'before all' hook we are skipping the remaining tests in the current suite: 'st.add_rows'\n    at Object.cypressErr (http://localhost:59677/__cypress/runner/cypress_runner.js:85348:11)\n    at Object.throwErr (http://localhost:59677/__cypress/runner/cypress_runner.js:85303:18)\n    at Object.throwErrByPath (http://localhost:59677/__cypress/runner/cypress_runner.js:85335:17)\n    at http://localhost:59677/__cypress/runner/cypress_runner.js:73981:31\n    at visitFailedByErr (http://localhost:59677/__cypress/runner/cypress_runner.js:73499:12)\n    at http://localhost:59677/__cypress/runner/cypress_runner.js:73980:22\n    at tryCatcher (http://localhost:59677/__cypress/runner/cypress_runner.js:118962:23)\n    at Promise._settlePromiseFromHandler (http://localhost:59677/__cypress/runner/cypress_runner.js:116898:31)\n    at Promise._settlePromise (http://localhost:59677/__cypress/runner/cypress_runner.js:116955:18)\n    at Promise._settlePromise0 (http://localhost:59677/__cypress/runner/cypress_runner.js:117000:10)\n    at Promise._settlePromises (http://localhost:59677/__cypress/runner/cypress_runner.js:117075:18)\n    at Async../node_modules/bluebird/js/release/async.js.Async._drainQueue (http://localhost:59677/__cypress/runner/cypress_runner.js:113687:16)\n    at Async../node_modules/bluebird/js/release/async.js.Async._drainQueues (http://localhost:59677/__cypress/runner/cypress_runner.js:113697:10)\n    at Async.drainQueues (http://localhost:59677/__cypress/runner/cypress_runner.js:113571:14)\n    at <anonymous>",
+                "diff": null
+              },
+              "uuid": "52da16cf-921f-49fa-ae90-434158b876ad",
+              "parentUUID": "118467ec-bb2a-43eb-806b-f8dbcc995184",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "raises an exception when the shapes don't match",
+              "fullTitle": "st.add_rows raises an exception when the shapes don't match",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stException\")\n  .should(\"have.length\", 1)\n  .contains(\"Dataframes have incompatible shapes\");",
+              "err": {},
+              "uuid": "9909aa0c-6117-41bb-ac07-907a977bae59",
+              "parentUUID": "118467ec-bb2a-43eb-806b-f8dbcc995184",
+              "isHook": false,
+              "skipped": true
+            },
+            {
+              "title": "correctly adds rows to tables and dataframes",
+              "fullTitle": "st.add_rows correctly adds rows to tables and dataframes",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stTable tr\").should(\"have.length\", 10);\ncy.get(\".element-container .stDataFrame .col-header\").should(\n  \"have.length\",\n  7\n);",
+              "err": {},
+              "uuid": "2f18acae-1b7e-4b99-a125-9f3c727236bb",
+              "parentUUID": "118467ec-bb2a-43eb-806b-f8dbcc995184",
+              "isHook": false,
+              "skipped": true
+            },
+            {
+              "title": "correctly adds rows to charts",
+              "fullTitle": "st.add_rows correctly adds rows to charts",
+              "timedOut": null,
+              "duration": 0,
+              "state": "skipped",
+              "speed": null,
+              "pass": false,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.get(\".element-container .stChart\").each((el, i) => {\n  cy.get(el).matchImageSnapshot(`stChart-${i}`);\n});\ncy.get(\".element-container .stVegaLiteChart\").each((el, i) => {\n  cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);\n});",
+              "err": {},
+              "uuid": "ade46fc3-baab-47fb-9cb1-25da7ad0fc01",
+              "parentUUID": "118467ec-bb2a-43eb-806b-f8dbcc995184",
+              "isHook": false,
+              "skipped": true
+            }
+          ],
+          "suites": [],
+          "passes": [],
+          "failures": ["52da16cf-921f-49fa-ae90-434158b876ad"],
+          "pending": [],
+          "skipped": [
+            "9909aa0c-6117-41bb-ac07-907a977bae59",
+            "2f18acae-1b7e-4b99-a125-9f3c727236bb",
+            "ade46fc3-baab-47fb-9cb1-25da7ad0fc01"
+          ],
+          "duration": 36502,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "5.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false
+      },
+      "version": "4.1.0"
+    },
+    "marge": {
+      "options": {
+        "id": "default",
+        "reportDir": "cypress/mochawesome",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "4.0.1"
+    }
+  }
+}

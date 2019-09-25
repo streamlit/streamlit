@@ -38,6 +38,14 @@ class BokehChart extends React.PureComponent<Props> {
 
   private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
+
+    /**
+     * When you create a bokeh chart in your python script, you can specify
+     * the width: p = figure(title="simple line example", x_axis_label="x", y_axis_label="y", plot_width=200);
+     * In that case, the json object will contains an attribute called
+     * plot_width (or plot_heigth) inside the plot reference.
+     * If that values are missing, we can set that values to make the chart responsive.
+     */
     const plot =
       data && data.doc && data.doc.roots && data.doc.roots.references
         ? data.doc.roots.references.find((e: any) => e.type === "Plot")
@@ -78,7 +86,10 @@ class BokehChart extends React.PureComponent<Props> {
     <div
       id={this.chartId}
       className="stBokehChart"
-      style={{ width: this.props.width, height: this.props.height }}
+      style={{
+        width: this.props.width,
+        height: this.props.height ? this.props.height : DEFAULT_HEIGHT,
+      }}
     />
   )
 }
