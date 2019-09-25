@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import fnmatch
 import os
 import sys
 import collections
@@ -28,6 +29,7 @@ from streamlit import config
 from streamlit import util
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 try:
@@ -39,15 +41,18 @@ except ImportError:
     # Fallback that doesn't use watchdog.
     from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
-    if not config.get_option('global.disableWatchdogWarning'):
-        msg = '\n  $ xcode-select --install' if util.is_darwin() else ''
+    if not config.get_option("global.disableWatchdogWarning"):
+        msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
 
-        LOGGER.warning("""
+        LOGGER.warning(
+            """
   For better performance, install the Watchdog module:
   %s
   $ pip install watchdog
 
-        """ % msg)
+        """
+            % msg
+        )
 
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
@@ -60,6 +65,9 @@ class LocalSourcesWatcher(object):
         self._is_closed = False
 
         self._folder_blacklist = config.get_option("server.folderWatchBlacklist")
+
+        # Blacklist some additional folders, using glob syntax.
+        self._folder_blacklist.extend(["**/.*", "**/anaconda*", "**/miniconda*"])
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
@@ -140,12 +148,12 @@ class LocalSourcesWatcher(object):
                     # .origin is 'built-in'.
                     continue
 
-                folder_is_blacklisted = any(
+                is_in_blacklisted_folder = any(
                     _file_is_in_folder(filepath, blacklisted_folder)
                     for blacklisted_folder in self._folder_blacklist
                 )
 
-                if folder_is_blacklisted:
+                if is_in_blacklisted_folder:
                     continue
 
                 file_is_new = filepath not in self._watched_modules
@@ -175,7 +183,10 @@ class LocalSourcesWatcher(object):
                 self._deregister_watcher(filepath)
 
 
-def _file_is_in_folder(filepath, folderpath):
-    # Assumes filepath is an absolute path, as a teeny tiny optimization.
-    folderpath = os.path.abspath(folderpath) + "/"
-    return filepath.startswith(folderpath)
+def _file_is_in_folder(filepath, folderpath_glob):
+    # Strip trailing slash if it exists
+    if folderpath_glob.endswith("/"):
+        folderpath_glob = folderpath_glob[:-1]
+
+    file_dir = os.path.dirname(filepath)
+    return fnmatch.fnmatch(file_dir, folderpath_glob)

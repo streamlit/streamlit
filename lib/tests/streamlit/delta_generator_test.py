@@ -150,9 +150,9 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.
-        self.assertEqual(wrapped.__module__, "delta_generator_test")
-        self.assertEqual(wrapped.__name__, "fake_text")
-        self.assertEqual(wrapped.__doc__, "Fake text delta generator.")
+        self.assertEqual("delta_generator_test", wrapped.__module__)
+        self.assertEqual("fake_text", wrapped.__name__)
+        self.assertEqual("Fake text delta generator.", wrapped.__doc__)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_text)

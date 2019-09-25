@@ -28,15 +28,36 @@ from streamlit.watcher import LocalSourcesWatcher
 
 class FileIsInFolderTest(unittest.TestCase):
     def test_file_in_folder(self):
+        # Test with and without trailing slash
         ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
+        self.assertTrue(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
         self.assertTrue(ret)
 
     def test_file_not_in_folder(self):
+        # Test with and without trailing slash
         ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f")
         self.assertFalse(ret)
 
     def test_rel_file_not_in_folder(self):
+        # Test with and without trailing slash
         ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f")
+        self.assertFalse(ret)
+
+    def test_file_in_folder_glob(self):
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/c")
+        self.assertTrue(ret)
+
+    def test_file_not_in_folder_glob(self):
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/f")
+        self.assertFalse(ret)
+
+    def test_rel_file_not_in_folder_glob(self):
+        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "**/f")
         self.assertFalse(ret)
 
 
@@ -44,14 +65,16 @@ if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
     import test_data.misbehaved_module as MISBEHAVED_MODULE
+    import test_data.miniconda3.dummy_miniconda_module as MINICONDA_MODULE
 else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
+    import tests.streamlit.watcher.test_data.miniconda3.dummy_miniconda_module as MINICONDA_MODULE
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, [])
-CALLBACK = lambda x: x
+NOOP_CALLBACK = lambda x: x
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
@@ -59,7 +82,12 @@ DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
-        modules = ["DUMMY_MODULE_1", "DUMMY_MODULE_2", "MISBEHAVED_MODULE"]
+        modules = [
+            "DUMMY_MODULE_1",
+            "DUMMY_MODULE_2",
+            "MISBEHAVED_MODULE",
+            "MINICONDA_MODULE",
+        ]
 
         the_globals = globals()
 
@@ -76,7 +104,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_just_script(self, fob):
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
         args = fob.call_args.args
@@ -94,7 +122,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_script_and_2_modules_at_once(self, fob):
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
 
@@ -126,7 +154,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_script_and_2_modules_in_series(self, fob):
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
 
@@ -160,7 +188,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_misbehaved_module(self, fob):
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
 
@@ -171,18 +199,42 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()  # Just __init__.py
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_blacklist(self, fob):
+    def test_config_blacklist(self, fob):
+        """Test server.folderWatchBlacklist"""
         prev_blacklist = config.get_option("server.folderWatchBlacklist")
 
         config.set_option(
             "server.folderWatchBlacklist", [os.path.dirname(DUMMY_MODULE_1.__file__)]
         )
 
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, CALLBACK)
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
 
         sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+        fob.reset_mock()
+
+        lso.update_watched_modules()
+
+        fob.assert_not_called()
+
+        # Reset the config object.
+        config.set_option("server.folderWatchBlacklist", prev_blacklist)
+
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
+    def test_auto_blacklist(self, fob):
+        prev_blacklist = config.get_option("server.folderWatchBlacklist")
+        config.set_option("server.folderWatchBlacklist", [])
+
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+        lso.update_watched_modules()
+
+        # Called for test_data/__init__.py and test_data/not_a_real_script.py
+        self.assertEqual(2, fob.call_count)
+
+        # The miniconda module is in a package called "miniconda3", which is
+        # automatically blacklsited by LocalSourcesWatcher
+        sys.modules["MINICONDA_MODULE"] = MINICONDA_MODULE
         fob.reset_mock()
 
         lso.update_watched_modules()
