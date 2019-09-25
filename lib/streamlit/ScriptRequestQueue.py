@@ -92,7 +92,7 @@ class ScriptRequestQueue(object):
                         # so we simply overwrite the existing request.
                         self._queue[index] = (
                             request,
-                            RerunData(argv=data.argv, widget_state=data.widget_state),
+                            RerunData(widget_state=data.widget_state),
                         )
                     elif data.widget_state is None:
                         # If this request's widget_state is None, and the
@@ -107,7 +107,7 @@ class ScriptRequestQueue(object):
                         )
                         self._queue[index] = (
                             request,
-                            RerunData(argv=data.argv, widget_state=coalesced_state),
+                            RerunData(widget_state=coalesced_state),
                         )
                 else:
                     self._queue.append((request, data))
