@@ -118,26 +118,24 @@ def main_hello():
     _main_run(filename)
 
 
-def get_config_as_parameter_pairs():
-    """
-    makes up a list with existing comnfig options formated as options for click
-    """
-
-    all_config_keys = list(_config._config_options)
-    return [[key.replace(".", "-"), key.replace(".", "_")] for key in all_config_keys]
-
-
 def configurator_options(func):
     """
-    decorator that composes the existing config options as options for click
+    decorator that composes the existing config options as options for click lib
     """
-    all_key_parameter_pairs = get_config_as_parameter_pairs()
+    config_key_value_pairs = [[k, _config._config_options[k]] for k in _config._config_options]
 
-    for option, param in all_key_parameter_pairs:
+    for key, value in config_key_value_pairs:
+        option = key.replace(".", "-")
+        param = key.replace(".", "_")
+        description = value.description
+        if value.deprecated:
+            description += '\n %s - %s'.format(value.deprecation_text, value.deprecation_date)
+
         config_option = click.option(
             "--" + option.replace(".", "-"),
             param.replace(".", "_"),
             default=OPTION_UNSET,
+            help=description
         )
         func = config_option(func)
     return func
@@ -159,7 +157,6 @@ def main_run(file_or_url, args, **kwargs):
     # to override default/file configs
     for config_option in kwargs:
         if kwargs[config_option] != OPTION_UNSET:
-            print(" call  _config._set_option with values:", config_option.replace("_", "."), kwargs[config_option])
             _config._set_option(
                 config_option.replace("_", "."),
                 kwargs[config_option],
