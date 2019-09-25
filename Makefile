@@ -59,16 +59,33 @@ else
 endif
 
 .PHONY: pylint
-# Run Python linter.
+# Run "black", our Python formatter, to verify that our source files
+# are properly formatted. Does not modify any files. Returns with a non-zero
+# status if anything is not properly formatted. (This isn't really
+# "linting"; we're not checking anything but code style.)
 pylint:
-	# It requires Python 3.6.0+ to run but you can reformat
-	# Python 2 code with it, too.
+	@# Black requires Python 3.6+ to run (but you can reformat
+	@# Python 2 code with it, too).
 	if command -v "black" > /dev/null; then \
 		black --check docs/ ; \
 		black --check examples/ ; \
 		black --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
 		black --check lib/tests/ --exclude=compile_error.py ; \
 		black --check e2e/scripts/ ; \
+	fi
+
+.PHONY: pyformat
+# Run "black", our Python formatter, to fix any source files that are not
+# properly formatted.
+pyformat:
+	@# Black requires Python 3.6+ to run (but you can reformat
+	@# Python 2 code with it, too).
+	if command -v "black" > /dev/null; then \
+		black docs/ ; \
+		black examples/ ; \
+		black lib/streamlit/ --exclude=/*_pb2.py$/ ; \
+		black lib/tests/ --exclude=compile_error.py ; \
+		black e2e/scripts/ ; \
 	fi
 
 .PHONY: pytest
@@ -234,10 +251,11 @@ scssvars: react-init
 	) > src/autogen/scssVariables.ts
 
 .PHONY: jslint
-# Lint the JS code.
+# Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
+	@# HK: I'm removing `max-warnings 0` until we convert all our JavaScript
+	@# files to TypeScript.
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -248,6 +266,13 @@ jslint:
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
+
+.PHONY: jsformat
+# Runs "Prettier" on our JavaScript and TypeScript code to fix formatting
+# issues.
+jsformat:
+		yarn --cwd "frontend" pretty-quick \
+			--pattern "**/*.*(js|jsx|ts|tsx)"
 
 .PHONY: jstest
 # Run JS unit tests.
