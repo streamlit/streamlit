@@ -55,6 +55,12 @@ except ImportError:
         )
 
 
+# Streamlit never watches files in the folders below.
+DEFAULT_FOLDER_BLACKLIST = [
+    "**/.*", "**/anaconda2", "**/anaconda3", "**/miniconda2", "**/miniconda3"
+]
+
+
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
 
@@ -67,9 +73,7 @@ class LocalSourcesWatcher(object):
         self._folder_blacklist = config.get_option("server.folderWatchBlacklist")
 
         # Blacklist some additional folders, using glob syntax.
-        self._folder_blacklist.extend(
-            ["**/.*", "**/anaconda2", "**/anaconda3", "**/miniconda2", "**/miniconda3"]
-        )
+        self._folder_blacklist.extend(DEFAULT_FOLDER_BLACKLIST)
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
