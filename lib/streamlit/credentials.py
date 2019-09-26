@@ -153,8 +153,9 @@ class Credentials(object):
         This is used by `streamlit activate reset` in case a user wants
         to start over.
         """
-        Credentials._singleton = None
-        c = Credentials()
+        c = Credentials.get_current()
+        c.activation = None
+
         try:
             os.remove(c._conf_file)
         except OSError as e:
