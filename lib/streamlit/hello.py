@@ -332,9 +332,10 @@ def demo_agri():
 
     ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
 
-    ax.set_ylabel("GAP in Billions (Int $)", fontsize=20)
-    ax.set_xlabel("Year", fontsize=20)
+    ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
+    ax.set_xlabel("Year", fontsize=25)
     ax.tick_params(labelsize=20)
+    ax.legend(loc=2, prop={'size': 20})
     st.pyplot()
 
 
@@ -350,26 +351,25 @@ DEMOS = OrderedDict(
 
 
 def run():
-    st.title("Welcome to Streamlit!")
-    st.write(
-        """
-        Streamlit is the best way to create bespoke apps.
-        """
-    )
-
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
     if demo_name != "---":
-        st.markdown("## %s Demo" % demo_name)
+        st.markdown("# %s Demo" % demo_name)
         st.write(inspect.getdoc(demo))
         demo()
         if st.sidebar.checkbox("Show Code", True):
-            st.markdown("### Code")
+            st.markdown("## Code")
             sourcelines, n_lines = inspect.getsourcelines(demo)
             sourcelines = reset_indentation(remove_docstring(sourcelines))
             st.code("".join(sourcelines))
     else:
+        st.title("Welcome to Streamlit!")
+        st.write(
+            """
+            Streamlit is the best way to create bespoke apps.
+            """
+        )
         demo()
 
 
