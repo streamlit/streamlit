@@ -335,7 +335,7 @@ def demo_agri():
     ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
     ax.set_xlabel("Year", fontsize=25)
     ax.tick_params(labelsize=20)
-    ax.legend(loc=2, prop={'size': 20})
+    ax.legend(loc=2, prop={"size": 20})
     st.pyplot()
 
 
