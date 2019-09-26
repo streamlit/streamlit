@@ -119,45 +119,31 @@ def _with_element(method):
     return wrapped_method
 
 
-def _widget(method):
-    @_wraps_with_cleaned_sig(method, 3)  # Remove self, element, ui_value.
-    @_with_element
-    def wrapper(dg, element, *args, **kwargs):
-        # All of this label-parsing code only exists so we can throw a pretty
-        # error to the user when she forgets to pass in a label. Otherwise we'd
-        # get a really cryptic error.
-        if "label" in kwargs:
-            label = kwargs["label"]
-            del kwargs["label"]
-        elif len(args) > 0:
-            label = args[0]
-            args = args[1:]
-        else:
-            raise TypeError("%s must have a label" % method.__name__)
+def _do_widget_boilerplate(widget_type, element):
+    """Set the widget id and return the ui_value from the report context.
 
-        ctx = get_report_ctx()
-        # The widget ID is the widget type (i.e. the name "foo" of the
-        # st.foo function for the widget) followed by the label, and
-        # the hashes of default values (args and kwargs).
-        # This allows widgets of different types to have the same label,
-        # and solves a bug where changing the widget type but keeping
-        # the label could break things.
-        # Hash parts allow us to use React keys to reset widget state
-        # when default values change.
-        widget_id = "%s-%s-%s-%s" % (
-            method.__name__,
-            label,
-            hash(args),
-            hash(frozenset(kwargs.items())),
-        )
+    Parameters
+    ----------
+    widget_type : str
+        The type of the widget as stored in proto.
+    element : proto
+        The proto of the element
 
-        el = getattr(element, method.__name__)
-        el.id = widget_id
+    Returns
+    -------
+    ui_value : any
+        The value of the widget set by the client or
+        the default value passed. If the report context
+        doesn't exist, None will be returned.
 
-        ui_value = ctx.widgets.get_widget_value(widget_id) if ctx else None
-        return method(dg, element, ui_value, label, *args, **kwargs)
+    """
+    widget_id = "%s" % hash(element.SerializeToString())
+    el = getattr(element, widget_type)
+    el.id = widget_id
 
-    return wrapper
+    ctx = get_report_ctx()
+    ui_value = ctx.widgets.get_widget_value(widget_id) if ctx else None
+    return ui_value
 
 
 class NoValue(object):
@@ -1347,8 +1333,8 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
-    @_widget
-    def button(self, element, ui_value, label):
+    @_with_element
+    def button(self, element, label):
         """Display a button widget.
 
         Parameters
@@ -1369,13 +1355,15 @@ class DeltaGenerator(object):
         ...     st.write('Goodbye')
 
         """
-        current_value = ui_value if ui_value is not None else False
         element.button.label = label
         element.button.default = False
+
+        ui_value = _do_widget_boilerplate("button", element)
+        current_value = ui_value if ui_value is not None else False
         return current_value
 
-    @_widget
-    def checkbox(self, element, ui_value, label, value=False):
+    @_with_element
+    def checkbox(self, element, label, value=False):
         """Display a checkbox widget.
 
         Parameters
@@ -1399,13 +1387,15 @@ class DeltaGenerator(object):
         ...     st.write('Great!')
 
         """
-        current_value = ui_value if ui_value is not None else value
         element.checkbox.label = label
         element.checkbox.default = bool(value)
+
+        ui_value = _do_widget_boilerplate("checkbox", element)
+        current_value = ui_value if ui_value is not None else value
         return bool(current_value)
 
-    @_widget
-    def multiselect(self, element, ui_value, label, options, format_func=str):
+    @_with_element
+    def multiselect(self, element, label, options, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1434,19 +1424,19 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', options)
 
         """
-
-        current_value = ui_value.value if ui_value is not None else []
-
-        element.multiselectbox.label = label
+        element.multiselect.label = label
         # TODO: Issue #158
-        # element.multiselectbox.default[:] = value
-        element.multiselectbox.options[:] = [
+        # element.multiselect.default[:] = value
+        element.multiselect.options[:] = [
             str(format_func(option)) for option in options
         ]
+
+        ui_value = _do_widget_boilerplate("multiselect", element)
+        current_value = ui_value.value if ui_value is not None else []
         return [options[i] for i in current_value]
 
-    @_widget
-    def radio(self, element, ui_value, label, options, index=0, format_func=str):
+    @_with_element
+    def radio(self, element, label, options, index=0, format_func=str):
         """Display a radio button widget.
 
         Parameters
@@ -1485,14 +1475,16 @@ class DeltaGenerator(object):
         if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError("Radio index must be between 0 and length of options")
 
-        current_value = ui_value if ui_value is not None else index
         element.radio.label = label
         element.radio.default = index
         element.radio.options[:] = [str(format_func(opt)) for opt in options]
+
+        ui_value = _do_widget_boilerplate("radio", element)
+        current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
-    @_widget
-    def selectbox(self, element, ui_value, label, options, index=0, format_func=str):
+    @_with_element
+    def selectbox(self, element, label, options, index=0, format_func=str):
         """Display a select widget.
 
         Parameters
@@ -1530,17 +1522,18 @@ class DeltaGenerator(object):
         if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError("Selectbox index must be between 0 and length of options")
 
-        current_value = ui_value if ui_value is not None else index
         element.selectbox.label = label
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+
+        ui_value = _do_widget_boilerplate("selectbox", element)
+        current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
-    @_widget
+    @_with_element
     def slider(
         self,
         element,
-        ui_value,
         label,
         min_value=None,
         max_value=None,
@@ -1670,19 +1663,6 @@ class DeltaGenerator(object):
             if not min_value <= start <= end <= max_value:
                 raise ValueError("The value and/or arguments are out of range.")
 
-        # Convert the current value to the appropriate type.
-        current_value = ui_value if ui_value is not None else value
-        # Cast ui_value to the same type as the input arguments
-        if ui_value is not None:
-            current_value = getattr(ui_value, "value")
-            # Convert float array into int array if the rest of the arguments
-            # are ints
-            if all_ints:
-                current_value = list(map(int, current_value))
-            # If there is only one value in the array destructure it into a
-            # single variable
-            current_value = current_value[0] if single_value else current_value
-
         # Set format default.
         if format is None:
             if all_ints:
@@ -1701,10 +1681,23 @@ class DeltaGenerator(object):
         element.slider.step = step
         element.slider.format = format
 
+        ui_value = _do_widget_boilerplate("slider", element)
+        # Convert the current value to the appropriate type.
+        current_value = ui_value if ui_value is not None else value
+        # Cast ui_value to the same type as the input arguments
+        if ui_value is not None:
+            current_value = getattr(ui_value, "value")
+            # Convert float array into int array if the rest of the arguments
+            # are ints
+            if all_ints:
+                current_value = list(map(int, current_value))
+            # If there is only one value in the array destructure it into a
+            # single variable
+            current_value = current_value[0] if single_value else current_value
         return current_value if single_value else tuple(current_value)
 
-    @_widget
-    def text_input(self, element, ui_value, label, value=""):
+    @_with_element
+    def text_input(self, element, label, value=""):
         """Display a single-line text input widget.
 
         Parameters
@@ -1726,13 +1719,15 @@ class DeltaGenerator(object):
         >>> st.write('The current movie title is', title)
 
         """
-        current_value = ui_value if ui_value is not None else value
         element.text_input.label = label
         element.text_input.default = str(value)
+
+        ui_value = _do_widget_boilerplate("text_input", element)
+        current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
-    @_widget
-    def text_area(self, element, ui_value, label, value=""):
+    @_with_element
+    def text_area(self, element, label, value=""):
         """Display a multi-line text input widget.
 
         Parameters
@@ -1760,13 +1755,15 @@ class DeltaGenerator(object):
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
-        current_value = ui_value if ui_value is not None else value
         element.text_area.label = label
         element.text_area.default = str(value)
+
+        ui_value = _do_widget_boilerplate("text_area", element)
+        current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
-    @_widget
-    def time_input(self, element, ui_value, label, value=None):
+    @_with_element
+    def time_input(self, element, label, value=None):
         """Display a time input widget.
 
         Parameters
@@ -1800,17 +1797,19 @@ class DeltaGenerator(object):
         if isinstance(value, datetime):
             value = value.time()
 
-        if ui_value is None:
-            current_value = value
-        else:
-            current_value = datetime.strptime(ui_value, "%H:%M").time()
-
         element.time_input.label = label
         element.time_input.default = time.strftime(value, "%H:%M")
+
+        ui_value = _do_widget_boilerplate("time_input", element)
+        current_value = (
+            datetime.strptime(ui_value, "%H:%M").time()
+            if ui_value is not None
+            else value
+        )
         return current_value
 
-    @_widget
-    def date_input(self, element, ui_value, label, value=None):
+    @_with_element
+    def date_input(self, element, label, value=None):
         """Display a date input widget.
 
         Parameters
@@ -1846,13 +1845,15 @@ class DeltaGenerator(object):
         if isinstance(value, datetime):
             value = value.date()
 
-        if ui_value is None:
-            current_value = value
-        else:
-            current_value = datetime.strptime(ui_value, "%Y/%m/%d").date()
-
         element.date_input.label = label
         element.date_input.default = date.strftime(value, "%Y/%m/%d")
+
+        ui_value = _do_widget_boilerplate("date_input", element)
+        current_value = (
+            datetime.strptime(ui_value, "%Y/%m/%d").date()
+            if ui_value is not None
+            else value
+        )
         return current_value
 
     @_with_element
