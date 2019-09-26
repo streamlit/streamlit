@@ -26,7 +26,12 @@ interface Props {
   index: number
 }
 
-const DEFAULT_HEIGHT = 400
+interface Dimensions {
+  width: number
+  height: number
+}
+
+const DEFAULT_HEIGHT = 600
 
 class BokehChart extends React.PureComponent<Props> {
   private chartId = "bokeh-chart-" + this.props.index
@@ -34,6 +39,18 @@ class BokehChart extends React.PureComponent<Props> {
   private getChartData = (): any => {
     const figure = this.props.element.get("figure")
     return JSON.parse(figure)
+  }
+
+  public getChartDimensions = (plot: any): Dimensions => {
+    const width = plot.attributes.plot_width
+      ? plot.attributes.plot_width
+      : this.props.width
+    const height = plot.attributes.plot_height
+      ? plot.attributes.plot_height
+      : this.props.height
+      ? this.props.height
+      : DEFAULT_HEIGHT
+    return { width, height }
   }
 
   private updateChart = (data: any): void => {
@@ -51,15 +68,11 @@ class BokehChart extends React.PureComponent<Props> {
         ? data.doc.roots.references.find((e: any) => e.type === "Plot")
         : undefined
     if (plot) {
-      if (!plot.attributes.plot_width) {
-        plot.attributes.plot_width = this.props.width
-      }
-      if (!plot.attributes.plot_height) {
-        plot.attributes.plot_height = this.props.height
-          ? this.props.height
-          : DEFAULT_HEIGHT
-      }
+      const { width, height } = this.getChartDimensions(plot)
+      plot.attributes.plot_width = width
+      plot.attributes.plot_height = height
     }
+
     if (chart !== null) {
       this.removeAllChildNodes(chart)
       BokehEmbed.embed_item(data, this.chartId)

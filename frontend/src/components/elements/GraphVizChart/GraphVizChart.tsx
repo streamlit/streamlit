@@ -29,6 +29,11 @@ interface Props {
   index: number
 }
 
+interface Dimensions {
+  width: number
+  height: number
+}
+
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
 const _dummy_graphviz = graphviz
@@ -40,6 +45,18 @@ class GraphVizChart extends React.PureComponent<Props> {
 
   private getChartData = (): string => {
     return this.props.element.get("spec")
+  }
+
+  public getChartDimensions = (): Dimensions => {
+    const el = this.props.element
+    const width = el.get("width") ? el.get("width") : this.props.width
+    const height = el.get("height")
+      ? el.get("height")
+      : this.props.height
+      ? this.props.height
+      : this.originalHeight
+
+    return { width, height }
   }
 
   private updateChart = () => {
@@ -60,20 +77,15 @@ class GraphVizChart extends React.PureComponent<Props> {
           }
         })
 
-      // Override or reset the graph height
-      if (this.props.element.get("height")) {
-        graph.height(this.props.element.get("height"))
-      } else if (this.props.height) {
-        graph.height(this.props.height)
-      } else if (this.originalHeight) {
-        graph.height(this.originalHeight)
+      const { width, height } = this.getChartDimensions()
+      if (height > 0) {
+        // Override or reset the graph height
+        graph.height(height)
       }
 
       // Override or reset the graph width
-      if (this.props.element.get("width")) {
-        graph.width(this.props.element.get("width"))
-      } else {
-        graph.width(this.props.width)
+      if (width > 0) {
+        graph.width(width)
       }
     } catch (error) {
       logError(error)

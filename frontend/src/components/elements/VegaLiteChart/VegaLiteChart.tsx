@@ -53,6 +53,11 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
+interface Dimensions {
+  width: number
+  height: number
+}
+
 interface State {
   error?: Error
 }
@@ -105,6 +110,14 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     }
   }
 
+  public getChartDimensions = (): Dimensions => {
+    const width = this.props.width - EMBED_PADDING
+    const height = this.props.height
+      ? this.props.height - EMBED_PADDING
+      : DEFAULT_HEIGHT - EMBED_PADDING
+    return { width, height }
+  }
+
   public async componentDidUpdate(prevProps: Props): Promise<void> {
     const prevElement = prevProps.element
     const element = this.props.element
@@ -122,16 +135,13 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
       return
     }
 
+    const { width, height } = this.getChartDimensions()
     if (prevProps.width !== this.props.width && this.specWidth === 0) {
-      this.vegaView.width(this.props.width - EMBED_PADDING)
+      this.vegaView.width(width)
     }
 
     if (prevProps.height !== this.props.height) {
-      if (this.props.height === undefined) {
-        this.vegaView.height(DEFAULT_HEIGHT - EMBED_PADDING)
-      } else {
-        this.vegaView.height(this.props.height - EMBED_PADDING)
-      }
+      this.vegaView.height(height)
     }
 
     const prevData = prevElement.get("data")

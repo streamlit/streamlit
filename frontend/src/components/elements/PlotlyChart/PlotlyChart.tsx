@@ -31,11 +31,19 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
+interface Dimensions {
+  width: number
+  height: number
+}
+
 const DEFAULT_HEIGHT = 500
 
 class PlotlyChart extends React.PureComponent<Props> {
-  public render(): React.ReactNode {
+  public getChartDimensions = (): Dimensions => {
     const el = this.props.element
+
+    const width: number =
+      el.get("width") > 0 ? el.get("width") : this.props.width
 
     const height: number =
       el.get("height") > 0
@@ -44,8 +52,12 @@ class PlotlyChart extends React.PureComponent<Props> {
         ? this.props.height
         : DEFAULT_HEIGHT
 
-    const width: number =
-      el.get("width") > 0 ? el.get("width") : this.props.width
+    return { width, height }
+  }
+
+  public render(): React.ReactNode {
+    const el = this.props.element
+    const { width, height } = this.getChartDimensions()
 
     return dispatchOneOf(el, "chart", {
       url: (url: string) => this.renderIFrame(url, width, height),
