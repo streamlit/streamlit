@@ -133,12 +133,7 @@ def configurator_options(func):
                 value.deprecation_text, value.deprecation_date
             )
 
-        config_option = click.option(
-            option,
-            param,
-            help=description,
-            type=value.type
-        )
+        config_option = click.option(option, param, help=description, type=value.type)
         func = config_option(func)
     return func
 
@@ -164,7 +159,7 @@ def main_run(file_or_url, args, **kwargs):
             config_option_def = _config._config_options[config_option_def_key]
             # special consideration to cast string to bool
             if config_option_def.type == bool:
-                if value.lower() in ['true', '1', 't', 'y', 'yes']:
+                if value.lower() in ["true", "1", "t", "y", "yes"]:
                     value = True
                 else:
                     value = False
@@ -172,9 +167,7 @@ def main_run(file_or_url, args, **kwargs):
                 value = config_option_def.type(value)
 
             _config._set_option(
-                config_option_def_key,
-                kwargs[config_option],
-                "cli call option",
+                config_option_def_key, kwargs[config_option], "cli call option"
             )
 
     if url(file_or_url):

@@ -99,7 +99,7 @@ class ConfigOption(object):
         expiration_date=None,
         replaced_by=None,
         config_getter=None,
-        type_=str
+        type_=str,
     ):
         """Create a ConfigOption with the given name.
 

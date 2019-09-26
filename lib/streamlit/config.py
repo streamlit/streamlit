@@ -114,7 +114,7 @@ def _create_option(
     deprecation_text=None,
     expiration_date=None,
     replaced_by=None,
-    type_=str
+    type_=str,
 ):
     '''Create a ConfigOption and store it globally in this module.
 
@@ -160,7 +160,7 @@ def _create_option(
         deprecation_text=deprecation_text,
         expiration_date=expiration_date,
         replaced_by=replaced_by,
-        type_=type_
+        type_=type_,
     )
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.'
