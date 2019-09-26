@@ -129,9 +129,13 @@ def demo_bart_vs_bikes():
     )
     layers = st.multiselect("Select layers", list(layers_def.keys()))
     if len(layers) == 0:
-        st.error(("Please choose at least a layer in the select box."
-                  " For example, choose Bike Rentals and Bart Stop Outbound"
-                  " Flow"))
+        st.error(
+            (
+                "Please choose at least a layer in the select box."
+                " For example, choose Bike Rentals and Bart Stop Outbound"
+                " Flow"
+            )
+        )
         return
     st.deck_gl_chart(
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
