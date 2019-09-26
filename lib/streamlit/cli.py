@@ -100,7 +100,7 @@ def main_docs():
     print("Showing help page in browser...")
     from streamlit import util
 
-    util.open_browser("https://streamlit.io/secret/docs")
+    util.open_browser("https://streamlit.io/docs")
 
 
 @main.command("hello")

@@ -68,10 +68,7 @@ class StreamlitTest(unittest.TestCase):
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
-    """Test Public Streamlit Public APIs.
-
-    Unit tests for https://streamlit.io/secret/docs/#api
-    """
+    """Test Public Streamlit Public APIs."""
 
     def test_st_altair_chart(self):
         """Test st.altair_chart."""

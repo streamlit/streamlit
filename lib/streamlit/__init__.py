@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Streamlit. Data Science, reimagined.
+"""Streamlit.
 
 How to use Streamlit in 3 seconds:
 
-    1. Write your code
+    1. Write an app
     >>> import streamlit as st
     >>> st.write(anything_you_want)
 
-    2. Run your code
+    2. Run your app
     $ streamlit run my_script.py
 
-    3. Visualize your code
+    3. Use your app
     A new tab will open on your browser. That's your Streamlit app!
 
     4. Modify your code, save it, and watch changes live on your browser.
@@ -38,7 +38,7 @@ Or try running our "Hello World":
 
     $ streamlit hello
 
-For more detailed info, see https://streamlit.io/secret/docs.
+For more detailed info, see https://streamlit.io/docs.
 """
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.

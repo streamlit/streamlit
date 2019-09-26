@@ -28,7 +28,7 @@ def run():
 
         If this is your first time using Streamlit, welcome! You may want to
         take a look at our
-        [tutorials and documentation](https://streamlit.io/secret/docs) next.
+        [tutorials and documentation](https://streamlit.io/docs) next.
         And feel free to ask us questions any time at
         [help@streamlit.io](mailto:help@streamlit.io).
 
@@ -62,7 +62,7 @@ def run():
     st.write(
         """
         PS: Want to know how we did this?
-        [You can learn about it here.](https://streamlit.io/secret/docs/core_mechanics.html)
+        [You can learn about it here.](https://streamlit.io/docs/core_mechanics.html)
     """
     )
 

@@ -38,15 +38,16 @@ from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
 
-CACHED_ST_FUNCTION_WARNING = (
-    "Your script writes to your Streamlit app from within a cached function. "
-    'This code will only be called when we detect a cache "miss", which '
-    "can lead to unexpected results.\n\n"
-    "How to resolve this warning:\n\n"
-    "Move the streamlit function call outside the cached function.\n"
-    "Or, if you know what you're doing, use "
-    "@st.cache(suppress_st_warning=True) to suppress the warning."
-)
+CACHED_ST_FUNCTION_WARNING = """
+Your script writes to your Streamlit app from within a cached function. This
+code will only be called when we detect a cache "miss", which can lead to
+unexpected results.
+
+How to resolve this warning:
+* Move the streamlit function call outside the cached function.
+* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
+to suppress the warning.
+"""
 
 
 try:
@@ -231,7 +232,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         "2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. "
         "This is an escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html)."
+        "(https://streamlit.io/docs/tutorial/create_an_interactive_app.html)."
     )
 
     return message.format(
@@ -269,7 +270,7 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
         "2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an "
         "escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/secret/docs/tutorial/tutorial_caching.html)."
+        "(https://streamlit.io/docs/api.html#optimize-performance)."
     )
 
     return message.format(
@@ -286,7 +287,7 @@ def _build_args_mutated_message(func):
         "When decorating a function with `@st.cache`, the arguments should not be mutated inside "
         "the function body, as that breaks the caching mechanism. Please update the code of "
         "`{name}` to bypass the mutation.\n\n"
-        "See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html) for more info."
+        "See the [Streamlit docs](https://streamlit.io/docs/tutorial/create_an_interactive_app.html) for more info."
     )
 
     return message.format(name=func.__name__)
