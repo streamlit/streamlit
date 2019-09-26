@@ -245,9 +245,13 @@ class CredentialsClassTest(unittest.TestCase):
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_reset(self):
         """Test Credentials.reset()."""
+        c = Credentials.get_current()
+
         with patch("streamlit.credentials.os.remove") as p:
             Credentials.reset()
             p.assert_called_once_with("/mock/home/folder/.streamlit/credentials.toml")
+
+        self.assertEqual(c, Credentials.get_current())
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_reset_error(self):
