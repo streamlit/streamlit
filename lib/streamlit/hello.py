@@ -77,9 +77,7 @@ def demo_bart_vs_bikes():
 
     @st.cache
     def from_data_file(filename):
-        GITHUB_DATA = (
-            "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        )
+        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
         url = GITHUB_DATA + "/data/" + filename
         return pd.read_json(url)
 
