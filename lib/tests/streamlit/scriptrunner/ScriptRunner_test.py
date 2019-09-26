@@ -346,10 +346,10 @@ class TestScriptRunner(ScriptRunner):
             self.maybe_handle_execution_control_request()
             return True
 
-        self.main_dg = DeltaGenerator(enqueue=enqueue_fn,
-                                      container=BlockPath.MAIN)
-        self.sidebar_dg = DeltaGenerator(enqueue=enqueue_fn,
-                                         container=BlockPath.SIDEBAR)
+        self.main_dg = DeltaGenerator(enqueue=enqueue_fn, container=BlockPath.MAIN)
+        self.sidebar_dg = DeltaGenerator(
+            enqueue=enqueue_fn, container=BlockPath.SIDEBAR
+        )
         self.script_request_queue = ScriptRequestQueue()
 
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)

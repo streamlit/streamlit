@@ -52,7 +52,7 @@ EMAIL_PROMPT = """
 
   %(email)s""" % {
     "welcome": click.style("Welcome to Streamlit!", bold=True),
-    "email": click.style("Email: ", fg="blue")
+    "email": click.style("Email: ", fg="blue"),
 }
 
 TELEMETRY_TEXT = """
@@ -74,7 +74,7 @@ INSTRUCTIONS_TEXT = """
 """ % {
     "start": click.style("Get started by typing:", fg="blue", bold=True),
     "prompt": click.style("$", fg="blue"),
-    "hello": click.style("streamlit hello", bold=True)
+    "hello": click.style("streamlit hello", bold=True),
 }
 
 
@@ -190,8 +190,8 @@ class Credentials(object):
             while not activated:
 
                 email = click.prompt(
-                    text=EMAIL_PROMPT, prompt_suffix="", default="",
-                    show_default=False)
+                    text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:

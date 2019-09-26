@@ -67,10 +67,12 @@ class MyCallback(keras.callbacks.Callback):
 
     def on_batch_end(self, batch, logs=None):
         rows = pd.DataFrame(
-            [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"])
+            [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"]
+        )
         if batch % 10 == 0:
-            self._epoch_chart.add_rows({"loss": [logs["loss"]],
-                                        "accuracy": [logs["accuracy"]]})
+            self._epoch_chart.add_rows(
+                {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
+            )
         if batch % 100 == 99:
             self._summary_chart.add_rows(rows)
         percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
@@ -95,6 +97,7 @@ class MyCallback(keras.callbacks.Callback):
             "%(epoch)8s :  %(epoch)s\n%(summary)s"
             % {"epoch": epoch, "summary": summary}
         )
+
 
 st.title("MNIST CNN")
 
@@ -134,8 +137,7 @@ model.add(Flatten())
 model.add(Dense(8, activation="relu"))
 model.add(Dense(num_classes, activation="softmax"))
 
-model.compile(
-    loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
 
 show_terminal_output = not config.get_option("server.liveSave")
 model.fit(

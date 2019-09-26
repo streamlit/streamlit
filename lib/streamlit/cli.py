@@ -43,10 +43,10 @@ NEW_VERSION_TEXT = """
   %(prompt)s %(command)s
 """ % {
     "new_version": click.style(
-        "A new version of Streamlit is available.", fg="blue", bold=True),
+        "A new version of Streamlit is available.", fg="blue", bold=True
+    ),
     "prompt": click.style("$", fg="blue"),
-    "command": click.style(
-        "pip install streamlit --upgrade", bold=True),
+    "command": click.style("pip install streamlit --upgrade", bold=True),
 }
 
 

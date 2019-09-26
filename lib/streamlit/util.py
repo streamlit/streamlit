@@ -423,7 +423,7 @@ def get_streamlit_file_path(*filepath):
 
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
-    click.secho("  %s: " % title, nl=False, fg='blue')
+    click.secho("  %s: " % title, nl=False, fg="blue")
     click.secho(url, bold=True)
 
 

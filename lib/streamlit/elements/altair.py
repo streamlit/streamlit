@@ -32,13 +32,18 @@ def generate_chart(chart_type, data):
     if not isinstance(data, pd.DataFrame):
         data = convert_anything_to_df(data)
 
-    data = pd.melt(data.reset_index(), id_vars=['index'])
+    data = pd.melt(data.reset_index(), id_vars=["index"])
 
-    chart = getattr(alt.Chart(data), 'mark_' + chart_type)().encode(
-        alt.X('index', title=''),
-        alt.Y('value', title=''),
-        alt.Color('variable', title=''),
-        alt.Tooltip(['index', 'value', 'variable'])).interactive()
+    chart = (
+        getattr(alt.Chart(data), "mark_" + chart_type)()
+        .encode(
+            alt.X("index", title=""),
+            alt.Y("value", title=""),
+            alt.Color("variable", title=""),
+            alt.Tooltip(["index", "value", "variable"]),
+        )
+        .interactive()
+    )
 
     return chart
 
