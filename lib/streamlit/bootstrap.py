@@ -78,6 +78,7 @@ def _fix_sys_argv(script_path, args):
     and be set to what a user's script may expect.
     """
     import sys
+
     sys.argv = [script_path] + list(args)
 
 

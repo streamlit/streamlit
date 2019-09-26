@@ -157,6 +157,7 @@ def main_run(file_or_url, args=None):
 # Utility function to compute the command line as a string
 def _get_command_line_as_string():
     import subprocess
+
     cmd_line_as_list = [click.get_current_context().parent.command_path]
     cmd_line_as_list.extend(click.get_os_args())
     return subprocess.list2cmdline(cmd_line_as_list)

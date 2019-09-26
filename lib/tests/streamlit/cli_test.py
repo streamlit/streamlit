@@ -104,7 +104,7 @@ class CliTest(unittest.TestCase):
                     ],
                 )
         mock_main_run.assert_called_with(
-            'some script.py', ('argument with space', 'argument with another space'),
+            "some script.py", ("argument with space", "argument with another space")
         )
         self.assertEqual(0, result.exit_code)
 
@@ -125,9 +125,8 @@ class CliTest(unittest.TestCase):
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
         with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.credentials.Credentials"), patch(
-            "streamlit.cli._get_command_line_as_string"
-        ):
+            "streamlit.credentials.Credentials"
+        ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
