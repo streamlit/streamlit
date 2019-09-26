@@ -17,21 +17,21 @@
 .streamlit-container {
   .dataframe {
     font-size: 0.8rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     text-align: right;
     padding: 0.5rem;
     line-height: 1;
   }
 
   .dataframe-container {
-    border: 1px solid #E6E9EE;
-    box-sizing: content-box;  /* Fix borders going under other elements. */
+    border: 1px solid #e6e9ee;
+    box-sizing: content-box; /* Fix borders going under other elements. */
   }
 
   .dataframe.row-header,
   .dataframe.col-header,
   .dataframe.corner {
-    background-color: #F0F3F9;
+    background-color: #f0f3f9;
     color: #768096;
     z-index: 1;
   }
@@ -53,7 +53,7 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    line-height: 0.75;  /** For vertical centering. */
+    line-height: 0.75; /** For vertical centering. */
   }
 
   .fixup {
@@ -72,16 +72,16 @@
 
   .table-top-right {
     overflow-x: hidden !important;
-    background-color: #F0F3F9;
+    background-color: #f0f3f9;
   }
 
   .table-bottom-left {
     overflow-y: hidden !important;
-    background-color: #F0F3F9;
+    background-color: #f0f3f9;
   }
 
   .empty-dataframe {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     color: #768096;
     font-style: italic;
     font-size: 0.8rem;
@@ -89,8 +89,8 @@
   }
 
   .sort-arrow-icon {
-    width: 0.7rem;
-    height: 0.7rem;
+    font-size: 0.7rem;
+    margin-right: 0.1rem;
     opacity: 0.3;
   }
 }

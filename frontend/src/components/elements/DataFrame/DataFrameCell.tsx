@@ -17,7 +17,7 @@
 
 import React, { PureComponent } from "react"
 import { SortDirection } from "./SortDirection"
-import openIconic from "assets/img/open-iconic.svg"
+import Icon from "components/shared/Icon"
 
 interface Props {
   /** The cell's column index in the DataFrame */
@@ -121,18 +121,10 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
-      return (
-        <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use href={openIconic + "#chevron-top"} />
-        </svg>
-      )
+      return <Icon className="sort-arrow-icon" type="chevron-top"></Icon>
 
     case SortDirection.DESCENDING:
-      return (
-        <svg className="sort-arrow-icon" viewBox="0 -1 10 10">
-          <use href={openIconic + "#chevron-bottom"} />
-        </svg>
-      )
+      return <Icon className="sort-arrow-icon" type="chevron-bottom"></Icon>
 
     case undefined:
     default:
