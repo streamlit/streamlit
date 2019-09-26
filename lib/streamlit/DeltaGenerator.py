@@ -46,7 +46,7 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
-DELTAS_TYPES_THAT_MELT_DATAFRAMES = ('line_chart', 'area_chart', 'bar_chart')
+DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
@@ -114,8 +114,7 @@ def _with_element(method):
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, delta_type,
-                                             last_index)
+        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
 
     return wrapped_method
 
@@ -173,14 +172,16 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self,
-                 enqueue,
-                 id=0,
-                 delta_type=None,
-                 last_index=None,
-                 is_root=True,
-                 container=BlockPath_pb2.BlockPath.MAIN,
-                 path=()):
+    def __init__(
+        self,
+        enqueue,
+        id=0,
+        delta_type=None,
+        last_index=None,
+        is_root=True,
+        container=BlockPath_pb2.BlockPath.MAIN,
+        path=(),
+    ):
         """Constructor.
 
         Parameters
@@ -254,10 +255,14 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element, delta_type,
-                                   last_index=None,
-                                   elementWidth=None,
-                                   elementHeight=None):
+    def _enqueue_new_element_delta(
+        self,
+        marshall_element,
+        delta_type,
+        last_index=None,
+        elementWidth=None,
+        elementHeight=None,
+    ):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -300,7 +305,6 @@ class DeltaGenerator(object):
             if elementHeight is not None:
                 msg.metadata.element_dimension_spec.height = elementHeight
 
-
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
             return value_or_dg(rv, self)
@@ -313,7 +317,7 @@ class DeltaGenerator(object):
                 delta_type=delta_type,
                 last_index=last_index,
                 container=self._container,
-                is_root=False
+                is_root=False,
             )
         else:
             self._delta_type = delta_type
@@ -763,9 +767,9 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame, 'dataframe',
-                                               elementWidth=width,
-                                               elementHeight=height)
+        return self._enqueue_new_element_delta(
+            set_data_frame, "dataframe", elementWidth=width, elementHeight=height
+        )
 
     @_with_element
     def line_chart(self, element, data=None, width=0, height=0):
@@ -798,7 +802,8 @@ class DeltaGenerator(object):
         """
 
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('line', data)
+
+        chart = altair.generate_chart("line", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -830,7 +835,8 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('area', data)
+
+        chart = altair.generate_chart("area", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -862,7 +868,8 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('bar', data)
+
+        chart = altair.generate_chart("bar", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -1433,7 +1440,9 @@ class DeltaGenerator(object):
         element.multiselectbox.label = label
         # TODO: Issue #158
         # element.multiselectbox.default[:] = value
-        element.multiselectbox.options[:] = [str(format_func(option)) for option in options]
+        element.multiselectbox.options[:] = [
+            str(format_func(option)) for option in options
+        ]
         return [options[i] for i in current_value]
 
     @_widget
@@ -2184,7 +2193,7 @@ class DeltaGenerator(object):
             stop = self._last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            data = pd.melt(data.reset_index(), id_vars=['index'])
+            data = pd.melt(data.reset_index(), id_vars=["index"])
 
             self._last_index = stop
 
