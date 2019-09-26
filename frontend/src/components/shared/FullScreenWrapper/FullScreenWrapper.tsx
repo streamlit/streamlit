@@ -17,6 +17,7 @@
 
 import React, { PureComponent } from "react"
 import Icon from "../Icon"
+import { SCSS_VARS } from "autogen/scssVariables"
 import "./FullScreenWrapper.scss"
 
 export type Size = {
@@ -65,7 +66,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     const { expanded } = this.state
 
     if (event.keyCode === 27 && expanded) {
-      //exit fullscreen
+      // Exit fullscreen
       this.zoomOut()
     }
   }
@@ -82,16 +83,24 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     this.setState({ expanded: false })
   }
 
-  convertRemToPixels = (rem: number) => {
+  convertScssRemValueToPixels = (scssValue: string) => {
+    const remValue = parseFloat(scssValue)
     return (
-      rem * parseFloat(getComputedStyle(document.documentElement).fontSize)
+      remValue *
+      parseFloat(getComputedStyle(document.documentElement).fontSize)
     )
   }
 
   updateWindowDimensions = () => {
+    const padding = this.convertScssRemValueToPixels(
+      SCSS_VARS["$fullscreen-padding"]
+    )
+    const paddingTop = this.convertScssRemValueToPixels(
+      SCSS_VARS["$fullscreen-padding-top"]
+    )
     this.setState({
-      fullwidth: window.innerWidth - this.convertRemToPixels(1.5), //0.75rem + 0.75rem
-      fullheight: window.innerHeight - this.convertRemToPixels(3.75), //0.75rem + 3rem
+      fullwidth: window.innerWidth - padding * 2, // Left and right
+      fullheight: window.innerHeight - (padding + paddingTop), // Bottom and Top
     })
   }
 
