@@ -69,6 +69,8 @@ class ReportView extends PureComponent<Props> {
   private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
 
   public render = (): ReactNode => {
+    console.log("render report view")
+
     const reportViewClassName = classNames("reportview-container", {
       "--wide": this.props.wide,
       "--with-sidebar": this.hasSidebar(),
