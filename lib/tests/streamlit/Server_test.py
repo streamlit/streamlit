@@ -30,6 +30,7 @@ from tornado import gen
 import streamlit.server.Server
 from streamlit import config
 from streamlit.server.Server import server_port_is_manually_set
+from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
@@ -37,7 +38,7 @@ from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import State
 from streamlit.server.Server import start_listening
-from streamlit.server.Server import ExceededRetries
+from streamlit.server.Server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -316,7 +317,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class PortRotateAHundredTest(unittest.TestCase):
-    """Tests port rotation handles a hundred attempts then sys exits"""
+    """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
     def get_app(self):
         app = mock.MagicMock()
@@ -330,10 +331,11 @@ class PortRotateAHundredTest(unittest.TestCase):
         app = self.get_app()
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             start_listening(app)
+
             assert pytest_wrapped_e.type == SystemExit
             assert pytest_wrapped_e.value.code == errno.EADDRINUSE
 
-            assert app.listen.call_count == 100
+            assert app.listen.call_count == MAX_PORT_SEARCH_RETRIES
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -356,8 +358,8 @@ class PortRotateOneTest(unittest.TestCase):
     ):
         app = self.get_app()
 
-        patched_server_port_is_manually_set.return_value = True
-        with pytest.raises(ExceededRetries) as pytest_wrapped_e:
+        patched_server_port_is_manually_set.return_value = False
+        with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
             start_listening(app)
 
             PortRotateOneTest.which_port.assert_called_with(8502)

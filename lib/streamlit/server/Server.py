@@ -16,7 +16,6 @@
 import logging
 import threading
 import sys
-import signal
 import errno
 from enum import Enum
 
@@ -60,6 +59,9 @@ TORNADO_SETTINGS = {
 # up before the first browser connects.
 PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 
+# When server.port is not available it will look for the next available port
+# up to MAX_PORT_SEARCH_RETRIES.
+MAX_PORT_SEARCH_RETRIES = 100
 
 class SessionInfo(object):
     """Type stored in our _report_sessions dict.
@@ -89,7 +91,7 @@ class State(Enum):
     STOPPED = "STOPPED"
 
 
-class ExceededRetries(Exception):
+class RetriesExceeded(Exception):
     pass
 
 
@@ -98,31 +100,35 @@ def server_port_is_manually_set():
 
 
 def start_listening(app, call_count=0):
-    """makes the server start listening at the configured port.
+    """Takes the server start listening at the configured port.
+
     In case the port is already taken it tries listening to the next available port.
-    It will error after a 100 attempts."""
+    It will error after MAX_PORT_SEARCH_RETRIES attempts.
+
+    """
+
     port = config.get_option("server.port")
     try:
         app.listen(port)
     except OSError as e:
         if e.errno == errno.EADDRINUSE:
-            if call_count >= 100:
-                raise ExceededRetries(
-                    "Port %s already in use, were unable to find a free port after a hundred attempts",
-                    port,
+            if call_count >= MAX_PORT_SEARCH_RETRIES:
+                raise RetriesExceeded(
+                    "Cannot start Streamlit server. Port %(port)s is already in use, and Streamlit was unable to find a free port after $(num_retries) attempts.",
+                    {"port": port, "num_retries": MAX_PORT_SEARCH_RETRIES}
                 )
             if server_port_is_manually_set():
-                LOGGER.debug("Port %s already in use, trying to use the next one", port)
+                LOGGER.error("Port %s is already in use", port)
+                sys.exit(1)
+            else:
+                LOGGER.debug("Port %s already in use, trying to use the next one.", port)
                 port += 1
-                # save port 3000 because it is used for the development server in the front end
+                # Save port 3000 because it is used for the development server in the front end.
                 if port == 3000:
                     port += 1
 
                 config._set_option("server.port", port, "server initialization")
                 start_listening(app, call_count + 1)
-            else:
-                LOGGER.error("Port %s is already in use", port)
-                sys.exit(signal.NSIG)
         else:
             raise
 
