@@ -127,16 +127,6 @@ def main_run(file_or_url, args=None):
     latter case, streamlit will download the script to a
     temporary file and runs this file.
     """
-    import subprocess
-
-    cmd_line_as_list = [
-        click.get_current_context().parent.command_path,
-        click.get_current_context().command.name,
-        file_or_url,
-    ]
-    cmd_line_as_list.extend(args)
-    command_line = subprocess.list2cmdline(cmd_line_as_list)
-
     from validators import url
 
     if url(file_or_url):
@@ -156,15 +146,25 @@ def main_run(file_or_url, args=None):
                 )
             # this is called within the with block to make sure the temp file
             # is not deleted
-            _main_run(fp.name, command_line)
+            _main_run(fp.name, args)
 
     else:
         if not os.path.exists(file_or_url):
             raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url, command_line)
+        _main_run(file_or_url, args)
 
 
-def _main_run(file, command_line):
+# Utility function to compute the command line as a string
+def _get_command_line_as_string():
+    import subprocess
+    cmd_line_as_list = [click.get_current_context().parent.command_path]
+    cmd_line_as_list.extend(click.get_os_args())
+    return subprocess.list2cmdline(cmd_line_as_list)
+
+
+def _main_run(file, args=[]):
+    command_line = _get_command_line_as_string()
+
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
 
@@ -175,7 +175,7 @@ def _main_run(file, command_line):
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 
-    bootstrap.run(file, command_line)
+    bootstrap.run(file, command_line, args)
 
 
 # DEPRECATED

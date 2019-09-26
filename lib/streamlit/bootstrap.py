@@ -73,6 +73,14 @@ def _fix_matplotlib_crash():
         os.environ["MPLBACKEND"] = "Agg"
 
 
+def _fix_sys_argv(script_path, args):
+    """sys.argv needs to exclude streamlit arguments and parameters
+    and be set to what a user's script may expect.
+    """
+    import sys
+    sys.argv = [script_path] + list(args)
+
+
 def _on_server_start(server):
     _print_url()
 
@@ -131,7 +139,7 @@ def _print_url():
     click.secho("")
 
 
-def run(script_path, command_line):
+def run(script_path, command_line, args):
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
@@ -140,10 +148,12 @@ def run(script_path, command_line):
     ----------
     script_path : str
     command_line : str
+    args : [str]
 
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
+    _fix_sys_argv(script_path, args)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

@@ -20,7 +20,8 @@ import unittest
 import requests
 import requests_mock
 from click.testing import CliRunner
-from mock import patch
+from mock import patch, MagicMock
+import click
 
 import streamlit
 from streamlit import cli
@@ -87,25 +88,12 @@ class CliTest(unittest.TestCase):
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("Unable to fetch" in result.output)
 
-    def test_running_in_streamlit(self):
-        """Test that streamlit._running_in_streamlit is True after
-        calling `streamlit run...`, and false otherwise.
-        """
-        self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.credentials.Credentials"
-        ):
-
-            cli._main_run("/not/a/file", None)
-            self.assertTrue(streamlit._is_running_with_streamlit)
-
-    def test_run_spaces(self):
+    def test_run_arguments(self):
         """The correct command line should be passed downstream"""
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
             with patch("streamlit.cli._main_run") as mock_main_run:
-
                 result = self.runner.invoke(
                     cli,
                     [
@@ -115,8 +103,31 @@ class CliTest(unittest.TestCase):
                         "argument with another space",
                     ],
                 )
-                mock_main_run.assert_called_with(
-                    "some script.py",
-                    'test run "some script.py" "argument with space" "argument with another space"',
-                )
+        mock_main_run.assert_called_with(
+            'some script.py', ('argument with space', 'argument with another space'),
+        )
         self.assertEqual(0, result.exit_code)
+
+    def test_get_command_line(self):
+        """Test that _get_command_line_as_string correctly concatenates values
+        from click.
+        """
+        mock_context = MagicMock()
+        mock_context.parent.command_path = "mock_command"
+        with patch("click.get_current_context", return_value=mock_context):
+            with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
+                result = cli._get_command_line_as_string()
+                self.assertEqual("mock_command os_arg1 os_arg2", result)
+
+    def test_running_in_streamlit(self):
+        """Test that streamlit._running_in_streamlit is True after
+        calling `streamlit run...`, and false otherwise.
+        """
+        self.assertFalse(streamlit._is_running_with_streamlit)
+        with patch("streamlit.cli.bootstrap.run"), patch(
+            "streamlit.credentials.Credentials"), patch(
+            "streamlit.cli._get_command_line_as_string"
+        ):
+
+            cli._main_run("/not/a/file", None)
+            self.assertTrue(streamlit._is_running_with_streamlit)
