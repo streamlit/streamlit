@@ -42,8 +42,9 @@ text text text text text text text text text text text text text text text text
 
 def demo_random_numbers():
     """
-    Welcome to Streamlit! we're generating a bunch of random numbers in a loop
-    for around 10 seconds. Enjoy!.
+    This demo illustrates a combination of plotting and animation with Streamlit.
+    We're generating a bunch of random numbers in a loop for around 10 seconds.
+    Enjoy!.
     """
     import time
     import numpy as np
@@ -67,9 +68,10 @@ def demo_random_numbers():
 
 def demo_bart_vs_bikes():
     """
-    This demo shows how Streamlit can be used to display geospatial data. Select
-    the layers about San Francisco Bart and bikes traffice in the select box
-    below.
+    This demo shows how Streamlit can be used to display geospatial data. Use
+    the select box below to choose which layers about San Francisco Bart and
+    bikes traffic you want to see. You can then navigate the map and discover
+    other layers.
     """
     import pandas as pd
     import copy
@@ -112,7 +114,7 @@ def demo_bart_vs_bikes():
                 "getColor": [0, 0, 0, 200],
                 "getSize": 15,
             },
-            "Bart Stop Outbound": {
+            "Bart Stop Outbound Flow": {
                 "type": "ArcLayer",
                 "data": bart_path_stats,
                 "pickable": True,
@@ -125,9 +127,11 @@ def demo_bart_vs_bikes():
             },
         }
     )
-    layers = st.multiselect("Select some layers", list(layers_def.keys()))
+    layers = st.multiselect("Select layers", list(layers_def.keys()))
     if len(layers) == 0:
-        st.error("Please choose at least a layer in the select box.")
+        st.error(("Please choose at least a layer in the select box."
+                  " For example, choose Bike Rentals and Bart Stop Outbound"
+                  " Flow"))
         return
     st.deck_gl_chart(
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
@@ -135,24 +139,20 @@ def demo_bart_vs_bikes():
     )
 
 
-# https://tomroelandts.com/articles/how-to-compute-colorful-fractals-using-numpy-and-matplotlib
-# https://en.wikipedia.org/wiki/Julia_set
 def demo_fractals():
     """
-    This small app shows how you can use Streamlit to build cool animations.
+    This app shows how you can use Streamlit to build cool animations.
     It displays an animated fractal based on the the Julia Set. Use the slider
     to tune the level of detail.
     """
     import numpy as np
-    import matplotlib.pyplot as plt
 
     iterations = st.slider("Level of detail", 1, 100, 70, 1)
 
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
-    plot = st.pyplot()
-    plt.axis("off")
+    image = st.empty()
 
     progress_bar = st.progress(0)
     for a in np.linspace(0.0, 4 * np.pi, 100):
@@ -168,14 +168,14 @@ def demo_fractals():
             M[np.abs(Z) > 2] = False
             N[M] = i
 
-        plot.image(1.0 - (N / N.max()), use_column_width=True)
+        image.image(1.0 - (N / N.max()), use_column_width=True)
     progress_bar.empty()
     st.button("Re-run")
 
 
 def demo_deformation():
     """
-    <...>.
+    <...>
     """
     import requests
     from io import BytesIO
@@ -293,10 +293,11 @@ def demo_movies():
 
 def demo_agri():
     """
-    This demo shows how to use Streamlit to visualize Dataframes. It consists
-    of an app to explore the Gross Agricultultural Production (GPA) in the world
-    from 1960 to 2007. Data are derived from a United Nation publicly available dataset
-    (http://data.un.org/Explorer.aspx).
+    This demo shows how to use Streamlit to visualize Dataframes.
+    The app allows you to explore the Gross Agricultultural Production (GPA)
+    in the world from 1960 to 2007. Data are derived from a United Nation
+    publicly available dataset (http://data.un.org/Explorer.aspx). Use the
+    select box to choose some countries to compare.
     """
     import pandas as pd
 
@@ -304,30 +305,14 @@ def demo_agri():
     def read():
         return pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
 
-    @st.cache
-    def clean(dataset):
-        gap = dataset.pivot(index="Region", columns="Year", values="Price")
-        gap.columns = gap.columns.astype(str)
-        years = list(map(str, range(1961, 2008)))
-        gap["Total"] = gap.sum(axis=1)
-        gap.sort_values(["Total"], ascending=False, axis=0, inplace=True)
-        gap = gap[years].transpose()
-        gap.fillna(0, inplace=True)
-        gap_unwant = [col for col in gap.columns if "+" in col]
-        gap = gap.drop(gap_unwant, axis=1)
-        return gap
-
     try:
-        gap = read().copy()
+        df = read().copy()
     except urllib.error.URLError:
         st.error("Connection Error. This demo requires internet access")
         return
-    gap_clean = clean(gap)
 
-    gap_top10tran = gap_clean
-    gap_top10tran.fillna(0, inplace=True)
-
-    countries = st.multiselect("Choose countries", gap_top10tran.columns)
+    df = df.set_index("Region")
+    countries = st.multiselect("Choose countries", df.index)
     if len(countries) == 0:
         st.error(
             (
@@ -337,34 +322,15 @@ def demo_agri():
             )
         )
         return
+
     st.text("Gross Agricultural Production [$1B]")
-    st.write(gap_top10tran[countries].transpose().sort_index().style.format("{0:,.0f}"))
+    st.write(df.loc[countries].sort_index())
 
-    # import altair as alt
-    # st.write(gap_top10tran)
-    # chart = alt.Chart(gap_top10tran).mark_line().encode()
-    # st.altair_chart(chart)
-    # st.text(gap_top10tran[countries].T)
-    # df = gap_top10tran[countries].T
-    # st.write('Hello')
-    # df = df.reset_index()#
-    #
-    # df = df.set_index(['Region'])
-    # st.text(df)
-    # st.write(df)
-    # st.text(df)
-    # st.area_chart(df)
+    ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
 
-    ax = gap_top10tran[countries].plot(kind="area", figsize=(20, 8), stacked=False)
-
-    ax.set_title(
-        "Gross Agricultural Producing Nations from 1961 to 2007 [$1B]",
-        fontsize=20,
-        fontweight="bold",
-    )
-    ax.set_ylabel("GAP in Billions (Int $)", fontsize=15)
-    ax.set_xlabel("")
-    ax.tick_params(labelsize=13)
+    ax.set_ylabel("GAP in Billions (Int $)", fontsize=20)
+    ax.set_xlabel("Year", fontsize=20)
+    ax.tick_params(labelsize=20)
     st.pyplot()
 
 
