@@ -346,16 +346,16 @@ class TestScriptRunner(ScriptRunner):
             self.maybe_handle_execution_control_request()
             return True
 
-        self.main_dg = DeltaGenerator(enqueue=enqueue_fn,
-                                      container=BlockPath.MAIN)
-        self.sidebar_dg = DeltaGenerator(enqueue=enqueue_fn,
-                                         container=BlockPath.SIDEBAR)
+        self.main_dg = DeltaGenerator(enqueue=enqueue_fn, container=BlockPath.MAIN)
+        self.sidebar_dg = DeltaGenerator(
+            enqueue=enqueue_fn, container=BlockPath.SIDEBAR
+        )
         self.script_request_queue = ScriptRequestQueue()
 
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
-            report=Report(script_path, []),
+            report=Report(script_path, "test command line"),
             main_dg=self.main_dg,
             sidebar_dg=self.sidebar_dg,
             widget_states=WidgetStates(),
@@ -386,7 +386,7 @@ class TestScriptRunner(ScriptRunner):
 
     def enqueue_rerun(self, argv=None, widget_state=None):
         self.script_request_queue.enqueue(
-            ScriptRequest.RERUN, RerunData(argv=argv, widget_state=widget_state)
+            ScriptRequest.RERUN, RerunData(widget_state=widget_state)
         )
 
     def enqueue_stop(self):

@@ -29,7 +29,7 @@ from streamlit import config
 from streamlit.Report import Report
 from tests import testutil
 
-report = Report("the/path", ["arg0", "arg1"])
+report = Report("the/path", "test command line")
 
 
 class BootstrapPrintTest(unittest.TestCase):
