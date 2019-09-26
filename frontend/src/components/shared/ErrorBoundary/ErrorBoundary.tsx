@@ -58,7 +58,7 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
             name="Network issue"
             message={
               <p>
-                Please press <i>cmd+r</i> to reload the page
+                Please press <i>F5</i> or <i>cmd+r</i> to reload the page
                 <br />
                 if you are still experiencing issues please try{" "}
                 <a
