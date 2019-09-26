@@ -146,7 +146,7 @@ def _widget(method):
         # Hash parts allow us to use React keys to reset widget state
         # when default values change.
         widget_id = "%s-%s-%s-%s" % (
-            f.__name__,
+            method.__name__,
             label,
             hash(args),
             hash(frozenset(kwargs.items())),
