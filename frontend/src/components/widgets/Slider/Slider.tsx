@@ -18,6 +18,7 @@
 import React from "react"
 import { Slider as UISlider } from "baseui/slider"
 import { Map as ImmutableMap } from "immutable"
+import { sprintf } from "sprintf-js"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
@@ -80,7 +81,8 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private handleClick = (e: Event): void => {
-    ;(e.target as HTMLElement).focus()
+    const knob = e.target as HTMLElement
+    knob.focus()
   }
 
   private get value(): number[] {
@@ -108,6 +110,37 @@ class Slider extends React.PureComponent<Props, State> {
     return value.length > 1 ? [start, end] : [start]
   }
 
+  private renderThumbValue = (data: {
+    $thumbIndex: number
+    $value: any
+  }): JSX.Element => {
+    const format = this.props.element.get("format")
+    const thumbValueStyle = sliderOverrides.ThumbValue.style(
+      this.props.disabled
+    ) as React.CSSProperties
+
+    return (
+      <div style={thumbValueStyle}>
+        {sprintf(format, data.$value[data.$thumbIndex])}
+      </div>
+    )
+  }
+
+  private renderTickBar = (): JSX.Element => {
+    const format = this.props.element.get("format")
+    const max = this.props.element.get("max")
+    const min = this.props.element.get("min")
+    const tickBarItemStyle = sliderOverrides.TickBarItem
+      .style as React.CSSProperties
+
+    return (
+      <div style={sliderOverrides.TickBar.style}>
+        <div style={tickBarItemStyle}>{sprintf(format, min)}</div>
+        <div style={tickBarItemStyle}>{sprintf(format, max)}</div>
+      </div>
+    )
+  }
+
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     const label = this.props.element.get("label")
@@ -125,7 +158,11 @@ class Slider extends React.PureComponent<Props, State> {
           value={this.value}
           onChange={this.handleChange}
           disabled={this.props.disabled}
-          overrides={sliderOverrides}
+          overrides={{
+            ...sliderOverrides,
+            ThumbValue: this.renderThumbValue,
+            TickBar: this.renderTickBar,
+          }}
         />
       </div>
     )

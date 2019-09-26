@@ -94,6 +94,12 @@ pycoverage:
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
 
+.PHONY: integration-tests
+# Run Python integration tests. Currently, this is just a script that runs
+# all the e2e tests in "bare" mode and checks for non-zero exit codes.
+integration-tests:
+	python scripts/run_bare_integration_tests.py
+
 .PHONY: install
 # Install Streamlit into your Python environment.
 install:
@@ -153,22 +159,31 @@ devel-docs: docs
 publish-docs: docs
 	cd docs/_build; \
 		aws s3 sync \
+				--acl public-read html s3://streamlit.io/docs/ \
+				--profile streamlit
+
+  # For now, continue publishing to secret/docs.
+	# TODO: Remove after 2020-01-01
+	cd docs/_build; \
+		aws s3 sync \
 				--acl public-read html s3://streamlit.io/secret/docs/ \
 				--profile streamlit
 
-	@# The line below uses the distribution ID obtained with
-	@# $ aws cloudfront list-distributions | \
-	@#     jq '.DistributionList.Items[] | \
-	@#     select(.Aliases.Items[0] | \
-	@#     contains("www.streamlit.io")) | \
-	@#     .Id'
+	# The line below uses the distribution ID obtained with
+	# $ aws cloudfront list-distributions | \
+	#     jq '.DistributionList.Items[] | \
+	#     select(.Aliases.Items[0] | \
+	#     contains("www.streamlit.io")) | \
+	#     .Id'
 
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths \
-				'/secret/docs/*' \
-				'/secret/docs/tutorial/*' \
-			--profile streamlit
+	aws cloudfront create-invalidation \
+		--distribution-id=E5G9JPT7IOJDV \
+		--paths \
+			'/docs/*' \
+			'/docs/tutorial/*' \
+			'/secret/docs/*' \
+			'/secret/docs/tutorial/*' \
+		--profile streamlit
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
@@ -262,50 +277,11 @@ distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)
 
-.PHONY: prepare-conda-repo
-prepare-conda-repo:
-	mkdir -p /var/tmp/streamlit-conda
-	aws s3 sync \
-			s3://repo.streamlit.io/streamlit-forge/ \
-			/var/tmp/streamlit-conda/streamlit-forge/ \
-			--profile streamlit
-
-.PHONY: conda-packages
-conda-packages:
-	cd scripts; \
-		./create_conda_packages.sh
-
-.PHONY: serve-conda-packages
-serve-conda-packages:
-	cd /var/tmp/streamlit-conda; \
-		python -m SimpleHTTPServer 8000 || python -m http.server 8000
-
-.PHONY: conda-dev-env
-conda-dev-env:
-	conda env create -f scripts/conda/test_conda_env.yml
-
-.PHONY: clean-conda-dev-env
-clean-conda-dev-env:
-	conda env remove -n streamlit-dev
-
-.PHONY: distribute-conda-packages
-distribute-conda-packages:
-	aws s3 sync \
-		/var/tmp/streamlit-conda/streamlit-forge/ \
-		s3://repo.streamlit.io/streamlit-forge/ \
-		--acl public-read \
-		--profile streamlit
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E3V3HGGB52ZUA0 \
-		--paths '/*' \
-		--profile streamlit
-
 .PHONY: notices
 # Rebuild the NOTICES file.
 notices:
 	cd frontend; \
-		yarn notices generate-disclaimer --silent --production > ../NOTICES
+		yarn licenses generate-disclaimer --silent --production > ../NOTICES
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 

@@ -25,6 +25,7 @@
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 
 import path from "path"
+import * as _ from "lodash"
 
 // https://github.com/palmerhq/cypress-image-snapshot#installation
 import { addMatchImageSnapshotCommand } from "cypress-image-snapshot/command"
@@ -56,7 +57,7 @@ addMatchImageSnapshotCommand({
 Cypress.Commands.overwrite(
   "matchImageSnapshot",
   (originalFn, subject, name, options) => {
-    cy.wrap(subject).trigger("blur")
+    cy.wrap(subject).trigger("blur", _.pick(options, "force"))
     return originalFn(subject, name, options)
   }
 )

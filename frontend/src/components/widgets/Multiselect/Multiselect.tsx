@@ -100,7 +100,7 @@ class Multiselect extends React.PureComponent<Props, State> {
       .toArray()
 
     return (
-      <div className="Widget row-widget stMultiselectbox" style={style}>
+      <div className="Widget row-widget stMultiSelect" style={style}>
         <label>{label}</label>
         <UISelect
           options={selectOptions}

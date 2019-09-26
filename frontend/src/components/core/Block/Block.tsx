@@ -240,7 +240,7 @@ class Block extends PureComponent<Props> {
         <GraphVizChart element={el} index={index} width={width} />
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-      multiselectbox: (el: SimpleElement) => (
+      multiselect: (el: SimpleElement) => (
         <Multiselect element={el} width={width} {...widgetProps} />
       ),
       plotlyChart: (el: SimpleElement) => (

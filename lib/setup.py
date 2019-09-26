@@ -33,8 +33,8 @@ def readme():
 
 setuptools.setup(
     name="streamlit",
-    version="0.45.0",  # PEP-440
-    description="Magical developer tool for machine learning engineers",
+    version="0.46.0",  # PEP-440
+    description="Frontend library for machine learning engineers",
     long_description=readme(),
     url="https://streamlit.io",
     author="Streamlit Inc",

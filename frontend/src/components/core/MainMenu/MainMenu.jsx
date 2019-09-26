@@ -25,7 +25,7 @@ import {
 import openIconic from "assets/img/open-iconic.svg"
 import "./MainMenu.scss"
 
-const ONLINE_DOCS_URL = "https://streamlit.io/secret/docs"
+const ONLINE_DOCS_URL = "https://streamlit.io/docs"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/teams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
@@ -71,14 +71,6 @@ class MainMenu extends PureComponent {
 
           <DropdownItem
             disabled={!this.props.isServerConnected()}
-            onClick={this.props.rerunCallback}
-          >
-            <span>Edit command</span>
-            <span className="shortcut">&#x21e7;R</span>
-          </DropdownItem>
-
-          <DropdownItem
-            disabled={!this.props.isServerConnected()}
             onClick={this.props.clearCacheCallback}
           >
             <span>Clear cache</span>
@@ -92,20 +84,18 @@ class MainMenu extends PureComponent {
           </DropdownItem>
 
           <DropdownItem onClick={() => window.open(COMMUNITY_URL, "_blank")}>
-            Community
+            Ask a question
           </DropdownItem>
-
-          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
-            Streamlit for teams
-          </DropdownItem>
-
-          <DropdownItem divider />
 
           <DropdownItem onClick={() => window.open(BUG_URL, "_blank")}>
             Report a bug
           </DropdownItem>
 
           <DropdownItem divider />
+
+          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
+            Streamlit for teams
+          </DropdownItem>
 
           <DropdownItem onClick={() => this.props.settingsCallback()}>
             Settings

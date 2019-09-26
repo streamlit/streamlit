@@ -44,6 +44,10 @@ message Text {
 
     // Shows a success message.
     SUCCESS = 9;
+
   }
+
   Format format = 2;
+
+  bool allow_html = 3;
 }

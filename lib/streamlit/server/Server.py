@@ -24,15 +24,21 @@ import tornado.web
 import tornado.websocket
 
 from streamlit import config
-from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit import util
+from streamlit.ForwardMsgCache import ForwardMsgCache
+from streamlit.ForwardMsgCache import create_reference_msg
+from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
+from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
+from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
 
@@ -50,6 +56,25 @@ TORNADO_SETTINGS = {
 # Dictionary key used to mark the script execution context that starts
 # up before the first browser connects.
 PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
+
+
+class SessionInfo(object):
+    """Type stored in our _report_sessions dict.
+
+    For each ReportSession, the server tracks that session's
+    report_run_count. This is used to track the age of messages in
+    the ForwardMsgCache.
+    """
+
+    def __init__(self, session):
+        """Initialize a SessionInfo instance.
+
+        Parameters
+        ----------
+        session : ReportSession
+        """
+        self.session = session
+        self.report_run_count = 0
 
 
 class State(Enum):
@@ -94,12 +119,13 @@ class Server(object):
         self._script_path = script_path
         self._script_argv = script_argv
 
-        # Mapping of WebSocket->ReportSession.
-        self._report_sessions = {}
+        # Mapping of WebSocket->SessionInfo.
+        self._session_infos = {}
 
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
+        self._message_cache = ForwardMsgCache()
 
     def start(self, on_started):
         """Start the server.
@@ -142,6 +168,7 @@ class Server(object):
             ),
             (r"/debugz", DebugHandler, dict(server=self)),
             (r"/metrics", MetricsHandler),
+            (r"/message", MessageCacheHandler, dict(cache=self._message_cache)),
         ]
 
         if config.get_option("global.developmentMode") and config.get_option(
@@ -198,18 +225,17 @@ class Server(object):
                 # Shallow-clone our sessions into a list, so we can iterate
                 # over it and not worry about whether it's being changed
                 # outside this coroutine.
-                ws_session_pairs = list(self._report_sessions.items())
+                session_pairs = list(self._session_infos.items())
 
-                for ws, session in ws_session_pairs:
+                for ws, session_info in session_pairs:
                     if ws is PREHEATED_REPORT_SESSION:
                         continue
                     if ws is None:
                         continue
-                    msg_list = session.flush_browser_queue()
+                    msg_list = session_info.session.flush_browser_queue()
                     for msg in msg_list:
-                        msg_str = serialize_forward_msg(msg)
                         try:
-                            ws.write_message(msg_str, binary=True)
+                            self._send_message(ws, session_info, msg)
                         except tornado.websocket.WebSocketClosedError:
                             self._remove_browser_connection(ws)
                         yield
@@ -225,12 +251,71 @@ class Server(object):
             yield tornado.gen.sleep(0.01)
 
         # Shut down all ReportSessions
-        for session in list(self._report_sessions.values()):
-            session.shutdown()
+        for session_info in list(self._session_infos.values()):
+            session_info.session.shutdown()
 
         self._set_state(State.STOPPED)
 
         self._on_stopped()
+
+    def _send_message(self, ws, session_info, msg):
+        """Send a message to a client.
+
+        If the client is likely to have already cached the message, we may
+        instead send a "reference" message that contains only the hash of the
+        message.
+
+        Parameters
+        ----------
+        ws : _BrowserWebSocketHandler
+            The socket connected to the client
+        session_info : SessionInfo
+            The SessionInfo associated with websocket
+        msg : ForwardMsg
+            The message to send to the client
+
+        """
+        msg.metadata.cacheable = is_cacheable_msg(msg)
+        msg_to_send = msg
+        if msg.metadata.cacheable:
+            populate_hash_if_needed(msg)
+
+            if self._message_cache.has_message_reference(
+                msg, session_info.session, session_info.report_run_count
+            ):
+
+                # This session has probably cached this message. Send
+                # a reference instead.
+                LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)
+                msg_to_send = create_reference_msg(msg)
+
+            # Cache the message so it can be referenced in the future.
+            # If the message is already cached, this will reset its
+            # age.
+            LOGGER.debug("Caching message (hash=%s)" % msg.hash)
+            self._message_cache.add_message(
+                msg, session_info.session, session_info.report_run_count
+            )
+
+        # If this was a `report_finished` message, we increment the
+        # report_run_count for this session, and update the cache
+        if (
+            msg.WhichOneof("type") == "report_finished"
+            and msg.report_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+        ):
+            LOGGER.debug(
+                "Report finished successfully; "
+                "removing expired entries from MessageCache "
+                "(max_age=%s)",
+                config.get_option("global.maxCachedMessageAge"),
+            )
+            session_info.report_run_count += 1
+            self._message_cache.remove_expired_session_entries(
+                session_info.session, session_info.report_run_count
+            )
+
+        # Ship it off!
+        ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def stop(self):
         self._set_state(State.STOPPING)
@@ -268,13 +353,13 @@ class Server(object):
             The ReportSession associated with this browser connection
 
         """
-        if ws not in self._report_sessions:
+        if ws not in self._session_infos:
 
-            if PREHEATED_REPORT_SESSION in self._report_sessions:
-                assert len(self._report_sessions) == 1
+            if PREHEATED_REPORT_SESSION in self._session_infos:
+                assert len(self._session_infos) == 1
                 LOGGER.debug("Reusing preheated context for ws %s", ws)
-                session = self._report_sessions[PREHEATED_REPORT_SESSION]
-                del self._report_sessions[PREHEATED_REPORT_SESSION]
+                session = self._session_infos[PREHEATED_REPORT_SESSION].session
+                del self._session_infos[PREHEATED_REPORT_SESSION]
             else:
                 LOGGER.debug("Creating new context for ws %s", ws)
                 session = ReportSession(
@@ -283,20 +368,20 @@ class Server(object):
                     script_argv=self._script_argv,
                 )
 
-            self._report_sessions[ws] = session
+            self._session_infos[ws] = SessionInfo(session)
 
             if ws is not PREHEATED_REPORT_SESSION:
                 self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
-        return self._report_sessions[ws]
+        return self._session_infos[ws].session
 
     def _remove_browser_connection(self, ws):
-        if ws in self._report_sessions:
-            session = self._report_sessions[ws]
-            del self._report_sessions[ws]
-            session.shutdown()
+        if ws in self._session_infos:
+            session_info = self._session_infos[ws]
+            del self._session_infos[ws]
+            session_info.session.shutdown()
 
-        if len(self._report_sessions) == 0:
+        if len(self._session_infos) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 

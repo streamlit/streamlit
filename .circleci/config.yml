@@ -33,26 +33,16 @@ jobs:
       #################################################################
       # Pre Cache Steps
       #################################################################
-      - run: &set_env_vars
-          name: set environment variables if in conda.
-          command: |
-            if conda info; then
-              echo "Conda found, setting variables."
-              ./scripts/anaconda_version.sh >> $BASH_ENV
-              echo 'export SUDO=""' >> $BASH_ENV
-              touch make.bin
-              md5sum make.bin > ~/make.md5
-              rm -f make.bin
-            else
-              echo 'export SUDO="sudo"' >> $BASH_ENV
-              cp -f /usr/bin/make make.bin
-              md5sum make.bin > ~/make.md5
-            fi
-
-      - run: &install_graphviz
-          name: install graphviz ie dot
+      - run: &get_make_checksum
+          name: Get 'make' checksum
           command: |
             echo 'export SUDO="sudo"' >> $BASH_ENV
+            cp -f /usr/bin/make make.bin
+            md5sum make.bin > ~/make.md5
+
+      - run: &get_dot_checksum
+          name: Get 'dot' checksum
+          command: |
             if [ -f /usr/bin/dot ] ; then
               cp -f /usr/bin/dot dot.bin
               md5sum dot.bin > ~/dot.md5
@@ -66,13 +56,13 @@ jobs:
           # We use the python Pipfile.lock as the cache key and also
           # the hash of the current python.
           # If dependencies haven't changed then use the cache.
-          name: Create python cache key.
+          name: Create Python cache key
           command: |
             md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
             md5sum $(which python) >> ~/python_version.md5
 
       - run: &create_yarn_cache_key
-          name: Create yarn cache key.
+          name: Create Yarn cache key
           command: |
             md5sum frontend/yarn.lock > ~/yarn.lock.md5
 
@@ -80,18 +70,13 @@ jobs:
           # There is no lock file for the protobufs so we run a checksum
           # across all the protos and save that to a file to use as
           # cache key.
-          name: Create checksum for all protobufs
+          name: Checksum all protobufs
           command: |
             md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
 
       #################################################################
       # Restore from cache
       #################################################################
-      - restore_cache:
-          name: Restore /opt/conda from cache
-          keys:
-            - v12-opt-conda-{{ checksum "~/python_version.md5" }}
-
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
@@ -121,12 +106,12 @@ jobs:
       # Pre Make commands
       #################################################################
       - run: &install_make
-          name: install make
+          name: Install make
           command: |
             if [ -s make.bin ] ; then
-              echo "make.bin does exists and is non zero"
+              echo "make.bin exists; not installing"
             else
-              echo "/usr/bin/make doesnt exist, installing"
+              echo "/usr/bin/make doesn't exist; installing"
               apt-get update -y
               apt-get install -y make
               cp -f /usr/bin/make make.bin
@@ -140,12 +125,12 @@ jobs:
             - make.bin
 
       - run: &install_dot
-          name: install dot
+          name: Install dot
           command: |
             if [ -s dot.bin ] ; then
-              echo "dot.bin does exists and is non zero"
+              echo "dot.bin exists and is non zero"
             else
-              echo "/usr/bin/dot doesnt exist, installing"
+              echo "/usr/bin/dot doesn't exist, installing"
               ${SUDO} apt-get update -y
               ${SUDO} apt-get install -y graphviz
               cp -f /usr/bin/dot dot.bin
@@ -161,8 +146,8 @@ jobs:
       #################################################################
       # Run 'make init'
       #################################################################
-      - run: &install_nvm
-          name: Install NVM ie nodejs
+      - run: &install_nodejs
+          name: Install NVM, Node.js, and Yarn
           command: |
             if [ ! -d ~/.nvm ] ; then
               # install nodejs via nvm
@@ -180,38 +165,24 @@ jobs:
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv if necessary.
+          name: Run make pipenv-lock and create virtualenv
           command: |
-            if echo ${CIRCLE_JOB} | egrep -qi conda ; then
-              echo 'In conda, not creating virtualenv'
-              if pip freeze | grep -qi pipenv ; then
-                echo 'skipping make setup and make pipenv-lock'
+            echo 'Checking for virtualenv'
+            if [ ! -d venv ] ; then
+              if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
+                pip install virtualenv
+                python -m virtualenv venv
               else
-                # pip install psutil requires gcc.
-                apt-get update -y
-                apt-get install -y build-essential
-                make setup
-                make pipenv-lock
+                python -m venv venv
               fi
-              mkdir -p venv
+              source venv/bin/activate
+              make setup
+              make pipenv-lock
+              deactivate
             else
-              echo 'Not in conda, checking for virtualenv'
-              if [ ! -d venv ] ; then
-                if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-                  pip install virtualenv
-                  python -m virtualenv venv
-                else
-                  python -m venv venv
-                fi
-                source venv/bin/activate
-                make setup
-                make pipenv-lock
-                deactivate
-              else
-                echo 'Virtualenv already exists, not creating'
-              fi
-              echo 'source venv/bin/activate' >> $BASH_ENV
+              echo 'Virtualenv already exists, not creating'
             fi
+            echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &make_develop
           name: Run make develop
@@ -240,7 +211,7 @@ jobs:
       # Run linters
       #################################################################
       - run:
-          name: Run linters.
+          name: Run linters
           command: |
             make jslint
             make pylint
@@ -253,7 +224,7 @@ jobs:
       # Run make pycoverage
       #################################################################
       - run:
-          name: Run python tests.
+          name: Run python tests
           command: |
             make pycoverage
 
@@ -262,10 +233,18 @@ jobs:
           when: always
 
       #################################################################
+      # Run integration tests
+      #################################################################
+      - run:
+          name: Run integration tests
+          command: |
+            make integration-tests
+
+      #################################################################
       # Run frontend tests. (Only executed in the Python 3 job.)
       #################################################################
       - run:
-          name: Run frontend tests.
+          name: Run frontend tests
           command: |
             if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
               echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
@@ -276,11 +255,6 @@ jobs:
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
       #################################################################
-      - save_cache:
-          name: Save /opt/conda to cache
-          key: v12-opt-conda-{{ checksum "~/python_version.md5" }}
-          paths:
-            - /opt/conda
 
       - save_cache:
           name: Save virtualenv to cache
@@ -326,10 +300,10 @@ jobs:
       # Pre Cache Steps
       #################################################################
       - run:
-          <<: *set_env_vars
+          <<: *get_make_checksum
 
       - run:
-          <<: *install_graphviz
+          <<: *get_dot_checksum
 
       - run:
           name: Create python cache key.
@@ -365,7 +339,7 @@ jobs:
           <<: *install_dot
 
       - run:
-          <<: *install_nvm
+          <<: *install_nodejs
 
       - run:
           <<: *activate_virtualenv

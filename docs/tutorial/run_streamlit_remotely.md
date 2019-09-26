@@ -76,7 +76,7 @@ And that's it! Now your browser should show your script at
 
 ## How to edit your remote script
 
-When actively working on a Streamlit report remotely, there are three ways to
+When actively working on a Streamlit app remotely, there are three ways to
 edit your remote code:
 
 1. If you use [VS Code](https://code.visualstudio.com/docs/remote/ssh) or the

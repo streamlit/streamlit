@@ -50,25 +50,30 @@ EMAIL_PROMPT = """
   getting personal technical support, please enter your email address
   below. Otherwise, you may leave the field blank.
 
-  Email""" % {
-    "welcome": click.style("Welcome to Streamlit!", fg="green")
+  %(email)s""" % {
+    "welcome": click.style("Welcome to Streamlit!", bold=True),
+    "email": click.style("Email: ", fg="blue")
 }
 
 TELEMETRY_TEXT = """
-  Telemetry: as an open source project, we collect summary statistics
-  and metadata to understand how people are using Streamlit.
+  %(telemetry)s As an open source project, we collect usage statistics.
+  We cannot see and do not store information contained in Streamlit apps.
 
   If you'd like to opt out, add the following to ~/.streamlit/config.toml,
   creating that file if necessary:
 
-  [browser]
-  gatherUsageStats = false
-"""
+    [browser]
+    gatherUsageStats = false
+""" % {
+    "telemetry": click.style("Telemetry:", fg="blue", bold=True)
+}
 
 INSTRUCTIONS_TEXT = """
-  Get started by typing:
-  $ %(hello)s
+  %(start)s
+  %(prompt)s %(hello)s
 """ % {
+    "start": click.style("Get started by typing:", fg="blue", bold=True),
+    "prompt": click.style("$", fg="blue"),
     "hello": click.style("streamlit hello", bold=True)
 }
 
@@ -184,7 +189,9 @@ class Credentials(object):
 
             while not activated:
 
-                email = click.prompt(text=EMAIL_PROMPT, default="", show_default=False)
+                email = click.prompt(
+                    text=EMAIL_PROMPT, prompt_suffix="", default="",
+                    show_default=False)
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
