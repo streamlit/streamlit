@@ -44,10 +44,10 @@ def _set_up_signal_handler():
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    if sys.platform == 'win32':
-      signal.signal(signal.SIGBREAK, signal_handler)
+    if sys.platform == "win32":
+        signal.signal(signal.SIGBREAK, signal_handler)
     else:
-      signal.signal(signal.SIGQUIT, signal_handler)
+        signal.signal(signal.SIGQUIT, signal_handler)
 
 
 def _fix_sys_path(script_path):
@@ -71,6 +71,15 @@ def _fix_matplotlib_crash():
     """
     if config.get_option("runner.fixMatplotlib"):
         os.environ["MPLBACKEND"] = "Agg"
+
+
+def _fix_sys_argv(script_path, args):
+    """sys.argv needs to exclude streamlit arguments and parameters
+    and be set to what a user's script may expect.
+    """
+    import sys
+
+    sys.argv = [script_path] + list(args)
 
 
 def _on_server_start(server):
@@ -131,7 +140,7 @@ def _print_url():
     click.secho("")
 
 
-def run(script_path):
+def run(script_path, command_line, args):
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
@@ -139,10 +148,13 @@ def run(script_path):
     Parameters
     ----------
     script_path : str
+    command_line : str
+    args : [str]
 
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
+    _fix_sys_argv(script_path, args)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads
@@ -151,7 +163,7 @@ def run(script_path):
     ioloop = tornado.ioloop.IOLoop.current()
 
     # Create and start the server.
-    server = Server(ioloop, script_path, sys.argv)
+    server = Server(ioloop, script_path, command_line)
     server.add_preheated_report_session()
     server.start(_on_server_start)
 

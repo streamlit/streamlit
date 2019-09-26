@@ -121,7 +121,7 @@ def main_hello():
 @main.command("run")
 @click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args):
+def main_run(file_or_url, args=None):
     """Run a Python script, piping stderr to Streamlit.
     The script can be local or it can be an url. In the
     latter case, streamlit will download the script to a
@@ -154,9 +154,17 @@ def main_run(file_or_url, args):
         _main_run(file_or_url, args)
 
 
-def _main_run(file, args=None):
-    if args is None:
-        args = []
+# Utility function to compute the command line as a string
+def _get_command_line_as_string():
+    import subprocess
+
+    cmd_line_as_list = [click.get_current_context().parent.command_path]
+    cmd_line_as_list.extend(click.get_os_args())
+    return subprocess.list2cmdline(cmd_line_as_list)
+
+
+def _main_run(file, args=[]):
+    command_line = _get_command_line_as_string()
 
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
@@ -168,14 +176,7 @@ def _main_run(file, args=None):
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 
-    # We don't use args ourselves. We just allow people to pass them so their
-    # script can handle them via sys.argv or whatever.
-    # IMPORTANT: This means we should treat argv carefully inside our code!
-    import sys
-
-    sys.argv = [file] + list(args)
-
-    bootstrap.run(file)
+    bootstrap.run(file, command_line, args)
 
 
 # DEPRECATED

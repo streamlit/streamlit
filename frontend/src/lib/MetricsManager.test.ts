@@ -25,7 +25,7 @@ beforeEach(() => {
     authorEmail: "ae",
     pythonVersion: "pv",
     maxCachedMessageAge: 2,
-    commandLine: ["cl"],
+    commandLine: "command line",
   })
 })
 

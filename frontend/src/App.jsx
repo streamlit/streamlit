@@ -82,7 +82,6 @@ class App extends PureComponent {
     this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
     this.onLogInSuccess = this.onLogInSuccess.bind(this)
-    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
     this.rerunScript = this.rerunScript.bind(this)
     this.stopReport = this.stopReport.bind(this)
     this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
@@ -207,6 +206,7 @@ class App extends PureComponent {
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
       maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
+      commandLine: initializeMsg.commandLine,
     })
 
     MetricsManager.current.initialize({
@@ -321,11 +321,8 @@ class App extends PureComponent {
       reportHash: hashString(SessionInfo.current.installationId + scriptPath),
     })
 
-    SessionInfo.current.commandLine = newReportProto.commandLine
-
     this.setState({
       reportId: newReportProto.id,
-      commandLine: newReportProto.commandLine.join(" "),
       reportName: name,
     })
   }
@@ -475,26 +472,7 @@ class App extends PureComponent {
   }
 
   /**
-   * Opens the dialog to rerun the script.
-   */
-  openRerunScriptDialog() {
-    if (this.isServerConnected()) {
-      this.openDialog({
-        type: DialogType.RERUN_SCRIPT,
-        getCommandLine: () => this.state.commandLine,
-        setCommandLine: commandLine => this.setState({ commandLine }),
-        rerunCallback: this.rerunScript,
-
-        // This will be called if enter is pressed.
-        defaultAction: this.rerunScript,
-      })
-    } else {
-      logError("Cannot rerun script when disconnected from server.")
-    }
-  }
-
-  /**
-   * Reruns the script (given by this.state.commandLine).
+   * Reruns the script.
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
    * will be set to true, which will result in a request to the Server
@@ -531,7 +509,7 @@ class App extends PureComponent {
 
     this.sendBackMsg({
       type: "rerunScript",
-      rerunScript: this.state.commandLine,
+      rerunScript: true,
     })
   }
 

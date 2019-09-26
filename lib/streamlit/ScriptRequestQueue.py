@@ -34,12 +34,9 @@ class ScriptRequest(Enum):
 RerunData = namedtuple(
     "RerunData",
     [
-        # The argv value to run the script with. If this is None,
-        # the argv from the most recent run of the script will be used instead.
-        "argv",
         # WidgetStates protobuf to run the script with. If this is None, the
         # widget_state from the most recent run of the script will be used instead.
-        "widget_state",
+        "widget_state"
     ],
 )
 
@@ -95,7 +92,7 @@ class ScriptRequestQueue(object):
                         # so we simply overwrite the existing request.
                         self._queue[index] = (
                             request,
-                            RerunData(argv=data.argv, widget_state=data.widget_state),
+                            RerunData(widget_state=data.widget_state),
                         )
                     elif data.widget_state is None:
                         # If this request's widget_state is None, and the
@@ -110,7 +107,7 @@ class ScriptRequestQueue(object):
                         )
                         self._queue[index] = (
                             request,
-                            RerunData(argv=data.argv, widget_state=coalesced_state),
+                            RerunData(widget_state=coalesced_state),
                         )
                 else:
                     self._queue.append((request, data))

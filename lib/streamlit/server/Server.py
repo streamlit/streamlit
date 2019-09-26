@@ -149,14 +149,14 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, script_path, command_line):
         """Create the server. It won't be started yet.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
         script_path : str
-        script_argv : List[str]
+        command_line : str
 
         """
         if Server._singleton is not None:
@@ -168,7 +168,7 @@ class Server(object):
 
         self._ioloop = ioloop
         self._script_path = script_path
-        self._script_argv = script_argv
+        self._command_line = command_line
 
         # Mapping of WebSocket->SessionInfo.
         self._session_infos = {}
@@ -419,7 +419,7 @@ class Server(object):
                 session = ReportSession(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv,
+                    command_line=self._command_line,
                 )
 
             self._session_infos[ws] = SessionInfo(session)
@@ -468,7 +468,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
             elif msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(command_line=msg.rerun_script)
+                self._session.handle_rerun_script_request()
             elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
