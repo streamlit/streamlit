@@ -20,13 +20,9 @@ import inspect
 from collections import OrderedDict
 import urllib
 
-AWS_BUCKET_URL = (
-    "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-)
+AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
 
-GITHUB_DATA = (
-    "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-)
+GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
 
 
 def intro():
@@ -92,50 +88,52 @@ def demo_bart_vs_bikes():
     bart_stop_stats.drop(labels=["name"], axis=1, inplace=True)
     bart_stop_stats.insert(0, "name", bart_stop_names)
 
-    layers_def = OrderedDict({
-        "Bike Rentals": {
-            "type": "HexagonLayer",
-            "data": bike_rental_stats,
-            "radius": 200,
-            "elevationScale": 4,
-            "elevationRange": [0, 1000],
-            "pickable": True,
-            "extruded": True,
-        },
-        "Bart Stop Exits": {
-            "type": "ScatterplotLayer",
-            "data": bart_stop_stats,
-            "radiusScale": 0.05,
-            "getRadius": "exits",
-        },
-        "Bart Stop Names": {
-            "type": "TextLayer",
-            "data": bart_stop_stats,
-            "getText": "name",
-            "getColor": [0, 0, 0, 200],
-            "getSize": 15,
-        },
-        "Bart Stop Outbound": {
-            "type": "ArcLayer",
-            "data": bart_path_stats,
-            "pickable": True,
-            "autoHighlight": True,
-            "getStrokeWidth": 10,
-            "widthScale": 0.0001,
-            "getWidth": "outbound",
-            "widthMinPixels": 3,
-            "widthMaxPixels": 30
-
-        },
-    })
+    layers_def = OrderedDict(
+        {
+            "Bike Rentals": {
+                "type": "HexagonLayer",
+                "data": bike_rental_stats,
+                "radius": 200,
+                "elevationScale": 4,
+                "elevationRange": [0, 1000],
+                "pickable": True,
+                "extruded": True,
+            },
+            "Bart Stop Exits": {
+                "type": "ScatterplotLayer",
+                "data": bart_stop_stats,
+                "radiusScale": 0.05,
+                "getRadius": "exits",
+            },
+            "Bart Stop Names": {
+                "type": "TextLayer",
+                "data": bart_stop_stats,
+                "getText": "name",
+                "getColor": [0, 0, 0, 200],
+                "getSize": 15,
+            },
+            "Bart Stop Outbound": {
+                "type": "ArcLayer",
+                "data": bart_path_stats,
+                "pickable": True,
+                "autoHighlight": True,
+                "getStrokeWidth": 10,
+                "widthScale": 0.0001,
+                "getWidth": "outbound",
+                "widthMinPixels": 3,
+                "widthMaxPixels": 30,
+            },
+        }
+    )
     layers = st.multiselect("Select some layers", list(layers_def.keys()))
     if len(layers) == 0:
         st.error("Please choose at least a layer in the select box.")
         return
     st.deck_gl_chart(
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
-        layers=[layers_def[k] for k in layers]
+        layers=[layers_def[k] for k in layers],
     )
+
 
 # https://tomroelandts.com/articles/how-to-compute-colorful-fractals-using-numpy-and-matplotlib
 # https://en.wikipedia.org/wiki/Julia_set
@@ -184,8 +182,11 @@ def demo_deformation():
 
     @st.cache(show_spinner=False)
     def load_image():
-        return Image.open(BytesIO(requests.get(
-            AWS_BUCKET_URL + "/maarten-van-den-heuvel.jpg").content))
+        return Image.open(
+            BytesIO(
+                requests.get(AWS_BUCKET_URL + "/maarten-van-den-heuvel.jpg").content
+            )
+        )
 
     import numpy as np
     from PIL import Image
@@ -276,6 +277,7 @@ def demo_movies():
         return pd.read_csv(AWS_BUCKET_URL + "/movies-revenue.csv.gz").transform(
             {"title": lambda x: x, "revenue": lambda x: round(x / 1000 / 1000)}
         )
+
     try:
         df = load_dataframe_from_url()
     except urllib.error.URLError:
@@ -304,14 +306,14 @@ def demo_agri():
 
     @st.cache
     def clean(dataset):
-        gap = dataset.pivot(index='Region', columns='Year', values='Price')
+        gap = dataset.pivot(index="Region", columns="Year", values="Price")
         gap.columns = gap.columns.astype(str)
         years = list(map(str, range(1961, 2008)))
-        gap['Total'] = gap.sum(axis=1)
-        gap.sort_values(['Total'], ascending=False, axis=0, inplace=True)
+        gap["Total"] = gap.sum(axis=1)
+        gap.sort_values(["Total"], ascending=False, axis=0, inplace=True)
         gap = gap[years].transpose()
         gap.fillna(0, inplace=True)
-        gap_unwant = [col for col in gap.columns if '+' in col]
+        gap_unwant = [col for col in gap.columns if "+" in col]
         gap = gap.drop(gap_unwant, axis=1)
         return gap
 
@@ -327,13 +329,16 @@ def demo_agri():
 
     countries = st.multiselect("Choose countries", gap_top10tran.columns)
     if len(countries) == 0:
-        st.error(("Please select at least one country. For example, search"
-                 " for China and United States. Just type the initial letters in"
-                 " the search box!"))
+        st.error(
+            (
+                "Please select at least one country. For example, search"
+                " for China and United States. Just type the initial letters in"
+                " the search box!"
+            )
+        )
         return
-    st.text('Gross Agricultural Production [$1B]')
-    st.write(
-        gap_top10tran[countries].transpose().sort_index().style.format("{0:,.0f}"))
+    st.text("Gross Agricultural Production [$1B]")
+    st.write(gap_top10tran[countries].transpose().sort_index().style.format("{0:,.0f}"))
 
     # import altair as alt
     # st.write(gap_top10tran)
@@ -350,14 +355,15 @@ def demo_agri():
     # st.text(df)
     # st.area_chart(df)
 
-    ax = gap_top10tran[countries].plot(kind='area', figsize=(20, 8),
-                                       stacked=False)
+    ax = gap_top10tran[countries].plot(kind="area", figsize=(20, 8), stacked=False)
 
     ax.set_title(
-        'Gross Agricultural Producing Nations from 1961 to 2007 [$1B]',
-        fontsize=20, fontweight='bold')
-    ax.set_ylabel('GAP in Billions (Int $)', fontsize=15)
-    ax.set_xlabel('')
+        "Gross Agricultural Producing Nations from 1961 to 2007 [$1B]",
+        fontsize=20,
+        fontweight="bold",
+    )
+    ax.set_ylabel("GAP in Billions (Int $)", fontsize=15)
+    ax.set_xlabel("")
     ax.tick_params(labelsize=13)
     st.pyplot()
 
@@ -369,7 +375,6 @@ DEMOS = OrderedDict(
         "Animation": demo_fractals,
         "Dataframe": demo_agri,
         "Plotting": demo_random_numbers,
-
     }
 )
 
