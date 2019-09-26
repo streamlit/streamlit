@@ -22,9 +22,6 @@ import urllib
 
 AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
 
-GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-
-
 def intro():
     st.markdown(
         """
@@ -79,7 +76,7 @@ def demo_bart_vs_bikes():
 
     @st.cache
     def from_data_file(filename):
-
+        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
         url = GITHUB_DATA + "/data/" + filename
         return pd.read_json(url)
 
