@@ -36,7 +36,7 @@ BROWSER_WAIT_TIMEOUT_SEC = 1
 
 
 def _set_up_signal_handler():
-    LOGGER.debug('Setting up signal handler')
+    LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and stop the ioloop
@@ -44,7 +44,10 @@ def _set_up_signal_handler():
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGQUIT, signal_handler)
+    if sys.platform == 'win32':
+      signal.signal(signal.SIGBREAK, signal_handler)
+    else:
+      signal.signal(signal.SIGQUIT, signal_handler)
 
 
 def _fix_sys_path(script_path):
@@ -55,20 +58,26 @@ def _fix_sys_path(script_path):
     """
     sys.path.insert(0, os.path.dirname(script_path))
 
+
 def _fix_matplotlib_crash():
-    """
+    """Set Matplotlib backend to avoid a crash.
+
     The default Matplotlib backend crashes Python for most MacOS users.
     So here we set a safer backend as a fix. Users can always disable this
     behavior by setting the config runner.fixMatplotlib = false.
+
+    This fix is OS-independent. We didn't see a good reason to make this
+    Mac-only. Consistency within Streamlit seemed more important.
     """
-    if config.get_option('runner.fixMatplotlib'):
-        os.environ['MPLBACKEND'] = 'Agg'
+    if config.get_option("runner.fixMatplotlib"):
+        os.environ["MPLBACKEND"] = "Agg"
+
 
 def _on_server_start(server):
     _print_url()
 
     def maybe_open_browser():
-        if config.get_option('server.headless'):
+        if config.get_option("server.headless"):
             # Don't open browser when in headless mode.
             return
 
@@ -78,10 +87,10 @@ def _on_server_start(server):
             # connect, and it happens to success before we launch the browser.
             return
 
-        if config.is_manually_set('browser.serverAddress'):
-            addr = config.get_option('browser.serverAddress')
+        if config.is_manually_set("browser.serverAddress"):
+            addr = config.get_option("browser.serverAddress")
         else:
-            addr = 'localhost'
+            addr = "localhost"
 
         util.open_browser(Report.get_url(addr))
 
@@ -92,39 +101,38 @@ def _on_server_start(server):
 
 
 def _print_url():
-    title_message = 'You can now view your Streamlit report in your browser.'
+    title_message = "You can now view your Streamlit app in your browser."
     named_urls = []
 
-    if config.is_manually_set('browser.serverAddress'):
+    if config.is_manually_set("browser.serverAddress"):
         named_urls = [
-            ('URL',
-                Report.get_url(config.get_option('browser.serverAddress'))),
+            ("URL", Report.get_url(config.get_option("browser.serverAddress")))
         ]
 
-    elif config.get_option('server.headless'):
+    elif config.get_option("server.headless"):
         named_urls = [
-            ('Network URL', Report.get_url(util.get_internal_ip())),
-            ('External URL', Report.get_url(util.get_external_ip())),
+            ("Network URL", Report.get_url(util.get_internal_ip())),
+            ("External URL", Report.get_url(util.get_external_ip())),
         ]
 
     else:
         named_urls = [
-            ('Local URL', Report.get_url('localhost')),
-            ('Network URL', Report.get_url(util.get_internal_ip())),
+            ("Local URL", Report.get_url("localhost")),
+            ("Network URL", Report.get_url(util.get_internal_ip())),
         ]
 
-    click.secho('')
-    click.secho('  %s' % title_message, fg='green')
-    click.secho('')
+    click.secho("")
+    click.secho("  %s" % title_message, fg="blue", bold=True)
+    click.secho("")
 
     for url_name, url in named_urls:
         util.print_url(url_name, url)
 
-    click.secho('')
+    click.secho("")
 
 
 def run(script_path):
-    """Run a script in a separate thread and start a server for the report.
+    """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
 

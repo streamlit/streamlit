@@ -32,18 +32,18 @@ LOGGER = get_logger(__name__)
 
 class ScriptRunnerEvent(Enum):
     # The script started running.
-    SCRIPT_STARTED = 'SCRIPT_STARTED'
+    SCRIPT_STARTED = "SCRIPT_STARTED"
 
     # The script run stopped because of a compile error.
-    SCRIPT_STOPPED_WITH_COMPILE_ERROR = 'SCRIPT_STOPPED_WITH_COMPILE_ERROR'
+    SCRIPT_STOPPED_WITH_COMPILE_ERROR = "SCRIPT_STOPPED_WITH_COMPILE_ERROR"
 
     # The script run stopped because it ran to completion, or was
     # interrupted by the user.
-    SCRIPT_STOPPED_WITH_SUCCESS = 'SCRIPT_STOPPED_WITH_SUCCESS'
+    SCRIPT_STOPPED_WITH_SUCCESS = "SCRIPT_STOPPED_WITH_SUCCESS"
 
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
-    SHUTDOWN = 'SHUTDOWN'
+    SHUTDOWN = "SHUTDOWN"
 
 
 class ScriptRunner(object):
@@ -97,7 +97,8 @@ class ScriptRunner(object):
             widget_states : streamlit.proto.Widget_pb2.WidgetStates | None
                 The ScriptRunner's final WidgetStates. Set only for the
                 SHUTDOWN event.
-            """)
+            """
+        )
 
         # Set to true when we process a SHUTDOWN request
         self._shutdown_requested = False
@@ -116,14 +117,15 @@ class ScriptRunner(object):
 
         """
         if self._script_thread is not None:
-            raise Exception('ScriptRunner was already started')
+            raise Exception("ScriptRunner was already started")
 
         self._script_thread = ReportThread(
             main_dg=self._main_dg,
             sidebar_dg=self._sidebar_dg,
             widgets=self._widgets,
             target=self._process_request_queue,
-            name='ScriptRunner.scriptThread')
+            name="ScriptRunner.scriptThread",
+        )
         self._script_thread.start()
 
     def _process_request_queue(self):
@@ -132,27 +134,27 @@ class ScriptRunner(object):
         This is run in a separate thread.
 
         """
-        LOGGER.debug('Beginning script thread')
+        LOGGER.debug("Beginning script thread")
 
         while not self._shutdown_requested and self._request_queue.has_request:
             request, data = self._request_queue.dequeue()
             if request == ScriptRequest.STOP:
-                LOGGER.debug('Ignoring STOP request while not running')
+                LOGGER.debug("Ignoring STOP request while not running")
             elif request == ScriptRequest.SHUTDOWN:
-                LOGGER.debug('Shutting down')
+                LOGGER.debug("Shutting down")
                 self._shutdown_requested = True
             elif request == ScriptRequest.RERUN:
                 self._run_script(data)
             else:
-                raise RuntimeError('Unrecognized ScriptRequest: %s' % request)
+                raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
         # ReportSession will pass on to the next ScriptRunner that gets
         # created.
         self.on_event.send(
-            ScriptRunnerEvent.SHUTDOWN,
-            widget_states=self._widgets.get_state())
+            ScriptRunnerEvent.SHUTDOWN, widget_states=self._widgets.get_state()
+        )
 
     def _is_in_script_thread(self):
         """True if the calling function is running in the script thread"""
@@ -178,7 +180,7 @@ class ScriptRunner(object):
         if request is None:
             return
 
-        LOGGER.debug('Received ScriptRequest: %s', request)
+        LOGGER.debug("Received ScriptRequest: %s", request)
         if request == ScriptRequest.STOP:
             raise StopException()
         elif request == ScriptRequest.SHUTDOWN:
@@ -187,7 +189,7 @@ class ScriptRunner(object):
         elif request == ScriptRequest.RERUN:
             raise RerunException(data)
         else:
-            raise RuntimeError('Unrecognized ScriptRequest: %s' % request)
+            raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
     def _install_tracer(self):
         """Install function that runs before each line of the script."""
@@ -197,7 +199,7 @@ class ScriptRunner(object):
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
-        if hasattr(sys, 'settrace'):
+        if hasattr(sys, "settrace"):
             sys.settrace(trace_calls)
 
     @contextmanager
@@ -208,7 +210,7 @@ class ScriptRunner(object):
         we only handle requests while we're inside an exec() call
         """
         if self._execing:
-            raise RuntimeError('Nested set_execing_flag call')
+            raise RuntimeError("Nested set_execing_flag call")
         self._execing = True
         try:
             yield
@@ -226,10 +228,11 @@ class ScriptRunner(object):
         """
         assert self._is_in_script_thread()
 
-        LOGGER.debug('Running script %s', rerun_data)
+        LOGGER.debug("Running script %s", rerun_data)
 
         # Reset delta generator so it starts from index 0.
         import streamlit as st
+
         st._reset(self._main_dg, self._sidebar_dg)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
@@ -244,7 +247,7 @@ class ScriptRunner(object):
             with open(self._report.script_path) as f:
                 filebody = f.read()
 
-            if config.get_option('runner.magicEnabled'):
+            if config.get_option("runner.magicEnabled"):
                 filebody = magic.add_magic(filebody, self._report.script_path)
 
             code = compile(
@@ -253,7 +256,7 @@ class ScriptRunner(object):
                 self._report.script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
-                mode='exec',
+                mode="exec",
                 # Don't inherit any flags or "future" statements.
                 flags=0,
                 dont_inherit=1,
@@ -263,9 +266,10 @@ class ScriptRunner(object):
 
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug('Fatal script error: %s' % e)
+            LOGGER.debug("Fatal script error: %s" % e)
             self.on_event.send(
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e)
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e
+            )
             return
 
         # If we get here, we've successfully compiled our script. The next step
@@ -283,7 +287,7 @@ class ScriptRunner(object):
         if rerun_data.widget_state is not None:
             self._widgets.set_state(rerun_data.widget_state)
 
-        if config.get_option('runner.installTracer'):
+        if config.get_option("runner.installTracer"):
             self._install_tracer()
 
         # This will be set to a RerunData instance if our execution
@@ -293,14 +297,14 @@ class ScriptRunner(object):
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
-            module = _new_module('__main__')
+            module = _new_module("__main__")
 
             # Install the fake module as the __main__ module. This allows
             # the pickle module to work inside the user's code, since it now
             # can know the module where the pickled objects stem from.
             # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
             # our code, as it will point to the wrong module!!!
-            sys.modules['__main__'] = module
+            sys.modules["__main__"] = module
 
             # Make it look like command-line args were set to whatever the user
             # asked them to be via the GUI.
@@ -311,7 +315,7 @@ class ScriptRunner(object):
             sys.argv = argv
 
             # Add special variables to the module's globals dict.
-            module.__dict__['__file__'] = self._report.script_path
+            module.__dict__["__file__"] = self._report.script_path
 
             with modified_sys_path(self._report), self._set_execing_flag():
                 exec(code, module.__dict__)
@@ -326,6 +330,7 @@ class ScriptRunner(object):
             # Show exceptions in the Streamlit report.
             LOGGER.debug(e)
             import streamlit as st
+
             st.exception(e)  # This is OK because we're in the script thread.
             # TODO: Clean up the stack trace, so it doesn't include
             # ScriptRunner.
@@ -344,16 +349,19 @@ class ScriptRunner(object):
 
 class ScriptControlException(BaseException):
     """Base exception for ScriptRunner."""
+
     pass
 
 
 class StopException(ScriptControlException):
     """Silently stop the execution of the user's script."""
+
     pass
 
 
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
+
     def __init__(self, rerun_data):
         """Construct a RerunException
 
@@ -368,17 +376,17 @@ class RerunException(ScriptControlException):
 def _clean_problem_modules():
     """Some modules are stateful, so we have to clear their state."""
 
-    if 'keras' in sys.modules:
+    if "keras" in sys.modules:
         try:
-            keras = sys.modules['keras']
+            keras = sys.modules["keras"]
             keras.backend.clear_session()
         except:
             pass
 
-    if 'matplotlib.pyplot' in sys.modules:
+    if "matplotlib.pyplot" in sys.modules:
         try:
-            plt = sys.modules['matplotlib.pyplot']
-            plt.close('all')
+            plt = sys.modules["matplotlib.pyplot"]
+            plt.close("all")
         except:
             pass
 
@@ -388,9 +396,11 @@ def _new_module(name):
 
     if sys.version_info >= (3, 4):
         import types
+
         return types.ModuleType(name)
 
     import imp
+
     return imp.new_module(name)
 
 

@@ -19,13 +19,28 @@
 
 describe("st.write", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
-  it("displays a text", () => {
-    cy.get(".element-container .stText p").should(
-      "contain",
-      "This text is awesome!"
-    )
-  })
-})
+  beforeEach(() => {
+    cy.get(".element-container").should("have.length", 3);
+  });
+
+  it("displays markdown", () => {
+    cy.get(".element-container .stText p")
+      .first()
+      .contains("This markdown is awesome!");
+  });
+
+  it("escapes HTML", () => {
+    cy.get(".element-container .stText p")
+      .eq(1)
+      .contains("This <b>HTML tag</b> is escaped!");
+  });
+
+  it("allows HTML if defined explicitly", () => {
+    cy.get(".element-container .stText p")
+      .last()
+      .contains("This HTML tag is not escaped!");
+  });
+});

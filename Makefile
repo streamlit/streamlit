@@ -1,7 +1,6 @@
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
-PY_VERSION := python-$(shell python -c 'import platform; print(platform.python_version())')
+PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
 .PHONY: help
 help:
@@ -31,7 +30,10 @@ build: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv
+	pip install pip-tools pipenv ; \
+	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]] ; then \
+		pip install black ; \
+	fi
 
 .PHONY: pipenv-install
 pipenv-install: lib/Pipfile
@@ -44,11 +46,11 @@ pipenv-lock: lib/Pipfile
 	@# Regenerates Pipfile.lock and rebuilds the virtualenv. This is rather slow.
 # In CircleCI, dont generate Pipfile.lock This is only used for development.
 ifndef CIRCLECI
-	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/$(PY_VERSION)
+	cd lib; rm -f Pipfile.lock; pipenv lock --dev && mv Pipfile.lock Pipfile.locks/python-$(PY_VERSION)
 else
 	echo "Running in CircleCI, not generating requirements."
 endif
-	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/$(PY_VERSION) Pipfile.lock
+	cd lib; rm -f Pipfile.lock; cp -f Pipfile.locks/python-$(PY_VERSION) Pipfile.lock
 ifndef CIRCLECI
 	# Dont update lockfile and install whatever is in lock.
 	cd lib; pipenv install --ignore-pipfile --dev
@@ -57,16 +59,34 @@ else
 endif
 
 .PHONY: pylint
-# Run Python linter.
+# Run "black", our Python formatter, to verify that our source files
+# are properly formatted. Does not modify any files. Returns with a non-zero
+# status if anything is not properly formatted. (This isn't really
+# "linting"; we're not checking anything but code style.)
 pylint:
-	# Linting
-	# (Ignore E402 since our Python2-compatibility imports break this lint rule.)
-	cd lib; \
-		flake8 \
-		--ignore=E402,E128 \
-		--exclude=streamlit/proto/*_pb2.py \
-		$(PYTHON_MODULES) \
-		tests/
+	@# Black requires Python 3.6+ to run (but you can reformat
+	@# Python 2 code with it, too).
+	if command -v "black" > /dev/null; then \
+		black --check docs/ ; \
+		black --check examples/ ; \
+		black --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
+		black --check lib/tests/ --exclude=compile_error.py ; \
+		black --check e2e/scripts/ ; \
+	fi
+
+.PHONY: pyformat
+# Run "black", our Python formatter, to fix any source files that are not
+# properly formatted.
+pyformat:
+	@# Black requires Python 3.6+ to run (but you can reformat
+	@# Python 2 code with it, too).
+	if command -v "black" > /dev/null; then \
+		black docs/ ; \
+		black examples/ ; \
+		black lib/streamlit/ --exclude=/*_pb2.py$/ ; \
+		black lib/tests/ --exclude=compile_error.py ; \
+		black e2e/scripts/ ; \
+	fi
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -90,6 +110,12 @@ pycoverage:
 			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
+
+.PHONY: integration-tests
+# Run Python integration tests. Currently, this is just a script that runs
+# all the e2e tests in "bare" mode and checks for non-zero exit codes.
+integration-tests:
+	python scripts/run_bare_integration_tests.py
 
 .PHONY: install
 # Install Streamlit into your Python environment.
@@ -150,22 +176,31 @@ devel-docs: docs
 publish-docs: docs
 	cd docs/_build; \
 		aws s3 sync \
+				--acl public-read html s3://streamlit.io/docs/ \
+				--profile streamlit
+
+  # For now, continue publishing to secret/docs.
+	# TODO: Remove after 2020-01-01
+	cd docs/_build; \
+		aws s3 sync \
 				--acl public-read html s3://streamlit.io/secret/docs/ \
 				--profile streamlit
 
-	@# The line below uses the distribution ID obtained with
-	@# $ aws cloudfront list-distributions | \
-	@#     jq '.DistributionList.Items[] | \
-	@#     select(.Aliases.Items[0] | \
-	@#     contains("www.streamlit.io")) | \
-	@#     .Id'
+	# The line below uses the distribution ID obtained with
+	# $ aws cloudfront list-distributions | \
+	#     jq '.DistributionList.Items[] | \
+	#     select(.Aliases.Items[0] | \
+	#     contains("www.streamlit.io")) | \
+	#     .Id'
 
-		aws cloudfront create-invalidation \
-			--distribution-id=E5G9JPT7IOJDV \
-			--paths \
-				'/secret/docs/*' \
-				'/secret/docs/tutorial/*' \
-			--profile streamlit
+	aws cloudfront create-invalidation \
+		--distribution-id=E5G9JPT7IOJDV \
+		--paths \
+			'/docs/*' \
+			'/docs/tutorial/*' \
+			'/secret/docs/*' \
+			'/secret/docs/tutorial/*' \
+		--profile streamlit
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
@@ -216,10 +251,11 @@ scssvars: react-init
 	) > src/autogen/scssVariables.ts
 
 .PHONY: jslint
-# Lint the JS code.
+# Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	@# HK: I'm removing `max-warnings 0` out, until we convert all our JavaScript files to TypeScript
+	@# HK: I'm removing `max-warnings 0` until we convert all our JavaScript
+	@# files to TypeScript.
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -230,6 +266,13 @@ jslint:
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
+
+.PHONY: jsformat
+# Runs "Prettier" on our JavaScript and TypeScript code to fix formatting
+# issues.
+jsformat:
+		yarn --cwd "frontend" pretty-quick \
+			--pattern "**/*.*(js|jsx|ts|tsx)"
 
 .PHONY: jstest
 # Run JS unit tests.
@@ -259,50 +302,11 @@ distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1)
 
-.PHONY: prepare-conda-repo
-prepare-conda-repo:
-	mkdir -p /var/tmp/streamlit-conda
-	aws s3 sync \
-			s3://repo.streamlit.io/streamlit-forge/ \
-			/var/tmp/streamlit-conda/streamlit-forge/ \
-			--profile streamlit
-
-.PHONY: conda-packages
-conda-packages:
-	cd scripts; \
-		./create_conda_packages.sh
-
-.PHONY: serve-conda-packages
-serve-conda-packages:
-	cd /var/tmp/streamlit-conda; \
-		python -m SimpleHTTPServer 8000 || python -m http.server 8000
-
-.PHONY: conda-dev-env
-conda-dev-env:
-	conda env create -f scripts/conda/test_conda_env.yml
-
-.PHONY: clean-conda-dev-env
-clean-conda-dev-env:
-	conda env remove -n streamlit-dev
-
-.PHONY: distribute-conda-packages
-distribute-conda-packages:
-	aws s3 sync \
-		/var/tmp/streamlit-conda/streamlit-forge/ \
-		s3://repo.streamlit.io/streamlit-forge/ \
-		--acl public-read \
-		--profile streamlit
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E3V3HGGB52ZUA0 \
-		--paths '/*' \
-		--profile streamlit
-
 .PHONY: notices
 # Rebuild the NOTICES file.
 notices:
 	cd frontend; \
-		yarn notices generate-disclaimer --silent --production > ../NOTICES
+		yarn licenses generate-disclaimer --silent --production > ../NOTICES
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 

@@ -16,8 +16,7 @@
 """A bunch of useful utilities."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, \
-    absolute_import
+from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -34,34 +33,29 @@ import subprocess
 import sys
 import urllib
 
-try:
-    import urllib.request  # for Python3
-except ImportError:
-    pass
-
 import click
+import requests
 
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-STREAMLIT_ROOT_DIRECTORY = '.streamlit'
+STREAMLIT_ROOT_DIRECTORY = ".streamlit"
 
 # Magic strings used to mark exceptions that have been handled by Streamlit's
 # excepthook. These string should be printed to stderr.
-EXCEPTHOOK_IDENTIFIER_STR = (
-    'Streamlit has caught the following unhandled exception...')
+EXCEPTHOOK_IDENTIFIER_STR = "Streamlit has caught the following unhandled exception..."
 
 # URL for checking the current machine's external IP address.
-_AWS_CHECK_IP = 'http://checkip.amazonaws.com'
+_AWS_CHECK_IP = "http://checkip.amazonaws.com"
 
 # URL of Streamlit's help page.
-HELP_DOC = 'https://streamlit.io/secret/docs/'
+HELP_DOC = "https://streamlit.io/secret/docs/"
 
 
 def _decode_ascii(string):
     """Decodes a string as ascii."""
-    return string.decode('ascii')
+    return string.decode("ascii")
 
 
 @contextlib.contextmanager
@@ -82,9 +76,9 @@ def streamlit_read(path, binary=False):
     if os.stat(filename).st_size == 0:
         raise Error('Read zero byte file: "%s"' % filename)
 
-    mode = 'r'
+    mode = "r"
     if binary:
-        mode += 'b'
+        mode += "b"
     with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
         yield handle
 
@@ -104,19 +98,21 @@ def streamlit_write(path, binary=False):
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
     """ % STREAMLIT_ROOT_DIRECTORY
-    mode = 'w'
+    mode = "w"
     if binary:
-        mode += 'b'
+        mode += "b"
     path = get_streamlit_file_path(path)
     try:
         with open(path, mode) as handle:
             yield handle
     except OSError as e:
-        msg = ['Unable to write file: %s' % os.path.abspath(path)]
-        if e.errno == errno.EINVAL and platform.system() == 'Darwin':
-            msg.append('Python is limited to files below 2GB on OSX. '
-                       'See https://bugs.python.org/issue24658')
-        raise Error('\n'.join(msg))
+        msg = ["Unable to write file: %s" % os.path.abspath(path)]
+        if e.errno == errno.EINVAL and platform.system() == "Darwin":
+            msg.append(
+                "Python is limited to files below 2GB on OSX. "
+                "See https://bugs.python.org/issue24658"
+            )
+        raise Error("\n".join(msg))
 
 
 def escape_markdown(raw_string):
@@ -136,17 +132,17 @@ def escape_markdown(raw_string):
     ::
         escape_markdown("1 * 2") -> "1 \\* 2"
     """
-    metacharacters = ['\\', '*', '-', '=', '`', '!', '#', '|']
+    metacharacters = ["\\", "*", "-", "=", "`", "!", "#", "|"]
     result = raw_string
     for character in metacharacters:
-        result = result.replace(character, '\\' + character)
+        result = result.replace(character, "\\" + character)
     return result
 
 
 def get_static_dir():
     """Get the folder where static HTML/JS/CSS files live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
-    return os.path.normpath(os.path.join(dirname, 'static'))
+    return os.path.normpath(os.path.join(dirname, "static"))
 
 
 def memoize(func):
@@ -164,8 +160,8 @@ def memoize(func):
 
 def _make_blocking_http_get(url, timeout=5):
     try:
-        return urllib.request.urlopen(url, timeout=timeout).read()
-    except Exception:
+        return requests.get(url, timeout=timeout).text
+    except Exception as e:
         return None
 
 
@@ -190,10 +186,11 @@ def get_external_ip():
 
     if response is None:
         LOGGER.warning(
-            'Did not auto detect external IP.\n'
-            'Please go to %s for debugging hints.', HELP_DOC)
+            "Did not auto detect external IP.\n" "Please go to %s for debugging hints.",
+            HELP_DOC,
+        )
     else:
-        _external_ip = response.decode('utf-8').strip()
+        _external_ip = response.strip()
 
     return _external_ip
 
@@ -220,10 +217,10 @@ def get_internal_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # Doesn't even have to be reachable
-        s.connect(('8.8.8.8', 1))
+        s.connect(("8.8.8.8", 1))
         _internal_ip = s.getsockname()[0]
     except Exception:
-        _internal_ip = '127.0.0.1'
+        _internal_ip = "127.0.0.1"
     finally:
         s.close()
 
@@ -245,11 +242,11 @@ def open_browser(url):
 
     system = platform.system()
 
-    if system == 'Linux':
-        cmd = ['xdg-open', url]
-    elif system == 'Darwin':
-        cmd = ['open', url]
-    elif system == 'Windows':
+    if system == "Linux":
+        cmd = ["xdg-open", url]
+    elif system == "Darwin":
+        cmd = ["open", url]
+    elif system == "Windows":
         # Windows has a few bugs.
         # * os.devnull doesnt exist so the open command below fails
         # * subprocess doesnt actually pop up the browser even though
@@ -258,16 +255,17 @@ def open_browser(url):
         #   you get a 404.
         data = urllib.parse.urlsplit(url)
         (scheme, netloc, path, query, fragment) = data
-        if re.match(r'^/$', path):
-            path = '/index.html'
+        if re.match(r"^/$", path):
+            path = "/index.html"
         url = urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
         import webbrowser
+
         webbrowser.open(url)
         return
     else:
         raise Error('Cannot open browser in platform "%s"' % system)
 
-    with open(os.devnull, 'w') as devnull:
+    with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
 
@@ -294,7 +292,7 @@ def is_type(obj, fqn_type_pattern):
     the_type = type(obj)
     module = the_type.__module__
     name = the_type.__name__
-    actual_fqn = '%s.%s' % (module, name)
+    actual_fqn = "%s.%s" % (module, name)
     if isinstance(fqn_type_pattern, string_types):
         return fqn_type_pattern == actual_fqn
     else:
@@ -311,46 +309,44 @@ def is_pex():
     Pex modifies sys.path so the pex file is the first path and that's
     how we determine we're running in the pex file.
     """
-    if re.match(r'.*pex$', sys.path[0]):
+    if re.match(r".*pex$", sys.path[0]):
         return True
     return False
 
 
 def is_altair_chart(obj):
     """True if input looks like an Altair chart."""
-    return is_type(obj, re.compile(r'^altair\.vegalite\.v\d+\.api\.\w*Chart$'))
+    return is_type(obj, re.compile(r"^altair\.vegalite\.v\d+\.api\.\w*Chart$"))
 
 
 def is_keras_model(obj):
     """True if input looks like a Keras model."""
     return (
-        is_type(obj, 'keras.engine.sequential.Sequential') or
-        is_type(obj, 'keras.engine.training.Model') or
-        is_type(obj, 'tensorflow.python.keras.engine.sequential.Sequential') or
-        is_type(obj, 'tensorflow.python.keras.engine.training.Model'))
+        is_type(obj, "keras.engine.sequential.Sequential")
+        or is_type(obj, "keras.engine.training.Model")
+        or is_type(obj, "tensorflow.python.keras.engine.sequential.Sequential")
+        or is_type(obj, "tensorflow.python.keras.engine.training.Model")
+    )
 
 
 def is_plotly_chart(obj):
     """True if input looks like a Plotly chart."""
     return (
-        is_type(obj, 'plotly.graph_objs._figure.Figure') or
-        _is_list_of_plotly_objs(obj) or
-        _is_probably_plotly_dict(obj)
+        is_type(obj, "plotly.graph_objs._figure.Figure")
+        or _is_list_of_plotly_objs(obj)
+        or _is_probably_plotly_dict(obj)
     )
 
 
 def is_graphviz_chart(obj):
     """True if input looks like a GraphViz chart."""
-    return (
-        is_type(obj, 'graphviz.dot.Graph') or
-        is_type(obj, 'graphviz.dot.Digraph')
-    )
+    return is_type(obj, "graphviz.dot.Graph") or is_type(obj, "graphviz.dot.Digraph")
 
 
 def _is_plotly_obj(obj):
     """True if input if from a type that lives in plotly.plotly_objs."""
     the_type = type(obj)
-    return the_type.__module__.startswith('plotly.graph_objs')
+    return the_type.__module__.startswith("plotly.graph_objs")
 
 
 def _is_list_of_plotly_objs(obj):
@@ -368,8 +364,7 @@ def _is_probably_plotly_dict(obj):
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ['config', 'data', 'frames', 'layout']
-           for k in obj.keys()):
+    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
@@ -384,15 +379,16 @@ def _is_probably_plotly_dict(obj):
 def is_repl():
     """Return True if running in the Python REPL."""
     import inspect
+
     root_frame = inspect.stack()[-1]
     filename = root_frame[1]  # 1 is the filename field in this tuple.
 
-    if filename.endswith(os.path.join('bin', 'ipython')):
+    if filename.endswith(os.path.join("bin", "ipython")):
         return True
 
     # <stdin> is what the basic Python REPL calls the root frame's
     # filename, and <string> is what iPython sometimes calls it.
-    if filename in ('<stdin>', '<string>'):
+    if filename in ("<stdin>", "<string>"):
         return True
 
     return False
@@ -412,9 +408,9 @@ def get_streamlit_file_path(*filepath):
     Creates ~/.streamlit if needed.
     """
     # os.path.expanduser works on OSX, Linux and Windows
-    home = os.path.expanduser('~')
+    home = os.path.expanduser("~")
     if home is None:
-        raise RuntimeError('No home directory.')
+        raise RuntimeError("No home directory.")
 
     folder_path = filepath[:-1]
     st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *folder_path)
@@ -427,7 +423,7 @@ def get_streamlit_file_path(*filepath):
 
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
-    click.secho('  %s: ' % title, nl=False)
+    click.secho("  %s: " % title, nl=False, fg='blue')
     click.secho(url, bold=True)
 
 
@@ -435,8 +431,8 @@ def get_hostname(url):
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
-    if '://' not in url:
-        url = 'http://%s' % url
+    if "://" not in url:
+        url = "http://%s" % url
 
     parsed = urllib.parse.urlparse(url)
     return parsed.hostname
@@ -445,7 +441,13 @@ def get_hostname(url):
 def is_namedtuple(x):
     t = type(x)
     b = t.__bases__
-    if len(b) != 1 or b[0] != tuple: return False
-    f = getattr(t, '_fields', None)
-    if not isinstance(f, tuple): return False
-    return all(type(n).__name__ == 'str' for n in f)
+    if len(b) != 1 or b[0] != tuple:
+        return False
+    f = getattr(t, "_fields", None)
+    if not isinstance(f, tuple):
+        return False
+    return all(type(n).__name__ == "str" for n in f)
+
+
+def is_darwin():
+    return platform.system() == "Darwin"

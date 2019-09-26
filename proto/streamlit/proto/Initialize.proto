@@ -37,6 +37,8 @@ message Config {
   // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
 
+  // See config option "global.maxCachedMessageAge".
+  int32 max_cached_message_age = 3;
 }
 
 message UserInfo {

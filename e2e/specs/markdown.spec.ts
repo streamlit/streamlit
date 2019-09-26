@@ -19,13 +19,27 @@
 
 describe("st.markdown", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
-  it("displays a markdown", () => {
-    cy.get(".element-container .stText p").should(
-      "contain",
-      "This markdown is awesome!"
-    )
-  })
-})
+  it("displays markdown", () => {
+    cy.get(".element-container .stText p").then(els => {
+      expect(els.length).to.eq(6);
+
+      expect(els[0].textContent).to.eq("This markdown is awesome!");
+      expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
+      expect(els[2].textContent).to.eq("This HTML tag is not escaped!");
+      expect(els[3].textContent).to.eq("[text]");
+      expect(els[4].textContent).to.eq("link");
+      expect(els[5].textContent).to.eq("");
+
+      cy.wrap(els[3])
+        .find("a")
+        .should("not.exist");
+
+      cy.wrap(els[4])
+        .find("a")
+        .should("have.attr", "href");
+    });
+  });
+});

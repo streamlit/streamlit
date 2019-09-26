@@ -48,14 +48,13 @@ def coalesce_widget_states(old_states, new_states):
         states_by_id[new_state.id] = new_state
 
     for old_state in old_states.widgets:
-        if (old_state.WhichOneof('value') == 'trigger_value' and
-           old_state.trigger_value):
+        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
 
             # Ensure the corresponding new_state is also a trigger;
             # otherwise, a widget that was previously a button but no longer is
             # could get a bad value.
             new_state = states_by_id.get(old_state.id)
-            if new_state and new_state.WhichOneof('value') == 'trigger_value':
+            if new_state and new_state.WhichOneof("value") == "trigger_value":
                 states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
@@ -88,7 +87,7 @@ class Widgets(object):
         if wstate is None:
             return None
 
-        value_type = wstate.WhichOneof('value')
+        value_type = wstate.WhichOneof("value")
         if value_type is None:
             return None
 
@@ -130,7 +129,7 @@ class Widgets(object):
         prev_state = self._state
         self._state = {}
         for wstate in prev_state.values():
-            if wstate.WhichOneof('value') != 'trigger_value':
+            if wstate.WhichOneof("value") != "trigger_value":
                 self._state[wstate.id] = wstate
 
     def set_item(self, key, value):

@@ -15,4 +15,14 @@
 
 import streamlit as st
 
-st.markdown('This **markdown** is awesome!')
+st.markdown("This **markdown** is awesome!")
+
+st.markdown("This <b>HTML tag</b> is escaped!")
+
+st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+
+st.markdown("[text]")
+
+st.markdown("[link](href)")
+
+st.markdown("[][]")

@@ -40,11 +40,11 @@ startTime = datetime.now()
 
 # Shared GPU has memory sharing issues
 # https://www.tensorflow.org/guide/using_gpu
-config=tf.ConfigProto(log_device_placement=True)
+config = tf.ConfigProto(log_device_placement=True)
 config.gpu_options.allow_growth = True
 with tf.Session(config=config) as session:
-        result = session.run(sum_operation)
-        st.write(result)
+    result = session.run(sum_operation)
+    st.write(result)
 
 st.write("Shape:", shape, "Device:", device_name)
 st.write("Time taken:", datetime.now() - startTime)

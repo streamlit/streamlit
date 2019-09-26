@@ -36,57 +36,59 @@ import time
 
 num_rows = 3
 
-df = pd.DataFrame({'a': [1, 2, 3], 'b': [10, 0, 30], 'c': [100, 200, -100]})
+df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 0, 30], "c": [100, 200, -100]})
 
 df1 = df.iloc[0:1, :]
 
-for test_type in ['coalesce in Py', 'coalesce in JS', 'clear after addrows']:
+for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
     table_el = st.table(df1)
     dataframe_el = st.dataframe(df1)
     chart_el = st.line_chart(df1)
 
     # 4 identical charts, built in different ways.
-    vega_el1 = st.vega_lite_chart(df1, {
-        'mark': {'type': 'line', 'point': True},
-        'encoding': {
-            'x': {'field': 'a', 'type': 'quantitative'},
-            'y': {'field': 'b', 'type': 'quantitative'},
+    vega_el1 = st.vega_lite_chart(
+        df1,
+        {
+            "mark": {"type": "line", "point": True},
+            "encoding": {
+                "x": {"field": "a", "type": "quantitative"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
         },
-    })
-    vega_el2 = st.vega_lite_chart({
-        'datasets': {
-            'foo': df1,
-        },
-        'data': {'name': 'foo'},
-        'mark': {'type': 'line', 'point': True},
-        'encoding': {
-            'x': {'field': 'a', 'type': 'quantitative'},
-            'y': {'field': 'b', 'type': 'quantitative'},
-        },
-    })
-    vega_el3 = st.vega_lite_chart({
-        'datasets': {
-            'foo': df1,
-        },
-        'data': {'name': 'foo'},
-        'mark': {'type': 'line', 'point': True},
-        'encoding': {
-            'x': {'field': 'a', 'type': 'quantitative'},
-            'y': {'field': 'b', 'type': 'quantitative'},
-        },
-    })
-    altair_el = st.altair_chart(alt.Chart(df)
-        .mark_line(point=True)
-        .encode(x='a', y='b')
-        .interactive())
+    )
+    vega_el2 = st.vega_lite_chart(
+        {
+            "datasets": {"foo": df1},
+            "data": {"name": "foo"},
+            "mark": {"type": "line", "point": True},
+            "encoding": {
+                "x": {"field": "a", "type": "quantitative"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+    )
+    vega_el3 = st.vega_lite_chart(
+        {
+            "datasets": {"foo": df1},
+            "data": {"name": "foo"},
+            "mark": {"type": "line", "point": True},
+            "encoding": {
+                "x": {"field": "a", "type": "quantitative"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+    )
+    altair_el = st.altair_chart(
+        alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive()
+    )
 
     for i in range(1, num_rows):
         # Make rows get merged in JS rather than Python.
-        if test_type == 'coalesce in JS':
+        if test_type == "coalesce in JS":
             time.sleep(0.2)
 
-        df2 = df.iloc[i:i+1, :]
+        df2 = df.iloc[i : i + 1, :]
 
         table_el.add_rows(df2)
         dataframe_el.add_rows(df2)
@@ -96,45 +98,55 @@ for test_type in ['coalesce in Py', 'coalesce in JS', 'clear after addrows']:
         vega_el3.add_rows(foo=df2)
         altair_el.add_rows(df2)
 
-    if test_type == 'clear after addrows':
+    if test_type == "clear after addrows":
         # Clear all elements.
         table_el.table([])
         dataframe_el.dataframe([])
         chart_el.line_chart([])
-        vega_el1.vega_lite_chart([], {
-            'mark': {'type': 'line', 'point': True},
-            'encoding': {
-                'x': {'field': 'a', 'type': 'quantitative'},
-                'y': {'field': 'b', 'type': 'quantitative'},
+        vega_el1.vega_lite_chart(
+            [],
+            {
+                "mark": {"type": "line", "point": True},
+                "encoding": {
+                    "x": {"field": "a", "type": "quantitative"},
+                    "y": {"field": "b", "type": "quantitative"},
+                },
             },
-        })
-        vega_el2.vega_lite_chart({
-            'datasets': {
-                'foo': [],
-            },
-            'data': {'name': 'foo'},
-            'mark': {'type': 'line', 'point': True},
-            'encoding': {
-                'x': {'field': 'a', 'type': 'quantitative'},
-                'y': {'field': 'b', 'type': 'quantitative'},
-            },
-        })
-        vega_el3.vega_lite_chart({
-            'datasets': {
-                'foo': [],
-            },
-            'data': {'name': 'foo'},
-            'mark': {'type': 'line', 'point': True},
-            'encoding': {
-                'x': {'field': 'a', 'type': 'quantitative'},
-                'y': {'field': 'b', 'type': 'quantitative'},
-            },
-        })
+        )
+        vega_el2.vega_lite_chart(
+            {
+                "datasets": {"foo": []},
+                "data": {"name": "foo"},
+                "mark": {"type": "line", "point": True},
+                "encoding": {
+                    "x": {"field": "a", "type": "quantitative"},
+                    "y": {"field": "b", "type": "quantitative"},
+                },
+            }
+        )
+        vega_el3.vega_lite_chart(
+            {
+                "datasets": {"foo": []},
+                "data": {"name": "foo"},
+                "mark": {"type": "line", "point": True},
+                "encoding": {
+                    "x": {"field": "a", "type": "quantitative"},
+                    "y": {"field": "b", "type": "quantitative"},
+                },
+            }
+        )
         altair_el.altair_chart(
             alt.Chart(pd.DataFrame())
-                .mark_line(point=True)
-                .encode(x='x:Q', y='y:Q')
-                .interactive())
+            .mark_line(point=True)
+            .encode(x="x:Q", y="y:Q")
+            .interactive()
+        )
+
+# Testing add_rows from an empty chart
+empty_chart = st.line_chart()
+
+for i in range(3):
+    empty_chart.add_rows({"a": [i], "b": [i]})
 
 # Test that add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.

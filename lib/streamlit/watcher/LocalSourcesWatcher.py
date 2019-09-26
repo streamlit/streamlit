@@ -24,21 +24,33 @@ except ImportError:
     # Python 3
     import importlib
 
-try:
-    # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher as FileWatcher
-except ImportError:
-    # Fallback that doesn't use watchdog.
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
-
 from streamlit import config
+from streamlit import util
 
 from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
+try:
+    # If the watchdog module is installed.
+    from streamlit.watcher.EventBasedFileWatcher import (
+        EventBasedFileWatcher as FileWatcher,
+    )
+except ImportError:
+    # Fallback that doesn't use watchdog.
+    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
-WatchedModule = collections.namedtuple(
-    'WatchedModule', ['watcher', 'module_name'])
+    if not config.get_option('global.disableWatchdogWarning'):
+        msg = '\n  $ xcode-select --install' if util.is_darwin() else ''
+
+        LOGGER.warning("""
+  For better performance, install the Watchdog module:
+  %s
+  $ pip install watchdog
+
+        """ % msg)
+
+
+WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
 
 class LocalSourcesWatcher(object):
@@ -47,8 +59,7 @@ class LocalSourcesWatcher(object):
         self._on_file_changed = on_file_changed
         self._is_closed = False
 
-        self._folder_blacklist = config.get_option(
-            'server.folderWatchBlacklist')
+        self._folder_blacklist = config.get_option("server.folderWatchBlacklist")
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
@@ -60,7 +71,7 @@ class LocalSourcesWatcher(object):
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
-            LOGGER.error('Received event for non-watched file', filepath)
+            LOGGER.error("Received event for non-watched file", filepath)
             return
 
         wm = self._watched_modules[filepath]
@@ -78,8 +89,7 @@ class LocalSourcesWatcher(object):
 
     def _register_watcher(self, filepath, module_name):
         wm = WatchedModule(
-            watcher=FileWatcher(filepath, self.on_file_changed),
-            module_name=module_name,
+            watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
         )
         self._watched_modules[filepath] = wm
 
@@ -106,10 +116,10 @@ class LocalSourcesWatcher(object):
 
         for name, module in modules.items():
             try:
-                spec = getattr(module, '__spec__', None)
+                spec = getattr(module, "__spec__", None)
 
                 if spec is None:
-                    filepath = getattr(module, '__file__', None)
+                    filepath = getattr(module, "__file__", None)
                     if filepath is None:
                         # Some modules have neither a spec nor a file. But we
                         # can ignore those since they're not the user-created
@@ -139,8 +149,7 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = _file_is_in_folder(
-                    filepath, self._report.script_folder)
+                file_is_local = _file_is_in_folder(filepath, self._report.script_folder)
 
                 local_filepaths.append(filepath)
 
@@ -168,5 +177,5 @@ class LocalSourcesWatcher(object):
 
 def _file_is_in_folder(filepath, folderpath):
     # Assumes filepath is an absolute path, as a teeny tiny optimization.
-    folderpath = os.path.abspath(folderpath) + '/'
+    folderpath = os.path.abspath(folderpath) + "/"
     return filepath.startswith(folderpath)

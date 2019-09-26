@@ -1,0 +1,7 @@
+{% extends "!layout.html" %} {% block extrahead %}
+<script>
+  if (document.location.pathname.indexOf("/secret") == 0) {
+    document.location = document.location.href.replace("/secret", "");
+  }
+</script>
+{% endblock %}

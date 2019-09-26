@@ -18,8 +18,10 @@ import requests
 import tornado.testing
 import tornado.web
 import tornado.websocket
+from tornado import gen
 from tornado.concurrent import Future
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import Server
 
 
@@ -33,11 +35,12 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
     See the "ServerTest" class for example usage.
     """
+
     def get_app(self):
         # Create a Server, and patch its _on_stopped function
         # to no-op. This prevents it from shutting down the
         # ioloop when it stops.
-        self.server = Server(self.io_loop, '/not/a/script.py', [])
+        self.server = Server(self.io_loop, "/not/a/script.py", [])
         self.server._on_stopped = mock.MagicMock()
         app = self.server._create_app()
         return app
@@ -60,8 +63,8 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """
         server_started = Future()
         self.io_loop.spawn_callback(
-            self.server._loop_coroutine,
-            lambda _: server_started.set_result(None))
+            self.server._loop_coroutine, lambda _: server_started.set_result(None)
+        )
         return server_started
 
     def get_ws_url(self, path):
@@ -70,7 +73,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # we swap it out for 'ws'.
         url = self.get_url(path)
         parts = list(requests.utils.urlparse(url))
-        parts[0] = 'ws'
+        parts[0] = "ws"
         return requests.utils.urlunparse(tuple(parts))
 
     def ws_connect(self):
@@ -84,4 +87,12 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             'tornado.testing.gen_test' coroutine.
 
         """
-        return tornado.websocket.websocket_connect(self.get_ws_url('/stream'))
+        return tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+
+    @tornado.gen.coroutine
+    def read_forward_msg(self, ws_client):
+        """Parse the next message from a Websocket client into a ForwardMsg."""
+        data = yield ws_client.read_message()
+        message = ForwardMsg()
+        message.ParseFromString(data)
+        raise gen.Return(message)

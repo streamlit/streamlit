@@ -19,6 +19,23 @@ import tornado.web
 
 from streamlit import config
 from streamlit import metrics
+from streamlit.logger import get_logger
+from streamlit.server.server_util import serialize_forward_msg
+
+LOGGER = get_logger(__name__)
+
+
+def _allow_cross_origin_requests():
+    """True if cross-origin requests are allowed.
+
+    We only allow cross-origin requests when using the Node server. This is
+    only needed when using the Node server anyway, since in that case we
+    have a dev port and the prod port, which count as two origins.
+
+    """
+    return not config.get_option("server.enableCORS") or config.get_option(
+        "global.useNode"
+    )
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
@@ -30,22 +47,39 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         """
         is_index_url = len(path) == 0
 
-        if is_index_url or path.endswith('.html'):
-            self.set_header('Cache-Control', 'no-cache')
+        if is_index_url or path.endswith(".html"):
+            self.set_header("Cache-Control", "no-cache")
         else:
-            self.set_header('Cache-Control', 'public')
+            self.set_header("Cache-Control", "public")
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
+
     def set_default_headers(self):
-        self.set_header('Cache-Control', 'no-cache')
-        # Only allow cross-origin requests when using the Node server. This is
-        # only needed when using the Node server anyway, since in that case we
-        # have a dev port and the prod port, which count as two origins.
-        if (not config.get_option('server.enableCORS') or
-                config.get_option('global.useNode')):
-            self.set_header('Access-Control-Allow-Origin', '*')
+        self.set_header("Cache-Control", "no-cache")
+        if _allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def options(self):
+        """/OPTIONS handler for preflight CORS checks.
+
+        When a browser is making a CORS request, it may sometimes first
+        send an OPTIONS request, to check whether the server understands the
+        CORS protocol. This is optional, and doesn't happen for every request
+        or in every browser. If an OPTIONS request does get sent, and is not
+        then handled by the server, the browser will fail the underlying
+        request.
+
+        The proper way to handle this is to send a 204 response ("no content")
+        with the CORS headers attached. (These headers are automatically added
+        to every outgoing response, including OPTIONS responses,
+        via set_default_headers().)
+
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
 
 
 class HealthHandler(_SpecialRequestHandler):
@@ -62,19 +96,19 @@ class HealthHandler(_SpecialRequestHandler):
 
     def get(self):
         if self._health_check():
-            self.write('ok')
+            self.write("ok")
             self.set_status(200)
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
-            self.write('unavailable')
+            self.write("unavailable")
 
 
 class MetricsHandler(_SpecialRequestHandler):
     def get(self):
-        if config.get_option('global.metrics'):
-            self.add_header('Cache-Control', 'no-cache')
-            self.set_header('Content-Type', 'text/plain')
+        if config.get_option("global.metrics"):
+            self.add_header("Cache-Control", "no-cache")
+            self.set_header("Content-Type", "text/plain")
             self.write(metrics.Client.get_current().generate_latest())
         else:
             self.set_status(404)
@@ -86,10 +120,56 @@ class DebugHandler(_SpecialRequestHandler):
         self._server = server
 
     def get(self):
-        self.add_header('Cache-Control', 'no-cache')
+        self.add_header("Cache-Control", "no-cache")
         self.write(
-            '<code><pre>%s</pre><code>' %
-            json.dumps(
-                self._server.get_debug(),
-                indent=2,
-            ))
+            "<code><pre>%s</pre><code>" % json.dumps(self._server.get_debug(), indent=2)
+        )
+
+
+class MessageCacheHandler(tornado.web.RequestHandler):
+    """Returns ForwardMsgs from our MessageCache"""
+
+    def initialize(self, cache):
+        """Initializes the handler.
+
+        Parameters
+        ----------
+        cache : MessageCache
+
+        """
+        self._cache = cache
+
+    def set_default_headers(self):
+        if _allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def get(self):
+        msg_hash = self.get_argument("hash", None)
+        if msg_hash is None:
+            # Hash is missing! This is a malformed request.
+            LOGGER.error(
+                "HTTP request for cached message is " "missing the hash attribute."
+            )
+            self.set_status(404)
+            raise tornado.web.Finish()
+
+        message = self._cache.get_message(msg_hash)
+        if message is None:
+            # Message not in our cache.
+            LOGGER.error(
+                "HTTP request for cached message could not be fulfilled. "
+                "No such message: %s" % msg_hash
+            )
+            self.set_status(404)
+            raise tornado.web.Finish()
+
+        LOGGER.debug("MessageCache HIT [hash=%s]" % msg_hash)
+        msg_str = serialize_forward_msg(message)
+        self.set_header("Content-Type", "application/octet-stream")
+        self.write(msg_str)
+        self.set_status(200)
+
+    def options(self):
+        """/OPTIONS handler for preflight CORS checks."""
+        self.set_status(204)
+        self.finish()

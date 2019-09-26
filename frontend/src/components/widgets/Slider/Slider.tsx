@@ -21,6 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { debounce } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
+import { sprintf } from "sprintf-js"
 
 interface Props {
   disabled: boolean
@@ -123,6 +124,34 @@ class Slider extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
   }
 
+  renderThumbValue = (data: { $thumbIndex: number; $value: any }) => {
+    const { element } = this.props
+    const format = element.get("format")
+    const thumbValueStyle = sliderOverrides.ThumbValue.style(
+      this.props.disabled
+    ) as React.CSSProperties
+    return (
+      <div style={thumbValueStyle}>
+        {sprintf(format, data.$value[data.$thumbIndex])}
+      </div>
+    )
+  }
+
+  renderTickBar = () => {
+    const { element } = this.props
+    const format = element.get("format")
+    const max = element.get("max")
+    const min = element.get("min")
+    const tickBarItemStyle = sliderOverrides.TickBarItem
+      .style as React.CSSProperties
+    return (
+      <div style={sliderOverrides.TickBar.style}>
+        <div style={tickBarItemStyle}>{sprintf(format, min)}</div>
+        <div style={tickBarItemStyle}>{sprintf(format, max)}</div>
+      </div>
+    )
+  }
+
   public render(): React.ReactNode {
     const { element, width } = this.props
     const label = element.get("label")
@@ -141,7 +170,11 @@ class Slider extends React.PureComponent<Props, State> {
           value={this.valueOrDefault}
           onChange={this.handleChange}
           disabled={this.props.disabled}
-          overrides={sliderOverrides}
+          overrides={{
+            ...sliderOverrides,
+            ThumbValue: this.renderThumbValue,
+            TickBar: this.renderTickBar,
+          }}
         />
       </div>
     )

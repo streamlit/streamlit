@@ -19,12 +19,12 @@
 
 describe("st.line_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
 
   it("displays a line chart", () => {
-    cy.get(".element-container .stChart")
-      .find("svg")
-      .should("have.attr", "height", "200")
-  })
-})
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .should("have.css", "height", "200px");
+  });
+});

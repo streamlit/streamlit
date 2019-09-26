@@ -113,12 +113,12 @@ class DataFrameProtoTest(unittest.TestCase):
 
     def test_marshall_index(self):
         """Test streamlit.data_frame_proto._marshall_index."""
-        df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
+        df = pd.DataFrame(data={"col1": [1, 2], "col2": [3, 4]})
 
         # Plain Index
         proto = Index()
         data_frame_proto._marshall_index(df.columns, proto)
-        self.assertEqual(['col1', 'col2'], proto.plain_index.data.strings.data)
+        self.assertEqual(["col1", "col2"], proto.plain_index.data.strings.data)
 
         # Range Index
         proto = Index()
@@ -127,36 +127,33 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(2, proto.range_index.stop)
 
         # Range Index with NaNs
-        df_nan = pd.DataFrame(data={'col1': [], 'col2': []})
+        df_nan = pd.DataFrame(data={"col1": [], "col2": []})
         proto = Index()
         data_frame_proto._marshall_index(df_nan.index, proto)
         self.assertEqual(0, proto.range_index.start)
         self.assertEqual(0, proto.range_index.stop)
 
         # multi index
-        df_multi = pd.MultiIndex.from_arrays([[1, 2], [3, 4]],
-                                             names=['one', 'two'])
+        df_multi = pd.MultiIndex.from_arrays([[1, 2], [3, 4]], names=["one", "two"])
         proto = Index()
         data_frame_proto._marshall_index(df_multi, proto)
-        self.assertEqual([1, 2],
-                         proto.multi_index.levels[0].int_64_index.data.data)
+        self.assertEqual([1, 2], proto.multi_index.levels[0].int_64_index.data.data)
         self.assertEqual([0, 1], proto.multi_index.labels[0].data)
 
         # datetimeindex
         truth = [int(x * 1e9) for x in (1554138000, 1554141600, 1554145200)]
-        df_dt = pd.date_range(start='2019/04/01 10:00',
-                              end='2019/04/01 12:00',
-                              freq='H')
+        df_dt = pd.date_range(
+            start="2019/04/01 10:00", end="2019/04/01 12:00", freq="H"
+        )
         proto = Index()
-        obj_to_patch = (
-            'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
+        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
         with patch(obj_to_patch) as p:
-            p.return_value = 'America/Los_Angeles'
+            p.return_value = "America/Los_Angeles"
             data_frame_proto._marshall_index(df_dt, proto)
             self.assertEqual(truth, proto.datetime_index.data.data)
 
         # timedeltaindex
-        df_td = pd.to_timedelta(np.arange(1, 5), unit='ns')
+        df_td = pd.to_timedelta(np.arange(1, 5), unit="ns")
         proto = Index()
         data_frame_proto._marshall_index(df_td, proto)
         self.assertEqual([1, 2, 3, 4], proto.timedelta_index.data.data)
@@ -174,15 +171,15 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual([1, 2, 3, 4], proto.float_64_index.data.data)
 
         # Period index
-        df_period = pd.period_range(start='2005-12-21 08:45 ',
-                                    end='2005-12-21 11:55',
-                                    freq='H')
+        df_period = pd.period_range(
+            start="2005-12-21 08:45 ", end="2005-12-21 11:55", freq="H"
+        )
         proto = Index()
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_index(df_period, proto)
         err_msg = (
-            "Can't handle <class 'pandas.core.indexes.period.PeriodIndex'>"
-            ' yet.')
+            "Can't handle <class 'pandas.core.indexes.period.PeriodIndex'>" " yet."
+        )
         self.assertEqual(err_msg, str(e.value))
 
     def test_marshall_table(self):
@@ -190,8 +187,8 @@ class DataFrameProtoTest(unittest.TestCase):
         proto = Table()
         data_frame_proto._marshall_table([[1, 2], [3, 4]], proto)
         ret = json.loads(json_format.MessageToJson(proto))
-        ret = [x['int64s']['data'] for x in ret['cols']]
-        truth = [['1', '2'], ['3', '4']]
+        ret = [x["int64s"]["data"] for x in ret["cols"]]
+        truth = [["1", "2"], ["3", "4"]]
         self.assertEqual(ret, truth)
 
     def test_marshall_any_array(self):
@@ -205,9 +202,8 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # wrong shape
         with pytest.raises(ValueError) as e:
-            data_frame_proto._marshall_any_array([[1, 2], [3, 4]],
-                                                 AnyArray())
-        err_msg = 'Array must be 1D.'
+            data_frame_proto._marshall_any_array([[1, 2], [3, 4]], AnyArray())
+        err_msg = "Array must be 1D."
         self.assertEqual(err_msg, str(e.value))
 
         # float
@@ -247,33 +243,31 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(obj_proto.strings.data, truth)
 
         # No timezone
-        dt_data = pd.Series([np.datetime64('2019-04-09T12:34:56')])
+        dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
         dt_proto = AnyArray()
 
-        obj_to_patch = (
-            'streamlit.elements.data_frame_proto.tzlocal.get_localzone')
+        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
         with patch(obj_to_patch) as p:
-            p.return_value = 'America/Los_Angeles'
+            p.return_value = "America/Los_Angeles"
             data_frame_proto._marshall_any_array(dt_data, dt_proto)
-            self.assertEqual(1554838496.0,
-                             dt_proto.datetimes.data[0] / 1000000000)
+            self.assertEqual(1554838496.0, dt_proto.datetimes.data[0] / 1000000000)
 
         # With timezone
-        dt_data = pd.Series([np.datetime64('2019-04-09T12:34:56')])
-        dt_data = dt_data.dt.tz_localize('UTC')
+        dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
+        dt_data = dt_data.dt.tz_localize("UTC")
         data_frame_proto._marshall_any_array(dt_data, dt_proto)
         self.assertEqual(1554838496.0, dt_proto.datetimes.data[0] / 1000000000)
 
         # string
-        str_data = np.array(['random', 'string'])
+        str_data = np.array(["random", "string"])
         str_proto = AnyArray()
 
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_any_array(str_data, str_proto)
         if sys.version_info >= (3, 0):
-            err_msg = 'Dtype <U6 not understood.'
+            err_msg = "Dtype <U6 not understood."
         else:
-            err_msg = 'Dtype |S6 not understood.'
+            err_msg = "Dtype |S6 not understood."
         self.assertEqual(err_msg, str(e.value))
 
     def test_add_rows(self):
@@ -283,7 +277,7 @@ class DataFrameProtoTest(unittest.TestCase):
         aa.int64s.data.extend([1, 2])
 
         cell_style = CellStyle()
-        cell_style.css.extend([_css_style('color', 'black')])
+        cell_style.css.extend([_css_style("color", "black")])
 
         style = CellStyleArray()
         style.styles.extend([cell_style])
@@ -291,18 +285,14 @@ class DataFrameProtoTest(unittest.TestCase):
         # Delta DataFrame
         dt1 = Delta()
         dt1.new_element.data_frame.data.cols.extend([aa])
-        dt1.new_element.data_frame.index.plain_index.data.int64s.data.extend(
-            [3, 4])
-        dt1.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
-            [5, 6])
+        dt1.new_element.data_frame.index.plain_index.data.int64s.data.extend([3, 4])
+        dt1.new_element.data_frame.columns.plain_index.data.int64s.data.extend([5, 6])
         dt1.new_element.data_frame.style.cols.extend([style])
 
         dt2 = Delta()
         dt2.new_element.data_frame.data.cols.extend([aa])
-        dt2.new_element.data_frame.index.plain_index.data.int64s.data.extend(
-            [3, 4])
-        dt2.new_element.data_frame.columns.plain_index.data.int64s.data.extend(
-            [5, 6])
+        dt2.new_element.data_frame.index.plain_index.data.int64s.data.extend([3, 4])
+        dt2.new_element.data_frame.columns.plain_index.data.int64s.data.extend([5, 6])
         dt2.new_element.data_frame.style.cols.extend([style])
 
         combined = Delta()
@@ -350,7 +340,7 @@ class DataFrameProtoTest(unittest.TestCase):
         with pytest.raises(ValueError) as e:
             data_frame_proto.add_rows(diff0, diff1)
 
-        err_msg = 'Dataframes have incompatible shapes'
+        err_msg = "Dataframes have incompatible shapes"
         self.assertEqual(err_msg, str(e.value))
 
     def test_concat_index(self):
@@ -372,7 +362,7 @@ class DataFrameProtoTest(unittest.TestCase):
         with pytest.raises(ValueError) as e:
             data_frame_proto._concat_index(idx1, idx2)
 
-        err_msg = 'Cannot concatenate int64s with doubles.'
+        err_msg = "Cannot concatenate int64s with doubles."
         self.assertEqual(err_msg, str(e.value))
 
         # plain index
@@ -414,7 +404,7 @@ class DataFrameProtoTest(unittest.TestCase):
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._concat_index(m_idx1, m_idx2)
 
-        err_msg = 'Cannot yet concatenate MultiIndices.'
+        err_msg = "Cannot yet concatenate MultiIndices."
         self.assertEqual(err_msg, str(e.value))
 
         # int_64_index
@@ -498,16 +488,16 @@ class DataFrameProtoTest(unittest.TestCase):
         with pytest.raises(ValueError) as e:
             data_frame_proto._concat_any_array(aa2, aa3)
 
-        err_msg = 'Cannot concatenate int64s with doubles.'
+        err_msg = "Cannot concatenate int64s with doubles."
         self.assertEqual(err_msg, str(e.value))
 
     def test_concat_cell_style_array(self):
         """Test streamlit.data_frame_proto._concat_cell_style_array."""
         cell_style1 = CellStyle()
-        cell_style1.css.extend([_css_style('color', 'black')])
+        cell_style1.css.extend([_css_style("color", "black")])
 
         cell_style2 = CellStyle()
-        cell_style2.css.extend([_css_style('vertical-align', 'middle')])
+        cell_style2.css.extend([_css_style("vertical-align", "middle")])
 
         style0 = CellStyleArray()
 
@@ -536,17 +526,17 @@ class DataFrameProtoTest(unittest.TestCase):
             delta = Delta()
             data_frame_proto._get_data_frame(delta)
 
-        err_msg = 'Cannot extract DataFrame from None.'
+        err_msg = "Cannot extract DataFrame from None."
         self.assertEqual(err_msg, str(e.value))
 
         # Test delta = new_element, a name is used and type is chart, df, table
         with pytest.raises(ValueError) as e:
             delta = Delta()
             # TODO(armando): test df and table
-            delta.new_element.chart.type = 'some chart'
-            data_frame_proto._get_data_frame(delta, name='some name')
+            delta.new_element.chart.type = "some chart"
+            data_frame_proto._get_data_frame(delta, name="some name")
 
-        err_msg = 'Dataset names not supported for st.chart'
+        err_msg = "Dataset names not supported for st.chart"
         self.assertEqual(err_msg, str(e.value))
 
         # Generic Data
@@ -581,16 +571,16 @@ class DataFrameProtoTest(unittest.TestCase):
         delta_vega_dataset = Delta()
 
         ds1 = NamedDataSet()
-        ds1.name = 'dataset 1'
+        ds1.name = "dataset 1"
         ds1.has_name = True
         ds1.data.data.cols.extend([aa])
 
         delta_vega_dataset.new_element.vega_lite_chart.datasets.extend([ds1])
 
-        df = data_frame_proto._get_data_frame(delta_vega_dataset, 'dataset 1')
+        df = data_frame_proto._get_data_frame(delta_vega_dataset, "dataset 1")
         self.assertEqual(
-            df,
-            delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data)
+            df, delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data
+        )
 
         # Vega-Lite Chart w/ unnamed dataset
         delta_vega_unnamed_dataset = Delta()
@@ -599,26 +589,25 @@ class DataFrameProtoTest(unittest.TestCase):
         ds2.has_name = False
         ds2.data.data.cols.extend([aa])
 
-        delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets.extend(
-            [ds2])
+        delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets.extend([ds2])
 
         df = data_frame_proto._get_data_frame(delta_vega_unnamed_dataset)
         self.assertEqual(
-            df, delta_vega_unnamed_dataset.new_element.vega_lite_chart.
-            datasets[0].data)
+            df, delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets[0].data
+        )
 
         # add_rows w/ name
         delta_add_rows = Delta()
-        delta_add_rows.add_rows.name = 'named dataset'
+        delta_add_rows.add_rows.name = "named dataset"
         delta_add_rows.add_rows.has_name = True
         delta_add_rows.add_rows.data.data.cols.extend([aa])
-        df = data_frame_proto._get_data_frame(delta_add_rows, 'named dataset')
+        df = data_frame_proto._get_data_frame(delta_add_rows, "named dataset")
         self.assertEqual(df, delta_add_rows.add_rows.data)
 
         # add_rows w/out name
         with pytest.raises(ValueError) as e:
             delta_add_rows_noname = Delta()
-            delta_add_rows_noname.add_rows.name = 'named dataset'
+            delta_add_rows_noname.add_rows.name = "named dataset"
             delta_add_rows_noname.add_rows.has_name = True
             delta_add_rows_noname.add_rows.data.data.cols.extend([aa])
             df = data_frame_proto._get_data_frame(delta_add_rows_noname)
@@ -631,7 +620,7 @@ class DataFrameProtoTest(unittest.TestCase):
         chart = VegaLiteChart()
 
         ds1 = NamedDataSet()
-        ds1.name = 'dataset 1'
+        ds1.name = "dataset 1"
         ds1.has_name = True
 
         aa = AnyArray()
@@ -639,14 +628,13 @@ class DataFrameProtoTest(unittest.TestCase):
         ds1.data.data.cols.extend([aa])
 
         ds2 = NamedDataSet()
-        ds2.name = 'dataset 2'
+        ds2.name = "dataset 2"
         ds2.has_name = True
 
         chart.datasets.extend([ds1, ds2])
 
-        ret = data_frame_proto._get_or_create_dataset(chart.datasets, 'dataset 1')
+        ret = data_frame_proto._get_or_create_dataset(chart.datasets, "dataset 1")
         self.assertEqual(ret, ds1.data)
-
 
     def test_index_len(self):
         """Test streamlit.data_frame_proto._index_len."""
@@ -695,13 +683,13 @@ class DataFrameProtoTest(unittest.TestCase):
     def test_any_array_len(self):
         """Test streamlit.data_frame_proto._any_array_len."""
         data = [
-            ('strings', 2, ['a', 'b']),
-            ('int64s', 3, [1, 2, 3]),
-            ('doubles', 4, [1.0, 2.0, 3.0, 4.0]),
+            ("strings", 2, ["a", "b"]),
+            ("int64s", 3, [1, 2, 3]),
+            ("doubles", 4, [1.0, 2.0, 3.0, 4.0]),
             # datetimes and timedeltas are just stored as ints and aren't
             # python data types.
-            ('datetimes', 5, [1, 2, 3, 4, 5]),
-            ('timedeltas', 6, [1, 2, 3, 4, 5, 6]),
+            ("datetimes", 5, [1, 2, 3, 4, 5]),
+            ("timedeltas", 6, [1, 2, 3, 4, 5, 6]),
         ]
 
         for kind, length, array in data:

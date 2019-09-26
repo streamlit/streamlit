@@ -19,12 +19,16 @@
 
 describe("st.plotly_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+    cy.visit("http://localhost:3000/");
+  });
+
+  beforeEach(() => {
+    cy.get(".element-container").should("have.length", 1);
+  });
 
   it("displays a plotly chart", () => {
     cy.get(".element-container .stPlotlyChart")
       .find(".modebar-btn--logo")
-      .should("have.attr", "data-title", "Produced with Plotly")
-  })
-})
+      .should("have.attr", "data-title", "Produced with Plotly");
+  });
+});

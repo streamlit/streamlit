@@ -23,6 +23,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportThread import REPORT_CONTEXT_ATTR_NAME
 from streamlit.ReportThread import ReportContext
 from streamlit.widgets import Widgets
+from streamlit.proto.BlockPath_pb2 import BlockPath
 
 
 def build_mock_config_get_option(overrides_dict):
@@ -53,11 +54,14 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
         if override_root:
             main_dg = self.new_delta_generator()
-            sidebar_dg = self.new_delta_generator()
-            setattr(threading.current_thread(),
-                    REPORT_CONTEXT_ATTR_NAME,
-                    ReportContext(main_dg=main_dg, sidebar_dg=sidebar_dg,
-                                  widgets=Widgets()))
+            sidebar_dg = self.new_delta_generator(container=BlockPath.SIDEBAR)
+            setattr(
+                threading.current_thread(),
+                REPORT_CONTEXT_ATTR_NAME,
+                ReportContext(
+                    main_dg=main_dg, sidebar_dg=sidebar_dg, widgets=Widgets()
+                ),
+            )
 
     def tearDown(self):
         self.report_queue._clear()
@@ -72,8 +76,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         if len(args) > 0:
             enqueue = args[0]
             args = args[1:]
-        elif 'enqueue' in kwargs:
-            enqueue = kwargs.pop('enqueue')
+        elif "enqueue" in kwargs:
+            enqueue = kwargs.pop("enqueue")
         else:
             enqueue = enqueue_fn
 

@@ -16,9 +16,10 @@
  */
 
 import React, { Fragment, PureComponent } from "react"
-import { Col, Container, Row } from "reactstrap"
+import { Container } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
+import classNames from "classnames"
 //@ts-ignore
 import debounceRender from "react-debounce-render"
 
@@ -35,6 +36,7 @@ import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { applyDelta } from "lib/DeltaParser"
+import { ForwardMsg } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
@@ -52,8 +54,11 @@ import "./App.scss"
 import "assets/css/header.scss"
 
 // https://lodash.com/docs/4.17.15#debounce
-const DebouncedReportView = debounceRender(
-  ReportView, 150, {leading: false, trailing: true, maxWait: 300})
+const DebouncedReportView = debounceRender(ReportView, 150, {
+  leading: false,
+  trailing: true,
+  maxWait: 300,
+})
 
 class App extends PureComponent {
   constructor(props) {
@@ -189,7 +194,7 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
-        reportFinished: () => this.handleReportFinished(),
+        reportFinished: status => this.handleReportFinished(status),
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url =>
@@ -210,6 +215,7 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
+      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
     })
 
     MetricsManager.current.initialize({
@@ -335,18 +341,26 @@ class App extends PureComponent {
 
   /**
    * Handler for ForwardMsg.reportFinished messages
+   * @param status the ReportFinishedStatus that the report finished with
    */
-  handleReportFinished() {
-    // When a script finishes running, we clear any stale elements left over
-    // from its previous run - unless our script had a fatal error during
-    // execution.
-    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+  handleReportFinished(status) {
+    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
       this.setState(({ elements, reportId }) => ({
         elements: {
           main: this.clearOldElements(elements.main, reportId),
           sidebar: this.clearOldElements(elements.sidebar, reportId),
         },
       }))
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      this.connectionManager.incrementMessageCacheRunCount(
+        SessionInfo.current.maxCachedMessageAge
+      )
     }
   }
 
@@ -451,7 +465,7 @@ class App extends PureComponent {
       } else {
         this.openDialog({
           type: "warning",
-          title: "Error sharing report",
+          title: "Error sharing app",
           msg: (
             <Fragment>
               <div>You do not have sharing configured.</div>
@@ -465,7 +479,7 @@ class App extends PureComponent {
         })
       }
     } else {
-      logError("Cannot save report when disconnected from server")
+      logError("Cannot save app when disconnected from server")
     }
   }
 
@@ -533,7 +547,7 @@ class App extends PureComponent {
   /** Requests that the server stop running the report */
   stopReport() {
     if (!this.isServerConnected()) {
-      logError("Cannot stop report when disconnected from server.")
+      logError("Cannot stop app when disconnected from server.")
       return
     }
 
@@ -644,14 +658,10 @@ class App extends PureComponent {
   }
 
   render() {
-    const outerDivClass = [
-      "stApp",
-      isEmbeddedInIFrame()
-        ? "streamlit-embedded"
-        : this.state.userSettings.wideMode
-        ? "streamlit-wide"
-        : "streamlit-regular",
-    ].join(" ")
+    const outerDivClass = classNames("stApp", {
+      "streamlit-embedded": isEmbeddedInIFrame(),
+      "streamlit-wide": this.state.userSettings.wideMode,
+    })
 
     const dialogProps = {
       ...this.state.dialog,
@@ -693,41 +703,26 @@ class App extends PureComponent {
           </header>
 
           <Container className="streamlit-container">
-            <Row className="justify-content-center">
-              {/*
-                Disclaimer: If this columns are changed please update
-                MAXIMUM_CONTENT_WIDTH constant value for st.image() from
-                image_proto.py file
-              */}
-
-              <Col
-                className={
-                  this.state.userSettings.wideMode
-                    ? ""
-                    : "col-lg-8 col-md-9 col-sm-12 col-xs-12"
+            {this.state.showLoginBox ? (
+              <LoginBox
+                onSuccess={this.onLogInSuccess}
+                onFailure={this.onLogInError}
+              />
+            ) : (
+              <DebouncedReportView
+                wide={this.state.userSettings.wideMode}
+                elements={this.state.elements}
+                reportId={this.state.reportId}
+                reportRunState={this.state.reportRunState}
+                showStaleElementIndicator={
+                  this.state.connectionState !== ConnectionState.STATIC
                 }
-              >
-                {this.state.showLoginBox ? (
-                  <LoginBox
-                    onSuccess={this.onLogInSuccess}
-                    onFailure={this.onLogInError}
-                  />
-                ) : (
-                  <DebouncedReportView
-                    elements={this.state.elements}
-                    reportId={this.state.reportId}
-                    reportRunState={this.state.reportRunState}
-                    showStaleElementIndicator={
-                      this.state.connectionState !== ConnectionState.STATIC
-                    }
-                    widgetMgr={this.widgetMgr}
-                    widgetsDisabled={
-                      this.state.connectionState !== ConnectionState.CONNECTED
-                    }
-                  />
-                )}
-              </Col>
-            </Row>
+                widgetMgr={this.widgetMgr}
+                widgetsDisabled={
+                  this.state.connectionState !== ConnectionState.CONNECTED
+                }
+              />
+            )}
 
             <StreamlitDialog {...dialogProps} />
           </Container>

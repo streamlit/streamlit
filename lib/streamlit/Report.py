@@ -24,6 +24,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit import util
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -37,7 +38,7 @@ class Report(object):
 
     @classmethod
     def get_url(cls, host_ip):
-        """Get the URL for any report served at the given host_ip.
+        """Get the URL for any app served at the given host_ip.
 
         Parameters
         ----------
@@ -50,10 +51,7 @@ class Report(object):
             The URL.
         """
         port = _get_browser_address_bar_port()
-        return ('http://%(host_ip)s:%(port)s' % {
-            'host_ip': host_ip,
-            'port': port,
-        })
+        return "http://%(host_ip)s:%(port)s" % {"host_ip": host_ip, "port": port}
 
     def __init__(self, script_path, argv):
         """Constructor.
@@ -61,7 +59,7 @@ class Report(object):
         Parameters
         ----------
         script_path : str
-            Path of the Python file from which this report is generated.
+            Path of the Python file from which this app is generated.
 
         argv : list of str
             Command-line arguments to run the script with.
@@ -88,9 +86,7 @@ class Report(object):
         self.generate_new_id()
 
     def get_debug(self):
-        return {
-            'master queue': self._master_queue.get_debug(),
-        }
+        return {"master queue": self._master_queue.get_debug()}
 
     def parse_argv_from_command_line(self, cmd_line_str):
         """Parses an argv dict for this script from a command line string.
@@ -113,8 +109,9 @@ class Report(object):
 
         if new_script_path != self.script_path:
             raise ValueError(
-                'Cannot change script from %s to %s' %
-                (self.script_path, cmd_line_list[0]))
+                "Cannot change script from %s to %s"
+                % (self.script_path, cmd_line_list[0])
+            )
 
         self.argv = cmd_line_list
 
@@ -152,8 +149,7 @@ class Report(object):
     def generate_new_id(self):
         """Randomly generate an ID representing this report's execution."""
         # Convert to str for Python2
-        self.report_id = str(
-            base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
+        self.report_id = str(base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -167,20 +163,17 @@ class Report(object):
             live.
 
         """
-        LOGGER.debug('Serializing running report')
+        LOGGER.debug("Serializing running report")
 
         manifest = self._build_manifest(
-            status='running',
+            status="running",
             external_server_ip=util.get_external_ip(),
             internal_server_ip=util.get_internal_ip(),
         )
 
-        manifest_json = json.dumps(manifest).encode('utf-8')
+        manifest_json = json.dumps(manifest).encode("utf-8")
 
-        return [(
-            'reports/%s/manifest.json' % self.report_id,
-            manifest_json
-        )]
+        return [("reports/%s/manifest.json" % self.report_id, manifest_json)]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -193,49 +186,58 @@ class Report(object):
             of serialized ForwardMsgs.
 
         """
-        LOGGER.debug('Serializing final report')
+        LOGGER.debug("Serializing final report")
 
         messages = [
-            copy.deepcopy(msg) for msg in self._master_queue
+            copy.deepcopy(msg)
+            for msg in self._master_queue
             if _should_save_report_msg(msg)
         ]
 
         first_delta_index = 0
         num_deltas = 0
         for idx in range(len(messages)):
-            if messages[idx].HasField('delta'):
+            if messages[idx].HasField("delta"):
                 messages[idx].metadata.delta_id = num_deltas
                 if num_deltas == 0:
                     first_delta_index = idx
                 num_deltas += 1
 
         manifest = self._build_manifest(
-            status='done',
+            status="done",
             num_messages=len(messages),
             first_delta_index=first_delta_index,
             num_deltas=num_deltas,
         )
 
-        manifest_json = json.dumps(manifest).encode('utf-8')
+        manifest_json = json.dumps(manifest).encode("utf-8")
 
         # Build a list of message tuples: (message_location, serialized_message)
-        message_tuples = [(
-            'reports/%(id)s/%(idx)s.pb' %
-                {'id': self.report_id, 'idx': msg_idx},
-            msg.SerializeToString()
-        ) for msg_idx, msg in enumerate(messages)]
+        message_tuples = [
+            (
+                "reports/%(id)s/%(idx)s.pb" % {"id": self.report_id, "idx": msg_idx},
+                msg.SerializeToString(),
+            )
+            for msg_idx, msg in enumerate(messages)
+        ]
 
-        manifest_tuples = [(
-            'reports/%(id)s/manifest.json' %
-                {'id': self.report_id}, manifest_json)]
+        manifest_tuples = [
+            ("reports/%(id)s/manifest.json" % {"id": self.report_id}, manifest_json)
+        ]
 
         # Manifest must be at the end, so clients don't connect and read the
         # manifest while the deltas haven't been saved yet.
         return message_tuples + manifest_tuples
 
     def _build_manifest(
-            self, status, num_messages=None, first_delta_index=None,
-            num_deltas=None, external_server_ip=None, internal_server_ip=None):
+        self,
+        status,
+        num_messages=None,
+        first_delta_index=None,
+        num_deltas=None,
+        external_server_ip=None,
+        internal_server_ip=None,
+    ):
         """Build a manifest dict for this report.
 
         Parameters
@@ -269,9 +271,8 @@ class Report(object):
             - serverPort: int
 
         """
-        if status == 'running':
-            configured_server_address = (
-                config.get_option('browser.serverAddress'))
+        if status == "running":
+            configured_server_address = config.get_option("browser.serverAddress")
         else:
             configured_server_address = None
 
@@ -287,7 +288,7 @@ class Report(object):
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            serverPort=config.get_option('browser.serverPort'),
+            serverPort=config.get_option("browser.serverPort"),
         )
 
 
@@ -300,23 +301,19 @@ def _should_save_report_msg(msg):
 
     """
 
-    msg_type = msg.WhichOneof('type')
+    msg_type = msg.WhichOneof("type")
 
     # Strip out empty delta messages. These don't have any data in them
     # by definition, so omitting them can save the user from a potentially
     # long load time with no downside.
     if (
-        msg_type == 'delta' and
-        msg.delta.WhichOneof('type') == 'new_element' and
-        msg.delta.new_element.WhichOneof('type') == 'empty'
+        msg_type == "delta"
+        and msg.delta.WhichOneof("type") == "new_element"
+        and msg.delta.new_element.WhichOneof("type") == "empty"
     ):
         return False
 
-    return (
-        msg_type == 'initialize' or
-        msg_type == 'new_report' or
-        msg_type == 'delta'
-    )
+    return msg_type == "initialize" or msg_type == "new_report" or msg_type == "delta"
 
 
 def _get_browser_address_bar_port():
@@ -327,7 +324,8 @@ def _get_browser_address_bar_port():
     server-browser websocket.
 
     """
-    if (config.get_option('global.developmentMode')
-            and config.get_option('global.useNode')):
+    if config.get_option("global.developmentMode") and config.get_option(
+        "global.useNode"
+    ):
         return 3000
-    return config.get_option('browser.serverPort')
+    return config.get_option("browser.serverPort")

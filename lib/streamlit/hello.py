@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A "Hello World" report."""
+"""A "Hello World" app."""
 
 import streamlit as st
 import numpy as np
@@ -21,9 +21,10 @@ import time
 
 
 def run():
-    st.title('Hello Streamlit!')
-    st.write('''
-        This is an example **Streamlit** report.
+    st.title("Hello Streamlit!")
+    st.write(
+        """
+        This is an example **Streamlit** app.
 
         If this is your first time using Streamlit, welcome! You may want to
         take a look at our
@@ -33,7 +34,8 @@ def run():
 
         To celebrate this magic moment, below we're generating a bunch of
         random numbers in a loop for around 10 seconds. Enjoy!
-    ''')
+    """
+    )
 
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -46,8 +48,7 @@ def run():
         new_rows = np.random.randn(10, 1)
 
         # Update status text.
-        status_text.text(
-            'The latest random number is: %s' % new_rows[-1, 0])
+        status_text.text("The latest random number is: %s" % new_rows[-1, 0])
 
         # Append data to the chart.
         chart.add_rows(new_rows)
@@ -55,14 +56,16 @@ def run():
         # Pretend we're doing some computation that takes time.
         time.sleep(0.1)
 
-    status_text.text('Done!')
+    status_text.text("Done!")
     st.balloons()
 
-    st.write('''
+    st.write(
+        """
         PS: Want to know how we did this?
         [You can learn about it here.](https://streamlit.io/secret/docs/core_mechanics.html)
-    ''')
+    """
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

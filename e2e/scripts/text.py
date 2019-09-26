@@ -15,4 +15,4 @@
 
 import streamlit as st
 
-st.text('This text is awesome!')
+st.text("This text is awesome!")

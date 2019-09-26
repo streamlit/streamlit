@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import boto3
@@ -35,6 +36,7 @@ from streamlit import config
 from streamlit.storage.AbstractStorage import AbstractStorage
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -49,57 +51,54 @@ class S3Storage(AbstractStorage):
 
         # For now don't enable verbose boto logs
         # TODO(armando): Make this configurable.
-        log = logging.getLogger('botocore')
+        log = logging.getLogger("botocore")
         log.propagate = False
 
-        assert config.get_option('global.sharingMode') != 'off', (
-            'Sharing is disabled. See "global.sharingMode".')
+        assert (
+            config.get_option("global.sharingMode") != "off"
+        ), 'Sharing is disabled. See "global.sharingMode".'
 
-        self._bucketname = config.get_option('s3.bucket')
-        self._url = config.get_option('s3.url')
-        self._key_prefix = config.get_option('s3.keyPrefix')
-        self._region = config.get_option('s3.region')
+        self._bucketname = config.get_option("s3.bucket")
+        self._url = config.get_option("s3.url")
+        self._key_prefix = config.get_option("s3.keyPrefix")
+        self._region = config.get_option("s3.region")
 
-        if config.get_option('global.sharingMode') == 'streamlit-public':
-            assert self._bucketname is not None, (
-                'Error fetching public credentials. '
-                'Are you connected to the internet?')
+        user = os.getenv("USER", None)
 
-        user = os.getenv('USER', None)
-
-        if self._url and '{USER}' in self._url:
-            self._url = self._url.replace('{USER}', user)
-        if self._key_prefix and '{USER}' in self._key_prefix:
-            self._key_prefix = self._key_prefix.replace('{USER}', user)
+        if self._url and "{USER}" in self._url:
+            self._url = self._url.replace("{USER}", user)
+        if self._key_prefix and "{USER}" in self._key_prefix:
+            self._key_prefix = self._key_prefix.replace("{USER}", user)
 
         # URL where browsers go to load the Streamlit web app.
         self._web_app_url = None
 
         if not self._url:
             self._web_app_url = os.path.join(
-                'https://%s.%s' % (self._bucketname, 's3.amazonaws.com'),
-                self._s3_key('index.html'))
+                "https://%s.%s" % (self._bucketname, "s3.amazonaws.com"),
+                self._s3_key("index.html"),
+            )
         else:
             self._web_app_url = os.path.join(
-                self._url,
-                self._s3_key('index.html', add_prefix=False))
+                self._url, self._s3_key("index.html", add_prefix=False)
+            )
 
-        aws_profile = config.get_option('s3.profile')
-        access_key_id = config.get_option('s3.accessKeyId')
-        secret_access_key = config.get_option('s3.secretAccessKey')
+        aws_profile = config.get_option("s3.profile")
+        access_key_id = config.get_option("s3.accessKeyId")
+        secret_access_key = config.get_option("s3.secretAccessKey")
 
         if aws_profile is not None:
             LOGGER.debug('Using AWS profile "%s".', aws_profile)
-            self._s3_client = boto3.Session(
-                profile_name=aws_profile).client('s3')
+            self._s3_client = boto3.Session(profile_name=aws_profile).client("s3")
         elif access_key_id is not None and secret_access_key is not None:
             self._s3_client = boto3.client(
-                's3',
+                "s3",
                 aws_access_key_id=access_key_id,
-                aws_secret_access_key=secret_access_key)
+                aws_secret_access_key=secret_access_key,
+            )
         else:
-            LOGGER.debug('Using default AWS profile.')
-            self._s3_client = boto3.client('s3')
+            LOGGER.debug("Using default AWS profile.")
+            self._s3_client = boto3.client("s3")
 
     @run_on_executor
     def _get_static_upload_files(self):
@@ -109,8 +108,8 @@ class S3Storage(AbstractStorage):
         """
         try:
             self._s3_client.head_object(
-                Bucket=self._bucketname,
-                Key=self._s3_key('index.html'))
+                Bucket=self._bucketname, Key=self._s3_key("index.html")
+            )
             return []
         except botocore.exceptions.ClientError:
             return list(self._static_files)
@@ -124,7 +123,8 @@ class S3Storage(AbstractStorage):
         except botocore.exceptions.ClientError as e:
             LOGGER.warning(
                 '"%s" bucket not found. Do you have s3:HeadBucket permission?',
-                self._bucketname)
+                self._bucketname,
+            )
             LOGGER.warning(e)
             return False
         return True
@@ -133,9 +133,10 @@ class S3Storage(AbstractStorage):
     def _create_bucket(self):
         LOGGER.debug('Attempting to create "%s" bucket', self._bucketname)
         self._s3_client.create_bucket(
-            ACL='public-read',
+            ACL="public-read",
             Bucket=self._bucketname,
-            CreateBucketConfiguration={'LocationConstraint': self._region})
+            CreateBucketConfiguration={"LocationConstraint": self._region},
+        )
         LOGGER.debug('"%s" bucket created', self._bucketname)
 
     @gen.coroutine
@@ -144,13 +145,14 @@ class S3Storage(AbstractStorage):
         try:
             bucket_exists = yield self._bucket_exists()
             if not bucket_exists:
-                LOGGER.warning('Will attempt to create bucket')
+                LOGGER.warning("Will attempt to create bucket")
                 yield self._create_bucket()
 
         except botocore.exceptions.NoCredentialsError:
             LOGGER.error(
                 'Please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
-                'environment variables')
+                "environment variables"
+            )
             raise errors.S3NoCredentials
 
     def _s3_key(self, relative_path, add_prefix=True):
@@ -161,13 +163,14 @@ class S3Storage(AbstractStorage):
         return os.path.normpath(key)
 
     @gen.coroutine
-    def _save_report_files(self, report_id, files, progress_coroutine=None,
-            manifest_save_order=None):
+    def _save_report_files(
+        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+    ):
         """Save files related to a given report.
 
         See AbstractStorage for docs.
         """
-        LOGGER.debug('Saving report %s', report_id)
+        LOGGER.debug("Saving report %s", report_id)
         yield self._s3_init()
         static_files = yield self._get_static_upload_files()
         files_to_upload = static_files + files
@@ -176,7 +179,7 @@ class S3Storage(AbstractStorage):
             manifest_index = None
             manifest_tuple = None
             for i, file_tuple in enumerate(files_to_upload):
-                if file_tuple[0] == 'manifest.json':
+                if file_tuple[0] == "manifest.json":
                     manifest_index = i
                     manifest_tuple = file_tuple
                     break
@@ -184,32 +187,33 @@ class S3Storage(AbstractStorage):
             if manifest_tuple:
                 files_to_upload.pop(manifest_index)
 
-                if manifest_save_order == 'first':
+                if manifest_save_order == "first":
                     files_to_upload.insert(0, manifest_tuple)
                 else:
                     files_to_upload.append(manifest_tuple)
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 
-        raise gen.Return('%s?id=%s' % (self._web_app_url, report_id))
+        raise gen.Return("%s?id=%s" % (self._web_app_url, report_id))
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):
-        set_private_acl = config.get_option('s3.requireLoginToView')
+        set_private_acl = config.get_option("s3.requireLoginToView")
         for i, (path, data) in enumerate(files):
             mime_type = mimetypes.guess_type(path)[0]
             if not mime_type:
-                mime_type = 'application/octet-stream'
-            if set_private_acl and path.startswith('report'):
-                acl = 'private'
+                mime_type = "application/octet-stream"
+            if set_private_acl and path.startswith("report"):
+                acl = "private"
             else:
-                acl = 'public-read'
+                acl = "public-read"
             self._s3_client.put_object(
                 Bucket=self._bucketname,
                 Body=data,
                 Key=self._s3_key(path),
                 ContentType=mime_type,
-                ACL=acl)
+                ACL=acl,
+            )
             LOGGER.debug('Uploaded: "%s"', path)
 
             if progress_coroutine:

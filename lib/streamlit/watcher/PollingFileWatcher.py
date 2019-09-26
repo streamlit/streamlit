@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 from concurrent.futures import ThreadPoolExecutor
@@ -27,6 +28,7 @@ import time
 from streamlit.watcher import util
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -46,7 +48,7 @@ class PollingFileWatcher(object):
         This is a no-op, and exists for interface parity with
         EventBasedFileWatcher.
         """
-        LOGGER.debug('Watcher closed')
+        LOGGER.debug("Watcher closed")
 
     def __init__(self, file_path, on_file_changed):
         """Constructor.
@@ -95,7 +97,7 @@ class PollingFileWatcher(object):
 
         self._md5 = md5
 
-        LOGGER.debug('Change detected: %s', self._file_path)
+        LOGGER.debug("Change detected: %s", self._file_path)
         self._on_file_changed(self._file_path)
 
         self._schedule()
