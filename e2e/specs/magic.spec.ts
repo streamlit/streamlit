@@ -17,29 +17,38 @@
 
 /// <reference types="cypress" />
 
-describe("st.markdown", () => {
+describe("streamlit magic", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays markdown", () => {
-    cy.get(".element-container .stText p").then(els => {
-      expect(els.length).to.eq(6);
+  it("displays expected text", () => {
+    const expected = [
+      "no block",
+      "This should be printed",
+      "IF",
+      "ELIF",
+      "ELSE",
+      "FOR",
+      "WHILE",
+      "WITH",
+      "TRY",
+      "EXCEPT",
+      "FINALLY",
+      "FUNCTION",
+      "ASYNC FUNCTION",
+      "ASYNC FOR",
+      "ASYNC WITH"
+    ];
 
-      expect(els[0].textContent).to.eq("This markdown is awesome!");
-      expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
-      expect(els[2].textContent).to.eq("This HTML tag is not escaped!");
-      expect(els[3].textContent).to.eq("[text]");
-      expect(els[4].textContent).to.eq("link");
-      expect(els[5].textContent).to.eq("");
+    const selector = ".element-container > .stText > p";
 
-      cy.wrap(els[3])
-        .find("a")
-        .should("not.exist");
+    cy.get(selector).should("have.length", expected.length);
 
-      cy.wrap(els[4])
-        .find("a")
-        .should("have.attr", "href");
+    expected.forEach((text, index) => {
+      cy.get(selector)
+        .eq(index)
+        .contains(text);
     });
   });
 });

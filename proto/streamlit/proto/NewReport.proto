@@ -21,13 +21,10 @@ message NewReport {
   // The report ID
   string id = 1;
 
-  // The command line that launched this report.
-  repeated string command_line = 2;
-
   // The basename of the script that launched this report. Example: "foo.py"
-  string name = 3;
+  string name = 2;
 
   // The full path of the script that launched this report. Example:
   // "/foo/bar/foo.py"
-  string script_path = 4;
+  string script_path = 3;
 }

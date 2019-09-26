@@ -19,12 +19,13 @@ import url from "url"
 
 import { ConnectionState } from "./ConnectionState"
 import { ForwardMsg } from "autogen/proto"
-import { IS_DEV_ENV, IS_SHARED_REPORT, WEBSOCKET_PORT_DEV } from "./baseconsts"
+import { IS_SHARED_REPORT } from "./baseconsts"
 import { ReactNode } from "react"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 import { configureCredentials, getObject } from "./s3helper"
 import { logError } from "./log"
+import { getWindowBaseUriParts } from "lib/UriUtil"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
@@ -91,6 +92,17 @@ export class ConnectionManager {
     }
   }
 
+  /**
+   * Increment the runCount on our message cache, and clear entries
+   * whose age is greater than the max.
+   */
+  public incrementMessageCacheRunCount(maxMessageAge: number): void {
+    // StaticConnection does not use a MessageCache.
+    if (this.connection instanceof WebsocketConnection) {
+      this.connection.incrementMessageCacheRunCount(maxMessageAge)
+    }
+  }
+
   private async connect(): Promise<void> {
     try {
       if (IS_SHARED_REPORT) {
@@ -133,12 +145,7 @@ export class ConnectionManager {
   }
 
   private connectToRunningServer(): WebsocketConnection {
-    // If dev, always connect to 8501, since window.location.port is the Node
-    // server's port 3000.
-    // If changed, also change config.py
-    const host = window.location.hostname
-    const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port)
-    const baseUriParts = { host, port }
+    const baseUriParts = getWindowBaseUriParts()
 
     return new WebsocketConnection({
       baseUriPartsList: [baseUriParts],

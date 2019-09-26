@@ -303,6 +303,7 @@ class DeltaGenerator(object):
                 id=msg.metadata.delta_id,
                 delta_type=delta_type,
                 last_index=last_index,
+                container=self._container,
                 is_root=False
             )
         else:
@@ -1542,26 +1543,30 @@ class DeltaGenerator(object):
         max_value=None,
         value=None,
         step=None,
+        format=None,
     ):
         """Display a slider widget.
 
         Parameters
         ----------
-        label : str
+        label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float
+        min_value : int/float or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 otherwise.
-        max_value : int/float
+        max_value : int/float or None
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
-        value : int/float or a tuple/list of int/float
+        value : int/float or a tuple/list of int/float or None
             The value of this widget when it first renders. In case the value
             is passed as a tuple/list a range slider will be used.
             Defaults to min_value.
-        step : int/float
+        step : int/float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
+        format : str or None
+            Printf/Python format string.
+            
 
         Returns
         -------
@@ -1582,6 +1587,7 @@ class DeltaGenerator(object):
         >>> st.write('Values:', values)
 
         """
+
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
@@ -1675,12 +1681,25 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
 
+        # Set format default.
+        if format is None:
+            if all_ints:
+                format = "%d"
+            else:
+                format = "%0.2f"
+        # It would be great if we could guess the number of decimal places from
+        # the step`argument, but this would only be meaningful if step were a decimal. 
+        # As a possible improvement we could make this function accept decimals 
+        # and/or use some heuristics for floats.
+       
         element.slider.label = label
         element.slider.value[:] = [
             current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
+        element.slider.format = format        
+        
         return current_value if single_value else tuple(current_value)
 
     @_widget

@@ -31,6 +31,8 @@ try:
 except ImportError:
     from funcsigs import signature
 
+from parameterized import parameterized
+
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
@@ -228,9 +230,16 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue_new_element_delta(None, None)
         self.assertEqual(dg, new_dg)
 
-    def test_enqueue_new_element_delta(self):
-        dg = self.new_delta_generator()
+    @parameterized.expand(
+        [
+            (BlockPath.MAIN,),
+            (BlockPath.SIDEBAR,),
+        ]
+    )
+    def test_enqueue_new_element_delta(self, container):
+        dg = self.new_delta_generator(container=container)
         self.assertEqual(0, dg._id)
+        self.assertEqual(container, dg._container)
 
         test_data = "some test data"
         # Use FakeDeltaGenerator.fake_text cause if we use
@@ -244,6 +253,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._id)
+        self.assertEqual(container, new_dg._container)
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.text.body, test_data)
