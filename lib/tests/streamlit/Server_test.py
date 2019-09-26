@@ -52,6 +52,7 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
+
 def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
     msg.metadata.delta_id = id

@@ -63,6 +63,7 @@ PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100
 
+
 class SessionInfo(object):
     """Type stored in our _report_sessions dict.
 
@@ -114,14 +115,17 @@ def start_listening(app, call_count=0):
         if e.errno == errno.EADDRINUSE:
             if call_count >= MAX_PORT_SEARCH_RETRIES:
                 raise RetriesExceeded(
-                    "Cannot start Streamlit server. Port %(port)s is already in use, and Streamlit was unable to find a free port after $(num_retries) attempts.",
-                    {"port": port, "num_retries": MAX_PORT_SEARCH_RETRIES}
+                    "Cannot start Streamlit server. Port %s is already in use, and Streamlit was unable to find a free port after %s attempts.",
+                    port,
+                    MAX_PORT_SEARCH_RETRIES,
                 )
             if server_port_is_manually_set():
                 LOGGER.error("Port %s is already in use", port)
                 sys.exit(1)
             else:
-                LOGGER.debug("Port %s already in use, trying to use the next one.", port)
+                LOGGER.debug(
+                    "Port %s already in use, trying to use the next one.", port
+                )
                 port += 1
                 # Save port 3000 because it is used for the development server in the front end.
                 if port == 3000:
