@@ -100,6 +100,9 @@ class App extends PureComponent {
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
+
+    this.timerSet = false
+    this.elementsWithDeltaApplied = null
   }
 
   /**
@@ -409,21 +412,39 @@ class App extends PureComponent {
    * Applies a list of deltas to the elements.
    */
   handleDeltaMsg = (deltaMsg, metadataMsg) => {
-    // (BUG #685) When user presses stop, stop adding elements to
-    // report immediately to avoid race condition.
-    // The one exception is static connections, which do not depend on
-    // the report state (and don't have a stop button).
-    const isStaticConnection = this.connectionManager.isStaticConnection()
-    const reportIsRunning =
-      this.state.reportRunState === ReportRunState.RUNNING
-    if (isStaticConnection || reportIsRunning) {
-      this.setState(state => ({
-        // Create brand new `elements` instance, so components that depend on
-        // this for re-rendering catch the change.
-        elements: {
-          ...applyDelta(state.elements, state.reportId, deltaMsg, metadataMsg),
-        },
-      }))
+    this.elementsWithDeltaApplied = applyDelta(
+      this.state.elements,
+      this.state.reportId,
+      deltaMsg,
+      metadataMsg
+    )
+
+    if (!this.timerSet) {
+      this.timerSet = true
+
+      // (BUG #685) When user presses stop, stop adding elements to
+      // report immediately to avoid race condition.
+      // The one exception is static connections, which do not depend on
+      // the report state (and don't have a stop button).
+      const isStaticConnection = this.connectionManager.isStaticConnection()
+      const reportIsRunning =
+        this.state.reportRunState === ReportRunState.RUNNING
+
+      setTimeout(() => {
+        this.timerSet = false
+
+        if (isStaticConnection || reportIsRunning) {
+          this.setState(state => {
+            return {
+              // Create brand new `elements` instance, so components that depend on
+              // this for re-rendering catch the change.
+              elements: {
+                ...this.elementsWithDeltaApplied,
+              },
+            }
+          })
+        }
+      }, 10)
     }
   }
 
