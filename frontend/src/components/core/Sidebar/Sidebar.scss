@@ -1,0 +1,105 @@
+@import "src/assets/css/variables";
+
+section.sidebar {
+  &.--collapsed {
+    .sidebar-content {
+      margin-left: -$sidebar-width;
+    }
+    .sidebar-collapse-control {
+      left: 0;
+    }
+  }
+
+  .sidebar-content {
+    position: relative;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: $sidebar-width;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: $z-index-sidebar;
+    background-color: #31353d;
+    color: #b8bfce !important;
+    flex-shrink: 0;
+    padding: 5rem 15px 15px 15px;
+    box-shadow: 0px -1px 5px #282c33;
+
+    transition: all ease-in 0.2s;
+
+    .sidebar-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      fill: #bdbdbd;
+      height: 20px;
+      width: 20px;
+      z-index: 1;
+      cursor: pointer;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1rem;
+    }
+
+    h4 {
+      font-size: 0.8rem;
+    }
+
+    h5 {
+      font-size: 0.8rem;
+    }
+
+    h6 {
+      font-size: 0.8rem;
+    }
+
+    .Widget {
+      color: inherit;
+
+      label {
+        color: inherit;
+      }
+    }
+  }
+
+  .sidebar-collapse-control {
+    position: fixed;
+    top: 10px;
+    left: -40px;
+    cursor: pointer;
+    z-index: $z-index-sidebar - 1;
+
+    color: #fff;
+    background-color: rgb(52, 58, 64);
+    border-radius: 0 4px 4px 0px;
+    width: 35px;
+
+    transition: all 0.3s ease;
+    transition-delay: 0.3s;
+
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    border: 1px solid #343a40;
+    fill: white;
+
+    &:hover {
+      color: #fff;
+      background-color: #23272b;
+      border-color: #1d2124;
+    }
+  }
+}

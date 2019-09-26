@@ -20,7 +20,7 @@ import { List, Map as ImmutableMap } from "immutable"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
-import Icon from "components/core/Icon"
+import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
@@ -67,37 +67,21 @@ interface Props {
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
 class ReportView extends PureComponent<Props> {
-  state = {
-    collapsedSidebar: false,
-  }
-
   private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
-
-  private toggleCollapse = (): void => {
-    const { collapsedSidebar } = this.state
-
-    this.setState({ collapsedSidebar: !collapsedSidebar })
-  }
 
   public render = (): ReactNode => {
     const { wide } = this.props
-    const { collapsedSidebar } = this.state
 
     const reportViewClassName = classNames("reportview-container", {
       "--wide": wide,
       "--with-sidebar": this.hasSidebar(),
-      "--collapsed": collapsedSidebar,
     })
 
     return (
       <ThemeProvider theme={widgetTheme}>
         <div className={reportViewClassName}>
           {this.hasSidebar() && (
-            <section className="sidebar">
-              <span onClick={this.toggleCollapse} className="sidebar-close">
-                <Icon type="x" />
-              </span>
-
+            <Sidebar>
               <div className="block-container">
                 <Block
                   elements={this.props.elements.sidebar}
@@ -110,15 +94,7 @@ class ReportView extends PureComponent<Props> {
                   widgetsDisabled={this.props.widgetsDisabled}
                 />
               </div>
-            </section>
-          )}
-          {this.hasSidebar() && (
-            <span
-              className="sidebar-collapse-control"
-              onClick={this.toggleCollapse}
-            >
-              <Icon type="account-login" />
-            </span>
+            </Sidebar>
           )}
           <section className="main">
             <div className="block-container">
