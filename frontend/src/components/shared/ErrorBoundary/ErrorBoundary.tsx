@@ -51,6 +51,29 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
     const { error } = this.state
 
     if (error) {
+      if (error.name === "ChunkLoadError") {
+        return (
+          <ErrorElement
+            width={this.props.width}
+            name="Network issue"
+            message={
+              <p>
+                Please press <i>cmd+r</i> to reload the page
+                <br />
+                if you are still experiencing issues please try{" "}
+                <a
+                  href="https://en.wikipedia.org/wiki/Wikipedia:Bypass_your_cache#Cache_clearing_and_disabling"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  clearing the entire cache
+                </a>
+              </p>
+            }
+          />
+        )
+      }
+
       return (
         <ErrorElement
           width={this.props.width}
@@ -60,6 +83,7 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
         />
       )
     }
+
     return this.props.children
   }
 }
