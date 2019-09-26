@@ -50,7 +50,7 @@ else:
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
-REPORT = Report(REPORT_PATH, [])
+REPORT = Report(REPORT_PATH, "test command line")
 CALLBACK = lambda x: x
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
