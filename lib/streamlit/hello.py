@@ -18,6 +18,15 @@
 import streamlit as st
 import inspect
 from collections import OrderedDict
+import urllib
+
+AWS_BUCKET_URL = (
+    "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+)
+
+GITHUB_DATA = (
+    "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
+)
 
 
 def intro():
@@ -60,142 +69,86 @@ def demo_random_numbers():
     st.button("Re-run")
 
 
-def demo_sinc():
-    """
-    Welcome to Streamlit! we're generating a bunch of random numbers in a loop
-    for around 10 seconds. Enjoy!.
-    """
-    import time
-    import numpy as np
-
-    progress_bar, success = None, None
-    status_text = st.empty()
-    chart = st.line_chart(np.sinc(np.linspace(-5, 5, 100)))
-    for i in range(1, 101):
-        new_rows = np.sinc(np.linspace(-5, 5, 100) * i)
-        # status_text.text("The latest random number is: %s" % new_rows[-1, 0])
-        chart.line_chart(new_rows)
-        if progress_bar is None:
-            progress_bar = st.progress(0)
-            success = st.empty()
-        progress_bar.progress(i)
-        time.sleep(0.1)
-    progress_bar.empty()
-    success.success("Complete!")
-    st.button("Re-run")
-
-
-def demo_repetitions():
-    """
-    In this demo, we ask you to enter your name in the input box below.
-    Streamlit will print it out with a number of repetitions given by a
-    slider that you can control.
-    """
-    name = st.text_input("Your name")
-    repetitions = st.slider("Repetitions", 1, 100, 10)
-    st.write(name + "".join((" %s" % name) * (repetitions - 1)))
-
-
 def demo_bart_vs_bikes():
     """
-    Bart vs bikes!
+    This demo shows how Streamlit can be used to display geospatial data. Select
+    the layers about San Francisco Bart and bikes traffice in the select box
+    below.
     """
     import pandas as pd
-    import os
     import copy
+    from collections import OrderedDict
 
     @st.cache
     def from_data_file(filename):
-        dirname = (
-            "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        )
-        url = os.path.join(dirname, "data", filename)
+
+        url = GITHUB_DATA + "/data/" + filename
         return pd.read_json(url)
 
-    # Grab some data
     bart_stop_stats = copy.deepcopy(from_data_file("bart_stop_stats.json"))
     bart_path_stats = from_data_file("bart_path_stats.json")
     bike_rental_stats = from_data_file("bike_rental_stats.json")
-
-    # Move bart stop name to the 1st column, so it looks nicer when printed as a
-    # table.
     bart_stop_names = bart_stop_stats["name"]
     bart_stop_stats.drop(labels=["name"], axis=1, inplace=True)
     bart_stop_stats.insert(0, "name", bart_stop_names)
 
+    layers_def = OrderedDict({
+        "Bike Rentals": {
+            "type": "HexagonLayer",
+            "data": bike_rental_stats,
+            "radius": 200,
+            "elevationScale": 4,
+            "elevationRange": [0, 1000],
+            "pickable": True,
+            "extruded": True,
+        },
+        "Bart Stop Exits": {
+            "type": "ScatterplotLayer",
+            "data": bart_stop_stats,
+            "radiusScale": 0.05,
+            "getRadius": "exits",
+        },
+        "Bart Stop Names": {
+            "type": "TextLayer",
+            "data": bart_stop_stats,
+            "getText": "name",
+            "getColor": [0, 0, 0, 200],
+            "getSize": 15,
+        },
+        "Bart Stop Outbound": {
+            "type": "ArcLayer",
+            "data": bart_path_stats,
+            "pickable": True,
+            "autoHighlight": True,
+            "getStrokeWidth": 10,
+            "widthScale": 0.0001,
+            "getWidth": "outbound",
+            "widthMinPixels": 3,
+            "widthMaxPixels": 30
+
+        },
+    })
+    layers = st.multiselect("Select some layers", list(layers_def.keys()))
+    if len(layers) == 0:
+        st.error("Please choose at least a layer in the select box.")
+        return
     st.deck_gl_chart(
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
-        layers=[
-            {
-                # Plot number of bike rentals throughtout the city
-                "type": "HexagonLayer",
-                "data": bike_rental_stats,
-                "radius": 200,
-                "elevationScale": 4,
-                "elevationRange": [0, 1000],
-                "pickable": True,
-                "extruded": True,
-            },
-            {
-                # Now plot locations of Bart stops
-                # ...and let's size the stops according to traffic
-                "type": "ScatterplotLayer",
-                "data": bart_stop_stats,
-                "radiusScale": 10,
-                "getRadius": 50,
-            },
-            {
-                # Now Add names of Bart stops
-                "type": "TextLayer",
-                "data": bart_stop_stats,
-                "getText": "name",
-                "getColor": [0, 0, 0, 200],
-                "getSize": 15,
-            },
-            {
-                # And draw some arcs connecting the stops
-                "type": "ArcLayer",
-                "data": bart_path_stats,
-                "pickable": True,
-                "autoHighlight": True,
-                "getStrokeWidth": 10,
-            },
-        ],
+        layers=[layers_def[k] for k in layers]
     )
-
-
-def demo_progress_bar():
-    """
-    This demo shows how to use Streamlit to implement a progress bar.
-    """
-    import time
-
-    progress_text = st.text("0%")
-    progress_bar = st.progress(0)
-    success = st.empty()
-    for percent_complete in range(1, 101):
-        progress_text.text("%d%%" % percent_complete)
-        progress_bar.progress(percent_complete)
-        time.sleep(0.1)
-    progress_bar.empty()
-    success.success("Complete!")
-    st.balloons()
-    st.button("Re-run")
-
-
-IMAGE_URL = "https://unsplash.com/photos/k0rVudBoB4c/download?force=true"
-counter = 0
 
 # https://tomroelandts.com/articles/how-to-compute-colorful-fractals-using-numpy-and-matplotlib
 # https://en.wikipedia.org/wiki/Julia_set
 def demo_fractals():
     """
-    Fractal! This small app allow you to explore the Julia sets.
+    This small app shows how you can use Streamlit to build cool animations.
+    It displays an animated fractal based on the the Julia Set. Use the slider
+    to tune the level of detail.
     """
     import numpy as np
     import matplotlib.pyplot as plt
 
-    iterations = st.slider("Iterations", 1, 100, 70, 1)
+    iterations = st.slider("Level of detail", 1, 100, 70, 1)
 
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
@@ -203,7 +156,9 @@ def demo_fractals():
     plot = st.pyplot()
     plt.axis("off")
 
+    progress_bar = st.progress(0)
     for a in np.linspace(0.0, 4 * np.pi, 100):
+        progress_bar.progress(int(round(100 * a / (4 * np.pi))))
         c = 0.7885 * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
@@ -216,6 +171,7 @@ def demo_fractals():
             N[M] = i
 
         plot.image(1.0 - (N / N.max()), use_column_width=True)
+    progress_bar.empty()
     st.button("Re-run")
 
 
@@ -228,7 +184,8 @@ def demo_deformation():
 
     @st.cache(show_spinner=False)
     def load_image():
-        return Image.open(BytesIO(requests.get(IMAGE_URL).content))
+        return Image.open(BytesIO(requests.get(
+            AWS_BUCKET_URL + "/maarten-van-den-heuvel.jpg").content))
 
     import numpy as np
     from PIL import Image
@@ -293,22 +250,17 @@ def demo_deformation():
         return mesh
 
     p1 = st.sidebar.slider("Parm1", 0, 100, 0, 1)
-    image = Image.open("maarten-van-den-heuvel.jpg")
+    try:
+        image = load_image()
+    except urllib.error.URLError:
+        st.error("Connection Error. This demo requires internet access")
+        return
 
-    rect = (0, 0, 1024, 576)
-    # dst_grid = griddify(shape_to_rect(image.size), 4, 4)
-    dst_grid = griddify(rect, 4, 4)
+    dst_grid = griddify((0, 0, 1024, 576), 4, 4)
     src_grid = distort_grid(dst_grid, p1)
     mesh = grid_to_mesh(src_grid, dst_grid)
     im = image.transform(image.size, Image.MESH, mesh)
     st.image(im, use_column_width=True)
-
-
-# Data for demo_5 derived from
-# https://www.kaggle.com/rounakbanik/the-movies-dataset
-DATASET_URL = (
-    "https://streamlit-demo-data.s3-us-west-2.amazonaws.com/movies-revenue.csv.gz"
-)
 
 
 def demo_movies():
@@ -321,11 +273,14 @@ def demo_movies():
 
     @st.cache
     def load_dataframe_from_url():
-        return pd.read_csv(DATASET_URL).transform(
+        return pd.read_csv(AWS_BUCKET_URL + "/movies-revenue.csv.gz").transform(
             {"title": lambda x: x, "revenue": lambda x: round(x / 1000 / 1000)}
         )
-
-    df = load_dataframe_from_url()
+    try:
+        df = load_dataframe_from_url()
+    except urllib.error.URLError:
+        st.error("Connection Error. This demo requires internet access")
+        return
     movie = st.text_input("Search movie titles")
     df = df[df.title.str.contains(movie, case=False)].sort_values(
         ascending=False, by="revenue"
@@ -334,14 +289,87 @@ def demo_movies():
     st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
 
 
+def demo_agri():
+    """
+    This demo shows how to use Streamlit to visualize Dataframes. It consists
+    of an app to explore the Gross Agricultultural Production (GPA) in the world
+    from 1960 to 2007. Data are derived from a United Nation publicly available dataset
+    (http://data.un.org/Explorer.aspx).
+    """
+    import pandas as pd
+
+    @st.cache
+    def read():
+        return pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
+
+    @st.cache
+    def clean(dataset):
+        gap = dataset.pivot(index='Region', columns='Year', values='Price')
+        gap.columns = gap.columns.astype(str)
+        years = list(map(str, range(1961, 2008)))
+        gap['Total'] = gap.sum(axis=1)
+        gap.sort_values(['Total'], ascending=False, axis=0, inplace=True)
+        gap = gap[years].transpose()
+        gap.fillna(0, inplace=True)
+        gap_unwant = [col for col in gap.columns if '+' in col]
+        gap = gap.drop(gap_unwant, axis=1)
+        return gap
+
+    try:
+        gap = read().copy()
+    except urllib.error.URLError:
+        st.error("Connection Error. This demo requires internet access")
+        return
+    gap_clean = clean(gap)
+
+    gap_top10tran = gap_clean
+    gap_top10tran.fillna(0, inplace=True)
+
+    countries = st.multiselect("Choose countries", gap_top10tran.columns)
+    if len(countries) == 0:
+        st.error(("Please select at least one country. For example, search"
+                 " for China and United States. Just type the initial letters in"
+                 " the search box!"))
+        return
+    st.text('Gross Agricultural Production [$1B]')
+    st.write(
+        gap_top10tran[countries].transpose().sort_index().style.format("{0:,.0f}"))
+
+    # import altair as alt
+    # st.write(gap_top10tran)
+    # chart = alt.Chart(gap_top10tran).mark_line().encode()
+    # st.altair_chart(chart)
+    # st.text(gap_top10tran[countries].T)
+    # df = gap_top10tran[countries].T
+    # st.write('Hello')
+    # df = df.reset_index()#
+    #
+    # df = df.set_index(['Region'])
+    # st.text(df)
+    # st.write(df)
+    # st.text(df)
+    # st.area_chart(df)
+
+    ax = gap_top10tran[countries].plot(kind='area', figsize=(20, 8),
+                                       stacked=False)
+
+    ax.set_title(
+        'Gross Agricultural Producing Nations from 1961 to 2007 [$1B]',
+        fontsize=20, fontweight='bold')
+    ax.set_ylabel('GAP in Billions (Int $)', fontsize=15)
+    ax.set_xlabel('')
+    ax.tick_params(labelsize=13)
+    st.pyplot()
+
+
 DEMOS = OrderedDict(
     {
         "---": intro,
-        "Number Generator": demo_random_numbers,
-        "Bart vs Bikes": demo_bart_vs_bikes,
-        "Fractals": demo_fractals,
-        "Image Deformation": demo_deformation,
-        "Movies": demo_movies,
+        "Geodata": demo_bart_vs_bikes,
+        "Animation": demo_fractals,
+        "Dataframe": demo_agri,
+        "Plotting": demo_random_numbers,
+
     }
 )
 
@@ -354,18 +382,18 @@ def run():
         """
     )
 
-    demo_name = st.selectbox("Choose a demo", list(DEMOS.keys()), 0)
+    demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
     if demo_name != "---":
         st.markdown("## %s Demo" % demo_name)
         st.write(inspect.getdoc(demo))
-        st.markdown("---")
         demo()
-        st.markdown("---\n ### Code")
-        sourcelines, n_lines = inspect.getsourcelines(demo)
-        sourcelines = reset_indentation(remove_docstring(sourcelines))
-        st.code("".join(sourcelines))
+        if st.sidebar.checkbox("Show Code", True):
+            st.markdown("### Code")
+            sourcelines, n_lines = inspect.getsourcelines(demo)
+            sourcelines = reset_indentation(remove_docstring(sourcelines))
+            st.code("".join(sourcelines))
     else:
         demo()
 
