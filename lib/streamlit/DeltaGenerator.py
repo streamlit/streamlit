@@ -165,6 +165,18 @@ def _get_widget_ui_value(widget_type, element):
     return ui_value
 
 
+def _get_pandas_index_attr(data, attr):
+    python3_attr = getattr(data.index, attr, None)
+    python2_attr = getattr(data.index, '__dict__', None)
+
+    if python3_attr:
+        return python3_attr
+    elif python2_attr:
+        return data.index.__dict__["_" + attr]
+    else:
+        return None
+
+
 class NoValue(object):
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
     call to return None. This is needed because `_enqueue_new_element_delta`
@@ -2202,12 +2214,16 @@ class DeltaGenerator(object):
             if not isinstance(data, pd.DataFrame):
                 data = data_frame_proto.convert_anything_to_df(data)
 
-            old_step = data.index.step
+            old_step = _get_pandas_index_attr(data, 'step')
 
             # We have to drop the predefined index
             data = data.reset_index(drop=True)
 
-            old_stop = data.index.stop
+            old_stop = _get_pandas_index_attr(data, 'stop')
+
+            if old_step is None or old_stop is None:
+                raise AttributeError("'RangeIndex' object has no attribute "
+                                     "'step'")
 
             start = self._last_index + old_step
             stop = self._last_index + old_step + old_stop
