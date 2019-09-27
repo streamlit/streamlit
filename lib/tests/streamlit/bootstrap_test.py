@@ -41,18 +41,26 @@ class BootstrapTest(unittest.TestCase):
         """Test that bootstrap.run sets the matplotlib backend to
         "Agg" if config.runner.fixMatplotlib=True.
         """
-        matplotlib.use("tkagg")
+        # TODO: Find a proper way to mock sys.platform
+        ORIG_PLATFORM = sys.platform
 
-        config._set_option("runner.fixMatplotlib", True, "test")
-        bootstrap.run("/not/a/script")
-        self.assertEqual("agg", matplotlib.get_backend().lower())
+        for platform in ["darwin", "linux2"]:
+            sys.platform = platform
 
-        # Reset
-        matplotlib.use("tkagg")
+            matplotlib.use("tkagg")
 
-        config._set_option("runner.fixMatplotlib", False, "test")
-        bootstrap.run("/not/a/script")
-        self.assertEqual("tkagg", matplotlib.get_backend().lower())
+            config._set_option("runner.fixMatplotlib", True, "test")
+            bootstrap.run("/not/a/script")
+            self.assertEqual("agg", matplotlib.get_backend().lower())
+
+            # Reset
+            matplotlib.use("tkagg")
+
+            config._set_option("runner.fixMatplotlib", False, "test")
+            bootstrap.run("/not/a/script")
+            self.assertEqual("tkagg", matplotlib.get_backend().lower())
+
+        sys.platform = ORIG_PLATFORM
 
 
 class BootstrapPrintTest(unittest.TestCase):
