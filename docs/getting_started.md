@@ -73,15 +73,7 @@ Streamlit.
 ### Add a title
 
 Streamlit has a number of ways to add text to your app. Check out our
-[API reference](api.md) for a complete list. Here's a short list of the
-most common methods used to render text:
-
-* [`st.title()`](api.md#streamlit.title)
-* [`st.header()`](api.md#streamlit.header)
-* [`st.subheader()`](api.md#streamlit.subheader)
-* [`st.markdown()`](api.md#streamlit.markdown)
-* [`st.text()`](api.md#streamlit.text)
-* [`st.write()`](api.md#streamlit.write)
+[API reference](api.md) for a complete list. 
 
 Let's add a title to test things out:
 
