@@ -32,10 +32,12 @@ describe("st.multiselect", () => {
     });
 
     it("should show the correct text", () => {
-      cy.get(".stText").should(
-        "have.text",
-        'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
-      );
+      cy.get(".stText")
+        .should("have.length", 8)
+        .should(
+          "have.text",
+          'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
+        );
     });
 
     describe("when there are valid options", () => {
@@ -97,20 +99,24 @@ describe("st.multiselect", () => {
     });
 
     it("outputs the correct value", () => {
-      cy.get(".stText").should(
-        "have.text",
-        'value 1:[]value 2:[0:"female"]value 3:[]value 4:[0:"tea"1:"water"]'
-      );
+      cy.get(".stText")
+        .should("have.length", 8)
+        .should(
+          "have.text",
+          'value 1:[]value 2:[0:"female"]value 3:[]value 4:[0:"tea"1:"water"]'
+        );
     });
 
     describe("when the user picks a second option", () => {
       beforeEach(() => selectOption(0));
 
       it("outputs the correct value", () => {
-        cy.get(".stText").should(
-          "have.text",
-          'value 1:[]value 2:[0:"female"1:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
-        );
+        cy.get(".stText")
+          .should("have.length", 8)
+          .should(
+            "have.text",
+            'value 1:[]value 2:[0:"female"1:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
+          );
       });
 
       describe("when the user deselects the first option", () => {
@@ -120,10 +126,12 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText").should(
-            "have.text",
-            'value 1:[]value 2:[0:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
-          );
+          cy.get(".stText")
+            .should("have.length", 8)
+            .should(
+              "have.text",
+              'value 1:[]value 2:[0:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
+            );
         });
       });
 
@@ -134,10 +142,12 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText").should(
-            "have.text",
-            'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
-          );
+          cy.get(".stText")
+            .should("have.length", 8)
+            .should(
+              "have.text",
+              'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
+            );
         });
       });
     });
