@@ -214,7 +214,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
         scriptrunner.enqueue_shutdown()
         scriptrunner.join()
-
         self._assert_no_exceptions(scriptrunner)
 
     def test_coalesce_rerun(self):
@@ -288,6 +287,10 @@ class ScriptRunnerTest(unittest.TestCase):
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
             )
+
+        scriptrunner.enqueue_shutdown()
+        scriptrunner.join()
+        self._assert_no_exceptions(scriptrunner)
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
