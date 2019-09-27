@@ -58,15 +58,21 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
             name="Network issue"
             message={
               <p>
-                Please press <i>F5</i> or <i>cmd+r</i> to reload the page
+                Cannot load Streamlit frontend code. This can happen when you
+                update Streamlit while a Streamlit app is running.
                 <br />
-                if you are still experiencing issues please try{" "}
+                To fix this, simply reload this app by pressing <kbd>
+                  F5
+                </kbd>, <kbd>Ctrl+R</kbd>, or <kbd>Cmd+R</kbd>.
+                <br />
+                If the error persists, try force-clearing your browser's cache
+                as described{" "}
                 <a
                   href="https://en.wikipedia.org/wiki/Wikipedia:Bypass_your_cache#Cache_clearing_and_disabling"
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  clearing the entire cache
+                  here
                 </a>
               </p>
             }
