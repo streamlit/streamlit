@@ -19,12 +19,14 @@
 from __future__ import absolute_import, division, print_function
 
 import ast
+import contextlib
 import hashlib
 import inspect
 import os
 import shutil
 import struct
 import textwrap
+import threading
 from collections import namedtuple
 from functools import wraps
 
@@ -35,6 +37,17 @@ from streamlit.hashing import CodeHasher, Context, get_hash
 from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
+
+CACHED_ST_FUNCTION_WARNING = """
+Your script writes to your Streamlit app from within a cached function. This
+code will only be called when we detect a cache "miss", which can lead to
+unexpected results.
+
+How to resolve this warning:
+* Move the streamlit function call outside the cached function.
+* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
+to suppress the warning.
+"""
 
 
 try:
@@ -66,6 +79,63 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
 
 # The in memory cache.
 _mem_cache = {}  # type: Dict[string, CacheEntry]
+
+
+# A thread-local counter that's incremented when we enter @st.cache
+# and decremented when we exit.
+class ThreadLocalCacheInfo(threading.local):
+    def __init__(self):
+        self.within_cached_func = 0
+        self.suppress_st_function_warning = 0
+
+
+_cache_info = ThreadLocalCacheInfo()
+
+
+@contextlib.contextmanager
+def _calling_cached_function():
+    _cache_info.within_cached_func += 1
+    try:
+        yield
+    finally:
+        _cache_info.within_cached_func -= 1
+
+
+@contextlib.contextmanager
+def suppress_cached_st_function_warning():
+    _cache_info.suppress_st_function_warning += 1
+    try:
+        yield
+    finally:
+        _cache_info.suppress_st_function_warning -= 1
+        assert _cache_info.suppress_st_function_warning >= 0
+
+
+def _show_cached_st_function_warning(dg):
+    # Avoid infinite recursion by suppressing additional cached
+    # function warnings from within the cached function warning.
+    with suppress_cached_st_function_warning():
+        dg.warning(CACHED_ST_FUNCTION_WARNING)
+
+
+def maybe_show_cached_st_function_warning(dg):
+    """If appropriate, warn about calling st.foo inside @cache.
+
+    DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+    the user when they're calling st.foo() from within a function that is
+    wrapped in @st.cache.
+
+    Parameters
+    ----------
+    dg : DeltaGenerator
+        The DeltaGenerator to publish the warning to.
+
+    """
+    if (
+        _cache_info.within_cached_func > 0
+        and _cache_info.suppress_st_function_warning <= 0
+    ):
+        _show_cached_st_function_warning(dg)
 
 
 class _AddCopy(ast.NodeTransformer):
@@ -157,7 +227,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         "2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. "
         "This is an escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html)."
+        "(https://streamlit.io/docs/tutorial/create_an_interactive_app.html)."
     )
 
     return message.format(
@@ -195,7 +265,7 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
         "2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an "
         "escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/secret/docs/tutorial/tutorial_caching.html)."
+        "(https://streamlit.io/docs/api.html#optimize-performance)."
     )
 
     return message.format(
@@ -212,7 +282,7 @@ def _build_args_mutated_message(func):
         "When decorating a function with `@st.cache`, the arguments should not be mutated inside "
         "the function body, as that breaks the caching mechanism. Please update the code of "
         "`{name}` to bypass the mutation.\n\n"
-        "See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/create_an_interactive_app.html) for more info."
+        "See the [Streamlit docs](https://streamlit.io/docs/tutorial/create_an_interactive_app.html) for more info."
     )
 
     return message.format(name=func.__name__)
@@ -310,7 +380,13 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
         _write_to_disk_cache(key, value, args_mutated)
 
 
-def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
+def cache(
+    func=None,
+    persist=False,
+    ignore_hash=False,
+    show_spinner=True,
+    suppress_st_warning=False,
+):
     """Function decorator to memoize function executions.
 
     Parameters
@@ -330,6 +406,10 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     show_spinner : boolean
         Enable the spinner. Default is True to show a spinner when there is
         a cache miss.
+
+    suppress_st_warning : boolean
+        Suppress warnings about calling Streamlit functions from within
+        the cached function.
 
     Example
     -------
@@ -364,34 +444,39 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
     ...     return data
 
     """
-    # Support setting the persist and ignore_hash parameters via
+    # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, ignore_hash=True)
     if func is None:
         return lambda f: cache(
-            func=f, persist=persist, ignore_hash=ignore_hash, show_spinner=show_spinner
+            func=f,
+            persist=persist,
+            ignore_hash=ignore_hash,
+            show_spinner=show_spinner,
+            suppress_st_warning=suppress_st_warning,
         )
 
     @wraps(func)
-    def wrapped_func(*argc, **argv):
+    def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
+
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
-            return func(*argc, **argv)
+            return func(*args, **kwargs)
 
         name = func.__name__
 
-        if len(argc) == 0 and len(argv) == 0:
+        if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
         else:
             message = "Running %s(...)." % name
 
-        def function():
+        def get_or_set_cache():
             hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher)
-            args_hasher.update([argc, argv])
+            args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
             args_digest_before = args_hasher.digest()
@@ -409,23 +494,32 @@ def cache(func=None, persist=False, ignore_hash=False, show_spinner=True):
                     key, persist, ignore_hash, func, caller_frame
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
-                return_value = func(*argc, **argv)
+                with _calling_cached_function():
+                    if suppress_st_warning:
+                        with suppress_cached_st_function_warning():
+                            return_value = func(*args, **kwargs)
+                    else:
+                        return_value = func(*args, **kwargs)
 
                 args_hasher_after = CodeHasher("md5")
-                args_hasher_after.update([argc, argv])
+                args_hasher_after.update([args, kwargs])
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
                 _write_to_cache(key, return_value, persist, ignore_hash, args_mutated)
 
             if args_mutated:
-                st.warning(_build_args_mutated_message(func))
+                # If we're inside a _nested_ cached function, our
+                # _within_cached_function_counter will be non-zero.
+                # Suppress the warning about this.
+                with suppress_cached_st_function_warning():
+                    st.warning(_build_args_mutated_message(func))
             return return_value
 
         if show_spinner:
             with st.spinner(message):
-                return function()
+                return get_or_set_cache()
         else:
-            return function()
+            return get_or_set_cache()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.

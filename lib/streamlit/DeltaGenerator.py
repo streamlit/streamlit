@@ -16,8 +16,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, \
-    absolute_import
+from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -31,6 +30,7 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 
+from streamlit import caching
 from streamlit import metrics
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
@@ -104,6 +104,9 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
+        # Warn if we're called from within an @st.cache function
+        caching.maybe_show_cached_st_function_warning(dg)
+
         delta_type = method.__name__
         last_index = -1
 
@@ -214,22 +217,24 @@ class DeltaGenerator(object):
 
     def __getattr__(self, name):
         import streamlit as st
-        streamlit_methods = [method_name for method_name in dir(st)
-                             if callable(getattr(st, method_name))]
+
+        streamlit_methods = [
+            method_name for method_name in dir(st) if callable(getattr(st, method_name))
+        ]
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
                 if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                    )
                 else:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`DeltaGenerator` objects. Did you mean " \
-                              "`st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`DeltaGenerator` objects. Did you mean "
+                        "`st.%(name)s()`?" % {"name": name}
+                    )
             else:
                 message = "`%(name)s()` is not a valid Streamlit command." % {
                     "name": name
@@ -682,8 +687,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.exception_proto as exception_proto
 
-        exception_proto.marshall(element.exception, exception,
-                                 exception_traceback)
+        exception_proto.marshall(element.exception, exception, exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -858,8 +862,7 @@ class DeltaGenerator(object):
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0,
-                        **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -914,8 +917,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, width,
-                           **kwargs)
+        vega_lite.marshall(element.vega_lite_chart, data, spec, width, **kwargs)
 
     @_with_element
     def altair_chart(self, element, altair_chart, width=0):
@@ -1031,8 +1033,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0, sharing="streamlit",
-        **kwargs
+        self, element, figure_or_data, width=0, height=0, sharing="streamlit", **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -1111,8 +1112,7 @@ class DeltaGenerator(object):
         import streamlit.elements.plotly_chart as plotly_chart
 
         plotly_chart.marshall(
-            element.plotly_chart, figure_or_data, width, height, sharing,
-            **kwargs
+            element.plotly_chart, figure_or_data, width, height, sharing, **kwargs
         )
 
     @_with_element
@@ -1395,8 +1395,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_widget
-    def multiselect(self, element, ui_value, label, options,
-                       format_func=str):
+    def multiselect(self, element, ui_value, label, options, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1430,13 +1429,11 @@ class DeltaGenerator(object):
 
         element.multiselect.label = label
         element.multiselect.default[:] = current_value
-        element.multiselect.options[:] = [str(format_func(opt)) for opt in
-                                             options]
+        element.multiselect.options[:] = [str(format_func(opt)) for opt in options]
         return [options[i] for i in current_value]
 
     @_widget
-    def radio(self, element, ui_value, label, options, index=0,
-              format_func=str):
+    def radio(self, element, ui_value, label, options, index=0, format_func=str):
         """Display a radio button widget.
 
         Parameters
@@ -1470,12 +1467,10 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError(
-                "Radio Value has invalid type: %s" % type(index).__name__)
+            raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
 
         if len(options) and not 0 <= index < len(options):
-            raise ValueError(
-                "Radio index must be between 0 and length of options")
+            raise ValueError("Radio index must be between 0 and length of options")
 
         current_value = ui_value if ui_value is not None else index
 
@@ -1485,8 +1480,7 @@ class DeltaGenerator(object):
         return options[current_value] if len(options) else NoValue
 
     @_widget
-    def selectbox(self, element, ui_value, label, options, index=0,
-                  format_func=str):
+    def selectbox(self, element, ui_value, label, options, index=0, format_func=str):
         """Display a select widget.
 
         Parameters
@@ -1522,15 +1516,13 @@ class DeltaGenerator(object):
             )
 
         if len(options) and not 0 <= index < len(options):
-            raise ValueError(
-                "Selectbox index must be between 0 and length of options")
+            raise ValueError("Selectbox index must be between 0 and length of options")
 
         current_value = ui_value if ui_value is not None else index
 
         element.selectbox.label = label
         element.selectbox.value = current_value
-        element.selectbox.options[:] = [str(format_func(opt)) for opt in
-                                        options]
+        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
         return options[current_value] if len(options) else NoValue
 
     @_widget
@@ -1566,7 +1558,7 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
             Printf/Python format string.
-            
+
 
         Returns
         -------
@@ -1665,8 +1657,7 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError(
-                    "The value and/or arguments are out of range.")
+                raise ValueError("The value and/or arguments are out of range.")
 
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
@@ -1688,18 +1679,17 @@ class DeltaGenerator(object):
             else:
                 format = "%0.2f"
         # It would be great if we could guess the number of decimal places from
-        # the step`argument, but this would only be meaningful if step were a decimal. 
-        # As a possible improvement we could make this function accept decimals 
+        # the step`argument, but this would only be meaningful if step were a decimal.
+        # As a possible improvement we could make this function accept decimals
         # and/or use some heuristics for floats.
-       
+
         element.slider.label = label
-        element.slider.value[:] = [
-            current_value] if single_value else current_value
+        element.slider.value[:] = [current_value] if single_value else current_value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
-        element.slider.format = format        
-        
+        element.slider.format = format
+
         return current_value if single_value else tuple(current_value)
 
     @_widget
@@ -1795,8 +1785,7 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError(
-                "The type of the value should be either datetime or time.")
+            raise TypeError("The type of the value should be either datetime or time.")
 
         # Convert datetime to time
         if isinstance(value, datetime):
@@ -1842,8 +1831,7 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError(
-                "The type of the value should be either datetime or date.")
+            raise TypeError("The type of the value should be either datetime or date.")
 
         # Convert datetime to date
         if isinstance(value, datetime):
