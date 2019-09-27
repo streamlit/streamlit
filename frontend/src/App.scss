@@ -41,20 +41,6 @@ iframe {
   margin: 0;
 }
 
-.streamlit-container {
-  margin: 80px auto;
-  width: unset;
-  max-width: unset;
-  padding: 0;
-}
-
-.streamlit-embedded .streamlit-container {
-  width: unset;
-  max-width: unset;
-  padding-left: 0px;
-  padding-right: 0px;
-}
-
 code {
   padding: 0.2em 0.4em;
   margin: 0;
@@ -84,6 +70,15 @@ pre {
     overflow-x: auto;
     color: $green;
   }
+}
+
+.stApp {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
 }
 
 .progress {

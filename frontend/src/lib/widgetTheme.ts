@@ -24,7 +24,9 @@ const borderRadius = SCSS_VARS["$border-radius"]
 const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
 const fontSizeBase = SCSS_VARS["$font-size-base"]
+const fontSizeSm = SCSS_VARS["$font-size-sm"]
 const gray = SCSS_VARS["$gray"]
+const grayLight = SCSS_VARS["$gray-light"]
 const grayLighter = SCSS_VARS["$gray-lighter"]
 const grayLightest = SCSS_VARS["$gray-lightest"]
 const labelFontSize = SCSS_VARS["$font-size-sm"]
@@ -125,6 +127,11 @@ export const sliderOverrides = {
 }
 
 export const datePickerOverrides = {
+  CalendarContainer: {
+    style: {
+      fontSize: fontSizeSm,
+    },
+  },
   CalendarHeader: {
     style: {
       // Make header look nicer.
@@ -135,6 +142,11 @@ export const datePickerOverrides = {
     style: {
       // Make header look nicer.
       backgroundColor: gray,
+    },
+  },
+  Week: {
+    style: {
+      fontSize: fontSizeSm,
     },
   },
   Day: {
@@ -237,83 +249,98 @@ export const radioOverrides = {
 
 export const checkboxOverrides = radioOverrides
 
-export const widgetTheme = createTheme(
-  // Theme primitives. See lightThemePrimitives for what's available. These are
-  // used to create a large JSON-style structure with theme values for all
-  // widgets.
-  // - See node_modules/baseui/themes/light-theme-primitives.js for an example
-  // of primitives we can use here.
-  // - See node_modules/baseui/themes/creator.js for the mapping of values from
-  // this file to output values.
+// Theme primitives. See lightThemePrimitives for what's available. These are
+// used to create a large JSON-style structure with theme values for all
+// widgets.
+// - See node_modules/baseui/themes/light-theme-primitives.js for an example
+// of primitives we can use here.
+// - See node_modules/baseui/themes/creator.js for the mapping of values from
+// this file to output values.
+const mainThemePrimitives = {
+  ...lightThemePrimitives,
+
+  primaryFontFamily: SCSS_VARS["$font-family-sans-serif"],
+
+  primary100: primary,
+  primary200: primary,
+  primary300: primary,
+  primary400: primary,
+  primary500: primary,
+  primary600: primary,
+  primary700: primary,
+
+  // Override gray values based on what is actually used in BaseWeb, and the
+  // way we want it to match our Bootstrap theme.
+  mono100: white, // Popup menu
+  mono200: grayLightest, // Text input, text area, selectbox
+  mono300: grayLighter, // Disabled widget background
+  mono400: grayLighter, // Slider track
+  mono500: gray, // Clicked checkbox and radio
+  mono600: gray, // Disabled widget text
+  mono700: gray, // Unselected checkbox and radio
+  mono800: gray, // Selectbox text
+  mono900: gray, // Not used, but just in case.
+  mono1000: black,
+
+  rating200: "#FFE1A5",
+  rating400: "#FFC043",
+}
+
+// Theme overrides.
+// NOTE: A lot of the properties we can override here don't seem to actually
+// be used anywhere in BaseWeb's source. Will report a bug about it.
+const themeOverrides = {
+  borders: {
+    radius100: borderRadius,
+    radius200: borderRadius,
+    radius300: borderRadius,
+    radius400: borderRadius,
+    buttonBorderRadius: borderRadius,
+    inputBorderRadius: borderRadius,
+    popoverBorderRadius: borderRadius,
+    surfaceBorderRadius: borderRadius,
+  },
+
+  typography: {
+    // Here we override some fonts that are used in widgets. We don't care
+    // about the ones that are not used.
+    font100: {},
+    font200: {},
+    font250: {},
+    font300: { ...fontStyles }, // Popup menus
+    font350: { ...fontStyles }, // Checkbox
+    font400: { ...fontStyles }, // Textinput, textarea, selectboxes
+    font450: { ...fontStyles }, // Radio
+    font460: { ...fontStyles }, // Calendar header buttons
+    font470: { ...fontStyles }, // Button
+    font500: { ...fontStyles }, // Selected items in selectbox
+    font600: {},
+  },
+
+  colors: {
+    white: white,
+    black: black,
+    tickMarkFillDisabled: grayLighter,
+    tickFillDisabled: gray,
+  },
+}
+
+export const mainWidgetTheme = createTheme(mainThemePrimitives, themeOverrides)
+
+export const sidebarWidgetTheme = createTheme(
   {
-    ...lightThemePrimitives,
-
-    primaryFontFamily: SCSS_VARS["$font-family-sans-serif"],
-
-    primary100: primary,
-    primary200: primary,
-    primary300: primary,
-    primary400: primary,
-    primary500: primary,
-    primary600: primary,
-    primary700: primary,
+    ...mainThemePrimitives,
 
     // Override gray values based on what is actually used in BaseWeb, and the
     // way we want it to match our Bootstrap theme.
     mono100: white, // Popup menu
-    mono200: grayLightest, // Text input, text area, selectbox
-    mono300: grayLighter, // Disabled widget background
-    mono400: grayLighter, // Slider track
-    mono500: gray, // Clicked checkbox and radio
-    mono600: gray, // Disabled widget text
-    mono700: gray, // Unselected checkbox and radio
-    mono800: gray, // Selectbox text
-    mono900: gray, // Not used, but just in case.
-    mono1000: black,
-
-    rating200: "#FFE1A5",
-    rating400: "#FFC043",
+    mono200: white, // Text input, text area, selectbox
+    mono300: white, // Disabled widget background
+    mono400: grayLight, // Slider track
   },
-
-  // Theme overrides.
-  // NOTE: A lot of the properties we can override here don't seem to actually
-  // be used anywhere in BaseWeb's source. Will report a bug about it.
-  {
-    borders: {
-      radius100: borderRadius,
-      radius200: borderRadius,
-      radius300: borderRadius,
-      radius400: borderRadius,
-      buttonBorderRadius: borderRadius,
-      inputBorderRadius: borderRadius,
-      popoverBorderRadius: borderRadius,
-      surfaceBorderRadius: borderRadius,
-    },
-
-    typography: {
-      // Here we override some fonts that are used in widgets. We don't care
-      // about the ones that are not used.
-      font100: {},
-      font200: {},
-      font250: {},
-      font300: { ...fontStyles }, // Popup menus
-      font350: { ...fontStyles }, // Checkbox
-      font400: { ...fontStyles }, // Textinput, textarea, selectboxes
-      font450: { ...fontStyles }, // Radio
-      font460: { ...fontStyles }, // Calendar header buttons
-      font470: { ...fontStyles }, // Button
-      font500: { ...fontStyles }, // Selected items in selectbox
-      font600: {},
-    },
-
-    colors: {
-      white: white,
-      black: black,
-      tickMarkFillDisabled: grayLighter,
-      tickFillDisabled: gray,
-    },
-  }
+  themeOverrides
 )
 
 // Log the widget theme just for debug purposes.
-logMessage("widgetTheme", widgetTheme)
+logMessage("mainWidgetTheme", mainWidgetTheme)
+logMessage("sidebarWidgetTheme", sidebarWidgetTheme)
