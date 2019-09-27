@@ -177,13 +177,10 @@ class NoValue(object):
 # Check if index is of the correct type and within bounds of options.
 def _check_index(index, options):
     if not isinstance(index, int):
-        raise TypeError(
-            "Selectbox Value has invalid type: %s" % type(index).__name__
-        )
+        raise TypeError("Selectbox Value has invalid type: %s" % type(index).__name__)
 
     if len(options) > 0 and not 0 <= index < len(options):
-        raise ValueError(
-            "Selectbox index must be between 0 and length of options")
+        raise ValueError("Selectbox index must be between 0 and length of options")
 
 
 class DeltaGenerator(object):
