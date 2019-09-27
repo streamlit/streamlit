@@ -57,7 +57,11 @@ except ImportError:
 
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
-    "**/.*", "**/anaconda2", "**/anaconda3", "**/miniconda2", "**/miniconda3"
+    "**/.*",
+    "**/anaconda2",
+    "**/anaconda3",
+    "**/miniconda2",
+    "**/miniconda3",
 ]
 
 
