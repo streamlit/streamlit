@@ -44,14 +44,17 @@ class BootstrapTest(unittest.TestCase):
         # TODO: Find a proper way to mock sys.platform
         ORIG_PLATFORM = sys.platform
 
-        for platform in ["darwin", "linux2"]:
+        for platform, do_fix in [("darwin", True), ("linux2", False)]:
             sys.platform = platform
 
             matplotlib.use("tkagg")
 
             config._set_option("runner.fixMatplotlib", True, "test")
             bootstrap.run("/not/a/script")
-            self.assertEqual("agg", matplotlib.get_backend().lower())
+            if do_fix:
+                self.assertEqual("agg", matplotlib.get_backend().lower())
+            else:
+                self.assertEqual("tkagg", matplotlib.get_backend().lower())
 
             # Reset
             matplotlib.use("tkagg")
