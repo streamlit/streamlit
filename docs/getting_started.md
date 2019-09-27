@@ -114,7 +114,7 @@ and styling to your data frames.
 
 ```eval_rst
 .. tip::
-   For this guide we're using small amounts of data so that we can move quickly. You can check out our [Tutorial on creating a data explorer]() to see an example of how to load data from an API and use [@st.cache](api.md#streamlit.cache) to cache it.
+   For this guide we're using small amounts of data so that we can move quickly. You can check out our `Tutorial on creating a data explorer <tutorial/create_an_interactive_app.html>`_ to see an example of how to load data from an API and use `@st.cache <api.html#streamlit.cache>`_ to cache it.
 ```
 
 ## Use magic
