@@ -54,32 +54,6 @@ class Multiselect extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value)
   }
 
-  // private get valueOrDefault(): MultiselectOption[] {
-  //   if (this.state.value.length === 0) {  // no! overrrides!
-  //     return this.props.element
-  //       .get("default")
-  //       .toArray()
-  //       .map((i: number) => {
-  //         const label = this.props.element.get("options").get(i)
-  //         return { value: i.toString(), label }
-  //       })
-  //   }
-  //   return this.state.value.map(i => {
-  //     const label = this.props.element.get("options").get(i)
-  //     return { value: i.toString(), label }
-  //   })
-  // }
-
-  private get valueFromDefault(): MultiselectOption[] {
-    return this.props.element
-      .get("default")
-      .toArray()
-      .map((i: number) => {
-        const label = this.props.element.get("options").get(i)
-        return { value: i.toString(), label }
-      })
-  }
-
   private get valueFromState(): MultiselectOption[] {
     return this.state.value.map(i => {
       const label = this.props.element.get("options").get(i)
