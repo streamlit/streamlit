@@ -119,8 +119,25 @@ def _with_element(method):
     return wrapped_method
 
 
-def _do_widget_boilerplate(widget_type, element):
-    """Set the widget id and return the ui_value from the report context.
+def _set_widget_id(widget_type, element):
+    """Set the widget id.
+
+    Parameters
+    ----------
+    widget_type : str
+        The type of the widget as stored in proto.
+    element : proto
+        The proto of the element
+
+    """
+    widget_id = "%s" % hash(element.SerializeToString())
+    el = getattr(element, widget_type)
+    el.id = widget_id
+
+
+def _get_widget_ui_value(widget_type, element):
+    """Get the widget ui_value from the report context.
+    NOTE: This function should be called after the proto has been filled.
 
     Parameters
     ----------
@@ -137,12 +154,10 @@ def _do_widget_boilerplate(widget_type, element):
         doesn't exist, None will be returned.
 
     """
-    widget_id = "%s" % hash(element.SerializeToString())
+    _set_widget_id(widget_type, element)
     el = getattr(element, widget_type)
-    el.id = widget_id
-
     ctx = get_report_ctx()
-    ui_value = ctx.widgets.get_widget_value(widget_id) if ctx else None
+    ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
     return ui_value
 
 
@@ -1358,7 +1373,7 @@ class DeltaGenerator(object):
         element.button.label = label
         element.button.default = False
 
-        ui_value = _do_widget_boilerplate("button", element)
+        ui_value = _get_widget_ui_value("button", element)
         current_value = ui_value if ui_value is not None else False
         return current_value
 
@@ -1390,7 +1405,7 @@ class DeltaGenerator(object):
         element.checkbox.label = label
         element.checkbox.default = bool(value)
 
-        ui_value = _do_widget_boilerplate("checkbox", element)
+        ui_value = _get_widget_ui_value("checkbox", element)
         current_value = ui_value if ui_value is not None else value
         return bool(current_value)
 
@@ -1431,7 +1446,7 @@ class DeltaGenerator(object):
             str(format_func(option)) for option in options
         ]
 
-        ui_value = _do_widget_boilerplate("multiselect", element)
+        ui_value = _get_widget_ui_value("multiselect", element)
         current_value = ui_value.value if ui_value is not None else []
         return [options[i] for i in current_value]
 
@@ -1479,7 +1494,7 @@ class DeltaGenerator(object):
         element.radio.default = index
         element.radio.options[:] = [str(format_func(opt)) for opt in options]
 
-        ui_value = _do_widget_boilerplate("radio", element)
+        ui_value = _get_widget_ui_value("radio", element)
         current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
@@ -1526,7 +1541,7 @@ class DeltaGenerator(object):
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
 
-        ui_value = _do_widget_boilerplate("selectbox", element)
+        ui_value = _get_widget_ui_value("selectbox", element)
         current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
@@ -1681,7 +1696,7 @@ class DeltaGenerator(object):
         element.slider.step = step
         element.slider.format = format
 
-        ui_value = _do_widget_boilerplate("slider", element)
+        ui_value = _get_widget_ui_value("slider", element)
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
         # Cast ui_value to the same type as the input arguments
@@ -1722,7 +1737,7 @@ class DeltaGenerator(object):
         element.text_input.label = label
         element.text_input.default = str(value)
 
-        ui_value = _do_widget_boilerplate("text_input", element)
+        ui_value = _get_widget_ui_value("text_input", element)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -1758,7 +1773,7 @@ class DeltaGenerator(object):
         element.text_area.label = label
         element.text_area.default = str(value)
 
-        ui_value = _do_widget_boilerplate("text_area", element)
+        ui_value = _get_widget_ui_value("text_area", element)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -1800,7 +1815,7 @@ class DeltaGenerator(object):
         element.time_input.label = label
         element.time_input.default = time.strftime(value, "%H:%M")
 
-        ui_value = _do_widget_boilerplate("time_input", element)
+        ui_value = _get_widget_ui_value("time_input", element)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
@@ -1848,7 +1863,7 @@ class DeltaGenerator(object):
         element.date_input.label = label
         element.date_input.default = date.strftime(value, "%Y/%m/%d")
 
-        ui_value = _do_widget_boilerplate("date_input", element)
+        ui_value = _get_widget_ui_value("date_input", element)
         current_value = (
             datetime.strptime(ui_value, "%Y/%m/%d").date()
             if ui_value is not None
