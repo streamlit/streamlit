@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,31 +15,24 @@
  * limitations under the License.
  */
 
-@import 'assets/css/variables';
+/// <reference types="cypress" />
 
-.Widget > label {
-  font-size: $font-size-sm;
-  color: $black;
-  margin-bottom: $m1-2-font-size-sm;
-}
+describe("st calls within cached functions", () => {
+  beforeEach(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-.Widget > .instructions {
-  font-size: $font-size-sm;
-  color: $gray;
-  margin: 0;
-  text-align: right;
-  position: absolute;
-  bottom: 0;
-  right: $m1-2-font-size-sm;
-}
+  it("displays expected results", () => {
+    // We should have two alerts
+    cy.get(".element-container > .alert-warning").should("have.length", 2);
 
-.Widget {
-  & .h1,
-  & .h2,
-  & .h3,
-  & .h4,
-  & .h5,
-  & .h6 {
-    margin-bottom: 0;
-  }
-}
+    // One button
+    cy.get(".element-container > .stButton").should("have.length", 1);
+
+    // And two texts
+    cy.get(".element-container > .markdown-text-container").should(
+      "have.length",
+      2
+    );
+  });
+});

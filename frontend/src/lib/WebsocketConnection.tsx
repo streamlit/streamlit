@@ -488,14 +488,12 @@ function doHealthPing(
   xhr.timeout = timeoutMs
 
   const retryWhenTheresNoResponse = (): void => {
-    const uri = uriList[uriNumber]
+    const uri = new URL(uriList[uriNumber])
 
-    if (uri.startsWith("//localhost:")) {
-      const scriptname =
-        SessionInfo.isSet() && SessionInfo.current.commandLine.length
-          ? SessionInfo.current.commandLine[0]
-          : "yourscript.py"
-
+    if (uri.hostname === "localhost") {
+      const commandLine = SessionInfo.isSet()
+        ? SessionInfo.current.commandLine
+        : "streamlit run yourscript.py"
       retry(
         <Fragment>
           <p>
@@ -503,7 +501,7 @@ function doHealthPing(
             just restart it in your terminal:
           </p>
           <pre>
-            <code className="bash">streamlit run {scriptname}</code>
+            <code className="bash">{commandLine}</code>
           </pre>
         </Fragment>
       )

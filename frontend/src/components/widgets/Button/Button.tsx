@@ -40,12 +40,10 @@ class Button extends React.PureComponent<Props> {
 
     return (
       <div className="Widget row-widget stButton" style={style}>
-        {/*
-        // @ts-ignore */}
         <UIButton
-          overrides={buttonOverrides}
-          onClick={this.handleClick}
           disabled={this.props.disabled}
+          onClick={this.handleClick}
+          overrides={buttonOverrides}
         >
           {label}
         </UIButton>

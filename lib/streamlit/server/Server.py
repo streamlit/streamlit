@@ -15,6 +15,8 @@
 
 import logging
 import threading
+import sys
+import errno
 from enum import Enum
 
 import tornado.concurrent
@@ -57,6 +59,10 @@ TORNADO_SETTINGS = {
 # up before the first browser connects.
 PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 
+# When server.port is not available it will look for the next available port
+# up to MAX_PORT_SEARCH_RETRIES.
+MAX_PORT_SEARCH_RETRIES = 100
+
 
 class SessionInfo(object):
     """Type stored in our _report_sessions dict.
@@ -86,6 +92,51 @@ class State(Enum):
     STOPPED = "STOPPED"
 
 
+class RetriesExceeded(Exception):
+    pass
+
+
+def server_port_is_manually_set():
+    return config.is_manually_set("server.port")
+
+
+def start_listening(app, call_count=0):
+    """Takes the server start listening at the configured port.
+
+    In case the port is already taken it tries listening to the next available port.
+    It will error after MAX_PORT_SEARCH_RETRIES attempts.
+
+    """
+
+    port = config.get_option("server.port")
+    try:
+        app.listen(port)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            if call_count >= MAX_PORT_SEARCH_RETRIES:
+                raise RetriesExceeded(
+                    "Cannot start Streamlit server. Port %s is already in use, and Streamlit was unable to find a free port after %s attempts.",
+                    port,
+                    MAX_PORT_SEARCH_RETRIES,
+                )
+            if server_port_is_manually_set():
+                LOGGER.error("Port %s is already in use", port)
+                sys.exit(1)
+            else:
+                LOGGER.debug(
+                    "Port %s already in use, trying to use the next one.", port
+                )
+                port += 1
+                # Save port 3000 because it is used for the development server in the front end.
+                if port == 3000:
+                    port += 1
+
+                config._set_option("server.port", port, "server initialization")
+                start_listening(app, call_count + 1)
+        else:
+            raise
+
+
 class Server(object):
 
     _singleton = None
@@ -98,14 +149,14 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, script_path, command_line):
         """Create the server. It won't be started yet.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
         script_path : str
-        script_argv : List[str]
+        command_line : str
 
         """
         if Server._singleton is not None:
@@ -117,7 +168,7 @@ class Server(object):
 
         self._ioloop = ioloop
         self._script_path = script_path
-        self._script_argv = script_argv
+        self._command_line = command_line
 
         # Mapping of WebSocket->SessionInfo.
         self._session_infos = {}
@@ -141,9 +192,12 @@ class Server(object):
             raise RuntimeError("Server has already been started")
 
         LOGGER.debug("Starting server...")
+
         app = self._create_app()
+        start_listening(app)
+
         port = config.get_option("server.port")
-        app.listen(port)
+
         LOGGER.debug("Server started on port %s", port)
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
@@ -365,7 +419,7 @@ class Server(object):
                 session = ReportSession(
                     ioloop=self._ioloop,
                     script_path=self._script_path,
-                    script_argv=self._script_argv,
+                    command_line=self._command_line,
                 )
 
             self._session_infos[ws] = SessionInfo(session)
@@ -414,7 +468,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
             elif msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(command_line=msg.rerun_script)
+                self._session.handle_rerun_script_request()
             elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":

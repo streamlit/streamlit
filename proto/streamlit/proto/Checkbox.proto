@@ -19,5 +19,5 @@ syntax = "proto3";
 message Checkbox {
   string id = 1;
   string label = 2;
-  bool value = 3;
+  bool default = 3;
 }

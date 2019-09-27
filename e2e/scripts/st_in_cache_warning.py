@@ -13,19 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""button unit test."""
-
-from tests import testutil
 import streamlit as st
 
 
-class ButtonTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall button protos."""
+@st.cache
+def cached_write(value):
+    st.write(value)
 
-    def test_button(self):
-        """Test that it can be called."""
-        st.button("the label")
 
-        c = self.get_delta_from_queue().new_element.button
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, False)
+@st.cache(suppress_st_warning=True)
+def cached_write_nowarn(value):
+    st.write(value)
+
+
+@st.cache
+def cached_widget(name):
+    st.button(name)
+
+
+cached_write("I'm in a cached function!")
+cached_widget("Wadjet!")
+cached_write_nowarn("Me too!")
