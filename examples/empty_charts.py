@@ -59,6 +59,7 @@ x.add_rows(data)
 st.subheader("Here is 1 empty map")
 st.deck_gl_chart()
 
+
 # TODO: Implement add_rows on DeckGL
 # st.subheader('1 filled map')
 # x = st.deck_gl_chart()
