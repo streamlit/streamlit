@@ -20,9 +20,6 @@ import inspect
 from collections import OrderedDict
 import urllib
 
-AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-
-
 def intro():
     st.markdown(
         """
@@ -38,33 +35,7 @@ text text text text text text text text text text text text text text text text
     )
 
 
-def demo_random_numbers():
-    """
-    This demo illustrates a combination of plotting and animation with Streamlit.
-    We're generating a bunch of random numbers in a loop for around 10 seconds.
-    Enjoy!.
-    """
-    import time
-    import numpy as np
-
-    progress_bar, success = None, None
-    status_text = st.empty()
-    chart = st.line_chart(np.random.randn(10, 1))
-    for i in range(1, 101):
-        new_rows = np.random.randn(10, 1)
-        status_text.text("The latest random number is: %s" % new_rows[-1, 0])
-        chart.add_rows(new_rows)
-        if progress_bar is None:
-            progress_bar = st.progress(0)
-            success = st.empty()
-        progress_bar.progress(i)
-        time.sleep(0.1)
-    progress_bar.empty()
-    success.success("Complete!")
-    st.button("Re-run")
-
-
-def map_demo():
+def mapping_demo():
     """
     This demo shows how to use
     [`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
@@ -115,16 +86,16 @@ def map_demo():
         }
     }
 
-    st.sidebar.markdown('## Map Layers')
+    st.sidebar.markdown('### Map Layers')
     layers = [layer_name for layer_name in layers_def
-        if st.sidebar.checkbox(layer_name, True)]# st.multiselect("Select layers", list(layers_def.keys()))
+        if st.sidebar.checkbox(layer_name, True)]
     if layers:
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50}
         st.deck_gl_chart(viewport=viewport, layers=[layers_def[k] for k in layers])
     else:
         st.error("Please choose at least one layer above.")
 
-def demo_fractals():
+def fractal_demo():
     """
     This app shows how you can use Streamlit to build cool animations.
     It displays an animated fractal based on the the Julia Set. Use the slider
@@ -132,17 +103,20 @@ def demo_fractals():
     """
     import numpy as np
 
-    iterations = st.slider("Level of detail", 1, 100, 70, 1)
+    iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
+    separation = st.sidebar.slider('Separation', 0.7, 2.0, 0.7885)
 
     m, n, s = 480, 320, 300
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
     image = st.empty()
 
-    progress_bar = st.progress(0)
-    for a in np.linspace(0.0, 4 * np.pi, 100):
-        progress_bar.progress(int(round(100 * a / (4 * np.pi))))
-        c = 0.7885 * np.exp(1j * a)
+    progress_bar = st.sidebar.progress(0)
+    frame_text = st.sidebar.empty()
+    for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
+        progress_bar.progress(frame_num)
+        frame_text.text('Frame %i/100' % (frame_num + 1))
+        c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
         M = np.full((n, m), True, dtype=bool)
@@ -155,8 +129,66 @@ def demo_fractals():
 
         image.image(1.0 - (N / N.max()), use_column_width=True)
     progress_bar.empty()
+    frame_text.empty()
     st.button("Re-run")
 
+def plotting_demo():
+    """
+    This demo illustrates a combination of plotting and animation with Streamlit.
+    We're generating a bunch of random numbers in a loop for around 10 seconds.
+    Enjoy!.
+    """
+    import time
+    import numpy as np
+
+    progress_bar = st.sidebar.progress(0)
+    status_text = st.sidebar.empty()
+    last_rows = np.random.randn(1, 1)
+    chart = st.line_chart(last_rows)
+    for i in range(1, 101):
+        new_rows = last_rows[-1,:] + np.random.randn(5, 1).cumsum(axis=0)
+        status_text.text("%i%% Complete" % i)
+        chart.add_rows(new_rows)
+        progress_bar.progress(i)
+        last_rows = new_rows
+        time.sleep(0.05)
+    progress_bar.empty()
+    st.button("Re-run")
+
+def data_frame_demo():
+    """
+    This demo shows how to use `st.write` to visualize Pandas DataFrames.
+    
+    (Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
+    """
+    import pandas as pd
+
+    @st.cache
+    def get_UN_data():
+        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+        df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
+        return df.set_index("Region")
+
+    try:
+        df = get_UN_data()
+    except urllib.error.URLError:
+        st.error("Connection Error. This demo requires internet access")
+        return
+
+    countries = st.multiselect("Choose countries", df.index)
+    if not countries:
+        st.error("Please select at least one country.")
+        return
+
+    "### Gross Agricultural Production \[$1B\]"
+    st.write(df.loc[countries].sort_index())
+
+    ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
+    ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
+    ax.set_xlabel("Year", fontsize=25)
+    ax.tick_params(labelsize=20)
+    ax.legend(loc=2, prop={"size": 20})
+    st.pyplot()
 
 def demo_deformation():
     """
@@ -276,70 +308,27 @@ def demo_movies():
     st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
 
 
-def demo_agri():
-    """
-    This demo shows how to use Streamlit to visualize Dataframes.
-    The app allows you to explore the Gross Agricultultural Production (GPA)
-    in the world from 1960 to 2007. Data are derived from a United Nation
-    publicly available dataset (http://data.un.org/Explorer.aspx). Use the
-    select box to choose some countries to compare.
-    """
-    import pandas as pd
-
-    @st.cache
-    def read():
-        return pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
-
-    try:
-        df = read().copy()
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
-        return
-
-    df = df.set_index("Region")
-    countries = st.multiselect("Choose countries", df.index)
-    if len(countries) == 0:
-        st.error(
-            (
-                "Please select at least one country. For example, search"
-                " for China and United States. Just type the initial letters in"
-                " the search box!"
-            )
-        )
-        return
-
-    st.text("Gross Agricultural Production [$1B]")
-    st.write(df.loc[countries].sort_index())
-
-    ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
-
-    ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
-    ax.set_xlabel("Year", fontsize=25)
-    ax.tick_params(labelsize=20)
-    ax.legend(loc=2, prop={"size": 20})
-    st.pyplot()
 
 
-DEMOS = OrderedDict(
-    {
-        "---": intro,
-        "Map": map_demo,
-        "Animation": demo_fractals,
-        "Dataframe": demo_agri,
-        "Plotting": demo_random_numbers,
-    }
-)
 
+DEMOS = OrderedDict({
+    "---": intro,
+    "Mapping Demo": mapping_demo,
+    "Animation Demo": fractal_demo,
+    "DataFrame Demo": data_frame_demo,
+    "Plotting Demo": plotting_demo,
+})
 
 def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
     if demo_name != "---":
-        st.markdown("# %s Demo" % demo_name)
+        show_code = st.sidebar.checkbox("Show code", True)
+        st.markdown("# %s" % demo_name)
         st.write(inspect.getdoc(demo))
         demo()
-        if st.sidebar.checkbox("Show Code", True):
+        if show_code:
             st.markdown("## Code")
             sourcelines, n_lines = inspect.getsourcelines(demo)
             sourcelines = reset_indentation(remove_docstring(sourcelines))
