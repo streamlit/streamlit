@@ -174,15 +174,6 @@ class NoValue(object):
     pass
 
 
-# Check if index is of the correct type and within bounds of options.
-def _check_index(index, options):
-    if not isinstance(index, int):
-        raise TypeError("Selectbox Value has invalid type: %s" % type(index).__name__)
-
-    if len(options) > 0 and not 0 <= index < len(options):
-        raise ValueError("Selectbox index must be between 0 and length of options")
-
-
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
@@ -1423,7 +1414,7 @@ class DeltaGenerator(object):
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, indices=None, format_func=str):
+    def multiselect(self, element, label, options, default=None, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1434,8 +1425,8 @@ class DeltaGenerator(object):
         options : list, tuple, numpy.ndarray, or pandas.Series
             Labels for the select options. This will be cast to str internally
             by default.
-        indices: [int] or None
-            <...>
+        default: [str] or None
+            List of default values.
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
@@ -1449,15 +1440,29 @@ class DeltaGenerator(object):
         -------
         >>> options = st.multiselect(
         ...     'What are your favorite colors',
+                ('Yellow', 'Red')
         ...     ('Green', 'Yellow', 'Red', 'Blue'))
         >>>
         >>> st.write('You selected:', options)
 
         """
+        # Perform validation checks and return indices base on the default values.
+        # Returns None if default_values is None
+        def _check_and_convert_to_indices(default_values):
+            if default_values is not None:
+                for value in default_values:
+                    if not isinstance(value, str):
+                        raise TypeError(
+                            "A Multiselect default value has invalid type: %s" % type(
+                                value).__name__
+                        )
+                    if value not in options:
+                        raise ValueError(
+                            "Every Multiselect default value must exist in options")
+                return [options.index(value) for value in default]
+            return None
 
-        if indices is not None:
-            [_check_index(i, options) for i in indices]
-
+        indices = _check_and_convert_to_indices(default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
@@ -1548,7 +1553,14 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', option)
 
         """
-        _check_index(index, options)
+        if not isinstance(index, int):
+            raise TypeError(
+                "Selectbox Value has invalid type: %s" % type(index).__name__
+            )
+
+        if len(options) > 0 and not 0 <= index < len(options):
+            raise ValueError("Selectbox index must be between 0 and length of options")
+
         element.selectbox.label = label
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
