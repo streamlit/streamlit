@@ -1423,7 +1423,7 @@ class DeltaGenerator(object):
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, indices=None, format_func=str):  # !!
+    def multiselect(self, element, label, options, indices=None, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 

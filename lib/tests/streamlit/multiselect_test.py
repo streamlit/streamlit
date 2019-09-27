@@ -23,7 +23,7 @@ import streamlit as st
 from tests import testutil
 
 
-class SelectboxTest(testutil.DeltaGeneratorTestCase):
+class Multiselectbox(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall multiselect protos."""
 
     def test_just_label(self):
@@ -32,8 +32,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        # TODO: Issue #158
-        # self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [])
 
     @parameterized.expand(
         [
@@ -49,8 +48,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        # TODO: Issue #158
-        # self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_cast_options_to_string(self):
@@ -62,8 +60,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        # TODO: Issue #158
-        # self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -75,8 +72,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        # TODO: Issue #158
-        # self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
@@ -86,6 +82,33 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        # TODO: Issue #158
-        # self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
+
+    @parameterized.expand(
+        [
+            (None, []),
+            ([], []),
+            ([1, 2], [1, 2]),
+        ]
+    )
+    def test_defaults(self, defaults, expected):
+        """Test that valid default can be passed as expected."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label, "the label")
+        self.assertListEqual(c.default[:], expected)
+        self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
+
+    @parameterized.expand(
+        [
+            ([1, 2, 100], ValueError),
+            (["a", "b"], TypeError),
+
+        ]
+    )
+    def test_invalid_defaults(self, defaults, expected):
+        """Test that invalid default trigger the expected exception."""
+        with self.assertRaises(expected):
+            st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
