@@ -30,6 +30,7 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 
+from streamlit import caching
 from streamlit import metrics
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
@@ -103,6 +104,9 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
+        # Warn if we're called from within an @st.cache function
+        caching.maybe_show_cached_st_function_warning(dg)
+
         delta_type = method.__name__
         last_index = -1
 
@@ -1492,7 +1496,7 @@ class DeltaGenerator(object):
 
         element.radio.label = label
         element.radio.default = index
-        element.radio.options[:] = [str(format_func(opt)) for opt in options]
+        element.radio.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = _get_widget_ui_value("radio", element)
         current_value = ui_value if ui_value is not None else index
@@ -1539,7 +1543,7 @@ class DeltaGenerator(object):
 
         element.selectbox.label = label
         element.selectbox.default = index
-        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
+        element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = _get_widget_ui_value("selectbox", element)
         current_value = ui_value if ui_value is not None else index

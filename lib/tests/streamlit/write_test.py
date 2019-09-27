@@ -30,7 +30,7 @@ import streamlit as st
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
 
-    Unit tests for https://streamlit.io/secret/docs/api/text.html#streamlit.write
+    Unit tests for https://streamlit.io/docs/api/text.html#streamlit.write
 
     Because we're going to test st.markdown, st.pyplot, st.altair_chart
     later on, we don't have to test it in st.write In st.write, all we're
