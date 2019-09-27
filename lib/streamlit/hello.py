@@ -50,7 +50,7 @@ def mapping_demo():
         GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
         return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
 
-    layers_def = {
+    ALL_LAYERS = {
         "Bike Rentals": {
             "type": "HexagonLayer",
             "data": from_data_file("bike_rental_stats.json"),
@@ -87,11 +87,11 @@ def mapping_demo():
     }
 
     st.sidebar.markdown('### Map Layers')
-    layers = [layer_name for layer_name in layers_def
+    selected_layers = [layer for layer_name, layer in ALL_LAYERS.items()
         if st.sidebar.checkbox(layer_name, True)]
-    if layers:
+    if selected_layers:
         viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50}
-        st.deck_gl_chart(viewport=viewport, layers=[layers_def[k] for k in layers])
+        st.deck_gl_chart(viewport=viewport, layers=selected_layers)
     else:
         st.error("Please choose at least one layer above.")
 
