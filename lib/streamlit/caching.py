@@ -381,7 +381,7 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
 
 
 def cache(
-    user_func=None,
+    func=None,
     persist=False,
     ignore_hash=False,
     show_spinner=True,
@@ -391,7 +391,7 @@ def cache(
 
     Parameters
     ----------
-    user_func : callable
+    func : callable
         The function to cache. Streamlit hashes the function and dependent code.
         Streamlit can only hash nested objects (e.g. `bar` in `foo.bar`) in
         Python 3.4+.
@@ -446,16 +446,16 @@ def cache(
     """
     # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, ignore_hash=True)
-    if user_func is None:
+    if func is None:
         return lambda f: cache(
-            user_func=f,
+            func=f,
             persist=persist,
             ignore_hash=ignore_hash,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
         )
 
-    @wraps(user_func)
+    @wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
@@ -463,9 +463,9 @@ def cache(
 
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
-            return user_func(*args, **kwargs)
+            return func(*args, **kwargs)
 
-        name = user_func.__name__
+        name = func.__name__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
@@ -482,7 +482,7 @@ def cache(
             args_digest_before = args_hasher.digest()
 
             code_hasher = CodeHasher("md5", hasher)
-            code_hasher.update(user_func)
+            code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
             key = hasher.hexdigest()
@@ -491,15 +491,15 @@ def cache(
             caller_frame = inspect.currentframe().f_back
             try:
                 return_value, args_mutated = _read_from_cache(
-                    key, persist, ignore_hash, user_func, caller_frame
+                    key, persist, ignore_hash, func, caller_frame
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 with _calling_cached_function():
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
-                            return_value = user_func(*args, **kwargs)
+                            return_value = func(*args, **kwargs)
                     else:
-                        return_value = user_func(*args, **kwargs)
+                        return_value = func(*args, **kwargs)
 
                 args_hasher_after = CodeHasher("md5")
                 args_hasher_after.update([args, kwargs])
@@ -512,7 +512,7 @@ def cache(
                 # _within_cached_function_counter will be non-zero.
                 # Suppress the warning about this.
                 with suppress_cached_st_function_warning():
-                    st.warning(_build_args_mutated_message(user_func))
+                    st.warning(_build_args_mutated_message(func))
             return return_value
 
         if show_spinner:
@@ -524,7 +524,7 @@ def cache(
     # Make this a well-behaved decorator by preserving important function
     # attributes.
     try:
-        wrapped_func.__dict__.update(user_func.__dict__)
+        wrapped_func.__dict__.update(func.__dict__)
     except AttributeError:
         pass
 
