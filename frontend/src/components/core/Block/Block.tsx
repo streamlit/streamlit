@@ -264,28 +264,68 @@ class Block extends PureComponent<Props> {
         <Button element={el} width={width} {...widgetProps} />
       ),
       checkbox: (el: SimpleElement) => (
-        <Checkbox element={el} width={width} {...widgetProps} />
+        <Checkbox
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       dateInput: (el: SimpleElement) => (
-        <DateInput element={el} width={width} {...widgetProps} />
-      ),
-      textInput: (el: SimpleElement) => (
-        <TextInput element={el} width={width} {...widgetProps} />
+        <DateInput
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       radio: (el: SimpleElement) => (
-        <Radio element={el} width={width} {...widgetProps} />
+        <Radio
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       selectbox: (el: SimpleElement) => (
-        <Selectbox element={el} width={width} {...widgetProps} />
+        <Selectbox
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       slider: (el: SimpleElement) => (
-        <Slider element={el} width={width} {...widgetProps} />
+        <Slider
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       textArea: (el: SimpleElement) => (
-        <TextArea element={el} width={width} {...widgetProps} />
+        <TextArea
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
+      textInput: (el: SimpleElement) => (
+        <TextInput
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       timeInput: (el: SimpleElement) => (
-        <TimeInput element={el} width={width} {...widgetProps} />
+        <TimeInput
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
     })
   }

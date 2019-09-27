@@ -490,7 +490,7 @@ function doHealthPing(
   const retryWhenTheresNoResponse = (): void => {
     const uri = new URL(uriList[uriNumber])
 
-    if (uri.hostname == "localhost") {
+    if (uri.hostname === "localhost") {
       const commandLine = SessionInfo.isSet()
         ? SessionInfo.current.commandLine
         : "streamlit run yourscript.py"

@@ -189,10 +189,14 @@ class ScriptRunnerTest(unittest.TestCase):
 
         # Update widgets
         states = WidgetStates()
-        _create_widget("checkbox-checkbox", states).bool_value = True
-        _create_widget("text_area-text_area", states).string_value = "matey!"
-        _create_widget("radio-radio", states).int_value = 2
-        _create_widget("button-button", states).trigger_value = True
+        w1_id = scriptrunner.get_widget_id("checkbox", "checkbox")
+        _create_widget(w1_id, states).bool_value = True
+        w2_id = scriptrunner.get_widget_id("text_area", "text_area")
+        _create_widget(w2_id, states).string_value = "matey!"
+        w3_id = scriptrunner.get_widget_id("radio", "radio")
+        _create_widget(w3_id, states).int_value = 2
+        w4_id = scriptrunner.get_widget_id("button", "button")
+        _create_widget(w4_id, states).trigger_value = True
 
         scriptrunner.enqueue_rerun(widget_state=states)
         time.sleep(0.1)
@@ -210,7 +214,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
         scriptrunner.enqueue_shutdown()
         scriptrunner.join()
-
         self._assert_no_exceptions(scriptrunner)
 
     def test_coalesce_rerun(self):
@@ -235,6 +238,13 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
+        # This scriptrunner will run in parallel to the other 3.
+        # It's used to retrieve the widget id before initializing deltas on other runners.
+        # Wait a beat to access deltas.
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.enqueue_rerun()
+        scriptrunner.start()
+        time.sleep(0.1)
 
         # Build several runners. Each will set a different int value for
         # its radio button.
@@ -244,7 +254,8 @@ class ScriptRunnerTest(unittest.TestCase):
             runners.append(runner)
 
             states = WidgetStates()
-            _create_widget("radio-radio", states).int_value = ii
+            wid = scriptrunner.get_widget_id("radio", "radio")
+            _create_widget(wid, states).int_value = ii
             runner.enqueue_rerun(widget_state=states)
 
         # Start the runners and wait a beat.
@@ -258,7 +269,6 @@ class ScriptRunnerTest(unittest.TestCase):
             self._assert_text_deltas(
                 runner, ["False", "ahoy!", "%s" % ii, "False", "loop_forever"]
             )
-
             runner.enqueue_shutdown()
 
         time.sleep(0.1)
@@ -277,6 +287,10 @@ class ScriptRunnerTest(unittest.TestCase):
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
             )
+
+        scriptrunner.enqueue_shutdown()
+        scriptrunner.join()
+        self._assert_no_exceptions(scriptrunner)
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
@@ -409,3 +423,13 @@ class TestScriptRunner(ScriptRunner):
     def deltas(self):
         """Returns the delta messages in our ReportQueue"""
         return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+
+    def get_widget_id(self, widget_type, label):
+        """Returns the id of the widget with the specified type and label"""
+        for delta in self.deltas():
+            new_element = getattr(delta, "new_element", None)
+            widget = getattr(new_element, widget_type, None)
+            widget_label = getattr(widget, "label", None)
+            if widget_label == label:
+                return widget.id
+        return None

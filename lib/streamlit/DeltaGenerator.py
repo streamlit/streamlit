@@ -47,7 +47,7 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
-DELTAS_TYPES_THAT_MELT_DATAFRAMES = ('line_chart', 'area_chart', 'bar_chart')
+DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
 
 def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
@@ -118,43 +118,51 @@ def _with_element(method):
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, delta_type,
-                                             last_index)
+        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
 
     return wrapped_method
 
 
-def _widget(method):
-    @_wraps_with_cleaned_sig(method, 3)  # Remove self, element, ui_value.
-    @_with_element
-    def wrapper(dg, element, *args, **kwargs):
-        # All of this label-parsing code only exists so we can throw a pretty
-        # error to the user when she forgets to pass in a label. Otherwise we'd
-        # get a really cryptic error.
-        if "label" in kwargs:
-            label = kwargs["label"]
-            del kwargs["label"]
-        elif len(args) > 0:
-            label = args[0]
-            args = args[1:]
-        else:
-            raise TypeError("%s must have a label" % method.__name__)
+def _set_widget_id(widget_type, element):
+    """Set the widget id.
 
-        ctx = get_report_ctx()
-        # The widget ID is the widget type (i.e. the name "foo" of the
-        # st.foo function for the widget) followed by the label.
-        # This allows widgets of different types to have the same label,
-        # and solves a bug where changing the widget type but keeping
-        # the label could break things.
-        widget_id = "%s-%s" % (method.__name__, label)
+    Parameters
+    ----------
+    widget_type : str
+        The type of the widget as stored in proto.
+    element : proto
+        The proto of the element
 
-        el = getattr(element, method.__name__)
-        el.id = widget_id
+    """
+    widget_id = "%s" % hash(element.SerializeToString())
+    el = getattr(element, widget_type)
+    el.id = widget_id
 
-        ui_value = ctx.widgets.get_widget_value(widget_id) if ctx else None
-        return method(dg, element, ui_value, label, *args, **kwargs)
 
-    return wrapper
+def _get_widget_ui_value(widget_type, element):
+    """Get the widget ui_value from the report context.
+    NOTE: This function should be called after the proto has been filled.
+
+    Parameters
+    ----------
+    widget_type : str
+        The type of the widget as stored in proto.
+    element : proto
+        The proto of the element
+
+    Returns
+    -------
+    ui_value : any
+        The value of the widget set by the client or
+        the default value passed. If the report context
+        doesn't exist, None will be returned.
+
+    """
+    _set_widget_id(widget_type, element)
+    el = getattr(element, widget_type)
+    ctx = get_report_ctx()
+    ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
+    return ui_value
 
 
 class NoValue(object):
@@ -169,14 +177,16 @@ class NoValue(object):
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
-    def __init__(self,
-                 enqueue,
-                 id=0,
-                 delta_type=None,
-                 last_index=None,
-                 is_root=True,
-                 container=BlockPath_pb2.BlockPath.MAIN,
-                 path=()):
+    def __init__(
+        self,
+        enqueue,
+        id=0,
+        delta_type=None,
+        last_index=None,
+        is_root=True,
+        container=BlockPath_pb2.BlockPath.MAIN,
+        path=(),
+    ):
         """Constructor.
 
         Parameters
@@ -250,10 +260,14 @@ class DeltaGenerator(object):
         assert self._is_root
         self._id = 0
 
-    def _enqueue_new_element_delta(self, marshall_element, delta_type,
-                                   last_index=None,
-                                   elementWidth=None,
-                                   elementHeight=None):
+    def _enqueue_new_element_delta(
+        self,
+        marshall_element,
+        delta_type,
+        last_index=None,
+        elementWidth=None,
+        elementHeight=None,
+    ):
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -296,7 +310,6 @@ class DeltaGenerator(object):
             if elementHeight is not None:
                 msg.metadata.element_dimension_spec.height = elementHeight
 
-
         # "Null" delta generators (those without queues), don't send anything.
         if self._enqueue is None:
             return value_or_dg(rv, self)
@@ -309,7 +322,7 @@ class DeltaGenerator(object):
                 delta_type=delta_type,
                 last_index=last_index,
                 container=self._container,
-                is_root=False
+                is_root=False,
             )
         else:
             self._delta_type = delta_type
@@ -759,9 +772,9 @@ class DeltaGenerator(object):
         def set_data_frame(delta):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
-        return self._enqueue_new_element_delta(set_data_frame, 'dataframe',
-                                               elementWidth=width,
-                                               elementHeight=height)
+        return self._enqueue_new_element_delta(
+            set_data_frame, "dataframe", elementWidth=width, elementHeight=height
+        )
 
     @_with_element
     def line_chart(self, element, data=None, width=0, height=0):
@@ -794,7 +807,8 @@ class DeltaGenerator(object):
         """
 
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('line', data)
+
+        chart = altair.generate_chart("line", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -826,7 +840,8 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('area', data)
+
+        chart = altair.generate_chart("area", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -858,7 +873,8 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
-        chart = altair.generate_chart('bar', data)
+
+        chart = altair.generate_chart("bar", data)
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
@@ -1336,8 +1352,8 @@ class DeltaGenerator(object):
         generic_binary_proto.marshall(element.video, data)
         element.video.format = format
 
-    @_widget
-    def button(self, element, ui_value, label):
+    @_with_element
+    def button(self, element, label):
         """Display a button widget.
 
         Parameters
@@ -1358,13 +1374,15 @@ class DeltaGenerator(object):
         ...     st.write('Goodbye')
 
         """
-        current_value = ui_value if ui_value is not None else False
         element.button.label = label
-        element.button.value = False
+        element.button.default = False
+
+        ui_value = _get_widget_ui_value("button", element)
+        current_value = ui_value if ui_value is not None else False
         return current_value
 
-    @_widget
-    def checkbox(self, element, ui_value, label, value=False):
+    @_with_element
+    def checkbox(self, element, label, value=False):
         """Display a checkbox widget.
 
         Parameters
@@ -1388,14 +1406,15 @@ class DeltaGenerator(object):
         ...     st.write('Great!')
 
         """
-        current_value = ui_value if ui_value is not None else value
-        current_value = bool(current_value)
         element.checkbox.label = label
-        element.checkbox.value = current_value
-        return current_value
+        element.checkbox.default = bool(value)
 
-    @_widget
-    def multiselect(self, element, ui_value, label, options, format_func=str):
+        ui_value = _get_widget_ui_value("checkbox", element)
+        current_value = ui_value if ui_value is not None else value
+        return bool(current_value)
+
+    @_with_element
+    def multiselect(self, element, label, options, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1424,16 +1443,19 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', options)
 
         """
-
-        current_value = ui_value.value if ui_value is not None else []
-
         element.multiselect.label = label
-        element.multiselect.default[:] = current_value
-        element.multiselect.options[:] = [str(format_func(opt)) for opt in options]
+        # TODO: Issue #158
+        # element.multiselect.default[:] = value
+        element.multiselect.options[:] = [
+            str(format_func(option)) for option in options
+        ]
+
+        ui_value = _get_widget_ui_value("multiselect", element)
+        current_value = ui_value.value if ui_value is not None else []
         return [options[i] for i in current_value]
 
-    @_widget
-    def radio(self, element, ui_value, label, options, index=0, format_func=str):
+    @_with_element
+    def radio(self, element, label, options, index=0, format_func=str):
         """Display a radio button widget.
 
         Parameters
@@ -1469,18 +1491,19 @@ class DeltaGenerator(object):
         if not isinstance(index, int):
             raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
 
-        if len(options) and not 0 <= index < len(options):
+        if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError("Radio index must be between 0 and length of options")
 
-        current_value = ui_value if ui_value is not None else index
-
         element.radio.label = label
-        element.radio.value = current_value
-        element.radio.options[:] = [str(format_func(opt)) for opt in options]
-        return options[current_value] if len(options) else NoValue
+        element.radio.default = index
+        element.radio.options[:] = [str(format_func(option)) for option in options]
 
-    @_widget
-    def selectbox(self, element, ui_value, label, options, index=0, format_func=str):
+        ui_value = _get_widget_ui_value("radio", element)
+        current_value = ui_value if ui_value is not None else index
+        return options[current_value] if len(options) > 0 else NoValue
+
+    @_with_element
+    def selectbox(self, element, label, options, index=0, format_func=str):
         """Display a select widget.
 
         Parameters
@@ -1515,21 +1538,21 @@ class DeltaGenerator(object):
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(options) and not 0 <= index < len(options):
+        if len(options) > 0 and not 0 <= index < len(options):
             raise ValueError("Selectbox index must be between 0 and length of options")
 
-        current_value = ui_value if ui_value is not None else index
-
         element.selectbox.label = label
-        element.selectbox.value = current_value
-        element.selectbox.options[:] = [str(format_func(opt)) for opt in options]
-        return options[current_value] if len(options) else NoValue
+        element.selectbox.default = index
+        element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
-    @_widget
+        ui_value = _get_widget_ui_value("selectbox", element)
+        current_value = ui_value if ui_value is not None else index
+        return options[current_value] if len(options) > 0 else NoValue
+
+    @_with_element
     def slider(
         self,
         element,
-        ui_value,
         label,
         min_value=None,
         max_value=None,
@@ -1659,19 +1682,6 @@ class DeltaGenerator(object):
             if not min_value <= start <= end <= max_value:
                 raise ValueError("The value and/or arguments are out of range.")
 
-        # Convert the current value to the appropriate type.
-        current_value = ui_value if ui_value is not None else value
-        # Cast ui_value to the same type as the input arguments
-        if ui_value is not None:
-            current_value = getattr(ui_value, "value")
-            # Convert float array into int array if the rest of the arguments
-            # are ints
-            if all_ints:
-                current_value = list(map(int, current_value))
-            # If there is only one value in the array destructure it into a
-            # single variable
-            current_value = current_value[0] if single_value else current_value
-
         # Set format default.
         if format is None:
             if all_ints:
@@ -1684,16 +1694,29 @@ class DeltaGenerator(object):
         # and/or use some heuristics for floats.
 
         element.slider.label = label
-        element.slider.value[:] = [current_value] if single_value else current_value
+        element.slider.default[:] = [value] if single_value else value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
         element.slider.format = format
 
+        ui_value = _get_widget_ui_value("slider", element)
+        # Convert the current value to the appropriate type.
+        current_value = ui_value if ui_value is not None else value
+        # Cast ui_value to the same type as the input arguments
+        if ui_value is not None:
+            current_value = getattr(ui_value, "value")
+            # Convert float array into int array if the rest of the arguments
+            # are ints
+            if all_ints:
+                current_value = list(map(int, current_value))
+            # If there is only one value in the array destructure it into a
+            # single variable
+            current_value = current_value[0] if single_value else current_value
         return current_value if single_value else tuple(current_value)
 
-    @_widget
-    def text_input(self, element, ui_value, label, value=""):
+    @_with_element
+    def text_input(self, element, label, value=""):
         """Display a single-line text input widget.
 
         Parameters
@@ -1715,14 +1738,15 @@ class DeltaGenerator(object):
         >>> st.write('The current movie title is', title)
 
         """
-        current_value = ui_value if ui_value is not None else value
-        current_value = str(current_value)
         element.text_input.label = label
-        element.text_input.value = current_value
-        return current_value
+        element.text_input.default = str(value)
 
-    @_widget
-    def text_area(self, element, ui_value, label, value=""):
+        ui_value = _get_widget_ui_value("text_input", element)
+        current_value = ui_value if ui_value is not None else value
+        return str(current_value)
+
+    @_with_element
+    def text_area(self, element, label, value=""):
         """Display a multi-line text input widget.
 
         Parameters
@@ -1750,14 +1774,15 @@ class DeltaGenerator(object):
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
-        current_value = ui_value if ui_value is not None else value
-        current_value = str(current_value)
         element.text_area.label = label
-        element.text_area.value = current_value
-        return current_value
+        element.text_area.default = str(value)
 
-    @_widget
-    def time_input(self, element, ui_value, label, value=None):
+        ui_value = _get_widget_ui_value("text_area", element)
+        current_value = ui_value if ui_value is not None else value
+        return str(current_value)
+
+    @_with_element
+    def time_input(self, element, label, value=None):
         """Display a time input widget.
 
         Parameters
@@ -1791,17 +1816,19 @@ class DeltaGenerator(object):
         if isinstance(value, datetime):
             value = value.time()
 
-        if ui_value is None:
-            current_value = value
-        else:
-            current_value = datetime.strptime(ui_value, "%H:%M").time()
-
         element.time_input.label = label
-        element.time_input.value = time.strftime(current_value, "%H:%M")
+        element.time_input.default = time.strftime(value, "%H:%M")
+
+        ui_value = _get_widget_ui_value("time_input", element)
+        current_value = (
+            datetime.strptime(ui_value, "%H:%M").time()
+            if ui_value is not None
+            else value
+        )
         return current_value
 
-    @_widget
-    def date_input(self, element, ui_value, label, value=None):
+    @_with_element
+    def date_input(self, element, label, value=None):
         """Display a date input widget.
 
         Parameters
@@ -1837,13 +1864,15 @@ class DeltaGenerator(object):
         if isinstance(value, datetime):
             value = value.date()
 
-        if ui_value is None:
-            current_value = value
-        else:
-            current_value = datetime.strptime(ui_value, "%Y/%m/%d").date()
-
         element.date_input.label = label
-        element.date_input.value = date.strftime(current_value, "%Y/%m/%d")
+        element.date_input.default = date.strftime(value, "%Y/%m/%d")
+
+        ui_value = _get_widget_ui_value("date_input", element)
+        current_value = (
+            datetime.strptime(ui_value, "%Y/%m/%d").date()
+            if ui_value is not None
+            else value
+        )
         return current_value
 
     @_with_element
@@ -2184,7 +2213,7 @@ class DeltaGenerator(object):
             stop = self._last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            data = pd.melt(data.reset_index(), id_vars=['index'])
+            data = pd.melt(data.reset_index(), id_vars=["index"])
 
             self._last_index = stop
 
