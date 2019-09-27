@@ -423,7 +423,6 @@ class TestScriptRunner(ScriptRunner):
 
     def get_widget_id(self, widget_type, label):
         """Returns the id of the widget with the specified type and label"""
-        print("kantuni", self.deltas())
         for delta in self.deltas():
             new_element = getattr(delta, "new_element", None)
             widget = getattr(new_element, widget_type, None)
