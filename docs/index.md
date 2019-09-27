@@ -9,6 +9,7 @@
    tutorial/index
 
    core_mechanics
+   advanced_concepts
 
    api
    cli
