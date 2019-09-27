@@ -276,13 +276,6 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
-        # Update Report.argv
-        if rerun_data.argv is not None:
-            argv = rerun_data.argv
-            self._report.argv = rerun_data.argv
-        else:
-            argv = self._report.argv
-
         # Update the Widget singleton with the new widget_state
         if rerun_data.widget_state is not None:
             self._widgets.set_state(rerun_data.widget_state)
@@ -305,14 +298,6 @@ class ScriptRunner(object):
             # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
             # our code, as it will point to the wrong module!!!
             sys.modules["__main__"] = module
-
-            # Make it look like command-line args were set to whatever the user
-            # asked them to be via the GUI.
-            # IMPORTANT: This means we can't count on sys.argv in our code ---
-            # but we already knew it from the argv surgery in cli.py.
-            # TODO: Remove this feature when we implement interactivity!
-            # This is not robust in a multi-user environment.
-            sys.argv = argv
 
             # Add special variables to the module's globals dict.
             module.__dict__["__file__"] = self._report.script_path

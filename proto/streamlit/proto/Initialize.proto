@@ -28,6 +28,9 @@ message Initialize {
 
   // The session state at the time the connection was established
   SessionState session_state = 4;
+
+  // the actual command line as a string
+  string command_line = 5;
 }
 
 message Config {
