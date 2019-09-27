@@ -24,3 +24,6 @@ st.write("value 2:", i2)
 
 i3 = st.multiselect("selectbox 3", [])
 st.write("value 3:", i3)
+
+i4 = st.multiselect("selectbox 4", ["coffee", "tea", "water"], [1, 2])
+st.write("value 4:", i4)
