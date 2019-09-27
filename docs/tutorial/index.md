@@ -6,6 +6,6 @@
    :titlesonly:
    :glob:
 
-   create_an_interactive_app
+   create_a_data_explorer_app
    run_streamlit_remotely
 ```

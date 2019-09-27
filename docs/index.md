@@ -55,7 +55,7 @@ The easiest way to learn how to use Streamlit is to try it out. Use our [get sta
 
 ## Build your first app
 
-[Create an app](tutorial/create_an_interactive_app.md) to explore an Uber dataset for pickups in New York City. You'll learn about caching, drawing charts, plotting data on a map, and how to use interactive widgets.
+[Create an app](tutorial/create_a_data_explorer_app.md) to explore an Uber dataset for pickups in New York City. You'll learn about caching, drawing charts, plotting data on a map, and how to use interactive widgets.
 
 ## Join the community
 

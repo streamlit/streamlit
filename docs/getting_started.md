@@ -73,7 +73,7 @@ Streamlit.
 ### Add a title
 
 Streamlit has a number of ways to add text to your app. Check out our
-[API reference](api.md) for a complete list. 
+[API reference](api.md) for a complete list.
 
 Let's add a title to test things out:
 
@@ -106,7 +106,7 @@ and styling to your data frames.
 
 ```eval_rst
 .. tip::
-   For this guide we're using small amounts of data so that we can move quickly. You can check out our `Tutorial on creating a data explorer <tutorial/create_an_interactive_app.html>`_ to see an example of how to load data from an API and use `@st.cache <api.html#streamlit.cache>`_ to cache it.
+   For this guide we're using small amounts of data so that we can move quickly. You can check out our `Tutorial on creating a data explorer <tutorial/create_a_data_explorer_app.html>`_ to see an example of how to load data from an API and use `@st.cache <api.html#streamlit.cache>`_ to cache it.
 ```
 
 ## Use magic
