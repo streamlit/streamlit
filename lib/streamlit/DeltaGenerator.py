@@ -1447,22 +1447,19 @@ class DeltaGenerator(object):
 
         """
         # Perform validation checks and return indices base on the default values.
-        # Returns None if default_values is None
         def _check_and_convert_to_indices(default_values):
-            if default_values is not None:
-                for value in default_values:
-                    if not isinstance(value, str):
-                        raise TypeError(
-                            "A Multiselect default value has invalid type: %s" % type(
-                                value).__name__
-                        )
-                    if value not in options:
-                        raise ValueError(
-                            "Every Multiselect default value must exist in options")
-                return [options.index(value) for value in default]
-            return None
+            for value in default_values:
+                if not isinstance(value, string_types):  # noqa: F821
+                    raise TypeError(
+                        "A Multiselect default value has invalid type: %s" % type(
+                            value).__name__
+                    )
+                if value not in options:
+                    raise ValueError(
+                        "Every Multiselect default value must exist in options")
+            return [options.index(value) for value in default]
 
-        indices = _check_and_convert_to_indices(default)
+        indices = _check_and_convert_to_indices(default) if default is not None else None
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
