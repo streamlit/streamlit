@@ -174,6 +174,18 @@ class NoValue(object):
     pass
 
 
+# Check if index is of the correct type and within bounds of options.
+def _check_index(index, options):
+    if not isinstance(index, int):
+        raise TypeError(
+            "Selectbox Value has invalid type: %s" % type(index).__name__
+        )
+
+    if len(options) > 0 and not 0 <= index < len(options):
+        raise ValueError(
+            "Selectbox index must be between 0 and length of options")
+
+
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages."""
 
@@ -1414,7 +1426,7 @@ class DeltaGenerator(object):
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, format_func=str):
+    def multiselect(self, element, label, options, indices=None, format_func=str):  # !!
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1425,6 +1437,8 @@ class DeltaGenerator(object):
         options : list, tuple, numpy.ndarray, or pandas.Series
             Labels for the select options. This will be cast to str internally
             by default.
+        indices: [int] or None
+            <...>
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
@@ -1443,15 +1457,19 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', options)
 
         """
+
+        if indices is not None:
+            [_check_index(i, options) for i in indices]
+
         element.multiselect.label = label
-        # TODO: Issue #158
-        # element.multiselect.default[:] = value
+        default_value = [] if indices is None else indices
+        element.multiselect.default[:] = default_value
         element.multiselect.options[:] = [
             str(format_func(option)) for option in options
         ]
 
         ui_value = _get_widget_ui_value("multiselect", element)
-        current_value = ui_value.value if ui_value is not None else []
+        current_value = ui_value.value if ui_value is not None else default_value
         return [options[i] for i in current_value]
 
     @_with_element
@@ -1533,14 +1551,7 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', option)
 
         """
-        if not isinstance(index, int):
-            raise TypeError(
-                "Selectbox Value has invalid type: %s" % type(index).__name__
-            )
-
-        if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Selectbox index must be between 0 and length of options")
-
+        _check_index(index, options)
         element.selectbox.label = label
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
