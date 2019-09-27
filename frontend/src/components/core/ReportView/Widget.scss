@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import '../../../assets/css/variables';
-
+@import "../../../assets/css/variables";
 
 .Widget > label {
   font-size: $font-size-sm;
@@ -32,4 +31,15 @@
   margin: 0;
   bottom: 0;
   right: $m1-2-font-size-sm;
+}
+
+.Widget {
+  & .h1,
+  & .h2,
+  & .h3,
+  & .h4,
+  & .h5,
+  & .h6 {
+    margin-bottom: 0;
+  }
 }
