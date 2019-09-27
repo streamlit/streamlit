@@ -472,6 +472,8 @@ def spinner(text="In progress..."):
     >>> st.success('Done!')
 
     """
+    import streamlit.caching as caching
+
     display_message_lock = None
 
     # @st.cache optionally uses spinner for long-running computations.
@@ -480,7 +482,7 @@ def spinner(text="In progress..."):
     # these warnings for spinner's message, so we create and mutate this
     # message delta within the "suppress_cached_st_function_warning"
     # context.
-    with caching._suppress_cached_st_function_warning():
+    with caching.suppress_cached_st_function_warning():
         message = empty()
 
     try:
@@ -493,7 +495,7 @@ def spinner(text="In progress..."):
         def set_message():
             with display_message_lock:
                 if display_message:
-                    with caching._suppress_cached_st_function_warning():
+                    with caching.suppress_cached_st_function_warning():
                         message.warning(str(text))
 
         add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
@@ -504,7 +506,7 @@ def spinner(text="In progress..."):
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        with caching._suppress_cached_st_function_warning():
+        with caching.suppress_cached_st_function_warning():
             message.empty()
 
 

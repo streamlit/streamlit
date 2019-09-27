@@ -93,10 +93,7 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _within_cached_function():
-    """A context manager that increments the "within_cached_func" counter
-    for the current thread.
-    """
+def _calling_cached_function():
     _cache_info.within_cached_func += 1
     try:
         yield
@@ -105,21 +102,19 @@ def _within_cached_function():
 
 
 @contextlib.contextmanager
-def _suppress_cached_st_function_warning():
-    """A context manager that increments the "suppress_st_function_warning"
-    counter for the current thread.
-    """
+def suppress_cached_st_function_warning():
     _cache_info.suppress_st_function_warning += 1
     try:
         yield
     finally:
         _cache_info.suppress_st_function_warning -= 1
+        assert _cache_info.suppress_st_function_warning >= 0
 
 
 def _show_cached_st_function_warning(dg):
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
-    with _suppress_cached_st_function_warning():
+    with suppress_cached_st_function_warning():
         dg.warning(CACHED_ST_FUNCTION_WARNING)
 
 
@@ -386,7 +381,7 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
 
 
 def cache(
-    func=None,
+    user_func=None,
     persist=False,
     ignore_hash=False,
     show_spinner=True,
@@ -396,7 +391,7 @@ def cache(
 
     Parameters
     ----------
-    func : callable
+    user_func : callable
         The function to cache. Streamlit hashes the function and dependent code.
         Streamlit can only hash nested objects (e.g. `bar` in `foo.bar`) in
         Python 3.4+.
@@ -413,7 +408,7 @@ def cache(
         a cache miss.
 
     suppress_st_warning : boolean
-        Suppress warnings about calling streamlit functions from within
+        Suppress warnings about calling Streamlit functions from within
         the cached function.
 
     Example
@@ -451,43 +446,43 @@ def cache(
     """
     # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, ignore_hash=True)
-    if func is None:
+    if user_func is None:
         return lambda f: cache(
-            func=f,
+            user_func=f,
             persist=persist,
             ignore_hash=ignore_hash,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
         )
 
-    @wraps(func)
-    def wrapped_func(*argc, **argv):
+    @wraps(user_func)
+    def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
         directory."""
 
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
-            return func(*argc, **argv)
+            return user_func(*args, **kwargs)
 
-        name = func.__name__
+        name = user_func.__name__
 
-        if len(argc) == 0 and len(argv) == 0:
+        if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
         else:
             message = "Running %s(...)." % name
 
-        def function():
+        def get_or_set_cache():
             hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher)
-            args_hasher.update([argc, argv])
+            args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
             args_digest_before = args_hasher.digest()
 
             code_hasher = CodeHasher("md5", hasher)
-            code_hasher.update(func)
+            code_hasher.update(user_func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
             key = hasher.hexdigest()
@@ -496,18 +491,18 @@ def cache(
             caller_frame = inspect.currentframe().f_back
             try:
                 return_value, args_mutated = _read_from_cache(
-                    key, persist, ignore_hash, func, caller_frame
+                    key, persist, ignore_hash, user_func, caller_frame
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
-                with _within_cached_function():
+                with _calling_cached_function():
                     if suppress_st_warning:
-                        with _suppress_cached_st_function_warning():
-                            return_value = func(*argc, **argv)
+                        with suppress_cached_st_function_warning():
+                            return_value = user_func(*args, **kwargs)
                     else:
-                        return_value = func(*argc, **argv)
+                        return_value = user_func(*args, **kwargs)
 
                 args_hasher_after = CodeHasher("md5")
-                args_hasher_after.update([argc, argv])
+                args_hasher_after.update([args, kwargs])
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
                 _write_to_cache(key, return_value, persist, ignore_hash, args_mutated)
@@ -516,20 +511,20 @@ def cache(
                 # If we're inside a _nested_ cached function, our
                 # _within_cached_function_counter will be non-zero.
                 # Suppress the warning about this.
-                with _suppress_cached_st_function_warning():
-                    st.warning(_build_args_mutated_message(func))
+                with suppress_cached_st_function_warning():
+                    st.warning(_build_args_mutated_message(user_func))
             return return_value
 
         if show_spinner:
             with st.spinner(message):
-                return function()
+                return get_or_set_cache()
         else:
-            return function()
+            return get_or_set_cache()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.
     try:
-        wrapped_func.__dict__.update(func.__dict__)
+        wrapped_func.__dict__.update(user_func.__dict__)
     except AttributeError:
         pass
 
