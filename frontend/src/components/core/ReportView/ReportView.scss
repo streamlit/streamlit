@@ -77,9 +77,6 @@
     }
   }
 
-  // XXX Make info, warning, code, etc, look good.
-  // XXX use material icons. Vertical split is great for sidebar.
-
   &.--with-sidebar {
     .main {
       @media (max-width: 746px) {

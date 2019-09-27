@@ -1,17 +1,17 @@
-@import "src/assets/css/variables";
+@import "src/assets/css/theme";
 
 .sidebar {
   &.--collapsed {
     .sidebar-content {
       margin-left: -$sidebar-width;
 
-      @media (max-width: 746px) {
+      @include media-breakpoint-down(md) {
         box-shadow: 0 0 2rem transparent;
       }
     }
 
     .sidebar-collapse-control {
-      left: 0;
+      left: 0.5rem;
     }
   }
 
@@ -30,7 +30,7 @@
     width: $sidebar-width;
     z-index: $z-index-sidebar;
 
-    @media (max-width: 746px) {
+    @include media-breakpoint-down(md) {
       box-shadow: 0 0 2rem #a3a8b488;
       background-color: $gray-100;
       background-image: none;
@@ -38,20 +38,21 @@
 
     .sidebar-close {
       position: absolute;
-      top: 1rem;
-      right: 1rem;
-      height: 1rem;
-      width: 1rem;
+      top: 0.5rem;
+      right: 0.5rem;
       z-index: 1;
-      cursor: pointer;
 
       svg {
         fill: $black;
         opacity: 0.25;
       }
 
-      &:hover svg {
-        opacity: 1;
+      &:hover {
+        background: transparent;
+
+        svg {
+          opacity: 1;
+        }
       }
     }
 
@@ -84,35 +85,31 @@
   }
 
   .sidebar-collapse-control {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: fixed;
-    top: 10px;
-    left: -40px;
-    cursor: pointer;
+    top: 0.5rem;
+    left: -0.5rem;
     z-index: $z-index-sidebar - 1;
-
-    color: $black;
-    border-radius: 35px;
-    width: 35px;
-    height: 35px;
 
     transition: left $normal-animation-duration;
     transition-delay: $normal-animation-duration;
 
-    padding: 0.25rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-
     svg {
       fill: $black;
+      opacity: 0.25;
+
+      @include media-breakpoint-down(md) {
+        opacity: 1;
+      }
     }
 
     &:hover {
       color: #fff;
       background-color: $gray-lightest;
       border-color: #1d2124;
+
+      svg {
+        opacity: 1;
+      }
     }
   }
 

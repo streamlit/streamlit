@@ -17,8 +17,8 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import classNames from "classnames"
-
-import Icon from "../Icon"
+import Icon from "components/core/Icon"
+import { Button } from "reactstrap"
 
 import "./Sidebar.scss"
 
@@ -31,7 +31,9 @@ interface State {
   collapsedSidebar: boolean
 }
 
-const MOBILE_BREAKPOINT = 746
+// Bootstrap medium breakpoint. See
+// https://getbootstrap.com/docs/4.3/layout/overview/.
+const MEDIUM_BREAKPOINT_PX = 767.98
 
 class Sidebar extends PureComponent<Props, State> {
   public static defaultProps: Partial<Props> = {
@@ -44,7 +46,9 @@ class Sidebar extends PureComponent<Props, State> {
     const { innerWidth } = window || {}
 
     this.state = {
-      collapsedSidebar: innerWidth ? innerWidth <= MOBILE_BREAKPOINT : false,
+      collapsedSidebar: innerWidth
+        ? innerWidth <= MEDIUM_BREAKPOINT_PX
+        : false,
     }
   }
 
@@ -61,7 +65,7 @@ class Sidebar extends PureComponent<Props, State> {
 
     const { innerWidth } = window
 
-    if (innerWidth <= MOBILE_BREAKPOINT)
+    if (innerWidth <= MEDIUM_BREAKPOINT_PX)
       this.setState({ collapsedSidebar: true })
   }
 
@@ -87,18 +91,23 @@ class Sidebar extends PureComponent<Props, State> {
     return (
       <section className={sectionClassName}>
         <div className="sidebar-content">
-          <span onClick={this.toggleCollapse} className="sidebar-close">
+          <Button
+            outline
+            onClick={this.toggleCollapse}
+            className="sidebar-close"
+          >
             <Icon type="x" />
-          </span>
+          </Button>
 
           {children}
         </div>
-        <span
-          className="sidebar-collapse-control"
+        <Button
+          outline
           onClick={this.toggleCollapse}
+          className="sidebar-collapse-control"
         >
-          <Icon type="account-login" />
-        </span>
+          <Icon type="chevron-right" />
+        </Button>
       </section>
     )
   }
