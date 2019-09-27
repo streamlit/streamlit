@@ -16,9 +16,9 @@
  */
 
 import React from "react"
+import moment from "moment"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { Map as ImmutableMap } from "immutable"
-import moment from "moment"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { datePickerOverrides } from "lib/widgetTheme"
 
@@ -32,46 +32,43 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: string
+  value: string
 }
 
 class DateInput extends React.PureComponent<Props, State> {
-  public state: State = {}
-
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): Date {
-    if (this.state.value === undefined) {
-      return stringToDate(this.props.element.get("value") as string)
-    } else {
-      return stringToDate(this.state.value)
-    }
+  public state: State = {
+    value: this.props.element.get("default"),
   }
 
-  private handleChange = (e: any): void => {
-    const widgetId = this.props.element.get("id")
-
-    this.setState({ value: e.date })
-    this.props.widgetMgr.setStringValue(widgetId, dateToString(e.date))
+  public componentDidMount(): void {
+    this.setWidgetValue()
   }
 
-  public render(): React.ReactNode {
-    const label = this.props.element.get("label")
+  private setWidgetValue = (): void => {
+    const widgetId: string = this.props.element.get("id")
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+  }
+
+  private handleChange = ({ date }: { date: Date | Date[] }): void => {
+    const value = dateToString(date as Date)
+    this.setState({ value }, this.setWidgetValue)
+  }
+
+  public render = (): React.ReactNode => {
     const style = { width: this.props.width }
+    const label = this.props.element.get("label")
 
     return (
       <div className="Widget stDateInput" style={style}>
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          value={this.valueOrDefault}
-          onChange={this.handleChange}
           disabled={this.props.disabled}
+          onChange={this.handleChange}
           overrides={datePickerOverrides}
+          value={stringToDate(this.state.value)}
         />
       </div>
     )

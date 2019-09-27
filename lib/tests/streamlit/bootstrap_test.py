@@ -50,7 +50,7 @@ class BootstrapTest(unittest.TestCase):
             matplotlib.use("tkagg")
 
             config._set_option("runner.fixMatplotlib", True, "test")
-            bootstrap.run("/not/a/script")
+            bootstrap.run("/not/a/script", "", [])
             if do_fix:
                 self.assertEqual("agg", matplotlib.get_backend().lower())
             else:
@@ -60,7 +60,7 @@ class BootstrapTest(unittest.TestCase):
             matplotlib.use("tkagg")
 
             config._set_option("runner.fixMatplotlib", False, "test")
-            bootstrap.run("/not/a/script")
+            bootstrap.run("/not/a/script", "", [])
             self.assertEqual("tkagg", matplotlib.get_backend().lower())
 
         sys.platform = ORIG_PLATFORM
