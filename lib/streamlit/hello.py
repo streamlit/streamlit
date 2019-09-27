@@ -64,82 +64,65 @@ def demo_random_numbers():
     st.button("Re-run")
 
 
-def demo_bart_vs_bikes():
+def map_demo():
     """
-    This demo shows how Streamlit can be used to display geospatial data. Use
-    the select box below to choose which layers about San Francisco Bart and
-    bikes traffic you want to see. You can then navigate the map and discover
-    other layers.
+    This demo shows how to use
+    [`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
+    to display geospatial data.
     """
     import pandas as pd
-    import copy
+    import copy, os
     from collections import OrderedDict
 
     @st.cache
     def from_data_file(filename):
         GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        url = GITHUB_DATA + "/data/" + filename
-        return pd.read_json(url)
+        return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
 
-    bart_stop_stats = copy.deepcopy(from_data_file("bart_stop_stats.json"))
-    bart_path_stats = from_data_file("bart_path_stats.json")
-    bike_rental_stats = from_data_file("bike_rental_stats.json")
-    bart_stop_names = bart_stop_stats["name"]
-    bart_stop_stats.drop(labels=["name"], axis=1, inplace=True)
-    bart_stop_stats.insert(0, "name", bart_stop_names)
-
-    layers_def = OrderedDict(
-        {
-            "Bike Rentals": {
-                "type": "HexagonLayer",
-                "data": bike_rental_stats,
-                "radius": 200,
-                "elevationScale": 4,
-                "elevationRange": [0, 1000],
-                "pickable": True,
-                "extruded": True,
-            },
-            "Bart Stop Exits": {
-                "type": "ScatterplotLayer",
-                "data": bart_stop_stats,
-                "radiusScale": 0.05,
-                "getRadius": "exits",
-            },
-            "Bart Stop Names": {
-                "type": "TextLayer",
-                "data": bart_stop_stats,
-                "getText": "name",
-                "getColor": [0, 0, 0, 200],
-                "getSize": 15,
-            },
-            "Bart Stop Outbound Flow": {
-                "type": "ArcLayer",
-                "data": bart_path_stats,
-                "pickable": True,
-                "autoHighlight": True,
-                "getStrokeWidth": 10,
-                "widthScale": 0.0001,
-                "getWidth": "outbound",
-                "widthMinPixels": 3,
-                "widthMaxPixels": 30,
-            },
+    layers_def = {
+        "Bike Rentals": {
+            "type": "HexagonLayer",
+            "data": from_data_file("bike_rental_stats.json"),
+            "radius": 200,
+            "elevationScale": 4,
+            "elevationRange": [0, 1000],
+            "pickable": True,
+            "extruded": True,
+        },
+        "Bart Stop Exits": {
+            "type": "ScatterplotLayer",
+            "data": from_data_file("bart_stop_stats.json"),
+            "radiusScale": 0.05,
+            "getRadius": "exits",
+        },
+        "Bart Stop Names": {
+            "type": "TextLayer",
+            "data": from_data_file("bart_stop_stats.json"),
+            "getText": "name",
+            "getColor": [0, 0, 0, 200],
+            "getSize": 15,
+        },
+        "Outbound Flow": {
+            "type": "ArcLayer",
+            "data": from_data_file("bart_path_stats.json"),
+            "pickable": True,
+            "autoHighlight": True,
+            "getStrokeWidth": 10,
+            "widthScale": 0.0001,
+            "getWidth": "outbound",
+            "widthMinPixels": 3,
+            "widthMaxPixels": 30,
         }
-    )
-    layers = st.multiselect("Select layers", list(layers_def.keys()))
-    if len(layers) == 0:
-        st.error(
-            (
-                "Please choose at least a layer in the select box."
-                " For example, choose Bike Rentals and Bart Stop Outbound"
-                " Flow"
-            )
-        )
-        return
-    st.deck_gl_chart(
-        viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
-        layers=[layers_def[k] for k in layers],
-    )
+    }
 
+    st.sidebar.markdown('## Map Layers')
+    layers = [layer_name for layer_name in layers_def
+        if st.sidebar.checkbox(layer_name, True)]# st.multiselect("Select layers", list(layers_def.keys()))
+    if layers:
+        viewport={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50}
+        st.deck_gl_chart(viewport=viewport, layers=[layers_def[k] for k in layers])
+    else:
+        st.error("Please choose at least one layer above.")
 
 def demo_fractals():
     """
@@ -340,7 +323,7 @@ def demo_agri():
 DEMOS = OrderedDict(
     {
         "---": intro,
-        "Geodata": demo_bart_vs_bikes,
+        "Map": map_demo,
         "Animation": demo_fractals,
         "Dataframe": demo_agri,
         "Plotting": demo_random_numbers,
