@@ -24,27 +24,28 @@ setup_2_3_shims(globals())
 import streamlit as st
 from streamlit import config
 
-from keras.datasets import mnist
-from keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
-from keras.models import Sequential
-from keras.optimizers import SGD
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
 from keras.utils import np_utils
-import keras
+from tensorflow import keras
 import math
 import numpy as np
 import pandas as pd
 import time
 
-# https://kobkrit.com/using-allow-growth-memory-option-in-tensorflow-and-keras-dc8c8081bc96
-from keras.backend.tensorflow_backend import set_session
+# TODO add updated tensorflow to pipfile.lock
 import tensorflow as tf
 
-tf_config = tf.ConfigProto()
 # dynamically grow the memory used on the GPU
 # this option is fine on non gpus as well.
+tf_config = tf.compat.v1.ConfigProto()
 tf_config.gpu_options.allow_growth = True
 tf_config.log_device_placement = True
-set_session(tf.Session(config=tf_config))
+
+# https://kobkrit.com/using-allow-growth-memory-option-in-tensorflow-and-keras-dc8c8081bc96
+tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=tf_config))
 
 
 class MyCallback(keras.callbacks.Callback):
