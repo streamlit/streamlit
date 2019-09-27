@@ -35,6 +35,11 @@ E2E_DIR = "e2e/scripts"
 
 EXCLUDED_FILENAMES = set()
 
+# Since there is not DISPLAY set (and since Streamlit is not actually running
+# and fixing Matplotlib in these tests), we set the MPL backend to something
+# that doesn't require a display.
+os.environ['MPLBACKEND'] = 'Agg'
+
 # Scripts that rely on matplotlib can't be run in Python2. matplotlib
 # dropped Py2 support, and so we don't install it in our virtualenv.
 try:

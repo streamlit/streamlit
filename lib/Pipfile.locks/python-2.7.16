@@ -774,7 +774,6 @@
                 "sha256:f99c43df8ed2b9d1c95a042f3cacf017f9690092feba0b4292eaa6713f92de97"
             ],
             "index": "pypi",
-            "markers": "python_version > '3.0'",
             "version": "==2.2.4"
         },
         "mock": {
