@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactElement } from "react"
 import { Alert } from "reactstrap"
 
 export interface Props {
   name: string
-  message: string
+  message: string | ReactElement
   stack?: string
   width?: number
 }
@@ -31,7 +31,7 @@ export interface Props {
  * in a Streamlit report. For that, see st.exception / Exception.tsx or
  * st.error / Text.tsx.
  */
-class ErrorElement extends React.PureComponent<Props> {
+class ErrorElement extends PureComponent<Props> {
   public render(): React.ReactNode {
     const { name, message, stack } = this.props
 
@@ -43,7 +43,8 @@ class ErrorElement extends React.PureComponent<Props> {
 
     return (
       <Alert color="danger" style={{ width: this.props.width }}>
-        <strong>{name}:</strong> {message}
+        <strong>{name}: </strong>
+        {message}
         {stack ? (
           <pre className="error">
             <code>{cleanedStack}</code>
