@@ -14,17 +14,23 @@
 # limitations under the License.
 
 """st.caching unit tests."""
-
-import inspect
+import threading
 import unittest
 
 from mock import patch
 
 import streamlit as st
+from streamlit import caching
 from streamlit.caching import _build_args_mutated_message
 
 
 class CacheTest(unittest.TestCase):
+    def tearDown(self):
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        st.caching._cache_info.within_cached_func = 0
+        st.caching._cache_info.suppress_st_function_warning = 0
+
     def test_simple(self):
         @st.cache
         def foo():
@@ -84,6 +90,108 @@ class CacheTest(unittest.TestCase):
         f([1, 2])
 
         warning.assert_called_with(_build_args_mutated_message(f))
+
+    @patch("streamlit.caching._show_cached_st_function_warning")
+    def test_cached_st_function_warning(self, warning):
+        st.text("foo")
+        warning.assert_not_called()
+
+        @st.cache
+        def cached_func():
+            st.text("Inside cached func")
+
+        cached_func()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test warning suppression
+        @st.cache(suppress_st_warning=True)
+        def suppressed_cached_func():
+            st.text("No warnings here!")
+
+        suppressed_cached_func()
+
+        warning.assert_not_called()
+
+        # Test nested st.cache functions
+        @st.cache
+        def outer():
+            @st.cache
+            def inner():
+                st.text("Inside nested cached func")
+
+            return inner()
+
+        outer()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Test st.cache functions that raise errors
+        with self.assertRaises(RuntimeError):
+
+            @st.cache
+            def cached_raise_error():
+                st.text("About to throw")
+                raise RuntimeError("avast!")
+
+            cached_raise_error()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test st.cache functions with widgets
+        @st.cache
+        def cached_widget():
+            st.button("Press me!")
+
+        cached_widget()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+    def test_caching_counter(self):
+        """Test that _within_cached_function_counter behaves properly in
+        multiple threads."""
+
+        def get_counter():
+            return caching._cache_info.within_cached_func
+
+        def set_counter(val):
+            caching._cache_info.within_cached_func = val
+
+        self.assertEqual(0, get_counter())
+        set_counter(1)
+        self.assertEqual(1, get_counter())
+
+        values_in_thread = []
+
+        def thread_test():
+            values_in_thread.append(get_counter())
+            set_counter(55)
+            values_in_thread.append(get_counter())
+
+        thread = threading.Thread(target=thread_test)
+        thread.start()
+        thread.join()
+
+        self.assertEqual([0, 55], values_in_thread)
+
+        # The other thread should not have modified the main thread
+        self.assertEqual(1, get_counter())
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__

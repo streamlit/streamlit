@@ -27,8 +27,8 @@ message BackMsg {
     // Set to true to ask the server to upload the report.
     bool cloud_upload = 2;
 
-    // Asks the server to run the script with this given command line.
-    string rerun_script = 3;
+    // Asks the server to run the script.
+    bool rerun_script = 3;
 
     // DEPRECATED - Asks the server to run the script with this object
     // ReRun rerun = 4;

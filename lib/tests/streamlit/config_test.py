@@ -266,6 +266,8 @@ class ConfigTest(unittest.TestCase):
                 u"global.developmentMode",
                 u"global.disableWatchdogWarning",
                 u"global.logLevel",
+                u"global.maxCachedMessageAge",
+                u"global.minCachedMessageSize",
                 u"global.metrics",
                 u"global.sharingMode",
                 u"global.showWarningOnDirectExecution",

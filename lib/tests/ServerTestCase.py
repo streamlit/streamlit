@@ -18,8 +18,10 @@ import requests
 import tornado.testing
 import tornado.web
 import tornado.websocket
+from tornado import gen
 from tornado.concurrent import Future
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.Server import Server
 
 
@@ -38,7 +40,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # Create a Server, and patch its _on_stopped function
         # to no-op. This prevents it from shutting down the
         # ioloop when it stops.
-        self.server = Server(self.io_loop, "/not/a/script.py", [])
+        self.server = Server(self.io_loop, "/not/a/script.py", "test command line")
         self.server._on_stopped = mock.MagicMock()
         app = self.server._create_app()
         return app
@@ -86,3 +88,11 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
         """
         return tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+
+    @tornado.gen.coroutine
+    def read_forward_msg(self, ws_client):
+        """Parse the next message from a Websocket client into a ForwardMsg."""
+        data = yield ws_client.read_message()
+        message = ForwardMsg()
+        message.ParseFromString(data)
+        raise gen.Return(message)

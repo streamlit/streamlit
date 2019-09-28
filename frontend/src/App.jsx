@@ -34,6 +34,7 @@ import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { applyDelta } from "lib/DeltaParser"
+import { ForwardMsg } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
@@ -81,7 +82,6 @@ class App extends PureComponent {
     this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
     this.onLogInSuccess = this.onLogInSuccess.bind(this)
-    this.openRerunScriptDialog = this.openRerunScriptDialog.bind(this)
     this.rerunScript = this.rerunScript.bind(this)
     this.stopReport = this.stopReport.bind(this)
     this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
@@ -184,7 +184,7 @@ class App extends PureComponent {
         sessionEvent: evtMsg => this.handleSessionEvent(evtMsg),
         newReport: newReportMsg => this.handleNewReport(newReportMsg),
         delta: deltaMsg => this.handleDeltaMsg(deltaMsg, msgProto.metadata),
-        reportFinished: () => this.handleReportFinished(),
+        reportFinished: status => this.handleReportFinished(status),
         uploadReportProgress: progress =>
           this.openDialog({ progress, type: DialogType.UPLOAD_PROGRESS }),
         reportUploaded: url =>
@@ -205,6 +205,8 @@ class App extends PureComponent {
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
       installationId: initializeMsg.userInfo.installationId,
       authorEmail: initializeMsg.userInfo.email,
+      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
+      commandLine: initializeMsg.commandLine,
     })
 
     MetricsManager.current.initialize({
@@ -319,29 +321,34 @@ class App extends PureComponent {
       reportHash: hashString(SessionInfo.current.installationId + scriptPath),
     })
 
-    SessionInfo.current.commandLine = newReportProto.commandLine
-
     this.setState({
       reportId: newReportProto.id,
-      commandLine: newReportProto.commandLine.join(" "),
       reportName: name,
     })
   }
 
   /**
    * Handler for ForwardMsg.reportFinished messages
+   * @param status the ReportFinishedStatus that the report finished with
    */
-  handleReportFinished() {
-    // When a script finishes running, we clear any stale elements left over
-    // from its previous run - unless our script had a fatal error during
-    // execution.
-    if (this.state.reportRunState !== ReportRunState.COMPILATION_ERROR) {
+  handleReportFinished(status) {
+    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
       this.setState(({ elements, reportId }) => ({
         elements: {
           main: this.clearOldElements(elements.main, reportId),
           sidebar: this.clearOldElements(elements.sidebar, reportId),
         },
       }))
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      this.connectionManager.incrementMessageCacheRunCount(
+        SessionInfo.current.maxCachedMessageAge
+      )
     }
   }
 
@@ -465,26 +472,7 @@ class App extends PureComponent {
   }
 
   /**
-   * Opens the dialog to rerun the script.
-   */
-  openRerunScriptDialog() {
-    if (this.isServerConnected()) {
-      this.openDialog({
-        type: DialogType.RERUN_SCRIPT,
-        getCommandLine: () => this.state.commandLine,
-        setCommandLine: commandLine => this.setState({ commandLine }),
-        rerunCallback: this.rerunScript,
-
-        // This will be called if enter is pressed.
-        defaultAction: this.rerunScript,
-      })
-    } else {
-      logError("Cannot rerun script when disconnected from server.")
-    }
-  }
-
-  /**
-   * Reruns the script (given by this.state.commandLine).
+   * Reruns the script.
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
    * will be set to true, which will result in a request to the Server
@@ -521,7 +509,7 @@ class App extends PureComponent {
 
     this.sendBackMsg({
       type: "rerunScript",
-      rerunScript: this.state.commandLine,
+      rerunScript: true,
     })
   }
 

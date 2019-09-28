@@ -23,11 +23,14 @@ beforeEach(() => {
     streamlitVersion: "sv",
     installationId: "iid",
     authorEmail: "ae",
+    pythonVersion: "pv",
+    maxCachedMessageAge: 2,
+    commandLine: "command line",
   })
 })
 
 afterEach(() => {
-  SessionInfo["singleton"] = null
+  SessionInfo["singleton"] = undefined
 })
 
 test("does not track while uninitialized", () => {
