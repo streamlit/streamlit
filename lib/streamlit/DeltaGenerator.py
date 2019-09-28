@@ -1426,7 +1426,7 @@ class DeltaGenerator(object):
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, format_func=str):
+    def multiselect(self, element, label, options, default=None, format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1437,6 +1437,8 @@ class DeltaGenerator(object):
         options : list, tuple, numpy.ndarray, or pandas.Series
             Labels for the select options. This will be cast to str internally
             by default.
+        default: [str] or None
+            List of default values.
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
@@ -1450,20 +1452,35 @@ class DeltaGenerator(object):
         -------
         >>> options = st.multiselect(
         ...     'What are your favorite colors',
+                ('Yellow', 'Red')
         ...     ('Green', 'Yellow', 'Red', 'Blue'))
         >>>
         >>> st.write('You selected:', options)
 
         """
+        # Perform validation checks and return indices base on the default values.
+        def _check_and_convert_to_indices(default_values):
+            for value in default_values:
+                if not isinstance(value, string_types):  # noqa: F821
+                    raise TypeError(
+                        "A Multiselect default value has invalid type: %s" % type(
+                            value).__name__
+                    )
+                if value not in options:
+                    raise ValueError(
+                        "Every Multiselect default value must exist in options")
+            return [options.index(value) for value in default]
+
+        indices = _check_and_convert_to_indices(default) if default is not None else None
         element.multiselect.label = label
-        # TODO: Issue #158
-        # element.multiselect.default[:] = value
+        default_value = [] if indices is None else indices
+        element.multiselect.default[:] = default_value
         element.multiselect.options[:] = [
             str(format_func(option)) for option in options
         ]
 
         ui_value = _get_widget_ui_value("multiselect", element)
-        current_value = ui_value.value if ui_value is not None else []
+        current_value = ui_value.value if ui_value is not None else default_value
         return [options[i] for i in current_value]
 
     @_with_element
