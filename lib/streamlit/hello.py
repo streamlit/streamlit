@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A "Hello World" app."""
+from __future__ import division
 
 import streamlit as st
 import inspect
@@ -106,7 +107,7 @@ def fractal_demo():
     iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
     separation = st.sidebar.slider('Separation', 0.7, 2.0, 0.7885)
 
-    m, n, s = 480, 320, 300
+    m, n, s = 480, 320, 200
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
     image = st.empty()
