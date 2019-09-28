@@ -241,7 +241,12 @@ class Block extends PureComponent<Props> {
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
       multiselect: (el: SimpleElement) => (
-        <Multiselect element={el} width={width} {...widgetProps} />
+        <Multiselect
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
       ),
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
