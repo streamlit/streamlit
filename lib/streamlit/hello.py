@@ -17,20 +17,40 @@
 from __future__ import division
 
 import streamlit as st
+from streamlit.logger import get_logger
 import inspect
 from collections import OrderedDict
 import urllib
 
+LOGGER = get_logger(__name__)
+
 def intro():
+    @st.cache(show_spinner=False)
+    def load_image(url):
+        import requests
+        from PIL import Image
+        from io import BytesIO
+        img = Image.open(BytesIO(requests.get(url).content))
+        old_width, old_height = img.size
+        new_width = 1024
+        new_height = int(old_height * new_width / old_width)
+        return img.resize((new_width, new_height), Image.BICUBIC)
+
+    st.sidebar.error('Select a demo above.')
+
     st.markdown(
         """
             Streamlit is a completely free and open-source library to create
             web tools for Machine Learning and Data Science projects.
 
             **Select a demo from the menu on the left** to see Streamlit in action.
+        """
+    )
 
-            ![](https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png)
+    image_location = st.empty()
 
+    st.markdown(
+        """
             ### Want to learn more?
 
             - [Get started with help](https://streamlit.io/docs)
@@ -42,9 +62,16 @@ def intro():
               (https://github.com/streamlit/demo-self-driving)
             - [Explore a New York City rideshare dataset]
               (https://github.com/streamlit/demo-uber-nyc-pickups)
-"""
+        """
     )
 
+    try:
+        img_url = 'https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png'
+        img = load_image(img_url)
+        image_location.image(img, use_column_width=True)
+    except Exception as e:
+        LOGGER.warning(e)
+        LOGGER.warning(img_url)
 
 def mapping_demo():
     """
