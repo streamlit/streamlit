@@ -76,6 +76,7 @@ describe("st.multiselect", () => {
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
+      .should("have.length", 4)
       .eq(1)
       .find("input")
       .click();
