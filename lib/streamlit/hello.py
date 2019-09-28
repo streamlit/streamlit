@@ -73,6 +73,8 @@ def intro():
         LOGGER.warning(e)
         LOGGER.warning(img_url)
 
+# Turn off black formatting for this funtion to present the user with more compact code.
+# fmt: off
 def mapping_demo():
     """
     This demo shows how to use
@@ -132,7 +134,10 @@ def mapping_demo():
         st.deck_gl_chart(viewport=viewport, layers=selected_layers)
     else:
         st.error("Please choose at least one layer above.")
+# fmt: on
 
+# Turn off black formatting for this funtion to present the user with more compact code.
+# fmt: off
 def fractal_demo():
     """
     This app shows how you can use Streamlit to build cool animations.
@@ -169,7 +174,10 @@ def fractal_demo():
     progress_bar.empty()
     frame_text.empty()
     st.button("Re-run")
+# fmt: on
 
+# Turn off black formatting for this funtion to present the user with more compact code.
+# fmt: off
 def plotting_demo():
     """
     This demo illustrates a combination of plotting and animation with Streamlit.
@@ -192,7 +200,10 @@ def plotting_demo():
         time.sleep(0.05)
     progress_bar.empty()
     st.button("Re-run")
+# fmt: on
 
+# Turn off black formatting for this funtion to present the user with more compact code.
+# fmt: off
 def data_frame_demo():
     """
     This demo shows how to use `st.write` to visualize Pandas DataFrames.
@@ -232,7 +243,7 @@ def data_frame_demo():
     ax.tick_params(labelsize=20)
     ax.legend(loc=2, prop={"size": 20})
     st.pyplot()
-
+# fmt: on
 
 DEMOS = OrderedDict({
     "---": intro,
