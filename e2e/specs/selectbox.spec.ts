@@ -55,6 +55,7 @@ describe("st.selectbox", () => {
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stSelectbox")
+      .should("have.length", 3)
       .eq(1)
       .then(el => {
         cy.wrap(el)
