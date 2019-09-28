@@ -24,14 +24,24 @@ import urllib
 def intro():
     st.markdown(
         """
-## Intro...
+            Streamlit is a completely free and open-source library to create
+            web tools for Machine Learning and Data Science projects.
 
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
+            **Select a demo from the menu on the left** to see Streamlit in action.
+
+            ![](https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png)
+
+            ### Want to learn more?
+
+            - [Get started with help](https://streamlit.io/docs)
+            - [Ask our community a question](https://discuss.streamlit.io)
+
+            ### See more complex demos
+
+            - [Use neural nets to analyze the Udacity Self-driving Car Image Dataset]
+              (https://github.com/streamlit/demo-self-driving)
+            - [Explore a New York City rideshare dataset]
+              (https://github.com/streamlit/demo-uber-nyc-pickups)
 """
     )
 
@@ -220,14 +230,13 @@ def run():
             sourcelines = reset_indentation(remove_docstring(sourcelines))
             st.code("".join(sourcelines))
     else:
-        st.title("Welcome to Streamlit!")
         st.write(
             """
-            Streamlit is the best way to create bespoke apps.
+            # Welcome to Streamlit
+            ## The fastest way to build custom ML tools
             """
         )
         demo()
-
 
 # This function parses the lines of a function and removes the docstring
 # if found. If no docstring is found, it returns None.
