@@ -196,126 +196,6 @@ def data_frame_demo():
     ax.legend(loc=2, prop={"size": 20})
     st.pyplot()
 
-def demo_deformation():
-    """
-    <...>
-    """
-    import requests
-    from io import BytesIO
-
-    @st.cache(show_spinner=False)
-    def load_image():
-        return Image.open(
-            BytesIO(
-                requests.get(AWS_BUCKET_URL + "/maarten-van-den-heuvel.jpg").content
-            )
-        )
-
-    import numpy as np
-    from PIL import Image
-
-    def griddify(rect, w_div, h_div):
-        w = rect[2] - rect[0]
-        h = rect[3] - rect[1]
-        x_step = w / float(w_div)
-        y_step = h / float(h_div)
-        y = rect[1]
-        grid_vertex_matrix = []
-        for _ in range(h_div + 1):
-            grid_vertex_matrix.append([])
-            x = rect[0]
-            for _ in range(w_div + 1):
-                grid_vertex_matrix[-1].append([int(x), int(y)])
-                x += x_step
-            y += y_step
-        grid = np.array(grid_vertex_matrix)
-        return grid
-
-    def distort_grid(org_grid, max_shift):
-        new_grid = np.copy(org_grid)
-        x_min = np.min(new_grid[:, :, 0])
-        y_min = np.min(new_grid[:, :, 1])
-        x_max = np.max(new_grid[:, :, 0])
-        y_max = np.max(new_grid[:, :, 1])
-        new_grid += np.random.randint(-max_shift, max_shift + 1, new_grid.shape)
-        new_grid[:, :, 0] = np.maximum(x_min, new_grid[:, :, 0])
-        new_grid[:, :, 1] = np.maximum(y_min, new_grid[:, :, 1])
-        new_grid[:, :, 0] = np.minimum(x_max, new_grid[:, :, 0])
-        new_grid[:, :, 1] = np.minimum(y_max, new_grid[:, :, 1])
-        return new_grid
-
-    def grid_to_mesh(src_grid, dst_grid):
-        assert src_grid.shape == dst_grid.shape
-        mesh = []
-        for i in range(src_grid.shape[0] - 1):
-            for j in range(src_grid.shape[1] - 1):
-                src_quad = [
-                    src_grid[i, j, 0],
-                    src_grid[i, j, 1],
-                    src_grid[i + 1, j, 0],
-                    src_grid[i + 1, j, 1],
-                    src_grid[i + 1, j + 1, 0],
-                    src_grid[i + 1, j + 1, 1],
-                    src_grid[i, j + 1, 0],
-                    src_grid[i, j + 1, 1],
-                ]
-                dst_quad = [
-                    dst_grid[i, j, 0],
-                    dst_grid[i, j, 1],
-                    dst_grid[i + 1, j, 0],
-                    dst_grid[i + 1, j, 1],
-                    dst_grid[i + 1, j + 1, 0],
-                    dst_grid[i + 1, j + 1, 1],
-                    dst_grid[i, j + 1, 0],
-                    dst_grid[i, j + 1, 1],
-                ]
-                dst_rect = (dst_quad[0], dst_quad[1], dst_quad[4], dst_quad[3])
-                mesh.append([dst_rect, src_quad])
-        return mesh
-
-    p1 = st.sidebar.slider("Parm1", 0, 100, 0, 1)
-    try:
-        image = load_image()
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
-        return
-
-    dst_grid = griddify((0, 0, 1024, 576), 4, 4)
-    src_grid = distort_grid(dst_grid, p1)
-    mesh = grid_to_mesh(src_grid, dst_grid)
-    im = image.transform(image.size, Image.MESH, mesh)
-    st.image(im, use_column_width=True)
-
-
-def demo_movies():
-    """
-    Discover the gross revenue of a movie of your liking!
-    Note that the network loading and preprocessing of the data is cached
-    by using Streamlit st.cache annotation.
-    """
-    import pandas as pd
-
-    @st.cache
-    def load_dataframe_from_url():
-        return pd.read_csv(AWS_BUCKET_URL + "/movies-revenue.csv.gz").transform(
-            {"title": lambda x: x, "revenue": lambda x: round(x / 1000 / 1000)}
-        )
-
-    try:
-        df = load_dataframe_from_url()
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
-        return
-    movie = st.text_input("Search movie titles")
-    df = df[df.title.str.contains(movie, case=False)].sort_values(
-        ascending=False, by="revenue"
-    )
-    st.markdown("#### Result dataframe for %d movie(s)" % df.shape[0])
-    st.dataframe(df.rename(columns={"title": "Title", "revenue": "Revenue [$1M]"}))
-
-
-
-
 
 DEMOS = OrderedDict({
     "---": intro,
@@ -349,8 +229,8 @@ def run():
         demo()
 
 
-# This function parses the lines of the function and removes the docstring
-# if found.
+# This function parses the lines of a function and removes the docstring
+# if found. If no docstring is found, it returns None.
 def remove_docstring(lines):
     if len(lines) < 3 and '"""' not in lines[1]:
         return lines
@@ -358,11 +238,11 @@ def remove_docstring(lines):
     index = 2
     while '"""' not in lines[index]:
         index += 1
-        # limit to ~100 lines
+        # limit to ~100 lines, if the docstring is longer, just bail
         if index > 100:
             return lines
     # lined[index] is the closing """
-    return lines[index + 1 :]
+    return lines[index + 1:]
 
 
 # This function remove the common leading indentation from a code block
