@@ -158,7 +158,7 @@ def plotting_demo():
 def data_frame_demo():
     """
     This demo shows how to use `st.write` to visualize Pandas DataFrames.
-    
+
     (Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
     """
     import pandas as pd
@@ -175,7 +175,8 @@ def data_frame_demo():
         st.error("Connection Error. This demo requires internet access")
         return
 
-    countries = st.multiselect("Choose countries", df.index)
+    countries = st.multiselect("Choose countries", list(df.index),
+                               ["China", "United States of America"])
     if not countries:
         st.error("Please select at least one country.")
         return
