@@ -161,10 +161,14 @@ def data_frame_demo():
 
     (Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
     """
+    import sys
     import pandas as pd
 
     @st.cache
     def get_UN_data():
+        if sys.version_info[0] < 3:
+            reload(sys)
+            sys.setdefaultencoding("utf-8")
         AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
         df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
         return df.set_index("Region")
