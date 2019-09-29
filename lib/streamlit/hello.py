@@ -265,7 +265,7 @@ def data_frame_demo():
         st.error("Please select at least one country.")
         return
 
-    "### Gross Agricultural Production ($)", df.loc[countries].sort_index()
+    st.write("### Gross Agricultural Production ($)", df.loc[countries].sort_index())
 
     data = df.loc[countries].T.reset_index()
     data = pd.melt(data, id_vars=["index"]).rename(
@@ -280,7 +280,7 @@ def data_frame_demo():
             color="Region:N",
         )
     )
-    "", "", chart
+    st.write("", "", chart)
 
 
 # fmt: on
