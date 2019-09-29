@@ -24,19 +24,21 @@ import urllib
 
 LOGGER = get_logger(__name__)
 
+
 def intro():
     @st.cache(show_spinner=False)
     def load_image(url):
         import requests
         from PIL import Image
         from io import BytesIO
+
         img = Image.open(BytesIO(requests.get(url).content))
         old_width, old_height = img.size
         new_width = 1024
         new_height = int(old_height * new_width / old_width)
         return img.resize((new_width, new_height), Image.BICUBIC)
 
-    st.sidebar.error('Select a demo above.')
+    st.sidebar.success("Select a demo above.")
 
     st.markdown(
         """
@@ -58,20 +60,23 @@ def intro():
 
             ### See more complex demos
 
-            - [Use neural nets to analyze the Udacity Self-driving Car Image Dataset]
+            - Use a neural net to [analyze the Udacity Self-driving Car Image Dataset]
               (https://github.com/streamlit/demo-self-driving)
-            - [Explore a New York City rideshare dataset]
+            - Explore a [New York City rideshare dataset]
               (https://github.com/streamlit/demo-uber-nyc-pickups)
         """
     )
 
     try:
-        img_url = 'https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png'
+        img_url = (
+            "https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png"
+        )
         img = load_image(img_url)
         image_location.image(img, use_column_width=True)
     except Exception as e:
         LOGGER.warning(e)
         LOGGER.warning(img_url)
+
 
 # Turn off black formatting for this funtion to present the user with more compact code.
 # fmt: off
@@ -147,7 +152,7 @@ def fractal_demo():
     import numpy as np
 
     iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
-    separation = st.sidebar.slider('Separation', 0.7, 2.0, 0.7885)
+    separation = st.sidebar.slider("Separation", 0.7, 2.0, 0.7885)
 
     m, n, s = 480, 320, 200
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
@@ -158,7 +163,7 @@ def fractal_demo():
     frame_text = st.sidebar.empty()
     for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
         progress_bar.progress(frame_num)
-        frame_text.text('Frame %i/100' % (frame_num + 1))
+        frame_text.text("Frame %i/100" % (frame_num + 1))
         c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
@@ -174,6 +179,8 @@ def fractal_demo():
     progress_bar.empty()
     frame_text.empty()
     st.button("Re-run")
+
+
 # fmt: on
 
 # Turn off black formatting for this funtion to present the user with more compact code.
@@ -192,7 +199,7 @@ def plotting_demo():
     last_rows = np.random.randn(1, 1)
     chart = st.line_chart(last_rows)
     for i in range(1, 101):
-        new_rows = last_rows[-1,:] + np.random.randn(5, 1).cumsum(axis=0)
+        new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)
         status_text.text("%i%% Complete" % i)
         chart.add_rows(new_rows)
         progress_bar.progress(i)
@@ -200,6 +207,8 @@ def plotting_demo():
         time.sleep(0.05)
     progress_bar.empty()
     st.button("Re-run")
+
+
 # fmt: on
 
 # Turn off black formatting for this funtion to present the user with more compact code.
@@ -212,6 +221,7 @@ def data_frame_demo():
     """
     import sys
     import pandas as pd
+
     if sys.version_info[0] < 3:
         reload(sys)
         sys.setdefaultencoding("utf-8")
@@ -228,8 +238,9 @@ def data_frame_demo():
         st.error("Connection Error. This demo requires internet access")
         return
 
-    countries = st.multiselect("Choose countries", list(df.index),
-                               ["China", "United States of America"])
+    countries = st.multiselect(
+        "Choose countries", list(df.index), ["China", "United States of America"]
+    )
     if not countries:
         st.error("Please select at least one country.")
         return
@@ -243,15 +254,20 @@ def data_frame_demo():
     ax.tick_params(labelsize=20)
     ax.legend(loc=2, prop={"size": 20})
     st.pyplot()
+
+
 # fmt: on
 
-DEMOS = OrderedDict({
-    "---": intro,
-    "Mapping Demo": mapping_demo,
-    "Animation Demo": fractal_demo,
-    "DataFrame Demo": data_frame_demo,
-    "Plotting Demo": plotting_demo,
-})
+DEMOS = OrderedDict(
+    {
+        "---": intro,
+        "Mapping Demo": mapping_demo,
+        "Animation Demo": fractal_demo,
+        "DataFrame Demo": data_frame_demo,
+        "Plotting Demo": plotting_demo,
+    }
+)
+
 
 def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
@@ -276,6 +292,7 @@ def run():
         )
         demo()
 
+
 # This function parses the lines of a function and removes the docstring
 # if found. If no docstring is found, it returns None.
 def remove_docstring(lines):
@@ -289,7 +306,7 @@ def remove_docstring(lines):
         if index > 100:
             return lines
     # lined[index] is the closing """
-    return lines[index + 1:]
+    return lines[index + 1 :]
 
 
 # This function remove the common leading indentation from a code block
