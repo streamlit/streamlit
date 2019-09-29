@@ -18,7 +18,7 @@
 import React from "react"
 import { TimePicker as UITimePicker } from "baseui/datepicker"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 interface Props {
   disabled: boolean
@@ -41,17 +41,17 @@ class TimeInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
   private handleChange = (newDate: Date): void => {
     const value = dateToString(newDate)
-    this.setState({ value }, this.setWidgetValue)
+    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
   public render = (): React.ReactNode => {

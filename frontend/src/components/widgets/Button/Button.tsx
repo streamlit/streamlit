@@ -31,7 +31,7 @@ interface Props {
 class Button extends React.PureComponent<Props> {
   private handleClick = () => {
     const widgetId = this.props.element.get("id")
-    this.props.widgetMgr.setTriggerValue(widgetId)
+    this.props.widgetMgr.setTriggerValue(widgetId, { fromUi: true })
   }
 
   public render(): React.ReactNode {

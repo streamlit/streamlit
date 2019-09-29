@@ -19,7 +19,7 @@ import React from "react"
 import moment from "moment"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { datePickerOverrides } from "lib/widgetTheme"
 
 interface Props {
@@ -43,17 +43,17 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
     const value = dateToString(date as Date)
-    this.setState({ value }, this.setWidgetValue)
+    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
   public render = (): React.ReactNode => {
