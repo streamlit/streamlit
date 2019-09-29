@@ -21,6 +21,7 @@ from streamlit.logger import get_logger
 import inspect
 from collections import OrderedDict
 import urllib
+import textwrap
 
 LOGGER = get_logger(__name__)
 
@@ -151,19 +152,30 @@ def fractal_demo():
     """
     import numpy as np
 
+    # Interactive Streamlit elements, like these sliders, return thier value.
+    # This gives you an extremely simple interaction model.
     iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
     separation = st.sidebar.slider("Separation", 0.7, 2.0, 0.7885)
+
+    # Non-interactive elements return a placeholder to thier location
+    # in the app. Here we're storing progress_bar to update it later.
+    progress_bar = st.sidebar.progress(0)
+
+    # These two elements will be filled in later, so we create a placeholder
+    # for them using st.empty()
+    frame_text = st.sidebar.empty()
+    image = st.empty()
 
     m, n, s = 480, 320, 200
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
-    image = st.empty()
 
-    progress_bar = st.sidebar.progress(0)
-    frame_text = st.sidebar.empty()
     for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
+        # Here were setting value for these two elements.
         progress_bar.progress(frame_num)
         frame_text.text("Frame %i/100" % (frame_num + 1))
+
+        # Performing some fractal wizardry.
         c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
@@ -175,9 +187,14 @@ def fractal_demo():
             M[np.abs(Z) > 2] = False
             N[M] = i
 
+        # Update the image placeholder by calling the image() function on it.
         image.image(1.0 - (N / N.max()), use_column_width=True)
+
+    # We clear elements by calling empty on them.
     progress_bar.empty()
     frame_text.empty()
+
+    # Streamlit buttons automatically run the script from top to bottom.
     st.button("Re-run")
 
 
@@ -193,6 +210,7 @@ def plotting_demo():
     """
     import time
     import numpy as np
+    import time2
 
     progress_bar = st.sidebar.progress(0)
     status_text = st.sidebar.empty()
@@ -206,6 +224,8 @@ def plotting_demo():
         last_rows = new_rows
         time.sleep(0.05)
     progress_bar.empty()
+
+    # Streamlit buttons automatically run the script from top to bottom.
     st.button("Re-run")
 
 
@@ -281,8 +301,8 @@ def run():
         if show_code:
             st.markdown("## Code")
             sourcelines, n_lines = inspect.getsourcelines(demo)
-            sourcelines = reset_indentation(remove_docstring(sourcelines))
-            st.code("".join(sourcelines))
+            sourcelines = remove_docstring(sourcelines)
+            st.code(textwrap.dedent("".join(sourcelines)))
     else:
         st.write(
             """
@@ -307,15 +327,6 @@ def remove_docstring(lines):
             return lines
     # lined[index] is the closing """
     return lines[index + 1 :]
-
-
-# This function remove the common leading indentation from a code block
-def reset_indentation(lines):
-    if len(lines) == 0:
-        return []
-    spaces = len(lines[0]) - len(lines[0].lstrip())
-    return [line[spaces:] if len(line) > spaces else "\n" for line in lines]
-
 
 if __name__ == "__main__":
     run()
