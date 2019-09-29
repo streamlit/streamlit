@@ -88,7 +88,6 @@ def mapping_demo():
     """
     import pandas as pd
     import copy, os
-    from collections import OrderedDict
 
     @st.cache
     def from_data_file(filename):
@@ -287,13 +286,13 @@ def data_frame_demo():
 # fmt: on
 
 DEMOS = OrderedDict(
-    {
-        "---": intro,
-        "Animation Demo": fractal_demo,
-        "Plotting Demo": plotting_demo,
-        "Mapping Demo": mapping_demo,
-        "DataFrame Demo": data_frame_demo,
-    }
+    [
+        ("---", intro),
+        ("Animation Demo", fractal_demo),
+        ("Plotting Demo", plotting_demo),
+        ("Mapping Demo", mapping_demo),
+        ("DataFrame Demo", data_frame_demo),
+    ]
 )
 
 
