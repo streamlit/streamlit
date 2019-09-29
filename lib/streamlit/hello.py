@@ -17,25 +17,69 @@
 from __future__ import division
 
 import streamlit as st
+from streamlit.logger import get_logger
 import inspect
 from collections import OrderedDict
 import urllib
+import textwrap
+
+LOGGER = get_logger(__name__)
+
 
 def intro():
+    from PIL import Image
+    from io import BytesIO
+
+    @st.cache(show_spinner=False)
+    def load_image(url):
+        img = Image.open(BytesIO(urllib.request.urlopen(url).read()))
+        old_width, old_height = img.size
+        new_width = 1024
+        new_height = int(old_height * new_width / old_width)
+        return img.resize((new_width, new_height), Image.BICUBIC)
+
+    st.sidebar.success("Select a demo above.")
+
     st.markdown(
         """
-## Intro...
+            Streamlit is a completely free and open-source library to create
+            web tools for Machine Learning and Data Science projects.
 
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text text text
-"""
+            **Select a demo from the menu on the left** to see Streamlit in action.
+        """
     )
 
+    image_location = st.empty()
 
+    st.markdown(
+        """
+            ### Want to learn more?
+
+            - [Get started with help](https://streamlit.io/docs)
+            - [Ask our community a question](https://discuss.streamlit.io)
+
+            ### See more complex demos
+
+            - Use a neural net to [analyze the Udacity Self-driving Car Image Dataset]
+              (https://github.com/streamlit/demo-self-driving)
+            - Explore a [New York City rideshare dataset]
+              (https://github.com/streamlit/demo-uber-nyc-pickups)
+        """
+    )
+
+    try:
+        img_url = (
+            "https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png"
+        )
+        img = load_image(img_url)
+        image_location.image(img, use_column_width=True)
+    except Exception as e:
+        LOGGER.warning(e)
+        LOGGER.warning(img_url)
+
+
+# Turn off black formatting for this function to present the user with more compact code.
+# fmt: off
 def mapping_demo():
     """
     This demo shows how to use
@@ -95,7 +139,10 @@ def mapping_demo():
         st.deck_gl_chart(viewport=viewport, layers=selected_layers)
     else:
         st.error("Please choose at least one layer above.")
+# fmt: on
 
+# Turn off black formatting for this function to present the user with more compact code.
+# fmt: off
 def fractal_demo():
     """
     This app shows how you can use Streamlit to build cool animations.
@@ -104,19 +151,30 @@ def fractal_demo():
     """
     import numpy as np
 
+    # Interactive Streamlit elements, like these sliders, return thier value.
+    # This gives you an extremely simple interaction model.
     iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
-    separation = st.sidebar.slider('Separation', 0.7, 2.0, 0.7885)
+    separation = st.sidebar.slider("Separation", 0.7, 2.0, 0.7885)
+
+    # Non-interactive elements return a placeholder to thier location
+    # in the app. Here we're storing progress_bar to update it later.
+    progress_bar = st.sidebar.progress(0)
+
+    # These two elements will be filled in later, so we create a placeholder
+    # for them using st.empty()
+    frame_text = st.sidebar.empty()
+    image = st.empty()
 
     m, n, s = 480, 320, 200
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
-    image = st.empty()
 
-    progress_bar = st.sidebar.progress(0)
-    frame_text = st.sidebar.empty()
     for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
+        # Here were setting value for these two elements.
         progress_bar.progress(frame_num)
-        frame_text.text('Frame %i/100' % (frame_num + 1))
+        frame_text.text("Frame %i/100" % (frame_num + 1))
+
+        # Performing some fractal wizardry.
         c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
@@ -128,11 +186,21 @@ def fractal_demo():
             M[np.abs(Z) > 2] = False
             N[M] = i
 
+        # Update the image placeholder by calling the image() function on it.
         image.image(1.0 - (N / N.max()), use_column_width=True)
+
+    # We clear elements by calling empty on them.
     progress_bar.empty()
     frame_text.empty()
+
+    # Streamlit buttons automatically run the script from top to bottom.
     st.button("Re-run")
 
+
+# fmt: on
+
+# Turn off black formatting for this function to present the user with more compact code.
+# fmt: off
 def plotting_demo():
     """
     This demo illustrates a combination of plotting and animation with Streamlit.
@@ -147,15 +215,22 @@ def plotting_demo():
     last_rows = np.random.randn(1, 1)
     chart = st.line_chart(last_rows)
     for i in range(1, 101):
-        new_rows = last_rows[-1,:] + np.random.randn(5, 1).cumsum(axis=0)
+        new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)
         status_text.text("%i%% Complete" % i)
         chart.add_rows(new_rows)
         progress_bar.progress(i)
         last_rows = new_rows
         time.sleep(0.05)
     progress_bar.empty()
+
+    # Streamlit buttons automatically run the script from top to bottom.
     st.button("Re-run")
 
+
+# fmt: on
+
+# Turn off black formatting for this function to present the user with more compact code.
+# fmt: off
 def data_frame_demo():
     """
     This demo shows how to use `st.write` to visualize Pandas DataFrames.
@@ -164,6 +239,8 @@ def data_frame_demo():
     """
     import sys
     import pandas as pd
+    import altair as alt
+
     if sys.version_info[0] < 3:
         reload(sys)
         sys.setdefaultencoding("utf-8")
@@ -180,53 +257,72 @@ def data_frame_demo():
         st.error("Connection Error. This demo requires internet access")
         return
 
-    countries = st.multiselect("Choose countries", list(df.index),
-                               ["China", "United States of America"])
+    countries = st.multiselect(
+        "Choose countries", list(df.index), ["China", "United States of America"]
+    )
     if not countries:
         st.error("Please select at least one country.")
         return
 
-    "### Gross Agricultural Production \[$1B\]"
-    st.write(df.loc[countries].sort_index())
+    data = df.loc[countries]
+    data /= 1000000.0
+    st.write("### Gross Agricultural Production ($B)", data.sort_index())
 
-    ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
-    ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
-    ax.set_xlabel("Year", fontsize=25)
-    ax.tick_params(labelsize=20)
-    ax.legend(loc=2, prop={"size": 20})
-    st.pyplot()
+    data = data.T.reset_index()
+    data = pd.melt(data, id_vars=["index"]).rename(
+        columns={"index": "year", "value": "Gross Agricultural Product ($B)"}
+    )
+    chart = (
+        alt.Chart(data)
+        .mark_area(opacity=0.3)
+        .encode(
+            x="year:T",
+            y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
+            color="Region:N",
+        )
+    )
+    st.write("", "", chart)
 
 
-DEMOS = OrderedDict({
-    "---": intro,
-    "Mapping Demo": mapping_demo,
-    "Animation Demo": fractal_demo,
-    "DataFrame Demo": data_frame_demo,
-    "Plotting Demo": plotting_demo,
-})
+# fmt: on
+
+DEMOS = OrderedDict(
+    {
+        "---": intro,
+        "Animation Demo": fractal_demo,
+        "Plotting Demo": plotting_demo,
+        "Mapping Demo": mapping_demo,
+        "DataFrame Demo": data_frame_demo,
+    }
+)
+
 
 def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
-    if demo_name != "---":
+    if demo_name == "---":
+        show_code = False
+        st.write(
+            """
+            # Welcome to Streamlit
+            ## The fastest way to build custom ML tools
+            """
+        )
+    else:
         show_code = st.sidebar.checkbox("Show code", True)
         st.markdown("# %s" % demo_name)
         st.write(inspect.getdoc(demo))
-        demo()
-        if show_code:
-            st.markdown("## Code")
-            sourcelines, n_lines = inspect.getsourcelines(demo)
-            sourcelines = reset_indentation(remove_docstring(sourcelines))
-            st.code("".join(sourcelines))
-    else:
-        st.title("Welcome to Streamlit!")
-        st.write(
-            """
-            Streamlit is the best way to create bespoke apps.
-            """
-        )
-        demo()
+        # Clear everything from the intro page.
+        # We only have 4 elements in the page so this is intentional overkill.
+        for i in range(10):
+            st.empty()
+    demo()
+    if show_code:
+        st.markdown("## Code")
+        sourcelines, n_lines = inspect.getsourcelines(demo)
+        sourcelines = remove_docstring(sourcelines)
+        st.code(textwrap.dedent("".join(sourcelines)))
 
 
 # This function parses the lines of a function and removes the docstring
@@ -242,15 +338,7 @@ def remove_docstring(lines):
         if index > 100:
             return lines
     # lined[index] is the closing """
-    return lines[index + 1:]
-
-
-# This function remove the common leading indentation from a code block
-def reset_indentation(lines):
-    if len(lines) == 0:
-        return []
-    spaces = len(lines[0]) - len(lines[0].lstrip())
-    return [line[spaces:] if len(line) > spaces else "\n" for line in lines]
+    return lines[index + 1 :]
 
 
 if __name__ == "__main__":
