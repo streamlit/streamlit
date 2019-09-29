@@ -32,7 +32,7 @@ describe("st calls within cached functions", () => {
     // And two texts
     cy.get(".element-container > .markdown-text-container").should(
       "have.length",
-      2
+      3
     );
   });
 });
