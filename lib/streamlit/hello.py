@@ -27,12 +27,12 @@ LOGGER = get_logger(__name__)
 
 
 def intro():
+    import requests
+    from PIL import Image
+    from io import BytesIO
+
     @st.cache(show_spinner=False)
     def load_image(url):
-        import requests
-        from PIL import Image
-        from io import BytesIO
-
         img = Image.open(BytesIO(requests.get(url).content))
         old_width, old_height = img.size
         new_width = 1024
