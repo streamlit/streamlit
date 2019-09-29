@@ -20,93 +20,72 @@
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  align-items: flex-start;
-  align-content: stretch;
+  align-items: stretch;
+  align-content: flex-start;
   width: 100%;
+  min-height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
 
   &.--wide {
-    .main {
-      .block-container {
-        min-width: auto;
-        max-width: initial;
+    .main .block-container {
+      min-width: auto;
+      max-width: initial;
+    }
+  }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: auto;
+    align-items: center;
+
+    .block-container {
+      flex: 1;
+      max-width: $content-max-width;
+      width: 100%;
+      padding: $top-margin 1rem $bottom-margin 1rem;
+      box-sizing: border-box;
+
+      @media (max-width: 746px) {
+        min-width: 0;
+      }
+    }
+
+    footer {
+      color: $gray;
+      flex: 0;
+      font-size: $font-size-sm;
+      max-width: $content-max-width;
+      padding: 0.5rem 1rem;
+      width: 100%;
+
+      a {
+        color: $gray;
+        text-decoration: underline;
+        transition: color 300ms;
+      }
+
+      &:hover a {
+        color: $black;
       }
     }
   }
 
   &.--with-sidebar {
     .main {
-      margin-left: 250px;
-
       @media (max-width: 746px) {
         margin-left: 0;
-      }
-    }
-  }
-
-  .main {
-    display: flex;
-    width: 100%;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 15px 0 15px;
-
-    .block-container {
-      max-width: $content-max-width;
-      width: 100%;
-
-      @media (max-width: 746px) {
-        min-width: 0;
-      }
-    }
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: $sidebar-width;
-    padding: 5rem 15px 15px 15px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    z-index: $z-index-sidebar;
-
-    h1 {
-      font-size: 1.5rem;
-    }
-
-    h2 {
-      font-size: 1.25rem;
-    }
-
-    h3 {
-      font-size: 1rem;
-    }
-
-    h4 {
-      font-size: 0.8rem;
-    }
-
-    h5 {
-      font-size: 0.8rem;
-    }
-
-    h6 {
-      font-size: 0.8rem;
-    }
-
-    @media (max-width: 746px) {
-      & {
-        background: $white;
-        transform: translateX(-240px);
-        z-index: 0;
-      }
-
-      &:hover {
-        transform: translateX(0);
-        box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.1);
-        transition: transform 150ms, box-shadow 150ms;
-        z-index: $z-index-sidebar;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
       }
     }
   }

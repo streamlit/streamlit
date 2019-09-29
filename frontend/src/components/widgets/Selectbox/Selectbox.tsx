@@ -18,7 +18,7 @@
 import React from "react"
 import { Select as UISelect, OnChangeParams } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 
 interface Props {
@@ -47,12 +47,12 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setIntValue(widgetId, this.state.value)
+    this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
   private onChange = (params: OnChangeParams) => {
@@ -62,7 +62,9 @@ class Selectbox extends React.PureComponent<Props, State> {
     }
 
     const [selected] = params.value
-    this.setState({ value: parseInt(selected.value, 10) }, this.setWidgetValue)
+    this.setState({ value: parseInt(selected.value, 10) }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
   public render = (): React.ReactNode => {

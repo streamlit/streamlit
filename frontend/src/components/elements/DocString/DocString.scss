@@ -14,28 +14,30 @@
  * limitations under the License.
  */
 
-.streamlit-container .doc-containter {
-  background-color: #F0F3F9;
-  padding: 0.5rem 1rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
-  overflow-x: auto;
-}
+.reportview-container {
+  .doc-containter {
+    background-color: #f0f3f9;
+    padding: 0.5rem 1rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+  }
 
-.streamlit-container .doc-header {
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #E6E9EF;
-}
+  .doc-header {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e6e9ef;
+  }
 
-.streamlit-container .doc-module {
-  color: #444444;
-}
+  .doc-module {
+    color: #444444;
+  }
 
-.streamlit-container .doc-name {
-  font-weight: bold;
-}
+  .doc-name {
+    font-weight: bold;
+  }
 
-.streamlit-container .doc-containter .doc-string {
-  white-space: pre;
+  .doc-containter .doc-string {
+    white-space: pre;
+  }
 }

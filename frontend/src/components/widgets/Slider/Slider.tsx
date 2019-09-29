@@ -19,7 +19,7 @@ import React from "react"
 import { Slider as UISlider } from "baseui/slider"
 import { Map as ImmutableMap } from "immutable"
 import { sprintf } from "sprintf-js"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
 
@@ -40,7 +40,7 @@ interface State {
 
 class Slider extends React.PureComponent<Props, State> {
   private sliderRef = React.createRef<HTMLDivElement>()
-  private setWidgetValue: () => void
+  private setWidgetValue: (source: Source) => void
   public state: State = {
     value: this.props.element.get("default").toJS(),
   }
@@ -57,7 +57,7 @@ class Slider extends React.PureComponent<Props, State> {
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
       knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
     }
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
   public componentWillUnmount = (): void => {
@@ -71,13 +71,13 @@ class Slider extends React.PureComponent<Props, State> {
     }
   }
 
-  private setWidgetValueRaw = (): void => {
+  private setWidgetValueRaw = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value)
+    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
-    this.setState({ value }, this.setWidgetValue)
+    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
   private handleClick = (e: Event): void => {
