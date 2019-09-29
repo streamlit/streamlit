@@ -16,7 +16,6 @@
  */
 
 import React, { Fragment, PureComponent } from "react"
-import { Container } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
@@ -668,30 +667,28 @@ class App extends PureComponent {
             </div>
           </header>
 
-          <Container className="streamlit-container">
-            {this.state.showLoginBox ? (
-              <LoginBox
-                onSuccess={this.onLogInSuccess}
-                onFailure={this.onLogInError}
-              />
-            ) : (
-              <ReportView
-                wide={this.state.userSettings.wideMode}
-                elements={this.state.elements}
-                reportId={this.state.reportId}
-                reportRunState={this.state.reportRunState}
-                showStaleElementIndicator={
-                  this.state.connectionState !== ConnectionState.STATIC
-                }
-                widgetMgr={this.widgetMgr}
-                widgetsDisabled={
-                  this.state.connectionState !== ConnectionState.CONNECTED
-                }
-              />
-            )}
+          {this.state.showLoginBox ? (
+            <LoginBox
+              onSuccess={this.onLogInSuccess}
+              onFailure={this.onLogInError}
+            />
+          ) : (
+            <ReportView
+              wide={this.state.userSettings.wideMode}
+              elements={this.state.elements}
+              reportId={this.state.reportId}
+              reportRunState={this.state.reportRunState}
+              showStaleElementIndicator={
+                this.state.connectionState !== ConnectionState.STATIC
+              }
+              widgetMgr={this.widgetMgr}
+              widgetsDisabled={
+                this.state.connectionState !== ConnectionState.CONNECTED
+              }
+            />
+          )}
 
-            <StreamlitDialog {...dialogProps} />
-          </Container>
+          <StreamlitDialog {...dialogProps} />
         </div>
       </HotKeys>
     )

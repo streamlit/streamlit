@@ -25,16 +25,23 @@ always_continue=false
 any_failed=false
 
 # Flag to record test results in the cypress dashboard
-record_results=
+# Set to "--record" to turn on.
+record_results_flag=
+
+# Flag to update snapshots.
+# Set to "--env updateSnapshots=true" to turn on.
+snapshots_flag=
 
 # Handle command line named arguments, passed as `-c .. -a true`
-while getopts ":c:a:r" opt; do
+while getopts ":c:a:r:u" opt; do
   case $opt in
     c) cwd="$OPTARG"
     ;;
     a) always_continue="$OPTARG"
     ;;
-    r) record_results="--record"
+    r) record_results_flag="--record"
+    ;;
+    u) snapshots_flag="--env updateSnapshots=true"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -74,6 +81,8 @@ rm mochawesome.json || true
 # Test core streamlit elements
 for file in ../e2e/scripts/*.py
 do
+  snapshots_flag_for_this_run=snapshots_flag
+
   # Infinite loop to support retries.
   while true
   do
@@ -86,7 +95,7 @@ do
     yarn \
       cy:run \
       --spec $specpath \
-      $record_results
+      $record_results_flag $snapshots_flag_for_this_run
 
     EXITCODE="$?"
 
@@ -95,11 +104,12 @@ do
 
     # If exit code is nonzero, prompt user to continue or continue without prompting
     if [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "false" ]; then
-      read -p "Retry, Skip, or Quit? " key
+      read -p "Retry, Update snapshots, Skip, or Quit? " key
       case $key in
         [Ss]* ) break ;;
         [Qq]* ) exit 1 ;;
         [Rr]* ) continue ;;
+        [Uu]* ) snapshots_flag_for_this_run="--env updateSnapshots=true"; continue ;;
         * ) continue ;;  # Retry if key not recognized.
       esac
     elif [ "$EXITCODE" -ne "0" ] && [ "$always_continue" = "true" ]; then
