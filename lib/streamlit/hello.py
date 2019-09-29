@@ -269,16 +269,19 @@ def data_frame_demo():
     "### Gross Agricultural Production ($)", df.loc[countries].sort_index()
 
     data = df.loc[countries].T.reset_index()
-    data = pd.melt(data, id_vars=['index']).rename(columns={
-        'index': 'year',
-        'value': 'Gross Agricultural Product ($)',
-    })
-    chart = alt.Chart(data).mark_area(opacity=0.3).encode(
-        x="year:T",
-        y=alt.Y("Gross Agricultural Product ($):Q", stack=None),
-        color="Region:N"
+    data = pd.melt(data, id_vars=["index"]).rename(
+        columns={"index": "year", "value": "Gross Agricultural Product ($)"}
     )
-    '', '', chart
+    chart = (
+        alt.Chart(data)
+        .mark_area(opacity=0.3)
+        .encode(
+            x="year:T",
+            y=alt.Y("Gross Agricultural Product ($):Q", stack=None),
+            color="Region:N",
+        )
+    )
+    "", "", chart
 
 
 # fmt: on
@@ -310,15 +313,7 @@ def run():
             ## The fastest way to build custom ML tools
             """
         )
-    try:
-        demo()
-    except ImportError as e:
-        st.write('Got an error')
-        st.write(dir(e))
-        st.show(e.name)
-        st.show(e.path)
-        st.show(e.args)
-        st.write(e)
+    demo()
     if show_code:
         st.markdown("## Code")
         sourcelines, n_lines = inspect.getsourcelines(demo)
