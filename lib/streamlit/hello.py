@@ -289,9 +289,9 @@ DEMOS = OrderedDict(
     {
         "---": intro,
         "Mapping Demo": mapping_demo,
-        "Animation Demo": fractal_demo,
         "DataFrame Demo": data_frame_demo,
         "Plotting Demo": plotting_demo,
+        "Animation Demo": fractal_demo,
     }
 )
 
