@@ -210,7 +210,6 @@ def plotting_demo():
     """
     import time
     import numpy as np
-    import time2
 
     progress_bar = st.sidebar.progress(0)
     status_text = st.sidebar.empty()
