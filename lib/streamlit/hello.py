@@ -27,13 +27,12 @@ LOGGER = get_logger(__name__)
 
 
 def intro():
-    import requests
     from PIL import Image
     from io import BytesIO
 
     @st.cache(show_spinner=False)
     def load_image(url):
-        img = Image.open(BytesIO(requests.get(url).content))
+        img = Image.open(BytesIO(urllib.request.urlopen(url).read()))
         old_width, old_height = img.size
         new_width = 1024
         new_height = int(old_height * new_width / old_width)
@@ -79,7 +78,7 @@ def intro():
         LOGGER.warning(img_url)
 
 
-# Turn off black formatting for this funtion to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more compact code.
 # fmt: off
 def mapping_demo():
     """
@@ -142,7 +141,7 @@ def mapping_demo():
         st.error("Please choose at least one layer above.")
 # fmt: on
 
-# Turn off black formatting for this funtion to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more compact code.
 # fmt: off
 def fractal_demo():
     """
@@ -200,7 +199,7 @@ def fractal_demo():
 
 # fmt: on
 
-# Turn off black formatting for this funtion to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more compact code.
 # fmt: off
 def plotting_demo():
     """
@@ -230,7 +229,7 @@ def plotting_demo():
 
 # fmt: on
 
-# Turn off black formatting for this funtion to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more compact code.
 # fmt: off
 def data_frame_demo():
     """
@@ -265,18 +264,20 @@ def data_frame_demo():
         st.error("Please select at least one country.")
         return
 
-    st.write("### Gross Agricultural Production ($)", df.loc[countries].sort_index())
+    data = df.loc[countries]
+    data /= 1000000.0
+    st.write("### Gross Agricultural Production ($B)", data.sort_index())
 
-    data = df.loc[countries].T.reset_index()
+    data = data.T.reset_index()
     data = pd.melt(data, id_vars=["index"]).rename(
-        columns={"index": "year", "value": "Gross Agricultural Product ($)"}
+        columns={"index": "year", "value": "Gross Agricultural Product ($B)"}
     )
     chart = (
         alt.Chart(data)
         .mark_area(opacity=0.3)
         .encode(
             x="year:T",
-            y=alt.Y("Gross Agricultural Product ($):Q", stack=None),
+            y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
             color="Region:N",
         )
     )
@@ -313,6 +314,7 @@ def run():
         st.markdown("# %s" % demo_name)
         st.write(inspect.getdoc(demo))
         # Clear everything from the intro page.
+        # We only have 4 elements in the page so this is intentional overkill.
         for i in range(10):
             st.empty()
     demo()
