@@ -288,10 +288,10 @@ def data_frame_demo():
 DEMOS = OrderedDict(
     {
         "---": intro,
+        "Animation Demo": fractal_demo,
+        "Plotting Demo": plotting_demo,
         "Mapping Demo": mapping_demo,
         "DataFrame Demo": data_frame_demo,
-        "Plotting Demo": plotting_demo,
-        "Animation Demo": fractal_demo,
     }
 )
 
@@ -300,11 +300,7 @@ def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
-    if demo_name != "---":
-        show_code = st.sidebar.checkbox("Show code", True)
-        st.markdown("# %s" % demo_name)
-        st.write(inspect.getdoc(demo))
-    else:
+    if demo_name == "---":
         show_code = False
         st.write(
             """
@@ -312,6 +308,13 @@ def run():
             ## The fastest way to build custom ML tools
             """
         )
+    else:
+        show_code = st.sidebar.checkbox("Show code", True)
+        st.markdown("# %s" % demo_name)
+        st.write(inspect.getdoc(demo))
+        # Clear everything from the intro page.
+        for i in range(10):
+            st.empty()
     demo()
     if show_code:
         st.markdown("## Code")
