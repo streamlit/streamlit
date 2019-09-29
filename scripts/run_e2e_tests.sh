@@ -81,7 +81,7 @@ rm mochawesome.json || true
 # Test core streamlit elements
 for file in ../e2e/scripts/*.py
 do
-  snapshots_flag_for_this_run=snapshots_flag
+  snapshots_flag_for_this_run=$snapshots_flag
 
   # Infinite loop to support retries.
   while true
