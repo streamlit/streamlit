@@ -241,6 +241,7 @@ def data_frame_demo():
     """
     import sys
     import pandas as pd
+    import altair as alt
 
     if sys.version_info[0] < 3:
         reload(sys)
@@ -265,15 +266,19 @@ def data_frame_demo():
         st.error("Please select at least one country.")
         return
 
-    "### Gross Agricultural Production \[$1B\]"
-    st.write(df.loc[countries].sort_index())
+    "### Gross Agricultural Production ($)", df.loc[countries].sort_index()
 
-    ax = df.loc[countries].T.plot(kind="area", figsize=(20, 8), stacked=False)
-    ax.set_ylabel("GAP in Billions (Int $)", fontsize=25)
-    ax.set_xlabel("Year", fontsize=25)
-    ax.tick_params(labelsize=20)
-    ax.legend(loc=2, prop={"size": 20})
-    st.pyplot()
+    data = df.loc[countries].T.reset_index()
+    data = pd.melt(data, id_vars=['index']).rename(columns={
+        'index': 'year',
+        'value': 'Gross Agricultural Product ($)',
+    })
+    chart = alt.Chart(data).mark_area(opacity=0.3).encode(
+        x="year:T",
+        y=alt.Y("Gross Agricultural Product ($):Q", stack=None),
+        color="Region:N"
+    )
+    '', '', chart
 
 
 # fmt: on
@@ -297,20 +302,28 @@ def run():
         show_code = st.sidebar.checkbox("Show code", True)
         st.markdown("# %s" % demo_name)
         st.write(inspect.getdoc(demo))
-        demo()
-        if show_code:
-            st.markdown("## Code")
-            sourcelines, n_lines = inspect.getsourcelines(demo)
-            sourcelines = remove_docstring(sourcelines)
-            st.code(textwrap.dedent("".join(sourcelines)))
     else:
+        show_code = False
         st.write(
             """
             # Welcome to Streamlit
             ## The fastest way to build custom ML tools
             """
         )
+    try:
         demo()
+    except ImportError as e:
+        st.write('Got an error')
+        st.write(dir(e))
+        st.show(e.name)
+        st.show(e.path)
+        st.show(e.args)
+        st.write(e)
+    if show_code:
+        st.markdown("## Code")
+        sourcelines, n_lines = inspect.getsourcelines(demo)
+        sourcelines = remove_docstring(sourcelines)
+        st.code(textwrap.dedent("".join(sourcelines)))
 
 
 # This function parses the lines of a function and removes the docstring
@@ -327,6 +340,7 @@ def remove_docstring(lines):
             return lines
     # lined[index] is the closing """
     return lines[index + 1 :]
+
 
 if __name__ == "__main__":
     run()
