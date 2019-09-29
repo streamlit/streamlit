@@ -18,7 +18,7 @@
 import React from "react"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 interface Props {
   disabled: boolean
@@ -47,18 +47,18 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
     this.setState({ dirty: false })
   }
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue()
+      this.setWidgetValue({ fromUi: true })
     }
   }
 
@@ -71,7 +71,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === "Enter" && e.ctrlKey && this.state.dirty) {
-      this.setWidgetValue()
+      this.setWidgetValue({ fromUi: true })
     }
   }
 
