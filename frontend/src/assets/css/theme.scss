@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-@import 'variables';
-@import 'fonts';
-@import '~bootstrap/scss/bootstrap';
+@import "variables";
+@import "fonts";
+@import "~bootstrap/scss/bootstrap";
 
 // Use this file to override specific bootstrap styles.
 
@@ -33,7 +33,7 @@
 .btn-outline-info {
   background-color: $white;
   border-color: $gray-lighter;
-  color: $gray-dark;
+  color: $gray-darker;
 }
 
 .btn-outline-primary:not(:disabled):not(.disabled):hover,
@@ -64,8 +64,32 @@
   color: $white;
 }
 
+// Make alert boxes work on different backgrounds.
+
+.alert-success {
+  background: change-color($green, $alpha: 0.2);
+  border-color: change-color($green, $alpha: 0.2);
+}
+
+.alert-info {
+  background: change-color($blue, $alpha: 0.1);
+  border-color: change-color($blue, $alpha: 0.1);
+}
+
+.alert-warning {
+  background: change-color($yellow, $alpha: 0.2);
+  border-color: change-color($yellow, $alpha: 0.8);
+}
+
+.alert-danger {
+  background: change-color($red, $alpha: 0.2);
+  border-color: change-color($red, $alpha: 0.2);
+}
+
+// Make scrollbars awesome on Chrome.
+
 ::-webkit-scrollbar {
-  background-color: rgba(0, 0, 0, 0);
+  background-color: transparent;
   border-radius: 100px;
   height: 6px;
   width: 6px;

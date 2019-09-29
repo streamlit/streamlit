@@ -18,7 +18,7 @@
 import React from "react"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 interface Props {
   disabled: boolean
@@ -47,18 +47,18 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value)
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
     this.setState({ dirty: false })
   }
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue()
+      this.setWidgetValue({ fromUi: true })
     }
   }
 
@@ -71,7 +71,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter" && this.state.dirty) {
-      this.setWidgetValue()
+      this.setWidgetValue({ fromUi: true })
     }
   }
 

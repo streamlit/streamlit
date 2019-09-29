@@ -18,7 +18,7 @@
 import React from "react"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import * as _ from "lodash"
 
 interface Props {
@@ -46,12 +46,12 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue()
+    this.setWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (): void => {
+  private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value)
+    this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
   }
 
   private get valueFromState(): MultiselectOption[] {
@@ -85,7 +85,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams) => {
     const newState = this.generateNewState(params)
-    this.setState(newState, this.setWidgetValue)
+    this.setState(newState, () => this.setWidgetValue({ fromUi: true }))
   }
 
   public render(): React.ReactNode {

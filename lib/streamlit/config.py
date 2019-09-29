@@ -277,7 +277,7 @@ _create_option(
 
 _create_option(
     "global.minCachedMessageSize",
-    description="""Only cache ForwardMsgs that are greater than or equal to 
+    description="""Only cache ForwardMsgs that are greater than or equal to
         this minimum.""",
     visibility="hidden",
     default_val=10 * 1e3,
@@ -286,8 +286,8 @@ _create_option(
 
 _create_option(
     "global.maxCachedMessageAge",
-    description="""Expire cached ForwardMsgs whose age is greater than this 
-        value. A message's age is defined by how many times its script has 
+    description="""Expire cached ForwardMsgs whose age is greater than this
+        value. A message's age is defined by how many times its script has
         finished running since the message has been accessed.""",
     visibility="hidden",
     default_val=2,
@@ -442,7 +442,8 @@ def _gather_usage_stats():
 @_create_option("browser.serverPort")
 @util.memoize
 def _browser_server_port():
-    """Port that the browser should use to connect to the server.
+    """Port that the browser should use to connect to the server when in
+    liveSave mode.
 
     Default: whatever value is set in server.port.
     """

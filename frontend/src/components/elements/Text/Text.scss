@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
+@import "src/assets/css/variables";
 
-
-.streamlit-container {
+.reportview-container {
   .fixed-width {
     font-family: $font-family-monospace;
     white-space: pre;
@@ -43,7 +42,8 @@
       background: $white;
     }
 
-    th, td {
+    th,
+    td {
       padding: 6px 13px;
       border: 1px solid $gray-lighter;
     }
