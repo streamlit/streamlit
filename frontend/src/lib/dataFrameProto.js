@@ -105,7 +105,10 @@ export function dataFrameGetDimensions(df) {
     : [0, 0]
   const [dataRows, dataCols] = data ? tableGetRowsAndCols(data) : [0, 0]
 
-  if (dataRows !== dataRowsCheck || dataCols !== dataColsCheck) {
+  if (
+    (dataRows !== 0 && dataRows !== dataRowsCheck) ||
+    (dataCols !== 0 && dataCols !== dataColsCheck)
+  ) {
     throw new Error(
       "Dataframe dimensions don't align: " +
         `rows(${dataRows} != ${dataRowsCheck}) OR ` +
