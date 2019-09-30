@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """A "Hello World" app."""
-from __future__ import division
+
+from __future__ import division, unicode_literals
 
 import streamlit as st
 from streamlit.logger import get_logger

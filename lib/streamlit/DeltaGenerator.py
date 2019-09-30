@@ -118,7 +118,8 @@ def _with_element(method):
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
+        return dg._enqueue_new_element_delta(
+            marshall_element, delta_type, last_index)
 
     return wrapped_method
 
