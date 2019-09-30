@@ -32,14 +32,15 @@ def intro():
         Streamlit is an open-source app framework built specifically for
         Machine Learning and Data Science projects.
 
-        **Select a demo from the menu on the left** to see some examples of
-        what Streamlit can do.
+        **👈 Select a demo from the menu on the left** to see some examples of
+        what Streamlit can do!
 
         ### Want to learn more?
 
         - Check out [streamlit.io](https://streamlit.io)
         - Jump into our [documentation](https://streamlit.io/docs)
-        - Ask a question in our [community forum](https://discuss.streamlit.io)
+        - Ask a question in our [community
+          forums](https://discuss.streamlit.io)
 
         ### See more complex demos
 
@@ -273,7 +274,7 @@ def data_frame_demo():
 
 DEMOS = OrderedDict(
     [
-        "—": intro,
+        ("—", intro),
         ("Animation Demo", fractal_demo),
         ("Plotting Demo", plotting_demo),
         ("Mapping Demo", mapping_demo),
