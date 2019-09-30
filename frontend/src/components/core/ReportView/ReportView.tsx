@@ -20,11 +20,12 @@ import { List, Map as ImmutableMap } from "immutable"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
+import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
-import { widgetTheme } from "lib/widgetTheme"
+import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 import "./ReportView.scss"
 import "./Widget.scss"
 
@@ -69,17 +70,19 @@ class ReportView extends PureComponent<Props> {
   private hasSidebar = (): boolean => !this.props.elements.sidebar.isEmpty()
 
   public render = (): ReactNode => {
+    const { wide } = this.props
+
     const reportViewClassName = classNames("reportview-container", {
-      "--wide": this.props.wide,
+      "--wide": wide,
       "--with-sidebar": this.hasSidebar(),
     })
 
     return (
-      <ThemeProvider theme={widgetTheme}>
-        <div className={reportViewClassName}>
-          {this.hasSidebar() && (
-            <section className="sidebar">
-              <div className="block-container">
+      <div className={reportViewClassName}>
+        {this.hasSidebar() && (
+          <Sidebar>
+            <div className="block-container">
+              <ThemeProvider theme={sidebarWidgetTheme}>
                 <Block
                   elements={this.props.elements.sidebar}
                   reportId={this.props.reportId}
@@ -90,11 +93,13 @@ class ReportView extends PureComponent<Props> {
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
                 />
-              </div>
-            </section>
-          )}
-          <section className="main">
-            <div className="block-container">
+              </ThemeProvider>
+            </div>
+          </Sidebar>
+        )}
+        <section className="main">
+          <div className="block-container">
+            <ThemeProvider theme={mainWidgetTheme}>
               <Block
                 elements={this.props.elements.main}
                 reportId={this.props.reportId}
@@ -105,10 +110,14 @@ class ReportView extends PureComponent<Props> {
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
               />
-            </div>
-          </section>
-        </div>
-      </ThemeProvider>
+            </ThemeProvider>
+          </div>
+
+          <footer>
+            Made with <a href="//streamlit.io">Streamlit</a>
+          </footer>
+        </section>
+      </div>
     )
   }
 }

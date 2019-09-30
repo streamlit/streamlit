@@ -58,7 +58,9 @@ describe("disable widgets", () => {
 
       cy.get(".stText").should("have.text", "Value 1: 25");
 
-      cy.get(".streamlit-container").matchImageSnapshot("disabled-widgets");
+      cy.get(".element-container").each((el, i) => {
+        cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
+      });
     });
   });
 });

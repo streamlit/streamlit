@@ -1,0 +1,135 @@
+@import "src/assets/css/theme";
+
+.sidebar {
+  &.--collapsed {
+    .sidebar-content {
+      margin-left: -$sidebar-width;
+
+      @include media-breakpoint-down(md) {
+        box-shadow: 0 0 2rem transparent;
+      }
+    }
+
+    .sidebar-collapse-control {
+      left: 0.5rem;
+    }
+  }
+
+  .sidebar-content {
+    background-color: $gray-200;
+    background-image: linear-gradient(to bottom, $gray-200, $gray-100);
+    background-attachment: fixed;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow: auto;
+    padding: $top-margin 1rem;
+    position: relative;
+    transition: margin-left $normal-animation-duration,
+      box-shadow $normal-animation-duration;
+    width: $sidebar-width;
+    z-index: $z-index-sidebar;
+
+    @include media-breakpoint-down(md) {
+      box-shadow: 0 0 2rem #a3a8b488;
+      background-color: $gray-100;
+      background-image: none;
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      z-index: 1;
+
+      svg {
+        fill: $black;
+        opacity: 0.25;
+      }
+
+      &:hover {
+        background: transparent;
+
+        svg {
+          opacity: 1;
+        }
+      }
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    h5,
+    h6 {
+      font-size: $font-size-sm;
+      font-weight: 300;
+      text-transform: uppercase;
+    }
+  }
+
+  .sidebar-collapse-control {
+    position: fixed;
+    top: 0.5rem;
+    left: -0.5rem;
+    z-index: $z-index-sidebar - 1;
+
+    transition: left $normal-animation-duration;
+    transition-delay: $normal-animation-duration;
+
+    svg {
+      fill: $black;
+      opacity: 0.25;
+
+      @include media-breakpoint-down(md) {
+        opacity: 1;
+      }
+    }
+
+    &:hover {
+      color: #fff;
+      background-color: $gray-lightest;
+      border-color: #1d2124;
+
+      svg {
+        opacity: 1;
+      }
+    }
+  }
+
+  ::-webkit-scrollbar-thumb:vertical,
+  ::-webkit-scrollbar-thumb:horizontal,
+  ::-webkit-scrollbar-thumb:vertical:active,
+  ::-webkit-scrollbar-thumb:horizontal:active {
+    background: transparent;
+  }
+
+  &:hover {
+    ::-webkit-scrollbar-thumb:vertical,
+    ::-webkit-scrollbar-thumb:horizontal {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    ::-webkit-scrollbar-thumb:vertical:active,
+    ::-webkit-scrollbar-thumb:horizontal:active {
+      background: rgba(0, 0, 0, 0.61);
+      border-radius: 100px;
+    }
+  }
+}

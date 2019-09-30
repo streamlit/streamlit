@@ -43,14 +43,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "my_func")
-        self.assertEqual(ds.module, "help_test")
+        self.assertEqual("my_func", ds.name)
+        self.assertEqual("help_test", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
+            self.assertEqual("<type 'function'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(some_param, another_param=123)")
-        self.assertEqual(ds.doc_string, "This is the doc")
+            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("(some_param, another_param=123)", ds.signature)
+        self.assertEqual("This is the doc", ds.doc_string)
 
     def test_basic_func_without_doc(self):
         """Test basic function without docstring."""
@@ -61,14 +61,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "my_func")
-        self.assertEqual(ds.module, "help_test")
+        self.assertEqual("my_func", ds.name)
+        self.assertEqual("help_test", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
+            self.assertEqual("<type 'function'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(some_param, another_param=123)")
-        self.assertEqual(ds.doc_string, "No docs available.")
+            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("(some_param, another_param=123)", ds.signature)
+        self.assertEqual("No docs available.", ds.doc_string)
 
     def test_deltagenerator_func(self):
         """Test Streamlit DeltaGenerator function."""
@@ -76,14 +76,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(st.audio)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "audio")
-        self.assertEqual(ds.module, "streamlit")
+        self.assertEqual("audio", ds.name)
+        self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
-            self.assertEqual(ds.signature, "(data, format=u'audio/wav')")
+            self.assertEqual("<type 'function'>", ds.type)
+            self.assertEqual("(data, format=u'audio/wav')", ds.signature)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-            self.assertEqual(ds.signature, "(data, format='audio/wav')")
+            self.assertEqual("<class 'function'>", ds.type)
+            self.assertEqual("(data, format='audio/wav')", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
     def test_unwrapped_deltagenerator_func(self):
@@ -91,13 +91,13 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(st.dataframe)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "dataframe")
-        self.assertEqual(ds.module, "streamlit")
+        self.assertEqual("dataframe", ds.name)
+        self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
+            self.assertEqual("<type 'function'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(data=None, width=None, height=None)")
+            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("(data=None, width=None, height=None)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display a dataframe"))
 
     def test_st_cache(self):
@@ -105,15 +105,18 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(st.cache)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "cache")
-        self.assertEqual(ds.module, "streamlit")
+        self.assertEqual("cache", ds.name)
+        self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
+            self.assertEqual("<type 'function'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
+            self.assertEqual("<class 'function'>", ds.type)
             self.assertEqual(
                 ds.signature,
-                ("(func=None, persist=False, " "ignore_hash=False, show_spinner=True)"),
+                (
+                    "(func=None, persist=False, "
+                    "ignore_hash=False, show_spinner=True, suppress_st_warning=False)"
+                ),
             )
             self.assertTrue(ds.doc_string.startswith("Function decorator to"))
 
@@ -122,13 +125,13 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(st.write)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "write")
-        self.assertEqual(ds.module, "streamlit")
+        self.assertEqual("write", ds.name)
+        self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'function'>")
+            self.assertEqual("<type 'function'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'function'>")
-        self.assertEqual(ds.signature, "(*args, **kwargs)")
+            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("(*args, **kwargs)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Write arguments to the"))
 
     def test_builtin_func(self):
@@ -136,14 +139,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(dir)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "dir")
+        self.assertEqual("dir", ds.name)
         if is_python_2:
-            self.assertEqual(ds.module, "__builtin__")
-            self.assertEqual(ds.type, "<type 'builtin_function_or_method'>")
+            self.assertEqual("__builtin__", ds.module)
+            self.assertEqual("<type 'builtin_function_or_method'>", ds.type)
         else:
-            self.assertEqual(ds.module, "builtins")
-            self.assertEqual(ds.type, "<class 'builtin_function_or_method'>")
-        self.assertEqual(ds.signature, "")
+            self.assertEqual("builtins", ds.module)
+            self.assertEqual("<class 'builtin_function_or_method'>", ds.type)
+        self.assertEqual("", ds.signature)
         self.assertTrue(len(ds.doc_string) > 0)
 
     def test_builtin_obj(self):
@@ -151,13 +154,13 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(123)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "")
-        self.assertEqual(ds.module, "")
+        self.assertEqual("", ds.name)
+        self.assertEqual("", ds.module)
         if is_python_2:
-            self.assertEqual(ds.type, "<type 'int'>")
+            self.assertEqual("<type 'int'>", ds.type)
         else:
-            self.assertEqual(ds.type, "<class 'int'>")
-        self.assertEqual(ds.signature, "")
+            self.assertEqual("<class 'int'>", ds.type)
+        self.assertEqual("", ds.signature)
         self.assertTrue(len(ds.doc_string) > 0)
 
     def test_doc_defined_for_type(self):
@@ -171,7 +174,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         st.help(array)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual(ds.name, "")
+        self.assertEqual("", ds.name)
         self.assertTrue("ndarray" in ds.doc_string)
 
     def test_doc_type_is_type(self):
@@ -185,6 +188,6 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(type(MyClass), type)
-        self.assertEqual(ds.name, "MyClass")
-        self.assertEqual(ds.module, "help_test")
-        self.assertEqual(ds.doc_string, "No docs available.")
+        self.assertEqual("MyClass", ds.name)
+        self.assertEqual("help_test", ds.module)
+        self.assertEqual("No docs available.", ds.doc_string)

@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-.streamlit-container .exception .message {
-  margin-bottom: 0.5rem;
-}
+.reportview-container {
+  .exception .message {
+    margin-bottom: 0.5rem;
+  }
 
-.streamlit-container .exception .stack-trace {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
-  margin-left: 1.0rem;
-  margin-right: 1.0rem;
-}
+  .exception .stack-trace {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
 
-.streamlit-container .exception .stack-trace .row {
-  margin-top: 0.5rem;
+  .exception .stack-trace .row {
+    margin-top: 0.5rem;
+  }
 }

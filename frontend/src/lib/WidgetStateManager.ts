@@ -23,6 +23,10 @@ import {
   WidgetStates,
 } from "autogen/proto"
 
+export interface Source {
+  fromUi: boolean
+}
+
 /**
  * Manages widget values, and sends widget update messages back to the server.
  */
@@ -50,9 +54,9 @@ export class WidgetStateManager {
    * Sets the trigger value for the given widget ID to true, sends an updateWidgets message
    * to the server, and then immediately unsets the trigger value.
    */
-  public setTriggerValue(widgetId: string): void {
+  public setTriggerValue(widgetId: string, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).triggerValue = true
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
     this.deleteWidgetStateProto(widgetId)
   }
 
@@ -65,9 +69,9 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setBoolValue(widgetId: string, value: boolean): void {
+  public setBoolValue(widgetId: string, value: boolean, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).boolValue = value
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public getIntValue(widgetId: string): number | undefined {
@@ -79,9 +83,9 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntValue(widgetId: string, value: number): void {
+  public setIntValue(widgetId: string, value: number, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).intValue = value
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public getFloatValue(widgetId: string): number | undefined {
@@ -93,9 +97,9 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setFloatValue(widgetId: string, value: number): void {
+  public setFloatValue(widgetId: string, value: number, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).floatValue = value
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public getStringValue(widgetId: string): string | undefined {
@@ -107,9 +111,13 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setStringValue(widgetId: string, value: string): void {
+  public setStringValue(
+    widgetId: string,
+    value: string,
+    source: Source
+  ): void {
     this.getOrCreateWidgetStateProto(widgetId).stringValue = value
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public getFloatArrayValue(widgetId: string): number[] | undefined {
@@ -126,11 +134,15 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setFloatArrayValue(widgetId: string, value: number[]): void {
+  public setFloatArrayValue(
+    widgetId: string,
+    value: number[],
+    source: Source
+  ): void {
     this.getOrCreateWidgetStateProto(
       widgetId
     ).floatArrayValue = FloatArray.fromObject({ value })
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public getIntArrayValue(widgetId: string): number[] | undefined {
@@ -147,11 +159,21 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntArrayValue(widgetId: string, value: number[]): void {
+  public setIntArrayValue(
+    widgetId: string,
+    value: number[],
+    source: Source
+  ): void {
     this.getOrCreateWidgetStateProto(
       widgetId
     ).intArrayValue = IntArray.fromObject({ value })
-    this.sendUpdateWidgetsMessage()
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  private maybeSendUpdateWidgetsMessage(source: Source): void {
+    if (source.fromUi) {
+      this.sendUpdateWidgetsMessage()
+    }
   }
 
   public sendUpdateWidgetsMessage(): void {
