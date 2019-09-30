@@ -18,6 +18,18 @@
 @import "fonts";
 @import "~bootstrap/scss/bootstrap";
 
+// IMPORTANT! This must come after the bootstrap import.
+// Styletron creates classes called h1, h2, etc., which conflict with Bootstrap classes.
+// So we have to override the bootstrap classes here. (We should not use these classes in our project)
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  all: unset;
+}
+
 // Use this file to override specific bootstrap styles.
 
 .btn-outline-primary {
