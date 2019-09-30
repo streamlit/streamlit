@@ -296,9 +296,6 @@ def _marshall_any_array(pandas_array, proto_array):
     """
     import numpy as np
 
-    if len(pandas_array) == 0:
-        return
-
     # Convert to np.array as necessary.
     if not hasattr(pandas_array, "dtype"):
         pandas_array = np.array(pandas_array)
