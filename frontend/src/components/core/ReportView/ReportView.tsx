@@ -77,6 +77,7 @@ class ReportView extends PureComponent<Props> {
       "--with-sidebar": this.hasSidebar(),
     })
 
+    // The tabindex is required to support scrolling by arrow keys.
     return (
       <div className={reportViewClassName}>
         {this.hasSidebar() && (
@@ -97,7 +98,7 @@ class ReportView extends PureComponent<Props> {
             </div>
           </Sidebar>
         )}
-        <section className="main">
+        <section className="main" tabIndex={0}>
           <div className="block-container">
             <ThemeProvider theme={mainWidgetTheme}>
               <Block

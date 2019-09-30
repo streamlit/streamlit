@@ -22,8 +22,6 @@
   justify-content: flex-start;
   align-items: stretch;
   align-content: flex-start;
-  width: 100%;
-  min-height: 100vh;
   position: absolute;
   top: 0;
   left: 0;
@@ -44,6 +42,10 @@
     width: 100%;
     overflow: auto;
     align-items: center;
+
+    &:focus {
+      outline: none;
+    }
 
     .block-container {
       flex: 1;
