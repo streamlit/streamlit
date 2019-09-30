@@ -112,9 +112,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
   public getChartDimensions = (): Dimensions => {
     const width = this.props.width - EMBED_PADDING
-    const height = this.props.height
-      ? this.props.height - EMBED_PADDING
-      : DEFAULT_HEIGHT - EMBED_PADDING
+    const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
     return { width, height }
   }
 
@@ -125,7 +123,12 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     const prevSpec = prevElement.get("spec")
     const spec = element.get("spec")
 
-    if (!this.vegaView || prevSpec !== spec) {
+    if (
+      !this.vegaView ||
+      prevSpec !== spec ||
+      prevProps.width !== this.props.width ||
+      prevProps.height !== this.props.height
+    ) {
       logMessage("Vega spec changed.")
       try {
         await this.createView()
@@ -133,15 +136,6 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
         this.setState({ error })
       }
       return
-    }
-
-    const { width, height } = this.getChartDimensions()
-    if (prevProps.width !== this.props.width && this.specWidth === 0) {
-      this.vegaView.width(width)
-    }
-
-    if (prevProps.height !== this.props.height) {
-      this.vegaView.height(height)
     }
 
     const prevData = prevElement.get("data")
@@ -252,8 +246,11 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
 
     const spec = JSON.parse(el.get("spec"))
 
-    if (spec.width === 0) {
-      spec.width = this.props.width - EMBED_PADDING
+    const { width, height } = this.getChartDimensions()
+    spec.width = width
+    spec.height = height
+    spec.padding = {
+      bottom: EMBED_PADDING,
     }
 
     if (spec.datasets) {
@@ -261,6 +258,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     }
 
     const { vgSpec, view } = await embed(this.element, spec)
+    console.log(view)
 
     const datasets = getDataArrays(el)
 
