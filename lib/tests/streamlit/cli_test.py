@@ -137,15 +137,15 @@ class CliTest(unittest.TestCase):
         """Test that configurator_options adds dynamic commands based on a config lists.
         """
         config_option = ConfigOption(
-            'server.customKey',
-            description='Custom description.\n\nLine one.',
+            "server.customKey",
+            description="Custom description.\n\nLine one.",
             deprecated=False,
             type_=int,
         )
 
         result = _compose_option_parameter(config_option)
 
-        self.assertEqual(result['option'], '--server.customKey')
-        self.assertEqual(result['param'], 'server_customKey')
-        self.assertEqual(result['type'], config_option.type)
-        self.assertEqual(result['description'], config_option.description)
+        self.assertEqual(result["option"], "--server.customKey")
+        self.assertEqual(result["param"], "server_customKey")
+        self.assertEqual(result["type"], config_option.type)
+        self.assertEqual(result["description"], config_option.description)

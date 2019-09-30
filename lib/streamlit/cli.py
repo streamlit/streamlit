@@ -133,10 +133,10 @@ def _compose_option_parameter(config_option):
         )
 
     return {
-        'param': param,
-        'description': description,
-        'type': config_option.type,
-        'option': option
+        "param": param,
+        "description": description,
+        "type": config_option.type,
+        "option": option,
     }
 
 
@@ -146,7 +146,12 @@ def configurator_options(func):
     """
     for _, value in reversed(_config._config_options.items()):
         parsed_parameter = _compose_option_parameter(value)
-        config_option = click.option(parsed_parameter['option'], parsed_parameter['param'], help=parsed_parameter['description'], type=parsed_parameter['type'])
+        config_option = click.option(
+            parsed_parameter["option"],
+            parsed_parameter["param"],
+            help=parsed_parameter["description"],
+            type=parsed_parameter["type"],
+        )
         func = config_option(func)
     return func
 
