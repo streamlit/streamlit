@@ -124,11 +124,7 @@ def configurator_options(func):
     """
     decorator that composes the existing config options as options for click lib
     """
-    config_key_value_pairs = [
-        [k, _config._config_options[k]] for k in _config._config_options
-    ]
-
-    for key, value in config_key_value_pairs:
+    for key, value in reversed(_config._config_options.items()):
         option = "--{}".format(key)
         param = key.replace(".", "_")
         description = value.description
