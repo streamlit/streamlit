@@ -25,6 +25,8 @@ import click
 
 import streamlit
 from streamlit import cli
+from streamlit.cli import _compose_option_parameter
+from streamlit.ConfigOption import ConfigOption
 
 
 class CliTest(unittest.TestCase):
@@ -130,3 +132,20 @@ class CliTest(unittest.TestCase):
 
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
+
+    def test_compose_option_parameter(self):
+        """Test that configurator_options adds dynamic commands based on a config lists.
+        """
+        config_option = ConfigOption(
+            'server.customKey',
+            description='Custom description.\n\nLine one.',
+            deprecated=False,
+            type_=int,
+        )
+
+        result = _compose_option_parameter(config_option)
+
+        self.assertEqual(result['option'], '--server.customKey')
+        self.assertEqual(result['param'], 'server_customKey')
+        self.assertEqual(result['type'], config_option.type)
+        self.assertEqual(result['description'], config_option.description)

@@ -120,20 +120,33 @@ def main_hello():
     _main_run(filename)
 
 
+def _compose_option_parameter(config_option):
+    """
+    Composes given config option options as options for click lib.
+    """
+    option = "--{}".format(config_option.key)
+    param = config_option.key.replace(".", "_")
+    description = config_option.description
+    if config_option.deprecated:
+        description += "\n {} - {}".format(
+            config_option.deprecation_text, config_option.deprecation_date
+        )
+
+    return {
+        'param': param,
+        'description': description,
+        'type': config_option.type,
+        'option': option
+    }
+
+
 def configurator_options(func):
     """
-    decorator that composes the existing config options as options for click lib
+    Decorator that adds config param keys to click dynamically.
     """
-    for key, value in reversed(_config._config_options.items()):
-        option = "--{}".format(key)
-        param = key.replace(".", "_")
-        description = value.description
-        if value.deprecated:
-            description += "\n {} - {}".format(
-                value.deprecation_text, value.deprecation_date
-            )
-
-        config_option = click.option(option, param, help=description, type=value.type)
+    for _, value in reversed(_config._config_options.items()):
+        parsed_parameter = _compose_option_parameter(value)
+        config_option = click.option(parsed_parameter['option'], parsed_parameter['param'], help=parsed_parameter['description'], type=parsed_parameter['type'])
         func = config_option(func)
     return func
 
