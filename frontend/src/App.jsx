@@ -341,12 +341,17 @@ class App extends PureComponent {
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
-      this.setState(({ elements, reportId }) => ({
-        elements: {
-          main: this.clearOldElements(elements.main, reportId),
-          sidebar: this.clearOldElements(elements.sidebar, reportId),
-        },
-      }))
+      this.setState(
+        ({ elements, reportId }) => ({
+          elements: {
+            main: this.clearOldElements(elements.main, reportId),
+            sidebar: this.clearOldElements(elements.sidebar, reportId),
+          },
+        }),
+        () => {
+          this.elementsWithDeltaApplied = this.state.elements
+        }
+      )
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -445,9 +450,9 @@ class App extends PureComponent {
       metadataMsg
     )
 
-    this.throttledUpdateState()
+    // this.updateState()
+    // this.throttledUpdateState()
 
-    /*
     if (!this.timerSet) {
       this.timerSet = true
 
@@ -475,7 +480,6 @@ class App extends PureComponent {
         }
       }, ELEMENT_LIST_UPDATE_THROTTLE_MS)
     }
-    */
   }
 
   /**
