@@ -35,7 +35,6 @@ import numpy as np
 import pandas as pd
 import time
 
-# TODO add updated tensorflow to pipfile.lock
 import tensorflow as tf
 
 # dynamically grow the memory used on the GPU
