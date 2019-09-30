@@ -149,7 +149,7 @@ def _hashing_error_message(start):
         "Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).\n\n"
         "To stop this warning from showing in the meantime, try one of the following:\n"
         "* **Preferred:** modify your code to avoid using this type of object.\n"
-        "* Or add the argument `ignore_cache=True` to the `st.cache` decorator.",
+        "* Or add the argument `ignore_hash=True` to the `st.cache` decorator.",
     )
 
 

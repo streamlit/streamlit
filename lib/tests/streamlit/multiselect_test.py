@@ -23,7 +23,7 @@ import streamlit as st
 from tests import testutil
 
 
-class SelectboxTest(testutil.DeltaGeneratorTestCase):
+class Multiselectbox(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall multiselect protos."""
 
     def test_just_label(self):
@@ -84,3 +84,22 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
+
+    @parameterized.expand([(None, []), ([], []),
+                           (["Tea", "Water"], [1, 2]),
+                           (("Tea", "Water"), [1, 2]),
+                           ])
+    def test_defaults(self, defaults, expected):
+        """Test that valid default can be passed as expected."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label, "the label")
+        self.assertListEqual(c.default[:], expected)
+        self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
+
+    @parameterized.expand([(["Tea", "Vodka"], ValueError), ([1, 2], TypeError)])
+    def test_invalid_defaults(self, defaults, expected):
+        """Test that invalid default trigger the expected exception."""
+        with self.assertRaises(expected):
+            st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
