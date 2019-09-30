@@ -27,6 +27,8 @@ import pandas as pd
 
 def generate_chart(chart_type, data):
     if data is None:
+        # Use an empty-ish dict because if we use None the x axis labels rotate
+        # 90 degrees. No idea why. Need to debug.
         data = {"": []}
 
     if not isinstance(data, pd.DataFrame):
