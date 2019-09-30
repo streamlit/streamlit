@@ -441,20 +441,31 @@ export function addRows(element, namedDataSet) {
     dataframeToModify = dataframeToModify.set("style", fromJS({ cols: [] }))
   }
 
-  const newDataFrame = dataframeToModify
-    .update("index", index => concatIndex(index, newRows.get("index")))
-    .updateIn(["data", "cols"], cols => {
-      return cols.zipWith(
-        (col1, col2) => concatAnyArray(col1, col2),
-        newRows.getIn(["data", "cols"])
-      )
-    })
-    .updateIn(["style", "cols"], style_cols => {
-      return style_cols.zipWith(
-        (col1, col2) => concatCellStyleArray(col1, col2),
-        newRows.getIn(["style", "cols"])
-      )
-    })
+  let newDataFrame
+
+  if (
+    dataframeToModify
+      .get("data")
+      .get("cols")
+      .isEmpty()
+  ) {
+    newDataFrame = newRows
+  } else {
+    newDataFrame = dataframeToModify
+      .update("index", index => concatIndex(index, newRows.get("index")))
+      .updateIn(["data", "cols"], cols => {
+        return cols.zipWith(
+          (col1, col2) => concatAnyArray(col1, col2),
+          newRows.getIn(["data", "cols"])
+        )
+      })
+      .updateIn(["style", "cols"], style_cols => {
+        return style_cols.zipWith(
+          (col1, col2) => concatCellStyleArray(col1, col2),
+          newRows.getIn(["style", "cols"])
+        )
+      })
+  }
 
   if (existingDataSet) {
     return setDataFrameInNamedDataSet(

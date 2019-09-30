@@ -27,7 +27,7 @@ import time
 # What to expect, visually:
 # * 1 table
 # * 1 dataframe
-# * 1 line chart
+# * 2 line charts (one with only 1 datapoint)
 # * 4 vega-lite charts
 # * And then all of the above once again.
 # (Also, all of the above should have 3 rows or datapoints.)
@@ -44,7 +44,8 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
     table_el = st.table(df1)
     dataframe_el = st.dataframe(df1)
-    chart_el = st.line_chart(df1)
+    chart_el1 = st.line_chart()
+    chart_el2 = st.line_chart(df1)
 
     # 4 identical charts, built in different ways.
     vega_el1 = st.vega_lite_chart(
@@ -92,7 +93,8 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
         table_el.add_rows(df2)
         dataframe_el.add_rows(df2)
-        chart_el.add_rows(df2)
+        chart_el1.add_rows(df2)
+        chart_el2.add_rows(df2)
         vega_el1.add_rows(df2)
         vega_el2.add_rows(df2)
         vega_el3.add_rows(foo=df2)
@@ -102,7 +104,8 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
         # Clear all elements.
         table_el.table([])
         dataframe_el.dataframe([])
-        chart_el.line_chart([])
+        chart_el1.line_chart([])
+        chart_el2.line_chart([])
         vega_el1.vega_lite_chart(
             [],
             {
@@ -141,12 +144,6 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             .encode(x="x:Q", y="y:Q")
             .interactive()
         )
-
-# Testing add_rows from an empty chart
-empty_chart = st.line_chart()
-
-for i in range(3):
-    empty_chart.add_rows({"a": [i], "b": [i]})
 
 # Test that add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.

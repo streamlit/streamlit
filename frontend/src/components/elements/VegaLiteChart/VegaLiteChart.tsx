@@ -388,6 +388,10 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
+  if (prevNumRows === 0) {
+    return false
+  }
+
   const df0 = prevData.get("data")
   const df1 = data.get("data")
   const c = numCols - 1
