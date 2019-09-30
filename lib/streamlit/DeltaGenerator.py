@@ -167,7 +167,7 @@ def _get_widget_ui_value(widget_type, element):
 
 def _get_pandas_index_attr(data, attr):
     python3_attr = getattr(data.index, attr, None)
-    python2_attr = getattr(data.index, '__dict__', None)
+    python2_attr = getattr(data.index, "__dict__", None)
 
     if python3_attr:
         return python3_attr
@@ -1463,15 +1463,18 @@ class DeltaGenerator(object):
             for value in default_values:
                 if not isinstance(value, string_types):  # noqa: F821
                     raise TypeError(
-                        "A Multiselect default value has invalid type: %s" % type(
-                            value).__name__
+                        "A Multiselect default value has invalid type: %s"
+                        % type(value).__name__
                     )
                 if value not in options:
                     raise ValueError(
-                        "Every Multiselect default value must exist in options")
+                        "Every Multiselect default value must exist in options"
+                    )
             return [options.index(value) for value in default]
 
-        indices = _check_and_convert_to_indices(default) if default is not None else None
+        indices = (
+            _check_and_convert_to_indices(default) if default is not None else None
+        )
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
@@ -2231,16 +2234,15 @@ class DeltaGenerator(object):
             if not isinstance(data, pd.DataFrame):
                 data = data_frame_proto.convert_anything_to_df(data)
 
-            old_step = _get_pandas_index_attr(data, 'step')
+            old_step = _get_pandas_index_attr(data, "step")
 
             # We have to drop the predefined index
             data = data.reset_index(drop=True)
 
-            old_stop = _get_pandas_index_attr(data, 'stop')
+            old_stop = _get_pandas_index_attr(data, "stop")
 
             if old_step is None or old_stop is None:
-                raise AttributeError("'RangeIndex' object has no attribute "
-                                     "'step'")
+                raise AttributeError("'RangeIndex' object has no attribute " "'step'")
 
             start = self._last_index + old_step
             stop = self._last_index + old_step + old_stop

@@ -76,8 +76,10 @@ try:
 finally:
     "FINALLY"
 
+
 def func(value):
     value
+
 
 func("FUNCTION")
 
@@ -116,8 +118,10 @@ async_loop.run_until_complete(async_with())
 
 # Docstrings should never be printed
 
+
 def docstrings():
     """Docstring. Should not be printed."""
+
     def nested():
         """Multiline docstring.
         Should not be printed."""
@@ -125,8 +129,10 @@ def docstrings():
 
     class Foo(object):
         """Class docstring. Should not be printed."""
+
         pass
 
     nested()
+
 
 docstrings()
