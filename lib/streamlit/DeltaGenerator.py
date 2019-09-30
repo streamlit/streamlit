@@ -2207,7 +2207,8 @@ class DeltaGenerator(object):
         if self._enqueue is None:
             return self
 
-        assert not self._is_root, "Only existing elements can add_rows."
+        if self._is_root:
+            raise RuntimeError("Only existing elements can add_rows.")
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
