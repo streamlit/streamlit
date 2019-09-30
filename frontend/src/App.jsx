@@ -20,6 +20,7 @@ import { Container } from "reactstrap"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
+import * as _ from "lodash"
 
 // Other local imports.
 import ReportView from "components/core/ReportView/"
@@ -50,6 +51,8 @@ import { logError, logMessage } from "lib/log"
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
+
+const ELEMENT_LIST_UPDATE_THROTTLE_MS = 10
 
 class App extends PureComponent {
   constructor(props) {
@@ -408,6 +411,30 @@ class App extends PureComponent {
     }
   }
 
+  updateState = () => {
+    // (BUG #685) When user presses stop, stop adding elements to
+    // report immediately to avoid race condition.
+    // The one exception is static connections, which do not depend on
+    // the report state (and don't have a stop button).
+    const isStaticConnection = this.connectionManager.isStaticConnection()
+    const reportIsRunning =
+      this.state.reportRunState === ReportRunState.RUNNING
+
+    if (isStaticConnection || reportIsRunning) {
+      this.setState(state => {
+        return {
+          // Create brand new `elements` instance, so components that depend on
+          // this for re-rendering catch the change.
+          elements: {
+            ...this.elementsWithDeltaApplied,
+          },
+        }
+      })
+    }
+  }
+
+  throttledUpdateState = _.throttle(this.updateState, 100, { trailing: false })
+
   /**
    * Applies a list of deltas to the elements.
    */
@@ -419,6 +446,9 @@ class App extends PureComponent {
       metadataMsg
     )
 
+    this.throttledUpdateState()
+
+    /*
     if (!this.timerSet) {
       this.timerSet = true
 
@@ -444,8 +474,9 @@ class App extends PureComponent {
             }
           })
         }
-      }, 10)
+      }, ELEMENT_LIST_UPDATE_THROTTLE_MS)
     }
+    */
   }
 
   /**
