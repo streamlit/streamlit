@@ -71,9 +71,10 @@ $btn-border-radius: $border-radius-large;
 
 // Custom z-index values (not related to bootstrap)
 $z-index-popup-menu: 140;
-$z-index-header: 120;
-$z-index-sidebar: 100;
 $z-index-sidebar-mobile: 130;
+$z-index-header: 120;
+$z-index-menu-button: 110;
+$z-index-sidebar: 100;
 
 // Custom values for our own use.
 $m1-2-font-size-sm: $font-size-sm / 2; // m1-2 = multiply by 1/2
