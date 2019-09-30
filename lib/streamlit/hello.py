@@ -32,8 +32,8 @@ def intro():
         Streamlit is an open-source app framework built specifically for
         Machine Learning and Data Science projects.
 
-        **👈 Select a demo from the menu on the left** to see some examples of
-        what Streamlit can do!
+        **👈 Select a demo from the dropdown on the left** to see some examples
+        of what Streamlit can do!
 
         ### Want to learn more?
 
@@ -129,7 +129,7 @@ def fractal_demo():
 
     # Interactive Streamlit elements, like these sliders, return their value.
     # This gives you an extremely simple interaction model.
-    iterations = st.sidebar.slider("Level of detail", 2, 20, 5, 1)
+    iterations = st.sidebar.slider("Level of detail", 2, 20, 10, 1)
     separation = st.sidebar.slider("Separation", 0.7, 2.0, 0.7885)
 
     # Non-interactive elements return a placeholder to their location
