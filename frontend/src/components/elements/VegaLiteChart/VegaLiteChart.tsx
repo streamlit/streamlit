@@ -258,8 +258,6 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     }
 
     const { vgSpec, view } = await embed(this.element, spec)
-    console.log(view)
-
     const datasets = getDataArrays(el)
 
     // Heuristic to determine the default dataset name.
