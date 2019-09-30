@@ -31,8 +31,6 @@ interface Dimensions {
   height: number
 }
 
-const DEFAULT_HEIGHT = 600
-
 class BokehChart extends React.PureComponent<Props> {
   private chartId = "bokeh-chart-" + this.props.index
 
@@ -49,7 +47,7 @@ class BokehChart extends React.PureComponent<Props> {
       ? plot.attributes.plot_height
       : this.props.height
       ? this.props.height
-      : DEFAULT_HEIGHT
+      : undefined
     return { width, height }
   }
 
@@ -70,7 +68,9 @@ class BokehChart extends React.PureComponent<Props> {
     if (plot) {
       const { width, height } = this.getChartDimensions(plot)
       plot.attributes.plot_width = width
-      plot.attributes.plot_height = height
+      if (height !== undefined) {
+        plot.attributes.plot_height = height
+      }
     }
 
     if (chart !== null) {
@@ -101,7 +101,7 @@ class BokehChart extends React.PureComponent<Props> {
       className="stBokehChart"
       style={{
         width: this.props.width,
-        height: this.props.height ? this.props.height : DEFAULT_HEIGHT,
+        height: this.props.height ? this.props.height : undefined,
       }}
     />
   )

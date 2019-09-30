@@ -36,7 +36,7 @@ interface Dimensions {
   height: number
 }
 
-const DEFAULT_HEIGHT = 500
+const DEFAULT_HEIGHT = 450
 
 class PlotlyChart extends React.PureComponent<Props> {
   public getChartDimensions = (): Dimensions => {
