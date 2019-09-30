@@ -17,8 +17,7 @@ Sphinx = "==1.8.5"
 sphinx-rtd-theme = "*"
 recommonmark = "*"
 # Packages used in unit tests:
-altair = "*"
-matplotlib = {version = "*",markers = "python_version > '3.0'"}
+matplotlib = "*"
 scipy = "<1.3.0"
 plotly = "*"
 chart-studio = "*"
@@ -37,6 +36,7 @@ requests-mock = "*"
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
 [packages]
+altair = "*"
 astor = "*"
 base58 = "*"
 blinker = "*"

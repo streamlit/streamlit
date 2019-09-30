@@ -50,7 +50,7 @@ EXCEPTHOOK_IDENTIFIER_STR = "Streamlit has caught the following unhandled except
 _AWS_CHECK_IP = "http://checkip.amazonaws.com"
 
 # URL of Streamlit's help page.
-HELP_DOC = "https://streamlit.io/secret/docs/"
+HELP_DOC = "https://streamlit.io/docs/"
 
 
 def _decode_ascii(string):
@@ -423,7 +423,7 @@ def get_streamlit_file_path(*filepath):
 
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
-    click.secho("  %s: " % title, nl=False, fg='blue')
+    click.secho("  %s: " % title, nl=False, fg="blue")
     click.secho(url, bold=True)
 
 
