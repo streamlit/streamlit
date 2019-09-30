@@ -151,12 +151,12 @@ class App extends PureComponent {
     }
   }
 
-  showError(errorNode) {
+  showError(title, errorNode) {
     logError(errorNode)
 
     this.openDialog({
+      title,
       type: "warning",
-      title: "Connection error",
       msg: errorNode,
     })
   }
@@ -190,7 +190,8 @@ class App extends PureComponent {
           this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
-      this.showError(err.message)
+      logError(err)
+      this.showError("Bad message format", err.message)
     }
   }
 
@@ -577,7 +578,7 @@ class App extends PureComponent {
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errNode) {
-    this.showError(errNode)
+    this.showError("Connection error", errNode)
   }
 
   /**
