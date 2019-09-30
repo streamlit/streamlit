@@ -31,6 +31,8 @@ try:
 except ImportError:
     from funcsigs import signature
 
+from parameterized import parameterized
+
 from streamlit.proto.Text_pb2 import Text
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
@@ -57,22 +59,23 @@ class FakeDeltaGenerator(object):
         pass
 
     def __getattr__(self, name):
-        streamlit_methods = [method_name for method_name in dir(st)
-                             if callable(getattr(st, method_name))]
+        streamlit_methods = [
+            method_name for method_name in dir(st) if callable(getattr(st, method_name))
+        ]
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
                 if self._container == BlockPath.SIDEBAR:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                    )
                 else:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`DeltaGenerator` objects. Did you mean " \
-                              "`st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`DeltaGenerator` objects. Did you mean "
+                        "`st.%(name)s()`?" % {"name": name}
+                    )
             else:
                 message = "`%(name)s()` is not a valid Streamlit command." % {
                     "name": name
@@ -104,7 +107,7 @@ class FakeDeltaGenerator(object):
         """
         self._exception_msg = str(e)
 
-    def _enqueue_new_element_delta(self, marshall_element):
+    def _enqueue_new_element_delta(self, marshall_element, delta_type, last_index):
         """Fake enqueue new element delta.
 
         The real DeltaGenerator method actually enqueues the deltas but
@@ -131,26 +134,28 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.non_existing()
 
-        self.assertEqual(str(ctx.exception),
-                         "`non_existing()` is not a valid Streamlit command.")
+        self.assertEqual(
+            str(ctx.exception), "`non_existing()` is not a valid Streamlit command."
+        )
 
     def test_sidebar_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.write()
 
-        self.assertEqual(str(ctx.exception),
-                         "Method `write()` does not exist for `DeltaGenerator`"
-                         " objects. Did you mean `st.write()`?")
+        self.assertEqual(
+            str(ctx.exception),
+            "Method `write()` does not exist for `DeltaGenerator`"
+            " objects. Did you mean `st.write()`?",
+        )
 
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = (
-            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2))
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
         wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.
-        self.assertEqual(wrapped.__module__, "delta_generator_test")
-        self.assertEqual(wrapped.__name__, "fake_text")
-        self.assertEqual(wrapped.__doc__, "Fake text delta generator.")
+        self.assertEqual("delta_generator_test", wrapped.__module__)
+        self.assertEqual("fake_text", wrapped.__name__)
+        self.assertEqual("Fake text delta generator.", wrapped.__doc__)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_text)
@@ -225,12 +230,14 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_new_element_delta_null(self):
         # Test "Null" Delta generators
         dg = self.new_delta_generator(None)
-        new_dg = dg._enqueue_new_element_delta(None)
+        new_dg = dg._enqueue_new_element_delta(None, None)
         self.assertEqual(dg, new_dg)
 
-    def test_enqueue_new_element_delta(self):
-        dg = self.new_delta_generator()
+    @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
+    def test_enqueue_new_element_delta(self, container):
+        dg = self.new_delta_generator(container=container)
         self.assertEqual(0, dg._id)
+        self.assertEqual(container, dg._container)
 
         test_data = "some test data"
         # Use FakeDeltaGenerator.fake_text cause if we use
@@ -241,9 +248,10 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._id)
+        self.assertEqual(container, new_dg._container)
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.text.body, test_data)
@@ -261,7 +269,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element)
+        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
         self.assertEqual(dg, new_dg)
 
         msg = self.get_message_from_queue()
@@ -412,34 +420,35 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         """Test dg.line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.line_chart(data)
+        st.line_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "LineChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_area_chart(self):
         """Test dg.area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.area_chart(data)
+        st.area_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "AreaChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "area")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        dg = st.bar_chart(data)
+        st.bar_chart(data)
 
-        element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.chart.type, "BarChart")
-        self.assertEqual(element.chart.data.data.cols[0].int64s.data[0], 20)
-        self.assertEqual(len(element.chart.components), 8)
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+
+        self.assertEqual(chart_spec["mark"], "bar")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
@@ -452,7 +461,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         caption = "ahoy!"
 
         # single URL
-        dg = st.image(url, caption=caption, width=200)
+        st.image(url, caption=caption, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.imgs.width, 200)
         self.assertEqual(len(element.imgs.imgs), 1)
@@ -460,7 +469,7 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.imgs.imgs[0].caption, caption)
 
         # multiple URLs
-        dg = st.image([url] * 5, caption=[caption] * 5, width=200)
+        st.image([url] * 5, caption=[caption] * 5, width=200)
         element = self.get_delta_from_queue().new_element
         self.assertEqual(len(element.imgs.imgs), 5)
         self.assertEqual(element.imgs.imgs[4].url, url)

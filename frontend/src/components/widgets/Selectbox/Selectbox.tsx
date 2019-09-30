@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { logWarning } from "lib/log"
 import React from "react"
-import { Select as UISelect } from "baseui/select"
+import { Select as UISelect, OnChangeParams } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { logWarning } from "lib/log"
 
 interface Props {
   disabled: boolean
@@ -31,9 +31,9 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: number
+  value: number
 }
 
 interface SelectOption {
@@ -42,45 +42,46 @@ interface SelectOption {
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
-  public state: State = {}
-
-  private get valueOrDefault(): SelectOption[] | undefined {
-    const value =
-      this.state.value === undefined
-        ? (this.props.element.get("value") as number)
-        : this.state.value
-
-    return [
-      {
-        value: value.toString(),
-        label: this.props.element.get("options")[value],
-      },
-    ]
+  public state: State = {
+    value: this.props.element.get("default"),
   }
 
-  private onChange = (data: any) => {
-    const widgetId = this.props.element.get("id")
-    const selectedValue: SelectOption[] = data["value"]
+  public componentDidMount(): void {
+    this.setWidgetValue({ fromUi: false })
+  }
 
-    if (selectedValue.length === 0) {
+  private setWidgetValue = (source: Source): void => {
+    const widgetId: string = this.props.element.get("id")
+    this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
+  }
+
+  private onChange = (params: OnChangeParams) => {
+    if (params.value.length === 0) {
       logWarning("No value selected!")
       return
     }
 
-    const valueId = selectedValue[0].value
-    const index = parseInt(valueId, 10)
-
-    this.setState({ value: index })
-    this.props.widgetMgr.setIntValue(widgetId, index)
+    const [selected] = params.value
+    this.setState({ value: parseInt(selected.value, 10) }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
-  public render(): React.ReactNode {
-    const { element, width } = this.props
-
-    const style = { width }
-    const label = element.get("label")
-    let options = element.get("options")
+  public render = (): React.ReactNode => {
+    const style = { width: this.props.width }
+    const label = this.props.element.get("label")
+    let options = this.props.element.get("options")
     let disabled = this.props.disabled
+
+    const value = [
+      {
+        label:
+          options.size > 0
+            ? options[this.state.value]
+            : "No options to select.",
+        value: this.state.value.toString(),
+      },
+    ]
 
     if (options.size === 0) {
       options = ["No options to select."]
@@ -88,10 +89,10 @@ class Selectbox extends React.PureComponent<Props, State> {
     }
 
     const selectOptions: SelectOption[] = []
-    options.forEach((option: string, idx: number) =>
+    options.forEach((option: string, index: number) =>
       selectOptions.push({
         label: option,
-        value: idx.toString(),
+        value: index.toString(),
       })
     )
 
@@ -99,13 +100,13 @@ class Selectbox extends React.PureComponent<Props, State> {
       <div className="Widget row-widget stSelectbox" style={style}>
         <label>{label}</label>
         <UISelect
-          options={selectOptions}
-          labelKey="label"
-          valueKey="value"
-          onChange={this.onChange}
-          value={this.valueOrDefault}
           clearable={false}
           disabled={disabled}
+          labelKey="label"
+          onChange={this.onChange}
+          options={selectOptions}
+          value={value}
+          valueKey="value"
         />
       </div>
     )

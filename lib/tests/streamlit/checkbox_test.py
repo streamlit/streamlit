@@ -34,7 +34,7 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.checkbox
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.value, False)
+        self.assertEqual(c.default, False)
 
     @parameterized.expand(
         [
@@ -52,4 +52,4 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.checkbox
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.value, proto_value)
+        self.assertEqual(c.default, proto_value)

@@ -23,8 +23,8 @@ describe("st.area_chart", () => {
   });
 
   it("displays an area chart", () => {
-    cy.get(".element-container .stChart")
-      .find("svg")
-      .should("have.attr", "height", "200");
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .should("have.css", "height", "200px");
   });
 });

@@ -20,7 +20,8 @@ interface Args {
   pythonVersion: string
   installationId: string
   authorEmail: string
-  commandLine: string[]
+  maxCachedMessageAge: number
+  commandLine: string
 }
 
 export class SessionInfo {
@@ -29,9 +30,8 @@ export class SessionInfo {
   public readonly pythonVersion: string
   public readonly installationId: string
   public readonly authorEmail: string
-
-  // Fields that can change during the lifetime of a session.
-  public commandLine: string[] = []
+  public readonly maxCachedMessageAge: number
+  public readonly commandLine: string
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -62,10 +62,14 @@ export class SessionInfo {
     pythonVersion,
     installationId,
     authorEmail,
+    maxCachedMessageAge,
+    commandLine,
   }: Args) {
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
+    this.maxCachedMessageAge = maxCachedMessageAge
+    this.commandLine = commandLine
   }
 }

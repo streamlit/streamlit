@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Streamlit. Data Science, reimagined.
+"""Streamlit.
 
 How to use Streamlit in 3 seconds:
 
-    1. Write your code
+    1. Write an app
     >>> import streamlit as st
     >>> st.write(anything_you_want)
 
-    2. Run your code
+    2. Run your app
     $ streamlit run my_script.py
 
-    3. Visualize your code
+    3. Use your app
     A new tab will open on your browser. That's your Streamlit app!
 
     4. Modify your code, save it, and watch changes live on your browser.
@@ -38,7 +38,7 @@ Or try running our "Hello World":
 
     $ streamlit hello
 
-For more detailed info, see https://streamlit.io/secret/docs.
+For more detailed info, see https://streamlit.io/docs.
 """
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
@@ -183,7 +183,6 @@ vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
-_native_chart = _with_dg(_DeltaGenerator._native_chart)  # noqa: E221
 _text_exception = _with_dg(_DeltaGenerator._text_exception)  # noqa: E221
 
 # Config
@@ -329,7 +328,7 @@ def write(*args, **kwargs):
     # Python2 doesn't support this syntax
     #   def write(*args, unsafe_allow_html=False)
     # so we do this instead:
-    unsafe_allow_html = kwargs.get('unsafe_allow_html', False)
+    unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
     try:
         string_buffer = []
@@ -337,8 +336,8 @@ def write(*args, **kwargs):
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer),
-                    unsafe_allow_html=unsafe_allow_html)  # noqa: F821
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html
+                )  # noqa: F821
                 string_buffer[:] = []
 
         for arg in args:
@@ -473,8 +472,18 @@ def spinner(text="In progress..."):
     >>> st.success('Done!')
 
     """
+    import streamlit.caching as caching
+
     display_message_lock = None
-    message = empty()
+
+    # @st.cache optionally uses spinner for long-running computations.
+    # Normally, streamlit warns the user when they call st functions
+    # from within an @st.cache'd function. But we do *not* want to show
+    # these warnings for spinner's message, so we create and mutate this
+    # message delta within the "suppress_cached_st_function_warning"
+    # context.
+    with caching.suppress_cached_st_function_warning():
+        message = empty()
 
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
@@ -486,7 +495,8 @@ def spinner(text="In progress..."):
         def set_message():
             with display_message_lock:
                 if display_message:
-                    message.warning(str(text))
+                    with caching.suppress_cached_st_function_warning():
+                        message.warning(str(text))
 
         add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
@@ -496,7 +506,8 @@ def spinner(text="In progress..."):
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        message.empty()
+        with caching.suppress_cached_st_function_warning():
+            message.empty()
 
 
 _SPACES_RE = _re.compile("\\s*")

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-.streamlit-container {
+@import "src/assets/css/variables";
+
+.reportview-container {
   .dataframe {
     font-size: 0.8rem;
     font-family: "IBM Plex Mono", monospace;
@@ -24,14 +26,14 @@
   }
 
   .dataframe-container {
-    border: 1px solid #e6e9ee;
+    border: 1px solid $gray-lightest;
     box-sizing: content-box; /* Fix borders going under other elements. */
   }
 
   .dataframe.row-header,
   .dataframe.col-header,
   .dataframe.corner {
-    background-color: #f0f3f9;
+    background-color: $gray-lightest;
     color: #768096;
     z-index: 1;
   }
@@ -72,12 +74,12 @@
 
   .table-top-right {
     overflow-x: hidden !important;
-    background-color: #f0f3f9;
+    background-color: $gray-lightest;
   }
 
   .table-bottom-left {
     overflow-y: hidden !important;
-    background-color: #f0f3f9;
+    background-color: $gray-lightest;
   }
 
   .empty-dataframe {

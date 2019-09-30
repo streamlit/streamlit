@@ -17,33 +17,35 @@
 
 // Overwrite some basic colors.
 $white: #ffffff;
-$gray-050: #f6f8f9;
-$gray-100: #f0f3f9;
-$gray-200: #e6e9ef;
-$gray-300: $gray-200; // We don't need a million grays!
-$gray-400: $gray-200;
-$gray-500: #c2c7d0;
-$gray-600: $gray-500;
-$gray-700: #768096;
-$gray-800: #313742;
-$gray-900: #101620;
+$gray-050: #fafafa;
+$gray-100: #fafafa;
+$gray-200: #f0f2f6;
+$gray-300: #e6eaf1; // 2 We don't need a million grays!
+$gray-400: #d5dae5; // 2
+$gray-500: #bfc5d3;
+$gray-600: #a3a8b4; // 500
+$gray-700: #808495;
+$gray-800: #555867;
+$gray-900: #262730;
+$gray-1000: #0e1117;
 $black: $gray-900;
-$red: #f63366;
-$yellow: #ffb40a;
-$blue: #2979e9;
-$green: #199939;
+$red: #ff2b2b;
+$yellow: #faca2b;
+$blue: #0068c9;
+$green: #09ab3b;
 
 // Custom color for our own use.
-$gray-faint: $gray-050;
-$gray-lightest: $gray-100;
-$gray-lighter: $gray-200;
-$gray-light: $gray-500;
-$gray: $gray-700;
-$gray-dark: $gray-800;
+$gray-faint: $gray-100;
+$gray-lightest: $gray-200;
+$gray-lighter: $gray-300;
+$gray-light: $gray-400;
+$gray: $gray-600;
+$gray-dark: $gray-700;
+$gray-darker: $gray-900;
 $yellow-light: #fffd80;
 
 // Overwrite some theme colors.
-$primary: $red;
+$primary: #f63366;
 $secondary: $gray;
 $light: $gray-100;
 $dark: $gray;
@@ -68,9 +70,9 @@ $border-radius-large: 0.75rem;
 $btn-border-radius: $border-radius-large;
 
 // Custom z-index values (not related to bootstrap)
-$z-index-popup-menu: 102;
-$z-index-header: 100;
-$z-index-sidebar: 99;
+$z-index-popup-menu: 140;
+$z-index-header: 120;
+$z-index-sidebar: 100;
 
 // Custom values for our own use.
 $m1-2-font-size-sm: $font-size-sm / 2; // m1-2 = multiply by 1/2
@@ -91,3 +93,10 @@ $overlayBtn-height: 2.5rem;
 $overlayBtn-width: 2.5rem;
 $overlayBtn-opacity-visible: 0.25;
 $overlayBtn-opacity-active: 0.75;
+$top-margin: 5rem;
+$bottom-margin: $top-margin * 2;
+$sidebar-width: 21rem;
+$content-max-width: 730px; // This number comes from bootstrap.
+
+// Animation settings
+$normal-animation-duration: 300ms;

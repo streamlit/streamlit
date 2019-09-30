@@ -27,6 +27,8 @@ beforeEach(() => {
     streamlitVersion: "sv",
     installationId: "iid",
     authorEmail: "ae",
+    maxCachedMessageAge: 2,
+    commandLine: "command line",
   })
   MetricsManager.current = getMetricsManagerForTest()
 })

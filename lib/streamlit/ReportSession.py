@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import sys
+from enum import Enum
 
 import tornado.gen
 import tornado.ioloop
@@ -62,19 +62,19 @@ class ReportSession(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, script_argv):
+    def __init__(self, ioloop, script_path, command_line):
         """Initialize the ReportSession.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
-            The Tornado IOLoop that we're running within
+            The Tornado IOLoop that we're running within.
 
         script_path : str
             Path of the Python file from which this report is generated.
 
-        script_argv : list of str
-            Command-line arguments to run the script with.
+        command_line : str
+            Command line as input by the user.
 
         """
         # Each ReportSession gets a unique ID
@@ -82,12 +82,14 @@ class ReportSession(object):
         ReportSession._next_id += 1
 
         self._ioloop = ioloop
-        self._report = Report(script_path, script_argv)
+        self._report = Report(script_path, command_line)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(self.enqueue, container=BlockPath.SIDEBAR)
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(
+            enqueue=self.enqueue, container=BlockPath.SIDEBAR
+        )
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -194,7 +196,7 @@ class ReportSession(object):
 
         self.enqueue(msg)
 
-    def request_rerun(self, argv=None, widget_state=None):
+    def request_rerun(self, widget_state=None):
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -202,15 +204,12 @@ class ReportSession(object):
 
         Parameters
         ----------
-        argv : dict | None
-            The new command line arguments to run the script with, or None
-            to use the argv from the previous run of the script.
         widget_state : dict | None
             The widget state dictionary to run the script with, or None
             to use the widget state from the previous run of the script.
 
         """
-        self._enqueue_script_request(ScriptRequest.RERUN, RerunData(argv, widget_state))
+        self._enqueue_script_request(ScriptRequest.RERUN, RerunData(widget_state))
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -265,14 +264,18 @@ class ReportSession(object):
             if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
                 self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-            self._enqueue_report_finished_message()
+            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+            self._enqueue_report_finished_message(
+                ForwardMsg.FINISHED_SUCCESSFULLY
+                if script_succeeded
+                else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+            )
 
             if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
                 # on the main thread.
                 self._ioloop.spawn_callback(self._save_final_report_and_quit)
-
-            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
             if script_succeeded:
                 # When a script completes successfully, we update our
@@ -338,14 +341,21 @@ class ReportSession(object):
         imsg = msg.initialize
 
         imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
-        LOGGER.debug(
-            "New browser connection: sharing_enabled=%s", imsg.config.sharing_enabled
-        )
 
         imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
+
+        imsg.config.max_cached_message_age = config.get_option(
+            "global.maxCachedMessageAge"
+        )
+
         LOGGER.debug(
-            "New browser connection: gather_usage_stats=%s",
+            "New browser connection: "
+            "gather_usage_stats=%s, "
+            "sharing_enabled=%s, "
+            "max_cached_message_age=%s",
             imsg.config.gather_usage_stats,
+            imsg.config.sharing_enabled,
+            imsg.config.max_cached_message_age,
         )
 
         imsg.environment_info.streamlit_version = __version__
@@ -359,20 +369,28 @@ class ReportSession(object):
         imsg.user_info.installation_id = __installation_id__
         imsg.user_info.email = Credentials.get_current().activation.email
 
+        imsg.command_line = self._report.command_line
+
         self.enqueue(msg)
 
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
         msg = ForwardMsg()
         msg.new_report.id = self._report.report_id
-        msg.new_report.command_line.extend(self._report.argv)
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
         self.enqueue(msg)
 
-    def _enqueue_report_finished_message(self):
+    def _enqueue_report_finished_message(self, status):
+        """Enqueues a report_finished ForwardMsg.
+
+        Parameters
+        ----------
+        status : ReportFinishedStatus
+
+        """
         msg = ForwardMsg()
-        msg.report_finished = True
+        msg.report_finished = status
         self.enqueue(msg)
 
     def handle_rerun_script_request(
@@ -391,33 +409,26 @@ class ReportSession(object):
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
-            argv and widget state.
+            widget state.
 
         """
-        old_argv = self._report.argv
-
-        if command_line is not None:
-            self._report.parse_argv_from_command_line(command_line)
-
         if is_preheat:
             self._maybe_reuse_previous_run = True  # For next time.
 
         elif self._maybe_reuse_previous_run:
             # If this is a "preheated" ReportSession, reuse the previous run if
-            # the argv and widget state matches. But only do this one time
-            # ever.
+            # the widget state matches. But only do this one time ever.
             self._maybe_reuse_previous_run = False
 
             has_widget_state = (
                 widget_state is not None and len(widget_state.widgets) > 0
             )
-            has_new_argv = old_argv != self._report.argv
 
-            if not has_widget_state and not has_new_argv:
+            if not has_widget_state:
                 LOGGER.debug("Skipping rerun since the preheated run is the same")
                 return
 
-        self.request_rerun(self._report.argv, widget_state)
+        self.request_rerun(widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""

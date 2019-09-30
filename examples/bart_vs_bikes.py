@@ -31,10 +31,11 @@ st.write(
 )
 
 
-@st.cache(persist=True)
+@st.cache
 def from_data_file(filename):
-    dirname = os.path.dirname(__file__)
-    return pd.read_json(os.path.join(dirname, "data", filename))
+    dirname = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
+    url = os.path.join(dirname, "data", filename)
+    return pd.read_json(url)
 
 
 # Grab some data

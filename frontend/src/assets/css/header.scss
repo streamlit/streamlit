@@ -44,45 +44,6 @@ header .decoration {
   z-index: $z-index-header;
 }
 
-header > nav {
-  position: absolute;
-  top: 0;
-  left: 1rem;
-  height: $header-height;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-header > nav {
-  a {
-    color: $black;
-    background: $white;
-    border-radius: $border-radius-large;
-    padding: 0 $m1-2-font-size-base;
-    margin: 0 -$m1-2-font-size-base;
-    border: 1px solid transparent;
-  }
-
-  a:visited {
-    color: $black;
-  }
-
-  a:active,
-  a:hover {
-    color: $primary;
-    text-decoration: none;
-  }
-
-  a:focus {
-    border: 1px solid $primary;
-    box-shadow: 0 0 0 0.2rem $primary-a50;
-    outline: none;
-  }
-}
-
 header > .toolbar {
   position: absolute;
   top: 0;
