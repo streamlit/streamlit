@@ -25,6 +25,7 @@ import * as vega from "vega"
 
 import "./VegaLiteChart.scss"
 import { Padding } from "vega"
+import { max } from "moment"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
@@ -131,10 +132,10 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
         top: padding,
         left: padding,
         right: padding,
-        bottom: padding + FIX_PADDING_BOTTOM,
+        bottom: Math.max(padding, FIX_PADDING_BOTTOM),
       }
     } else if (padding.bottom !== undefined) {
-      padding.bottom = padding.bottom + FIX_PADDING_BOTTOM
+      padding.bottom = Math.max(padding.bottom, FIX_PADDING_BOTTOM)
       return padding
     } else if (padding.bottom === undefined) {
       padding.bottom = FIX_PADDING_BOTTOM
