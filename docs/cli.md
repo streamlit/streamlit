@@ -62,4 +62,4 @@ Shows all config options for Streamlit, as well as their current values.
 $ streamlit cache clear
 ```
 
-Clears the [Streamlit cache](/api/index.md#optimize-performance).
+Clears the [Streamlit cache](api.html#optimize-performance).

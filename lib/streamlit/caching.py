@@ -227,7 +227,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         "2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. "
         "This is an escape hatch for advanced users who really know what they're doing.\n\n"
         "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/docs/tutorial/create_an_interactive_app.html)."
+        "(https://streamlit.io/secret/docs/tutorial/create_a_data_explorer_app.html)."
     )
 
     return message.format(
@@ -282,7 +282,7 @@ def _build_args_mutated_message(func):
         "When decorating a function with `@st.cache`, the arguments should not be mutated inside "
         "the function body, as that breaks the caching mechanism. Please update the code of "
         "`{name}` to bypass the mutation.\n\n"
-        "See the [Streamlit docs](https://streamlit.io/docs/tutorial/create_an_interactive_app.html) for more info."
+        "See the [Streamlit docs](https://streamlit.io/secret/docs/tutorial/create_a_data_explorer_app.html) for more info."
     )
 
     return message.format(name=func.__name__)
