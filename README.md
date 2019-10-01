@@ -15,11 +15,8 @@ https://streamlit.io/
 ```python
 import streamlit as st
 
-# Strings appear in your app, with Markdown:
-'''
-# My first Streamlit app
-
-Move the slider below and see what happens!
+x = st.slider('x')
+st.write(x, 'squared is', x * x)
 '''
 
 # A simple app in 2 lines of code!
