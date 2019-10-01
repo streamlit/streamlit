@@ -40,6 +40,8 @@ class Sidebar extends PureComponent<Props, State> {
     onChange: () => {},
   }
 
+  private sidebarRef = React.createRef<HTMLDivElement>()
+
   constructor(props: Props) {
     super(props)
 
@@ -54,10 +56,29 @@ class Sidebar extends PureComponent<Props, State> {
 
   componentDidMount() {
     window.addEventListener("resize", this.checkMobileOnResize)
+    document.addEventListener("mousedown", this.handleClickOutside)
   }
 
   componentWillUnmount() {
     window.removeEventListener("resize", this.checkMobileOnResize)
+    document.removeEventListener("mousedown", this.handleClickOutside)
+  }
+
+  handleClickOutside = (event: any) => {
+    if (this.sidebarRef) {
+      if (!window) return false
+
+      const { current } = this.sidebarRef
+      const { innerWidth } = window
+
+      if (
+        current &&
+        !current.contains(event.target) &&
+        innerWidth <= MEDIUM_BREAKPOINT_PX
+      ) {
+        this.setState({ collapsedSidebar: true })
+      }
+    }
   }
 
   checkMobileOnResize = () => {
@@ -89,7 +110,7 @@ class Sidebar extends PureComponent<Props, State> {
     })
 
     return (
-      <section className={sectionClassName}>
+      <section className={sectionClassName} ref={this.sidebarRef}>
         <div className="sidebar-content">
           <Button
             outline
