@@ -201,9 +201,15 @@ option = st.selectbox(
 
 ### Put widgets in a sidebar
 
-For a cleaner look, you can move your widgets into a sidebar. This keeps your app central, while widgets are pinned to the left. Let's take a look at how you can use  [`st.sidebar()`](api.md#streamlit.sidebar).
+For a cleaner look, you can move your widgets into a sidebar. This keeps your app central, while widgets are pinned to the left. Let's take a look at how you can use  [`st.sidebar()`](api.md#streamlit.sidebar) in your app.
 
-If you want to clean up the layout, you can move your widgets over to the sidebar, so that your app output stays central, and widget controls are pinned on the left. Just add st.sidebar before the widget, and it will move it over to the sidebar.
+```Python
+option = st.sidebar.selectbox(
+    'Which number do you like best?',
+     df['first column'])
+
+'You selected:', option
+```
 
 ## Show progress
 
