@@ -421,6 +421,15 @@ def get_streamlit_file_path(*filepath):
     return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
 
 
+def get_project_streamlit_file_path(*filepath):
+    """Return the full path to a filepath in ${CWD}/.streamlit.
+
+    Does *not* create ${CWD}/.streamlit if it doesn't already exist.
+    """
+    cwd = os.getcwd()
+    return os.path.join(cwd, STREAMLIT_ROOT_DIRECTORY, *filepath)
+
+
 def print_url(title, url):
     """Pretty-print a URL on the terminal."""
     click.secho("  %s: " % title, nl=False, fg="blue")

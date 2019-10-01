@@ -17,7 +17,11 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
+import os
+
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.util import STREAMLIT_ROOT_DIRECTORY
 
 setup_2_3_shims(globals())
 
@@ -179,3 +183,15 @@ class UtilTest(unittest.TestCase):
         with requests_mock.mock() as m:
             m.get(util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             self.assertEqual(None, util.get_external_ip())
+
+    def test_get_project_streamlit_file_path(self):
+        expected = os.path.join(
+            os.getcwd(), STREAMLIT_ROOT_DIRECTORY, "some/random/file")
+
+        self.assertEqual(
+            expected,
+            util.get_project_streamlit_file_path("some/random/file"))
+
+        self.assertEqual(
+            expected,
+            util.get_project_streamlit_file_path("some", "random", "file"))
