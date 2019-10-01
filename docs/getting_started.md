@@ -27,7 +27,7 @@ Before you get started, you're going to need a few things:
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 - [Streamlit](index.md) - This one's kind of important, so don't forget to install.
 
-If you haven't already, take a few minutes to read through [Main concepts](placeholder) to
+If you haven't already, take a few minutes to read through [Main concepts](main_concepts.md) to
 understand Streamlit's data flow model.
 
 ## Set up your virtual environment
@@ -238,5 +238,5 @@ run into difficulties here are a few things you can do.
 * Quick help from command line with `$ streamlit --help`
 * Read more documentation! Check out:
   * [Tutorials](tutorial/index.md) to make an app
-  * [Advanced guides](placeholder) for things like caching and inserting elements out of order
+  * [Advanced concepts](advanced_concepts.md) for things like caching and inserting elements out of order
   * [API reference](api.md) for examples of every Streamlit command

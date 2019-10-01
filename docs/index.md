@@ -28,9 +28,9 @@
 
 # Welcome to Streamlit
 
-Streamlit is an open-source Python library that makes it ridiculously easy to turn your Python script into an interactive app. With just a text editor, a browser and a few lines of pure Python, you can build an interactive frontend for your model or datastore -- converting it into a tool, dashboard, demo, or app in minutes.
+Streamlit is an open-source Python library that makes it easy to build beautiful applications for machine learning.
 
-Getting started is easy. Install Streamlit, import it, write some code, and run your script. Streamlit watches for changes on each save and updates automatically, visualizing your output while you’re coding. Your code runs from top to bottom, always from a clean state, just like running an ordinary script. There is no hidden state and no need for callbacks. You can view your code as a pure data flow model where you [cache anything that is expensive](api.md#optimize-performance). It’s a very simple and powerful app model that lets you build rich UIs incredibly quickly. Read more in [Streamlit’s Core Mechanics](core_mechanics.md).
+Install Streamlit, import it, write some code, and run your script. Streamlit watches for changes on each save and updates automatically, visualizing your output while you’re coding. Code runs from top to bottom, always from a clean state, and with no need for callbacks. It’s a simple and powerful app model that lets you build rich UIs incredibly quickly. Read more about how Streamlit works in [main concepts](main_concepts.md).
 
 ## Install Streamlit
 
