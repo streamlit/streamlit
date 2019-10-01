@@ -1,16 +1,21 @@
 # Welcome to Streamlit :wave:
 
-**[Streamlit](https://streamlit.io/) is the fastest way to build custom ML tools.**
+## The fastest way to build custom ML tools
 
-All in Python. Free and open source.
+![Example of live coding a dashboard in Streamlit|635x380](https://aws1.discourse-cdn.com/standard10/uploads/streamlit/original/1X/292e985f7f75ef7bef8c27b5899f71f76cd577e0.gif)
 
-![streamlit_uber_demo|635x380](https://aws1.discourse-cdn.com/standard10/uploads/streamlit/original/1X/292e985f7f75ef7bef8c27b5899f71f76cd577e0.gif)
+:party: **Streamlit launched today! Check out our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!** :party:
 
-Streamlit is an app framework for machine learning that allows you to rapidly create ML tools to visualize, explore, and compare your data and models. Quickly get the tools you need so you can spend more time on research and discovery and less on frontend development and infrastructure.
+## Installation
 
-https://streamlit.io/
+```bash
+pip install streamlit
+streamlit hello
+```
 
 ## Example
+
+Streamlit lets you build interactive apps rediculously easily.
 
 ```python
 import streamlit as st
@@ -19,43 +24,32 @@ x = st.slider('x')
 st.write(x, 'squared is', x * x)
 ```
 
-## Installation :floppy_disk:
+<img src="https://streamlit-demo-data.s3-us-west-2.amazonaws.com/squared-image-for-github-readme.png" width=490/>
 
-#### Prerequisites
-- Your favorite IDE
-- [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
-- [PIP](https://pip.pypa.io/en/stable/installing/)
+## A Bigger Example
 
-#### Install
+Despite it's simplicity Streamlit lets you build incredibly rich and useful tools. [This demonstration](https://github.com/streamlit/demo-self-driving) lets you browse the entire [Udacity self-driving-car dataset](https://github.com/udacity/self-driving-car) and runtime real-time inference on it using the [YOLO object detection net](https://pjreddie.com/darknet/yolo).
+
+![Making-of Animation](https://raw.githubusercontent.com/streamlit/demo-self-driving/master/av_final_optimized.gif "Making-of Animation")
+
+The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/app.py) which illustrates all the major building blocks of Streamlit. You can run it right now!
+
+```bash
+pip install --upgrade streamlit opencv-python
+streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/master/app.py
 ```
-$ pip install streamlit
-$ streamlit hello
-```
-That's it!
 
-## Get Started :bar_chart:
-- See our [Main concepts](https://streamlit.io/docs/main_concepts.html) documentation for a fast overview of how Streamlit works (data flow, caching primitives, interactive widgets).
-- Use the [Getting started](https://streamlit.io/docs/getting_started.html) guide to dive into Streamlit function calls.
-- If you want a deep dive into why we built Streamlit the way we did, check out this [blog post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace) by our CEO and co-founder, Adrien Treuille.
+## More Information
 
-## Tutorials :flashlight:
-- [These tutorials](https://streamlit.io/docs/tutorial/index.html) dive into how to create your own data exploration and model comparison apps.
-- We also have a number of [demo projects](https://github.com/streamlit/) you can check out and run. Let us know if you have a cool idea for a new project we could do, and we'll add it to one our upcoming Hackathons!
+- Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)
+- Our lovely [community](dicsuss.streamlit.io)
+- Streamlit [documentaton](https://streamlit.io/docs)
+- More [demo projects](https://github.com/streamlit/)
 
-## Documentation :books:
-- [Main concepts](https://streamlit.io/docs/main_concepts.html)
-- [Getting started](https://streamlit.io/docs/getting_started.html)
-- [API reference](https://streamlit.io/docs/api.html)
-- [Change log](https://streamlit.io/secret/docs/changelog.html)
+## Streamlit for Teams
 
-## Community Support :family:
-- Please join and ask questions on our [Community forum](https://discuss.streamlit.io/).
-- Our development team actively follows the forum and loves to hear your feedback. Our forum is also where we post our latest release notes.
+[Streamlit for Teams](https://streamlit.io/forteams/) is our enterprise edition, with single-click deploy, authentication, web editing, versioning, and more. Please contact us if you would like to learn more.
 
-## Contributing :ant:
-- Post new bugs and feature requests at [GitHub issues](https://github.com/streamlit/streamlit/issues/new/choose)
-- If you'd like to contribute with code — thanks! Check out our contributing information and guidelines [here](https://github.com/streamlit/streamlit/wiki/Contributing).
-- For anything else, post on the [forum](https://discuss.streamlit.io/).
+## License
 
-## License :scroll:
-- Streamlit licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
+Streamlit is completely free and open source and licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
