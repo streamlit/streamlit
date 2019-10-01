@@ -21,6 +21,7 @@ import streamlit as st
 from streamlit.logger import get_logger
 import inspect
 from collections import OrderedDict
+import urllib
 import textwrap
 
 LOGGER = get_logger(__name__)
@@ -63,48 +64,52 @@ def mapping_demo():
     to display geospatial data.
     """
     import pandas as pd
-    import copy, os
+    import os
 
     @st.cache
     def from_data_file(filename):
         GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
         return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
 
-    ALL_LAYERS = {
-        "Bike Rentals": {
-            "type": "HexagonLayer",
-            "data": from_data_file("bike_rental_stats.json"),
-            "radius": 200,
-            "elevationScale": 4,
-            "elevationRange": [0, 1000],
-            "pickable": True,
-            "extruded": True,
-        },
-        "Bart Stop Exits": {
-            "type": "ScatterplotLayer",
-            "data": from_data_file("bart_stop_stats.json"),
-            "radiusScale": 0.05,
-            "getRadius": "exits",
-        },
-        "Bart Stop Names": {
-            "type": "TextLayer",
-            "data": from_data_file("bart_stop_stats.json"),
-            "getText": "name",
-            "getColor": [0, 0, 0, 200],
-            "getSize": 15,
-        },
-        "Outbound Flow": {
-            "type": "ArcLayer",
-            "data": from_data_file("bart_path_stats.json"),
-            "pickable": True,
-            "autoHighlight": True,
-            "getStrokeWidth": 10,
-            "widthScale": 0.0001,
-            "getWidth": "outbound",
-            "widthMinPixels": 3,
-            "widthMaxPixels": 30,
+    try:
+        ALL_LAYERS = {
+            "Bike Rentals": {
+                "type": "HexagonLayer",
+                "data": from_data_file("bike_rental_stats.json"),
+                "radius": 200,
+                "elevationScale": 4,
+                "elevationRange": [0, 1000],
+                "pickable": True,
+                "extruded": True,
+            },
+            "Bart Stop Exits": {
+                "type": "ScatterplotLayer",
+                "data": from_data_file("bart_stop_stats.json"),
+                "radiusScale": 0.05,
+                "getRadius": "exits",
+            },
+            "Bart Stop Names": {
+                "type": "TextLayer",
+                "data": from_data_file("bart_stop_stats.json"),
+                "getText": "name",
+                "getColor": [0, 0, 0, 200],
+                "getSize": 15,
+            },
+            "Outbound Flow": {
+                "type": "ArcLayer",
+                "data": from_data_file("bart_path_stats.json"),
+                "pickable": True,
+                "autoHighlight": True,
+                "getStrokeWidth": 10,
+                "widthScale": 0.0001,
+                "getWidth": "outbound",
+                "widthMinPixels": 3,
+                "widthMaxPixels": 30,
+            }
         }
-    }
+    except urllib.error.URLError:
+        st.error("Connection Error. This demo requires internet access")
+        return
 
     st.sidebar.markdown('### Map Layers')
     selected_layers = [layer for layer_name, layer in ALL_LAYERS.items()
@@ -124,7 +129,7 @@ def fractal_demo():
     """
     This app shows how you can use Streamlit to build cool animations.
     It displays an animated fractal based on the the Julia Set. Use the slider
-    to tune difference parameters.
+    to tune different parameters.
     """
     import numpy as np
 
