@@ -1,4 +1,4 @@
-# Tutorial: Create your first interactive app
+# Tutorial: Create a data explorer app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/docs/#install-streamlit) and

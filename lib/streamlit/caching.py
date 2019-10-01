@@ -239,7 +239,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         what they're doing.
 
         Learn more about caching and copying in the [Streamlit documentation]
-        (https://streamlit.io/docs/api.html#optimize-performance).
+        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
         """
     ).strip("\n")
 
@@ -285,7 +285,7 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
         doing.
 
         Learn more about caching and copying in the [Streamlit documentation]
-        (https://streamlit.io/docs/api.html#optimize-performance).
+        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
     """).strip("\n")
 
     return message.format(
@@ -305,7 +305,7 @@ def _build_args_mutated_message(func):
         mechanism. Please update the code of `{name}` to bypass the mutation.
 
         See the [Streamlit
-        docs](https://streamlit.io/docs/api.html#optimize-performance) for more
+        docs](https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html) for more
         info.
     """).strip("\n")
 
