@@ -33,7 +33,7 @@ from collections import namedtuple
 import requests
 import pytest
 import requests_mock
-from mock import patch, mock_open, mock, MagicMock
+from mock import patch, mock_open, MagicMock
 import plotly.graph_objs as go
 
 from streamlit import util
@@ -94,18 +94,21 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write(self):
         """Test streamlit.util.streamlit.write."""
-        with patch("streamlit.util.open", mock_open()) as p, util.streamlit_write(
-            FILENAME
-        ) as output:
+
+        dirname = os.path.dirname(util.get_streamlit_file_path(FILENAME))
+        with patch("streamlit.util.open", mock_open()) as open, patch(
+            "streamlit.util.os.makedirs"
+        ) as makedirs, util.streamlit_write(FILENAME) as output:
             output.write("some data")
-            p().write.assert_called_once_with("some data")
+            open().write.assert_called_once_with("some data")
+            makedirs.assert_called_once_with(dirname, exist_ok=True)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write_exception(self):
         """Test streamlit.util.streamlit.write."""
         with patch("streamlit.util.open", mock_open()) as p, patch(
-            "streamlit.util.platform.system"
-        ) as system:
+            "streamlit.util.os.makedirs"
+        ), patch("streamlit.util.platform.system") as system:
             system.return_value = "Darwin"
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
             with pytest.raises(util.Error) as e, util.streamlit_write(

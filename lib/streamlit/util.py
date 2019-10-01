@@ -102,6 +102,7 @@ def streamlit_write(path, binary=False):
     if binary:
         mode += "b"
     path = get_streamlit_file_path(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         with open(path, mode) as handle:
             yield handle
@@ -403,20 +404,14 @@ def is_function(x):
 
 
 def get_streamlit_file_path(*filepath):
-    """Return the full path to a filepath in ~/.streamlit.
+    """Return the full path to a file in ~/.streamlit.
 
-    Creates ~/.streamlit if needed.
+    This doesn't guarantee that the file (or its directory) exists.
     """
     # os.path.expanduser works on OSX, Linux and Windows
     home = os.path.expanduser("~")
     if home is None:
         raise RuntimeError("No home directory.")
-
-    folder_path = filepath[:-1]
-    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *folder_path)
-
-    if not os.path.isdir(st_path):
-        os.makedirs(st_path)
 
     return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
 
@@ -424,10 +419,9 @@ def get_streamlit_file_path(*filepath):
 def get_project_streamlit_file_path(*filepath):
     """Return the full path to a filepath in ${CWD}/.streamlit.
 
-    Does *not* create ${CWD}/.streamlit if it doesn't already exist.
+    This doesn't guarantee that the file (or its directory) exists.
     """
-    cwd = os.getcwd()
-    return os.path.join(cwd, STREAMLIT_ROOT_DIRECTORY, *filepath)
+    return os.path.join(os.getcwd(), STREAMLIT_ROOT_DIRECTORY, *filepath)
 
 
 def print_url(title, url):

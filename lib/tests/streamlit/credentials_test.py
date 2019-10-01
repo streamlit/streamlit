@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """streamlit.credentials unit test."""
-
+import os
 import sys
 import textwrap
 import unittest
@@ -25,6 +25,7 @@ from mock import call
 from mock import mock_open
 from mock import patch
 
+from streamlit import util
 from streamlit.credentials import Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email
@@ -194,13 +195,21 @@ class CredentialsClassTest(unittest.TestCase):
         """
         ).lstrip()
 
-        m = mock_open()
-        with patch("streamlit.credentials.open", m, create=True) as m:
+        streamlit_root_path = os.path.join(
+            "/mock/home/folder", util.STREAMLIT_ROOT_DIRECTORY
+        )
+
+        with patch(
+            "streamlit.credentials.open", mock_open(), create=True
+        ) as open, patch("streamlit.credentials.os.makedirs") as make_dirs:
+
             c.save()
+
+            make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
             if sys.version_info >= (3, 0):
-                m.return_value.write.assert_called_once_with(truth)
+                open.return_value.write.assert_called_once_with(truth)
             else:
-                m.return_value.write.assert_called_once_with(truth2)
+                open.return_value.write.assert_called_once_with(truth2)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_activate_already_activated(self):
