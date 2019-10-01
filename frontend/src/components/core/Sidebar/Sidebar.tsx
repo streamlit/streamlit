@@ -65,9 +65,7 @@ class Sidebar extends PureComponent<Props, State> {
   }
 
   handleClickOutside = (event: any) => {
-    if (this.sidebarRef) {
-      if (!window) return false
-
+    if (this.sidebarRef && window) {
       const { current } = this.sidebarRef
       const { innerWidth } = window
 
