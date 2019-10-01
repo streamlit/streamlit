@@ -18,7 +18,7 @@
 import React from "react"
 import { TimePicker as UITimePicker } from "baseui/datepicker"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 interface Props {
   disabled: boolean
@@ -30,39 +30,35 @@ interface Props {
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, it's undefined.
+   * widget's UI, the default value is used.
    */
-  value?: string
+  value: string
 }
 
 class TimeInput extends React.PureComponent<Props, State> {
-  public state: State = {}
+  public state: State = {
+    value: this.props.element.get("default"),
+  }
 
-  /**
-   * Return the user-entered value, or the widget's default value
-   * if the user hasn't interacted with it yet.
-   */
-  private get valueOrDefault(): Date {
-    if (this.state.value === undefined) {
-      return stringToDate(this.props.element.get("value") as string)
-    } else {
-      return stringToDate(this.state.value)
-    }
+  public componentDidMount(): void {
+    this.setWidgetValue({ fromUi: false })
+  }
+
+  private setWidgetValue = (source: Source): void => {
+    const widgetId: string = this.props.element.get("id")
+    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
   private handleChange = (newDate: Date): void => {
-    const widgetId = this.props.element.get("id")
-
     const value = dateToString(newDate)
-    this.setState({ value })
-    this.props.widgetMgr.setStringValue(widgetId, value)
+    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
-  public render(): React.ReactNode {
-    const label = this.props.element.get("label")
+  public render = (): React.ReactNode => {
     const style = { width: this.props.width }
+    const label = this.props.element.get("label")
 
-    const selectOverride = {
+    const selectOverrides = {
       Select: {
         props: {
           disabled: this.props.disabled,
@@ -75,9 +71,9 @@ class TimeInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UITimePicker
           format="24"
-          value={this.valueOrDefault}
+          value={stringToDate(this.state.value)}
           onChange={this.handleChange}
-          overrides={selectOverride}
+          overrides={selectOverrides}
           creatable
         />
       </div>

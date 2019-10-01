@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
-.streamlit-container {
+@import "src/assets/css/variables";
+
+.reportview-container {
   .dataframe {
     font-size: 0.8rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     text-align: right;
     padding: 0.5rem;
     line-height: 1;
   }
 
   .dataframe-container {
-    border: 1px solid #E6E9EE;
-    box-sizing: content-box;  /* Fix borders going under other elements. */
+    border: 1px solid $gray-lightest;
+    box-sizing: content-box; /* Fix borders going under other elements. */
   }
 
   .dataframe.row-header,
   .dataframe.col-header,
   .dataframe.corner {
-    background-color: #F0F3F9;
+    background-color: $gray-lightest;
     color: #768096;
     z-index: 1;
   }
@@ -53,7 +55,7 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    line-height: 0.75;  /** For vertical centering. */
+    line-height: 0.75; /** For vertical centering. */
   }
 
   .fixup {
@@ -72,16 +74,16 @@
 
   .table-top-right {
     overflow-x: hidden !important;
-    background-color: #F0F3F9;
+    background-color: $gray-lightest;
   }
 
   .table-bottom-left {
     overflow-y: hidden !important;
-    background-color: #F0F3F9;
+    background-color: $gray-lightest;
   }
 
   .empty-dataframe {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     color: #768096;
     font-style: italic;
     font-size: 0.8rem;

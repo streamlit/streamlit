@@ -19,10 +19,10 @@
 
 describe("Dataframes with different sizes", () => {
   const expected = [
-    { width: "727px", height: "300px" },
+    { width: "695px", height: "300px" },
     { width: "247px", height: "150px" },
     { width: "247px", height: "300px" },
-    { width: "727px", height: "150px" }
+    { width: "695px", height: "150px" }
   ];
   before(() => {
     cy.visit("http://localhost:3000/");

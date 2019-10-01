@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@import '../../../assets/css/variables';
+@import 'assets/css/variables';
 
 
 .Widget > label {
@@ -29,7 +29,6 @@
   margin: 0;
   text-align: right;
   position: absolute;
-  margin: 0;
   bottom: 0;
   right: $m1-2-font-size-sm;
 }

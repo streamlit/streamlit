@@ -35,16 +35,17 @@ E2E_DIR = "e2e/scripts"
 
 EXCLUDED_FILENAMES = set()
 
+# Since there is not DISPLAY set (and since Streamlit is not actually running
+# and fixing Matplotlib in these tests), we set the MPL backend to something
+# that doesn't require a display.
+os.environ["MPLBACKEND"] = "Agg"
+
 # Scripts that rely on matplotlib can't be run in Python2. matplotlib
 # dropped Py2 support, and so we don't install it in our virtualenv.
 try:
     import matplotlib
 except ImportError:
-    EXCLUDED_FILENAMES |= set([
-        'empty_charts.py',
-        'pyplot.py',
-        'pyplot_kwargs.py'
-    ])
+    EXCLUDED_FILENAMES |= set(["empty_charts.py", "pyplot.py", "pyplot_kwargs.py"])
 
 # magic.py uses the async keyword, which is Python 3.6+
 if IS_PYTHON_2:
@@ -56,7 +57,7 @@ try:
     from subprocess import DEVNULL
 except ImportError:
     # Python 2
-    DEVNULL = open(os.devnull, 'wb')
+    DEVNULL = open(os.devnull, "wb")
 
 
 def _command_to_string(command):
@@ -93,8 +94,7 @@ def run_commands(section_header, commands):
         )
 
         # Run the command.
-        result = subprocess.call(
-            command.split(' '), stdout=DEVNULL, stderr=None)
+        result = subprocess.call(command.split(" "), stdout=DEVNULL, stderr=None)
         if result != 0:
             failed_commands.append(command)
 
@@ -111,8 +111,8 @@ def main():
         sys.exit(0)
     else:
         click.secho(
-            "\n".join(_command_to_string(command) for command in failed),
-            fg="red")
+            "\n".join(_command_to_string(command) for command in failed), fg="red"
+        )
         click.secho("\n%s failed scripts" % len(failed), fg="red", bold=True)
         sys.exit(-1)
 

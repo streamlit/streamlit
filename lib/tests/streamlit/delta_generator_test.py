@@ -59,22 +59,23 @@ class FakeDeltaGenerator(object):
         pass
 
     def __getattr__(self, name):
-        streamlit_methods = [method_name for method_name in dir(st)
-                             if callable(getattr(st, method_name))]
+        streamlit_methods = [
+            method_name for method_name in dir(st) if callable(getattr(st, method_name))
+        ]
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
                 if self._container == BlockPath.SIDEBAR:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                    )
                 else:
-                    message = "Method `%(name)s()` does not exist for " \
-                              "`DeltaGenerator` objects. Did you mean " \
-                              "`st.%(name)s()`?" % {
-                                  "name": name
-                              }
+                    message = (
+                        "Method `%(name)s()` does not exist for "
+                        "`DeltaGenerator` objects. Did you mean "
+                        "`st.%(name)s()`?" % {"name": name}
+                    )
             else:
                 message = "`%(name)s()` is not a valid Streamlit command." % {
                     "name": name
@@ -133,26 +134,28 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.non_existing()
 
-        self.assertEqual(str(ctx.exception),
-                         "`non_existing()` is not a valid Streamlit command.")
+        self.assertEqual(
+            str(ctx.exception), "`non_existing()` is not a valid Streamlit command."
+        )
 
     def test_sidebar_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
             st.sidebar.write()
 
-        self.assertEqual(str(ctx.exception),
-                         "Method `write()` does not exist for `DeltaGenerator`"
-                         " objects. Did you mean `st.write()`?")
+        self.assertEqual(
+            str(ctx.exception),
+            "Method `write()` does not exist for `DeltaGenerator`"
+            " objects. Did you mean `st.write()`?",
+        )
 
     def test_wraps_with_cleaned_sig(self):
-        wrapped_function = (
-            _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2))
+        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
         wrapped = wrapped_function.keywords.get("wrapped")
 
         # Check meta data.
-        self.assertEqual(wrapped.__module__, "delta_generator_test")
-        self.assertEqual(wrapped.__name__, "fake_text")
-        self.assertEqual(wrapped.__doc__, "Fake text delta generator.")
+        self.assertEqual("delta_generator_test", wrapped.__module__)
+        self.assertEqual("fake_text", wrapped.__name__)
+        self.assertEqual("Fake text delta generator.", wrapped.__doc__)
 
         # Verify original signature
         sig = signature(FakeDeltaGenerator.fake_text)
@@ -230,12 +233,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue_new_element_delta(None, None)
         self.assertEqual(dg, new_dg)
 
-    @parameterized.expand(
-        [
-            (BlockPath.MAIN,),
-            (BlockPath.SIDEBAR,),
-        ]
-    )
+    @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
     def test_enqueue_new_element_delta(self, container):
         dg = self.new_delta_generator(container=container)
         self.assertEqual(0, dg._id)
@@ -250,7 +248,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
+        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._id)
         self.assertEqual(container, new_dg._container)
@@ -271,7 +269,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element, 'fake')
+        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
         self.assertEqual(dg, new_dg)
 
         msg = self.get_message_from_queue()
@@ -426,9 +424,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec['mark'], 'line')
-        self.assertEqual(
-            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_area_chart(self):
         """Test dg.area_chart."""
@@ -438,9 +435,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec['mark'], 'area')
-        self.assertEqual(
-            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertEqual(chart_spec["mark"], "area")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
     def test_bar_chart(self):
         """Test dg.bar_chart."""
@@ -451,9 +447,8 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
 
-        self.assertEqual(chart_spec['mark'], 'bar')
-        self.assertEqual(
-            element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertEqual(chart_spec["mark"], "bar")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):

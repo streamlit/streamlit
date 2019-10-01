@@ -50,6 +50,13 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # TODO: line_chart, bar_chart, etc.
         ]
 
+    def _get_deltas_that_melt_dataframes(self):
+        return [
+            lambda df: self._dg.line_chart(df),
+            lambda df: self._dg.bar_chart(df),
+            lambda df: self._dg.area_chart(df),
+        ]
+
     def _get_named_data_methods(self):
         """DeltaGenerator methods that produce named datasets."""
         # These should always name the desired data "mydata1"
@@ -64,6 +71,20 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             ),
             # TODO: deck_gl_chart
         ]
+
+    def test_deltas_that_melt_dataframes(self):
+        deltas = self._get_deltas_that_melt_dataframes()
+
+        for delta in deltas:
+            el = delta(DATAFRAME)
+            el.add_rows(NEW_ROWS)
+
+            df_proto = data_frame_proto._get_data_frame(
+                        self.get_delta_from_queue())
+            num_rows = len(df_proto.data.cols[0].int64s.data)
+
+            self.assertEqual(num_rows, 10)
+
 
     def test_simple_add_rows(self):
         """Test plain old add_rows."""

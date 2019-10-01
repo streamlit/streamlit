@@ -162,7 +162,7 @@ map_data = pandas.DataFrame(
 st.map(map_data)
 ```
 
-### Add interactivity with widgets
+## Add interactivity with widgets
 
 With widgets, Streamlit allows you to bake interactivity directly into your
 apps with checkboxes, buttons, sliders, and more. Check out our [API reference](api.md)
@@ -198,6 +198,12 @@ option = st.selectbox(
 
 'You selected: ', option
 ```
+
+### Put widgets in a sidebar
+
+For a cleaner look, you can move your widgets into a sidebar. This keeps your app central, while widgets are pinned to the left. Let's take a look at how you can use  [`st.sidebar()`](api.md#streamlit.sidebar).
+
+If you want to clean up the layout, you can move your widgets over to the sidebar, so that your app output stays central, and widget controls are pinned on the left. Just add st.sidebar before the widget, and it will move it over to the sidebar.
 
 ## Show progress
 
