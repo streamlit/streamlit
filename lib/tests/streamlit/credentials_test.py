@@ -188,13 +188,6 @@ class CredentialsClassTest(unittest.TestCase):
         """
         ).lstrip()
 
-        truth2 = textwrap.dedent(
-            """
-            [general]
-            email = "some_email"
-        """
-        ).lstrip()
-
         streamlit_root_path = os.path.join(
             "/mock/home/folder", util.STREAMLIT_ROOT_DIRECTORY
         )
@@ -206,10 +199,7 @@ class CredentialsClassTest(unittest.TestCase):
             c.save()
 
             make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
-            if sys.version_info >= (3, 0):
-                open.return_value.write.assert_called_once_with(truth)
-            else:
-                open.return_value.write.assert_called_once_with(truth2)
+            open.return_value.write.assert_called_once_with(truth)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_activate_already_activated(self):
