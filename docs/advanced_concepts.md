@@ -172,4 +172,4 @@ Coming soon! Ping us in the [community forum](https://discuss.streamlit.io/) if
 you just can't wait and have to have this info immediately.
 
 Meanwhile, for an intro to caching in Streamlit, see the [data explorer
-tutorial](/tutorial/create_a_data_explorer_app.html).
+tutorial](tutorial/create_a_data_explorer_app.md).
