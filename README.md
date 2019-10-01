@@ -44,7 +44,7 @@ That's it!
 ## Get Started :bar_chart:
 - See our [Main concepts](https://streamlit.io/docs/main_concepts.html) documentation for a fast overview of how Streamlit works (data flow, caching primitives, interactive widgets).
 - Use the [Getting started](https://streamlit.io/docs/getting_started.html) guide to dive into Streamlit function calls.
-- If you want a deep dive into why we built Streamlit the way we did, check out this [blog post](https://needlink) by our CEO and co-founder, Adrien Treuille.
+- If you want a deep dive into why we built Streamlit the way we did, check out this [blog post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace) by our CEO and co-founder, Adrien Treuille.
 
 ## Tutorials :flashlight:
 - [These tutorials](https://streamlit.io/docs/tutorial/index.html) dive into how to create your own data exploration and model comparison apps.
