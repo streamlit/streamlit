@@ -17,11 +17,6 @@ import streamlit as st
 
 x = st.slider('x')
 st.write(x, 'squared is', x * x)
-'''
-
-# A simple app in 2 lines of code!
-reps = st.slider('Repetitions', 1, 10)
-st.write('Hello world. ' * reps)
 ```
 
 ## Installation :floppy_disk:
