@@ -24,6 +24,7 @@ import embed from "vega-embed"
 import * as vega from "vega"
 
 import "./VegaLiteChart.scss"
+import { Padding } from "vega"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
@@ -36,6 +37,7 @@ const DEFAULT_DATA_NAME = "source"
  */
 const EMBED_PADDING = 38
 const DEFAULT_HEIGHT = 200
+const FIX_PADDING_BOTTOM = 20
 
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
@@ -114,6 +116,32 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     const width = this.props.width - EMBED_PADDING
     const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
     return { width, height }
+  }
+
+  public getChartPadding = (padding: Padding): Padding => {
+    if (padding === undefined) {
+      return {
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: FIX_PADDING_BOTTOM,
+      }
+    } else if (typeof padding === "number") {
+      return {
+        top: padding,
+        left: padding,
+        right: padding,
+        bottom: padding - FIX_PADDING_BOTTOM,
+      }
+    } else if (padding.bottom !== undefined) {
+      padding.bottom = padding.bottom - FIX_PADDING_BOTTOM
+      return padding
+    } else if (padding.bottom === undefined) {
+      padding.bottom = FIX_PADDING_BOTTOM
+      return padding
+    } else {
+      return 0
+    }
   }
 
   public async componentDidUpdate(prevProps: Props): Promise<void> {
@@ -249,9 +277,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     const { width, height } = this.getChartDimensions()
     spec.width = width
     spec.height = height
-    spec.padding = {
-      bottom: EMBED_PADDING,
-    }
+    spec.padding = this.getChartPadding(spec.padding)
 
     if (spec.datasets) {
       throw new Error("Datasets should not be passed as part of the spec")
