@@ -4,7 +4,7 @@
 
 ![Example of live coding a dashboard in Streamlit|635x380](https://aws1.discourse-cdn.com/standard10/uploads/streamlit/original/1X/292e985f7f75ef7bef8c27b5899f71f76cd577e0.gif)
 
-:party: **Streamlit launched today! Check out our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!** :party:
+**Streamlit launched today! Check out our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!**
 
 ## Installation
 
