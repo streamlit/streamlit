@@ -34,18 +34,21 @@ class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
     def setUp(self):
-        self.patch1 = patch.object(
-            config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
-        )
-        self.patch2 = patch.object(
-            config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)
-        )
-        self.patch1.start()
-        self.patch2.start()
+        self.patches = [
+            patch.object(
+                config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
+            ),
+            patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
+            patch.object(config, "_config_file_has_been_parsed", new=False),
+        ]
+
+        for p in self.patches:
+            p.start()
 
     def tearDown(self):
-        self.patch1.stop()
-        self.patch2.stop()
+        for p in self.patches:
+            p.stop()
+
         try:
             del os.environ["TEST_ENV_VAR"]
         except Exception:
