@@ -62,7 +62,7 @@ That's it!
 
 ## Contributing :ant:
 - Post new bugs and feature requests at [GitHub issues](https://github.com/streamlit/streamlit/issues/new/choose)
-- If you'd like to contribute with code — thanks! Check out our contributing-guidelines **here**.
+- If you'd like to contribute with code — thanks! Check out our contributing information and guidelines [here](https://github.com/streamlit/streamlit/wiki/Contributing).
 - For anything else, post on the [forum](https://discuss.streamlit.io/).
 
 ## License :scroll:
