@@ -4,7 +4,7 @@ Working with Streamlit is simple. First you sprinkle a few Streamlit commands in
 
 As soon as you run the script, a new tab will open in your default browser and connect to a Streamlit server that's automatically launched behind the scenes. In the tab, you'll find your Streamlit app. This is your canvas, where you'll draw charts, text, tables, and more.
 
-What gets drawn in the app is up to you. For example [`st.text`](apid.md#streamlit.text) writes raw text to your app, and [`st.line_chart`](api.md#streamlit.line_chart) draws — you guessed it — a line chart.
+What gets drawn in the app is up to you. For example [`st.text`](apid.html#streamlit.text) writes raw text to your app, and [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it — a line chart.
 
 ## Data flow
 
@@ -18,7 +18,7 @@ What this all means is that Streamlit allows you to work in a fast interactive l
 
 Caching is super important when it comes to speed - especially when dealing with large data sets. It's always a good idea to load data, cache what's expensive, visualize the data, then spruce things up with interaction.
 
-Streamlit's ability to quickly update and re-execute the the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.md#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
+Streamlit's ability to quickly update and re-execute the the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.html#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
 
 When you mark a function with Streamlit's cache annotation, it tells Streamlit that whenever the function is called that it needs to check three things:
 
@@ -40,7 +40,7 @@ While these limitations are important to keep in mind, most of the time, they ar
 
 ## Widgets
 
-When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.md#streamlit.slider), [`st.button()`](api.md#streamlit.button) or [`st.selectbox()`](api.md#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
+When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.html#streamlit.slider), [`st.button()`](api.html#streamlit.button) or [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
 
 ```
 import streamlit as st
@@ -53,8 +53,8 @@ st.write(x, ‘squared is', x * x)
 
 Now that you have an idea of what Streamlit is, let's close the loop and review how it works:
 
-1. The entire script is rerun for each user interaction.
-2. Streamlit assigns each variable an up-to-date value based on the app state.
+1. The entire script is rerun with each save.
+2. Streamlit assigns each variable an up-to-date value based on the current state of the app.
 3. Caching allows Streamlit to skip redundant data fetches and computation.
 
 ![](media/app_model.png)

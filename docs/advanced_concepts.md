@@ -8,16 +8,16 @@ Now that you've mastered Streamlit's main concepts, let's take a look at some ad
 ```
 ## Display and style data
 
-There are a few ways to display data (tables, arrays, data frames) in Streamlit apps. In [getting started](getting_started.md), you were introduced to *magic* and [`st.write()`](api.md#streamlit.write), which can be used to write anything from text to tables. Now let's take a look at methods designed specifically for visualizing data.
+There are a few ways to display data (tables, arrays, data frames) in Streamlit apps. In [getting started](getting_started.md), you were introduced to *magic* and [`st.write()`](api.html#streamlit.write), which can be used to write anything from text to tables. Now let's take a look at methods designed specifically for visualizing data.
 
 You might be asking yourself, "why wouldn't I always use st.write()?" There are
 a few reasons:
 
-1. *Magic* and [`st.write()`](api.md#streamlit.write) inspect the type of data that you've passed in, and then decide how to best render it in the app. Sometimes you want to draw it another way. For example, instead of drawing a dataframe as an interactive table, you may want to draw it as a static table by using st.table(df).    
+1. *Magic* and [`st.write()`](api.html#streamlit.write) inspect the type of data that you've passed in, and then decide how to best render it in the app. Sometimes you want to draw it another way. For example, instead of drawing a dataframe as an interactive table, you may want to draw it as a static table by using st.table(df).    
 2. The second reason is that other methods return an object that can be used and modified, either by adding data to it or replacing it.
 3. Finally, if you use a more specific Streamlit method you can pass additional arguments to customize its behavior.  
 
-For example, let's create a data frame and change its formatting with a Pandas `Styler` object. In this example, you'll use Numpy to generate a random sample, and the [`st.dataframe()`](api.md#streamlit.dataframe) method to draw an interactive table.
+For example, let's create a data frame and change its formatting with a Pandas `Styler` object. In this example, you'll use Numpy to generate a random sample, and the [`st.dataframe()`](api.html#streamlit.dataframe) method to draw an interactive table.
 
 ```eval_rst
 .. note::
@@ -44,7 +44,7 @@ dataframe = pandas.DataFrame(
 st.dataframe(dataframe.style.highlight_max(axis=0))
 ```
 
-Streamlit also has a method for static table generation: [`st.table()`](api.md#streamlit.table).
+Streamlit also has a method for static table generation: [`st.table()`](api.html#streamlit.table).
 
 ```Python
 dataframe = pandas.DataFrame(

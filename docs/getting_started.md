@@ -82,12 +82,12 @@ st.title('My first app')
 ```
 
 That's it! Your report has a title. You can use specific text functions to add
-content to your report, or you can use [`st.write()`](api.md#streamlit.write) and add your own markdown.
+content to your report, or you can use [`st.write()`](api.html#streamlit.write) and add your own markdown.
 
 ### Write a data frame
 
-Along with [magic commands](api.md#magic-commands), [`st.write()`](api.md#streamlit.write)
-is Streamlit's "Swiss Army knife". You can pass almost anything to [`st.write()`](api.md#streamlit.write):
+Along with [magic commands](api.html#magic-commands), [`st.write()`](api.html#streamlit.write)
+is Streamlit's "Swiss Army knife". You can pass almost anything to [`st.write()`](api.html#streamlit.write):
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
 
@@ -99,7 +99,7 @@ st.write(pandas.DataFrame({
 }))
 ```
 
-There are other data specific functions like [`st.dataframe()`](api.md#streamlit.dataframe) and [`st.table()`](api.html#streamlit.table)
+There are other data specific functions like [`st.dataframe()`](api.html#streamlit.dataframe) and [`st.table()`](api.html#streamlit.table)
 that you can also use for displaying data. Check our advanced guides on
 displaying data to understand when to use these features and how to add colors
 and styling to your data frames.
@@ -112,8 +112,8 @@ and styling to your data frames.
 ## Use magic
 
 You can also write to your app without calling any Streamlit
-methods. Streamlit supports "[magic commands](api.md#magic-commands)," which means you don't have to
-use [`st.write()`](api.md#streamlit.write) at all! Try replacing the code above with this snippet:
+methods. Streamlit supports "[magic commands](api.html#magic-commands)," which means you don't have to
+use [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above with this snippet:
 
 ```Python
 """
@@ -129,15 +129,15 @@ df = pandas.DataFrame({
 df
 ```
 
-How it works is simple. Any time that Streamlit sees a variable or a literal value on its own line, it automatically writes that to your app using [`st.write()`](api.md#streamlit.write). For more information, refer to the documentation on [magic commands](api.md#magic-commands).
+How it works is simple. Any time that Streamlit sees a variable or a literal value on its own line, it automatically writes that to your app using [`st.write()`](api.html#streamlit.write). For more information, refer to the documentation on [magic commands](api.html#magic-commands).
 
 ## Draw charts and maps
 
-Streamlit supports several popular data charting libraries like [Matplotlib, Altair, Deck.Gl, and more](api.md#display-charts). In this section, you'll add a bar chart, line chart, and a map to your app.
+Streamlit supports several popular data charting libraries like [Matplotlib, Altair, Deck.Gl, and more](api.html#display-charts). In this section, you'll add a bar chart, line chart, and a map to your app.
 
 ### Draw a line chart
 
-You can easily add a line chart to your app with [`st.line_chart()`](api.md#streamlit.line_chart).
+You can easily add a line chart to your app with [`st.line_chart()`](api.html#streamlit.line_chart).
 We'll generate a random sample using Numpy and then chart it.
 
 ```Python
@@ -150,7 +150,7 @@ st.line_chart(chart_data)
 
 ### Plot a map
 
-With [`st.map()`](api.md#streamlit.map) you can display data points on a map.
+With [`st.map()`](api.html#streamlit.map) you can display data points on a map.
 Let's use Numpy to generate some sample data and plot it on a map of
 San Francisco.
 
@@ -172,7 +172,7 @@ for a full list of interactive widgets.
 ### Use checkboxes to show/hide data
 
 One use case for checkboxes is to hide or show a specific chart or section in
-an app. [`st.checkbox()`](api.md#streamlit.checkbox) takes a single argument, which
+an app. [`st.checkbox()`](api.html#streamlit.checkbox) takes a single argument, which
 is the widget label. In this sample, the checkbox is used to toggle a
 conditional statement.
 
@@ -187,7 +187,7 @@ if st.checkbox('Show dataframe'):
 
 ### Use a selectbox for options
 
-Use [`st.selectbox`](api.md#streamlit.selectbox) to choose from a series. You can
+Use [`st.selectbox`](api.html#streamlit.selectbox) to choose from a series. You can
 write in the options you want, or pass through an array or data frame column.
 Let's use the `df` data frame we created earlier.
 
@@ -201,7 +201,7 @@ option = st.selectbox(
 
 ### Put widgets in a sidebar
 
-For a cleaner look, you can move your widgets into a sidebar. This keeps your app central, while widgets are pinned to the left. Let's take a look at how you can use  [`st.sidebar()`](api.md#streamlit.sidebar) in your app.
+For a cleaner look, you can move your widgets into a sidebar. This keeps your app central, while widgets are pinned to the left. Let's take a look at how you can use  [`st.sidebar()`](api.html#streamlit.sidebar) in your app.
 
 ```Python
 option = st.sidebar.selectbox(
@@ -213,7 +213,7 @@ option = st.sidebar.selectbox(
 
 ## Show progress
 
-When adding long running computations to an app, you can use [`st.progess()`](api.md#streamlit.progress)
+When adding long running computations to an app, you can use [`st.progess()`](api.html#streamlit.progress)
 to display status in real time.
 
 First, let's import time. We're going to use the `time.sleep()` method to
