@@ -189,12 +189,13 @@ class UtilTest(unittest.TestCase):
 
     def test_get_project_streamlit_file_path(self):
         expected = os.path.join(
-            os.getcwd(), STREAMLIT_ROOT_DIRECTORY, "some/random/file")
+            os.getcwd(), STREAMLIT_ROOT_DIRECTORY, "some/random/file"
+        )
 
         self.assertEqual(
-            expected,
-            util.get_project_streamlit_file_path("some/random/file"))
+            expected, util.get_project_streamlit_file_path("some/random/file")
+        )
 
         self.assertEqual(
-            expected,
-            util.get_project_streamlit_file_path("some", "random", "file"))
+            expected, util.get_project_streamlit_file_path("some", "random", "file")
+        )
