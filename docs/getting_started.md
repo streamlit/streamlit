@@ -111,7 +111,7 @@ and styling to your data frames.
 
 ## Use magic
 
-You can also write to your app without without calling any Streamlit
+You can also write to your app without calling any Streamlit
 methods. Streamlit supports "[magic commands](api.md#magic-commands)," which means you don't have to
 use [`st.write()`](api.md#streamlit.write) at all! Try replacing the code above with this snippet:
 

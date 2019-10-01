@@ -14,14 +14,14 @@ You might be asking yourself, "why wouldn't I always use st.write()?" There are
 a few reasons:
 
 1. *Magic* and [`st.write()`](api.md#streamlit.write) inspect the type of data that you've passed in, and then decide how to best render it in the app. Sometimes you want to draw it another way. For example, instead of drawing a dataframe as an interactive table, you may want to draw it as a static table by using st.table(df).    
-2. The second reason is that other methods return an object that can be used and modified by adding data or replacing it with a completely different element.  
+2. The second reason is that other methods return an object that can be used and modified, either by adding data to it or replacing it.
 3. Finally, if you use a more specific Streamlit method you can pass additional arguments to customize its behavior.  
 
-For example, let's create a data frame and change its formatting with a Pandas `Styler` object. In this sample, you'll use Numpy to generate a random sample, and the [`st.dataframe()`](api.md#streamlit.dataframe) method to draw an interactive table.
+For example, let's create a data frame and change its formatting with a Pandas `Styler` object. In this example, you'll use Numpy to generate a random sample, and the [`st.dataframe()`](api.md#streamlit.dataframe) method to draw an interactive table.
 
 ```eval_rst
 .. note::
-   This sample uses Numpy to generate a random sample, but you can use Pandas DataFrames, Numpy arrays, or plain Python arrays.
+   This example uses Numpy to generate a random sample, but you can use Pandas DataFrames, Numpy arrays, or plain Python arrays.
 ```
 
 ```Python
@@ -55,8 +55,8 @@ st.table(dataframe)
 
 ## Insert elements out of order
 
-You can use the [`st.empty`](api.html#streamlit.empty) command so you can
-"save" a slot in your app for use later on.
+You can use the [`st.empty`](api.html#streamlit.empty) method as a placeholder,
+to "save" a slot in your app that you can use later.
 
 ```python
 st.text('This will appear first')
@@ -80,9 +80,8 @@ my_slot2.line_chart(np.random.randn(20, 2))
 
 ## Animate elements
 
-If you put together all the tools you learned about above you can create
-compelling animations using Streamlit. Just replace elements in the app or
-update their data every so often. For example:
+Let's combine some of the things you've learned to create compelling
+animations in your app.
 
 ```python
 progress_bar = st.progress(0)
@@ -109,8 +108,10 @@ status_text.text('Done!')
 st.balloons()
 ```
 
-You can see this example live by running `streamlit hello` on your command
-line.
+```eval_rst
+.. tip::
+   You can see this example live. Just run `streamlit hello` from the command line.
+```
 
 ## Append data to a table or chart
 
