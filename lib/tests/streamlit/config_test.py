@@ -14,14 +14,13 @@
 # limitations under the License.
 
 """Config System Unittest."""
-
 import copy
 import os
 import textwrap
 import unittest
 
 import pytest
-
+from mock import mock_open
 from mock import patch
 
 from streamlit import config
@@ -471,3 +470,44 @@ class ConfigTest(unittest.TestCase):
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
         self.assertEqual(u"info", config.get_option("global.logLevel"))
+
+    def test_local_config(self):
+        """Test that $CWD/.streamlit/config.toml gets overlaid on
+        ~/.streamlit/config.toml at parse time."""
+        global_config = """
+[s3]
+bucket = "bucket"
+url = "url"
+"""
+        local_config = """
+[s3]
+bucket = "borket"
+accessKeyId = "accessKeyId"
+"""
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
+        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
+
+        global_open = mock_open(read_data=global_config)
+        local_open = mock_open(read_data=local_config)
+        open = mock_open()
+        open.side_effect = [global_open.return_value, local_open.return_value]
+
+        with patch("streamlit.config.open", open), patch(
+            "streamlit.config.os.makedirs"
+        ) as makedirs, patch("streamlit.config.os.path.exists") as path_exists:
+
+            makedirs.return_value = True
+            path_exists.return_value = lambda path: path in [
+                global_config_path,
+                local_config_path,
+            ]
+            config.parse_config_file()
+
+        # s3.bucket set in both local and global
+        self.assertEqual(u"borket", config.get_option("s3.bucket"))
+
+        # s3.url is set in global, and not in local
+        self.assertEqual(u"url", config.get_option("s3.url"))
+
+        # s3.accessKeyId is set in local and not in global
+        self.assertEqual(u"accessKeyId", config.get_option("s3.accessKeyId"))
