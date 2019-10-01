@@ -5,10 +5,10 @@
    :hidden:
 
    Home <https://streamlit.io/docs/>
+   main_concepts
    getting_started
-   tutorial/index
 
-   core_mechanics
+   tutorial/index
    advanced_concepts
 
    api
