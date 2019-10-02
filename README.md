@@ -44,7 +44,7 @@ streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/mast
 ## More Information
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)
-- Our lovely [community](dicsuss.streamlit.io)
+- Our lovely [community](https://discuss.streamlit.io)
 - Streamlit [documentaton](https://streamlit.io/docs)
 - More [demo projects](https://github.com/streamlit/)
 
