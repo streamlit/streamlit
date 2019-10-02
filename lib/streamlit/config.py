@@ -28,7 +28,6 @@ import collections
 
 import click
 from blinker import Signal
-import requests
 
 from streamlit import development
 from streamlit import util
