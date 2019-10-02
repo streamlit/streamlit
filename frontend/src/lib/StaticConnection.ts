@@ -17,7 +17,7 @@
 
 import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
-import { ForwardMsg, Text as TextProto } from "autogen/proto"
+import { BlockPath, ForwardMsg, Text as TextProto } from "autogen/proto"
 import { getObject } from "lib/s3helper"
 import { logError } from "lib/log"
 
@@ -110,28 +110,36 @@ function getBucketAndVersion(): { bucket?: string; version: string } {
   return { bucket, version }
 }
 
-/**
- * Returns the json to construct a message which places an element at a
- * particular location in the document.
- */
-function textElement({
-  id,
-  body,
-  format,
-}: {
+interface TextProps {
   id: number
   body: string
   format: TextProto.Format
-}): any {
-  return {
+}
+
+/**
+ * Returns a ForwardMsg which places an element at a particular location
+ * in the document.
+ */
+function textElement({ id, body, format }: TextProps): ForwardMsg {
+  // TODO: this doesn't properly handle sidebar elements.
+  // We need to include delta metadata in the manifest, and use it
+  // to create these placeholder elements
+  return ForwardMsg.create({
     type: "delta",
+    metadata: {
+      cacheable: false,
+      deltaId: id,
+      parentBlock: {
+        container: BlockPath.Container.MAIN,
+        path: [],
+      },
+    },
     delta: {
-      id,
       type: "newElement",
       newElement: {
         type: "text",
         text: { body, format },
       },
     },
-  }
+  })
 }
