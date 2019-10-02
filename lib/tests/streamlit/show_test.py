@@ -36,16 +36,16 @@ class ShowTest(unittest.TestCase):
         """
         thing = "something"
 
-        with patch("streamlit.write") as write:
-            with patch("streamlit.markdown") as markdown:
+        with patch("streamlit.DeltaGenerator.DeltaGenerator.write") as write:
+            with patch("streamlit.DeltaGenerator.DeltaGenerator.markdown") as markdown:
                 st.show(thing)
                 write.assert_called_once()
                 markdown.assert_called_once()
 
         foo_show_bar = "baz"
 
-        with patch("streamlit.write") as write:
-            with patch("streamlit.markdown") as markdown:
+        with patch("streamlit.DeltaGenerator.DeltaGenerator.write") as write:
+            with patch("streamlit.DeltaGenerator.DeltaGenerator.markdown") as markdown:
                 st.show(foo_show_bar)
                 write.assert_called_once()
                 markdown.assert_called_once()
