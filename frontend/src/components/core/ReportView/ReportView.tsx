@@ -74,7 +74,6 @@ class ReportView extends PureComponent<Props> {
 
     const reportViewClassName = classNames("reportview-container", {
       "--wide": wide,
-      "--with-sidebar": this.hasSidebar(),
     })
 
     return (
