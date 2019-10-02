@@ -68,6 +68,7 @@ class App extends PureComponent {
         wideMode: false,
         runOnSave: false,
       },
+      sharingEnabled: false,
     }
 
     // Bind event handlers.
@@ -85,7 +86,7 @@ class App extends PureComponent {
     this.stopReport = this.stopReport.bind(this)
     this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
     this.clearCache = this.clearCache.bind(this)
-    this.saveReport = this.saveReport.bind(this)
+    this.shareReport = this.shareReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
     this.settingsCallback = this.settingsCallback.bind(this)
     this.aboutCallback = this.aboutCallback.bind(this)
@@ -439,9 +440,9 @@ class App extends PureComponent {
   }
 
   /**
-   * Callback to call when we want to save the report.
+   * Callback to call when we want to share the report.
    */
-  saveReport() {
+  shareReport() {
     if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
         MetricsManager.current.enqueue("shareReport")
@@ -656,10 +657,10 @@ class App extends PureComponent {
                 stopReport={this.stopReport}
               />
               <MainMenu
+                sharingEnabled={this.state.sharingEnabled}
                 isServerConnected={this.isServerConnected}
-                saveCallback={this.saveReport}
+                shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
-                rerunCallback={this.openRerunScriptDialog}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}

@@ -32,6 +32,9 @@ const TEAMS_URL = "https://streamlit.io/teams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 interface Props {
+  /** True if report sharing is properly configured and enabled. */
+  sharingEnabled: boolean
+
   /** True if we're connected to the Streamlit server. */
   isServerConnected: () => boolean
 
@@ -40,6 +43,9 @@ interface Props {
 
   /** Clear the cache. */
   clearCacheCallback: () => void
+
+  /** Share the report to S3. */
+  shareCallback: () => void
 
   /** Show the Settings dialog. */
   settingsCallback: () => void
@@ -113,6 +119,18 @@ class MainMenu extends PureComponent<Props, State> {
           </DropdownItem>
 
           <DropdownItem divider />
+
+          {/* We hide 'Share Report' + divider if sharing is not configured */}
+          {this.props.sharingEnabled && (
+            <DropdownItem
+              disabled={!this.props.isServerConnected()}
+              onClick={this.props.shareCallback}
+            >
+              Share report
+            </DropdownItem>
+          )}
+
+          {this.props.sharingEnabled && <DropdownItem divider />}
 
           <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
             Streamlit for teams
