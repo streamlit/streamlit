@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import {
   Dropdown,
   DropdownItem,
@@ -31,24 +31,46 @@ const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/teams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
-class MainMenu extends PureComponent {
+interface Props {
+  /** True if we're connected to the Streamlit server. */
+  isServerConnected: () => boolean
+
+  /** Rerun the report. */
+  quickRerunCallback: () => void
+
+  /** Clear the cache. */
+  clearCacheCallback: () => void
+
+  /** Show the Settings dialog. */
+  settingsCallback: () => void
+
+  /** Show the About dialog. */
+  aboutCallback: () => void
+}
+
+interface State {
+  /** True if the menu is currently visible. */
+  dropdownOpen: boolean
+}
+
+class MainMenu extends PureComponent<Props, State> {
   /**
    * Constructor.
    */
-  constructor(props) {
+  public constructor(props: Props) {
     super(props)
     this.state = {
       dropdownOpen: false,
     }
   }
 
-  toggle() {
+  public toggle(): void {
     this.setState(({ dropdownOpen }) => ({
       dropdownOpen: !dropdownOpen,
     }))
   }
 
-  render() {
+  public render(): ReactNode {
     return (
       <Dropdown
         id="MainMenu"
