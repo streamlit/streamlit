@@ -4,4 +4,6 @@
 
 ---
 
-- [ ] By checking this box, I agree that all contributions to this project are made under the Apache 2.0 license.
+**Contribution License Agreement**
+
+By submiting this pull request you agree that all contributions to this project are made under the Apache 2.0 license.
