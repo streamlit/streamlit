@@ -138,15 +138,15 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             str(ctx.exception), "`non_existing()` is not a valid Streamlit command."
         )
 
-    # def test_sidebar_nonexistent_method(self):
-    #     with self.assertRaises(Exception) as ctx:
-    #         st.sidebar.write()
-    #
-    #     self.assertEqual(
-    #         str(ctx.exception),
-    #         "Method `write()` does not exist for `DeltaGenerator`"
-    #         " objects. Did you mean `st.write()`?",
-    #     )
+    def test_sidebar_nonexistent_method(self):
+        with self.assertRaises(Exception) as ctx:
+            st.sidebar._transparent_write()
+
+        self.assertEqual(
+            str(ctx.exception),
+            "Method `_transparent_write()` does not exist for `DeltaGenerator`"
+            " objects. Did you mean `st._transparent_write()`?",
+        )
 
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
