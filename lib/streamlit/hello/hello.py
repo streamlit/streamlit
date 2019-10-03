@@ -17,12 +17,15 @@
 
 from __future__ import division, unicode_literals
 
-import streamlit as st
-from streamlit.logger import get_logger
 import inspect
 from collections import OrderedDict
 import urllib
 import textwrap
+
+import streamlit as st
+from streamlit.logger import get_logger
+
+from . import util
 
 LOGGER = get_logger(__name__)
 
@@ -313,24 +316,8 @@ def run():
     if show_code:
         st.markdown("## Code")
         sourcelines, n_lines = inspect.getsourcelines(demo)
-        sourcelines = remove_docstring(sourcelines)
+        sourcelines = util.remove_docstring(sourcelines)
         st.code(textwrap.dedent("".join(sourcelines)))
-
-
-# This function parses the lines of a function and removes the docstring
-# if found. If no docstring is found, it returns None.
-def remove_docstring(lines):
-    if len(lines) < 3 and '"""' not in lines[1]:
-        return lines
-    #  lines[2] is the first line of the docstring, past the inital """
-    index = 2
-    while '"""' not in lines[index]:
-        index += 1
-        # limit to ~100 lines, if the docstring is longer, just bail
-        if index > 100:
-            return lines
-    # lined[index] is the closing """
-    return lines[index + 1 :]
 
 
 if __name__ == "__main__":

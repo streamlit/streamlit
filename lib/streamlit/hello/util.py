@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+# Copyright 2018-2019 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+MAX_DOCSTRING = 1000
+
+
+def remove_declaration_and_docstring(lines):
+    """
+    This function parses the source code of a function and removes the function
+    declaration and the docstring if found. If no docstring is found and the
+    function has no code, it returns an empty list. This function can be used
+    in conjunction of inspect.getsourcelines(demo) to get the source code
+    lines of a function. If the docstring is longer than MAX_DOCSTRING lines
+    it will not remove the docstring.
+
+    Parameters
+    ----------
+    lines : [str]
+        function source code lines
+
+    Returns
+    -------
+    [str]
+        a copy of lines where the docstring is removed
+    """
+    if len(lines) <= 1:
+        return lines
+    if len(lines) < 3 and '"""' not in lines[1]:
+        return lines[1:]
+    #  lines[2] is the first line of the docstring, past the initial """
+    index = 2
+    while '"""' not in lines[index]:
+        index += 1
+        # limit to MAX_DOCSTRING lines, if the docstring is longer, just bail
+        if index > MAX_DOCSTRING:
+            return lines[1:]
+    # lined[index] is the closing """
+    return lines[index + 1 :]
