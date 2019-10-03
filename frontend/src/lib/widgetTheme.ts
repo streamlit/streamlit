@@ -25,6 +25,7 @@ const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
 const fontSizeBase = SCSS_VARS["$font-size-base"]
 const fontSizeSm = SCSS_VARS["$font-size-sm"]
+const grayDark = SCSS_VARS["$gray-dark"]
 const gray = SCSS_VARS["$gray"]
 const grayLight = SCSS_VARS["$gray-light"]
 const grayLighter = SCSS_VARS["$gray-lighter"]
@@ -278,8 +279,8 @@ const mainThemePrimitives = {
   mono500: gray, // Clicked checkbox and radio
   mono600: gray, // Disabled widget text
   mono700: gray, // Unselected checkbox and radio
-  mono800: gray, // Selectbox text
-  mono900: gray, // Not used, but just in case.
+  mono800: grayDark, // Selectbox text
+  mono900: grayDark, // Not used, but just in case.
   mono1000: black,
 
   rating200: "#FFE1A5",

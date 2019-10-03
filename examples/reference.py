@@ -407,7 +407,7 @@ with st.echo():
 
     bar = st.progress(0)
     complete = st.text("0% complete")
-    graph = st.line_chart(np.random.randn(1, 2))
+    graph = st.line_chart()
 
     for i in range(100):
         bar.progress(i + 1)
