@@ -30,7 +30,9 @@ import sys
 import textwrap
 
 import streamlit as st
+from streamlit import config
 from streamlit import util
+from streamlit.black_list import BlackList
 from streamlit.compatibility import setup_2_3_shims
 
 if sys.version_info >= (3, 0):
@@ -178,6 +180,9 @@ class CodeHasher:
         else:
             self.hasher = hashlib.new(name)
 
+        self._black_list = BlackList(
+            config.get_option("server.folderWatchBlacklist"))
+
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
         self._update(self.hasher, obj, context)
@@ -296,8 +301,10 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                # TODO: This may be too restrictive for libraries in development.
-                if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
+                print("===>", os.path.abspath(obj.__code__.co_filename))
+                filepath = os.path.abspath(obj.__code__.co_filename)
+                if (filepath.startswith(os.getcwd())
+                        and not self._black_list.is_blacklisted(filepath)):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
