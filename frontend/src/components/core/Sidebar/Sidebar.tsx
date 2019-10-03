@@ -107,6 +107,7 @@ class Sidebar extends PureComponent<Props, State> {
       "--collapsed": collapsedSidebar,
     })
 
+    // The tabindex is required to support scrolling by arrow keys.
     return (
       <section className={sectionClassName} ref={this.sidebarRef}>
         <div className="sidebar-content">

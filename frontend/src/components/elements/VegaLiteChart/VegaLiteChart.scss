@@ -24,7 +24,9 @@
   z-index: $z-index-popup-menu;
 }
 
-// Fix weird floating button height issue in Vega Lite.
-.vega-embed summary {
-  height: auto !important;
+.stApp .vega-embed summary {
+  // Fix weird floating button height issue in Vega Lite.
+  height: auto;
+  // Fix floating button appearing above pop-ups.
+  z-index: $z-index-menu-button;
 }

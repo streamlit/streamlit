@@ -42,8 +42,12 @@ spec = {
     },
 }
 
-st.subheader("Here are 2 empty charts")
+st.subheader("Here are 4 empty charts")
 st.vega_lite_chart(spec)
+st.line_chart()
+st.area_chart()
+st.bar_chart()
+
 st.write("Below is an empty pyplot chart (i.e. just a blank image)")
 st.pyplot()
 st.write("...and that was it.")
@@ -54,6 +58,15 @@ x.vega_lite_chart(data, spec)
 
 x = st.vega_lite_chart(spec)
 time.sleep(0.2)  # Sleep a little so the add_rows gets sent separately.
+x.add_rows(data)
+
+x = st.line_chart()
+x.add_rows(data)
+
+x = st.area_chart()
+x.add_rows(data)
+
+x = st.bar_chart()
 x.add_rows(data)
 
 st.subheader("Here is 1 empty map")

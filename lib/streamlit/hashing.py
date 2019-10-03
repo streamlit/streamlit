@@ -27,6 +27,7 @@ import inspect
 import io
 import os
 import sys
+import textwrap
 
 import streamlit as st
 from streamlit import util
@@ -143,14 +144,19 @@ def _key(obj, context):
 
 
 def _hashing_error_message(start):
-    return (
-        start,
-        "\n\n**More information:** to prevent unexpected behavior, Streamlit tries to detect mutations in cached objects so it can alert the user if needed. However, something went wrong while performing this check.\n\n"
-        "Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).\n\n"
-        "To stop this warning from showing in the meantime, try one of the following:\n"
-        "* **Preferred:** modify your code to avoid using this type of object.\n"
-        "* Or add the argument `ignore_hash=True` to the `st.cache` decorator.",
-    )
+    return textwrap.dedent("""
+        %(start)s,
+
+        **More information:** to prevent unexpected behavior, Streamlit tries
+        to detect mutations in cached objects so it can alert the user if
+        needed. However, something went wrong while performing this check.
+
+        Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).
+
+        To stop this warning from showing in the meantime, try one of the following:
+        * **Preferred:** modify your code to avoid using this type of object.
+        * Or add the argument `ignore_hash=True` to the `st.cache` decorator.
+    """ % {'start': start}).strip("\n")
 
 
 class CodeHasher:
@@ -337,13 +343,13 @@ class CodeHasher:
                     st.warning(
                         _hashing_error_message(
                             "Streamlit cannot hash an object of type %s." % type(obj)
-                        )
+                        ),
                     )
         except:
             st.warning(
                 _hashing_error_message(
                     "Streamlit failed to hash an object of type %s." % type(obj)
-                )
+                ),
             )
 
     def _code_to_bytes(self, code, context):

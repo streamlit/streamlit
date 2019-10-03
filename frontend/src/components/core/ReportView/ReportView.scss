@@ -22,8 +22,6 @@
   justify-content: flex-start;
   align-items: stretch;
   align-content: flex-start;
-  width: 100%;
-  min-height: 100vh;
   position: absolute;
   top: 0;
   left: 0;
@@ -45,6 +43,10 @@
     overflow: auto;
     align-items: center;
 
+    &:focus {
+      outline: none;
+    }
+
     .block-container {
       flex: 1;
       max-width: $content-max-width;
@@ -58,7 +60,7 @@
     }
 
     footer {
-      color: $gray;
+      color: $gray-500;
       flex: 0;
       font-size: $font-size-sm;
       max-width: $content-max-width;
@@ -66,13 +68,20 @@
       width: 100%;
 
       a {
-        color: $gray;
-        text-decoration: underline;
+        color: $gray-500;
         transition: color 300ms;
       }
 
+      &:hover {
+        color: $gray;
+      }
+
       &:hover a {
-        color: $black;
+        color: $gray-dark;
+      }
+
+      a:hover {
+        text-decoration: underline;
       }
     }
   }

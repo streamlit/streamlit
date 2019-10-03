@@ -49,6 +49,10 @@ magic off in your `~/.streamlit/config.toml` with the following setting:
 magicEnabled = false
 ```
 
+```eval_rst
+.. important:: Right now, Magic only works on Python 3.
+```
+
 ## Display text
 
 Streamlit apps usually start with a call to `st.title` to set the
@@ -124,6 +128,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.checkbox
 .. autofunction:: streamlit.radio
 .. autofunction:: streamlit.selectbox
+.. autofunction:: streamlit.multiselect
 .. autofunction:: streamlit.slider
 .. autofunction:: streamlit.text_input
 .. autofunction:: streamlit.text_area

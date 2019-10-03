@@ -61,6 +61,6 @@ Now that you have an idea of what Streamlit is, let's close the loop and review 
 
 ## Next steps
 
-* [Get started](getting_started.md) with Streamlit
-* Read up on [advanced concepts](advanced_concepts.md)
-* [Build your first app ](tutorial/index.md)
+- [Get started](getting_started.md) with Streamlit
+- Read up on [advanced concepts](advanced_concepts.md)
+- [Build your first app ](tutorial/index.md)
