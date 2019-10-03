@@ -30,6 +30,7 @@ class BlackList(object):
     Implement a black list object with globbing used to test whether a file is
     in a folder in the blacklist.
     """
+
     def __init__(self, folder_blacklist):
         self._folder_blacklist = list(folder_blacklist)
         self._folder_blacklist.extend(DEFAULT_FOLDER_BLACKLIST)
