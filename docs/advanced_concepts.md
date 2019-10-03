@@ -130,12 +130,6 @@ status_text.text('Done!')
 st.balloons()
 ```
 
-```eval_rst
-.. tip::
-   You can see this example live. Just run `streamlit hello` from the command
-   line.
-```
-
 ## Append data to a table or chart
 
 In Streamlit, you can not only replace entire elements in your app, but also
