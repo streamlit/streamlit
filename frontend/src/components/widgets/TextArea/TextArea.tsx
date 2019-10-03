@@ -40,8 +40,6 @@ interface State {
   value: string
 }
 
-const ENTER_KEY_CODE = 13
-
 class TextArea extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
