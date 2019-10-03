@@ -23,7 +23,8 @@ Use the links below to jump to a specific section:
 Before you get started, you're going to need a few things:
 
 - Your favorite IDE or text editor
-- [Python 2.7.0 or later / Python 3.6.x or later](https://www.python.org/downloads/)
+- [Python 2.7.0 or later / Python 3.6.x or
+  later](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 - [Streamlit](index.md) — This one's kind of important, so don't forget to
   install.
@@ -105,24 +106,24 @@ st.write(pandas.DataFrame({
 There are other data specific functions like
 [`st.dataframe()`](api.html#streamlit.dataframe) and
 [`st.table()`](api.html#streamlit.table) that you can also use for displaying
-data. Check our advanced guides on
-displaying data to understand when to use these features and how to add colors
-and styling to your data frames.
+data. Check our advanced guides on displaying data to understand when to use
+these features and how to add colors and styling to your data frames.
 
-````eval_rst
+```eval_rst
 .. tip::
    For this guide we're using small amounts of data so that we can move
    quickly. You can check out our `Tutorial on creating a data explorer
    <tutorial/create_a_data_explorer_app.html>`_ to see an example of how to
    load data from an API and use `@st.cache <api.html#streamlit.cache>`_ to
-   cache it.  ```
+   cache it.
+```
 
 ## Use magic
 
 If you're using Python 3, you can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
-[`st.write()`](api.html#streamlit.write) at all!  Try replacing the code above
+[`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
 with this snippet:
 
 ```Python
@@ -137,7 +138,7 @@ df = pandas.DataFrame({
 })
 
 df
-````
+```
 
 How it works is simple. Any time that Streamlit sees a variable or a literal
 value on its own line, it automatically writes that to your app using
@@ -220,7 +221,7 @@ option = st.selectbox(
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
-can use [`st.sidebar()`](api.html#streamlit.sidebar) in your app:
+can use [`st.sidebar()`](api.html#streamlit.sidebar) in your app.
 
 ```Python
 option = st.sidebar.selectbox(
