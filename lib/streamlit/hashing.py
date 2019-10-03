@@ -300,7 +300,6 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                print("===>", os.path.abspath(obj.__code__.co_filename))
                 filepath = os.path.abspath(obj.__code__.co_filename)
                 if filepath.startswith(
                     os.getcwd()
