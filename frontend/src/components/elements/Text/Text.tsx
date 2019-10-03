@@ -139,7 +139,7 @@ class Text extends React.PureComponent<Props> {
           throw e
         }
         return (
-          <div className={"json-text-container stText"} style={styleProp}>
+          <div className="json-text-container stText" style={styleProp}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
