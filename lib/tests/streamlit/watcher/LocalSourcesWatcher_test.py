@@ -24,7 +24,6 @@ from mock import patch
 from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
-from streamlit.watcher.LocalSourcesWatcher import _file_is_in_folder
 
 
 class FileIsInFolderTest(unittest.TestCase):
