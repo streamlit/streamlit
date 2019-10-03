@@ -49,6 +49,10 @@ magic off in your `~/.streamlit/config.toml` with the following setting:
 magicEnabled = false
 ```
 
+```eval_rst
+.. important:: Right now, Magic only works on Python 3.
+```
+
 ## Display text
 
 Streamlit apps usually start with a call to `st.title` to set the

@@ -47,9 +47,6 @@ install Streamlit on it. Using PIP, you can juse do:
 $ pip install streamlit
 ```
 
-For Conda instructions, see our [Getting Started](/getting_started#conda)
-guide.
-
 To check that everything is working, run the Hello command:
 
 ```bash

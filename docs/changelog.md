@@ -23,6 +23,24 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.47.0
+
+_Release date: October 1, 2019_
+
+**Highlights:**
+
+- 🌄 New hello.py showing off 4 glorious Streamlit apps. Try it out!
+- 🎁 Sidebar support is now out of beta! Just start any command with `st.sidebar.` instead of `st.`
+- ⚡ Performance improvements: we added a cache to our websocket layer so we no longer re-send data to the browser when it hasn't changed between runs
+- 📈 Our "native" charts `st.line_chart`, `st.area_chart` and `st.bar_chart` now use Altair behind the scenes
+- 🔫 Improved widgets: custom st.slider labels; default values in multiselect
+- 🕵️‍♀️ The filesystem watcher now ignores hidden folders and virtual environments
+- 💅 Plus lots of polish around caching and widget state management
+
+**Breaking change:**
+
+- 🛡️ We have temporarily disabled support for sharing static "snapshots" of Streamlit apps. Now that we're no longer in a limited-access beta, we need to make sure sharing is well thought through and abides by laws like the DMCA. But we're working on a solution!
+
 ## Version 0.46.0
 
 _Release date: September 19, 2019_

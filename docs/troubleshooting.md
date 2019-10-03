@@ -114,7 +114,3 @@ You can downgrade at any time with these commands:
 ```bash
 $ pip install --upgrade streamlit==0.37 # <- To downgrade Streamlit!
 ```
-
-```bash
-$ conda install streamlit=0.37
-```
