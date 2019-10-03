@@ -226,35 +226,6 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         # Reset the config object.
         config.set_option("server.folderWatchBlacklist", prev_blacklist)
 
-    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_auto_blacklist(self, _):
-        prev_blacklist = config.get_option("server.folderWatchBlacklist")
-        config.set_option("server.folderWatchBlacklist", [])
-
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
-
-        def is_blacklisted(filepath):
-            return any(
-                _file_is_in_folder(filepath, blacklisted_folder)
-                for blacklisted_folder in lso._folder_blacklist
-            )
-
-        # miniconda, anaconda, and .*/ folders should be blacklisted
-        self.assertTrue(is_blacklisted("/foo/miniconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/miniconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.virtualenv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.venv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.random_hidden_folder/script.py"))
-
-        # Ensure we're not accidentally blacklisting things we shouldn't be
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/script.py"))
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/.hidden_script.py"))
-
-        # Reset the config object.
-        config.set_option("server.folderWatchBlacklist", prev_blacklist)
-
 
 def sort_args_list(args_list):
     return sorted(args_list, key=lambda args: args[0])
