@@ -457,7 +457,12 @@ class DeltaGenerator(object):
 
         """
         element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+
+        if unsafe_allow_html:
+            element.text.format = Text_pb2.Text.PLAIN
+        else:
+            element.text.format = Text_pb2.Text.MARKDOWN
+
         element.text.allow_html = unsafe_allow_html
 
     @_with_element
