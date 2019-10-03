@@ -19,7 +19,6 @@ import React, { Fragment, PureComponent } from "react"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
-import * as _ from "lodash"
 
 // Other local imports.
 import ReportView from "components/core/ReportView/"
@@ -51,7 +50,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 
-const ELEMENT_LIST_UPDATE_THROTTLE_MS = 10
+const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
 class App extends PureComponent {
   constructor(props) {
@@ -100,11 +99,11 @@ class App extends PureComponent {
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
 
+    this.elementListBufferTimerIsSet = false
+    this.elementListBuffer = null
+
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
-
-    this.timerSet = false
-    this.elementsWithDeltaApplied = null
   }
 
   /**
@@ -349,7 +348,7 @@ class App extends PureComponent {
           },
         }),
         () => {
-          this.elementsWithDeltaApplied = this.state.elements
+          this.elementListBuffer = this.state.elements
         }
       )
 
@@ -415,46 +414,22 @@ class App extends PureComponent {
     }
   }
 
-  updateState = () => {
-    // (BUG #685) When user presses stop, stop adding elements to
-    // report immediately to avoid race condition.
-    // The one exception is static connections, which do not depend on
-    // the report state (and don't have a stop button).
-    const isStaticConnection = this.connectionManager.isStaticConnection()
-    const reportIsRunning =
-      this.state.reportRunState === ReportRunState.RUNNING
-
-    if (isStaticConnection || reportIsRunning) {
-      this.setState(state => {
-        return {
-          // Create brand new `elements` instance, so components that depend on
-          // this for re-rendering catch the change.
-          elements: {
-            ...this.elementsWithDeltaApplied,
-          },
-        }
-      })
-    }
-  }
-
-  throttledUpdateState = _.throttle(this.updateState, 100, { trailing: false })
-
   /**
-   * Applies a list of deltas to the elements.
+   * Updates elementListBuffer with the given delta, and sets up a timer to
+   * update the elementList in the state as well. This buffer allows us to
+   * receive deltas extremely quickly without spamming React with lots of
+   * render() calls.
    */
   handleDeltaMsg = (deltaMsg, metadataMsg) => {
-    this.elementsWithDeltaApplied = applyDelta(
+    this.elementListBuffer = applyDelta(
       this.state.elements,
       this.state.reportId,
       deltaMsg,
       metadataMsg
     )
 
-    // this.updateState()
-    // this.throttledUpdateState()
-
-    if (!this.timerSet) {
-      this.timerSet = true
+    if (!this.elementListBufferTimerIsSet) {
+      this.elementListBufferTimerIsSet = true
 
       // (BUG #685) When user presses stop, stop adding elements to
       // report immediately to avoid race condition.
@@ -465,7 +440,7 @@ class App extends PureComponent {
         this.state.reportRunState === ReportRunState.RUNNING
 
       setTimeout(() => {
-        this.timerSet = false
+        this.elementListBufferTimerIsSet = false
 
         if (isStaticConnection || reportIsRunning) {
           this.setState(state => {
@@ -473,12 +448,12 @@ class App extends PureComponent {
               // Create brand new `elements` instance, so components that depend on
               // this for re-rendering catch the change.
               elements: {
-                ...this.elementsWithDeltaApplied,
+                ...this.elementListBuffer,
               },
             }
           })
         }
-      }, ELEMENT_LIST_UPDATE_THROTTLE_MS)
+      }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
   }
 
