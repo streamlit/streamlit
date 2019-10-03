@@ -40,6 +40,8 @@ interface State {
   value: string
 }
 
+const ENTER_KEY_CODE = 13
+
 class TextArea extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
@@ -69,29 +71,46 @@ class TextArea extends React.PureComponent<Props, State> {
     })
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === "Enter" && e.ctrlKey && this.state.dirty) {
+  private handleSubmitEvent = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ): void => {
+    const { key, metaKey, ctrlKey } = e
+    const { dirty } = this.state
+
+    if (key === "Enter" && (metaKey || ctrlKey) && dirty) {
       this.setWidgetValue({ fromUi: true })
     }
   }
 
+  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    this.handleSubmitEvent(e)
+  }
+
+  private onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    this.handleSubmitEvent(e)
+  }
+
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { element, disabled, width } = this.props
+    const { value, dirty } = this.state
+
+    const style = { width }
+    const label = element.get("label")
 
     return (
       <div className="Widget stTextArea" style={style}>
         <label>{label}</label>
         <UITextArea
-          value={this.state.value}
+          value={value}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
-          disabled={this.props.disabled}
+          onKeyDown={this.onKeyDown}
+          disabled={disabled}
         />
-        {this.state.dirty ? (
+        {dirty && (
           <div className="instructions">Press Ctrl+Enter to apply</div>
-        ) : null}
+        )}
       </div>
     )
   }
