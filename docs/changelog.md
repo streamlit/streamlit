@@ -30,6 +30,7 @@ _Release date: October 1, 2019_
 **Highlights:**
 
 - 🌄 New hello.py showing off 4 glorious Streamlit apps. Try it out!
+- 🔄 Streamlit now automatically selects an unused port when 8501 is already in use.
 - 🎁 Sidebar support is now out of beta! Just start any command with `st.sidebar.` instead of `st.`
 - ⚡ Performance improvements: we added a cache to our websocket layer so we no longer re-send data to the browser when it hasn't changed between runs
 - 📈 Our "native" charts `st.line_chart`, `st.area_chart` and `st.bar_chart` now use Altair behind the scenes
