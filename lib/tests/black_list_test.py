@@ -16,7 +16,7 @@
 """streamlit.black_list unit test."""
 import unittest
 
-from streamlit.black_list import BlackList
+from streamlit.folder_black_list import FolderBlackList
 
 
 class FileIsInFolderTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class FileIsInFolderTest(unittest.TestCase):
         """
         miniconda, anaconda, and .*/ folders should be blacklisted.
         """
-        black_list = BlackList([])
+        black_list = FolderBlackList([])
         is_blacklisted = black_list.is_blacklisted
 
         self.assertTrue(is_blacklisted("/foo/miniconda2/script.py"))
@@ -39,7 +39,7 @@ class FileIsInFolderTest(unittest.TestCase):
         """
         Files inside user configured folders should be blacklisted.
         """
-        black_list = BlackList(["/bar/some_folder"])
+        black_list = FolderBlackList(["/bar/some_folder"])
         is_blacklisted = black_list.is_blacklisted
         self.assertTrue(is_blacklisted("/bar/some_folder/script.py"))
 
@@ -47,7 +47,7 @@ class FileIsInFolderTest(unittest.TestCase):
         """
         Ensure we're not accidentally blacklisting things we shouldn't be.
         """
-        black_list = BlackList([])
+        black_list = FolderBlackList([])
         is_blacklisted = black_list.is_blacklisted
 
         self.assertFalse(is_blacklisted("/foo/not_blacklisted/script.py"))

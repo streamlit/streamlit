@@ -25,7 +25,7 @@ DEFAULT_FOLDER_BLACKLIST = [
 ]
 
 
-class BlackList(object):
+class FolderBlackList(object):
     """
     Implement a black list object with globbing used to test whether a file is
     in a folder in the blacklist.

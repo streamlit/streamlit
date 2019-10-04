@@ -32,7 +32,7 @@ import textwrap
 import streamlit as st
 from streamlit import config
 from streamlit import util
-from streamlit.black_list import BlackList
+from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
 if sys.version_info >= (3, 0):
@@ -180,7 +180,7 @@ class CodeHasher:
         else:
             self.hasher = hashlib.new(name)
 
-        self._black_list = BlackList(config.get_option("server.folderWatchBlacklist"))
+        self._black_list = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""

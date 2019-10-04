@@ -27,7 +27,7 @@ except ImportError:
 
 from streamlit import config
 from streamlit import util
-from streamlit.black_list import BlackList
+from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 
@@ -76,7 +76,7 @@ class LocalSourcesWatcher(object):
         self._is_closed = False
 
         # Blacklist for folders that should not be watched
-        self._black_list = BlackList(config.get_option("server.folderWatchBlacklist"))
+        self._black_list = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
