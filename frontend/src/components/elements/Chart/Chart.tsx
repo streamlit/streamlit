@@ -23,12 +23,13 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from "../../../lib/dataFrameProto"
 import { format, Duration } from "../../../lib/format"
+import { Map as ImmutableMap } from "immutable"
 
 import * as recharts from "recharts"
 
 import "./Chart.scss"
 
-const COMPONENTS = {
+const COMPONENTS: any = {
   ////////////
   // Charts //
   ////////////
@@ -109,7 +110,14 @@ const SUPPORTED_INDEX_TYPES = new Set([
   // TODO(tvst): Support other index types
 ])
 
-class Chart extends React.PureComponent {
+interface Props {
+  width: number
+  element: ImmutableMap<string, any>
+}
+
+interface State {}
+
+class Chart extends React.PureComponent<Props, State> {
   render() {
     const { element, width } = this.props
     // Default height is 200 if not specified.
@@ -128,27 +136,29 @@ class Chart extends React.PureComponent {
     const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
 
     // transform to number, e.g. to support Date
-    let indexTransform = undefined
+    let indexTransform: any = undefined
     // transform to human readable tick, e.g. to support Date
-    let tickFormatter = undefined
+    let tickFormatter: any = undefined
     switch (indexType) {
       case "datetimeIndex":
-        indexTransform = date => date.getTime()
-        tickFormatter = millis => format.dateToString(new Date(millis))
+        indexTransform = (date: Date) => date.getTime()
+        tickFormatter = (millis: number) =>
+          format.dateToString(new Date(millis))
         break
       case "timedeltaIndex":
-        indexTransform = date => date.getTime()
-        tickFormatter = millis => format.durationToString(new Duration(millis))
+        indexTransform = (date: Date) => date.getTime()
+        tickFormatter = (millis: number) =>
+          format.durationToString(new Duration(millis))
         break
       case "float_64Index":
-        tickFormatter = float => float.toFixed(2)
+        tickFormatter = (float: number) => float.toFixed(2)
         break
       default:
         break
     }
 
     for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const rowData = {}
+      const rowData: any = {}
 
       if (hasSupportedIndex) {
         rowData[INDEX_COLUMN_DESIGNATOR] = indexGet(
@@ -174,7 +184,7 @@ class Chart extends React.PureComponent {
     }
 
     // Parse out the chart props into an object.
-    const chart_props = extractProps(element)
+    const chart_props: boolean = extractProps(element)
     // for (const chartProperty of element.get('props'))
     //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
 
@@ -183,9 +193,9 @@ class Chart extends React.PureComponent {
         <div style={{ ...chartDims, left: -chartXOffset }}>
           {React.createElement(
             COMPONENTS[element.get("type")],
-            { ...chartDims, data, ...chart_props },
-            ...element.get("components").map(component => {
-              const component_props = extractProps(component)
+            { ...chartDims, data, ...{ chart_props } },
+            ...element.get("components").map((component: any) => {
+              const component_props: any = extractProps(component)
               const isXAxis = component.get("type") === "XAxis"
               if (isXAxis && tickFormatter) {
                 component_props["tickFormatter"] = tickFormatter
@@ -202,15 +212,15 @@ class Chart extends React.PureComponent {
   }
 }
 
-function extractProps(element) {
-  function tryParseFloat(s) {
+function extractProps(element: any): boolean {
+  function tryParseFloat(s: string) {
     s = s.trim()
     const f = parseFloat(s)
     return isNaN(f) ? s : f
   }
 
-  const props = {}
-  element.get("props").forEach(prop => {
+  const props: any = {}
+  element.get("props").forEach((prop: any) => {
     let value = prop.get("value")
 
     // Do a little special-casing here. This is a hack which has to be fixed.
@@ -222,7 +232,7 @@ function extractProps(element) {
       value = prop
         .get("value")
         .split(",")
-        .map(x => tryParseFloat(x))
+        .map((x: any) => tryParseFloat(x))
     }
     props[prop.get("key")] = value
   })

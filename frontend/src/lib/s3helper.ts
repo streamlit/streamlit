@@ -24,14 +24,14 @@ import {
 } from "./baseconsts"
 import { logError } from "./log"
 
-let s3 = null
+let s3: any = null
 let haveCredentials = false
 
 /**
  * Set up AWS credentials, given an OAuth ID token from Google.
  * Only needs to be called once ever.
  */
-export async function configureCredentials(idToken) {
+export async function configureCredentials(idToken: string) {
   if (haveCredentials) {
     logError("Grabbing credentials again. This should never happen.")
   }
@@ -46,7 +46,11 @@ export async function configureCredentials(idToken) {
     },
   })
 
-  await AWS.config.credentials.getPromise()
+  const credentials = AWS.config.credentials
+
+  console.log("+++++++++++++++++++++++")
+  console.log(typeof AWS.config.credentials)
+  //await AWS.config.credentials.getPromise()
   haveCredentials = true
 }
 
@@ -64,7 +68,7 @@ export async function configureCredentials(idToken) {
  *
  * Arguments: {Key: string, Bucket: string}
  */
-export async function getObject(args) {
+export async function getObject(args: S3.Types.GetObjectRequest) {
   if (haveCredentials) {
     return getObjectViaS3API(args)
   } else {
@@ -72,7 +76,7 @@ export async function getObject(args) {
   }
 }
 
-async function getObjectViaFetchAPI(args) {
+async function getObjectViaFetchAPI(args: S3.Types.GetObjectRequest) {
   const response = await fetch(`/${args.Key}`, FETCH_PARAMS)
 
   if (!response.ok) {
@@ -91,7 +95,7 @@ async function getObjectViaFetchAPI(args) {
   return response
 }
 
-async function getObjectViaS3API(args) {
+async function getObjectViaS3API(args: S3.Types.GetObjectRequest) {
   if (!s3) {
     s3 = new S3()
   }

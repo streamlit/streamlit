@@ -18,7 +18,7 @@
 import React from "react"
 import { Table as ReactTable } from "reactstrap"
 import { toFormattedString } from "../../../lib/format"
-
+import { Map as ImmutableMap } from "immutable"
 import {
   dataFrameGet,
   dataFrameGetDimensions,
@@ -29,8 +29,12 @@ import "./Table.scss"
 /**
  * Functional element representing a DataFrame.
  */
+interface Props {
+  width: number
+  element: ImmutableMap<string, any>
+}
 
-class Table extends React.PureComponent {
+class Table extends React.PureComponent<Props> {
   render() {
     const { element } = this.props
     const { headerRows, rows, cols } = dataFrameGetDimensions(element)
@@ -80,7 +84,16 @@ class Table extends React.PureComponent {
  * rows       - Number of rows in the table (header + data).
  * cols       - Number of colums in the table.
  */
-function TableRows({ df, header, headerRows, rows, cols }) {
+interface TableRowsProps {
+  df: ImmutableMap<string, any>
+  header?: boolean | false
+  headerRows: number
+  rows: number
+  cols: number
+}
+
+const TableRows: React.SFC<TableRowsProps> = props => {
+  const { df, header, headerRows, rows, cols } = props
   const startRow = header ? 0 : headerRows
   const endRow = header ? headerRows : rows
   const rowArray = []
@@ -91,7 +104,7 @@ function TableRows({ df, header, headerRows, rows, cols }) {
       </tr>
     )
   }
-  return rowArray
+  return <React.Fragment>{rowArray}</React.Fragment>
 }
 
 /**
@@ -101,7 +114,15 @@ function TableRows({ df, header, headerRows, rows, cols }) {
  * rowIdx - The row index.
  * cols   - numver of colums in the table.
  */
-function TableRow({ df, rowIdx, cols }) {
+
+interface TableRowProps {
+  df: ImmutableMap<string, any>
+  rowIdx: number
+  cols: number
+}
+
+const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
+  const { df, rowIdx, cols } = props
   const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
     const { contents, styles, type } = dataFrameGet(df, colIdx, rowIdx)
@@ -126,7 +147,7 @@ function TableRow({ df, rowIdx, cols }) {
       throw new Error(`Cannot parse type "${type}".`)
     }
   }
-  return entries
+  return <React.Fragment>{entries}</React.Fragment>
 }
 
 export default Table

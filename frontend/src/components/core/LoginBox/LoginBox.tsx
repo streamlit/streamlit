@@ -18,24 +18,35 @@
 import React, { PureComponent } from "react"
 import PropTypes from "prop-types"
 
-import { GoogleLogin } from "react-google-login"
+import {
+  GoogleLogin,
+  GoogleLoginResponse,
+  GoogleLoginResponseOffline,
+} from "react-google-login"
 
 //const GOOGLE_CLIENT_ID =
 // '121672393440-k47bl22ndo3lnu5lblfbukg8812osjvp.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID =
   "230319206599-p4ol9d1ef0otk7o1eetaornovisu0925.apps.googleusercontent.com"
 
-class LoginBox extends PureComponent {
-  constructor(props) {
+interface Props {
+  onSuccess: (accessToken: string, idToken: string) => void
+  onFailure: (error: string) => void
+}
+
+interface State {
+  loginInProgress: boolean
+}
+
+class LoginBox extends PureComponent<Props, State> {
+  public static defaultProps: Partial<Props> = {}
+
+  constructor(props: Props) {
     super(props)
 
     this.state = {
       loginInProgress: false,
     }
-
-    this.onRequest = this.onRequest.bind(this)
-    this.onSuccess = this.onSuccess.bind(this)
-    this.onFailure = this.onFailure.bind(this)
   }
 
   static get propTypes() {
@@ -75,19 +86,20 @@ class LoginBox extends PureComponent {
     )
   }
 
-  onRequest() {
+  onRequest = () => {
     this.setState({ loginInProgress: true })
   }
 
-  onSuccess(googleUser) {
-    const authResult = googleUser.getAuthResponse()
-    this.props.onSuccess({
-      accessToken: authResult["access_token"],
-      idToken: authResult["id_token"],
-    })
+  onSuccess = (
+    googleUser: GoogleLoginResponse | GoogleLoginResponseOffline
+  ) => {
+    if ("getAuthResponse" in googleUser) {
+      const authResult = googleUser.getAuthResponse()
+      this.props.onSuccess(authResult["access_token"], authResult["id_token"])
+    }
   }
 
-  onFailure(response) {
+  onFailure = (response: any) => {
     this.props.onFailure(`Error: ${response.error}. ${response.details}`)
   }
 }

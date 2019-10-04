@@ -18,32 +18,32 @@
 /**
  * Text formatting utilities
  */
-
 import moment from "moment"
-import momentDurationFormat from "moment-duration-format"
+import "moment-duration-format"
 import numeral from "numeral"
-momentDurationFormat(moment)
 
 class Duration {
-  constructor(millis) {
+  private readonly millis: number
+
+  constructor(millis: number) {
     this.millis = millis
   }
 
-  getTime() {
+  getTime(): number {
     return this.millis
   }
 }
 
 class Format {
-  nanosToDate(nanos) {
+  nanosToDate(nanos: number) {
     return new Date(nanos / 1e6)
   }
 
-  nanosToDuration(nanos) {
+  nanosToDuration(nanos: number) {
     return new Duration(nanos / 1e6)
   }
 
-  dateToString(date) {
+  dateToString(date: Date) {
     const m = moment(date)
     let format = "lll"
     if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
@@ -52,7 +52,7 @@ class Format {
     return m.format(format)
   }
 
-  durationToString(duration) {
+  durationToString(duration: Duration) {
     return moment.duration(duration.getTime()).format()
   }
 }
@@ -62,7 +62,7 @@ const format = new Format()
 /**
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
-function toFormattedString(x) {
+function toFormattedString(x: any) {
   if (isFloat(x)) {
     return numeral(x).format("0,0.0000")
   } else if (x instanceof Date) {
@@ -77,7 +77,7 @@ function toFormattedString(x) {
 /**
  * Returns true if this number is a float.
  */
-function isFloat(n) {
+function isFloat(n: any) {
   return Number(n) === n && n % 1 !== 0
 }
 
