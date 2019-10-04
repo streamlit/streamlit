@@ -316,9 +316,5 @@ def run():
     if show_code:
         st.markdown("## Code")
         sourcelines, n_lines = inspect.getsourcelines(demo)
-        sourcelines = util.remove_docstring(sourcelines)
+        sourcelines = util.remove_declaration_and_docstring(sourcelines)
         st.code(textwrap.dedent("".join(sourcelines)))
-
-
-if __name__ == "__main__":
-    run()

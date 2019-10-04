@@ -21,9 +21,10 @@ def remove_declaration_and_docstring(lines):
     This function parses the source code of a function and removes the function
     declaration and the docstring if found. If no docstring is found and the
     function has no code, it returns an empty list. This function can be used
-    in conjunction of inspect.getsourcelines(demo) to get the source code
+    in conjunction of inspect.getsourcelines(...) to get the source code
     lines of a function. If the docstring is longer than MAX_DOCSTRING lines
-    it will not remove the docstring.
+    it will not remove the docstring and raise an exception. The function also
+    assumes that the input source code is syntactically correct.
 
     Parameters
     ----------
@@ -35,16 +36,26 @@ def remove_declaration_and_docstring(lines):
     [str]
         a copy of lines where the docstring is removed
     """
+    if len(lines) == 0:
+        raise Exception(
+            "You should pass code with a function declaration included")
+    # lines contains only the function declaration
     if len(lines) <= 1:
-        return lines
-    if len(lines) < 3 and '"""' not in lines[1]:
+        return []
+    # docstring is on one line - assuming it is syntactically correct
+    stripped = lines[1].strip()
+    if len(stripped) >= 6 and stripped[:3] == '"""' and stripped[-3:] == '"""':
+        return lines[2:]
+    # docstring is on multiple lines or there is no docstring
+    if stripped[:3] != '"""':
         return lines[1:]
-    #  lines[2] is the first line of the docstring, past the initial """
+    # lines[2] is the first line of the docstring, past the initial """
+    # if the code is correct, lines[2] must exist
     index = 2
     while '"""' not in lines[index]:
         index += 1
         # limit to MAX_DOCSTRING lines, if the docstring is longer, just bail
         if index > MAX_DOCSTRING:
-            return lines[1:]
+            raise Exception("Docstring is too long for remove_declaration_and_docstring")
     # lined[index] is the closing """
     return lines[index + 1 :]

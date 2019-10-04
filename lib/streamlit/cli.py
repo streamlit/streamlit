@@ -110,7 +110,7 @@ def main_hello():
     """Runs the Hello World script."""
     import streamlit.hello
 
-    filename = streamlit.hello.hello.__file__
+    filename = streamlit.hello.__file__
 
     # For Python 2 when Streamlit is actually installed (make install rather
     # than make develop).
