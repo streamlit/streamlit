@@ -66,7 +66,11 @@ export function dispatchOneOf(
  * name  - The name of the oneof field.
  * funcs - Dictionary of update functions, one for each oneof field.
  */
-export function updateOneOf(obj: Map<string, any>, name: string, funcs: any) {
+export function updateOneOf(
+  obj: Map<string, any>,
+  name: string,
+  funcs: any
+): any {
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return obj.update(whichOne, funcs[whichOne])
@@ -82,7 +86,11 @@ export function updateOneOf(obj: Map<string, any>, name: string, funcs: any) {
  * name  - The name of the oneof field.
  * funcs - Dictionary of values, one for each oneof field.
  */
-export function mapOneOf(obj: Map<string, any>, name: string, values: any) {
+export function mapOneOf(
+  obj: Map<string, any>,
+  name: string,
+  values: any
+): any {
   const whichOne = obj.get(name)
   if (whichOne in values) {
     return values[whichOne]
