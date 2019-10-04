@@ -168,8 +168,10 @@ class CliTest(unittest.TestCase):
 
         _apply_config_options_from_cli(kwargs)
 
-        patched__set_option.assert_has_calls([
-            mock.call("server.port", 3005, "cli call option"),
-            mock.call("server.headless", True, "cli call option"),
-            mock.call("browser.serverAddress", "localhost", "cli call option"),
-        ])
+        patched__set_option.assert_has_calls(
+            [
+                mock.call("server.port", 3005, "cli call option"),
+                mock.call("server.headless", True, "cli call option"),
+                mock.call("browser.serverAddress", "localhost", "cli call option"),
+            ]
+        )

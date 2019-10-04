@@ -151,6 +151,7 @@ def configurator_options(func):
         func = config_option(func)
     return func
 
+
 def _apply_config_options_from_cli(kwargs):
     """The "streamlit run" command supports passing Streamlit's config options
     as flags.
@@ -167,6 +168,7 @@ def _apply_config_options_from_cli(kwargs):
             _config._set_option(
                 config_option_def_key, kwargs[config_option], "cli call option"
             )
+
 
 @main.command("run")
 @configurator_options
