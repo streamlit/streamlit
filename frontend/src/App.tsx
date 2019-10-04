@@ -106,6 +106,12 @@ interface StateChangeProto {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+declare global {
+  interface Window {
+    streamlitDebug: any
+  }
+}
+
 class App extends PureComponent<Props, State> {
   userLoginResolver: Resolver<string>
   sessionEventDispatcher: SessionEventDispatcher
@@ -154,21 +160,18 @@ class App extends PureComponent<Props, State> {
     this.handleDeltaMsg = this.handleDeltaMsg.bind(this)
     this.settingsCallback = this.settingsCallback.bind(this)
     this.aboutCallback = this.aboutCallback.bind(this)
-
     this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
-
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
       this.sendBackMsg(new BackMsg(msg))
     })
-
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
 
-    //window.streamlitDebug = {}
-    //window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
+    window.streamlitDebug = {}
+    window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
   }
 
   /**
