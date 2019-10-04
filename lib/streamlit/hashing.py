@@ -180,7 +180,9 @@ class CodeHasher:
         else:
             self.hasher = hashlib.new(name)
 
-        self._black_list = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
+        self._folder_black_list = FolderBlackList(
+            config.get_option("server.folderWatchBlacklist")
+        )
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
@@ -303,7 +305,7 @@ class CodeHasher:
                 filepath = os.path.abspath(obj.__code__.co_filename)
                 if filepath.startswith(
                     os.getcwd()
-                ) and not self._black_list.is_blacklisted(filepath):
+                ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)

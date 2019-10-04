@@ -76,7 +76,9 @@ class LocalSourcesWatcher(object):
         self._is_closed = False
 
         # Blacklist for folders that should not be watched
-        self._black_list = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
+        self._folder_black_list = FolderBlackList(
+            config.get_option("server.folderWatchBlacklist")
+        )
 
         # A dict of filepath -> WatchedModule.
         self._watched_modules = {}
@@ -157,7 +159,7 @@ class LocalSourcesWatcher(object):
                     # .origin is 'built-in'.
                     continue
 
-                if self._black_list.is_blacklisted(filepath):
+                if self._folder_black_list.is_blacklisted(filepath):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
