@@ -27,7 +27,8 @@ from streamlit.hello import demos
 
 LOGGER = get_logger(__name__)
 
-
+# Dictionary of
+# demo_name -> (demo_function, demo_description)
 DEMOS = OrderedDict(
     [
         ("—", (demos.intro, None)),
