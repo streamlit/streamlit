@@ -120,10 +120,8 @@ def main_hello():
     _main_run(filename)
 
 
-def _compose_option_parameter(config_option):
-    """
-    Composes given config option options as options for click lib.
-    """
+def _convert_config_option_to_click_option(config_option):
+    """Composes given config option options as options for click lib."""
     option = "--{}".format(config_option.key)
     param = config_option.key.replace(".", "_")
     description = config_option.description
@@ -141,11 +139,9 @@ def _compose_option_parameter(config_option):
 
 
 def configurator_options(func):
-    """
-    Decorator that adds config param keys to click dynamically.
-    """
+    """Decorator that adds config param keys to click dynamically."""
     for _, value in reversed(_config._config_options.items()):
-        parsed_parameter = _compose_option_parameter(value)
+        parsed_parameter = _convert_config_option_to_click_option(value)
         config_option = click.option(
             parsed_parameter["option"],
             parsed_parameter["param"],
@@ -155,6 +151,22 @@ def configurator_options(func):
         func = config_option(func)
     return func
 
+def _apply_config_options_from_cli(kwargs):
+    """The "streamlit run" command supports passing Streamlit's config options
+    as flags.
+
+    This function reads through all config flags, massage them, and
+    pass them to _set_config() overriding default values and values set via
+    config.toml file
+
+    """
+    for config_option in kwargs:
+        if kwargs[config_option] is not None:
+            config_option_def_key = config_option.replace("_", ".")
+
+            _config._set_option(
+                config_option_def_key, kwargs[config_option], "cli call option"
+            )
 
 @main.command("run")
 @configurator_options
@@ -162,31 +174,14 @@ def configurator_options(func):
 @click.argument("args", nargs=-1)
 def main_run(file_or_url, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
-    The script can be local or it can be an url. In the
-    latter case, streamlit will download the script to a
-    temporary file and runs this file.
+
+    The script can be local or it can be an url. In the latter case, Streamlit
+    will download the script to a temporary file and runs this file.
+
     """
     from validators import url
 
-    # read through all option configs that are set via cmd option param
-    # and call set_option to override default/file configs
-    for config_option in kwargs:
-        if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-            value = kwargs[config_option]
-            config_option_def = _config._config_options[config_option_def_key]
-            # special consideration to cast string to bool
-            if config_option_def.type == bool:
-                if value.lower() in ["true", "1", "t", "y", "yes"]:
-                    value = True
-                else:
-                    value = False
-            else:
-                value = config_option_def.type(value)
-
-            _config._set_option(
-                config_option_def_key, kwargs[config_option], "cli call option"
-            )
+    _apply_config_options_from_cli(kwargs)
 
     if url(file_or_url):
         import tempfile

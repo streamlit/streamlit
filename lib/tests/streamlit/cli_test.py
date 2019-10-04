@@ -19,13 +19,15 @@ import unittest
 
 import requests
 import requests_mock
+import mock
 from click.testing import CliRunner
 from mock import patch, MagicMock
 import click
 
 import streamlit
 from streamlit import cli
-from streamlit.cli import _compose_option_parameter
+from streamlit.cli import _convert_config_option_to_click_option
+from streamlit.cli import _apply_config_options_from_cli
 from streamlit.ConfigOption import ConfigOption
 
 
@@ -133,8 +135,9 @@ class CliTest(unittest.TestCase):
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
 
-    def test_compose_option_parameter(self):
-        """Test that configurator_options adds dynamic commands based on a config lists.
+    def test_convert_config_option_to_click_option(self):
+        """Test that configurator_options adds dynamic commands based on a
+        config lists.
         """
         config_option = ConfigOption(
             "server.customKey",
@@ -143,9 +146,30 @@ class CliTest(unittest.TestCase):
             type_=int,
         )
 
-        result = _compose_option_parameter(config_option)
+        result = _convert_config_option_to_click_option(config_option)
 
         self.assertEqual(result["option"], "--server.customKey")
         self.assertEqual(result["param"], "server_customKey")
         self.assertEqual(result["type"], config_option.type)
         self.assertEqual(result["description"], config_option.description)
+
+    @patch("streamlit.cli._config._set_option")
+    def test_apply_config_options_from_cli(self, patched__set_option):
+        """Test that _apply_config_options_from_cli parses the key properly and
+        passes down the parameters
+        """
+
+        kwargs = {
+            "server_port": 3005,
+            "server_headless": True,
+            "browser_serverAddress": "localhost",
+            "global_minCachedMessageSize": None,
+        }
+
+        _apply_config_options_from_cli(kwargs)
+
+        patched__set_option.assert_has_calls([
+            mock.call("server.port", 3005, "cli call option"),
+            mock.call("server.headless", True, "cli call option"),
+            mock.call("browser.serverAddress", "localhost", "cli call option"),
+        ])
