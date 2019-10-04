@@ -25,7 +25,7 @@ import textwrap
 import streamlit as st
 from streamlit.logger import get_logger
 
-import streamlit.hello.util as util
+from streamlit.hello import util
 
 LOGGER = get_logger(__name__)
 
