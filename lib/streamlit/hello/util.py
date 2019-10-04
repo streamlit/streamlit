@@ -37,8 +37,7 @@ def remove_declaration_and_docstring(lines):
         a copy of lines where the docstring is removed
     """
     if len(lines) == 0:
-        raise Exception(
-            "You should pass code with a function declaration included")
+        raise Exception("You should pass code with a function declaration included")
     # lines contains only the function declaration
     if len(lines) <= 1:
         return []
@@ -56,6 +55,8 @@ def remove_declaration_and_docstring(lines):
         index += 1
         # limit to MAX_DOCSTRING lines, if the docstring is longer, just bail
         if index > MAX_DOCSTRING:
-            raise Exception("Docstring is too long for remove_declaration_and_docstring")
+            raise Exception(
+                "Docstring is too long for remove_declaration_and_docstring"
+            )
     # lined[index] is the closing """
     return lines[index + 1 :]
