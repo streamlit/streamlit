@@ -31,7 +31,7 @@ let haveCredentials = false
  * Set up AWS credentials, given an OAuth ID token from Google.
  * Only needs to be called once ever.
  */
-export async function configureCredentials(idToken: string): void {
+export async function configureCredentials(idToken: string): Promise<void> {
   if (haveCredentials) {
     logError("Grabbing credentials again. This should never happen.")
   }
