@@ -29,8 +29,8 @@ import { requireNonNull } from "lib/utils"
 
 type Container = "main" | "sidebar"
 type SimpleElement = ImmutableMap<string, any>
-type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> {}
+export type Element = SimpleElement | BlockElement
+export interface BlockElement extends List<Element> {}
 
 export interface Elements {
   main: BlockElement

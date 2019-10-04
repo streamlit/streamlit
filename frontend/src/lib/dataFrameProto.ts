@@ -32,7 +32,7 @@ const STRING_COLLATOR = new Intl.Collator("en", {
   sensitivity: "base",
 })
 
-function compareValues(a: any, b: any) {
+function compareValues(a: any, b: any): number {
   if (a < b) {
     return -1
   } else if (a > b) {
@@ -41,7 +41,7 @@ function compareValues(a: any, b: any) {
   return 0
 }
 
-function compareStrings(a: string, b: string) {
+function compareStrings(a: string, b: string): number {
   // using a Collator is faster than string.localeCompare:
   // https://stackoverflow.com/questions/14677060/400x-sorting-speedup-by-switching-a-localecompareb-to-ab-1ab10/52369951#52369951
   return STRING_COLLATOR.compare(a, b)
@@ -56,7 +56,7 @@ export function getSortedDataRowIndices(
   df: any,
   sortColumnIdx: number,
   sortAscending: boolean
-) {
+): any[] {
   const table = df.get("data")
   const [nRows, nCols] = tableGetRowsAndCols(table)
   if (sortColumnIdx < 0 || sortColumnIdx >= nCols) {
@@ -96,7 +96,7 @@ export function getSortedDataRowIndices(
  * If df is null, this returns zeroes. If any of index/data/columns are null,
  * this treats them as empty (so their dimensions are [0, 0]).
  */
-export function dataFrameGetDimensions(df: any) {
+export function dataFrameGetDimensions(df: any): any {
   const index = df ? df.get("index") : null
   const data = df ? df.get("data") : null
   const columns = df ? df.get("columns") : null
@@ -136,7 +136,7 @@ export function dataFrameGetDimensions(df: any) {
 /**
  * Returns [rows, cls] for this table.
  */
-export function tableGetRowsAndCols(table: any) {
+export function tableGetRowsAndCols(table: any): number[] {
   if (!table || !table.get("cols")) {
     return [0, 0]
   }
@@ -159,7 +159,7 @@ export function tableGetRowsAndCols(table: any) {
  *   {index1: row2_col1, index2: row2_col2, ...},
  * ]
  */
-export function dataFrameToArrayOfDicts(df: any) {
+export function dataFrameToArrayOfDicts(df: any): { [key: string]: any } {
   const dataArr = []
   const [nRows, nCols] = tableGetRowsAndCols(df.get("data"))
 
@@ -190,7 +190,7 @@ export function dataFrameToArrayOfDicts(df: any) {
  *  type: 'corner' | 'row-header' | 'col-header' | 'data'
  * }
  */
-export function dataFrameGet(df: any, col: any, row: any) {
+export function dataFrameGet(df: any, col: any, row: any): any {
   const { headerRows, headerCols } = dataFrameGetDimensions(df)
   if (col < headerCols) {
     if (row < headerRows) {
@@ -249,7 +249,7 @@ export function tableStyleGetDisplayValue(
   tableStyle: any,
   columnIndex: any,
   rowIndex: any
-) {
+): any | undefined {
   if (tableStyle == null) {
     return undefined
   }
@@ -275,7 +275,7 @@ export function tableStyleGetCSS(
   tableStyle: any,
   columnIndex: any,
   rowIndex: any
-) {
+): any | undefined {
   if (tableStyle == null) {
     return undefined
   }
@@ -301,14 +301,14 @@ export function tableStyleGetCSS(
 /**
  * Returns the given element from the table, formatted for display.
  */
-export function tableGet(table: any, columnIndex: any, rowIndex: any) {
+export function tableGet(table: any, columnIndex: any, rowIndex: any): any {
   return anyArrayGet(table.getIn(["cols", columnIndex]), rowIndex)
 }
 
 /**
  * Returns the raw data of the given element from the table.
  */
-export function tableData(table: any, columnIndex: any, rowIndex: any) {
+export function tableData(table: any, columnIndex: any, rowIndex: any): any {
   return anyArrayData(table.getIn(["cols", columnIndex])).get(rowIndex)
 }
 
@@ -316,7 +316,7 @@ export function tableData(table: any, columnIndex: any, rowIndex: any) {
  * Returns [levels, length]. The former is the length of the index, while the
  * latter is 1 (or >1 for MultiIndex).
  */
-export function indexGetLevelsAndLength(index: any) {
+export function indexGetLevelsAndLength(index: any): any {
   return dispatchOneOf(index, "type", {
     plainIndex: (idx: any) => [1, anyArrayLen(idx.get("data"))],
     rangeIndex: (idx: any) => [1, idx.get("stop") - idx.get("start")],
@@ -334,7 +334,7 @@ export function indexGetLevelsAndLength(index: any) {
 /**
  * Returns the ith index value of the given level.
  */
-export function indexGet(index: any, level: any, i: any) {
+export function indexGet(index: any, level: any, i: any): any {
   const type = index.get("type")
   if (type !== "multiIndex" && level !== 0) {
     throw new Error(`Attempting to access level ${level} of a ${type}.`)
@@ -365,7 +365,7 @@ export function indexGet(index: any, level: any, i: any) {
  * Returns the numerical index of the column with the specified name within
  * this table. If no such column exists, returns -1.
  */
-export function indexGetByName(index: any, name: string) {
+export function indexGetByName(index: any, name: string): number {
   const len = indexLen(index)
   for (let i = 0; i < len; i++) {
     if (indexGet(index, 0, i) === name) {
@@ -385,8 +385,8 @@ function anyArrayLen(anyArray: any): number {
 /**
  * Returns the ith element of this AnyArray.
  */
-function anyArrayGet(anyArray: any, i: any) {
-  const getData = (obj: any) => obj.get("data").get(i)
+function anyArrayGet(anyArray: any, i: any): any {
+  const getData = (obj: any): any => obj.get("data").get(i)
   return dispatchOneOf(anyArray, "type", {
     strings: getData,
     doubles: getData,
@@ -399,8 +399,8 @@ function anyArrayGet(anyArray: any, i: any) {
 /**
  * Returns the data array of an proto.AnyArray.
  */
-function anyArrayData(anyArray: any) {
-  const getData = (obj: any) => obj.get("data")
+function anyArrayData(anyArray: any): any {
+  const getData = (obj: any): any => obj.get("data")
   return dispatchOneOf(anyArray, "type", {
     strings: getData,
     doubles: getData,
@@ -413,7 +413,7 @@ function anyArrayData(anyArray: any) {
 /**
  * Concatenates namedDataSet into element, returning a new element.
  */
-export function addRows(element: any, namedDataSet: any) {
+export function addRows(element: any, namedDataSet: any): any {
   const name = namedDataSet.get("hasName") ? namedDataSet.get("name") : null
   const newRows = namedDataSet.get("data")
   const namedDataSets = getNamedDataSets(element)
@@ -496,7 +496,7 @@ export function addRows(element: any, namedDataSet: any) {
 /**
  * Concatenates the indices and returns a new index.
  */
-function concatIndex(index1: any, index2: any) {
+function concatIndex(index1: any, index2: any): any {
   // Special case if index1 is empty.
   if (indexLen(index1) === 0) {
     return index2
@@ -540,7 +540,7 @@ function concatIndex(index1: any, index2: any) {
 /**
  * Concatenates both anyArrays, returning the result.
  */
-function concatAnyArray(anyArray1: any, anyArray2: any) {
+function concatAnyArray(anyArray1: any, anyArray2: any): any {
   // Special case if the left array is empty.
   if (anyArrayLen(anyArray1) === 0) {
     return anyArray2
@@ -560,7 +560,7 @@ function concatAnyArray(anyArray1: any, anyArray2: any) {
 /**
  * Concatenates both CellStyleArrays, returning the result
  */
-function concatCellStyleArray(array1: any, array2: any) {
+function concatCellStyleArray(array1: any, array2: any): any {
   // Special case if the left array is empty.
   if (array1.get("styles").length === 0) {
     return array2
@@ -574,7 +574,7 @@ function concatCellStyleArray(array1: any, array2: any) {
  * Extracts the dataframe from an element. The name is only used if it makes
  * sense for the given element.
  */
-function getDataFrame(element: any) {
+function getDataFrame(element: any): any {
   return dispatchOneOf(element, "type", {
     chart: (chart: any) => chart.get("data"),
     dataFrame: (df: any) => df,
@@ -584,7 +584,7 @@ function getDataFrame(element: any) {
   })
 }
 
-function getNamedDataSets(element: any) {
+function getNamedDataSets(element: any): any {
   return dispatchOneOf(element, "type", {
     vegaLiteChart: (chart: any) => chart.get("datasets"),
     _else: () => null,
@@ -597,7 +597,7 @@ function getNamedDataSets(element: any) {
  * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
  * matching the given name.
  */
-function getNamedDataSet(namedDataSets: any, name: any) {
+function getNamedDataSet(namedDataSets: any, name: any): any {
   if (namedDataSets != null) {
     if (namedDataSets.size === 1) {
       const firstNamedDataSet = namedDataSets.first()
@@ -620,7 +620,7 @@ function getNamedDataSet(namedDataSets: any, name: any) {
  * Sets the dataframe of this element.
  * Returns a new element -- NOT A DATAFRAME!
  */
-function setDataFrame(element: any, df: any) {
+function setDataFrame(element: any, df: any): any {
   return updateOneOf(element, "type", {
     chart: (chart: any) => chart.set("data", df),
     dataFrame: () => df,
@@ -634,7 +634,7 @@ function setDataFrame(element: any, df: any) {
  * Adds a named dataset to this element.
  * Returns a new element -- NOT A DATAFRAME!
  */
-function pushNamedDataSet(element: any, namedDataset: any) {
+function pushNamedDataSet(element: any, namedDataset: any): any {
   return updateOneOf(element, "type", {
     vegaLiteChart: (chart: any) =>
       chart.update("datasets", (datasets: any) => datasets.push(namedDataset)),
@@ -645,7 +645,7 @@ function pushNamedDataSet(element: any, namedDataset: any) {
  * Sets the named dataset of this element.
  * Returns a new element -- NOT A DATAFRAME!
  */
-function setDataFrameInNamedDataSet(element: any, index: any, df: any) {
+function setDataFrameInNamedDataSet(element: any, index: any, df: any): any {
   return updateOneOf(element, "type", {
     vegaLiteChart: (chart: any) =>
       chart.setIn(["datasets", index, "data"], df),
@@ -655,7 +655,7 @@ function setDataFrameInNamedDataSet(element: any, index: any, df: any) {
 /**
  * Returns the number of elements in an index.
  */
-function indexLen(index: any) {
+function indexLen(index: any): any {
   return dispatchOneOf(index, "type", {
     plainIndex: (idx: any) => anyArrayLen(idx.get("data")),
     rangeIndex: (idx: any) => idx.get("stop") - idx.get("start"),

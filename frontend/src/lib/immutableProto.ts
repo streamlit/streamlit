@@ -22,7 +22,7 @@ import { logMessage } from "./log"
 /**
  * Converts a protobuf JS object into its immutable counterpart.
  */
-export function toImmutableProto(messageType: any, message: any) {
+export function toImmutableProto(messageType: any, message: any): any {
   const x = messageType.toObject(message, {
     defaults: true,
     oneofs: true,
@@ -48,7 +48,7 @@ export function dispatchOneOf(
   obj: Map<string, any>,
   name: string,
   funcs: any
-) {
+): any {
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return funcs[whichOne](obj.get(whichOne))

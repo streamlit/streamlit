@@ -16,8 +16,6 @@
  */
 
 import React, { PureComponent } from "react"
-import PropTypes from "prop-types"
-
 import {
   GoogleLogin,
   GoogleLoginResponse,
@@ -49,17 +47,7 @@ class LoginBox extends PureComponent<Props, State> {
     }
   }
 
-  static get propTypes() {
-    return {
-      /** Function that will be called when login succeeds. */
-      onSuccess: PropTypes.func.isRequired,
-
-      /** Function that will be called when login fails. */
-      onFailure: PropTypes.func.isRequired,
-    }
-  }
-
-  render() {
+  render(): JSX.Element {
     return (
       <div>
         <h1>Permission required</h1>

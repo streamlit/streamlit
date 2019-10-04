@@ -31,7 +31,7 @@ let haveCredentials = false
  * Set up AWS credentials, given an OAuth ID token from Google.
  * Only needs to be called once ever.
  */
-export async function configureCredentials(idToken: string) {
+export async function configureCredentials(idToken: string): void {
   if (haveCredentials) {
     logError("Grabbing credentials again. This should never happen.")
   }
@@ -46,11 +46,9 @@ export async function configureCredentials(idToken: string) {
     },
   })
 
-  const credentials = AWS.config.credentials
-
-  console.log("+++++++++++++++++++++++")
-  console.log(typeof AWS.config.credentials)
-  //await AWS.config.credentials.getPromise()
+  if ("getPromise" in AWS.config.credentials) {
+    await AWS.config.credentials.getPromise()
+  }
   haveCredentials = true
 }
 
@@ -68,7 +66,9 @@ export async function configureCredentials(idToken: string) {
  *
  * Arguments: {Key: string, Bucket: string}
  */
-export async function getObject(args: S3.Types.GetObjectRequest) {
+export async function getObject(
+  args: S3.Types.GetObjectRequest
+): Promise<any> {
   if (haveCredentials) {
     return getObjectViaS3API(args)
   } else {
@@ -76,7 +76,9 @@ export async function getObject(args: S3.Types.GetObjectRequest) {
   }
 }
 
-async function getObjectViaFetchAPI(args: S3.Types.GetObjectRequest) {
+async function getObjectViaFetchAPI(
+  args: S3.Types.GetObjectRequest
+): Promise<Response> {
   const response = await fetch(`/${args.Key}`, FETCH_PARAMS)
 
   if (!response.ok) {
@@ -95,7 +97,9 @@ async function getObjectViaFetchAPI(args: S3.Types.GetObjectRequest) {
   return response
 }
 
-async function getObjectViaS3API(args: S3.Types.GetObjectRequest) {
+async function getObjectViaS3API(
+  args: S3.Types.GetObjectRequest
+): Promise<any> {
   if (!s3) {
     s3 = new S3()
   }

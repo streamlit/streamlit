@@ -35,7 +35,7 @@ interface Props {
 }
 
 class Table extends React.PureComponent<Props> {
-  render() {
+  render(): JSX.Element {
     const { element } = this.props
     const { headerRows, rows, cols } = dataFrameGetDimensions(element)
 

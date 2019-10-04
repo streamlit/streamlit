@@ -86,11 +86,11 @@ class DeckGlChart extends React.PureComponent<Props, State> {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
-  fixHexLayerBug() {
+  fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <div
         className="deckglchart stDeckGlChart"
@@ -117,7 +117,7 @@ class DeckGlChart extends React.PureComponent<Props, State> {
     )
   }
 
-  buildLayers() {
+  buildLayers(): any {
     const layers = this.props.element.get("layers")
     return layers.map((layer: any) => buildLayer(layer)).toArray()
   }
@@ -182,7 +182,7 @@ const Defaults = {
   },
 }
 
-function buildLayer(layer: any) {
+function buildLayer(layer: any): any {
   const data = dataFrameToArrayOfDicts(layer.get("data"))
   const spec = JSON.parse(layer.get("spec"))
 
@@ -274,7 +274,7 @@ const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set(["arclayer", "linelayer"])
  *
  * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
  */
-function getStyleUrl(styleStr = "light-v9") {
+function getStyleUrl(styleStr = "light-v9"): string {
   if (
     styleStr.startsWith("http://") ||
     styleStr.startsWith("https://") ||
@@ -295,7 +295,7 @@ function getStyleUrl(styleStr = "light-v9") {
  * Accepts infinitely many arguments:
  *   fallback(value, fallback1, fallback2, fallback3)
  */
-function fallback(...args: any[]) {
+function fallback(...args: any[]): any | null {
   for (let i = 0; i < args.length; i += 1) {
     if (args[i] != null) {
       return args[i]
@@ -306,15 +306,15 @@ function fallback(...args: any[]) {
 
 /* Define a bunch of getters */
 
-function getPositionFromLatLonColumns(d: any) {
+function getPositionFromLatLonColumns(d: any): any[] {
   return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)]
 }
 
-function getTargetPositionFromLatLonColumn(d: any) {
+function getTargetPositionFromLatLonColumn(d: any): any[] {
   return [fallback(d.longitude2, d.lon2), fallback(d.latitude2, d.lat2)]
 }
 
-function getPositionFromPositionXYZColumns(d: any) {
+function getPositionFromPositionXYZColumns(d: any): any[] {
   return [
     fallback(d.longitude, d.lon, d.positionX, d.x),
     fallback(d.latitude, d.lat, d.positionY, d.y),
@@ -322,25 +322,25 @@ function getPositionFromPositionXYZColumns(d: any) {
   ]
 }
 
-function getNormalFromNormalXYZColumns(d: any) {
+function getNormalFromNormalXYZColumns(d: any): number[] {
   return [d.normalX, d.normalY, d.normalZ]
 }
 
 const DEFAULT_COLOR = [200, 30, 0, 160]
 
-function getColorFromColorRGBAColumns(d: any) {
+function getColorFromColorRGBAColumns(d: any): number[] {
   return d.colorR && d.colorG && d.colorB
     ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
     : DEFAULT_COLOR
 }
 
-function getSourceColorFromSourceColorRGBAColumns(d: any) {
+function getSourceColorFromSourceColorRGBAColumns(d: any): number[] {
   return d.colorR && d.colorG && d.colorB
     ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
     : DEFAULT_COLOR
 }
 
-function getTargetColorFromTargetColorRGBAColumns(d: any) {
+function getTargetColorFromTargetColorRGBAColumns(d: any): number[] {
   return d.targetColorR && d.targetColorG && d.targetColorB
     ? [
         d.targetColorR,
@@ -351,7 +351,7 @@ function getTargetColorFromTargetColorRGBAColumns(d: any) {
     : DEFAULT_COLOR
 }
 
-function parseGetters(type: any, spec: any) {
+function parseGetters(type: any, spec: any): void {
   // If this is a layer that accepts a getPosition argument, build that
   // argument from getLatiude and getLongitude.
   if (

@@ -55,13 +55,13 @@ class MainMenu extends PureComponent<Props, State> {
     }
   }
 
-  toggle() {
+  toggle(): void {
     this.setState(({ dropdownOpen }) => ({
       dropdownOpen: !dropdownOpen,
     }))
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <Dropdown
         id="MainMenu"

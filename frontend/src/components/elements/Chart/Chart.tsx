@@ -118,7 +118,7 @@ interface Props {
 interface State {}
 
 class Chart extends React.PureComponent<Props, State> {
-  render() {
+  render(): JSX.Element {
     const { element, width } = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
@@ -213,7 +213,7 @@ class Chart extends React.PureComponent<Props, State> {
 }
 
 function extractProps(element: any): boolean {
-  function tryParseFloat(s: string) {
+  function tryParseFloat(s: string): string | number {
     s = s.trim()
     const f = parseFloat(s)
     return isNaN(f) ? s : f
