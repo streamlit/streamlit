@@ -31,26 +31,50 @@ LOGGER = get_logger(__name__)
 DEMOS = OrderedDict(
     [
         ("—", (demos.intro, None)),
-        ("Animation Demo", (demos.fractal_demo, """
+        (
+            "Animation Demo",
+            (
+                demos.fractal_demo,
+                """
 This demo shows how to use
 [`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
 to display geospatial data.
-""")),
-        ("Plotting Demo", (demos.plotting_demo, """
+""",
+            ),
+        ),
+        (
+            "Plotting Demo",
+            (
+                demos.plotting_demo,
+                """
 This app shows how you can use Streamlit to build cool animations.
 It displays an animated fractal based on the the Julia Set. Use the slider
 to tune different parameters.
-""")),
-        ("Mapping Demo", (demos.mapping_demo, """
+""",
+            ),
+        ),
+        (
+            "Mapping Demo",
+            (
+                demos.mapping_demo,
+                """
 This demo illustrates a combination of plotting and animation with
 Streamlit. We're generating a bunch of random numbers in a loop for around
 5 seconds. Enjoy!
-""")),
-        ("DataFrame Demo", (demos.data_frame_demo, """
+""",
+            ),
+        ),
+        (
+            "DataFrame Demo",
+            (
+                demos.data_frame_demo,
+                """
 This demo shows how to use `st.write` to visualize Pandas DataFrames.
 
 (Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
-""")),
+""",
+            ),
+        ),
     ]
 )
 
