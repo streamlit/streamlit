@@ -24,6 +24,7 @@ import { Map as ImmutableMap } from "immutable"
 import { Text as TextProto } from "autogen/proto"
 
 // Ignoring typeScript for this module as it has no ts support
+// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 
