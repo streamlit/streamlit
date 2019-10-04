@@ -20,10 +20,10 @@ $white: #ffffff;
 $gray-050: #fafafa;
 $gray-100: #fafafa;
 $gray-200: #f0f2f6;
-$gray-300: #e6eaf1; // 2 We don't need a million grays!
-$gray-400: #d5dae5; // 2
+$gray-300: #e6eaf1;
+$gray-400: #d5dae5;
 $gray-500: #bfc5d3;
-$gray-600: #a3a8b4; // 500
+$gray-600: #a3a8b4;
 $gray-700: #808495;
 $gray-800: #555867;
 $gray-900: #262730;
@@ -71,7 +71,9 @@ $btn-border-radius: $border-radius-large;
 
 // Custom z-index values (not related to bootstrap)
 $z-index-popup-menu: 140;
+$z-index-sidebar-mobile: 130;
 $z-index-header: 120;
+$z-index-menu-button: 110;
 $z-index-sidebar: 100;
 
 // Custom values for our own use.

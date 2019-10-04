@@ -1,4 +1,4 @@
-# Tutorial: Create your first interactive app
+# Tutorial: Create a data explorer app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://streamlit.io/docs/#install-streamlit) and
@@ -215,7 +215,7 @@ Uber's busiest hours are in New York City.
 To draw this diagram we used Streamlit's native `bar_chart()` method, but it's
 important to know that Streamlit supports more complex charting libraries like
 Altair, Bokeh, Plotly, Matplotlib and more. For a full list, see
-[supported charting libraries](api.html#display-charts).
+[supported charting libraries](../api.html#display-charts).
 
 ## Plot data on a map
 
@@ -276,7 +276,7 @@ slider to the app with the `st.slider()` method.
 ## Use a button to toggle data
 
 Sliders are just one way to dynamically change the composition of your app.
-Let's use the [`st.checkbox`](api.html#streamlit.checkbox) function to add a
+Let's use the [`st.checkbox`](../api.html#streamlit.checkbox) function to add a
 checkbox to your app. We'll use this checkbox to show/hide the raw data
 table at the top of your app.
 
