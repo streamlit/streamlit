@@ -161,6 +161,13 @@ def _hashing_error_message(start):
     """ % {'start': start}).strip("\n")
 
 
+def _get_main_script_directory():
+    import __main__
+    import os
+    main_path = __main__.__file__
+    return os.path.dirname(main_path)
+
+
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
@@ -303,8 +310,9 @@ class CodeHasher:
 
                 h = hashlib.new(self.name)
                 filepath = os.path.abspath(obj.__code__.co_filename)
+                # ==> change  os.getcwd()
                 if filepath.startswith(
-                    os.getcwd()
+                    _get_main_script_directory()
                 ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)
                     if obj.__defaults__:

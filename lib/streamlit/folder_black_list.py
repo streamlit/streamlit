@@ -26,17 +26,37 @@ DEFAULT_FOLDER_BLACKLIST = [
 
 
 class FolderBlackList(object):
-    """
-    Implement a black list object with globbing used to test whether a file is
-    in a folder in the blacklist.
+    """Implement a black list object with globbing.
+
+    Note
+    ----
+    ===> Unsure who implements the following!
+    The blacklist does blacklist anything that is not in the directory of the
+    main script and anything that matches the `DEFAULT_FOLDER_BLACKLIST`.
+
     """
 
     def __init__(self, folder_blacklist):
+        """Constructor.
+
+        Parameters
+        ----------
+        folder_blacklist : list of str
+            list of folder names with globbing to blacklist.
+
+        """
         self._folder_blacklist = list(folder_blacklist)
         self._folder_blacklist.extend(DEFAULT_FOLDER_BLACKLIST)
 
-    # Test if filepath is in the blacklist.
     def is_blacklisted(self, filepath):
+        """Test if filepath is in the blacklist.
+
+        Parameters
+        ----------
+        filepath : str
+            File path that we intend to test.
+
+        """
         return any(
             self._file_is_in_folder(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
