@@ -20,14 +20,13 @@ import React, { ReactNode, ReactElement } from "react"
 import classNames from "classnames"
 import ReactJson from "react-json-view"
 import ReactMarkdown from "react-markdown"
+import htmlParser from "react-markdown/plugins/html-parser"
 import { Map as ImmutableMap } from "immutable"
 import { Text as TextProto } from "autogen/proto"
 
 import CodeBlock from "../CodeBlock"
 
 import "./Text.scss"
-
-const htmlParser = require("react-markdown/plugins/html-parser") // Using require as this plugin has no typescript support
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
   switch (format) {
