@@ -40,6 +40,8 @@ class Sidebar extends PureComponent<Props, State> {
     onChange: () => {},
   }
 
+  private sidebarRef = React.createRef<HTMLDivElement>()
+
   constructor(props: Props) {
     super(props)
 
@@ -54,10 +56,27 @@ class Sidebar extends PureComponent<Props, State> {
 
   componentDidMount() {
     window.addEventListener("resize", this.checkMobileOnResize)
+    document.addEventListener("mousedown", this.handleClickOutside)
   }
 
   componentWillUnmount() {
     window.removeEventListener("resize", this.checkMobileOnResize)
+    document.removeEventListener("mousedown", this.handleClickOutside)
+  }
+
+  handleClickOutside = (event: any) => {
+    if (this.sidebarRef && window) {
+      const { current } = this.sidebarRef
+      const { innerWidth } = window
+
+      if (
+        current &&
+        !current.contains(event.target) &&
+        innerWidth <= MEDIUM_BREAKPOINT_PX
+      ) {
+        this.setState({ collapsedSidebar: true })
+      }
+    }
   }
 
   checkMobileOnResize = () => {
@@ -90,8 +109,8 @@ class Sidebar extends PureComponent<Props, State> {
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <section className={sectionClassName}>
-        <div className="sidebar-content" tabIndex={0}>
+      <section className={sectionClassName} ref={this.sidebarRef}>
+        <div className="sidebar-content">
           <Button
             outline
             onClick={this.toggleCollapse}
