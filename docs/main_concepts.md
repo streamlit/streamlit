@@ -45,7 +45,7 @@ When you've got the data or model into the state that you want to explore, you c
 ```
 import streamlit as st
 x = st.slider('x')
-st.write(x, ‘squared is', x * x)
+st.write(x, 'squared is', x * x)
 
 ```
 
