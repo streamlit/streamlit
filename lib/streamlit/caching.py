@@ -213,7 +213,8 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
     else:
         load_or_rerun = "rerunning the function"
 
-    message = textwrap.dedent("""
+    message = textwrap.dedent(
+        """
         **Your code mutated a cached return value**
 
         Streamlit detected the mutation of a return value of `{name}`, which is
@@ -267,7 +268,8 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
     else:
         lines = "lines {start} to {end}".format(start=start, end=end)
 
-    message = textwrap.dedent("""
+    message = textwrap.dedent(
+        """
         **Your code mutated a cached value**
 
         Streamlit detected the mutation of a cached value in `{file_name}` in
@@ -286,7 +288,8 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
         Learn more about caching and copying in the [Streamlit documentation]
         (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
-    """).strip("\n")
+    """
+    ).strip("\n")
 
     return message.format(
         load_or_rerun=load_or_rerun,
@@ -297,7 +300,8 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
 
 def _build_args_mutated_message(func):
-    message = textwrap.dedent("""
+    message = textwrap.dedent(
+        """
         **Cached function mutated its input arguments**
 
         When decorating a function with `@st.cache`, the arguments should not
@@ -307,7 +311,8 @@ def _build_args_mutated_message(func):
         See the [Streamlit
         docs](https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html) for more
         info.
-    """).strip("\n")
+    """
+    ).strip("\n")
 
     return message.format(name=func.__name__)
 
