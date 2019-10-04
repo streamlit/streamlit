@@ -37,6 +37,7 @@ def remove_declaration_and_docstring(lines):
     list of str
         A copy of the input parameter `lines` where the function declaration
         and the docstring is removed.
+
     """
     if len(lines) == 0:
         raise Exception("You should pass code with a function declaration included")
