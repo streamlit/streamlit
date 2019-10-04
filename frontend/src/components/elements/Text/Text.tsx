@@ -27,6 +27,8 @@ import CodeBlock from "../CodeBlock"
 
 import "./Text.scss"
 
+const htmlParser = require("react-markdown/plugins/html-parser") // Using require as this plugin has no typescript support
+
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
   switch (format) {
     case TextProto.Format.ERROR:
@@ -98,22 +100,9 @@ class Text extends React.PureComponent<Props> {
     switch (format) {
       // Plain, fixed width text.
       case TextProto.Format.PLAIN: {
-        const allowHTML = element.get("allowHtml")
-
         const props = {
           className: classNames("fixed-width", "stText"),
           style: styleProp,
-        }
-
-        if (allowHTML) {
-          return (
-            <div
-              {...props}
-              dangerouslySetInnerHTML={{
-                __html: body,
-              }}
-            />
-          )
         }
 
         return <div {...props}>{body}</div>
@@ -121,9 +110,25 @@ class Text extends React.PureComponent<Props> {
 
       // Markdown.
       case TextProto.Format.MARKDOWN: {
+        const allowHTML = element.get("allowHtml")
+
+        if (allowHTML) {
+          const parseHtml = htmlParser()
+
+          return (
+            <div className="markdown-text-container stText" style={styleProp}>
+              <ReactMarkdown
+                source={body}
+                escapeHtml={false}
+                astPlugins={[parseHtml]}
+              />
+            </div>
+          )
+        }
+
         return (
           <div className="markdown-text-container stText" style={styleProp}>
-            <ReactMarkdown source={body} renderers={renderers} />
+            <ReactMarkdown source={body} />
           </div>
         )
       }
