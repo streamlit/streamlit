@@ -15,7 +15,7 @@
 
 """A "Hello World" app."""
 
-from __future__ import division, unicode_literals, absolute_import
+from __future__ import division, unicode_literals
 
 import inspect
 from collections import OrderedDict
@@ -25,7 +25,7 @@ import textwrap
 import streamlit as st
 from streamlit.logger import get_logger
 
-from . import util
+import streamlit.hello.util as util
 
 LOGGER = get_logger(__name__)
 
@@ -318,3 +318,7 @@ def run():
         sourcelines, n_lines = inspect.getsourcelines(demo)
         sourcelines = util.remove_declaration_and_docstring(sourcelines)
         st.code(textwrap.dedent("".join(sourcelines)))
+
+
+if __name__ == "__main__":
+    run()
