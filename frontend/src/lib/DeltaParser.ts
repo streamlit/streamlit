@@ -32,7 +32,7 @@ type SimpleElement = ImmutableMap<string, any>
 type Element = SimpleElement | BlockElement
 interface BlockElement extends List<Element> {}
 
-interface Elements {
+export interface Elements {
   main: BlockElement
   sidebar: BlockElement
 }

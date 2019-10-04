@@ -109,7 +109,10 @@ export function dataFrameGetDimensions(df: any) {
     : [0, 0]
   const [dataRows, dataCols] = data ? tableGetRowsAndCols(data) : [0, 0]
 
-  if (dataRows !== dataRowsCheck || dataCols !== dataColsCheck) {
+  if (
+    (dataRows !== 0 && dataRows !== dataRowsCheck) ||
+    (dataCols !== 0 && dataCols !== dataColsCheck)
+  ) {
     throw new Error(
       "Dataframe dimensions don't align: " +
         `rows(${dataRows} != ${dataRowsCheck}) OR ` +
@@ -451,20 +454,33 @@ export function addRows(element: any, namedDataSet: any) {
     dataframeToModify = dataframeToModify.set("style", fromJS({ cols: [] }))
   }
 
-  const newDataFrame = dataframeToModify
-    .update("index", (index: any) => concatIndex(index, newRows.get("index")))
-    .updateIn(["data", "cols"], (cols: any) => {
-      return cols.zipWith(
-        (col1: any, col2: any) => concatAnyArray(col1, col2),
-        newRows.getIn(["data", "cols"])
+  let newDataFrame
+
+  if (
+    dataframeToModify
+      .get("data")
+      .get("cols")
+      .isEmpty()
+  ) {
+    newDataFrame = newRows
+  } else {
+    newDataFrame = dataframeToModify
+      .update("index", (index: any) =>
+        concatIndex(index, newRows.get("index"))
       )
-    })
-    .updateIn(["style", "cols"], (style_cols: any) => {
-      return style_cols.zipWith(
-        (col1: any, col2: any) => concatCellStyleArray(col1, col2),
-        newRows.getIn(["style", "cols"])
-      )
-    })
+      .updateIn(["data", "cols"], (cols: any) => {
+        return cols.zipWith(
+          (col1: any, col2: any) => concatAnyArray(col1, col2),
+          newRows.getIn(["data", "cols"])
+        )
+      })
+      .updateIn(["style", "cols"], (style_cols: any) => {
+        return style_cols.zipWith(
+          (col1: any, col2: any) => concatCellStyleArray(col1, col2),
+          newRows.getIn(["style", "cols"])
+        )
+      })
+  }
 
   if (existingDataSet) {
     return setDataFrameInNamedDataSet(

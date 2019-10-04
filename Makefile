@@ -256,6 +256,16 @@ jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 	@# HK: I'm removing `max-warnings 0` until we convert all our JavaScript
 	@# files to TypeScript.
+ifndef CIRCLECI
+	cd frontend; \
+		./node_modules/.bin/eslint \
+			--ext .js \
+			--ext .jsx \
+			--ext .ts \
+			--ext .tsx \
+			--ignore-pattern 'src/autogen/*' \
+			./src
+else
 	cd frontend; \
 		./node_modules/.bin/eslint \
 			--ext .js \
@@ -266,6 +276,7 @@ jslint:
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
+endif CIRCLECI
 
 .PHONY: jsformat
 # Runs "Prettier" on our JavaScript and TypeScript code to fix formatting

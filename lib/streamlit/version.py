@@ -28,7 +28,7 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 # Probability that we'll make a network call to PyPI to check
 # the latest version of streamlit. This is used each time
 # should_show_new_version_notice() is called.
-CHECK_PYPI_PROBABILITY = 0.05
+CHECK_PYPI_PROBABILITY = 0.10
 
 
 def get_installed_streamlit_version():

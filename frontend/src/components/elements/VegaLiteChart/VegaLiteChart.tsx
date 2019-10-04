@@ -36,6 +36,12 @@ const DEFAULT_DATA_NAME = "source"
  */
 const EMBED_PADDING = 38
 
+/**
+ * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
+ * For example, in e2e/scripts/add_rows.py
+ */
+const BOTTOM_PADDING = 20
+
 /** Types of dataframe-indices that are supported as x axes. */
 const SUPPORTED_INDEX_TYPES = new Set([
   "datetimeIndex",
@@ -236,6 +242,14 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
       spec.width = this.props.width - EMBED_PADDING
     }
 
+    if (!spec.padding) {
+      spec.padding = {}
+    }
+
+    if (spec.padding.bottom == null) {
+      spec.padding.bottom = BOTTOM_PADDING
+    }
+
     if (spec.datasets) {
       throw new Error("Datasets should not be passed as part of the spec")
     }
@@ -385,6 +399,10 @@ function dataIsAnAppendOfPrev(
   }
 
   if (prevNumRows > numRows) {
+    return false
+  }
+
+  if (prevNumRows === 0) {
     return false
   }
 

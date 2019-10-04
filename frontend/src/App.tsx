@@ -36,7 +36,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { applyDelta } from "lib/DeltaParser"
+import { applyDelta, Elements } from "lib/DeltaParser"
 import {
   ForwardMsg,
   SessionEvent,
@@ -71,10 +71,7 @@ interface UserSettingsProps {
 
 interface State {
   connectionState: ConnectionState
-  elements: {
-    main: any
-    sidebar: any
-  }
+  elements: Elements
   reportId: string
   reportName: string | null
   reportRunState: ReportRunState
@@ -107,12 +104,16 @@ interface StateChangeProto {
   runOnSave: boolean
 }
 
+const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
+
 class App extends PureComponent<Props, State> {
   userLoginResolver: Resolver<string>
   sessionEventDispatcher: SessionEventDispatcher
   statusWidgetRef: React.RefObject<StatusWidget>
   connectionManager: ConnectionManager | null
   widgetMgr: WidgetStateManager
+  elementListBuffer: Elements | null
+  elementListBufferTimerIsSet: boolean
 
   constructor(props: Props) {
     super(props)
@@ -161,6 +162,9 @@ class App extends PureComponent<Props, State> {
     this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
       this.sendBackMsg(new BackMsg(msg))
     })
+
+    this.elementListBufferTimerIsSet = false
+    this.elementListBuffer = null
 
     //window.streamlitDebug = {}
     //window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -213,11 +217,11 @@ class App extends PureComponent<Props, State> {
     }
   }
 
-  showError(errorNode: ReactNode) {
+  showError(title: string, errorNode: ReactNode) {
     logError(errorNode)
     const newDialog: DialogProps = {
       type: DialogType.WARNING,
-      title: "Connection error",
+      title: title,
       msg: errorNode,
       onClose: () => {},
     }
@@ -271,7 +275,8 @@ class App extends PureComponent<Props, State> {
         },
       })
     } catch (err) {
-      this.showError(err.message)
+      logError(err)
+      this.showError("Bad message format", err.message)
     }
   }
 
@@ -421,12 +426,17 @@ class App extends PureComponent<Props, State> {
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
-      this.setState(({ elements, reportId }) => ({
-        elements: {
-          main: this.clearOldElements(elements.main, reportId),
-          sidebar: this.clearOldElements(elements.sidebar, reportId),
-        },
-      }))
+      this.setState(
+        ({ elements, reportId }) => ({
+          elements: {
+            main: this.clearOldElements(elements.main, reportId),
+            sidebar: this.clearOldElements(elements.sidebar, reportId),
+          },
+        }),
+        () => {
+          this.elementListBuffer = this.state.elements
+        }
+      )
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -495,26 +505,45 @@ class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Applies a list of deltas to the elements.
+   * Updates elementListBuffer with the given delta, and sets up a timer to
+   * update the elementList in the state as well. This buffer allows us to
+   * receive deltas extremely quickly without spamming React with lots of
+   * render() calls.
    */
   handleDeltaMsg = (deltaMsg: Delta, metadataMsg: ForwardMsgMetadata) => {
-    // (BUG #685) When user presses stop, stop adding elements to
-    // report immediately to avoid race condition.
-    // The one exception is static connections, which do not depend on
-    // the report state (and don't have a stop button).
-    const isStaticConnection = this.connectionManager
-      ? this.connectionManager.isStaticConnection()
-      : false
-    const reportIsRunning =
-      this.state.reportRunState === ReportRunState.RUNNING
-    if (isStaticConnection || reportIsRunning) {
-      this.setState(state => ({
-        // Create brand new `elements` instance, so components that depend on
-        // this for re-rendering catch the change.
-        elements: {
-          ...applyDelta(state.elements, state.reportId, deltaMsg, metadataMsg),
-        },
-      }))
+    this.elementListBuffer = applyDelta(
+      this.state.elements,
+      this.state.reportId,
+      deltaMsg,
+      metadataMsg
+    )
+
+    if (!this.elementListBufferTimerIsSet) {
+      this.elementListBufferTimerIsSet = true
+
+      // (BUG #685) When user presses stop, stop adding elements to
+      // report immediately to avoid race condition.
+      // The one exception is static connections, which do not depend on
+      // the report state (and don't have a stop button).
+      const isStaticConnection = this.connectionManager
+        ? this.connectionManager.isStaticConnection()
+        : false
+      const reportIsRunning =
+        this.state.reportRunState === ReportRunState.RUNNING
+
+      setTimeout(() => {
+        this.elementListBufferTimerIsSet = false
+        if (isStaticConnection || reportIsRunning) {
+          // Create brand new `elements` instance, so components that depend on
+          // this for re-rendering catch the change.
+          if (this.elementListBuffer) {
+            const elements: Elements = {
+              ...this.elementListBuffer,
+            }
+            this.setState({ elements: elements })
+          }
+        }
+      }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
   }
 
@@ -673,7 +702,7 @@ class App extends PureComponent<Props, State> {
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errNode: ReactNode) {
-    this.showError(errNode)
+    this.showError("Connection error", errNode)
   }
 
   /**

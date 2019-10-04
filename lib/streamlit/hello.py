@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """A "Hello World" app."""
-from __future__ import division
+
+from __future__ import division, unicode_literals
 
 import streamlit as st
 from streamlit.logger import get_logger
@@ -27,58 +28,34 @@ LOGGER = get_logger(__name__)
 
 
 def intro():
-    from PIL import Image
-    from io import BytesIO
-
-    @st.cache(show_spinner=False)
-    def load_image(url):
-        img = Image.open(BytesIO(urllib.request.urlopen(url).read()))
-        old_width, old_height = img.size
-        new_width = 1024
-        new_height = int(old_height * new_width / old_width)
-        return img.resize((new_width, new_height), Image.BICUBIC)
-
     st.sidebar.success("Select a demo above.")
 
-    st.markdown(
-        """
-            Streamlit is a completely free and open-source library to create
-            web tools for Machine Learning and Data Science projects.
+    st.markdown("""
+        Streamlit is an open-source app framework built specifically for
+        Machine Learning and Data Science projects.
 
-            **Select a demo from the menu on the left** to see Streamlit in action.
-        """
-    )
+        **👈 Select a demo from the dropdown on the left** to see some examples
+        of what Streamlit can do!
 
-    image_location = st.empty()
+        ### Want to learn more?
 
-    st.markdown(
-        """
-            ### Want to learn more?
+        - Check out [streamlit.io](https://streamlit.io)
+        - Jump into our [documentation](https://streamlit.io/docs)
+        - Ask a question in our [community
+          forums](https://discuss.streamlit.io)
 
-            - [Get started with help](https://streamlit.io/docs)
-            - [Ask our community a question](https://discuss.streamlit.io)
+        ### See more complex demos
 
-            ### See more complex demos
-
-            - Use a neural net to [analyze the Udacity Self-driving Car Image Dataset]
-              (https://github.com/streamlit/demo-self-driving)
-            - Explore a [New York City rideshare dataset]
-              (https://github.com/streamlit/demo-uber-nyc-pickups)
-        """
-    )
-
-    try:
-        img_url = (
-            "https://streamlit-demo-data.s3-us-west-2.amazonaws.com/hello-welcome.png"
-        )
-        img = load_image(img_url)
-        image_location.image(img, use_column_width=True)
-    except Exception as e:
-        LOGGER.warning(e)
-        LOGGER.warning(img_url)
+        - Use a neural net to [analyze the Udacity Self-driving Car Image
+          Dataset] (https://github.com/streamlit/demo-self-driving)
+        - Explore a [New York City rideshare dataset]
+          (https://github.com/streamlit/demo-uber-nyc-pickups)
+    """)
 
 
-# Turn off black formatting for this function to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more
+# compact code.
+# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def mapping_demo():
     """
@@ -144,22 +121,24 @@ def mapping_demo():
         st.error("Please choose at least one layer above.")
 # fmt: on
 
-# Turn off black formatting for this function to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more
+# compact code.
+# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def fractal_demo():
     """
     This app shows how you can use Streamlit to build cool animations.
     It displays an animated fractal based on the the Julia Set. Use the slider
-    to tune the level of detail.
+    to tune different parameters.
     """
     import numpy as np
 
-    # Interactive Streamlit elements, like these sliders, return thier value.
+    # Interactive Streamlit elements, like these sliders, return their value.
     # This gives you an extremely simple interaction model.
-    iterations = st.sidebar.slider("Level of detail", 1, 100, 70, 1)
+    iterations = st.sidebar.slider("Level of detail", 2, 20, 10, 1)
     separation = st.sidebar.slider("Separation", 0.7, 2.0, 0.7885)
 
-    # Non-interactive elements return a placeholder to thier location
+    # Non-interactive elements return a placeholder to their location
     # in the app. Here we're storing progress_bar to update it later.
     progress_bar = st.sidebar.progress(0)
 
@@ -168,7 +147,7 @@ def fractal_demo():
     frame_text = st.sidebar.empty()
     image = st.empty()
 
-    m, n, s = 480, 320, 200
+    m, n, s = 960, 640, 400
     x = np.linspace(-m / s, m / s, num=m).reshape((1, m))
     y = np.linspace(-n / s, n / s, num=n).reshape((n, 1))
 
@@ -196,19 +175,23 @@ def fractal_demo():
     progress_bar.empty()
     frame_text.empty()
 
-    # Streamlit buttons automatically run the script from top to bottom.
+    # Streamlit widgets automatically run the script from top to bottom. Since
+    # this button is not connected to any other logic, it just causes a plain
+    # rerun.
     st.button("Re-run")
 
 
 # fmt: on
 
-# Turn off black formatting for this function to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more
+# compact code.
+# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def plotting_demo():
     """
-    This demo illustrates a combination of plotting and animation with Streamlit.
-    We're generating a bunch of random numbers in a loop for around 10 seconds.
-    Enjoy!.
+    This demo illustrates a combination of plotting and animation with
+    Streamlit. We're generating a bunch of random numbers in a loop for around
+    5 seconds. Enjoy!
     """
     import time
     import numpy as np
@@ -217,6 +200,7 @@ def plotting_demo():
     status_text = st.sidebar.empty()
     last_rows = np.random.randn(1, 1)
     chart = st.line_chart(last_rows)
+
     for i in range(1, 101):
         new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)
         status_text.text("%i%% Complete" % i)
@@ -224,15 +208,20 @@ def plotting_demo():
         progress_bar.progress(i)
         last_rows = new_rows
         time.sleep(0.05)
+
     progress_bar.empty()
 
-    # Streamlit buttons automatically run the script from top to bottom.
+    # Streamlit widgets automatically run the script from top to bottom. Since
+    # this button is not connected to any other logic, it just causes a plain
+    # rerun.
     st.button("Re-run")
 
 
 # fmt: on
 
-# Turn off black formatting for this function to present the user with more compact code.
+# Turn off black formatting for this function to present the user with more
+# compact code.
+# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def data_frame_demo():
     """
@@ -291,7 +280,7 @@ def data_frame_demo():
 
 DEMOS = OrderedDict(
     [
-        ("---", intro),
+        ("—", intro),
         ("Animation Demo", fractal_demo),
         ("Plotting Demo", plotting_demo),
         ("Mapping Demo", mapping_demo),
@@ -304,14 +293,9 @@ def run():
     demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
     demo = DEMOS[demo_name]
 
-    if demo_name == "---":
+    if demo_name == "—":
         show_code = False
-        st.write(
-            """
-            # Welcome to Streamlit
-            ## The fastest way to build custom ML tools
-            """
-        )
+        st.write("# Welcome to Streamlit! 👋")
     else:
         show_code = st.sidebar.checkbox("Show code", True)
         st.markdown("# %s" % demo_name)
@@ -320,7 +304,9 @@ def run():
         # We only have 4 elements in the page so this is intentional overkill.
         for i in range(10):
             st.empty()
+
     demo()
+
     if show_code:
         st.markdown("## Code")
         sourcelines, n_lines = inspect.getsourcelines(demo)

@@ -98,6 +98,17 @@
   border-color: change-color($red, $alpha: 0.2);
 }
 
+// Undo bootstrap changes to classes that Styletron uses and we don't.
+
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  all: unset;
+}
+
 // Make scrollbars awesome on Chrome.
 
 ::-webkit-scrollbar {

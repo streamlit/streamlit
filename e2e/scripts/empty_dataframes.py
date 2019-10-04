@@ -32,7 +32,7 @@ st.header("Empty one-column dataframes")
 st.write(np.array([]))
 st.dataframe(np.array([]))
 
-st.header("Empty two-column dataframes")
+st.header("Empty two-column dataframes (only shows 1)")
 st.write(pd.DataFrame({"lat": [], "lon": []}))
 st.dataframe(pd.DataFrame({"lat": [], "lon": []}))
 

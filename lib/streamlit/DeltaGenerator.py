@@ -118,7 +118,8 @@ def _with_element(method):
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
+        return dg._enqueue_new_element_delta(
+            marshall_element, delta_type, last_index)
 
     return wrapped_method
 
@@ -2206,10 +2207,8 @@ class DeltaGenerator(object):
         if self._enqueue is None:
             return self
 
-        assert not self._is_root, "Only existing elements can add_rows."
-
-        import streamlit.elements.data_frame_proto as data_frame_proto
-        import pandas as pd
+        if self._is_root:
+            raise RuntimeError("Only existing elements can add_rows.")
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
@@ -2224,13 +2223,38 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
-        # For some delta types we have to reshape the data structure
-        # otherwise the input data and the actual data used
-        # by vega_lite will be different and it will throw an error.
-        if self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
-            if not isinstance(data, pd.DataFrame):
-                data = data_frame_proto.convert_anything_to_df(data)
+        data, self._last_index = _maybe_melt_data_for_add_rows(
+            data, self._delta_type, self._last_index)
 
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg.metadata.parent_block.container = self._container
+        msg.metadata.parent_block.path[:] = self._path
+        msg.metadata.delta_id = self._id
+
+        import streamlit.elements.data_frame_proto as data_frame_proto
+        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
+
+        if name:
+            msg.delta.add_rows.name = name
+            msg.delta.add_rows.has_name = True
+
+        self._enqueue(msg)
+
+        return self
+
+
+def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
+    import pandas as pd
+    import streamlit.elements.data_frame_proto as data_frame_proto
+
+    # For some delta types we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different and it will throw an error.
+    if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
+        if not isinstance(data, pd.DataFrame):
+            data = data_frame_proto.convert_anything_to_df(data)
+
+        if type(data.index) is pd.RangeIndex:
             old_step = _get_pandas_index_attr(data, 'step')
 
             # We have to drop the predefined index
@@ -2242,29 +2266,15 @@ class DeltaGenerator(object):
                 raise AttributeError("'RangeIndex' object has no attribute "
                                      "'step'")
 
-            start = self._last_index + old_step
-            stop = self._last_index + old_step + old_stop
+            start = last_index + old_step
+            stop = last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            data = pd.melt(data.reset_index(), id_vars=["index"])
+            last_index = stop
 
-            self._last_index = stop
+        data = pd.melt(data.reset_index(), id_vars=["index"])
 
-        msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._path
-        msg.metadata.delta_id = self._id
-
-        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
-
-        if name:
-            msg.delta.add_rows.name = name
-            msg.delta.add_rows.has_name = True
-
-        self._enqueue(msg)
-
-        return self
-
+    return data, last_index
 
 def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
