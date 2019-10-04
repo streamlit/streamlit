@@ -17,7 +17,8 @@ MAX_DOCSTRING = 1000
 
 
 def remove_declaration_and_docstring(lines):
-    """
+    """Return a function's source code with the docstring removed.
+
     This function parses the source code of a function and removes the function
     declaration and the docstring if found. If no docstring is found and the
     function has no code, it returns an empty list. This function can be used
@@ -28,24 +29,25 @@ def remove_declaration_and_docstring(lines):
 
     Parameters
     ----------
-    lines : [str]
-        function source code lines
+    lines : list of str
+        Function source code lines.
 
     Returns
     -------
-    [str]
-        a copy of lines where the docstring is removed
+    list of str
+        A copy of the input parameter `lines` where the function declaration
+        and the docstring is removed.
     """
     if len(lines) == 0:
         raise Exception("You should pass code with a function declaration included")
     # lines contains only the function declaration
     if len(lines) <= 1:
         return []
-    # docstring is on one line - assuming it is syntactically correct
+    # The docstring is on one line - assuming it is syntactically correct
     stripped = lines[1].strip()
     if len(stripped) >= 6 and stripped[:3] == '"""' and stripped[-3:] == '"""':
         return lines[2:]
-    # docstring is on multiple lines or there is no docstring
+    # The docstring is on multiple lines or there is no docstring
     if stripped[:3] != '"""':
         return lines[1:]
     # lines[2] is the first line of the docstring, past the initial """
@@ -53,10 +55,10 @@ def remove_declaration_and_docstring(lines):
     index = 2
     while '"""' not in lines[index]:
         index += 1
-        # limit to MAX_DOCSTRING lines, if the docstring is longer, just bail
+        # Limit to MAX_DOCSTRING lines, if the docstring is longer, just bail
         if index > MAX_DOCSTRING:
             raise Exception(
                 "Docstring is too long for remove_declaration_and_docstring"
             )
-    # lined[index] is the closing """
+    # lines[index] is the closing """
     return lines[index + 1 :]

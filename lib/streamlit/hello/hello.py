@@ -15,7 +15,7 @@
 
 """A "Hello World" app."""
 
-from __future__ import division, unicode_literals
+from __future__ import division, unicode_literals, absolute_import
 
 import inspect
 from collections import OrderedDict
