@@ -50,6 +50,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 
+// We update the elements list in the state in batches. This is how often we apply those batches.
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
 class App extends PureComponent {
