@@ -88,6 +88,10 @@ class ConfigOption(object):
     # that the option default was not overridden.
     DEFAULT_DEFINITION = "<default>"
 
+    # This is a special value for ConfigOption.where_defined which indicates
+    # that the options was defined by Streamlit's own code.
+    STREAMLIT_DEFINITION = "<streamlit>"
+
     def __init__(
         self,
         key,

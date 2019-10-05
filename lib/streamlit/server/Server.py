@@ -15,6 +15,7 @@
 
 import logging
 import threading
+import socket
 import sys
 import errno
 from enum import Enum
@@ -111,7 +112,7 @@ def start_listening(app, call_count=0):
     port = config.get_option("server.port")
     try:
         app.listen(port)
-    except OSError as e:
+    except (OSError, socket.error) as e:
         if e.errno == errno.EADDRINUSE:
             if call_count >= MAX_PORT_SEARCH_RETRIES:
                 raise RetriesExceeded(
@@ -131,7 +132,9 @@ def start_listening(app, call_count=0):
                 if port == 3000:
                     port += 1
 
-                config._set_option("server.port", port, "server initialization")
+                config._set_option(
+                    "server.port", port,
+                    config.ConfigOption.STREAMLIT_DEFINITION)
                 start_listening(app, call_count + 1)
         else:
             raise
