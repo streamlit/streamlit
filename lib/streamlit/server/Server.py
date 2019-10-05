@@ -101,43 +101,50 @@ def server_port_is_manually_set():
     return config.is_manually_set("server.port")
 
 
-def start_listening(app, call_count=0):
+def start_listening(app):
     """Takes the server start listening at the configured port.
 
-    In case the port is already taken it tries listening to the next available port.
-    It will error after MAX_PORT_SEARCH_RETRIES attempts.
+    In case the port is already taken it tries listening to the next available
+    port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
 
     """
 
-    port = config.get_option("server.port")
-    try:
-        app.listen(port)
-    except (OSError, socket.error) as e:
-        if e.errno == errno.EADDRINUSE:
-            if call_count >= MAX_PORT_SEARCH_RETRIES:
-                raise RetriesExceeded(
-                    "Cannot start Streamlit server. Port %s is already in use, and Streamlit was unable to find a free port after %s attempts.",
-                    port,
-                    MAX_PORT_SEARCH_RETRIES,
-                )
-            if server_port_is_manually_set():
-                LOGGER.error("Port %s is already in use", port)
-                sys.exit(1)
-            else:
-                LOGGER.debug(
-                    "Port %s already in use, trying to use the next one.", port
-                )
-                port += 1
-                # Save port 3000 because it is used for the development server in the front end.
-                if port == 3000:
-                    port += 1
+    call_count = 0
 
-                config._set_option(
-                    "server.port", port,
-                    config.ConfigOption.STREAMLIT_DEFINITION)
-                start_listening(app, call_count + 1)
-        else:
-            raise
+    while call_count < MAX_PORT_SEARCH_RETRIES:
+        port = config.get_option("server.port")
+
+        try:
+            app.listen(port)
+            break  # It worked! So let's break out of the loop.
+
+        except (OSError, socket.error) as e:
+            if e.errno == errno.EADDRINUSE:
+                if server_port_is_manually_set():
+                    LOGGER.error("Port %s is already in use", port)
+                    sys.exit(1)
+                else:
+                    LOGGER.debug(
+                        "Port %s already in use, trying to use the next one.",
+                        port)
+                    port += 1
+                    # Save port 3000 because it is used for the development
+                    # server in the front end.
+                    if port == 3000:
+                        port += 1
+
+                    config._set_option(
+                        "server.port", port,
+                        config.ConfigOption.STREAMLIT_DEFINITION)
+                    call_count += 1
+            else:
+                raise
+
+    if call_count >= MAX_PORT_SEARCH_RETRIES:
+        raise RetriesExceeded(
+            "Cannot start Streamlit server. Port %s is already in use, and "
+            "Streamlit was unable to find a free port after %s attempts.",
+            port, MAX_PORT_SEARCH_RETRIES)
 
 
 class Server(object):
@@ -163,7 +170,8 @@ class Server(object):
 
         """
         if Server._singleton is not None:
-            raise RuntimeError("Server already initialized. Use .get_current() instead")
+            raise RuntimeError(
+                "Server already initialized. Use .get_current() instead")
 
         Server._singleton = self
 
@@ -243,7 +251,11 @@ class Server(object):
                         StaticFileHandler,
                         {"path": "%s/index.html" % static_path},
                     ),
-                    (r"/(.*)", StaticFileHandler, {"path": "%s/" % static_path}),
+                    (
+                        r"/(.*)",
+                        StaticFileHandler,
+                        {"path": "%s/" % static_path}
+                    ),
                 ]
             )
 
@@ -475,7 +487,8 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
-                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
+                self._session.handle_set_run_on_save_request(
+                    msg.set_run_on_save)
             elif msg_type == "stop_report":
                 self._session.handle_stop_script_request()
             elif msg_type == "update_widgets":
