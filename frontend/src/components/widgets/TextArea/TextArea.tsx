@@ -50,6 +50,8 @@ class TextArea extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
+  private isFromMac = (): boolean => /Mac/i.test(navigator.platform)
+
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
@@ -69,23 +71,22 @@ class TextArea extends React.PureComponent<Props, State> {
     })
   }
 
-  private handleSubmitEvent = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ): void => {
-    const { key, metaKey, ctrlKey } = e
+  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    const { key, ctrlKey } = e
     const { dirty } = this.state
 
-    if (key === "Enter" && (metaKey || ctrlKey) && dirty) {
+    if (key === "Enter" && ctrlKey && dirty) {
       this.setWidgetValue({ fromUi: true })
     }
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    this.handleSubmitEvent(e)
-  }
-
   private onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    this.handleSubmitEvent(e)
+    const { key, metaKey } = e
+    const { dirty } = this.state
+
+    if (key === "Enter" && metaKey && dirty) {
+      this.setWidgetValue({ fromUi: true })
+    }
   }
 
   public render = (): React.ReactNode => {
@@ -106,8 +107,12 @@ class TextArea extends React.PureComponent<Props, State> {
           onKeyDown={this.onKeyDown}
           disabled={disabled}
         />
-        {dirty && (
+        {dirty && !this.isFromMac && (
           <div className="instructions">Press Ctrl+Enter to apply</div>
+        )}
+
+        {dirty && this.isFromMac && (
+          <div className="instructions">Press Command+Enter to apply</div>
         )}
       </div>
     )
