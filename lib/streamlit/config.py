@@ -583,7 +583,10 @@ def is_manually_set(option_name):
         True if the option has been set by the user.
 
     """
-    return get_where_defined(option_name) != ConfigOption.DEFAULT_DEFINITION
+    return get_where_defined(option_name) not in (
+        ConfigOption.DEFAULT_DEFINITION,
+        ConfigOption.STREAMLIT_DEFINITION
+    )
 
 
 def show_config():
