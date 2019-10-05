@@ -68,8 +68,9 @@ def mapping_demo():
 
     @st.cache
     def from_data_file(filename):
-        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
+        return pd.read_json(
+            "https://raw.githubusercontent.com/streamlit/streamlit/develop/"
+            "examples/data/" + filename)
 
     try:
         ALL_LAYERS = {
