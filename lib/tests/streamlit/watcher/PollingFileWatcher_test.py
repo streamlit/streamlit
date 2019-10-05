@@ -147,7 +147,8 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         def sleep():
             try:
-                time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
+                # TODO: Remove depedency on time.sleep!
+                time.sleep(5 * PollingFileWatcher._POLLING_PERIOD_SECS)
             except AssertionError:
                 pass
 
@@ -168,8 +169,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         modify_mock_file()
         sleep()
 
-        assert 1 == cb1.call_count
-        assert 1 == cb2.call_count
+        self.assertEqual(cb1.call_count, 1)
+        self.assertEqual(cb2.call_count, 1)
 
         # Close watcher1. Only watcher2's callback should be called after this.
         watcher1.close()
@@ -178,8 +179,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         modify_mock_file()
         sleep()
 
-        assert 1 == cb1.call_count
-        assert 2 == cb2.call_count
+        self.assertEqual(cb1.call_count, 1)
+        self.assertEqual(cb2.call_count, 2)
 
         watcher2.close()
 
@@ -188,8 +189,8 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         # Both watchers are now closed, so their callback counts
         # should not have increased.
-        assert 1 == cb1.call_count
-        assert 2 == cb2.call_count
+        self.assertEqual(cb1.call_count, 1)
+        self.assertEqual(cb2.call_count, 2)
 
 
 class FakeStat(object):

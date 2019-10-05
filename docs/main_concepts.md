@@ -45,7 +45,7 @@ When you've got the data or model into the state that you want to explore, you c
 ```
 import streamlit as st
 x = st.slider('x')
-st.write(x, ‘squared is', x * x)
+st.write(x, 'squared is', x * x)
 
 ```
 
@@ -61,6 +61,6 @@ Now that you have an idea of what Streamlit is, let's close the loop and review 
 
 ## Next steps
 
-* [Get started](getting_started.md) with Streamlit
-* Read up on [advanced concepts](advanced_concepts.md)
-* [Build your first app ](tutorial/index.md)
+- [Get started](getting_started.md) with Streamlit
+- Read up on [advanced concepts](advanced_concepts.md)
+- [Build your first app ](tutorial/index.md)

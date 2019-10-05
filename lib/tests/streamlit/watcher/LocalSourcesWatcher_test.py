@@ -35,6 +35,17 @@ class FileIsInFolderTest(unittest.TestCase):
         ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
         self.assertTrue(ret)
 
+    def test_file_in_subfolder(self):
+        # Test with and without trailing slash
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a")
+        self.assertTrue(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/")
+        self.assertTrue(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b")
+        self.assertTrue(ret)
+        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/")
+        self.assertTrue(ret)
+
     def test_file_not_in_folder(self):
         # Test with and without trailing slash
         ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
