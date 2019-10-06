@@ -1,6 +1,15 @@
 # Main concepts
 
-Working with Streamlit is simple. First you sprinkle a few Streamlit commands into a normal Python script. Then you run the script: `streamlit run your_script.py [script args]`.
+Working with Streamlit is simple. First you sprinkle a few Streamlit commands into a normal Python script. Then you run the script:
+
+```
+$ streamlit run your_script.py [script args]
+```
+
+```eval_rst
+.. tip::
+   Did you know that you can pass either a local python script or a URL to `$ streamlit run` as an argument.
+```
 
 As soon as you run the script, a new tab will open in your default browser and connect to a Streamlit server that's automatically launched behind the scenes. In the tab, you'll find your Streamlit app. This is your canvas, where you'll draw charts, text, tables, and more.
 
