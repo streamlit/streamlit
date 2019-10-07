@@ -21,7 +21,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 import os
 
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.util import STREAMLIT_ROOT_DIRECTORY
+from streamlit.util import CONFIG_FOLDER_NAME
 
 setup_2_3_shims(globals())
 
@@ -188,9 +188,7 @@ class UtilTest(unittest.TestCase):
             self.assertEqual(None, util.get_external_ip())
 
     def test_get_project_streamlit_file_path(self):
-        expected = os.path.join(
-            os.getcwd(), STREAMLIT_ROOT_DIRECTORY, "some/random/file"
-        )
+        expected = os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, "some/random/file")
 
         self.assertEqual(
             expected, util.get_project_streamlit_file_path("some/random/file")

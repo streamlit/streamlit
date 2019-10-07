@@ -188,9 +188,7 @@ class CredentialsClassTest(unittest.TestCase):
         """
         ).lstrip()
 
-        streamlit_root_path = os.path.join(
-            "/mock/home/folder", util.STREAMLIT_ROOT_DIRECTORY
-        )
+        streamlit_root_path = os.path.join("/mock/home/folder", util.CONFIG_FOLDER_NAME)
 
         with patch(
             "streamlit.credentials.open", mock_open(), create=True
