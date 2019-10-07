@@ -808,7 +808,7 @@ def parse_config_file():
     for filename in config_filenames:
         # Parse the config file.
         if not os.path.exists(filename):
-            return
+            continue
 
         with open(filename) as input:
             file_contents = input.read()

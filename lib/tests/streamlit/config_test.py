@@ -475,6 +475,28 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(u"info", config.get_option("global.logLevel"))
 
     def test_local_config(self):
+        """Test that $CWD/.streamlit/config.toml is read, even
+        if ~/.streamlit/config.toml is missing."""
+        local_config = """
+        [s3]
+        bucket = "borket"
+        accessKeyId = "accessKeyId"
+        """
+        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
+
+        with patch("streamlit.config.open", mock_open(read_data=local_config)), patch(
+            "streamlit.config.os.makedirs"
+        ) as makedirs, patch("streamlit.config.os.path.exists") as path_exists:
+            makedirs.return_value = True
+
+            path_exists.return_value = lambda path: path == local_config_path
+            config.parse_config_file()
+
+        self.assertEqual(u"borket", config.get_option("s3.bucket"))
+        self.assertEqual(u"accessKeyId", config.get_option("s3.accessKeyId"))
+        self.assertIsNone(config.get_option("s3.url"))
+
+    def test_global_local_config(self):
         """Test that $CWD/.streamlit/config.toml gets overlaid on
         ~/.streamlit/config.toml at parse time."""
         global_config = """
