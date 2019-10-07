@@ -134,9 +134,7 @@ class WithFullScreenWrapper extends React.Component {
     const { element, width } = this.props
     return (
       <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <Table element={element} width={width} height={height} />
-        )}
+        {({ width }) => <Table element={element} width={width} />}
       </FullScreenWrapper>
     )
   }
