@@ -21,7 +21,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.46.0`.
+...and then verify that the version number printed is `0.47.2`.
 
 **Try reproducing the issue now.**
 
@@ -113,8 +113,4 @@ You can downgrade at any time with these commands:
 
 ```bash
 $ pip install --upgrade streamlit==0.37 # <- To downgrade Streamlit!
-```
-
-```bash
-$ conda install streamlit=0.37
 ```
