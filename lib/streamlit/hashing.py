@@ -146,7 +146,8 @@ def _key(obj, context):
 
 
 def _hashing_error_message(start):
-    return textwrap.dedent("""
+    return textwrap.dedent(
+        """
         %(start)s,
 
         **More information:** to prevent unexpected behavior, Streamlit tries
@@ -158,7 +159,9 @@ def _hashing_error_message(start):
         To stop this warning from showing in the meantime, try one of the following:
         * **Preferred:** modify your code to avoid using this type of object.
         * Or add the argument `ignore_hash=True` to the `st.cache` decorator.
-    """ % {'start': start}).strip("\n")
+    """
+        % {"start": start}
+    ).strip("\n")
 
 
 def _get_main_script_directory():
@@ -166,6 +169,7 @@ def _get_main_script_directory():
     """
     import __main__
     import os
+
     main_path = __main__.__file__
     return os.path.dirname(main_path)
 
@@ -313,8 +317,9 @@ class CodeHasher:
                 h = hashlib.new(self.name)
                 filepath = os.path.abspath(obj.__code__.co_filename)
 
-                if (util.file_is_in_folder(filepath, _get_main_script_directory())
-                        and not self._folder_black_list.is_blacklisted(filepath)):
+                if util.file_is_in_folder(
+                    filepath, _get_main_script_directory()
+                ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
@@ -360,13 +365,13 @@ class CodeHasher:
                     st.warning(
                         _hashing_error_message(
                             "Streamlit cannot hash an object of type %s." % type(obj)
-                        ),
+                        )
                     )
         except:
             st.warning(
                 _hashing_error_message(
                     "Streamlit failed to hash an object of type %s." % type(obj)
-                ),
+                )
             )
 
     def _code_to_bytes(self, code, context):

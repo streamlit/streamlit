@@ -163,7 +163,9 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = util.file_is_in_folder(filepath, self._report.script_folder)
+                file_is_local = util.file_is_in_folder(
+                    filepath, self._report.script_folder
+                )
 
                 local_filepaths.append(filepath)
 
@@ -187,4 +189,3 @@ class LocalSourcesWatcher(object):
         for filepath in watched_modules:
             if filepath not in local_filepaths:
                 self._deregister_watcher(filepath)
-

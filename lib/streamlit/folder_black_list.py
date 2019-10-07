@@ -60,4 +60,3 @@ class FolderBlackList(object):
             util.file_is_in_folder(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
         )
-
