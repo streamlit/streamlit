@@ -29,9 +29,8 @@ class FolderBlackList(object):
 
     Note
     ----
-    ===> Unsure who implements the following!
-    The blacklist does blacklist anything that is not in the directory of the
-    main script and anything that matches the `DEFAULT_FOLDER_BLACKLIST`.
+    The blacklist does blacklist anything that matches the
+    `DEFAULT_FOLDER_BLACKLIST`.
 
     """
 
