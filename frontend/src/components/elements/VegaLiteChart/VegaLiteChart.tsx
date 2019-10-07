@@ -18,6 +18,7 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { logMessage } from "lib/log"
 
 import embed from "vega-embed"
@@ -52,8 +53,11 @@ const SUPPORTED_INDEX_TYPES = new Set([
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface Dimensions {
@@ -65,7 +69,7 @@ interface State {
   error?: Error
 }
 
-class VegaLiteChart extends React.PureComponent<Props, State> {
+class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
   /**
    * The Vega view object
    */
@@ -86,7 +90,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
    */
   private element: HTMLDivElement | null = null
 
-  public constructor(props: Props) {
+  public constructor(props: PropsWithHeight) {
     super(props)
 
     this.state = {
@@ -145,7 +149,7 @@ class VegaLiteChart extends React.PureComponent<Props, State> {
     }
   }
 
-  public async componentDidUpdate(prevProps: Props): Promise<void> {
+  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
     const prevElement = prevProps.element
     const element = this.props.element
 
@@ -448,4 +452,17 @@ function dataIsAnAppendOfPrev(
   return true
 }
 
-export default VegaLiteChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <VegaLiteChart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

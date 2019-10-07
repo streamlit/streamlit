@@ -23,12 +23,16 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import Plot from "react-plotly.js"
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface Dimensions {
@@ -38,7 +42,7 @@ interface Dimensions {
 
 const DEFAULT_HEIGHT = 450
 
-class PlotlyChart extends React.PureComponent<Props> {
+class PlotlyChart extends React.PureComponent<PropsWithHeight> {
   public getChartDimensions = (): Dimensions => {
     const el = this.props.element
 
@@ -98,4 +102,17 @@ class PlotlyChart extends React.PureComponent<Props> {
   }
 }
 
-export default PlotlyChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <PlotlyChart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

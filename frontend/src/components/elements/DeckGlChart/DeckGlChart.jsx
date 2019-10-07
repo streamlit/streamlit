@@ -30,6 +30,7 @@ import DeckGL, {
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import { dataFrameToArrayOfDicts } from "../../../lib/dataFrameProto"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
 
@@ -380,4 +381,17 @@ function parseGetters(type, spec) {
   })
 }
 
-export default DeckGlChart
+class WithFullScreenWrapper extends React.Component {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <DeckGlChart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

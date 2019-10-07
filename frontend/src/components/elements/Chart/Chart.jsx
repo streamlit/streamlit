@@ -23,7 +23,7 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from "../../../lib/dataFrameProto"
 import { format, Duration } from "../../../lib/format"
-
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import * as recharts from "recharts"
 
 import "./Chart.scss"
@@ -229,4 +229,17 @@ function extractProps(element) {
   return props
 }
 
-export default Chart
+class WithFullScreenWrapper extends React.Component {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <Chart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

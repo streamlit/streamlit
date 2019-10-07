@@ -23,7 +23,7 @@ import {
   dataFrameGet,
   dataFrameGetDimensions,
 } from "../../../lib/dataFrameProto"
-
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "./Table.scss"
 
 /**
@@ -129,4 +129,17 @@ function TableRow({ df, rowIdx, cols }) {
   return entries
 }
 
-export default Table
+class WithFullScreenWrapper extends React.Component {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <Table element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

@@ -20,6 +20,7 @@ import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
 import DataFrameCell from "./DataFrameCell"
 import { SortDirection } from "./SortDirection"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import {
   dataFrameGet,
   dataFrameGetDimensions,
@@ -50,8 +51,11 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface State {
@@ -112,10 +116,10 @@ const DEFAULT_HEIGHT = 300
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends React.PureComponent<Props, State> {
+class DataFrame extends React.PureComponent<PropsWithHeight, State> {
   private multiGridRef = React.createRef<MultiGrid>()
 
-  public constructor(props: Props) {
+  public constructor(props: PropsWithHeight) {
     super(props)
     this.state = {
       /**
@@ -517,4 +521,17 @@ function getWidths(
   return { elementWidth, columnWidth, headerWidth }
 }
 
-export default DataFrame
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <DataFrame element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

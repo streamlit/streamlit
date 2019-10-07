@@ -17,6 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "lib/log"
@@ -24,9 +25,12 @@ import "./GraphVizChart.scss"
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
   index: number
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface Dimensions {
@@ -39,7 +43,7 @@ interface Dimensions {
 const _dummy_graphviz = graphviz
 _dummy_graphviz // eslint-disable-line no-unused-expressions
 
-class GraphVizChart extends React.PureComponent<Props> {
+class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
   private originalHeight = 0
 
@@ -114,4 +118,22 @@ class GraphVizChart extends React.PureComponent<Props> {
   }
 }
 
-export default GraphVizChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, index, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <GraphVizChart
+            element={element}
+            index={index}
+            width={width}
+            height={height}
+          />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

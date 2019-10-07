@@ -18,12 +18,16 @@
 import React from "react"
 import { embed as BokehEmbed } from "bokehjs"
 import { Map as ImmutableMap } from "immutable"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
   index: number
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface Dimensions {
@@ -31,7 +35,7 @@ interface Dimensions {
   height: number
 }
 
-class BokehChart extends React.PureComponent<Props> {
+class BokehChart extends React.PureComponent<PropsWithHeight> {
   private chartId = "bokeh-chart-" + this.props.index
 
   private getChartData = (): any => {
@@ -107,4 +111,22 @@ class BokehChart extends React.PureComponent<Props> {
   )
 }
 
-export default BokehChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, index, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <BokehChart
+            element={element}
+            index={index}
+            width={width}
+            height={height}
+          />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

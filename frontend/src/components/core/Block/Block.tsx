@@ -218,37 +218,14 @@ class Block extends PureComponent<Props> {
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <BokehChart
-              element={el}
-              index={index}
-              width={width}
-              height={height}
-            />
-          )}
-        </FullScreenWrapper>
+        <BokehChart element={el} index={index} width={width} />
       ),
-      chart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <Chart element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
-      ),
+      chart: (el: SimpleElement) => <Chart element={el} width={width} />,
       dataFrame: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <DataFrame element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
+        <DataFrame element={el} width={width} />
       ),
       deckGlChart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <DeckGlChart element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
+        <DeckGlChart element={el} width={width} />
       ),
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
@@ -258,22 +235,9 @@ class Block extends PureComponent<Props> {
         <ExceptionElement element={el} width={width} />
       ),
       graphvizChart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <GraphVizChart
-              element={el}
-              index={index}
-              width={width}
-              height={height}
-            />
-          )}
-        </FullScreenWrapper>
+        <GraphVizChart element={el} index={index} width={width} />
       ),
-      imgs: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => <ImageList element={el} width={width} />}
-        </FullScreenWrapper>
-      ),
+      imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
       multiselect: (el: SimpleElement) => (
         <Multiselect
           key={el.get("id")}
@@ -283,11 +247,7 @@ class Block extends PureComponent<Props> {
         />
       ),
       plotlyChart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <PlotlyChart element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
+        <PlotlyChart element={el} width={width} />
       ),
       progress: (el: SimpleElement) => (
         <Progress
@@ -296,20 +256,10 @@ class Block extends PureComponent<Props> {
           style={{ width }}
         />
       ),
-      table: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <Table element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
-      ),
+      table: (el: SimpleElement) => <Table element={el} width={width} />,
       text: (el: SimpleElement) => <Text element={el} width={width} />,
       vegaLiteChart: (el: SimpleElement) => (
-        <FullScreenWrapper width={width}>
-          {({ width, height }) => (
-            <VegaLiteChart element={el} width={width} height={height} />
-          )}
-        </FullScreenWrapper>
+        <VegaLiteChart element={el} width={width} />
       ),
       video: (el: SimpleElement) => <Video element={el} width={width} />,
       // Widgets
