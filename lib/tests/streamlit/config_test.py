@@ -39,7 +39,6 @@ class ConfigTest(unittest.TestCase):
                 config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
             ),
             patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
-            patch.object(config, "_config_file_has_been_parsed", new=False),
         ]
 
         for p in self.patches:
@@ -474,41 +473,102 @@ class ConfigTest(unittest.TestCase):
         config.set_option("global.developmentMode", False)
         self.assertEqual(u"info", config.get_option("global.logLevel"))
 
-    def test_local_config(self):
-        """Test that $CWD/.streamlit/config.toml is read, even
-        if ~/.streamlit/config.toml is missing."""
-        local_config = """
-        [s3]
-        bucket = "borket"
-        accessKeyId = "accessKeyId"
-        """
-        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
 
-        with patch("streamlit.config.open", mock_open(read_data=local_config)), patch(
-            "streamlit.config.os.makedirs"
-        ) as makedirs, patch("streamlit.config.os.path.exists") as path_exists:
-            makedirs.return_value = True
+class ConfigLoadingTest(unittest.TestCase):
+    """Tests that involve loading the config.toml file."""
 
-            path_exists.return_value = lambda path: path == local_config_path
+    def setUp(self):
+        self.patches = [
+            patch.object(
+                config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
+            ),
+            patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
+            patch.object(config, "_config_file_has_been_parsed", new=False),
+        ]
+
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def test_missing_config(self):
+        """Test that we can initialize our config even if the file is missing."""
+        with patch("streamlit.config.os.path.exists") as path_exists:
+            path_exists.return_value = False
             config.parse_config_file()
 
-        self.assertEqual(u"borket", config.get_option("s3.bucket"))
-        self.assertEqual(u"accessKeyId", config.get_option("s3.accessKeyId"))
-        self.assertIsNone(config.get_option("s3.url"))
+            self.assertEqual(True, config.get_option("client.caching"))
+            self.assertIsNone(config.get_option("s3.bucket"))
 
-    def test_global_local_config(self):
-        """Test that $CWD/.streamlit/config.toml gets overlaid on
-        ~/.streamlit/config.toml at parse time."""
+    def test_load_global_config(self):
+        """Test that ~/.streamlit/config.toml is read."""
         global_config = """
-[s3]
-bucket = "bucket"
-url = "url"
-"""
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
+        """
+        global_config_path = (
+            global_config_path
+        ) = "/mock/home/folder/.streamlit/config.toml"
+
+        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path == global_config_path
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.parse_config_file()
+
+            self.assertEqual(u"global_bucket", config.get_option("s3.bucket"))
+            self.assertEqual(u"global_url", config.get_option("s3.url"))
+            self.assertIsNone(config.get_option("s3.accessKeyId"))
+
+    def test_load_local_config(self):
+        """Test that $CWD/.streamlit/config.toml is read, even
+        if ~/.streamlit/config.toml is missing.
+
+        """
         local_config = """
-[s3]
-bucket = "borket"
-accessKeyId = "accessKeyId"
-"""
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
+        """
+
+        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
+
+        open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path == local_config_path
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.parse_config_file()
+
+            self.assertEqual(u"local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
+            self.assertIsNone(config.get_option("s3.url"))
+
+    def test_load_global_local_config(self):
+        """Test that $CWD/.streamlit/config.toml gets overlaid on
+        ~/.streamlit/config.toml at parse time.
+
+        """
+        global_config = """
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
+        """
+
+        local_config = """
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
+        """
+
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
         local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
 
@@ -517,22 +577,23 @@ accessKeyId = "accessKeyId"
         open = mock_open()
         open.side_effect = [global_open.return_value, local_open.return_value]
 
-        with patch("streamlit.config.open", open), patch(
-            "streamlit.config.os.makedirs"
-        ) as makedirs, patch("streamlit.config.os.path.exists") as path_exists:
+        open_patch = patch("streamlit.config.open", open)
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path in [
+            global_config_path,
+            local_config_path,
+        ]
 
-            makedirs.return_value = True
-            path_exists.return_value = lambda path: path in [
-                global_config_path,
-                local_config_path,
-            ]
+        with open_patch, makedirs_patch, pathexists_patch:
             config.parse_config_file()
 
-        # s3.bucket set in both local and global
-        self.assertEqual(u"borket", config.get_option("s3.bucket"))
+            # s3.bucket set in both local and global
+            self.assertEqual(u"local_bucket", config.get_option("s3.bucket"))
 
-        # s3.url is set in global, and not in local
-        self.assertEqual(u"url", config.get_option("s3.url"))
+            # s3.url is set in global, and not in local
+            self.assertEqual(u"global_url", config.get_option("s3.url"))
 
-        # s3.accessKeyId is set in local and not in global
-        self.assertEqual(u"accessKeyId", config.get_option("s3.accessKeyId"))
+            # s3.accessKeyId is set in local and not in global
+            self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
