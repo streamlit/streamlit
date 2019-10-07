@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import fnmatch
+from streamlit import util
 
 # The files in the folders below should always be blacklisted.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -58,15 +57,7 @@ class FolderBlackList(object):
 
         """
         return any(
-            self._file_is_in_folder(filepath, blacklisted_folder)
+            util.file_is_in_folder(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
         )
 
-    @staticmethod
-    def _file_is_in_folder(filepath, folderpath_glob):
-        # Strip trailing slash if it exists
-        if folderpath_glob.endswith("/"):
-            folderpath_glob = folderpath_glob[:-1]
-
-        file_dir = os.path.dirname(filepath)
-        return fnmatch.fnmatch(file_dir, folderpath_glob)

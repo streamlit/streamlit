@@ -163,7 +163,7 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = _file_is_in_folder(filepath, self._report.script_folder)
+                file_is_local = util.file_is_in_folder(filepath, self._report.script_folder)
 
                 local_filepaths.append(filepath)
 
@@ -188,15 +188,3 @@ class LocalSourcesWatcher(object):
             if filepath not in local_filepaths:
                 self._deregister_watcher(filepath)
 
-
-def _file_is_in_folder(filepath, folderpath_glob):
-    # Make the glob always end with "/*" so we match files inside subfolders of
-    # folderpath_glob.
-    if not folderpath_glob.endswith("*"):
-        if folderpath_glob.endswith("/"):
-            folderpath_glob += "*"
-        else:
-            folderpath_glob += "/*"
-
-    file_dir = os.path.dirname(filepath) + "/"
-    return fnmatch.fnmatch(file_dir, folderpath_glob)

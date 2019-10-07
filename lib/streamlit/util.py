@@ -451,3 +451,16 @@ def is_namedtuple(x):
 
 def is_darwin():
     return platform.system() == "Darwin"
+
+
+def file_is_in_folder(filepath, folderpath_glob):
+    # Make the glob always end with "/*" so we match files inside subfolders of
+    # folderpath_glob.
+    if not folderpath_glob.endswith("*"):
+        if folderpath_glob.endswith("/"):
+            folderpath_glob += "*"
+        else:
+            folderpath_glob += "/*"
+
+    file_dir = os.path.dirname(filepath) + "/"
+    return fnmatch.fnmatch(file_dir, folderpath_glob)

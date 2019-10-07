@@ -162,6 +162,8 @@ def _hashing_error_message(start):
 
 
 def _get_main_script_directory():
+    """Get the directory of the main script.
+    """
     import __main__
     import os
     main_path = __main__.__file__
@@ -310,10 +312,9 @@ class CodeHasher:
 
                 h = hashlib.new(self.name)
                 filepath = os.path.abspath(obj.__code__.co_filename)
-                # ==> change  os.getcwd()
-                if filepath.startswith(
-                    _get_main_script_directory()
-                ) and not self._folder_black_list.is_blacklisted(filepath):
+
+                if (util.file_is_in_folder(filepath, _get_main_script_directory())
+                        and not self._folder_black_list.is_blacklisted(filepath)):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
