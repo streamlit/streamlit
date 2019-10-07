@@ -183,5 +183,4 @@ class UtilTest(unittest.TestCase):
     def test_file_is_in_folder(self):
         self.assertTrue(util.file_is_in_folder("/user/name/test", "/user"))
         self.assertTrue(util.file_is_in_folder("/user/name/test", "/user/*"))
-        self.assertFalse(util.file_is_in_folder("/user/name/test",
-                                                "/user/other"))
+        self.assertFalse(util.file_is_in_folder("/user/name/test", "/user/other"))
