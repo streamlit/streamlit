@@ -30,7 +30,8 @@ LOGGER = get_logger(__name__)
 def intro():
     st.sidebar.success("Select a demo above.")
 
-    st.markdown("""
+    st.markdown(
+        """
         Streamlit is an open-source app framework built specifically for
         Machine Learning and Data Science projects.
 
@@ -50,7 +51,8 @@ def intro():
           Dataset] (https://github.com/streamlit/demo-self-driving)
         - Explore a [New York City rideshare dataset]
           (https://github.com/streamlit/demo-uber-nyc-pickups)
-    """)
+    """
+    )
 
 
 # Turn off black formatting for this function to present the user with more
