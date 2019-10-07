@@ -34,6 +34,7 @@ import sys
 import urllib
 
 import click
+import fnmatch
 import requests
 
 from streamlit.logger import get_logger

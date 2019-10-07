@@ -179,3 +179,9 @@ class UtilTest(unittest.TestCase):
         with requests_mock.mock() as m:
             m.get(util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             self.assertEqual(None, util.get_external_ip())
+
+    def test_file_is_in_folder(self):
+        self.assertTrue(util.file_is_in_folder("/user/name/test", "/user"))
+        self.assertTrue(util.file_is_in_folder("/user/name/test", "/user/*"))
+        self.assertFalse(util.file_is_in_folder("/user/name/test",
+                                                "/user/other"))
