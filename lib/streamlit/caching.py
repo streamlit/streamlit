@@ -213,22 +213,36 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
     else:
         load_or_rerun = "rerunning the function"
 
-    message = (
-        "**Your code mutated a cached return value**\n\n"
-        "Streamlit detected the mutation of a return value of `{name}`, which is "
-        "a cached function. This happened in `{file_name}` line {lineno}. Since "
-        "`persist` is `{persisted}`, Streamlit will make up for this by "
-        "{load_or_rerun}, so your code will still work, but with reduced performance.\n\n"
-        "To dismiss this warning, try one of the following:\n\n"
-        "1. *Preferred:* fix the code by removing the mutation. The simplest way to do "
-        "this is to copy the cached value to a new variable, which you are allowed to "
-        "mutate. For example, try changing `{caller_file_name}` line {caller_lineno} to:\n"
-        "```python\nimport copy\n{copy_code}\n```\n"
-        "2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for `{name}`. "
-        "This is an escape hatch for advanced users who really know what they're doing.\n\n"
-        "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/docs/tutorial/create_an_interactive_app.html)."
-    )
+    message = textwrap.dedent(
+        """
+        **Your code mutated a cached return value**
+
+        Streamlit detected the mutation of a return value of `{name}`, which is
+        a cached function. This happened in `{file_name}` line {lineno}. Since
+        `persist` is `{persisted}`, Streamlit will make up for this by
+        {load_or_rerun}, so your code will still work, but with reduced
+        performance.
+
+        To dismiss this warning, try one of the following:
+
+        1. *Preferred:* fix the code by removing the mutation. The simplest way
+        to do this is to copy the cached value to a new variable, which you are
+        allowed to mutate. For example, try changing `{caller_file_name}` line
+        {caller_lineno} to:
+
+        ```python
+        import copy
+        {copy_code}
+        ```
+
+        2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for
+        `{name}`.  This is an escape hatch for advanced users who really know
+        what they're doing.
+
+        Learn more about caching and copying in the [Streamlit documentation]
+        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
+        """
+    ).strip("\n")
 
     return message.format(
         name=name,
@@ -254,19 +268,28 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
     else:
         lines = "lines {start} to {end}".format(start=start, end=end)
 
-    message = (
-        "**Your code mutated a cached value**\n\n"
-        "Streamlit detected the mutation of a cached value in `{file_name}` in {lines}. "
-        "Since `persist` is `{persisted}`, Streamlit will make up for this by {load_or_rerun}, "
-        "so your code will still work, but with reduced performance.\n\n"
-        "To dismiss this warning, try one of the following:\n\n"
-        "1. *Preferred:* fix the code by removing the mutation. The simplest way to do "
-        "this is to copy the cached value to a new variable, which you are allowed to mutate.\n"
-        "2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This is an "
-        "escape hatch for advanced users who really know what they're doing.\n\n"
-        "Learn more about caching and copying in the [Streamlit documentation]"
-        "(https://streamlit.io/docs/api.html#optimize-performance)."
-    )
+    message = textwrap.dedent(
+        """
+        **Your code mutated a cached value**
+
+        Streamlit detected the mutation of a cached value in `{file_name}` in
+        {lines}.  Since `persist` is `{persisted}`, Streamlit will make up for
+        this by {load_or_rerun}, so your code will still work, but with reduced
+        performance.
+
+        To dismiss this warning, try one of the following:
+
+        1. *Preferred:* fix the code by removing the mutation. The simplest way
+        to do this is to copy the cached value to a new variable, which you are
+        allowed to mutate.
+        2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This
+        is an escape hatch for advanced users who really know what they're
+        doing.
+
+        Learn more about caching and copying in the [Streamlit documentation]
+        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
+    """
+    ).strip("\n")
 
     return message.format(
         load_or_rerun=load_or_rerun,
@@ -277,13 +300,19 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
 
 
 def _build_args_mutated_message(func):
-    message = (
-        "**Cached function mutated its input arguments**\n\n"
-        "When decorating a function with `@st.cache`, the arguments should not be mutated inside "
-        "the function body, as that breaks the caching mechanism. Please update the code of "
-        "`{name}` to bypass the mutation.\n\n"
-        "See the [Streamlit docs](https://streamlit.io/docs/tutorial/create_an_interactive_app.html) for more info."
-    )
+    message = textwrap.dedent(
+        """
+        **Cached function mutated its input arguments**
+
+        When decorating a function with `@st.cache`, the arguments should not
+        be mutated inside the function body, as that breaks the caching
+        mechanism. Please update the code of `{name}` to bypass the mutation.
+
+        See the [Streamlit
+        docs](https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html) for more
+        info.
+    """
+    ).strip("\n")
 
     return message.format(name=func.__name__)
 

@@ -51,6 +51,9 @@ import "./App.scss"
 import "assets/css/header.scss"
 import "assets/css/open-iconic.scss"
 
+// We update the elements list in the state in batches. This is how often we apply those batches.
+const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
+
 class App extends PureComponent {
   constructor(props) {
     super(props)
@@ -97,6 +100,9 @@ class App extends PureComponent {
 
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendBackMsg)
+
+    this.elementListBufferTimerIsSet = false
+    this.elementListBuffer = null
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -152,12 +158,12 @@ class App extends PureComponent {
     }
   }
 
-  showError(errorNode) {
+  showError(title, errorNode) {
     logError(errorNode)
 
     this.openDialog({
+      title,
       type: "warning",
-      title: "Connection error",
       msg: errorNode,
     })
   }
@@ -191,7 +197,8 @@ class App extends PureComponent {
           this.openDialog({ url, type: DialogType.UPLOADED }),
       })
     } catch (err) {
-      this.showError(err.message)
+      logError(err)
+      this.showError("Bad message format", err.message)
     }
   }
 
@@ -336,12 +343,17 @@ class App extends PureComponent {
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
-      this.setState(({ elements, reportId }) => ({
-        elements: {
-          main: this.clearOldElements(elements.main, reportId),
-          sidebar: this.clearOldElements(elements.sidebar, reportId),
-        },
-      }))
+      this.setState(
+        ({ elements, reportId }) => ({
+          elements: {
+            main: this.clearOldElements(elements.main, reportId),
+            sidebar: this.clearOldElements(elements.sidebar, reportId),
+          },
+        }),
+        () => {
+          this.elementListBuffer = this.state.elements
+        }
+      )
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -406,24 +418,45 @@ class App extends PureComponent {
   }
 
   /**
-   * Applies a list of deltas to the elements.
+   * Updates elementListBuffer with the given delta, and sets up a timer to
+   * update the elementList in the state as well. This buffer allows us to
+   * receive deltas extremely quickly without spamming React with lots of
+   * render() calls.
    */
   handleDeltaMsg = (deltaMsg, metadataMsg) => {
-    // (BUG #685) When user presses stop, stop adding elements to
-    // report immediately to avoid race condition.
-    // The one exception is static connections, which do not depend on
-    // the report state (and don't have a stop button).
-    const isStaticConnection = this.connectionManager.isStaticConnection()
-    const reportIsRunning =
-      this.state.reportRunState === ReportRunState.RUNNING
-    if (isStaticConnection || reportIsRunning) {
-      this.setState(state => ({
-        // Create brand new `elements` instance, so components that depend on
-        // this for re-rendering catch the change.
-        elements: {
-          ...applyDelta(state.elements, state.reportId, deltaMsg, metadataMsg),
-        },
-      }))
+    this.elementListBuffer = applyDelta(
+      this.state.elements,
+      this.state.reportId,
+      deltaMsg,
+      metadataMsg
+    )
+
+    if (!this.elementListBufferTimerIsSet) {
+      this.elementListBufferTimerIsSet = true
+
+      // (BUG #685) When user presses stop, stop adding elements to
+      // report immediately to avoid race condition.
+      // The one exception is static connections, which do not depend on
+      // the report state (and don't have a stop button).
+      const isStaticConnection = this.connectionManager.isStaticConnection()
+      const reportIsRunning =
+        this.state.reportRunState === ReportRunState.RUNNING
+
+      setTimeout(() => {
+        this.elementListBufferTimerIsSet = false
+
+        if (isStaticConnection || reportIsRunning) {
+          this.setState(state => {
+            return {
+              // Create brand new `elements` instance, so components that depend on
+              // this for re-rendering catch the change.
+              elements: {
+                ...this.elementListBuffer,
+              },
+            }
+          })
+        }
+      }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
   }
 
@@ -578,7 +611,7 @@ class App extends PureComponent {
    * Updates the report body when there's a connection error.
    */
   handleConnectionError(errNode) {
-    this.showError(errNode)
+    this.showError("Connection error", errNode)
   }
 
   /**

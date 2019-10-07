@@ -79,12 +79,10 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = delta(DATAFRAME)
             el.add_rows(NEW_ROWS)
 
-            df_proto = data_frame_proto._get_data_frame(
-                        self.get_delta_from_queue())
+            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
 
             self.assertEqual(num_rows, 10)
-
 
     def test_simple_add_rows(self):
         """Test plain old add_rows."""

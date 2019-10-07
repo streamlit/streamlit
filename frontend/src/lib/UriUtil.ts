@@ -33,7 +33,13 @@ export function getWindowBaseUriParts(): BaseUriParts {
   // server's port 3000.
   // If changed, also change config.py
   const host = window.location.hostname
-  const port = IS_DEV_ENV ? WEBSOCKET_PORT_DEV : Number(window.location.port)
+  const port = IS_DEV_ENV
+    ? WEBSOCKET_PORT_DEV
+    : window.location.port
+    ? Number(window.location.port)
+    : isHttps()
+    ? 443
+    : 80
   return { host, port }
 }
 

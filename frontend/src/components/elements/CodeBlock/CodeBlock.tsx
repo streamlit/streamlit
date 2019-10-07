@@ -63,7 +63,9 @@ class CodeBlock extends React.PureComponent<Props> {
       lang = Prism.languages.python
     }
 
-    const safeHtml = Prism.highlight(this.props.value, lang, "")
+    const safeHtml = this.props.value
+      ? Prism.highlight(this.props.value, lang, "")
+      : ""
     const languageClassName = `language-${this.props.language}`
     return (
       <>

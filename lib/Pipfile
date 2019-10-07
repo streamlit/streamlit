@@ -25,7 +25,7 @@ bokeh = "*"
 graphviz = "*"
 parameterized = "*"
 pydot = "*"
-tensorflow = "*"
+tensorflow = ">=2.0.0"
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
@@ -36,7 +36,7 @@ requests-mock = "*"
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
 [packages]
-altair = "*"
+altair = ">=3.2.0"
 astor = "*"
 base58 = "*"
 blinker = "*"
