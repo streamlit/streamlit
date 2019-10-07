@@ -164,16 +164,6 @@ def _hashing_error_message(start):
     ).strip("\n")
 
 
-def _get_main_script_directory():
-    """Get the directory of the main script.
-    """
-    import __main__
-    import os
-
-    main_path = __main__.__file__
-    return os.path.dirname(main_path)
-
-
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
@@ -318,8 +308,10 @@ class CodeHasher:
                 filepath = os.path.abspath(obj.__code__.co_filename)
 
                 if util.file_is_in_folder(
-                    filepath, _get_main_script_directory()
+                    filepath, self._get_main_script_directory()
                 ) and not self._folder_black_list.is_blacklisted(filepath):
+                # if (os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd())
+                #     and not self._folder_black_list.is_blacklisted(filepath)):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
@@ -414,3 +406,13 @@ class CodeHasher:
                     self._update(h, name)
 
         return h.digest()
+
+    @staticmethod
+    def _get_main_script_directory():
+        """Get the directory of the main script.
+        """
+        import __main__
+        import os
+
+        main_path = __main__.__file__
+        return os.path.dirname(main_path)

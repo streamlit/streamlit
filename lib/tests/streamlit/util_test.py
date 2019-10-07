@@ -180,7 +180,50 @@ class UtilTest(unittest.TestCase):
             m.get(util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             self.assertEqual(None, util.get_external_ip())
 
-    def test_file_is_in_folder(self):
-        self.assertTrue(util.file_is_in_folder("/user/name/test", "/user"))
-        self.assertTrue(util.file_is_in_folder("/user/name/test", "/user/*"))
-        self.assertFalse(util.file_is_in_folder("/user/name/test", "/user/other"))
+
+class FileIsInFolderTest(unittest.TestCase):
+    """Tests for file_is_in_folder.
+    """
+    def test_file_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
+        self.assertTrue(ret)
+
+    def test_file_in_subfolder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/")
+        self.assertTrue(ret)
+
+    def test_file_not_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "/d/e/f")
+        self.assertFalse(ret)
+
+    def test_rel_file_not_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder("foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = util.file_is_in_folder("foo.py", "/d/e/f")
+        self.assertFalse(ret)
+
+    def test_file_in_folder_glob(self):
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "**/c")
+        self.assertTrue(ret)
+
+    def test_file_not_in_folder_glob(self):
+        ret = util.file_is_in_folder("/a/b/c/foo.py", "**/f")
+        self.assertFalse(ret)
+
+    def test_rel_file_not_in_folder_glob(self):
+        ret = util.file_is_in_folder("foo.py", "**/f")
+        self.assertFalse(ret)

@@ -25,53 +25,6 @@ from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
 
-
-class FileIsInFolderTest(unittest.TestCase):
-    def test_file_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
-        self.assertTrue(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
-        self.assertTrue(ret)
-
-    def test_file_in_subfolder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a")
-        self.assertTrue(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/")
-        self.assertTrue(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b")
-        self.assertTrue(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/")
-        self.assertTrue(ret)
-
-    def test_file_not_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
-        self.assertFalse(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f")
-        self.assertFalse(ret)
-
-    def test_rel_file_not_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f/")
-        self.assertFalse(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f")
-        self.assertFalse(ret)
-
-    def test_file_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/c")
-        self.assertTrue(ret)
-
-    def test_file_not_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/f")
-        self.assertFalse(ret)
-
-    def test_rel_file_not_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "**/f")
-        self.assertFalse(ret)
-
-
 if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
