@@ -32,7 +32,7 @@ from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
-
+# Get code hasher and mock the main script directory.
 def get_hash(f, context=None):
     hasher = CodeHasher("md5")
     hasher._get_main_script_directory = MagicMock()
