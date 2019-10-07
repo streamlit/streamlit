@@ -173,5 +173,5 @@ class CliTest(unittest.TestCase):
                 mock.call("server.port", 3005, "cli call option"),
                 mock.call("server.headless", True, "cli call option"),
                 mock.call("browser.serverAddress", "localhost", "cli call option"),
-            ]
+            ], any_order=True
         )
