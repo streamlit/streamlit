@@ -184,6 +184,7 @@ class UtilTest(unittest.TestCase):
 class FileIsInFolderTest(unittest.TestCase):
     """Tests for file_is_in_folder.
     """
+
     def test_file_in_folder(self):
         # Test with and without trailing slash
         ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")

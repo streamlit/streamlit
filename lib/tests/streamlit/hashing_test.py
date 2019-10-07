@@ -40,6 +40,7 @@ def get_hash(f, context=None):
     hasher.update(f, context)
     return hasher.digest()
 
+
 class HashTest(unittest.TestCase):
     def test_string(self):
         self.assertEqual(get_hash("hello"), get_hash("hello"))
@@ -194,6 +195,7 @@ class CodeHashTest(unittest.TestCase):
 
     def test_value(self):
         """Test the hash of functions with values."""
+
         def f():
             x = 42
             return x
