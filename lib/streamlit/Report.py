@@ -15,7 +15,6 @@
 
 import base58
 import copy
-import json
 import os
 import uuid
 
@@ -173,16 +172,12 @@ class Report(object):
         num_deltas = 0
         for idx in range(len(messages)):
             if messages[idx].HasField("delta"):
-                messages[idx].metadata.delta_id = num_deltas
                 if num_deltas == 0:
                     first_delta_index = idx
                 num_deltas += 1
 
         manifest = self._build_manifest(
-            status=StaticManifest.DONE,
-            num_messages=len(messages),
-            first_delta_index=first_delta_index,
-            num_deltas=num_deltas,
+            status=StaticManifest.DONE, num_messages=len(messages)
         )
 
         # Build a list of message tuples: (message_location, serialized_message)
@@ -209,8 +204,6 @@ class Report(object):
         self,
         status,
         num_messages=None,
-        first_delta_index=None,
-        num_deltas=None,
         external_server_ip=None,
         internal_server_ip=None,
     ):
@@ -224,10 +217,6 @@ class Report(object):
         num_messages : int or None
             Set only when status is DONE. The number of ForwardMsgs that this report
             is made of.
-        first_delta_index : int or None
-            Set only when status is DONE. The index of our first Delta message
-        num_deltas : int or None
-            Set only when status is DONE. The number of Delta messages in the report
         external_server_ip : str or None
             Only when status is RUNNING. The IP of the Server's websocket.
         internal_server_ip : str or None
@@ -256,8 +245,6 @@ class Report(object):
             manifest.server_port = config.get_option("browser.serverPort")
         else:
             manifest.num_messages = num_messages
-            manifest.first_delta_index = first_delta_index
-            manifest.num_deltas = num_deltas
 
         return manifest
 

@@ -33,25 +33,19 @@ message StaticManifest {
   // the report contains.
   uint32 num_messages = 2;
 
-  // Set only when status is DONE. The index of our first Delta message.
-  uint32 first_delta_index = 3;
-
-  // Set only when status is DONE. The number of Delta messages in the report.
-  uint32 num_deltas = 4;
-
   // The report status. If the script is still executing, then
   // the status will be RUNNING. Otherwise, DONE.
-  ServerStatus server_status = 5;
+  ServerStatus server_status = 3;
 
   // Set only when status is RUNNING. The "browser.serverAddress" config value.
-  string configured_server_address = 6;
+  string configured_server_address = 4;
 
   // Set only when status is RUNNING. The server's websocket's external IP.
-  string external_server_ip = 7;
+  string external_server_ip = 5;
 
   // Set only when status is RUNNING. The server's websocket's internal IP.
-  string internal_server_ip = 8;
+  string internal_server_ip = 6;
 
   // Set only when status is RUNNING. The server's websocket's port.
-  uint32 server_port = 9;
+  uint32 server_port = 7;
 }

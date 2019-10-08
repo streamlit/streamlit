@@ -17,12 +17,7 @@
 
 import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
-import {
-  BlockPath,
-  ForwardMsg,
-  StaticManifest,
-  Text as TextProto,
-} from "autogen/proto"
+import { ForwardMsg, StaticManifest } from "autogen/proto"
 import { getObject } from "lib/s3helper"
 import { logError } from "lib/log"
 
@@ -54,14 +49,10 @@ export class StaticConnection {
   }
 
   private static async getAllMessages(props: Props): Promise<void> {
-    const { numMessages, firstDeltaIndex, numDeltas } = props.manifest
+    const { numMessages } = props.manifest
     const { bucket, version } = getBucketAndVersion()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
-      const isDeltaMsg =
-        msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
-      const deltaID = isDeltaMsg ? msgIdx - firstDeltaIndex : -1
-
       const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
 
       try {
@@ -69,17 +60,7 @@ export class StaticConnection {
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {
-        if (isDeltaMsg) {
-          props.onMessage(
-            textElement({
-              id: deltaID,
-              body: `Error loading element ${deltaID}: ${error}`,
-              format: TextProto.Format.ERROR,
-            })
-          )
-        } else {
-          logError(`Error loading non-delta message ${msgIdx}: ${error}`)
-        }
+        logError(`Error loading message ${msgIdx}: ${error}`)
       }
     }
   }
@@ -94,38 +75,4 @@ function getBucketAndVersion(): { bucket?: string; version: string } {
   const bucket = hostname
   const version = pathname != null ? pathname.split("/")[1] : "null"
   return { bucket, version }
-}
-
-interface TextProps {
-  id: number
-  body: string
-  format: TextProto.Format
-}
-
-/**
- * Returns a ForwardMsg which places an element at a particular location
- * in the document.
- */
-function textElement({ id, body, format }: TextProps): ForwardMsg {
-  // TODO: this doesn't properly handle sidebar elements.
-  // We need to include delta metadata in the manifest, and use it
-  // to create these placeholder elements
-  return ForwardMsg.create({
-    type: "delta",
-    metadata: {
-      cacheable: false,
-      deltaId: id,
-      parentBlock: {
-        container: BlockPath.Container.MAIN,
-        path: [],
-      },
-    },
-    delta: {
-      type: "newElement",
-      newElement: {
-        type: "text",
-        text: { body, format },
-      },
-    },
-  })
 }
