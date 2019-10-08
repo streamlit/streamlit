@@ -201,6 +201,10 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
+    const isStale =
+      this.props.showStaleElementIndicator &&
+      this.isElementStale(element as SimpleElement)
+
     const metadata = element.get("metadata") as ForwardMsgMetadata
 
     // Modify width using the value from the spec as passed with the message when applicable
@@ -251,13 +255,14 @@ class Block extends PureComponent<Props> {
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),
-      progress: (el: SimpleElement) => (
-        <Progress
-          value={el.get("value")}
-          className="stProgress"
-          style={{ width }}
-        />
-      ),
+      progress: (el: SimpleElement) =>
+        isStale ? null : (
+          <Progress
+            value={el.get("value")}
+            className="stProgress"
+            style={{ width }}
+          />
+        ),
       table: (el: SimpleElement) => <Table element={el} width={width} />,
       text: (el: SimpleElement) => <Text element={el} width={width} />,
       vegaLiteChart: (el: SimpleElement) => (
