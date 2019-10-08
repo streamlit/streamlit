@@ -231,12 +231,6 @@ option = st.sidebar.selectbox(
 'You selected:', option
 ```
 
-Most of the elements you can put into the main part of your app with an
-`st.something()` call can also be put into a sidebar with
-`st.sidebar.something()`. The only exceptions right now are `st.write` (you
-should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`. Rest
-assured, though, we're currently working on adding support for those too!
-
 ## Show progress
 
 When adding long running computations to an app, you can use
