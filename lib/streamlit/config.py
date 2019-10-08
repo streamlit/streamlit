@@ -28,7 +28,6 @@ import collections
 
 import click
 from blinker import Signal
-import requests
 
 from streamlit import development
 from streamlit import util
@@ -53,7 +52,7 @@ _section_descriptions = collections.OrderedDict(
 _config_options = collections.OrderedDict()
 
 # Makes sure we only parse the config file once.
-config_file_has_been_parsed = False
+_config_file_has_been_parsed = False
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
@@ -792,35 +791,31 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file(file_contents=None):
-    """Parse the config file and update config parameters.
+def parse_config_file():
+    """Parse the config file and update config parameters."""
+    global _config_file_has_been_parsed
 
-    Parameters
-    ----------
-    file_contents : string or None
-        The contents of the config file (for use in tests) or None to load the
-        config from ~/.streamlit/config.toml.
-    """
-    global config_file_has_been_parsed
-
-    if config_file_has_been_parsed:
+    if _config_file_has_been_parsed:
         return
 
-    if file_contents:
-        config_filename = "mock_config_file"
-    else:
-        config_filename = util.get_streamlit_file_path("config.toml")
+    # Read ~/.streamlit/config.toml, and then overlay
+    # $CWD/.streamlit/config.toml if it exists.
+    config_filenames = [
+        util.get_streamlit_file_path("config.toml"),
+        util.get_project_streamlit_file_path("config.toml"),
+    ]
 
+    for filename in config_filenames:
         # Parse the config file.
-        if not os.path.exists(config_filename):
-            return
+        if not os.path.exists(filename):
+            continue
 
-        with open(config_filename) as input:
+        with open(filename) as input:
             file_contents = input.read()
 
-    _update_config_with_toml(file_contents, config_filename)
+        _update_config_with_toml(file_contents, filename)
 
-    config_file_has_been_parsed = True
+    _config_file_has_been_parsed = True
     _on_config_parsed.send()
 
 
@@ -880,7 +875,7 @@ def on_config_parsed(func):
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if config_file_has_been_parsed:
+    if _config_file_has_been_parsed:
         func()
     else:
         # weak=False, because we're using an anonymous lambda that
