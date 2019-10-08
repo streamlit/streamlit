@@ -24,6 +24,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit import util
 
 from streamlit.logger import get_logger
+from streamlit.proto.StaticManifest_pb2 import StaticManifest
 
 LOGGER = get_logger(__name__)
 
@@ -140,14 +141,14 @@ class Report(object):
         LOGGER.debug("Serializing running report")
 
         manifest = self._build_manifest(
-            status="running",
+            status=StaticManifest.RUNNING,
             external_server_ip=util.get_external_ip(),
             internal_server_ip=util.get_internal_ip(),
         )
 
-        manifest_json = json.dumps(manifest).encode("utf-8")
-
-        return [("reports/%s/manifest.json" % self.report_id, manifest_json)]
+        return [
+            ("reports/%s/manifest.pb" % self.report_id, manifest.SerializeToString())
+        ]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -178,13 +179,11 @@ class Report(object):
                 num_deltas += 1
 
         manifest = self._build_manifest(
-            status="done",
+            status=StaticManifest.DONE,
             num_messages=len(messages),
             first_delta_index=first_delta_index,
             num_deltas=num_deltas,
         )
-
-        manifest_json = json.dumps(manifest).encode("utf-8")
 
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
@@ -196,7 +195,10 @@ class Report(object):
         ]
 
         manifest_tuples = [
-            ("reports/%(id)s/manifest.json" % {"id": self.report_id}, manifest_json)
+            (
+                "reports/%(id)s/manifest.pb" % {"id": self.report_id},
+                manifest.SerializeToString(),
+            )
         ]
 
         # Manifest must be at the end, so clients don't connect and read the
@@ -216,7 +218,7 @@ class Report(object):
 
         Parameters
         ----------
-        status : 'done' or 'running'
+        status : StaticManifest.ServerStatus
             The report status. If the script is still executing, then the
             status should be RUNNING. Otherwise, DONE.
         num_messages : int or None
@@ -233,37 +235,31 @@ class Report(object):
 
         Returns
         -------
-        dict
-            The actual manifest. Schema:
-            - localId: str,
-            - numMessages: int or None,
-            - firstDeltaIndex: int or None,
-            - numDeltas: int or None,
-            - serverStatus: 'running' or 'done',
-            - externalServerIP: str or None,
-            - internalServerIP: str or None,
-            - serverPort: int
+        StaticManifest
+            A StaticManifest protobuf message
 
         """
-        if status == "running":
-            configured_server_address = config.get_option("browser.serverAddress")
-        else:
-            configured_server_address = None
 
-        return dict(
-            name=self.name,
-            numMessages=num_messages,
-            firstDeltaIndex=first_delta_index,
-            numDeltas=num_deltas,
-            serverStatus=status,
-            configuredServerAddress=configured_server_address,
-            externalServerIP=external_server_ip,
-            internalServerIP=internal_server_ip,
+        manifest = StaticManifest()
+        manifest.name = self.name
+        manifest.server_status = status
+
+        if status == StaticManifest.RUNNING:
+            manifest.external_server_ip = external_server_ip
+            manifest.internal_server_ip = internal_server_ip
+            manifest.configured_server_address = config.get_option(
+                "browser.serverAddress"
+            )
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            serverPort=config.get_option("browser.serverPort"),
-        )
+            manifest.server_port = config.get_option("browser.serverPort")
+        else:
+            manifest.num_messages = num_messages
+            manifest.first_delta_index = first_delta_index
+            manifest.num_deltas = num_deltas
+
+        return manifest
 
 
 def _should_save_report_msg(msg):

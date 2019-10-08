@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
+import { ForwardMsg, StaticManifest } from "autogen/proto"
+import { getWindowBaseUriParts } from "lib/UriUtil"
+import { ReactNode } from "react"
 import url from "url"
+import { IS_SHARED_REPORT } from "./baseconsts"
 
 import { ConnectionState } from "./ConnectionState"
-import { ForwardMsg } from "autogen/proto"
-import { IS_SHARED_REPORT } from "./baseconsts"
-import { ReactNode } from "react"
+import { logError } from "./log"
+import { configureCredentials, getObject } from "./s3helper"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
-import { configureCredentials, getObject } from "./s3helper"
-import { logError } from "./log"
-import { getWindowBaseUriParts } from "lib/UriUtil"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
@@ -164,7 +164,7 @@ export class ConnectionManager {
   ): Promise<WebsocketConnection | StaticConnection> {
     const manifest = await this.fetchManifestWithPossibleLogin(reportId)
 
-    return manifest.serverStatus === "running"
+    return manifest.serverStatus === StaticManifest.ServerStatus.RUNNING
       ? this.connectToRunningServerFromManifest(manifest)
       : this.connectToStaticReportFromManifest(reportId, manifest)
   }
@@ -196,7 +196,7 @@ export class ConnectionManager {
 
   private connectToStaticReportFromManifest(
     reportId: string,
-    manifest: any
+    manifest: StaticManifest
   ): StaticConnection {
     return new StaticConnection({
       manifest,
@@ -208,7 +208,7 @@ export class ConnectionManager {
 
   private async fetchManifestWithPossibleLogin(
     reportId: string
-  ): Promise<any> {
+  ): Promise<StaticManifest> {
     let manifest
     let permissionError = false
 
@@ -242,7 +242,7 @@ export class ConnectionManager {
   }
 }
 
-async function fetchManifest(reportId: string): Promise<any> {
+async function fetchManifest(reportId: string): Promise<StaticManifest> {
   const { hostname, pathname } = url.parse(window.location.href, true)
   if (pathname == null) {
     throw new Error(`No pathname in URL ${window.location.href}`)
@@ -251,7 +251,8 @@ async function fetchManifest(reportId: string): Promise<any> {
   // IMPORTANT: The bucket name must match the host name!
   const bucket = hostname
   const version = pathname.split("/")[1]
-  const manifestKey = `${version}/reports/${reportId}/manifest.json`
+  const manifestKey = `${version}/reports/${reportId}/manifest.pb`
   const data = await getObject({ Bucket: bucket, Key: manifestKey })
-  return data.json()
+  const arrayBuffer = await data.arrayBuffer()
+  return StaticManifest.decode(new Uint8Array(arrayBuffer))
 }

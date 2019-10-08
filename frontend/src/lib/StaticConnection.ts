@@ -17,22 +17,20 @@
 
 import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
-import { BlockPath, ForwardMsg, Text as TextProto } from "autogen/proto"
+import {
+  BlockPath,
+  ForwardMsg,
+  StaticManifest,
+  Text as TextProto,
+} from "autogen/proto"
 import { getObject } from "lib/s3helper"
 import { logError } from "lib/log"
-
-interface Manifest {
-  name: string
-  numMessages: number
-  firstDeltaIndex: number
-  numDeltas: number
-}
 
 interface Props {
   reportId: string
 
-  /** Manifest JSON from the server. */
-  manifest: Manifest
+  /** Manifest protobuf from the server. */
+  manifest: StaticManifest
 
   /** Function called when we receive a new message. */
   onMessage: (message: ForwardMsg) => void

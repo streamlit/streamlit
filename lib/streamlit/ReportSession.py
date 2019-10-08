@@ -550,7 +550,7 @@ class ReportSession(object):
             progress_msg.report_uploaded = err_msg
             yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
 
-            LOGGER.warning("Failed to save report: %s", e)
+            LOGGER.warning("Failed to save report:", exc_info=e)
 
     @tornado.gen.coroutine
     def _save_running_report(self):
