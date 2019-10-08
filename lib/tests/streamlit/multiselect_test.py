@@ -85,10 +85,9 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    @parameterized.expand([(None, []), ([], []),
-                           (["Tea", "Water"], [1, 2]),
-                           (("Tea", "Water"), [1, 2]),
-                           ])
+    @parameterized.expand(
+        [(None, []), ([], []), (["Tea", "Water"], [1, 2]), (("Tea", "Water"), [1, 2])]
+    )
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
         st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
