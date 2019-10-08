@@ -45,6 +45,8 @@ import {
   Delta,
   ForwardMsgMetadata,
   IBackMsg,
+  SessionState,
+  Initialize,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -61,13 +63,9 @@ import { logError, logMessage } from "lib/log"
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
+import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
 interface Props {}
-
-interface UserSettingsProps {
-  wideMode: boolean
-  runOnSave: boolean
-}
 
 interface State {
   connectionState: ConnectionState
@@ -76,32 +74,9 @@ interface State {
   reportName: string | null
   reportRunState: ReportRunState
   showLoginBox: boolean
-  userSettings: UserSettingsProps
+  userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
-}
-
-interface InitializeMsg {
-  environmentInfo: {
-    streamlitVersion: string
-    pythonVersion: string
-  }
-  userInfo: {
-    installationId: string
-    email: string
-  }
-  config: {
-    maxCachedMessageAge: number
-    gatherUsageStats: boolean
-    sharingEnabled: boolean
-  }
-  commandLine: string
-  sessionState: StateChangeProto
-}
-
-interface StateChangeProto {
-  reportIsRunning: boolean
-  runOnSave: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -249,9 +224,9 @@ class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        initialize: (initializeMsg: InitializeMsg) =>
+        initialize: (initializeMsg: Initialize) =>
           this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: StateChangeProto) =>
+        sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
@@ -289,7 +264,7 @@ class App extends PureComponent<Props, State> {
    * @param initializeMsg an Initialize protobuf
    */
 
-  handleInitialize(initializeMsg: InitializeMsg): void {
+  handleInitialize(initializeMsg: Initialize): void {
     SessionInfo.current = new SessionInfo({
       streamlitVersion: initializeMsg.environmentInfo.streamlitVersion,
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
@@ -319,7 +294,7 @@ class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged(stateChangeProto: StateChangeProto): void {
+  handleSessionStateChanged(stateChangeProto: SessionState): void {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let reportRunState = prevState.reportRunState
@@ -495,7 +470,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Saves a UserSettings object.
    */
-  saveSettings(newSettings: UserSettingsProps): void {
+  saveSettings(newSettings: UserSettings): void {
     const prevRunOnSave = this.state.userSettings.runOnSave
     const runOnSave = newSettings.runOnSave
 
