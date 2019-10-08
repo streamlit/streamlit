@@ -197,3 +197,52 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(
             expected, util.get_project_streamlit_file_path("some", "random", "file")
         )
+
+
+class FileIsInFolderTest(unittest.TestCase):
+    """Tests for file_is_in_folder.
+    """
+
+    def test_file_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c/")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c")
+        self.assertTrue(ret)
+
+    def test_file_in_subfolder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b")
+        self.assertTrue(ret)
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/")
+        self.assertTrue(ret)
+
+    def test_file_not_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f")
+        self.assertFalse(ret)
+
+    def test_rel_file_not_in_folder(self):
+        # Test with and without trailing slash
+        ret = util.file_is_in_folder_glob("foo.py", "/d/e/f/")
+        self.assertFalse(ret)
+        ret = util.file_is_in_folder_glob("foo.py", "/d/e/f")
+        self.assertFalse(ret)
+
+    def test_file_in_folder_glob(self):
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "**/c")
+        self.assertTrue(ret)
+
+    def test_file_not_in_folder_glob(self):
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "**/f")
+        self.assertFalse(ret)
+
+    def test_rel_file_not_in_folder_glob(self):
+        ret = util.file_is_in_folder_glob("foo.py", "**/f")
+        self.assertFalse(ret)

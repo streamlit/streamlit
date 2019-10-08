@@ -22,8 +22,7 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from "reactstrap"
-import Icon from "components/core/Icon"
-
+import Icon from "components/shared/Icon"
 import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "https://streamlit.io/docs"

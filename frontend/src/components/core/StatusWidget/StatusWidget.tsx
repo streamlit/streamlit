@@ -27,7 +27,7 @@ import { SessionEvent } from "autogen/proto"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { ReportRunState } from "lib/ReportRunState"
 import { Timer } from "lib/Timer"
-import openIconic from "assets/img/open-iconic.svg"
+import Icon from "components/shared/Icon"
 import iconRunning from "assets/img/icon_running.gif"
 import "./StatusWidget.scss"
 
@@ -82,7 +82,7 @@ interface State {
 }
 
 interface ConnectionStateUI {
-  icon: ReactNode
+  icon: string
   label: string
   tooltip: string
 }
@@ -143,9 +143,6 @@ export class StatusWidget extends PureComponent<Props, State> {
       e => this.handleSessionEvent(e)
     )
     window.addEventListener("scroll", this.handleScroll)
-
-    // Preload the close icon as a fix for it sporadically not appearing
-    new Image().src = openIconic + "#circle-x"
   }
 
   public componentWillUnmount(): void {
@@ -264,9 +261,7 @@ export class StatusWidget extends PureComponent<Props, State> {
           id="ConnectionStatus"
           className={this.state.statusMinimized ? "minimized" : ""}
         >
-          <svg className="icon" viewBox="0 0 8 8">
-            {ui.icon}
-          </svg>
+          <Icon className="icon" type={ui.icon} />
           <label>{ui.label}</label>
         </div>
         <UncontrolledTooltip placement="bottom" target="ConnectionStatus">
@@ -332,10 +327,7 @@ export class StatusWidget extends PureComponent<Props, State> {
             id="ReportStatus"
             className={minimized ? "rerun-prompt-minimized" : ""}
           >
-            <svg className="icon" viewBox="0 0 8 8">
-              <use href={openIconic + "#info"} />
-            </svg>
-
+            <Icon className="icon" type="info" />
             <label className="prompt">Source file changed.</label>
 
             {StatusWidget.promptButton(
@@ -402,7 +394,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.PINGING_SERVER:
       case ConnectionState.CONNECTING:
         return {
-          icon: <use href={openIconic + "#ellipses"} />,
+          icon: "ellipses",
           label: "Connecting",
           tooltip: "Connecting to Streamlit server",
         }
@@ -414,7 +406,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
-          icon: <use href={openIconic + "#warning"} />,
+          icon: "warning",
           label: "Error",
           tooltip: "Unable to connect to Streamlit server",
         }
