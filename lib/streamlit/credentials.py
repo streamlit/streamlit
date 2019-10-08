@@ -24,6 +24,7 @@ import click
 import toml
 
 from streamlit import util
+from streamlit import config
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -193,8 +194,6 @@ class Credentials(object):
             activated = False
 
             while not activated:
-                from streamlit import config
-
                 if config.get_option("server.headless"):
                     email = ""
                 else:
