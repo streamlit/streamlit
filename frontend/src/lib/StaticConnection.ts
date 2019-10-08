@@ -62,18 +62,6 @@ export class StaticConnection {
         msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
       const deltaID = isDeltaMsg ? msgIdx - firstDeltaIndex : -1
 
-      // If this is a delta message, insert a loading message
-      // for its associated element
-      if (isDeltaMsg) {
-        props.onMessage(
-          textElement({
-            id: deltaID,
-            body: `Loading element ${deltaID}...`,
-            format: TextProto.Format.INFO,
-          })
-        )
-      }
-
       const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
 
       try {
