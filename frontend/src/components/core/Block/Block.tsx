@@ -154,16 +154,16 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const component = this.renderElement(element, index, width)
+    const isStale =
+      this.props.showStaleElementIndicator &&
+      this.isElementStale(element as SimpleElement)
+
+    const component = this.renderElement(element, index, width, isStale)
 
     if (!component) {
       // Do not transform an empty element into a ReactNode.
       return null
     }
-
-    const isStale =
-      this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement)
 
     const className = isStale
       ? "element-container stale-element"
@@ -190,7 +190,8 @@ class Block extends PureComponent<Props> {
   private renderElement = (
     element: SimpleElement,
     index: number,
-    width: number
+    width: number,
+    isStale: boolean
   ): ReactNode | undefined => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -200,10 +201,6 @@ class Block extends PureComponent<Props> {
       widgetMgr: this.props.widgetMgr,
       disabled: this.props.widgetsDisabled,
     }
-
-    const isStale =
-      this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement)
 
     const metadata = element.get("metadata") as ForwardMsgMetadata
 
