@@ -193,10 +193,14 @@ class Credentials(object):
             activated = False
 
             while not activated:
+                from streamlit import config
 
-                email = click.prompt(
-                    text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
-                )
+                if config.get_option("server.headless"):
+                    email = ""
+                else:
+                    email = click.prompt(
+                        text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                    )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
