@@ -188,17 +188,16 @@ class UtilTest(unittest.TestCase):
             self.assertEqual(None, util.get_external_ip())
 
     def test_get_project_streamlit_file_path(self):
-        expected = os.path.join(os.getcwd(), CONFIG_FOLDER_NAME,
-                                "some/random/file")
+        expected = os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, "some/random/file")
 
         self.assertEqual(
             expected, util.get_project_streamlit_file_path("some/random/file")
         )
 
         self.assertEqual(
-            expected,
-            util.get_project_streamlit_file_path("some", "random", "file")
+            expected, util.get_project_streamlit_file_path("some", "random", "file")
         )
+
 
 class FileIsInFolderTest(unittest.TestCase):
     """Tests for file_is_in_folder.
