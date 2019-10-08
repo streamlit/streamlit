@@ -17,7 +17,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
+from streamlit.compatibility import (
+    setup_2_3_shims as setup_2_3_shims,
+    is_running_py3 as is_running_py3,
+)
 
 setup_2_3_shims(globals())
 
@@ -30,24 +33,20 @@ import random
 import textwrap
 import re
 import pandas as pd
-import sys as _sys
+import sys
 from datetime import datetime
 from datetime import date
 from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
-from streamlit import util as _util
+from streamlit import util
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit import code_util as _code_util
+from streamlit import code_util
 from streamlit.ReportThread import get_report_ctx, add_report_ctx
-from streamlit.compatibility import (
-    setup_2_3_shims as _setup_2_3_shims,
-    is_running_py3 as _is_running_py3,
-)
 
 # setup logging
 from streamlit.logger import get_logger
@@ -2165,6 +2164,7 @@ class DeltaGenerator(object):
 
         data_frame_proto.marshall_data_frame(data, element.table)
 
+    @_remove_self_from_sig
     def show(self, *args):
         """Write arguments to your app for debugging purposes.
 
@@ -2205,7 +2205,7 @@ class DeltaGenerator(object):
             import inspect
 
             # Get the calling line of code
-            previous_frame = inspect.currentframe().f_back.f_back
+            previous_frame = inspect.currentframe().f_back.f_back.f_back
             lines = inspect.getframeinfo(previous_frame)[3]
 
             if not lines:
@@ -2214,17 +2214,17 @@ class DeltaGenerator(object):
 
             # Parse arguments from the line
             line = lines[0].split("show", 1)[1]
-            inputs = _code_util.get_method_args_from_code(args, line)
+            inputs = code_util.get_method_args_from_code(args, line)
 
             # Escape markdown and add deltas
             for idx, input in enumerate(inputs):
-                escaped = _util.escape_markdown(input)
+                escaped = util.escape_markdown(input)
 
                 self.markdown("**%s**" % escaped)
                 self.write(args[idx])
 
         except Exception:
-            _, exc, exc_tb = _sys.exc_info()
+            _, exc, exc_tb = sys.exc_info()
             self.exception(exc, exc_tb)  # noqa: F821
 
     def write(self, *args, **kwargs):
@@ -2373,22 +2373,22 @@ class DeltaGenerator(object):
                 elif isinstance(arg, _HELP_TYPES):
                     flush_buffer()
                     self.help(arg)
-                elif _util.is_altair_chart(arg):
+                elif util.is_altair_chart(arg):
                     flush_buffer()
                     self.altair_chart(arg)
-                elif _util.is_type(arg, "matplotlib.figure.Figure"):
+                elif util.is_type(arg, "matplotlib.figure.Figure"):
                     flush_buffer()
                     self.pyplot(arg)
-                elif _util.is_plotly_chart(arg):
+                elif util.is_plotly_chart(arg):
                     flush_buffer()
                     self.plotly_chart(arg)
-                elif _util.is_type(arg, "bokeh.plotting.figure.Figure"):
+                elif util.is_type(arg, "bokeh.plotting.figure.Figure"):
                     flush_buffer()
                     self.bokeh_chart(arg)
-                elif _util.is_graphviz_chart(arg):
+                elif util.is_graphviz_chart(arg):
                     flush_buffer()
                     self.graphviz_chart(arg)
-                elif _util.is_keras_model(arg):
+                elif util.is_keras_model(arg):
                     from tensorflow.python.keras.utils import vis_utils
 
                     flush_buffer()
@@ -2398,7 +2398,7 @@ class DeltaGenerator(object):
                 isinstance(arg, list)):  # noqa: F821
                     flush_buffer()
                     self.json(arg)
-                elif _util.is_namedtuple(arg):
+                elif util.is_namedtuple(arg):
                     flush_buffer()
                     self.json(json.dumps(arg._asdict()))
                 else:
@@ -2407,7 +2407,7 @@ class DeltaGenerator(object):
             flush_buffer()
 
         except Exception:
-            _, exc, exc_tb = _sys.exc_info()
+            _, exc, exc_tb = sys.exc_info()
             self.exception(exc, exc_tb)  # noqa: F821
 
     @contextlib.contextmanager
@@ -2483,13 +2483,13 @@ class DeltaGenerator(object):
 
         try:
             frame = traceback.extract_stack()[-3]
-            if _is_running_py3():
+            if is_running_py3():
                 filename, start_line = frame.filename, frame.lineno
             else:
                 filename, start_line = frame[:2]
             yield
             frame = traceback.extract_stack()[-3]
-            if _is_running_py3():
+            if is_running_py3():
                 end_line = frame.lineno
             else:
                 end_line = frame[1]
