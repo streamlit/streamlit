@@ -47,11 +47,12 @@ _section_descriptions = collections.OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
-# Stores the config options as key value pairs in a flat dict.
-_config_options = dict()
+# Stores the config options as key value pairs in an ordered dict to be able
+# to show the config params help in the same order they were included.
+_config_options = collections.OrderedDict()
 
 # Makes sure we only parse the config file once.
-config_file_has_been_parsed = False
+_config_file_has_been_parsed = False
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
@@ -113,6 +114,7 @@ def _create_option(
     deprecation_text=None,
     expiration_date=None,
     replaced_by=None,
+    type_=str,
 ):
     '''Create a ConfigOption and store it globally in this module.
 
@@ -158,6 +160,7 @@ def _create_option(
         deprecation_text=deprecation_text,
         expiration_date=expiration_date,
         replaced_by=replaced_by,
+        type_=type_,
     )
     assert option.section in _section_descriptions, (
         'Section "%s" must be one of %s.'
@@ -195,6 +198,7 @@ _create_option(
         If you'd like to turn off this warning, set this to True.
         """,
     default_val=False,
+    type_=bool,
 )
 
 
@@ -219,10 +223,11 @@ _create_option(
         via "python my_script.py".
         """,
     default_val=True,
+    type_=bool,
 )
 
 
-@_create_option("global.developmentMode", visibility="hidden")
+@_create_option("global.developmentMode", visibility="hidden", type_=bool)
 def _global_development_mode():
     """Are we in development mode.
 
@@ -248,7 +253,7 @@ def _global_log_level():
         return "info"
 
 
-@_create_option("global.unitTest", visibility="hidden")
+@_create_option("global.unitTest", visibility="hidden", type_=bool)
 def _global_unit_test():
     """Are we in a unit test?
 
@@ -263,6 +268,7 @@ _create_option(
         developmentMode is True.""",
     visibility="hidden",
     default_val=True,
+    type_=bool,
 )
 
 
@@ -271,6 +277,7 @@ _create_option(
     description="Whether to serve prometheus metrics from /metrics.",
     visibility="hidden",
     default_val=False,
+    type_=bool,
 )
 
 
@@ -280,6 +287,7 @@ _create_option(
         this minimum.""",
     visibility="hidden",
     default_val=10 * 1e3,
+    type_=int,
 )  # 10k
 
 
@@ -290,6 +298,7 @@ _create_option(
         finished running since the message has been accessed.""",
     visibility="hidden",
     default_val=2,
+    type_=int,
 )
 
 
@@ -298,7 +307,10 @@ _create_option(
 _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
-    "client.caching", description="Whether to enable st.cache.", default_val=True
+    "client.caching",
+    description="Whether to enable st.cache.",
+    default_val=True,
+    type_=bool,
 )
 
 _create_option(
@@ -306,6 +318,7 @@ _create_option(
     description="""If false, makes your Streamlit script not draw to a
         Streamlit app.""",
     default_val=True,
+    type_=bool,
 )
 
 
@@ -320,6 +333,7 @@ _create_option(
         Python code to write it to the app.
         """,
     default_val=True,
+    type_=bool,
 )
 
 _create_option(
@@ -330,6 +344,7 @@ _create_option(
         script's execution.
         """,
     default_val=False,
+    type_=bool,
 )
 
 _create_option(
@@ -339,6 +354,7 @@ _create_option(
         prevent Python crashing.
         """,
     default_val=True,
+    type_=bool,
 )
 
 # Config Section: Server #
@@ -357,7 +373,7 @@ _create_option(
 )
 
 
-@_create_option("server.headless")
+@_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
     """If false, will attempt to open a browser window on start.
@@ -376,7 +392,7 @@ def _server_headless():
     )
 
 
-@_create_option("server.liveSave")
+@_create_option("server.liveSave", type_=bool)
 def _server_live_save():
     """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
@@ -386,7 +402,7 @@ def _server_live_save():
     return False
 
 
-@_create_option("server.runOnSave")
+@_create_option("server.runOnSave", type_=bool)
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
@@ -395,7 +411,7 @@ def _server_run_on_save():
     return False
 
 
-@_create_option("server.port")
+@_create_option("server.port", type_=int)
 def _server_port():
     """The port where the server will listen for client and browser
     connections.
@@ -405,7 +421,7 @@ def _server_port():
     return 8501
 
 
-@_create_option("server.enableCORS")
+@_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing, for added security.
 
@@ -429,7 +445,7 @@ def _browser_server_address():
     return "localhost"
 
 
-@_create_option("browser.gatherUsageStats")
+@_create_option("browser.gatherUsageStats", type_=bool)
 def _gather_usage_stats():
     """Whether to send usage statistics to Streamlit.
 
@@ -438,7 +454,7 @@ def _gather_usage_stats():
     return True
 
 
-@_create_option("browser.serverPort")
+@_create_option("browser.serverPort", type_=int)
 @util.memoize
 def _browser_server_port():
     """Port that the browser should use to connect to the server when in
@@ -501,6 +517,7 @@ _create_option(
         us at support@streamlit.io.
         """,
     default_val=False,
+    type_=bool,
 )
 
 _create_option(
@@ -774,35 +791,31 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file(file_contents=None):
-    """Parse the config file and update config parameters.
+def parse_config_file():
+    """Parse the config file and update config parameters."""
+    global _config_file_has_been_parsed
 
-    Parameters
-    ----------
-    file_contents : string or None
-        The contents of the config file (for use in tests) or None to load the
-        config from ~/.streamlit/config.toml.
-    """
-    global config_file_has_been_parsed
-
-    if config_file_has_been_parsed:
+    if _config_file_has_been_parsed:
         return
 
-    if file_contents:
-        config_filename = "mock_config_file"
-    else:
-        config_filename = util.get_streamlit_file_path("config.toml")
+    # Read ~/.streamlit/config.toml, and then overlay
+    # $CWD/.streamlit/config.toml if it exists.
+    config_filenames = [
+        util.get_streamlit_file_path("config.toml"),
+        util.get_project_streamlit_file_path("config.toml"),
+    ]
 
+    for filename in config_filenames:
         # Parse the config file.
-        if not os.path.exists(config_filename):
-            return
+        if not os.path.exists(filename):
+            continue
 
-        with open(config_filename) as input:
+        with open(filename) as input:
             file_contents = input.read()
 
-    _update_config_with_toml(file_contents, config_filename)
+        _update_config_with_toml(file_contents, filename)
 
-    config_file_has_been_parsed = True
+    _config_file_has_been_parsed = True
     _on_config_parsed.send()
 
 
@@ -862,7 +875,7 @@ def on_config_parsed(func):
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if config_file_has_been_parsed:
+    if _config_file_has_been_parsed:
         func()
     else:
         # weak=False, because we're using an anonymous lambda that
