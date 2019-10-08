@@ -187,7 +187,8 @@ class _MultiFileWatcher(object):
             folder_handler.remove_file_change_listener(file_path, callback)
 
             if not folder_handler.is_watching_files():
-                self._observer.unschedule(folder_handler.watch)
+                if hasattr(folder_handler, 'watch'):
+                    self._observer.unschedule(folder_handler.watch)
                 del self._folder_handlers[folder_path]
 
     def close(self):
