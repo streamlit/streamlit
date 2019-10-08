@@ -246,7 +246,7 @@ def open_browser(url):
     system = platform.system()
 
     if system == "Windows":
-        # Treat Windows separetely because:
+        # Treat Windows separately because:
         # 1. /dev/null doesn't exist.
         # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
         #    browser even though 'start url' works from the command prompt.
