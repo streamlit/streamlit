@@ -114,24 +114,15 @@ class Text extends React.PureComponent<Props> {
       // Markdown.
       case TextProto.Format.MARKDOWN: {
         const allowHTML = element.get("allowHtml")
-
-        if (allowHTML) {
-          const parseHtml = htmlParser()
-
-          return (
-            <div className="markdown-text-container stText" style={styleProp}>
-              <ReactMarkdown
-                source={body}
-                escapeHtml={false}
-                astPlugins={[parseHtml]}
-              />
-            </div>
-          )
-        }
+        const astPlugins = allowHTML ? [htmlParser()] : []
 
         return (
           <div className="markdown-text-container stText" style={styleProp}>
-            <ReactMarkdown source={body} />
+            <ReactMarkdown
+              source={body}
+              escapeHtml={!allowHTML}
+              astPlugins={astPlugins}
+            />
           </div>
         )
       }
