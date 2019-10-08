@@ -29,8 +29,7 @@ class FolderBlackList(object):
 
     Note
     ----
-    The blacklist does blacklist anything that matches the
-    `DEFAULT_FOLDER_BLACKLIST`.
+    Blacklist any path that matches a glob in `DEFAULT_FOLDER_BLACKLIST`.
 
     """
 
@@ -56,6 +55,6 @@ class FolderBlackList(object):
 
         """
         return any(
-            util.file_is_in_folder(filepath, blacklisted_folder)
+            util.file_is_in_folder_glob(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
         )

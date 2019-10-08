@@ -163,7 +163,7 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = util.file_is_in_folder(
+                file_is_local = util.file_is_in_folder_glob(
                     filepath, self._report.script_folder
                 )
 

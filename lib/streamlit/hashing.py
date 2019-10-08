@@ -307,7 +307,7 @@ class CodeHasher:
                 h = hashlib.new(self.name)
                 filepath = os.path.abspath(obj.__code__.co_filename)
 
-                if util.file_is_in_folder(
+                if util.file_is_in_folder_glob(
                     filepath, self._get_main_script_directory()
                 ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)

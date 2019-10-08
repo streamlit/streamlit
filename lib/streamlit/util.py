@@ -454,7 +454,7 @@ def is_darwin():
     return platform.system() == "Darwin"
 
 
-def file_is_in_folder(filepath, folderpath_glob):
+def file_is_in_folder_glob(filepath, folderpath_glob):
     """Test whether a file is in some folder with globbing support.
 
     Parameters

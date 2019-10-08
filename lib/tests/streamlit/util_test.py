@@ -187,44 +187,44 @@ class FileIsInFolderTest(unittest.TestCase):
 
     def test_file_in_folder(self):
         # Test with and without trailing slash
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c/")
         self.assertTrue(ret)
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c")
         self.assertTrue(ret)
 
     def test_file_in_subfolder(self):
         # Test with and without trailing slash
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a")
         self.assertTrue(ret)
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/")
         self.assertTrue(ret)
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b")
         self.assertTrue(ret)
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/a/b/")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/")
         self.assertTrue(ret)
 
     def test_file_not_in_folder(self):
         # Test with and without trailing slash
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f/")
         self.assertFalse(ret)
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "/d/e/f")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f")
         self.assertFalse(ret)
 
     def test_rel_file_not_in_folder(self):
         # Test with and without trailing slash
-        ret = util.file_is_in_folder("foo.py", "/d/e/f/")
+        ret = util.file_is_in_folder_glob("foo.py", "/d/e/f/")
         self.assertFalse(ret)
-        ret = util.file_is_in_folder("foo.py", "/d/e/f")
+        ret = util.file_is_in_folder_glob("foo.py", "/d/e/f")
         self.assertFalse(ret)
 
     def test_file_in_folder_glob(self):
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "**/c")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "**/c")
         self.assertTrue(ret)
 
     def test_file_not_in_folder_glob(self):
-        ret = util.file_is_in_folder("/a/b/c/foo.py", "**/f")
+        ret = util.file_is_in_folder_glob("/a/b/c/foo.py", "**/f")
         self.assertFalse(ret)
 
     def test_rel_file_not_in_folder_glob(self):
-        ret = util.file_is_in_folder("foo.py", "**/f")
+        ret = util.file_is_in_folder_glob("foo.py", "**/f")
         self.assertFalse(ret)
