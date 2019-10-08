@@ -23,6 +23,8 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+from streamlit import config as _config
+
 import os
 import click
 
@@ -106,9 +108,9 @@ def main_docs():
 @main.command("hello")
 def main_hello():
     """Runs the Hello World script."""
-    import streamlit.hello
+    from streamlit.hello import hello
 
-    filename = streamlit.hello.__file__
+    filename = hello.__file__
 
     # For Python 2 when Streamlit is actually installed (make install rather
     # than make develop).
@@ -118,16 +120,70 @@ def main_hello():
     _main_run(filename)
 
 
+def _convert_config_option_to_click_option(config_option):
+    """Composes given config option options as options for click lib."""
+    option = "--{}".format(config_option.key)
+    param = config_option.key.replace(".", "_")
+    description = config_option.description
+    if config_option.deprecated:
+        description += "\n {} - {}".format(
+            config_option.deprecation_text, config_option.deprecation_date
+        )
+
+    return {
+        "param": param,
+        "description": description,
+        "type": config_option.type,
+        "option": option,
+    }
+
+
+def configurator_options(func):
+    """Decorator that adds config param keys to click dynamically."""
+    for _, value in reversed(_config._config_options.items()):
+        parsed_parameter = _convert_config_option_to_click_option(value)
+        config_option = click.option(
+            parsed_parameter["option"],
+            parsed_parameter["param"],
+            help=parsed_parameter["description"],
+            type=parsed_parameter["type"],
+        )
+        func = config_option(func)
+    return func
+
+
+def _apply_config_options_from_cli(kwargs):
+    """The "streamlit run" command supports passing Streamlit's config options
+    as flags.
+
+    This function reads through all config flags, massage them, and
+    pass them to _set_config() overriding default values and values set via
+    config.toml file
+
+    """
+    for config_option in kwargs:
+        if kwargs[config_option] is not None:
+            config_option_def_key = config_option.replace("_", ".")
+
+            _config._set_option(
+                config_option_def_key, kwargs[config_option], "cli call option"
+            )
+
+
 @main.command("run")
+@configurator_options
 @click.argument("file_or_url", required=True)
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args=None):
+def main_run(file_or_url, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
-    The script can be local or it can be an url. In the
-    latter case, streamlit will download the script to a
-    temporary file and runs this file.
+
+    The script can be local or it can be an url. In the latter case, Streamlit
+    will download the script to a temporary file and runs this file.
+
     """
     from validators import url
+
+    _apply_config_options_from_cli(kwargs)
 
     if url(file_or_url):
         import tempfile
@@ -233,9 +289,7 @@ def config():
 @config.command("show")
 def config_show():
     """Show all of Streamlit's config settings."""
-    from streamlit import config
-
-    config.show_config()
+    _config.show_config()
 
 
 # SUBCOMMAND: activate

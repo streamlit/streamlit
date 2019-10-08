@@ -330,13 +330,12 @@ class PortRotateAHundredTest(unittest.TestCase):
 
     def test_rotates_a_hundred_ports(self):
         app = self.get_app()
-        with pytest.raises(SystemExit) as pytest_wrapped_e:
+        RetriesExceeded = streamlit.server.Server.RetriesExceeded
+        with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
             start_listening(app)
-
-            assert pytest_wrapped_e.type == SystemExit
-            assert pytest_wrapped_e.value.code == errno.EADDRINUSE
-
-            assert app.listen.call_count == MAX_PORT_SEARCH_RETRIES
+            self.assertEqual(pytest_wrapped_e.type, SystemExit)
+            self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
+            self.assertEqual(app.listen.call_count, MAX_PORT_SEARCH_RETRIES)
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -366,7 +365,7 @@ class PortRotateOneTest(unittest.TestCase):
             PortRotateOneTest.which_port.assert_called_with(8502)
 
             patched__set_option.assert_called_with(
-                "server.port", 8501, "server initialization"
+                "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
             )
 
 
