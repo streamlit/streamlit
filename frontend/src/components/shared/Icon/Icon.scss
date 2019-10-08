@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
-
-.element-container {
-  .code-block {
-    position: relative;
-  }
+.oi {
+  display: inline-block;
+  font-size: 0.9rem;
 }

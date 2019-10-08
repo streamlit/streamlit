@@ -29,6 +29,7 @@ import { ForwardMsgMetadata } from "autogen/proto"
 import Chart from "components/elements/Chart/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
+import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
@@ -165,9 +166,10 @@ class Block extends PureComponent<Props> {
       this.props.showStaleElementIndicator &&
       this.isElementStale(element as SimpleElement)
 
-    const className = isStale
-      ? "element-container stale-element"
-      : "element-container"
+    const className =
+      isStale && !FullScreenWrapper.isFullScreen
+        ? "element-container stale-element"
+        : "element-container"
 
     return (
       <div key={index} className={className} style={{ width }}>
@@ -220,11 +222,7 @@ class Block extends PureComponent<Props> {
       ),
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
       dataFrame: (el: SimpleElement) => (
-        <DataFrame
-          element={el}
-          width={width}
-          elementDimensionSpec={metadata.elementDimensionSpec}
-        />
+        <DataFrame element={el} width={width} />
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
