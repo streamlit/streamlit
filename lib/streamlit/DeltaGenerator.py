@@ -2227,6 +2227,7 @@ class DeltaGenerator(object):
             _, exc, exc_tb = sys.exc_info()
             self.exception(exc, exc_tb)  # noqa: F821
 
+    @_remove_self_from_sig
     def write(self, *args, **kwargs):
         """Write arguments to the app.
 
@@ -2411,6 +2412,7 @@ class DeltaGenerator(object):
             self.exception(exc, exc_tb)  # noqa: F821
 
     @contextlib.contextmanager
+    @_remove_self_from_sig
     def spinner(self, text="In progress..."):
         """Temporarily displays a message while executing a block of code.
 
@@ -2466,6 +2468,7 @@ class DeltaGenerator(object):
                 message.empty()
 
     @contextlib.contextmanager
+    @_remove_self_from_sig
     def echo(self):
         """Use in a `with` block to draw some code on the app, then execute it.
 
@@ -2508,6 +2511,7 @@ class DeltaGenerator(object):
         except FileNotFoundError as err:  # noqa: F821
             code.warning("Unable to display code. %s" % err)
 
+    @_remove_self_from_sig
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
 
