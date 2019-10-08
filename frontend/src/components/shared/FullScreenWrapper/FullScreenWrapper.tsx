@@ -51,13 +51,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   public state: State = { expanded: false, fullwidth: 0, fullheight: 0 }
 
-  componentDidMount() {
+  componentDidMount(): void {
     this.updateWindowDimensions()
     window.addEventListener("resize", this.updateWindowDimensions)
     document.addEventListener("keydown", this.controlKeys, false)
   }
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     window.removeEventListener("resize", this.updateWindowDimensions)
     document.removeEventListener("keydown", this.controlKeys, false)
   }

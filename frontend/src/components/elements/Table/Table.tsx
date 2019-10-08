@@ -150,8 +150,8 @@ const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
   return <React.Fragment>{entries}</React.Fragment>
 }
 
-class WithFullScreenWrapper extends React.Component {
-  render() {
+class WithFullScreenWrapper extends React.Component<Props> {
+  render(): JSX.Element {
     const { element, width } = this.props
     return (
       <FullScreenWrapper width={width}>
