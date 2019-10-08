@@ -245,26 +245,25 @@ def open_browser(url):
 
     system = platform.system()
 
+    if system == "Windows":
+        # Treat Windows separetely because:
+        # 1. /dev/null doesn't exist.
+        # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
+        #    browser even though 'start url' works from the command prompt.
+        # Fun!
+        import webbrowser
+        webbrowser.open(url)
+        return
+
+    # We don't use the webbrowser module on Linux and Mac because some browsers
+    # (ahem... Chrome) always print "Opening in existing browser session" to
+    # the terminal, which is spammy and annoying. So instead we start the
+    # browser ourselves and send all its output to /dev/null.
+
     if system == "Linux":
         cmd = ["xdg-open", url]
     elif system == "Darwin":
         cmd = ["open", url]
-    elif system == "Windows":
-        # Windows has a few bugs.
-        # * os.devnull doesnt exist so the open command below fails
-        # * subprocess doesnt actually pop up the browser even though
-        #   'start url' works from the command prompt
-        # * tornado for whatever reason doesnt map / to /index.html and
-        #   you get a 404.
-        data = urllib.parse.urlsplit(url)
-        (scheme, netloc, path, query, fragment) = data
-        if re.match(r"^/$", path):
-            path = "/index.html"
-        url = urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
-        import webbrowser
-
-        webbrowser.open(url)
-        return
     else:
         raise Error('Cannot open browser in platform "%s"' % system)
 
