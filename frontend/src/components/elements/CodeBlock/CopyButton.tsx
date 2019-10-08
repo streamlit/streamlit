@@ -17,7 +17,6 @@
 
 import Clipboard from "clipboard"
 import React, { PureComponent } from "react"
-import { Button } from "reactstrap"
 import { Copy as CopyIcon } from "react-feather"
 import "./CopyButton.scss"
 

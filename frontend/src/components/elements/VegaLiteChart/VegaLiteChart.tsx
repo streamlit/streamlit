@@ -26,7 +26,6 @@ import * as vega from "vega"
 
 import "./VegaLiteChart.scss"
 import { Padding } from "vega"
-import { max } from "moment"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
