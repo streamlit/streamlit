@@ -88,6 +88,10 @@ class ConfigOption(object):
     # that the option default was not overridden.
     DEFAULT_DEFINITION = "<default>"
 
+    # This is a special value for ConfigOption.where_defined which indicates
+    # that the options was defined by Streamlit's own code.
+    STREAMLIT_DEFINITION = "<streamlit>"
+
     def __init__(
         self,
         key,
@@ -99,6 +103,7 @@ class ConfigOption(object):
         expiration_date=None,
         replaced_by=None,
         config_getter=None,
+        type_=str,
     ):
         """Create a ConfigOption with the given name.
 
@@ -129,6 +134,8 @@ class ConfigOption(object):
         config_getter : callable or None
             Required if replaced_by != None. Should be set to
             config.get_option.
+        type_ : one of str, int, float or bool
+            Useful to cast the config params sent by cmd option parameter.
         """
         # Parse out the section and name.
         self.key = key
@@ -145,6 +152,7 @@ class ConfigOption(object):
         self.replaced_by = replaced_by
         self._get_val_func = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
+        self.type = type_
 
         if self.replaced_by:
             self.deprecated = True

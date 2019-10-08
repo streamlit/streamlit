@@ -29,6 +29,7 @@ import DeckGL, {
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import { dataFrameToArrayOfDicts } from "../../../lib/dataFrameProto"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
 
@@ -40,11 +41,15 @@ interface Props {
   element: Immutable.Map<string, any>
 }
 
+interface PropsWithHeight extends Props {
+  height: number | undefined
+}
+
 interface State {
   initialized: boolean
 }
 
-class DeckGlChart extends React.PureComponent<Props, State> {
+class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
   private initialViewState: {
     width: number
     height: number
@@ -58,16 +63,16 @@ class DeckGlChart extends React.PureComponent<Props, State> {
   private mapStyle: string
   private fixHexLayerBug_bound: () => void
 
-  constructor(props: Props) {
+  constructor(props: PropsWithHeight) {
     super(props)
 
     const specStr = this.props.element.get("spec")
     const spec = specStr ? JSON.parse(specStr) : {}
     const v = spec.viewport || {}
-
+    const { width, height } = this.props
     this.initialViewState = {
-      width: v.width || props.width,
-      height: v.height || 500,
+      width: v.width || width,
+      height: v.height || height,
       longitude: v.longitude || 0,
       latitude: v.latitude || 0,
       pitch: v.pitch || 0,
@@ -394,4 +399,17 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default DeckGlChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <DeckGlChart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

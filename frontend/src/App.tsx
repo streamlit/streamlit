@@ -63,6 +63,7 @@ import { logError, logMessage } from "lib/log"
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
+import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
 interface Props {}

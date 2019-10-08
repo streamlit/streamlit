@@ -82,6 +82,7 @@ __diff_output__
 cypress.env.json
 mochawesome-report
 mochawesome
+frontend/mochawesome.json
 
 ########################################################################
 # VSCode

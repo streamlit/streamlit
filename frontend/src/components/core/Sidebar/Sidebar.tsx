@@ -17,7 +17,7 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import classNames from "classnames"
-import Icon from "components/core/Icon"
+import Icon from "components/shared/Icon"
 import { Button } from "reactstrap"
 
 import "./Sidebar.scss"

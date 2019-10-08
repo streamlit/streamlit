@@ -15,20 +15,4 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import classNames from "classnames"
-
-import openIconic from "assets/img/open-iconic.svg"
-
-interface Props {
-  type: string
-  className?: string
-}
-
-const Icon = ({ type, className }: Props): ReactElement => (
-  <svg className={classNames("icon", className)} viewBox="0 0 8 8">
-    <use href={`${openIconic}#${type}`} />
-  </svg>
-)
-
-export default Icon
+export { default } from "./FullScreenWrapper"

@@ -24,7 +24,7 @@ import {
 } from "../../../lib/dataFrameProto"
 import { format, Duration } from "../../../lib/format"
 import { Map as ImmutableMap } from "immutable"
-
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import * as recharts from "recharts"
 
 import "./Chart.scss"
@@ -112,6 +112,7 @@ const SUPPORTED_INDEX_TYPES = new Set([
 
 interface Props {
   width: number
+  height: number | undefined
   element: ImmutableMap<string, any>
 }
 
@@ -119,12 +120,12 @@ interface State {}
 
 class Chart extends React.PureComponent<Props, State> {
   render(): JSX.Element {
-    const { element, width } = this.props
+    const { element, width, height } = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
     const chartDims = {
       width: (element.get("width") || width) + chartXOffset,
-      height: element.get("height") || 200,
+      height: element.get("height") || height || 200,
     }
 
     // Convert the data into a format that Recharts understands.
@@ -239,4 +240,17 @@ function extractProps(element: any): boolean {
   return props
 }
 
-export default Chart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render() {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <Chart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

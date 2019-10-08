@@ -14,42 +14,10 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
+@import "src/assets/css/variables";
 
 .element-container {
   .code-block {
     position: relative;
-  
-    .copyBtn {
-      background: transparent;
-      border: none;
-      padding: $m1-2-font-size-sm/2 $m1-2-font-size-sm;
-      position: absolute;
-      right: 0;
-      top: 0;
-      transition: opacity 300ms;
-      opacity: 0;
-
-      &:active,
-      &:focus {
-        background: $gray-200;
-        outline: none;
-        opacity: 1.0;
-      }
-    }
-    
-    &:hover {
-      .copyBtn {
-        &:hover {
-          opacity: 1.0;
-        }
-      }
-    }
-  }
-
-  &:hover {
-    .copyBtn {
-      opacity: 0.25;
-    }
   }
 }
