@@ -601,7 +601,7 @@ def is_manually_set(option_name):
     """
     return get_where_defined(option_name) not in (
         ConfigOption.DEFAULT_DEFINITION,
-        ConfigOption.STREAMLIT_DEFINITION
+        ConfigOption.STREAMLIT_DEFINITION,
     )
 
 
