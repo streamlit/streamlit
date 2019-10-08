@@ -12,19 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""A "Hello World" app."""
-
 from __future__ import division, unicode_literals
 
-import streamlit as st
-from streamlit.logger import get_logger
-import inspect
-from collections import OrderedDict
 import urllib
-import textwrap
 
-LOGGER = get_logger(__name__)
+import streamlit as st
 
 
 def intro():
@@ -57,22 +49,15 @@ def intro():
 
 # Turn off black formatting for this function to present the user with more
 # compact code.
-# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def mapping_demo():
-    """
-    This demo shows how to use
-    [`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
-    to display geospatial data.
-    """
     import pandas as pd
     import os
 
     @st.cache
     def from_data_file(filename):
-        return pd.read_json(
-            "https://raw.githubusercontent.com/streamlit/streamlit/develop/"
-            "examples/data/" + filename)
+        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
+        return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
 
     try:
         ALL_LAYERS = {
@@ -126,14 +111,8 @@ def mapping_demo():
 
 # Turn off black formatting for this function to present the user with more
 # compact code.
-# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def fractal_demo():
-    """
-    This app shows how you can use Streamlit to build cool animations.
-    It displays an animated fractal based on the the Julia Set. Use the slider
-    to tune different parameters.
-    """
     import numpy as np
 
     # Interactive Streamlit elements, like these sliders, return their value.
@@ -188,14 +167,8 @@ def fractal_demo():
 
 # Turn off black formatting for this function to present the user with more
 # compact code.
-# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def plotting_demo():
-    """
-    This demo illustrates a combination of plotting and animation with
-    Streamlit. We're generating a bunch of random numbers in a loop for around
-    5 seconds. Enjoy!
-    """
     import time
     import numpy as np
 
@@ -224,14 +197,8 @@ def plotting_demo():
 
 # Turn off black formatting for this function to present the user with more
 # compact code.
-# IMPORTANT: This docstring is shown to the user as an intro to the demo.
 # fmt: off
 def data_frame_demo():
-    """
-    This demo shows how to use `st.write` to visualize Pandas DataFrames.
-
-    (Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
-    """
     import sys
     import pandas as pd
     import altair as alt
@@ -280,58 +247,3 @@ def data_frame_demo():
 
 
 # fmt: on
-
-DEMOS = OrderedDict(
-    [
-        ("—", intro),
-        ("Animation Demo", fractal_demo),
-        ("Plotting Demo", plotting_demo),
-        ("Mapping Demo", mapping_demo),
-        ("DataFrame Demo", data_frame_demo),
-    ]
-)
-
-
-def run():
-    demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
-    demo = DEMOS[demo_name]
-
-    if demo_name == "—":
-        show_code = False
-        st.write("# Welcome to Streamlit! 👋")
-    else:
-        show_code = st.sidebar.checkbox("Show code", True)
-        st.markdown("# %s" % demo_name)
-        st.write(inspect.getdoc(demo))
-        # Clear everything from the intro page.
-        # We only have 4 elements in the page so this is intentional overkill.
-        for i in range(10):
-            st.empty()
-
-    demo()
-
-    if show_code:
-        st.markdown("## Code")
-        sourcelines, n_lines = inspect.getsourcelines(demo)
-        sourcelines = remove_docstring(sourcelines)
-        st.code(textwrap.dedent("".join(sourcelines)))
-
-
-# This function parses the lines of a function and removes the docstring
-# if found. If no docstring is found, it returns None.
-def remove_docstring(lines):
-    if len(lines) < 3 and '"""' not in lines[1]:
-        return lines
-    #  lines[2] is the first line of the docstring, past the inital """
-    index = 2
-    while '"""' not in lines[index]:
-        index += 1
-        # limit to ~100 lines, if the docstring is longer, just bail
-        if index > 100:
-            return lines
-    # lined[index] is the closing """
-    return lines[index + 1 :]
-
-
-if __name__ == "__main__":
-    run()
