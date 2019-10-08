@@ -4,6 +4,7 @@
   "private": true,
   "homepage": ".",
   "scripts": {
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco start",
     "build": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco build",
     "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
@@ -95,11 +96,11 @@
     "@typescript-eslint/parser": "^2.1.0",
     "cypress": "^3.4.1",
     "cypress-image-snapshot": "^3.1.1",
-    "fetch-mock": "^7.3.9",
     "eslint": "^6.3.0",
     "eslint-config-prettier": "^6.2.0",
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-plugin-react": "^7.14.3",
+    "fetch-mock": "^7.3.9",
     "hard-source-webpack-plugin": "^0.13.1",
     "husky": "^3.0.5",
     "mocha": "5.2.0",
@@ -111,6 +112,7 @@
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
     "scss-to-json": "^2.0.0",
+    "source-map-explorer": "^2.1.0",
     "start-server-and-test": "^1.9.1",
     "typescript": "^3.6.2"
   },
