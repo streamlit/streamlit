@@ -22,7 +22,7 @@
   "dependencies": {
     "@types/classnames": "^2.2.9",
     "aws-sdk": "^2.524.0",
-    "baseui": "^8.17.1",
+    "baseui": "^9.7.1",
     "bokehjs": "^1.2.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
@@ -61,7 +61,7 @@
     "recharts": "^1.6.2",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.1",
-    "styletron-react": "^5.2.1",
+    "styletron-react": "^5.2.2",
     "typed-signals": "^1.0.5",
     "vega": "^5.5.3",
     "vega-embed": "^5.1.2",
