@@ -34,6 +34,8 @@ import ExceptionElement from "components/elements/ExceptionElement/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
+import "./Block.scss"
+
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
@@ -155,16 +157,16 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const isStale =
-      this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement)
-
-    const component = this.renderElement(element, index, width, isStale)
+    const component = this.renderElement(element, index, width)
 
     if (!component) {
       // Do not transform an empty element into a ReactNode.
       return null
     }
+
+    const isStale =
+      this.props.showStaleElementIndicator &&
+      this.isElementStale(element as SimpleElement)
 
     const className =
       isStale && !FullScreenWrapper.isFullScreen
@@ -192,8 +194,7 @@ class Block extends PureComponent<Props> {
   private renderElement = (
     element: SimpleElement,
     index: number,
-    width: number,
-    isStale: boolean
+    width: number
   ): ReactNode | undefined => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -250,14 +251,13 @@ class Block extends PureComponent<Props> {
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),
-      progress: (el: SimpleElement) =>
-        isStale ? null : (
-          <Progress
-            value={el.get("value")}
-            className="stProgress"
-            style={{ width }}
-          />
-        ),
+      progress: (el: SimpleElement) => (
+        <Progress
+          value={el.get("value")}
+          className="stProgress"
+          style={{ width }}
+        />
+      ),
       table: (el: SimpleElement) => <Table element={el} width={width} />,
       text: (el: SimpleElement) => <Text element={el} width={width} />,
       vegaLiteChart: (el: SimpleElement) => (
