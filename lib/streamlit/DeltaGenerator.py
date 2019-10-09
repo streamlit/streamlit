@@ -2030,8 +2030,10 @@ class DeltaGenerator(object):
                   The data for the current layer.
 
                 - "type" : str
-                  A layer type accepted by Deck.GL, such as "HexagonLayer",
-                  "ScatterplotLayer", "TextLayer"
+                  One of the Deck.GL layer types that are currently supported
+                  by Streamlit: ArcLayer, GridLayer, HexagonLayer, LineLayer,
+                  PointCloudLayer, ScatterplotLayer, ScreenGridLayer,
+                  TextLayer.
 
                 - "encoding" : dict
                   A mapping connecting specific fields in the dataset to
