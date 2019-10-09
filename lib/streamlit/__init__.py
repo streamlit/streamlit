@@ -157,6 +157,7 @@ deck_gl_chart = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty = _with_dg(_DeltaGenerator.empty)  # noqa: E221
 error = _with_dg(_DeltaGenerator.error)  # noqa: E221
 exception = _with_dg(_DeltaGenerator.exception)  # noqa: E221
+file_uploader = _with_dg(_DeltaGenerator.file_uploader)  # noqa: E221
 graphviz_chart = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
 header = _with_dg(_DeltaGenerator.header)  # noqa: E221
 help = _with_dg(_DeltaGenerator.help)  # noqa: E221

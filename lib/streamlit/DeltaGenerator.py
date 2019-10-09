@@ -1819,6 +1819,18 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
+    def file_uploader(
+        self,
+        element,
+        label,
+        type,
+    ):
+        element.file_uploader.label = label
+        element.file_uploader.type[:] = type
+        
+        return "some value"
+
+    @_with_element
     def text_input(self, element, label, value="", key=None):
         """Display a single-line text input widget.
 
