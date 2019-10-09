@@ -202,8 +202,10 @@ class Credentials(object):
                     email = ""
                 else:
                     email = click.prompt(
-                        text=EMAIL_PROMPT, prompt_suffix="", default="",
-                        show_default=False
+                        text=EMAIL_PROMPT,
+                        prompt_suffix="",
+                        default="",
+                        show_default=False,
                     )
 
                 self.activation = _verify_email(email)
