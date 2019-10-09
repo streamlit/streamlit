@@ -112,13 +112,16 @@ const SUPPORTED_INDEX_TYPES = new Set([
 
 interface Props {
   width: number
-  height: number | undefined
   element: ImmutableMap<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface State {}
 
-class Chart extends React.PureComponent<Props, State> {
+class Chart extends React.PureComponent<PropsWithHeight, State> {
   render(): JSX.Element {
     const { element, width, height } = this.props
     // Default height is 200 if not specified.
