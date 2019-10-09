@@ -62,6 +62,9 @@ const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("components/widgets/Slider/"))
+const FileUploader = React.lazy(() =>
+  import("components/widgets/FileUploader/")
+)
 const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
 const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
@@ -300,6 +303,15 @@ class Block extends PureComponent<Props> {
           element={el}
           width={width}
           {...widgetProps}
+        />
+      ),
+      file_uploader: (el: SimpleElement) => (
+        <FileUploader
+          key={el.get("id")}
+          element={el}
+          width={width}
+          widgetStateManager={widgetProps.widgetMgr}
+          disabled={widgetProps.disabled}
         />
       ),
       textArea: (el: SimpleElement) => (
