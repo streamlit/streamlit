@@ -30,24 +30,37 @@ const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/teams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
-class MainMenu extends PureComponent {
+interface Props {
+  isServerConnected: () => boolean
+  saveCallback: () => any
+  quickRerunCallback: (alwaysRunOnSave?: boolean) => void
+  clearCacheCallback: () => any
+  settingsCallback: () => any
+  aboutCallback: () => any
+}
+
+interface State {
+  dropdownOpen: boolean
+}
+
+class MainMenu extends PureComponent<Props, State> {
   /**
    * Constructor.
    */
-  constructor(props) {
+  constructor(props: Props) {
     super(props)
     this.state = {
       dropdownOpen: false,
     }
   }
 
-  toggle() {
+  toggle(): void {
     this.setState(({ dropdownOpen }) => ({
       dropdownOpen: !dropdownOpen,
     }))
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <Dropdown
         id="MainMenu"

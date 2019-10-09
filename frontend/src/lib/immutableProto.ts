@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import { fromJS } from "immutable"
+import { fromJS, Map } from "immutable"
 import { IS_DEV_ENV } from "./baseconsts"
 import { logMessage } from "./log"
 
 /**
  * Converts a protobuf JS object into its immutable counterpart.
  */
-export function toImmutableProto(messageType, message) {
+export function toImmutableProto(messageType: any, message: any): any {
   const x = messageType.toObject(message, {
     defaults: true,
     oneofs: true,
@@ -43,7 +43,12 @@ export function toImmutableProto(messageType, message) {
  * is no match. If such a function is not passed, we throw an error if there's
  * no match.
  */
-export function dispatchOneOf(obj, name, funcs) {
+
+export function dispatchOneOf(
+  obj: Map<string, any>,
+  name: string,
+  funcs: any
+): any {
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return funcs[whichOne](obj.get(whichOne))
@@ -61,7 +66,11 @@ export function dispatchOneOf(obj, name, funcs) {
  * name  - The name of the oneof field.
  * funcs - Dictionary of update functions, one for each oneof field.
  */
-export function updateOneOf(obj, name, funcs) {
+export function updateOneOf(
+  obj: Map<string, any>,
+  name: string,
+  funcs: any
+): any {
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return obj.update(whichOne, funcs[whichOne])
@@ -77,7 +86,11 @@ export function updateOneOf(obj, name, funcs) {
  * name  - The name of the oneof field.
  * funcs - Dictionary of values, one for each oneof field.
  */
-export function mapOneOf(obj, name, values) {
+export function mapOneOf(
+  obj: Map<string, any>,
+  name: string,
+  values: any
+): any {
   const whichOne = obj.get(name)
   if (whichOne in values) {
     return values[whichOne]

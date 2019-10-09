@@ -15,17 +15,12 @@
  * limitations under the License.
  */
 
-import {
-  BasicDialog,
-  DialogType,
-} from "components/core/StreamlitDialog/StreamlitDialog"
+import { BasicDialog } from "components/core/StreamlitDialog/StreamlitDialog"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { Button, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
 
 export interface Props {
-  type: DialogType.SCRIPT_CHANGED
-
   /** Called to close the dialog without rerunning the report. */
   onClose: () => void
 
