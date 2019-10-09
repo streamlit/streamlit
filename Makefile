@@ -19,7 +19,7 @@ all-devel: init install develop
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a pipfile or test S3 sharing, run:"
 	@echo ""
-	@echo '    $ make build'
+	@echo "    \$ make build"
 	@echo ""
 
 .PHONY: init
