@@ -278,7 +278,7 @@ else
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
-endif CIRCLECI
+endif #CIRCLECI
 
 .PHONY: jsformat
 # Runs "Prettier" on our JavaScript and TypeScript code to fix formatting
