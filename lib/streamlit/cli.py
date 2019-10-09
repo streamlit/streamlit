@@ -108,9 +108,9 @@ def main_docs():
 @main.command("hello")
 def main_hello():
     """Runs the Hello World script."""
-    import streamlit.hello
+    from streamlit.hello import hello
 
-    filename = streamlit.hello.__file__
+    filename = hello.__file__
 
     # For Python 2 when Streamlit is actually installed (make install rather
     # than make develop).

@@ -26,6 +26,7 @@ it("renders without crashing", () => {
     element: ImmutableMap({ figure: null }),
     index: 0,
     width: 0,
+    height: undefined,
   }
   ReactDOM.render(<BokehChart {...props} />, mountPoint)
   ReactDOM.unmountComponentAtNode(mountPoint)

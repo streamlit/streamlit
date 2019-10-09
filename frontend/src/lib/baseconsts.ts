@@ -44,7 +44,7 @@ export const IS_SHARED_REPORT =
 /**
  * Parameters for our fetch() requests.
  */
-export const FETCH_PARAMS = {
+export const FETCH_PARAMS: RequestInit = {
   redirect: "follow",
   credentials: "same-origin",
   mode: "cors",
