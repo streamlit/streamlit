@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import PropTypes from "prop-types"
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -30,23 +29,50 @@ import DeckGL, {
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import { dataFrameToArrayOfDicts } from "../../../lib/dataFrameProto"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
 
 const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
 
-class DeckGlChart extends React.PureComponent {
-  constructor(props) {
+interface Props {
+  width: number
+  element: Immutable.Map<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
+}
+
+interface State {
+  initialized: boolean
+}
+
+class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
+  private initialViewState: {
+    width: number
+    height: number
+    longitude: number
+    latitude: number
+    pitch: number
+    bearing: number
+    zoom: number
+  }
+
+  private mapStyle: string
+  private fixHexLayerBug_bound: () => void
+
+  constructor(props: PropsWithHeight) {
     super(props)
 
     const specStr = this.props.element.get("spec")
     const spec = specStr ? JSON.parse(specStr) : {}
     const v = spec.viewport || {}
-
+    const { width, height } = this.props
     this.initialViewState = {
-      width: v.width || props.width,
-      height: v.height || 500,
+      width: v.width || width,
+      height: v.height || height,
       longitude: v.longitude || 0,
       latitude: v.latitude || 0,
       pitch: v.pitch || 0,
@@ -65,11 +91,11 @@ class DeckGlChart extends React.PureComponent {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
-  fixHexLayerBug() {
+  fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <div
         className="deckglchart stDeckGlChart"
@@ -96,15 +122,10 @@ class DeckGlChart extends React.PureComponent {
     )
   }
 
-  buildLayers() {
+  buildLayers(): any {
     const layers = this.props.element.get("layers")
-    return layers.map(layer => buildLayer(layer)).toArray()
+    return layers.map((layer: any) => buildLayer(layer)).toArray()
   }
-}
-
-DeckGlChart.propTypes = {
-  element: PropTypes.instanceOf(Immutable.Map).isRequired,
-  width: PropTypes.number.isRequired,
 }
 
 /**
@@ -147,17 +168,17 @@ const Defaults = {
   ScatterplotLayer: {
     getColor: getColorFromColorRGBAColumns,
     getPosition: getPositionFromLatLonColumns,
-    getRadius: d => fallback(d.radius, 100),
+    getRadius: (d: any) => fallback(d.radius, 100),
   },
 
   ScreenGridLayer: {
     getPosition: getPositionFromLatLonColumns,
-    getWeight: d => d.weight,
+    getWeight: (d: any) => d.weight,
   },
 
   TextLayer: {
     getColor: getColorFromColorRGBAColumns,
-    getPixelOffset: d => [
+    getPixelOffset: (d: any) => [
       fallback(d.pixelOffsetX, 0),
       fallback(d.pixelOffsetY, 0),
     ],
@@ -166,7 +187,7 @@ const Defaults = {
   },
 }
 
-function buildLayer(layer) {
+function buildLayer(layer: any): any {
   const data = dataFrameToArrayOfDicts(layer.get("data"))
   const spec = JSON.parse(layer.get("spec"))
 
@@ -258,7 +279,7 @@ const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set(["arclayer", "linelayer"])
  *
  * See https://www.mapbox.com/maps/ or https://www.mapbox.com/mapbox-gl-js/api/
  */
-function getStyleUrl(styleStr = "light-v9") {
+function getStyleUrl(styleStr = "light-v9"): string {
   if (
     styleStr.startsWith("http://") ||
     styleStr.startsWith("https://") ||
@@ -279,7 +300,7 @@ function getStyleUrl(styleStr = "light-v9") {
  * Accepts infinitely many arguments:
  *   fallback(value, fallback1, fallback2, fallback3)
  */
-function fallback(...args) {
+function fallback(...args: any[]): any | null {
   for (let i = 0; i < args.length; i += 1) {
     if (args[i] != null) {
       return args[i]
@@ -290,15 +311,15 @@ function fallback(...args) {
 
 /* Define a bunch of getters */
 
-function getPositionFromLatLonColumns(d) {
+function getPositionFromLatLonColumns(d: any): any[] {
   return [fallback(d.longitude, d.lon), fallback(d.latitude, d.lat)]
 }
 
-function getTargetPositionFromLatLonColumn(d) {
+function getTargetPositionFromLatLonColumn(d: any): any[] {
   return [fallback(d.longitude2, d.lon2), fallback(d.latitude2, d.lat2)]
 }
 
-function getPositionFromPositionXYZColumns(d) {
+function getPositionFromPositionXYZColumns(d: any): any[] {
   return [
     fallback(d.longitude, d.lon, d.positionX, d.x),
     fallback(d.latitude, d.lat, d.positionY, d.y),
@@ -306,25 +327,25 @@ function getPositionFromPositionXYZColumns(d) {
   ]
 }
 
-function getNormalFromNormalXYZColumns(d) {
+function getNormalFromNormalXYZColumns(d: any): number[] {
   return [d.normalX, d.normalY, d.normalZ]
 }
 
 const DEFAULT_COLOR = [200, 30, 0, 160]
 
-function getColorFromColorRGBAColumns(d) {
+function getColorFromColorRGBAColumns(d: any): number[] {
   return d.colorR && d.colorG && d.colorB
     ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
     : DEFAULT_COLOR
 }
 
-function getSourceColorFromSourceColorRGBAColumns(d) {
+function getSourceColorFromSourceColorRGBAColumns(d: any): number[] {
   return d.colorR && d.colorG && d.colorB
     ? [d.colorR, d.colorG, d.colorB, d.colorA == null ? 255 : d.colorA]
     : DEFAULT_COLOR
 }
 
-function getTargetColorFromTargetColorRGBAColumns(d) {
+function getTargetColorFromTargetColorRGBAColumns(d: any): number[] {
   return d.targetColorR && d.targetColorG && d.targetColorB
     ? [
         d.targetColorR,
@@ -335,7 +356,7 @@ function getTargetColorFromTargetColorRGBAColumns(d) {
     : DEFAULT_COLOR
 }
 
-function parseGetters(type, spec) {
+function parseGetters(type: any, spec: any): void {
   // If this is a layer that accepts a getPosition argument, build that
   // argument from getLatiude and getLongitude.
   if (
@@ -345,7 +366,7 @@ function parseGetters(type, spec) {
   ) {
     const latField = spec.getLatitude
     const lonField = spec.getLongitude
-    spec.getPosition = d => [d[lonField], d[latField]]
+    spec.getPosition = (d: any) => [d[lonField], d[latField]]
   }
 
   // Same as the above, but for getSourcePosition/getTargetPosition.
@@ -360,8 +381,8 @@ function parseGetters(type, spec) {
     const lonField = spec.getLongitude
     const latField2 = spec.getTargetLatitude
     const lonField2 = spec.getTargetLongitude
-    spec.getSourcePosition = d => [d[lonField], d[latField]]
-    spec.getTargetPosition = d => [d[lonField2], d[latField2]]
+    spec.getSourcePosition = (d: any) => [d[lonField], d[latField]]
+    spec.getTargetPosition = (d: any) => [d[lonField2], d[latField2]]
   }
 
   Object.keys(spec).forEach(key => {
@@ -373,9 +394,22 @@ function parseGetters(type, spec) {
       typeof v === "function"
         ? v // Leave functions untouched.
         : typeof v === "string"
-        ? d => d[v] // Make getters from strings.
+        ? (d: any) => d[v] // Make getters from strings.
         : () => v // Make constant function otherwise.
   })
 }
 
-export default DeckGlChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render(): JSX.Element {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <DeckGlChart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

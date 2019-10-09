@@ -30,7 +30,9 @@ import sys
 import textwrap
 
 import streamlit as st
+from streamlit import config
 from streamlit import util
+from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
 if sys.version_info >= (3, 0):
@@ -181,6 +183,10 @@ class CodeHasher:
         else:
             self.hasher = hashlib.new(name)
 
+        self._folder_black_list = FolderBlackList(
+            config.get_option("server.folderWatchBlacklist")
+        )
+
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
         self._update(self.hasher, obj, context)
@@ -299,8 +305,11 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                # TODO: This may be too restrictive for libraries in development.
-                if os.path.abspath(obj.__code__.co_filename).startswith(os.getcwd()):
+                filepath = os.path.abspath(obj.__code__.co_filename)
+
+                if util.file_is_in_folder_glob(
+                    filepath, self._get_main_script_directory()
+                ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
@@ -395,3 +404,15 @@ class CodeHasher:
                     self._update(h, name)
 
         return h.digest()
+
+    @staticmethod
+    def _get_main_script_directory():
+        """Get the directory of the main script.
+        """
+        import __main__
+        import os
+
+        # This works because we set __main__.__file__ to the report
+        # script path in ScriptRunner.
+        main_path = __main__.__file__
+        return os.path.dirname(main_path)

@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +15,21 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+import React, { ReactElement } from "react"
+import classNames from "classnames"
+import "./Icon.scss"
 
-.element-container {
-  .code-block {
-    position: relative;
-  }
+interface Props {
+  type: string
+  className?: string
 }
+const Icon = ({ type, className }: Props): ReactElement => (
+  <span
+    className={classNames("oi", className)}
+    data-glyph={type}
+    title={type}
+    aria-hidden="true"
+  ></span>
+)
+
+export default Icon

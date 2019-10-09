@@ -18,6 +18,7 @@
 import React from "react"
 import { embed as BokehEmbed } from "bokehjs"
 import { Map as ImmutableMap } from "immutable"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 
 interface Props {
   width: number
@@ -25,7 +26,16 @@ interface Props {
   index: number
 }
 
-class BokehChart extends React.PureComponent<Props> {
+interface PropsWithHeight extends Props {
+  height: number | undefined
+}
+
+interface Dimensions {
+  width: number
+  height: number
+}
+
+class BokehChart extends React.PureComponent<PropsWithHeight> {
   private chartId = "bokeh-chart-" + this.props.index
 
   private getChartData = (): any => {
@@ -33,8 +43,40 @@ class BokehChart extends React.PureComponent<Props> {
     return JSON.parse(figure)
   }
 
+  public getChartDimensions = (plot: any): Dimensions => {
+    const width = plot.attributes.plot_width
+      ? plot.attributes.plot_width
+      : this.props.width
+    const height = plot.attributes.plot_height
+      ? plot.attributes.plot_height
+      : this.props.height
+      ? this.props.height
+      : undefined
+    return { width, height }
+  }
+
   private updateChart = (data: any): void => {
     const chart = document.getElementById(this.chartId)
+
+    /**
+     * When you create a bokeh chart in your python script, you can specify
+     * the width: p = figure(title="simple line example", x_axis_label="x", y_axis_label="y", plot_width=200);
+     * In that case, the json object will contains an attribute called
+     * plot_width (or plot_heigth) inside the plot reference.
+     * If that values are missing, we can set that values to make the chart responsive.
+     */
+    const plot =
+      data && data.doc && data.doc.roots && data.doc.roots.references
+        ? data.doc.roots.references.find((e: any) => e.type === "Plot")
+        : undefined
+    if (plot) {
+      const { width, height } = this.getChartDimensions(plot)
+      plot.attributes.plot_width = width
+      if (height !== undefined) {
+        plot.attributes.plot_height = height
+      }
+    }
+
     if (chart !== null) {
       this.removeAllChildNodes(chart)
       BokehEmbed.embed_item(data, this.chartId)
@@ -61,9 +103,30 @@ class BokehChart extends React.PureComponent<Props> {
     <div
       id={this.chartId}
       className="stBokehChart"
-      style={{ width: this.props.width }}
+      style={{
+        width: this.props.width,
+        height: this.props.height ? this.props.height : undefined,
+      }}
     />
   )
 }
 
-export default BokehChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render(): JSX.Element {
+    const { element, index, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <BokehChart
+            element={element}
+            index={index}
+            width={width}
+            height={height}
+          />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

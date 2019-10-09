@@ -18,7 +18,7 @@
 import url from "url"
 
 import { ConnectionState } from "./ConnectionState"
-import { ForwardMsg } from "autogen/proto"
+import { ForwardMsg, BackMsg } from "autogen/proto"
 import { IS_SHARED_REPORT } from "./baseconsts"
 import { ReactNode } from "react"
 import { StaticConnection } from "./StaticConnection"
@@ -83,7 +83,7 @@ export class ConnectionManager {
     return this.connectionState === ConnectionState.STATIC
   }
 
-  public sendMessage(obj: any): void {
+  public sendMessage(obj: BackMsg): void {
     if (this.connection instanceof WebsocketConnection && this.isConnected()) {
       this.connection.sendMessage(obj)
     } else {
@@ -252,6 +252,6 @@ async function fetchManifest(reportId: string): Promise<any> {
   const bucket = hostname
   const version = pathname.split("/")[1]
   const manifestKey = `${version}/reports/${reportId}/manifest.json`
-  const data = await getObject({ Bucket: bucket, Key: manifestKey })
+  const data = await getObject({ Bucket: String(bucket), Key: manifestKey })
   return data.json()
 }

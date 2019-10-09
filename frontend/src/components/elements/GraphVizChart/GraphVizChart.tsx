@@ -17,6 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "lib/log"
@@ -28,17 +29,38 @@ interface Props {
   index: number
 }
 
+interface PropsWithHeight extends Props {
+  height: number | undefined
+}
+
+interface Dimensions {
+  width: number
+  height: number
+}
+
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
 const _dummy_graphviz = graphviz
 _dummy_graphviz // eslint-disable-line no-unused-expressions
 
-class GraphVizChart extends React.PureComponent<Props> {
+class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
   private originalHeight = 0
 
   private getChartData = (): string => {
     return this.props.element.get("spec")
+  }
+
+  public getChartDimensions = (): Dimensions => {
+    const el = this.props.element
+    const width = el.get("width") ? el.get("width") : this.props.width
+    const height = el.get("height")
+      ? el.get("height")
+      : this.props.height
+      ? this.props.height
+      : this.originalHeight
+
+    return { width, height }
   }
 
   private updateChart = () => {
@@ -59,11 +81,15 @@ class GraphVizChart extends React.PureComponent<Props> {
           }
         })
 
-      // Override or reset the graph height
-      if (this.props.element.get("height")) {
-        graph.height(this.props.element.get("height"))
-      } else if (this.originalHeight) {
-        graph.height(this.originalHeight)
+      const { width, height } = this.getChartDimensions()
+      if (height > 0) {
+        // Override or reset the graph height
+        graph.height(height)
+      }
+
+      // Override or reset the graph width
+      if (width > 0) {
+        graph.width(width)
       }
     } catch (error) {
       logError(error)
@@ -80,15 +106,34 @@ class GraphVizChart extends React.PureComponent<Props> {
 
   public render = (): React.ReactNode => {
     const width: number = this.props.element.get("width") || this.props.width
-
+    const height: number =
+      this.props.element.get("height") || this.props.height
     return (
       <div
         className="graphviz stGraphVizChart"
         id={this.chartId}
-        style={{ width }}
+        style={{ width, height }}
       />
     )
   }
 }
 
-export default GraphVizChart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render(): JSX.Element {
+    const { element, index, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <GraphVizChart
+            element={element}
+            index={index}
+            width={width}
+            height={height}
+          />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper

@@ -342,7 +342,6 @@ def _write_to_mem_cache(key, value, ignore_hash, args_mutated):
 
 def _read_from_disk_cache(key):
     path = util.get_streamlit_file_path("cache", "%s.pickle" % key)
-
     try:
         with util.streamlit_read(path, binary=True) as input:
             value, args_mutated = pickle.load(input)

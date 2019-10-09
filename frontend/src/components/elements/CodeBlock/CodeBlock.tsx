@@ -45,10 +45,12 @@ class CodeBlock extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     if (this.props.language == null) {
       return (
-        <pre className={"code-block"}>
-          <code>{this.props.value}</code>
+        <>
           <CopyButton text={this.props.value} />
-        </pre>
+          <pre className={"code-block"}>
+            <code>{this.props.value}</code>
+          </pre>
+        </>
       )
     }
 
@@ -66,13 +68,15 @@ class CodeBlock extends React.PureComponent<Props> {
       : ""
     const languageClassName = `language-${this.props.language}`
     return (
-      <pre className={"code-block"}>
-        <code
-          className={languageClassName}
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-        />
+      <>
         <CopyButton text={this.props.value} />
-      </pre>
+        <pre className={"code-block"}>
+          <code
+            className={languageClassName}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
+        </pre>
+      </>
     )
   }
 }

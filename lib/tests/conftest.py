@@ -22,10 +22,9 @@ config.
 
 import os
 
-from contextlib import contextmanager
 from mock import patch, mock_open
 from streamlit import config
-
+from streamlit import util
 
 os.environ["HOME"] = "/mock/home/folder"
 
@@ -38,4 +37,11 @@ unitTest = true
 gatherUsageStats = false
 """
 
-config.parse_config_file(CONFIG_FILE_CONTENTS)
+config_path = util.get_streamlit_file_path("config.toml")
+
+with patch(
+    "streamlit.config.open", mock_open(read_data=CONFIG_FILE_CONTENTS), create=True
+), patch("streamlit.config.os.path.exists") as path_exists:
+
+    path_exists.side_effect = lambda path: path == config_path
+    config.parse_config_file()
