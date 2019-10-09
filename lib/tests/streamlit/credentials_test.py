@@ -18,6 +18,7 @@ import os
 import sys
 import textwrap
 import unittest
+from parameterized import parameterized
 
 import pytest
 from mock import MagicMock
@@ -26,6 +27,7 @@ from mock import mock_open
 from mock import patch
 
 from streamlit import util
+from streamlit import config
 from streamlit.credentials import Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email
@@ -223,11 +225,14 @@ class CredentialsClassTest(unittest.TestCase):
                 str(p.error.call_args_list[1])[0:27], "call('Activation not valid."
             )
 
+    @parameterized.expand([(True,), (False,)])
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
-    def test_Credentials_activate(self):
+    def test_Credentials_activate(self, headless_mode):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
         c.activation = None
+
+        config.set_option("server.headless", headless_mode)
 
         with patch.object(
             c, "load", side_effect=RuntimeError("Some error")
@@ -236,7 +241,12 @@ class CredentialsClassTest(unittest.TestCase):
             patched_prompt.side_effect = ["user@domain.com"]
             c.activate()
             patched_save.assert_called_once()
-            self.assertEqual(c.activation.email, "user@domain.com")
+
+            if headless_mode:
+                self.assertEqual(c.activation.email, "")
+            else:
+                self.assertEqual(c.activation.email, "user@domain.com")
+
             self.assertEqual(c.activation.is_valid, True)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)

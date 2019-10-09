@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { ForwardMsg, StaticManifest } from "autogen/proto"
+import { BackMsg, ForwardMsg, StaticManifest } from "autogen/proto"
 import { getWindowBaseUriParts } from "lib/UriUtil"
 import { ReactNode } from "react"
 import url from "url"
@@ -83,7 +83,7 @@ export class ConnectionManager {
     return this.connectionState === ConnectionState.STATIC
   }
 
-  public sendMessage(obj: any): void {
+  public sendMessage(obj: BackMsg): void {
     if (this.connection instanceof WebsocketConnection && this.isConnected()) {
       this.connection.sendMessage(obj)
     } else {
@@ -252,7 +252,7 @@ async function fetchManifest(reportId: string): Promise<StaticManifest> {
   const bucket = hostname
   const version = pathname.split("/")[1]
   const manifestKey = `${version}/reports/${reportId}/manifest.pb`
-  const data = await getObject({ Bucket: bucket, Key: manifestKey })
+  const data = await getObject({ Bucket: String(bucket), Key: manifestKey })
   const arrayBuffer = await data.arrayBuffer()
   return StaticManifest.decode(new Uint8Array(arrayBuffer))
 }

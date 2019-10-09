@@ -522,7 +522,7 @@ function getWidths(
 }
 
 class WithFullScreenWrapper extends React.Component<Props> {
-  render() {
+  render(): JSX.Element {
     const { element, width } = this.props
     return (
       <FullScreenWrapper width={width}>

@@ -112,7 +112,7 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
 }
 
 class WithFullScreenWrapper extends React.Component<Props> {
-  render() {
+  render(): JSX.Element {
     const { element, index, width } = this.props
     return (
       <FullScreenWrapper width={width}>

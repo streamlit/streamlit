@@ -16,8 +16,10 @@ all: init install build develop
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
 all-devel: init install develop
 	@echo ""
-	@echo "    The frontend has *not* been rebuilt, so shared reports won't work."
-	@echo "    If you need to test report sharing, run 'make build' first!"
+	@echo "    The frontend has *not* been rebuilt."
+	@echo "    If you need to make a pipfile or test S3 sharing, run:"
+	@echo ""
+	@echo "    make build"
 	@echo ""
 
 .PHONY: init

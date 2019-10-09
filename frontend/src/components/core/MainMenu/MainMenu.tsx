@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { PureComponent } from "react"
 import {
   Dropdown,
   DropdownItem,
@@ -75,7 +75,7 @@ class MainMenu extends PureComponent<Props, State> {
     }))
   }
 
-  public render(): ReactNode {
+  public render(): JSX.Element {
     return (
       <Dropdown
         id="MainMenu"

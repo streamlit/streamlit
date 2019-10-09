@@ -29,7 +29,7 @@ import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
-  Props as ScriptChangedProps,
+  Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
 import { Exception } from "autogen/proto"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
@@ -39,7 +39,15 @@ import "./StreamlitDialog.scss"
 
 type PlainEventHandler = () => void
 
-type DialogProps =
+interface SettingsProps extends SettingsDialogProps {
+  type: DialogType.SETTINGS
+}
+
+interface ScriptChangedProps extends ScriptChangedDialogProps {
+  type: DialogType.SCRIPT_CHANGED
+}
+
+export type DialogProps =
   | AboutProps
   | ClearCacheProps
   | RerunScriptProps
@@ -252,10 +260,6 @@ function scriptCompileErrorDialog(
       </ModalFooter>
     </BasicDialog>
   )
-}
-
-interface SettingsProps extends SettingsDialogProps {
-  type: DialogType.SETTINGS
 }
 
 /**
