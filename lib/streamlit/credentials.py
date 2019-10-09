@@ -194,6 +194,10 @@ class Credentials(object):
             activated = False
 
             while not activated:
+
+                # Don't stop execution to show an interactive prompt
+                # when in headless mode, as this makes it harder for
+                # people to deploy Streamlit apps.
                 if config.get_option("server.headless"):
                     email = ""
                 else:
