@@ -455,7 +455,6 @@ def _gather_usage_stats():
 
 
 @_create_option("browser.serverPort", type_=int)
-@util.memoize
 def _browser_server_port():
     """Port that the browser should use to connect to the server when in
     liveSave mode.
