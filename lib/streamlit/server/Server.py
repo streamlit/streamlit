@@ -247,12 +247,10 @@ class Server(object):
 
             routes.extend(
                 [
-                    (
-                        r"/()$",
-                        StaticFileHandler,
-                        {"path": "%s/index.html" % static_path},
-                    ),
-                    (r"/(.*)", StaticFileHandler, {"path": "%s/" % static_path}),
+                    (r"/(.*)", StaticFileHandler, {
+                        "path": "%s/" % static_path,
+                        "default_filename": "index.html",
+                    }),
                 ]
             )
 
