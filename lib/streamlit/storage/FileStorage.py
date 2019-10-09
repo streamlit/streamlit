@@ -21,6 +21,7 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import errno
 import math
 import os
 
@@ -86,7 +87,7 @@ def _recursively_create_folder(path):
     try:
         os.makedirs(path)
     except OSError as e:
-        if e.errno == os.errno.EEXIST and os.path.isdir(path):
+        if e.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else:
             raise e
