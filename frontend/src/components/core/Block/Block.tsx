@@ -305,7 +305,7 @@ class Block extends PureComponent<Props> {
           {...widgetProps}
         />
       ),
-      file_uploader: (el: SimpleElement) => (
+      fileUploader: (el: SimpleElement) => (
         <FileUploader
           key={el.get("id")}
           element={el}

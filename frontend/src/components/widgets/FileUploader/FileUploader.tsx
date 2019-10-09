@@ -19,7 +19,7 @@ import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
-import "./FilePicker.scss"
+import "./FileUploader.scss"
 
 // https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 function useInterval(callback: any, delay: number | null) {
@@ -104,8 +104,8 @@ class FileUploader extends React.PureComponent<Props, State> {
   ) => {
     const data = new FormData()
     data.append("file", acceptedFiles[0])
-    this.props.widgetStateManager
-      .setFloatValue /*
+    //this.props.widgetStateManager.setFloatValue
+    /*
         acceptedFiles.forEach((file: File) => {
             const fileReader = new FileReader();
             fileReader.onloadend = this.handleFileRead;
