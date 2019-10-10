@@ -465,21 +465,12 @@ class App extends PureComponent<Props, State> {
   }
 
   flattenElements = (elements: BlockElement): SimpleElement[] => {
-    const result: SimpleElement[] = []
-    const walker = (
-      elements: BlockElement,
-      fn: (e: SimpleElement) => void
-    ): void => {
-      elements.forEach((element: Element) => {
-        if (element instanceof List) {
-          walker(element as BlockElement, fn)
-          return
-        }
-        fn(element as SimpleElement)
-      })
-    }
-    walker(elements, (e: SimpleElement) => result.push(e))
-    return result
+    return elements.reduce((acc: SimpleElement[], element: Element) => {
+      if (element instanceof List) {
+        return this.flattenElements(element as BlockElement)
+      }
+      return acc.concat([element as SimpleElement])
+    }, [])
   }
 
   /**
