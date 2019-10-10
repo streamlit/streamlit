@@ -420,15 +420,29 @@ class App extends PureComponent<Props, State> {
       )
 
       if (this.elementListBuffer) {
-        const ids = this.elementListBuffer.main
-          .map(e =>
-            (e as ImmutableMap<string, any>)
-              .get((e as ImmutableMap<string, any>).get("type"))
-              .get("id")
-          )
-          .filter(x => x != null)
-          .toArray()
-        this.widgetMgr.clean(ids as [string])
+        // const cleanOldState = (blockElement: BlockElement) => {
+        //   const ids = blockElement
+        //     .map(e =>
+        //       (e as ImmutableMap<string, any>)
+        //         .get((e as ImmutableMap<string, any>).get("type"))
+        //         .get("id")
+        //     )
+        //     .filter(x => x != null)
+        //     .toArray()
+        //   this.widgetMgr.clean(ids as [string])
+        // }
+        // cleanOldState(this.elementListBuffer.main)
+        // cleanOldState(this.elementListBuffer.sidebar)
+        const ids: string[] = []
+        // any??
+        const getId = (e: any) => {
+          const type = e.get("type")
+          ids.push(e.get(type).get("id"))
+        }
+        // make it a map
+        this.walkElements(this.elementListBuffer.main, getId)
+        this.walkElements(this.elementListBuffer.sidebar, getId)
+        this.widgetMgr.clean(ids.filter(x => x != null))
       }
 
       // Tell the ConnectionManager to increment the message cache run
@@ -457,6 +471,19 @@ class App extends PureComponent<Props, State> {
         return element.get("reportId") === reportId ? element : null
       })
       .filter((element: any) => element !== null)
+  }
+
+  walkElements = (
+    elements: any,
+    fn: (e: ImmutableMap<string, any>) => void
+  ): void => {
+    return elements.map((element: ImmutableMap<string, any>) => {
+      if (element instanceof List) {
+        this.walkElements(elements, fn)
+        return
+      }
+      fn(element)
+    })
   }
 
   /**
