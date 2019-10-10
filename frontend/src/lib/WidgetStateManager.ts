@@ -182,9 +182,12 @@ export class WidgetStateManager {
     this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
   }
 
-  public clean(ids: ImmutableSet<string>): void {
+  /**
+   * Remove the state of widgets that are not contained in `active_ids`.
+   */
+  public clean(active_ids: ImmutableSet<string>): void {
     this.widgetStates.forEach((value, key) => {
-      if (!ids.includes(key)) {
+      if (!active_ids.includes(key)) {
         this.deleteWidgetStateProto(key)
       }
     })

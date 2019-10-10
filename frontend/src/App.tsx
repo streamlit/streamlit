@@ -39,11 +39,9 @@ import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import {
   applyDelta,
   Elements,
-  Element,
   BlockElement,
   SimpleElement,
 } from "lib/DeltaParser"
-import { Set as ImmutableSet } from "immutable"
 import {
   ForwardMsg,
   SessionEvent,
@@ -63,6 +61,7 @@ import {
   hashString,
   isEmbeddedInIFrame,
   makeElementWithInfoText,
+  flattenElements,
 } from "lib/utils"
 import { logError, logMessage } from "lib/log"
 
@@ -425,15 +424,17 @@ class App extends PureComponent<Props, State> {
         }
       )
 
+      // This step removes from the WidgetManager the state of those widgets
+      // that are not shown on the page.
       if (this.elementListBuffer) {
-        const ids = this.flattenElements(this.elementListBuffer.main)
-          .union(this.flattenElements(this.elementListBuffer.sidebar))
+        const active_widget_ids = flattenElements(this.elementListBuffer.main)
+          .union(flattenElements(this.elementListBuffer.sidebar))
           .map((e: SimpleElement) => {
             const type = e.get("type")
             return e.get(type).get("id") as string
           })
           .filter(id => id != null)
-        this.widgetMgr.clean(ids)
+        this.widgetMgr.clean(active_widget_ids)
       }
 
       // Tell the ConnectionManager to increment the message cache run
@@ -462,18 +463,6 @@ class App extends PureComponent<Props, State> {
         return element.get("reportId") === reportId ? element : null
       })
       .filter((element: any) => element !== null)
-  }
-
-  flattenElements = (elements: BlockElement): ImmutableSet<SimpleElement> => {
-    return elements.reduce(
-      (acc: ImmutableSet<SimpleElement>, element: Element) => {
-        if (element instanceof List) {
-          return this.flattenElements(element as BlockElement)
-        }
-        return acc.union(ImmutableSet.of(element as SimpleElement))
-      },
-      ImmutableSet.of<SimpleElement>()
-    )
   }
 
   /**
