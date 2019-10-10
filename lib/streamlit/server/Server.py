@@ -18,6 +18,7 @@ import threading
 import sys
 import errno
 import traceback
+import click
 from enum import Enum
 
 import tornado.concurrent
@@ -315,9 +316,11 @@ class Server(object):
 
         except Exception as e:
             traceback.print_stack(file=sys.stdout)
-            LOGGER.info(" ")
-            LOGGER.info(" Please report this as a bug at https://github.com/streamlit/streamlit/issues ")
-            LOGGER.info(" ")
+            LOGGER.info(
+                """
+Please report this bug at https://github.com/streamlit/streamlit/issues.
+"""
+            )
 
         finally:
             self._on_stopped()
@@ -382,7 +385,7 @@ class Server(object):
         ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def stop(self):
-        LOGGER.info(" Tearing down...")
+        click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
         self._must_stop.set()
 
