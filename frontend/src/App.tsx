@@ -36,7 +36,13 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { applyDelta, Elements, BlockElement } from "lib/DeltaParser"
+import {
+  applyDelta,
+  Elements,
+  Element,
+  BlockElement,
+  SimpleElement,
+} from "lib/DeltaParser"
 import { Map as ImmutableMap } from "immutable"
 import {
   ForwardMsg,
@@ -420,29 +426,14 @@ class App extends PureComponent<Props, State> {
       )
 
       if (this.elementListBuffer) {
-        // const cleanOldState = (blockElement: BlockElement) => {
-        //   const ids = blockElement
-        //     .map(e =>
-        //       (e as ImmutableMap<string, any>)
-        //         .get((e as ImmutableMap<string, any>).get("type"))
-        //         .get("id")
-        //     )
-        //     .filter(x => x != null)
-        //     .toArray()
-        //   this.widgetMgr.clean(ids as [string])
-        // }
-        // cleanOldState(this.elementListBuffer.main)
-        // cleanOldState(this.elementListBuffer.sidebar)
-        const ids: string[] = []
-        // any??
-        const getId = (e: any) => {
-          const type = e.get("type")
-          ids.push(e.get(type).get("id"))
-        }
-        // make it a map
-        this.walkElements(this.elementListBuffer.main, getId)
-        this.walkElements(this.elementListBuffer.sidebar, getId)
-        this.widgetMgr.clean(ids.filter(x => x != null))
+        const ids = this.flattenElements(this.elementListBuffer.main)
+          .concat(this.flattenElements(this.elementListBuffer.sidebar))
+          .map(e => {
+            const type = e.get("type")
+            return e.get(type).get("id")
+          })
+          .filter(id => id != null)
+        this.widgetMgr.clean(ids)
       }
 
       // Tell the ConnectionManager to increment the message cache run
@@ -473,17 +464,22 @@ class App extends PureComponent<Props, State> {
       .filter((element: any) => element !== null)
   }
 
-  walkElements = (
-    elements: any,
-    fn: (e: ImmutableMap<string, any>) => void
-  ): void => {
-    return elements.map((element: ImmutableMap<string, any>) => {
-      if (element instanceof List) {
-        this.walkElements(elements, fn)
-        return
-      }
-      fn(element)
-    })
+  flattenElements = (elements: BlockElement): SimpleElement[] => {
+    const result: SimpleElement[] = []
+    const walker = (
+      elements: BlockElement,
+      fn: (e: SimpleElement) => void
+    ): void => {
+      elements.forEach((element: Element) => {
+        if (element instanceof List) {
+          walker(element as BlockElement, fn)
+          return
+        }
+        fn(element as SimpleElement)
+      })
+    }
+    walker(elements, (e: SimpleElement) => result.push(e))
+    return result
   }
 
   /**

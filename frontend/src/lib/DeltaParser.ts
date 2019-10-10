@@ -28,7 +28,7 @@ import { MetricsManager } from "lib/MetricsManager"
 import { requireNonNull } from "lib/utils"
 
 type Container = "main" | "sidebar"
-type SimpleElement = ImmutableMap<string, any>
+export type SimpleElement = ImmutableMap<string, any>
 export type Element = SimpleElement | BlockElement
 export interface BlockElement extends List<Element> {}
 
