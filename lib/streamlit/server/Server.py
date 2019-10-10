@@ -129,7 +129,8 @@ def start_listening(app, call_count=0):
                     "Port %s already in use, trying to use the next one.", port
                 )
                 port += 1
-                # Save port 3000 because it is used for the development server in the front end.
+                # Save port 3000 because it is used for the development server
+                # in the front end.
                 if port == 3000:
                     port += 1
 
@@ -162,7 +163,9 @@ class Server(object):
 
         """
         if Server._singleton is not None:
-            raise RuntimeError("Server already initialized. Use .get_current() instead")
+            raise RuntimeError(
+                "Server already initialized. Use .get_current() instead"
+            )
 
         Server._singleton = self
 
@@ -202,7 +205,7 @@ class Server(object):
 
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.spawn_callback(self._loop_coroutine, on_started)
+        self._ioloop.spawn_callback(self._loop_coroutine_wrapper, on_started)
 
     def get_debug(self):
         return {"report": self._report.get_debug()}
@@ -261,60 +264,12 @@ class Server(object):
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
 
     @tornado.gen.coroutine
-    def _loop_coroutine(self, on_started=None):
+    def _loop_coroutine_wrapper(self, on_started=None):
         try:
-            if self._state == State.INITIAL:
-                self._set_state(State.WAITING_FOR_FIRST_BROWSER)
-            elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
-                pass
-            else:
-                raise RuntimeError("Bad server state at start: %s" % self._state)
-
-            if on_started is not None:
-                on_started(self)
-
-            while not self._must_stop.is_set():
-
-                if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                    pass
-
-                elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
-
-                    # Shallow-clone our sessions into a list, so we can iterate
-                    # over it and not worry about whether it's being changed
-                    # outside this coroutine.
-                    session_pairs = list(self._session_infos.items())
-
-                    for ws, session_info in session_pairs:
-                        if ws is PREHEATED_REPORT_SESSION:
-                            continue
-                        if ws is None:
-                            continue
-                        msg_list = session_info.session.flush_browser_queue()
-                        for msg in msg_list:
-                            try:
-                                self._send_message(ws, session_info, msg)
-                            except tornado.websocket.WebSocketClosedError:
-                                self._remove_browser_connection(ws)
-                            yield
-                        yield
-
-                elif self._state == State.NO_BROWSERS_CONNECTED:
-                    pass
-
-                else:
-                    # Break out of the thread loop if we encounter any other state.
-                    break
-
-                yield tornado.gen.sleep(0.01)
-
-            # Shut down all ReportSessions
-            for session_info in list(self._session_infos.values()):
-                session_info.session.shutdown()
-
-            self._set_state(State.STOPPED)
+            yield self._loop_coroutine(on_started)
 
         except Exception as e:
+            print( 'EXCEPTION!', e)
             traceback.print_stack(file=sys.stdout)
             LOGGER.info(
                 """
@@ -324,6 +279,64 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         finally:
             self._on_stopped()
+
+    @tornado.gen.coroutine
+    def _loop_coroutine(self, on_started=None):
+
+        # lets make this fail
+        self.asdasd
+
+        if self._state == State.INITIAL:
+            self._set_state(State.WAITING_FOR_FIRST_BROWSER)
+        elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+            pass
+        else:
+            raise RuntimeError(
+                "Bad server state at start: %s" % self._state)
+
+        if on_started is not None:
+            on_started(self)
+
+        while not self._must_stop.is_set():
+
+            if self._state == State.WAITING_FOR_FIRST_BROWSER:
+                pass
+
+            elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+
+                # Shallow-clone our sessions into a list, so we can iterate
+                # over it and not worry about whether it's being changed
+                # outside this coroutine.
+                session_pairs = list(self._session_infos.items())
+
+                for ws, session_info in session_pairs:
+                    if ws is PREHEATED_REPORT_SESSION:
+                        continue
+                    if ws is None:
+                        continue
+                    msg_list = session_info.session.flush_browser_queue()
+                    for msg in msg_list:
+                        try:
+                            self._send_message(ws, session_info, msg)
+                        except tornado.websocket.WebSocketClosedError:
+                            self._remove_browser_connection(ws)
+                        yield
+                    yield
+
+            elif self._state == State.NO_BROWSERS_CONNECTED:
+                pass
+
+            else:
+                # Break out of the thread loop if we encounter any other state.
+                break
+
+            yield tornado.gen.sleep(0.01)
+
+        # Shut down all ReportSessions
+        for session_info in list(self._session_infos.values()):
+            session_info.session.shutdown()
+
+        self._set_state(State.STOPPED)
 
     def _send_message(self, ws, session_info, msg):
         """Send a message to a client.
