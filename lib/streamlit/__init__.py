@@ -183,6 +183,8 @@ vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
+number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
+
 _text_exception = _with_dg(_DeltaGenerator._text_exception)  # noqa: E221
 
 # Config

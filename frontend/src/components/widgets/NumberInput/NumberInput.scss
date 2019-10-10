@@ -1,0 +1,22 @@
+.stNumberInput {
+  input[type="number"] {
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  .startEnhancer,
+  .endEnhancer {
+    width: 40px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .instructions {
+    right: 45px;
+  }
+}

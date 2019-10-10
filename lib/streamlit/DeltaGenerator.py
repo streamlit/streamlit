@@ -16,7 +16,12 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import (
+    print_function,
+    division,
+    unicode_literals,
+    absolute_import
+)
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -118,7 +123,8 @@ def _with_element(method):
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
 
-        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
+        return dg._enqueue_new_element_delta(marshall_element, delta_type,
+                                             last_index)
 
     return wrapped_method
 
@@ -241,7 +247,8 @@ class DeltaGenerator(object):
         import streamlit as st
 
         streamlit_methods = [
-            method_name for method_name in dir(st) if callable(getattr(st, method_name))
+            method_name for method_name in dir(st) if
+            callable(getattr(st, method_name))
         ]
 
         def wrapper(*args, **kwargs):
@@ -249,7 +256,8 @@ class DeltaGenerator(object):
                 if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
                     message = (
                         "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {
+                            "name": name}
                     )
                 else:
                     message = (
@@ -712,7 +720,8 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.exception_proto as exception_proto
 
-        exception_proto.marshall(element.exception, exception, exception_traceback)
+        exception_proto.marshall(element.exception, exception,
+                                 exception_traceback)
 
     @_with_element
     def _text_exception(self, element, exception_type, message, stack_trace):
@@ -785,7 +794,8 @@ class DeltaGenerator(object):
             data_frame_proto.marshall_data_frame(data, delta.data_frame)
 
         return self._enqueue_new_element_delta(
-            set_data_frame, "dataframe", elementWidth=width, elementHeight=height
+            set_data_frame, "dataframe", elementWidth=width,
+            elementHeight=height
         )
 
     @_with_element
@@ -890,7 +900,8 @@ class DeltaGenerator(object):
         altair.marshall(element.vega_lite_chart, chart, width, height=height)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0,
+                        **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -945,7 +956,8 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, width, **kwargs)
+        vega_lite.marshall(element.vega_lite_chart, data, spec, width,
+                           **kwargs)
 
     @_with_element
     def altair_chart(self, element, altair_chart, width=0):
@@ -1061,7 +1073,8 @@ class DeltaGenerator(object):
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0, sharing="streamlit", **kwargs
+        self, element, figure_or_data, width=0, height=0, sharing="streamlit",
+        **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -1140,7 +1153,8 @@ class DeltaGenerator(object):
         import streamlit.elements.plotly_chart as plotly_chart
 
         plotly_chart.marshall(
-            element.plotly_chart, figure_or_data, width, height, sharing, **kwargs
+            element.plotly_chart, figure_or_data, width, height, sharing,
+            **kwargs
         )
 
     @_with_element
@@ -1426,7 +1440,8 @@ class DeltaGenerator(object):
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, default=None, format_func=str):
+    def multiselect(self, element, label, options, default=None,
+                    format_func=str):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1458,6 +1473,7 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', options)
 
         """
+
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(default_values):
             for value in default_values:
@@ -1473,7 +1489,8 @@ class DeltaGenerator(object):
             return [options.index(value) for value in default]
 
         indices = (
-            _check_and_convert_to_indices(default) if default is not None else None
+            _check_and_convert_to_indices(
+                default) if default is not None else None
         )
         element.multiselect.label = label
         default_value = [] if indices is None else indices
@@ -1521,14 +1538,17 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
+            raise TypeError(
+                "Radio Value has invalid type: %s" % type(index).__name__)
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Radio index must be between 0 and length of options")
+            raise ValueError(
+                "Radio index must be between 0 and length of options")
 
         element.radio.label = label
         element.radio.default = index
-        element.radio.options[:] = [str(format_func(option)) for option in options]
+        element.radio.options[:] = [str(format_func(option)) for option in
+                                    options]
 
         ui_value = _get_widget_ui_value("radio", element)
         current_value = ui_value if ui_value is not None else index
@@ -1571,11 +1591,13 @@ class DeltaGenerator(object):
             )
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Selectbox index must be between 0 and length of options")
+            raise ValueError(
+                "Selectbox index must be between 0 and length of options")
 
         element.selectbox.label = label
         element.selectbox.default = index
-        element.selectbox.options[:] = [str(format_func(option)) for option in options]
+        element.selectbox.options[:] = [str(format_func(option)) for option in
+                                        options]
 
         ui_value = _get_widget_ui_value("selectbox", element)
         current_value = ui_value if ui_value is not None else index
@@ -1712,7 +1734,8 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise ValueError(
+                    "The value and/or arguments are out of range.")
 
         # Set format default.
         if format is None:
@@ -1776,6 +1799,52 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("text_input", element)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
+
+    @_with_element
+    def number_input(
+        self,
+        element,
+        label,
+        value=None,
+        min_value=None,
+        max_value=None,
+        step=None,
+        format=None
+    ):
+        int_value = isinstance(value, int)
+
+        if value is not None:
+            if format is None and int_value:
+                format = "%d"
+            else:
+                format = "%0.2f"
+
+            if step is None:
+                if format is None:
+                    step = 1 if int_value else 0.01
+                else:
+                    step = 1 if format[-1:] == 'd' else 0.01
+
+        element.number_input.label = label
+
+        if value is not None:
+            element.number_input.default = value
+
+        if min_value is not None:
+            element.number_input.min = min_value
+
+        if max_value is not None:
+            element.number_input.max = max_value
+
+        if step is not None:
+            element.number_input.step = step
+
+        if format is not None:
+            element.number_input.format = format
+
+        ui_value = _get_widget_ui_value("number_input", element)
+
+        return ui_value if ui_value is not None else value
 
     @_with_element
     def text_area(self, element, label, value=""):
@@ -1842,7 +1911,8 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError("The type of the value should be either datetime or time.")
+            raise TypeError(
+                "The type of the value should be either datetime or time.")
 
         # Convert datetime to time
         if isinstance(value, datetime):
@@ -1890,7 +1960,8 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError("The type of the value should be either datetime or date.")
+            raise TypeError(
+                "The type of the value should be either datetime or date.")
 
         # Convert datetime to date
         if isinstance(value, datetime):
@@ -2269,7 +2340,8 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             old_stop = _get_pandas_index_attr(data, "stop")
 
             if old_step is None or old_stop is None:
-                raise AttributeError("'RangeIndex' object has no attribute " "'step'")
+                raise AttributeError(
+                    "'RangeIndex' object has no attribute " "'step'")
 
             start = last_index + old_step
             stop = last_index + old_step + old_stop
