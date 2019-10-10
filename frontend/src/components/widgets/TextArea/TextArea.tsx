@@ -112,7 +112,7 @@ class TextArea extends React.PureComponent<Props, State> {
         )}
 
         {dirty && this.isFromMac && (
-          <div className="instructions">Press Command+Enter to apply</div>
+          <div className="instructions">Press ⌘+Enter to apply</div>
         )}
       </div>
     )
