@@ -300,6 +300,10 @@ class ScriptRunner(object):
             sys.modules["__main__"] = module
 
             # Add special variables to the module's globals dict.
+            # Note: The following is a requirement for the CodeHasher to
+            # work correctly. The CodeHasher is scoped to
+            # files contained in the directory of __main__.__file__, which we
+            # assume is the main script directory.
             module.__dict__["__file__"] = self._report.script_path
 
             with modified_sys_path(self._report), self._set_execing_flag():

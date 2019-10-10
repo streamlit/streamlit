@@ -44,8 +44,8 @@
     margin 500ms 0ms, visibility 0ms 500ms;
 }
 
-#ConnectionStatus svg * {
-  fill: $gray-700;
+#ConnectionStatus .icon {
+  color: $gray;
 }
 
 #ConnectionStatus.minimized label {
@@ -79,6 +79,7 @@
   margin: 0 0 0 1rem;
   white-space: nowrap;
   max-width: 20rem;
+  height: 1rem;
 }
 
 #ReportStatus label.prompt {
@@ -95,8 +96,10 @@
   white-space: nowrap;
 }
 
-#ReportStatus svg.icon {
-  fill: $gray-700;
+#ReportStatus .icon {
+  color: $gray-700;
+  display: inline-flex;
+  font-size: 1rem;
   width: 1rem;
   height: 1rem;
   margin-right: 0.5rem;

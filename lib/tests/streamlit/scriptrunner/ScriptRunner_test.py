@@ -16,6 +16,7 @@
 """Tests ScriptRunner functionality"""
 
 import os
+import sys
 import time
 import unittest
 
@@ -70,6 +71,15 @@ class ScriptRunnerTest(unittest.TestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, ["complete!"])
+        # The following check is a requirement for the CodeHasher to
+        # work correctly. The CodeHasher is scoped to
+        # files contained in the directory of __main__.__file__, which we
+        # assume is the main script directory.
+        self.assertEqual(
+            scriptrunner._report.script_path,
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
+        )
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""

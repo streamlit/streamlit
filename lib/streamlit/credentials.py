@@ -24,6 +24,7 @@ import click
 import toml
 
 from streamlit import util
+from streamlit import config
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -163,6 +164,10 @@ class Credentials(object):
 
     def save(self):
         """Save to toml file."""
+        # Create intermediate directories if necessary
+        os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
+
+        # Write the file
         data = {"email": self.activation.email}
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
@@ -190,9 +195,18 @@ class Credentials(object):
 
             while not activated:
 
-                email = click.prompt(
-                    text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
-                )
+                # Don't stop execution to show an interactive prompt
+                # when in headless mode, as this makes it harder for
+                # people to deploy Streamlit apps.
+                if config.get_option("server.headless"):
+                    email = ""
+                else:
+                    email = click.prompt(
+                        text=EMAIL_PROMPT,
+                        prompt_suffix="",
+                        default="",
+                        show_default=False,
+                    )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:

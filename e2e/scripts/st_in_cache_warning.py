@@ -35,7 +35,9 @@ cached_write("I'm in a cached function!")
 cached_widget("Wadjet!")
 cached_write_nowarn("Me too!")
 
-st.write("""
+st.write(
+    """
     If this is failing locally, it could be because you have a browser with
     Streamlit open. Close it and the test should pass.
-""")
+"""
+)

@@ -16,11 +16,20 @@
  */
 
 import React, { ReactNode, ReactElement } from "react"
+
+import classNames from "classnames"
 import ReactJson from "react-json-view"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
-import CodeBlock from "../CodeBlock"
 import { Text as TextProto } from "autogen/proto"
+
+// Ignoring typeScript for this module as it has no ts support
+// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+// @ts-ignore
+import htmlParser from "react-markdown/plugins/html-parser"
+
+import CodeBlock from "../CodeBlock"
+
 import "./Text.scss"
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
@@ -89,30 +98,38 @@ class Text extends React.PureComponent<Props> {
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
     }
+    const styleProp = { width }
 
     switch (format) {
       // Plain, fixed width text.
-      case TextProto.Format.PLAIN:
-        return (
-          <div className="fixed-width stText" style={{ width }}>
-            {body}
-          </div>
-        )
+      case TextProto.Format.PLAIN: {
+        const props = {
+          className: classNames("fixed-width", "stText"),
+          style: styleProp,
+        }
+
+        return <div {...props}>{body}</div>
+      }
 
       // Markdown.
-      case TextProto.Format.MARKDOWN:
+      case TextProto.Format.MARKDOWN: {
+        const allowHTML = element.get("allowHtml")
+        const astPlugins = allowHTML ? [htmlParser()] : []
+
         return (
-          <div className="markdown-text-container stText" style={{ width }}>
+          <div className="markdown-text-container stText" style={styleProp}>
             <ReactMarkdown
               source={body}
+              escapeHtml={!allowHTML}
+              astPlugins={astPlugins}
               renderers={renderers}
-              escapeHtml={!element.get("allowHtml")}
             />
           </div>
         )
+      }
 
       // A JSON object. Stored as a string.
-      case TextProto.Format.JSON:
+      case TextProto.Format.JSON: {
         let bodyObject = undefined
         try {
           bodyObject = JSON.parse(body)
@@ -122,7 +139,7 @@ class Text extends React.PureComponent<Props> {
           throw e
         }
         return (
-          <div className="json-text-container stText" style={{ width }}>
+          <div className="json-text-container stText" style={styleProp}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
@@ -132,24 +149,27 @@ class Text extends React.PureComponent<Props> {
             />
           </div>
         )
+      }
 
       case TextProto.Format.ERROR:
       case TextProto.Format.WARNING:
       case TextProto.Format.INFO:
-      case TextProto.Format.SUCCESS:
+      case TextProto.Format.SUCCESS: {
         return (
           <div
-            className={`alert ${getAlertCSSClass(format)} stText`}
-            style={{ width }}
+            className={classNames("alert", getAlertCSSClass(format), "stText")}
+            style={styleProp}
           >
             <div className="markdown-text-container">
               <ReactMarkdown source={body} renderers={renderers} />
             </div>
           </div>
         )
+      }
+
       // Default
       default:
-        throw new Error(`Invalid Text format:${element.get("format")}`)
+        throw new Error(`Invalid Text format:${format}`)
     }
   }
 }

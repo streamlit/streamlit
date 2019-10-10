@@ -23,12 +23,13 @@ import {
   INDEX_COLUMN_DESIGNATOR,
 } from "../../../lib/dataFrameProto"
 import { format, Duration } from "../../../lib/format"
-
+import { Map as ImmutableMap } from "immutable"
+import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import * as recharts from "recharts"
 
 import "./Chart.scss"
 
-const COMPONENTS = {
+const COMPONENTS: any = {
   ////////////
   // Charts //
   ////////////
@@ -109,14 +110,25 @@ const SUPPORTED_INDEX_TYPES = new Set([
   // TODO(tvst): Support other index types
 ])
 
-class Chart extends React.PureComponent {
-  render() {
-    const { element, width } = this.props
+interface Props {
+  width: number
+  element: ImmutableMap<string, any>
+}
+
+interface PropsWithHeight extends Props {
+  height: number | undefined
+}
+
+interface State {}
+
+class Chart extends React.PureComponent<PropsWithHeight, State> {
+  render(): JSX.Element {
+    const { element, width, height } = this.props
     // Default height is 200 if not specified.
     const chartXOffset = 0 // 35;
     const chartDims = {
       width: (element.get("width") || width) + chartXOffset,
-      height: element.get("height") || 200,
+      height: element.get("height") || height || 200,
     }
 
     // Convert the data into a format that Recharts understands.
@@ -128,27 +140,29 @@ class Chart extends React.PureComponent {
     const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
 
     // transform to number, e.g. to support Date
-    let indexTransform = undefined
+    let indexTransform: any = undefined
     // transform to human readable tick, e.g. to support Date
-    let tickFormatter = undefined
+    let tickFormatter: any = undefined
     switch (indexType) {
       case "datetimeIndex":
-        indexTransform = date => date.getTime()
-        tickFormatter = millis => format.dateToString(new Date(millis))
+        indexTransform = (date: Date) => date.getTime()
+        tickFormatter = (millis: number) =>
+          format.dateToString(new Date(millis))
         break
       case "timedeltaIndex":
-        indexTransform = date => date.getTime()
-        tickFormatter = millis => format.durationToString(new Duration(millis))
+        indexTransform = (date: Date) => date.getTime()
+        tickFormatter = (millis: number) =>
+          format.durationToString(new Duration(millis))
         break
       case "float_64Index":
-        tickFormatter = float => float.toFixed(2)
+        tickFormatter = (float: number) => float.toFixed(2)
         break
       default:
         break
     }
 
     for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const rowData = {}
+      const rowData: any = {}
 
       if (hasSupportedIndex) {
         rowData[INDEX_COLUMN_DESIGNATOR] = indexGet(
@@ -174,7 +188,7 @@ class Chart extends React.PureComponent {
     }
 
     // Parse out the chart props into an object.
-    const chart_props = extractProps(element)
+    const chart_props: boolean = extractProps(element)
     // for (const chartProperty of element.get('props'))
     //   chart_props[chartProperty.get('key')] = chartProperty.get('value');
 
@@ -183,9 +197,9 @@ class Chart extends React.PureComponent {
         <div style={{ ...chartDims, left: -chartXOffset }}>
           {React.createElement(
             COMPONENTS[element.get("type")],
-            { ...chartDims, data, ...chart_props },
-            ...element.get("components").map(component => {
-              const component_props = extractProps(component)
+            { ...chartDims, data, ...{ chart_props } },
+            ...element.get("components").map((component: any) => {
+              const component_props: any = extractProps(component)
               const isXAxis = component.get("type") === "XAxis"
               if (isXAxis && tickFormatter) {
                 component_props["tickFormatter"] = tickFormatter
@@ -202,15 +216,15 @@ class Chart extends React.PureComponent {
   }
 }
 
-function extractProps(element) {
-  function tryParseFloat(s) {
+function extractProps(element: any): boolean {
+  function tryParseFloat(s: string): string | number {
     s = s.trim()
     const f = parseFloat(s)
     return isNaN(f) ? s : f
   }
 
-  const props = {}
-  element.get("props").forEach(prop => {
+  const props: any = {}
+  element.get("props").forEach((prop: any) => {
     let value = prop.get("value")
 
     // Do a little special-casing here. This is a hack which has to be fixed.
@@ -222,11 +236,24 @@ function extractProps(element) {
       value = prop
         .get("value")
         .split(",")
-        .map(x => tryParseFloat(x))
+        .map((x: any) => tryParseFloat(x))
     }
     props[prop.get("key")] = value
   })
   return props
 }
 
-export default Chart
+class WithFullScreenWrapper extends React.Component<Props> {
+  render(): JSX.Element {
+    const { element, width } = this.props
+    return (
+      <FullScreenWrapper width={width}>
+        {({ width, height }) => (
+          <Chart element={element} width={width} height={height} />
+        )}
+      </FullScreenWrapper>
+    )
+  }
+}
+
+export default WithFullScreenWrapper
