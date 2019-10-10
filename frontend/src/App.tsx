@@ -512,17 +512,19 @@ class App extends PureComponent<Props, State> {
         this.state.reportRunState === ReportRunState.RUNNING
 
       setTimeout(() => {
-        this.elementListBufferTimerIsSet = false
-        if (isStaticConnection || reportIsRunning) {
-          // Create brand new `elements` instance, so components that depend on
-          // this for re-rendering catch the change.
-          if (this.elementListBuffer) {
-            const elements: Elements = {
-              ...this.elementListBuffer,
+        window.requestAnimationFrame(() => {
+          this.elementListBufferTimerIsSet = false
+          if (isStaticConnection || reportIsRunning) {
+            // Create brand new `elements` instance, so components that depend on
+            // this for re-rendering catch the change.
+            if (this.elementListBuffer) {
+              const elements: Elements = {
+                ...this.elementListBuffer,
+              }
+              this.setState({ elements: elements })
             }
-            this.setState({ elements: elements })
           }
-        }
+        })
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
   }
