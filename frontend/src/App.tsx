@@ -37,6 +37,7 @@ import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { applyDelta, Elements, BlockElement } from "lib/DeltaParser"
+import { Map as ImmutableMap } from "immutable"
 import {
   ForwardMsg,
   SessionEvent,
@@ -417,6 +418,18 @@ class App extends PureComponent<Props, State> {
           this.elementListBuffer = this.state.elements
         }
       )
+
+      if (this.elementListBuffer) {
+        const ids = this.elementListBuffer.main
+          .map(e =>
+            (e as ImmutableMap<string, any>)
+              .get((e as ImmutableMap<string, any>).get("type"))
+              .get("id")
+          )
+          .filter(x => x != null)
+          .toArray()
+        this.widgetMgr.clean(ids as [string])
+      }
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from

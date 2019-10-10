@@ -180,6 +180,14 @@ export class WidgetStateManager {
     this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
   }
 
+  public clean(ids: [string]): void {
+    this.widgetStates.forEach((value, key) => {
+      if (!ids.includes(key)) {
+        this.deleteWidgetStateProto(key)
+      }
+    })
+  }
+
   private createWigetStatesMsg(): WidgetStates {
     const msg = new WidgetStates()
     this.widgetStates.forEach(value => msg.widgets.push(value))
