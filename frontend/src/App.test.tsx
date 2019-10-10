@@ -20,6 +20,8 @@ import ReactDOM from "react-dom"
 import { SessionInfo } from "./lib/SessionInfo"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
+import { BlockElement } from "lib/DeltaParser"
+import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
 import App from "./App"
 
 beforeEach(() => {

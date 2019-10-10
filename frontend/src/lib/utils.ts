@@ -17,8 +17,14 @@
 
 import url from "url"
 import xxhash from "xxhashjs"
-import { fromJS, Map as ImmutableMap } from "immutable"
+import {
+  fromJS,
+  List,
+  Map as ImmutableMap,
+  Set as ImmutableSet,
+} from "immutable"
 import { Text as TextProto } from "autogen/proto"
+import { BlockElement, Element, SimpleElement } from "./DeltaParser"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -54,10 +60,9 @@ export function isEmbeddedInIFrame(): boolean {
  * A helper function to make an ImmutableJS
  * info element from the given text.
  */
-
-type Element = ImmutableMap<string, any>
-
-export function makeElementWithInfoText(text: string): Element {
+export function makeElementWithInfoText(
+  text: string
+): ImmutableMap<string, any> {
   return fromJS({
     type: "text",
     text: {
@@ -84,4 +89,22 @@ export function requireNonNull<T>(obj: T | null | undefined): T {
     throw new Error("value is null")
   }
   return obj
+}
+
+/**
+ * Provide an ImmutableSet of SimpleElements by walking a BlockElement to
+ * its leaves.
+ */
+export function flattenElements(
+  elements: BlockElement
+): ImmutableSet<SimpleElement> {
+  return elements.reduce(
+    (acc: ImmutableSet<SimpleElement>, element: Element) => {
+      if (element instanceof List) {
+        return flattenElements(element as BlockElement)
+      }
+      return acc.union(ImmutableSet.of(element as SimpleElement))
+    },
+    ImmutableSet.of<SimpleElement>()
+  )
 }
