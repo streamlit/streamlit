@@ -34,13 +34,15 @@ import sys
 import urllib
 
 import click
+import fnmatch
 import requests
 
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-STREAMLIT_ROOT_DIRECTORY = ".streamlit"
+# Configuration and credentials are stored inside the ~/.streamlit folder
+CONFIG_FOLDER_NAME = ".streamlit"
 
 # Magic strings used to mark exceptions that have been handled by Streamlit's
 # excepthook. These string should be printed to stderr.
@@ -71,7 +73,7 @@ def streamlit_read(path, binary=False):
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % STREAMLIT_ROOT_DIRECTORY
+    """ % CONFIG_FOLDER_NAME
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
         raise Error('Read zero byte file: "%s"' % filename)
@@ -79,7 +81,7 @@ def streamlit_read(path, binary=False):
     mode = "r"
     if binary:
         mode += "b"
-    with open(os.path.join(STREAMLIT_ROOT_DIRECTORY, path), mode) as handle:
+    with open(os.path.join(CONFIG_FOLDER_NAME, path), mode) as handle:
         yield handle
 
 
@@ -97,11 +99,12 @@ def streamlit_write(path, binary=False):
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % STREAMLIT_ROOT_DIRECTORY
+    """ % CONFIG_FOLDER_NAME
     mode = "w"
     if binary:
         mode += "b"
     path = get_streamlit_file_path(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         with open(path, mode) as handle:
             yield handle
@@ -242,26 +245,25 @@ def open_browser(url):
 
     system = platform.system()
 
+    if system == "Windows":
+        # Treat Windows separately because:
+        # 1. /dev/null doesn't exist.
+        # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
+        #    browser even though 'start url' works from the command prompt.
+        # Fun!
+        import webbrowser
+        webbrowser.open(url)
+        return
+
+    # We don't use the webbrowser module on Linux and Mac because some browsers
+    # (ahem... Chrome) always print "Opening in existing browser session" to
+    # the terminal, which is spammy and annoying. So instead we start the
+    # browser ourselves and send all its output to /dev/null.
+
     if system == "Linux":
         cmd = ["xdg-open", url]
     elif system == "Darwin":
         cmd = ["open", url]
-    elif system == "Windows":
-        # Windows has a few bugs.
-        # * os.devnull doesnt exist so the open command below fails
-        # * subprocess doesnt actually pop up the browser even though
-        #   'start url' works from the command prompt
-        # * tornado for whatever reason doesnt map / to /index.html and
-        #   you get a 404.
-        data = urllib.parse.urlsplit(url)
-        (scheme, netloc, path, query, fragment) = data
-        if re.match(r"^/$", path):
-            path = "/index.html"
-        url = urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
-        import webbrowser
-
-        webbrowser.open(url)
-        return
     else:
         raise Error('Cannot open browser in platform "%s"' % system)
 
@@ -403,22 +405,24 @@ def is_function(x):
 
 
 def get_streamlit_file_path(*filepath):
-    """Return the full path to a filepath in ~/.streamlit.
+    """Return the full path to a file in ~/.streamlit.
 
-    Creates ~/.streamlit if needed.
+    This doesn't guarantee that the file (or its directory) exists.
     """
     # os.path.expanduser works on OSX, Linux and Windows
     home = os.path.expanduser("~")
     if home is None:
         raise RuntimeError("No home directory.")
 
-    folder_path = filepath[:-1]
-    st_path = os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *folder_path)
+    return os.path.join(home, CONFIG_FOLDER_NAME, *filepath)
 
-    if not os.path.isdir(st_path):
-        os.makedirs(st_path)
 
-    return os.path.join(home, STREAMLIT_ROOT_DIRECTORY, *filepath)
+def get_project_streamlit_file_path(*filepath):
+    """Return the full path to a filepath in ${CWD}/.streamlit.
+
+    This doesn't guarantee that the file (or its directory) exists.
+    """
+    return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
 
 
 def print_url(title, url):
@@ -451,3 +455,26 @@ def is_namedtuple(x):
 
 def is_darwin():
     return platform.system() == "Darwin"
+
+
+def file_is_in_folder_glob(filepath, folderpath_glob):
+    """Test whether a file is in some folder with globbing support.
+
+    Parameters
+    ----------
+    filepath : str
+        A file path.
+    folderpath_glob: str
+        A path to a folder that may include globbing.
+
+    """
+    # Make the glob always end with "/*" so we match files inside subfolders of
+    # folderpath_glob.
+    if not folderpath_glob.endswith("*"):
+        if folderpath_glob.endswith("/"):
+            folderpath_glob += "*"
+        else:
+            folderpath_glob += "/*"
+
+    file_dir = os.path.dirname(filepath) + "/"
+    return fnmatch.fnmatch(file_dir, folderpath_glob)

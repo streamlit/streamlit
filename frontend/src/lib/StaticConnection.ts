@@ -102,10 +102,10 @@ export class StaticConnection {
 /**
  * Parses the S3 data bucket name and report version from the window location href
  */
-function getBucketAndVersion(): { bucket?: string; version: string } {
+function getBucketAndVersion(): { bucket: string; version: string } {
   // TODO: Unify with ConnectionManager.ts
   const { hostname, pathname } = url.parse(window.location.href, true)
-  const bucket = hostname
+  const bucket = String(hostname)
   const version = pathname != null ? pathname.split("/")[1] : "null"
   return { bucket, version }
 }

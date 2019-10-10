@@ -6,7 +6,7 @@ Streamlit lets you create apps for your machine learning projects with deceptive
 
 ![Example of live coding a dashboard in Streamlit|635x380](https://aws1.discourse-cdn.com/standard10/uploads/streamlit/original/1X/292e985f7f75ef7bef8c27b5899f71f76cd577e0.gif)
 
-**Streamlit launched today! Check out our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!**
+**Check out our [launch blog post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!**
 
 ## Installation
 
@@ -45,7 +45,7 @@ streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/mast
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)
 - Our lovely [community](https://discuss.streamlit.io/)
-- Streamlit [documentaton](https://streamlit.io/docs)
+- Streamlit [documentation](https://streamlit.io/docs)
 - More [demo projects](https://github.com/streamlit/)
 
 ## Streamlit for Teams

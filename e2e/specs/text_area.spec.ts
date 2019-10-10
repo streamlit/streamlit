@@ -68,6 +68,20 @@ describe("st.text_area", () => {
     );
   });
 
+  it("sets value correctly on command-enter keypress", () => {
+    cy.get(".stTextArea textarea")
+      .first()
+      .type("test area{command}{enter}");
+
+    cy.get(".stText").should(
+      "have.text",
+      'value 1: " test area "' +
+        'value 2: " default text "' +
+        'value 3: " 1234 "' +
+        'value 4: " None "'
+    );
+  });
+
   it("sets value correctly on blur", () => {
     cy.get(".stTextArea textarea")
       .first()

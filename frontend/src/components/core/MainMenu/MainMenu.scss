@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-#MainMenuButton {
-  height: 2.5rem;
-  width: 2.5rem;
+@import "src/assets/css/variables";
+
+#MainMenuBtn {
+  height: $overlayBtn-height;
+  width: $overlayBtn-width;
 }
 
-#MainMenuButton > svg {
+#MainMenuBtn > svg {
   margin-top: -0.25rem;
 }
 

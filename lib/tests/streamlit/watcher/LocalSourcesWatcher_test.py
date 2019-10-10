@@ -24,43 +24,6 @@ from mock import patch
 from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
-from streamlit.watcher.LocalSourcesWatcher import _file_is_in_folder
-
-
-class FileIsInFolderTest(unittest.TestCase):
-    def test_file_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c/")
-        self.assertTrue(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/a/b/c")
-        self.assertTrue(ret)
-
-    def test_file_not_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f/")
-        self.assertFalse(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "/d/e/f")
-        self.assertFalse(ret)
-
-    def test_rel_file_not_in_folder(self):
-        # Test with and without trailing slash
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f/")
-        self.assertFalse(ret)
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "/d/e/f")
-        self.assertFalse(ret)
-
-    def test_file_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/c")
-        self.assertTrue(ret)
-
-    def test_file_not_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("/a/b/c/foo.py", "**/f")
-        self.assertFalse(ret)
-
-    def test_rel_file_not_in_folder_glob(self):
-        ret = LocalSourcesWatcher._file_is_in_folder("foo.py", "**/f")
-        self.assertFalse(ret)
-
 
 if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
@@ -211,35 +174,6 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
 
         fob.assert_not_called()
-
-        # Reset the config object.
-        config.set_option("server.folderWatchBlacklist", prev_blacklist)
-
-    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_auto_blacklist(self, _):
-        prev_blacklist = config.get_option("server.folderWatchBlacklist")
-        config.set_option("server.folderWatchBlacklist", [])
-
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
-
-        def is_blacklisted(filepath):
-            return any(
-                _file_is_in_folder(filepath, blacklisted_folder)
-                for blacklisted_folder in lso._folder_blacklist
-            )
-
-        # miniconda, anaconda, and .*/ folders should be blacklisted
-        self.assertTrue(is_blacklisted("/foo/miniconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/miniconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.virtualenv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.venv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.random_hidden_folder/script.py"))
-
-        # Ensure we're not accidentally blacklisting things we shouldn't be
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/script.py"))
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/.hidden_script.py"))
 
         # Reset the config object.
         config.set_option("server.folderWatchBlacklist", prev_blacklist)

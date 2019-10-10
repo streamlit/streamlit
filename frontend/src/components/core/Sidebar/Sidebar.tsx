@@ -17,7 +17,7 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import classNames from "classnames"
-import Icon from "components/core/Icon"
+import Icon from "components/shared/Icon"
 import { Button } from "reactstrap"
 
 import "./Sidebar.scss"
@@ -54,17 +54,17 @@ class Sidebar extends PureComponent<Props, State> {
     }
   }
 
-  componentDidMount() {
+  componentDidMount(): void {
     window.addEventListener("resize", this.checkMobileOnResize)
     document.addEventListener("mousedown", this.handleClickOutside)
   }
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     window.removeEventListener("resize", this.checkMobileOnResize)
     document.removeEventListener("mousedown", this.handleClickOutside)
   }
 
-  handleClickOutside = (event: any) => {
+  handleClickOutside = (event: any): void => {
     if (this.sidebarRef && window) {
       const { current } = this.sidebarRef
       const { innerWidth } = window
@@ -79,13 +79,15 @@ class Sidebar extends PureComponent<Props, State> {
     }
   }
 
-  checkMobileOnResize = () => {
+  checkMobileOnResize = (): boolean => {
     if (!window) return false
 
     const { innerWidth } = window
 
     if (innerWidth <= MEDIUM_BREAKPOINT_PX)
       this.setState({ collapsedSidebar: true })
+
+    return true
   }
 
   toggleCollapse = (): void => {
