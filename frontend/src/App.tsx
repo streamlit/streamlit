@@ -43,7 +43,7 @@ import {
   BlockElement,
   SimpleElement,
 } from "lib/DeltaParser"
-import { Map as ImmutableMap } from "immutable"
+import { Set as ImmutableSet } from "immutable"
 import {
   ForwardMsg,
   SessionEvent,
@@ -427,10 +427,10 @@ class App extends PureComponent<Props, State> {
 
       if (this.elementListBuffer) {
         const ids = this.flattenElements(this.elementListBuffer.main)
-          .concat(this.flattenElements(this.elementListBuffer.sidebar))
-          .map(e => {
+          .union(this.flattenElements(this.elementListBuffer.sidebar))
+          .map((e: SimpleElement) => {
             const type = e.get("type")
-            return e.get(type).get("id")
+            return e.get(type).get("id") as string
           })
           .filter(id => id != null)
         this.widgetMgr.clean(ids)
@@ -464,13 +464,16 @@ class App extends PureComponent<Props, State> {
       .filter((element: any) => element !== null)
   }
 
-  flattenElements = (elements: BlockElement): SimpleElement[] => {
-    return elements.reduce((acc: SimpleElement[], element: Element) => {
-      if (element instanceof List) {
-        return this.flattenElements(element as BlockElement)
-      }
-      return acc.concat([element as SimpleElement])
-    }, [])
+  flattenElements = (elements: BlockElement): ImmutableSet<SimpleElement> => {
+    return elements.reduce(
+      (acc: ImmutableSet<SimpleElement>, element: Element) => {
+        if (element instanceof List) {
+          return this.flattenElements(element as BlockElement)
+        }
+        return acc.union(ImmutableSet.of(element as SimpleElement))
+      },
+      ImmutableSet.of<SimpleElement>()
+    )
   }
 
   /**

@@ -23,6 +23,8 @@ import {
   WidgetStates,
 } from "autogen/proto"
 
+import { Set as ImmutableSet } from "immutable"
+
 export interface Source {
   fromUi: boolean
 }
@@ -180,7 +182,7 @@ export class WidgetStateManager {
     this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
   }
 
-  public clean(ids: string[]): void {
+  public clean(ids: ImmutableSet<string>): void {
     this.widgetStates.forEach((value, key) => {
       if (!ids.includes(key)) {
         this.deleteWidgetStateProto(key)
