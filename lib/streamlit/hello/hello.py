@@ -37,9 +37,9 @@ DEMOS = OrderedDict(
             (
                 demos.fractal_demo,
                 """
-This demo shows how to use
-[`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
-to display geospatial data.
+This app shows how you can use Streamlit to build cool animations.
+It displays an animated fractal based on the the Julia Set. Use the slider
+to tune different parameters.
 """,
             ),
         ),
@@ -48,9 +48,9 @@ to display geospatial data.
             (
                 demos.plotting_demo,
                 """
-This app shows how you can use Streamlit to build cool animations.
-It displays an animated fractal based on the the Julia Set. Use the slider
-to tune different parameters.
+This demo illustrates a combination of plotting and animation with
+Streamlit. We're generating a bunch of random numbers in a loop for around
+5 seconds. Enjoy!
 """,
             ),
         ),
@@ -59,9 +59,9 @@ to tune different parameters.
             (
                 demos.mapping_demo,
                 """
-This demo illustrates a combination of plotting and animation with
-Streamlit. We're generating a bunch of random numbers in a loop for around
-5 seconds. Enjoy!
+This demo shows how to use
+[`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
+to display geospatial data.
 """,
             ),
         ),
