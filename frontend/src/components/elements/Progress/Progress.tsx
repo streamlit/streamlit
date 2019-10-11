@@ -17,7 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import { Progress as RProgress } from "reactstrap"
+import { Progress as UIProgress } from "reactstrap"
 
 import "./Progress.scss"
 
@@ -35,20 +35,21 @@ class Progress extends React.PureComponent<Props> {
     const value = element.get("value")
     const time = new Date().getTime()
 
-    const cn =
+    // If going back to 0, set transition to none. This makes the scrollbar return to 0 quickly.
+    // If the time between the previous update and this one was < 50ms, set transition to none.
+    // This makes the scrollbar stop acting weird when updates come really quickly.
+    const status =
       value < this.lastValue || time - this.lastTime < 50 ? "reset" : "animate"
 
-    if (cn === "animate") {
+    if (status === "animate") {
       this.lastTime = time
     }
-
     this.lastValue = value
-    console.log(cn)
 
     return (
-      <RProgress
+      <UIProgress
         value={value}
-        className={"stProgress-" + cn}
+        className={"stProgress " + status}
         style={{ width }}
       />
     )
