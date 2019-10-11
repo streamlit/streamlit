@@ -95,8 +95,12 @@ def mapping_demo():
                 "widthMaxPixels": 30,
             }
         }
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
+    except urllib.error.URLError as e:
+        st.error("""
+            **This demo requires internet access.**
+
+            Connection error: %s
+        """ % e.reason)
         return
 
     st.sidebar.markdown('### Map Layers')
@@ -215,8 +219,12 @@ def data_frame_demo():
 
     try:
         df = get_UN_data()
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
+    except urllib.error.URLError as e:
+        st.error("""
+            **This demo requires internet access.**
+
+            Connection error: %s
+        """ % e.reason)
         return
 
     countries = st.multiselect(
