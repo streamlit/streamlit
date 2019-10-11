@@ -18,6 +18,8 @@ import threading
 import socket
 import sys
 import errno
+import traceback
+import click
 from enum import Enum
 
 import tornado.concurrent
@@ -247,10 +249,11 @@ class Server(object):
 
             routes.extend(
                 [
-                    (r"/(.*)", StaticFileHandler, {
-                        "path": "%s/" % static_path,
-                        "default_filename": "index.html",
-                    }),
+                    (
+                        r"/(.*)",
+                        StaticFileHandler,
+                        {"path": "%s/" % static_path, "default_filename": "index.html"},
+                    )
                 ]
             )
 
@@ -270,57 +273,69 @@ class Server(object):
 
     @tornado.gen.coroutine
     def _loop_coroutine(self, on_started=None):
-        if self._state == State.INITIAL:
-            self._set_state(State.WAITING_FOR_FIRST_BROWSER)
-        elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
-            pass
-        else:
-            raise RuntimeError("Bad server state at start: %s" % self._state)
-
-        if on_started is not None:
-            on_started(self)
-
-        while not self._must_stop.is_set():
-            if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                pass
-
+        try:
+            if self._state == State.INITIAL:
+                self._set_state(State.WAITING_FOR_FIRST_BROWSER)
             elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
-
-                # Shallow-clone our sessions into a list, so we can iterate
-                # over it and not worry about whether it's being changed
-                # outside this coroutine.
-                session_pairs = list(self._session_infos.items())
-
-                for ws, session_info in session_pairs:
-                    if ws is PREHEATED_REPORT_SESSION:
-                        continue
-                    if ws is None:
-                        continue
-                    msg_list = session_info.session.flush_browser_queue()
-                    for msg in msg_list:
-                        try:
-                            self._send_message(ws, session_info, msg)
-                        except tornado.websocket.WebSocketClosedError:
-                            self._remove_browser_connection(ws)
-                        yield
-                    yield
-
-            elif self._state == State.NO_BROWSERS_CONNECTED:
                 pass
-
             else:
-                # Break out of the thread loop if we encounter any other state.
-                break
+                raise RuntimeError("Bad server state at start: %s" % self._state)
 
-            yield tornado.gen.sleep(0.01)
+            if on_started is not None:
+                on_started(self)
 
-        # Shut down all ReportSessions
-        for session_info in list(self._session_infos.values()):
-            session_info.session.shutdown()
+            while not self._must_stop.is_set():
 
-        self._set_state(State.STOPPED)
+                if self._state == State.WAITING_FOR_FIRST_BROWSER:
+                    pass
 
-        self._on_stopped()
+                elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+
+                    # Shallow-clone our sessions into a list, so we can iterate
+                    # over it and not worry about whether it's being changed
+                    # outside this coroutine.
+                    session_pairs = list(self._session_infos.items())
+
+                    for ws, session_info in session_pairs:
+                        if ws is PREHEATED_REPORT_SESSION:
+                            continue
+                        if ws is None:
+                            continue
+                        msg_list = session_info.session.flush_browser_queue()
+                        for msg in msg_list:
+                            try:
+                                self._send_message(ws, session_info, msg)
+                            except tornado.websocket.WebSocketClosedError:
+                                self._remove_browser_connection(ws)
+                            yield
+                        yield
+
+                elif self._state == State.NO_BROWSERS_CONNECTED:
+                    pass
+
+                else:
+                    # Break out of the thread loop if we encounter any other state.
+                    break
+
+                yield tornado.gen.sleep(0.01)
+
+            # Shut down all ReportSessions
+            for session_info in list(self._session_infos.values()):
+                session_info.session.shutdown()
+
+            self._set_state(State.STOPPED)
+
+        except Exception as e:
+            print("EXCEPTION!", e)
+            traceback.print_stack(file=sys.stdout)
+            LOGGER.info(
+                """
+Please report this bug at https://github.com/streamlit/streamlit/issues.
+"""
+            )
+
+        finally:
+            self._on_stopped()
 
     def _send_message(self, ws, session_info, msg):
         """Send a message to a client.
@@ -382,6 +397,7 @@ class Server(object):
         ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def stop(self):
+        click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
         self._must_stop.set()
 

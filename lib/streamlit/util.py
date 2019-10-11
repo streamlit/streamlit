@@ -252,6 +252,7 @@ def open_browser(url):
         #    browser even though 'start url' works from the command prompt.
         # Fun!
         import webbrowser
+
         webbrowser.open(url)
         return
 
