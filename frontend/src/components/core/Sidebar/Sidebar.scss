@@ -1,7 +1,7 @@
 @import "src/assets/css/theme";
 
 .sidebar {
-  @media (max-width: 746px) {
+  @include media-breakpoint-down(md) {
     margin-left: 0;
     position: absolute;
     top: 0;
@@ -154,4 +154,8 @@
       border-radius: 100px;
     }
   }
+}
+
+div[data-baseweb="popover"] {
+  z-index: $z-index-sidebar-mobile + 1;
 }

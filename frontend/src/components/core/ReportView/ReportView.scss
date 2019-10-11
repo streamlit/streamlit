@@ -51,7 +51,7 @@
       flex: 1;
       max-width: $content-max-width;
       width: 100%;
-      padding: $top-margin 1rem $bottom-margin 1rem;
+      padding: $top-margin 0 $bottom-margin 0;
       box-sizing: border-box;
 
       @media (max-width: 746px) {
