@@ -27,13 +27,28 @@ interface Props {
 }
 
 class Progress extends React.PureComponent<Props> {
+  lastValue: number = -1
+  lastTime: number = -1
+
   public render(): React.ReactNode {
     const { element, width } = this.props
+    const value = element.get("value")
+    const time = new Date().getTime()
+
+    const cn =
+      value < this.lastValue || time - this.lastTime < 50 ? "reset" : "animate"
+
+    if (cn === "animate") {
+      this.lastTime = time
+    }
+
+    this.lastValue = value
+    console.log(cn)
 
     return (
       <RProgress
-        value={element.get("value")}
-        className="stProgress"
+        value={value}
+        className={"stProgress-" + cn}
         style={{ width }}
       />
     )

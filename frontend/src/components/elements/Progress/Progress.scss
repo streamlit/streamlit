@@ -16,13 +16,20 @@
 
 @import "src/assets/css/variables";
 
+// Reset the progress bar to 0 without animating on report re-run.
 .reportview-container {
-  // Reset the progress bar to 0 without animating on report re-run.
-  .progress > .progress-bar {
+  .stProgress-reset .progress-bar {
     -moz-transition: none;
     -webkit-transition: none;
-    -o-transition: color 0 ease-in;
+    -o-transition: color 0 linear;
     transition: none;
+  }
+
+  .stProgress-animate .progress-bar {
+    -moz-transition: width 0.1s linear;
+    -webkit-transition: width 0.1s linear;
+    -o-transition: width 0.1s linear;
+    transition: width 0.1s linear;
   }
 
   .stale-element .progress-bar {
