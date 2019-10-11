@@ -1299,7 +1299,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def audio(self, element, data, format="audio/wav"):
+    def audio(self, element, data, current_time=0, format="audio/wav"):
         """Display an audio player.
 
         Parameters
@@ -1308,6 +1308,8 @@ class DeltaGenerator(object):
                 io.open().
             The audio data. Must include headers and any other bytes required
             in the actual file.
+        current_time: int
+            This argument let you to set start position for this audio elements.
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1329,10 +1331,11 @@ class DeltaGenerator(object):
         import streamlit.elements.generic_binary_proto as generic_binary_proto
 
         generic_binary_proto.marshall(element.audio, data)
+        element.audio.current_time = current_time
         element.audio.format = format
 
     @_with_element
-    def video(self, element, data, format="video/mp4"):
+    def video(self, element, data, current_time=0, format="video/mp4"):
         """Display a video player.
 
         Parameters
@@ -1341,6 +1344,8 @@ class DeltaGenerator(object):
                 io.open().
             Must include headers and any other bytes required in the actual
             file.
+        current_time: int
+            This argument let you to set start position for this video elements.
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1362,6 +1367,7 @@ class DeltaGenerator(object):
         import streamlit.elements.generic_binary_proto as generic_binary_proto
 
         generic_binary_proto.marshall(element.video, data)
+        element.video.current_time = current_time
         element.video.format = format
 
     @_with_element
