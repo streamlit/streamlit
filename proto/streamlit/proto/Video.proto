@@ -20,10 +20,10 @@ message Video {
   // The data in Base64 format.
   string data = 1;
 
-  // The currentTime attribute of the HTML <video> tag's <source> subtag.
-  int32 current_time = 2;
-
   // The type attribute of the HTML <video> tag's <source> subtag.
   // ex: "video/mp4"
-  string format = 3;
+  string format = 2;
+
+  // The currentTime attribute of the HTML <video> tag's <source> subtag.
+  int32 start_time = 3;
 }

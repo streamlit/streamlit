@@ -125,6 +125,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
+        self.assertEqual(el.audio.start_time, 0)
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -549,6 +550,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.video.data, "ESIzRFVm")
         self.assertEqual(el.video.format, "video/mp4")
+        self.assertEqual(el.video.start_time, 0)
 
     def test_st_warning(self):
         """Test st.warning."""

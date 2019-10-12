@@ -28,8 +28,8 @@ class Video extends React.PureComponent<Props> {
 
   public componentDidMount = (): void => {
     if (this.videoRef.current) {
-      const currentTime = this.props.element.get("currentTime")
-      this.videoRef.current.currentTime = currentTime
+      const startTime = this.props.element.get("startTime")
+      this.videoRef.current.currentTime = startTime
     }
   }
 

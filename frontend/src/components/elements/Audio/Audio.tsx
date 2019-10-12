@@ -28,8 +28,8 @@ class Audio extends React.PureComponent<Props> {
 
   public componentDidMount = (): void => {
     if (this.audioRef.current) {
-      const currentTime = this.props.element.get("currentTime")
-      this.audioRef.current.currentTime = currentTime
+      const startTime = this.props.element.get("startTime")
+      this.audioRef.current.currentTime = startTime
     }
   }
 
