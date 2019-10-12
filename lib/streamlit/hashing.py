@@ -151,12 +151,29 @@ def _hashing_error_message(start):
         %(start)s,
 
         **More information:** to prevent unexpected behavior, Streamlit tries
-        to detect mutations in cached objects so it can alert the user if
-        needed. However, something went wrong while performing this check.
+        to detect mutations in cached objects defined in your local files so
+        it can alert you when the cache is used incorrectly. However, something
+        went wrong while performing this check.
 
-        Please [file a bug](https://github.com/streamlit/streamlit/issues/new/choose).
+        This error can occur when your virtual environment lives in the same
+        folder as your project, since that makes it hard for Streamlit to
+        understand which files it should check. If you think that's what caused
+        this, please add the following to `~/.streamlit/config.toml`:
 
-        To stop this warning from showing in the meantime, try one of the following:
+        ```
+        [server]
+        folderWatchBlacklist = ['foldername']
+        ```
+
+        ...where `foldername` is the relative or absolute path to the folder
+        where you put your virtual environment.
+
+        Otherwise, please [file a
+        bug here](https://github.com/streamlit/streamlit/issues/new/choose).
+
+        To stop this warning from showing in the meantime, try one of the
+        following:
+
         * **Preferred:** modify your code to avoid using this type of object.
         * Or add the argument `ignore_hash=True` to the `st.cache` decorator.
     """
