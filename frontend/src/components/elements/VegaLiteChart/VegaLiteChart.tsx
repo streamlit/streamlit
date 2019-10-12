@@ -285,7 +285,11 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     const spec = JSON.parse(el.get("spec"))
 
     const { width, height } = this.getChartDimensions()
-    spec.width = width
+
+    if (spec.width === 0) {
+      spec.width = width
+    }
+
     spec.height = height
     spec.padding = this.getChartPadding(spec.padding)
 

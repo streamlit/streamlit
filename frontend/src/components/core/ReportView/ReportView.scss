@@ -42,6 +42,7 @@
     width: 100%;
     overflow: auto;
     align-items: center;
+    padding: $top-margin 1rem $bottom-margin 1rem;
 
     &:focus {
       outline: none;
@@ -51,7 +52,6 @@
       flex: 1;
       max-width: $content-max-width;
       width: 100%;
-      padding: $top-margin 1rem $bottom-margin 1rem;
       box-sizing: border-box;
 
       @media (max-width: 746px) {
