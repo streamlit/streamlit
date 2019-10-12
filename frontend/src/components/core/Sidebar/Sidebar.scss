@@ -54,7 +54,7 @@
       right: 0.5rem;
       z-index: 1;
 
-      svg {
+      .open-iconic {
         fill: $black;
         opacity: 0.25;
       }
@@ -62,7 +62,7 @@
       &:hover {
         background: transparent;
 
-        svg {
+        .open-iconic {
           opacity: 1;
         }
       }
@@ -113,7 +113,7 @@
     transition: left $normal-animation-duration;
     transition-delay: $normal-animation-duration;
 
-    svg {
+    .open-iconic {
       fill: $black;
       opacity: 0.25;
 
@@ -127,7 +127,7 @@
       background-color: $gray-lightest;
       border-color: #1d2124;
 
-      svg {
+      .open-iconic {
         opacity: 1;
       }
     }
