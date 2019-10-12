@@ -45,8 +45,6 @@
 
     @include media-breakpoint-down(md) {
       box-shadow: 0 0 2rem #a3a8b488;
-      background-color: $gray-100;
-      background-image: none;
       z-index: $z-index-sidebar-mobile;
     }
 
