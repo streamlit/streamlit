@@ -121,7 +121,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
 
     return (
-      <div className={`stFullScreenFrame${expanded ? "--expanded" : ""}`}>
+      <div className={`fullScreenFrame${expanded ? "--expanded" : ""}`}>
         <button
           className={buttonClassName}
           onClick={buttonOnClick}
