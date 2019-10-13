@@ -31,7 +31,11 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 CHECK_PYPI_PROBABILITY = 0.10
 
 
-def get_installed_streamlit_version():
+def _version_str_to_tuple(version_str):
+    return tuple(int(x) for x in version_str.split('.'))
+
+
+def _get_installed_streamlit_version():
     """Return the streamlit version string from setup.py.
 
     Returns
@@ -40,10 +44,11 @@ def get_installed_streamlit_version():
         The version string specified in setup.py.
 
     """
-    return pkg_resources.get_distribution("streamlit").version
+    version_str = pkg_resources.get_distribution("streamlit").version
+    return _version_str_to_tuple(version_str)
 
 
-def get_latest_streamlit_version(timeout=None):
+def _get_latest_streamlit_version(timeout=None):
     """Request the latest streamlit version string from PyPI.
 
     NB: this involves a network call, so it could raise an error
@@ -63,9 +68,10 @@ def get_latest_streamlit_version(timeout=None):
     """
     rsp = requests.get(PYPI_STREAMLIT_URL, timeout=timeout)
     try:
-        return rsp.json()["info"]["version"]
+        version_str = rsp.json()["info"]["version"]
     except Exception as e:
         raise RuntimeError("Got unexpected response from PyPI", e)
+    return _version_str_to_tuple(version_str)
 
 
 def should_show_new_version_notice():
@@ -90,11 +96,11 @@ def should_show_new_version_notice():
         return False
 
     try:
-        installed_version = get_installed_streamlit_version()
-        latest_version = get_latest_streamlit_version(timeout=1)
+        installed_version = _get_installed_streamlit_version()
+        latest_version = _get_latest_streamlit_version(timeout=1)
     except BaseException as e:
         # Log this as a debug. We don't care if the user sees it.
         LOGGER.debug("Failed PyPI version check.\n%s", e)
         return False
 
-    return latest_version != installed_version
+    return latest_version > installed_version

@@ -15,31 +15,30 @@ $ streamlit --help
 
 Below are a few of the most useful commands accepted by Streamlit CLI:
 
-## streamlit run
+## Run Streamlit apps
 
 ```bash
 $ streamlit run your_script.py [script args]
 ```
 
-Runs your app. At any time you can kill the server with **Ctrl+c**. This is useful when making config changes or changing apps/scripts.
+Runs your app. At any time you can kill the server with **Ctrl+c**.
 
-## \-\-version
-
-```bash
-$ streamlit --version
-```
-
-Shows the version of Streamlit in your current Python environment.
-
-## docs
+You can also pass in config options to `streamlit run`. These allow you to do
+things like change the port the app is served from, disable run-on-save, and
+more. To see all options, run:
 
 ```bash
-$ streamlit docs
+$ streamlit run --help
 ```
 
-Opens Streamlit's documentation (i.e. this website) in a web browser.
+```eval_rst
+.. tip::
+  If you want to permanently set certain config options, just add them to
+  `$CWD/.streamlit/config.toml` or to a global
+  `~/.streamlit/config.toml`. More info below.
+```
 
-## hello
+## Run a cool demo
 
 ```bash
 $ streamlit hello
@@ -48,18 +47,43 @@ $ streamlit hello
 Opens Streamlit's Hello World app in a web browser. This is useful for
 testing Streamlit.
 
-## config show
+## View all config options
 
 ```bash
 $ streamlit config show
 ```
 
-Shows all config options for Streamlit, as well as their current values.
+Shows all config options available for Streamlit, including their current
+values. You can set these options in three different ways:
 
-## cache clear
+- **Globally:** `~/.streamlit/config.toml`.
+
+- **Per project:** `$CWD/.streamlit/config.toml`, where `$CWD` is
+  the folder you're running Streamlit from.
+
+- **Per execution:** just pass the options as flags when running `streamlit run`. See more info above.
+
+## Clear the cache
 
 ```bash
 $ streamlit cache clear
 ```
 
-Clears the [Streamlit cache](api.html#optimize-performance).
+Clears persisted files from the [Streamlit
+cache](api.html#optimize-performance), if any.
+
+## View documentation
+
+```bash
+$ streamlit docs
+```
+
+Opens Streamlit's documentation (i.e. this website) in a web browser.
+
+## Print Streamlit's version
+
+```bash
+$ streamlit --version
+```
+
+Shows the version of Streamlit in your current Python environment.
