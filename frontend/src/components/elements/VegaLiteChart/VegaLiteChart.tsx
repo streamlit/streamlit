@@ -66,7 +66,7 @@ interface PropsWithHeight extends Props {
 }
 
 interface Dimensions {
-  width: number
+  width: number | undefined
   height: number
 }
 
@@ -79,11 +79,6 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
    * The Vega view object
    */
   private vegaView: vega.View | undefined
-
-  /**
-   * The width from the parsed Vega-Lite spec.
-   */
-  private specWidth: number | undefined
 
   /**
    * The default data name to add to.
@@ -122,9 +117,17 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
   }
 
-  public getChartDimensions = (): Dimensions => {
-    const width = this.props.width - EMBED_PADDING
+  public getChartDimensions = (specWidth: number | undefined): Dimensions => {
+    // Width values:
+    //  undefined : let Vega-Lite pick (this is -1 in Python)
+    //          0 : use full width
+    //         >0 : use given width
+    // See docs for DeltaGenerator.vega_lite_chart().
+    const width =
+      specWidth === 0 ? this.props.width - EMBED_PADDING : specWidth
+
     const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
+
     return { width, height }
   }
 
@@ -284,7 +287,9 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
 
     const spec = JSON.parse(el.get("spec"))
 
-    const { width, height } = this.getChartDimensions()
+    const { width, height } = this.getChartDimensions(spec.width as (
+      | number
+      | undefined))
     spec.width = width
     spec.height = height
     spec.padding = this.getChartPadding(spec.padding)
@@ -302,6 +307,7 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
 
     const { vgSpec, view } = await embed(this.element, spec)
+
     const datasets = getDataArrays(el)
 
     // Heuristic to determine the default dataset name.

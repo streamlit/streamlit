@@ -23,6 +23,13 @@ describe("message_deduping", () => {
   });
 
   it("displays two dataframes", () => {
-    cy.get(".element-container > .stDataFrame").should("have.length", 2);
+    // Hack to make Cypress wait a little bit before searching for stDataFrame.
+    // (This waits for 2 suspense placeholders and 1 st.write() to show)
+    cy.get(".element-container .stText").should("have.length", 3);
+
+    cy.get(".element-container > .fullScreenFrame > .stDataFrame").should(
+      "have.length",
+      2
+    );
   });
 });
