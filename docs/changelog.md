@@ -30,7 +30,7 @@ _Release date: October 12, 2019_
 **Highlights:**
 
 - 🔧 Ability to set config options as command line flags or in a local config file.
-- 🗖 You can now maximize charts and images!
+- ↕️ You can now maximize charts and images!
 - ⚡ Streamlit is now much faster when writing data in quick succession to your app.
 - ✳️ Ability to blacklist folder globs from "run on save" and `@st.cache` hashing.
 - 🎛️ Improved handling of widget state when Python file is modified.
