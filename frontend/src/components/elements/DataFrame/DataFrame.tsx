@@ -279,7 +279,7 @@ class DataFrame extends React.PureComponent<Props, State> {
       rowHeight,
       headerHeight,
       border,
-      height: Math.min(rows * rowHeight + border, height || DEFAULT_HEIGHT),
+      height: Math.min(rows * rowHeight, height || DEFAULT_HEIGHT),
       elementWidth,
       columnWidth,
       headerWidth,
@@ -353,7 +353,7 @@ class DataFrame extends React.PureComponent<Props, State> {
           columnCount={cols}
           enableFixedColumnScroll
           enableFixedRowScroll
-          height={height - border}
+          height={height}
           rowHeight={rowHeight}
           rowCount={rows}
           width={elementWidth}
@@ -519,7 +519,6 @@ function getWidths(
   return { elementWidth, columnWidth, headerWidth }
 }
 
-// XXX Move this into higher level component
 class WithFullScreenWrapper extends React.Component<Props> {
   render(): JSX.Element {
     const { element, width, height } = this.props
