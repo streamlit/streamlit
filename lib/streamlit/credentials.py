@@ -165,7 +165,12 @@ class Credentials(object):
     def save(self):
         """Save to toml file."""
         # Create intermediate directories if necessary
-        os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(self._conf_file))
+        except Exception:
+            # Python 3 supports exist_ok=True which avoids the try/except,
+            # but Python 2 does not.
+            pass
 
         # Write the file
         data = {"email": self.activation.email}
