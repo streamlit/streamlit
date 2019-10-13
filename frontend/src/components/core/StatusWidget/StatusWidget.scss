@@ -46,6 +46,8 @@
 
 #ConnectionStatus .icon {
   color: $gray;
+  // Make up for 1px spacing that open-iconic adds.
+  margin-top: -1px;
 }
 
 #ConnectionStatus.minimized label {
