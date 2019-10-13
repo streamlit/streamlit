@@ -204,14 +204,16 @@ class Block extends PureComponent<Props> {
     }
 
     const metadata = element.get("metadata") as ForwardMsgMetadata
+    let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
-    if (
-      metadata &&
-      metadata.elementDimensionSpec &&
-      metadata.elementDimensionSpec.width > 0
-    ) {
-      width = Math.min(metadata.elementDimensionSpec.width, width)
+    if (metadata && metadata.elementDimensionSpec) {
+      if (metadata.elementDimensionSpec.width > 0) {
+        width = Math.min(metadata.elementDimensionSpec.width, width)
+      }
+      if (metadata.elementDimensionSpec.height > 0) {
+        height = metadata.elementDimensionSpec.height
+      }
     }
 
     return dispatchOneOf(element, "type", {
@@ -222,7 +224,7 @@ class Block extends PureComponent<Props> {
       ),
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
       dataFrame: (el: SimpleElement) => (
-        <DataFrame element={el} width={width} />
+        <DataFrame element={el} width={width} height={height} />
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
