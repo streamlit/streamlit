@@ -170,6 +170,17 @@ def _apply_config_options_from_cli(kwargs):
             )
 
 
+
+def urlCheck(url):
+    newUrl = url
+    if "github" in url:
+        if "blob" in url:
+            newUrl = url.replace("blob","raw")
+        elif "gist" in url:
+            newUrl = url+"/raw"
+    return newUrl
+
+
 @main.command("run")
 @configurator_options
 @click.argument("file_or_url", required=True)
@@ -191,6 +202,7 @@ def main_run(file_or_url, args=None, **kwargs):
 
         with tempfile.NamedTemporaryFile() as fp:
             try:
+                file_or_url = urlCheck(file_or_url)
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
