@@ -27,6 +27,14 @@ class Audio extends React.PureComponent<Props> {
   private audioRef = React.createRef<HTMLAudioElement>()
 
   public componentDidMount = (): void => {
+    this.updateTime()
+  }
+
+  public componentDidUpdate = (): void => {
+    this.updateTime()
+  }
+
+  private updateTime(): void {
     if (this.audioRef.current) {
       const startTime = this.props.element.get("startTime")
       this.audioRef.current.currentTime = startTime

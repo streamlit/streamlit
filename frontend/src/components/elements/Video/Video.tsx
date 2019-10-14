@@ -27,6 +27,14 @@ class Video extends React.PureComponent<Props> {
   private videoRef = React.createRef<HTMLVideoElement>()
 
   public componentDidMount = (): void => {
+    this.updateTime()
+  }
+
+  public componentDidUpdate = (): void => {
+    this.updateTime()
+  }
+
+  private updateTime(): void {
     if (this.videoRef.current) {
       const startTime = this.props.element.get("startTime")
       this.videoRef.current.currentTime = startTime
