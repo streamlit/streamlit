@@ -52,12 +52,13 @@ def intro():
 # fmt: off
 def mapping_demo():
     import pandas as pd
-    import os
 
     @st.cache
     def from_data_file(filename):
-        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
+        url = (
+            "https://raw.githubusercontent.com/streamlit/"
+            "streamlit/develop/examples/data/%s" % filename)
+        return pd.read_json(url)
 
     try:
         ALL_LAYERS = {
