@@ -29,8 +29,8 @@ interface Props {
 const FAST_UPDATE_MS = 50
 
 class Progress extends React.PureComponent<Props> {
-  lastValue: number = -1
-  lastAnimatedTime: number = -1
+  lastValue = -1
+  lastAnimatedTime = -1
 
   public render(): React.ReactNode {
     const { element, width } = this.props
