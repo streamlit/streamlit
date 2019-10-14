@@ -26,30 +26,34 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
+const FAST_UPDATE_MS = 50
+
 class Progress extends React.PureComponent<Props> {
   lastValue: number = -1
-  lastTime: number = -1
+  lastAnimatedTime: number = -1
 
   public render(): React.ReactNode {
     const { element, width } = this.props
     const value = element.get("value")
     const time = new Date().getTime()
 
-    // If going back to 0, set transition to none. This makes the scrollbar return to 0 quickly.
-    // If the time between the previous update and this one was < 50ms, set transition to none.
-    // This makes the scrollbar stop acting weird when updates come really quickly.
-    const status =
-      value < this.lastValue || time - this.lastTime < 50 ? "reset" : "animate"
+    // Make scrollbar stop acting weird when moving backwards or quickly.
+    const isMovingBackwards = value < this.lastValue
+    const isMovingSuperFast = time - this.lastAnimatedTime < FAST_UPDATE_MS
+    const className =
+      isMovingBackwards || isMovingSuperFast
+        ? "without-transition"
+        : "with-transition"
 
-    if (status === "animate") {
-      this.lastTime = time
+    if (className === "with-transition") {
+      this.lastAnimatedTime = time
     }
     this.lastValue = value
 
     return (
       <UIProgress
         value={value}
-        className={"stProgress " + status}
+        className={"stProgress " + className}
         style={{ width }}
       />
     )

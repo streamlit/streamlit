@@ -18,14 +18,14 @@
 
 // Reset the progress bar to 0 without animating on report re-run.
 .reportview-container {
-  .reset .progress-bar {
+  .without-transition .progress-bar {
     -moz-transition: none;
     -webkit-transition: none;
     -o-transition: color 0 linear;
     transition: none;
   }
 
-  .animate .progress-bar {
+  .with-transition .progress-bar {
     -moz-transition: width 0.1s linear;
     -webkit-transition: width 0.1s linear;
     -o-transition: width 0.1s linear;
