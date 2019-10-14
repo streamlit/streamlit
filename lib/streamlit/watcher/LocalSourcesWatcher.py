@@ -107,9 +107,15 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
-        wm = WatchedModule(
-            watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
-        )
+        try:
+            wm = WatchedModule(
+                watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
+            )
+        except PermissionError:
+            # If you don't have permission to read this file, don't even add it
+            # to watchers.
+            return
+
         self._watched_modules[filepath] = wm
 
     def _deregister_watcher(self, filepath):
