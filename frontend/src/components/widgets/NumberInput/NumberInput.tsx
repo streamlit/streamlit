@@ -23,7 +23,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import "./NumberInput.scss"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
@@ -85,11 +85,18 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, widgetMgr } = this.props
     const widgetId: string = element.get("id")
     const format: string = element.get("format")
+    const formattedValue = format ? sprintf(format, value) : value
 
-    widgetMgr.setStringValue(widgetId, value, source)
+    debugger
+    if (this.valueIsInt()) {
+      widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
+    } else {
+      widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
+    }
+
     this.setState({
       dirty: false,
-      value: format ? sprintf(format, value) : value,
+      value: formattedValue,
     })
   }
 
@@ -113,18 +120,14 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     switch (key) {
       case "ArrowUp":
-        {
-          e.preventDefault()
+        e.preventDefault()
 
-          this.modifyValueUsingStep("increment")()
-        }
+        this.modifyValueUsingStep("increment")()
         break
       case "ArrowDown":
-        {
-          e.preventDefault()
+        e.preventDefault()
 
-          this.modifyValueUsingStep("decrement")()
-        }
+        this.modifyValueUsingStep("decrement")()
         break
     }
   }
@@ -145,20 +148,16 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     switch (modifier) {
       case "increment":
-        {
-          this.setState({
-            dirty: true,
-            value: sprintf(format, value + step),
-          })
-        }
+        this.setState({
+          dirty: true,
+          value: sprintf(format, value + step),
+        })
         break
       case "decrement":
-        {
-          this.setState({
-            dirty: true,
-            value: sprintf(format, value - step),
-          })
-        }
+        this.setState({
+          dirty: true,
+          value: sprintf(format, value - step),
+        })
         break
     }
   }
