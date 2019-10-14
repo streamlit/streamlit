@@ -195,4 +195,15 @@ describe("NumberInput", () => {
       expect(preventDefault).toHaveBeenCalled()
     })
   })
+
+  it("Should show a message when it's dirty", () => {
+    const props = getProps()
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    wrapper.setState({
+      dirty: true,
+    })
+
+    expect(wrapper.find("div.instructions").length).toBe(1)
+  })
 })
