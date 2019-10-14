@@ -37,6 +37,7 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit.util import is_int
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
@@ -1812,18 +1813,68 @@ class DeltaGenerator(object):
         format=None
     ):
         int_value = isinstance(value, int)
+        float_value = isinstance(value, float)
 
         if value is not None:
-            if format is None and int_value:
-                format = "%d"
-            else:
-                format = "%0.2f"
+            if format is None:
+                format = "%d" if int_value else "%0.2f"
 
             if step is None:
                 if format is None:
                     step = 1 if int_value else 0.01
                 else:
-                    step = 1 if format[-1:] == 'd' else 0.01
+                    step = 1 if is_int(format % 0.01) else 0.01
+
+        # Ensure that all arguments are of the same type.
+        args = [min_value, max_value, step]
+        print(args)
+        int_args = all(map(lambda a: (
+            isinstance(a, int) or isinstance(a, type(None))), args))
+        float_args = all(map(lambda a: (
+            isinstance(a, float) or isinstance(a, type(None))), args))
+
+        if not int_args and not float_args:
+            raise TypeError(
+                "All arguments must be of the same type."
+                "\n`value` has %(value_type)s type."
+                "\n`min_value` has %(min_type)s type."
+                "\n`max_value` has %(max_type)s type."
+                % {
+                    "value_type": type(value).__name__,
+                    "min_type": type(min_value).__name__,
+                    "max_type": type(max_value).__name__,
+                }
+            )
+
+        # Ensure that the value matches arguments' types.
+        all_ints = int_value and int_args
+        all_floats = float_value and float_args
+
+        if int_value or float_value:
+            if not all_ints and not all_floats:
+                raise TypeError(
+                    "Both value and arguments must be of the same type."
+                    "\n`value` has %(value_type)s type."
+                    "\n`min_value` has %(min_type)s type."
+                    "\n`max_value` has %(max_type)s type."
+                    % {
+                        "value_type": type(value).__name__,
+                        "min_type": type(min_value).__name__,
+                        "max_type": type(max_value).__name__,
+                    }
+                )
+
+            if (min_value and min_value > value) or (
+                max_value and max_value < value
+            ):
+                raise ValueError(
+                    "The default `value` of %(value)s "
+                    "must lie between the `min_value` of %(min)s "
+                    "and the `max_value` of %(max)s, inclusively."
+                    % {"value": value, "min": min_value, "max": max_value}
+                )
+
+
 
         element.number_input.label = label
 

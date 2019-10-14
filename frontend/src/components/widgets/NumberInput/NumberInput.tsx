@@ -68,7 +68,6 @@ class NumberInput extends React.PureComponent<Props, State> {
   private getStep = (): number => {
     const { element } = this.props
     const step = element.get("step")
-    const format = element.get("format")
 
     if (step) {
       return step
@@ -218,6 +217,13 @@ class NumberInput extends React.PureComponent<Props, State> {
             },
             EndEnhancer: {
               style: this.getEnhancersStyle(),
+            },
+            Input: {
+              props: {
+                step: element.get("step"),
+                min: element.get("min"),
+                max: element.get("max"),
+              },
             },
           }}
         />
