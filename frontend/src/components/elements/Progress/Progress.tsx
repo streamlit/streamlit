@@ -37,7 +37,7 @@ class Progress extends React.PureComponent<Props> {
     const value = element.get("value")
     const time = new Date().getTime()
 
-    // Make scrollbar stop acting weird when moving backwards or quickly.
+    // Make progress bar stop acting weird when moving backwards or quickly.
     const isMovingBackwards = value < this.lastValue
     const isMovingSuperFast = time - this.lastAnimatedTime < FAST_UPDATE_MS
     const className =
