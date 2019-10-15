@@ -1306,8 +1306,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            The audio data. Must include headers and any other bytes required
-            in the actual file.
+            If readable as a string, will be checked as a URL first.
+            Otherwise, treated as raw audio data.  Must include headers 
+            and any other bytes required in the actual file.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1328,11 +1329,18 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
+        from validators import url
         import streamlit.elements.generic_binary_proto as generic_binary_proto
 
-        generic_binary_proto.marshall(element.audio, data)
-        element.audio.format = format
         element.audio.start_time = start_time
+        element.audio.format = format
+
+        if isinstance(data, string_types) and url(data):
+            element.audio.data = data
+        else:
+            generic_binary_proto.marshall(element.audio, data)
+            #element.audio.format = format
+            #element.audio.start_time = start_time
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
