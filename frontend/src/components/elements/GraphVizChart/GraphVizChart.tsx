@@ -81,7 +81,7 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
           }
         })
 
-      const { width, height } = this.getChartDimensions()
+      const { height } = this.getChartDimensions()
       if (height > 0) {
         // Override or reset the graph height
         graph.height(height)
