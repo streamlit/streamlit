@@ -596,12 +596,7 @@ class Cache(dict):
 
     """
 
-    def __init__(self, persist=False, allow_output_mutation=False, **kwargs):
-        if "ignore_hash" in kwargs:
-            raise Exception(
-                "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
-            )
-
+    def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
 
