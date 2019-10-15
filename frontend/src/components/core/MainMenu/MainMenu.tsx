@@ -125,7 +125,7 @@ class MainMenu extends PureComponent<Props, State> {
               disabled={!this.props.isServerConnected()}
               onClick={this.props.shareCallback}
             >
-              Share report
+              Save a snapshot
             </DropdownItem>
           )}
 
