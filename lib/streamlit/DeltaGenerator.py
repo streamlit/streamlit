@@ -1371,10 +1371,15 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
         import streamlit.elements.generic_binary_proto as generic_binary_proto
+        from validators import url
 
-        generic_binary_proto.marshall(element.video, data)
         element.video.format = format
         element.video.start_time = start_time
+
+        if isinstance(data, string_types) and url(data):
+            element.video.url = data
+        else:
+            generic_binary_proto.marshall(element.video, data)
 
     @_with_element
     def button(self, element, label):
