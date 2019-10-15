@@ -78,7 +78,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    let { value } = this.state
+    const { value } = this.state
     const { element, widgetMgr } = this.props
     const defaultValue: number = element.get("default")
     const widgetId: string = element.get("id")
