@@ -43,6 +43,19 @@ class Video extends React.PureComponent<Props> {
 
   public render(): React.ReactNode {
     const { element, width } = this.props
+
+    if (element.get("url")) {
+      return (
+        <video
+          ref={this.videoRef}
+          controls
+          src={element.get("url")}
+          className="stVideo"
+          style={{ width }}
+        />
+      )
+    }
+
     const dataUrl =
       "data:" + element.get("format") + ";base64," + element.get("data")
     return (
