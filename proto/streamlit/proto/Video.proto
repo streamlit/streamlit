@@ -26,4 +26,7 @@ message Video {
 
   // The currentTime attribute of the HTML <video> tag's <source> subtag.
   int32 start_time = 3;
+
+  // A url pointing to a video file
+  string url = 4;
 }

@@ -26,4 +26,7 @@ message Audio {
 
   // The currentTime attribute of the HTML <audio> tag's <source> subtag.
   int32 start_time = 3;
+
+  // A url pointing to an audio file
+  string url = 4;
 }
