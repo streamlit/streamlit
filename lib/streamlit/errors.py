@@ -20,3 +20,7 @@ class NoStaticFiles(Exception):
 
 class S3NoCredentials(Exception):
     pass
+
+
+class DuplicateWidgetIDException(Exception):
+    pass

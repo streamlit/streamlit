@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.errors import DuplicateWidgetIDException
 
 setup_2_3_shims(globals())
 
@@ -123,7 +124,34 @@ def _with_element(method):
     return wrapped_method
 
 
-def _set_widget_id(widget_type, element):
+def _build_duplicate_widget_message(widget_type, user_key=None):
+    if user_key is not None:
+        message = textwrap.dedent(
+            """
+            There are multiple {widget_type} widgets that use the '{user_key}' key.
+            
+            To fix this, please make sure that the 'key' argument is unique for 
+            each st.{widget_type} you create.
+            """
+        )
+    else:
+        message = textwrap.dedent(
+            """
+            There are multiple st.{widget_type} widgets with the same generated key.
+            
+            (When a widget is created, it's assigned an internal key based on
+            its structure. Multiple widgets with an identical structure will
+            result in the same internal key, which causes this error.)
+            
+            To fix this, please pass a unique 'key' argument to 
+            st.{widget_type}().
+            """
+        )
+
+    return message.strip("\n").format(widget_type=widget_type, user_key=user_key)
+
+
+def _set_widget_id(widget_type, element, user_key=None):
     """Set the widget id.
 
     Parameters
@@ -132,14 +160,28 @@ def _set_widget_id(widget_type, element):
         The type of the widget as stored in proto.
     element : proto
         The proto of the element
+    user_key : str
+        Optional user-specified key to use for the widget ID.
+        If this is None, we'll generate an ID by hashing the element.
 
     """
-    widget_id = "%s" % hash(element.SerializeToString())
+    if user_key is not None:
+        widget_id = "%s-%s" % (widget_type, user_key)
+    else:
+        widget_id = "%s" % hash(element.SerializeToString())
+
+    ctx = get_report_ctx()
+    if ctx is not None:
+        if widget_id in ctx.widget_ids_this_run:
+            raise DuplicateWidgetIDException(
+                _build_duplicate_widget_message(widget_type, user_key)
+            )
+        ctx.widget_ids_this_run.add(widget_id)
     el = getattr(element, widget_type)
     el.id = widget_id
 
 
-def _get_widget_ui_value(widget_type, element):
+def _get_widget_ui_value(widget_type, element, user_key=None):
     """Get the widget ui_value from the report context.
     NOTE: This function should be called after the proto has been filled.
 
@@ -149,6 +191,9 @@ def _get_widget_ui_value(widget_type, element):
         The type of the widget as stored in proto.
     element : proto
         The proto of the element
+    user_key : str
+        Optional user-specified string to use as the widget ID.
+        If this is None, we'll generate an ID by hashing the element.
 
     Returns
     -------
@@ -158,7 +203,7 @@ def _get_widget_ui_value(widget_type, element):
         doesn't exist, None will be returned.
 
     """
-    _set_widget_id(widget_type, element)
+    _set_widget_id(widget_type, element, user_key)
     el = getattr(element, widget_type)
     ctx = get_report_ctx()
     ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
@@ -1371,13 +1416,16 @@ class DeltaGenerator(object):
         element.video.start_time = start_time
 
     @_with_element
-    def button(self, element, label):
+    def button(self, element, label, key=None):
         """Display a button widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this button is for.
+
+        key : str
+            An optional string to use as an ID for the button.
 
         Returns
         -------
@@ -1395,7 +1443,7 @@ class DeltaGenerator(object):
         element.button.label = label
         element.button.default = False
 
-        ui_value = _get_widget_ui_value("button", element)
+        ui_value = _get_widget_ui_value("button", element, user_key=key)
         current_value = ui_value if ui_value is not None else False
         return current_value
 

@@ -59,7 +59,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                 threading.current_thread(),
                 REPORT_CONTEXT_ATTR_NAME,
                 ReportContext(
-                    main_dg=main_dg, sidebar_dg=sidebar_dg, widgets=Widgets()
+                    main_dg=main_dg, sidebar_dg=sidebar_dg, widgets=Widgets(),
+                    widget_ids_this_run=set(),
                 ),
             )
 

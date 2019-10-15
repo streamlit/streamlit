@@ -23,12 +23,15 @@ LOGGER = get_logger(__name__)
 ReportContext = namedtuple(
     "ReportContext",
     [
-        # The main DeltaGenerator for the report
+        # (DeltaGenerator) The main DeltaGenerator for the report
         "main_dg",
-        # The sidebar DeltaGenerator for the report
+        # (DeltaGenerator) The sidebar DeltaGenerator for the report
         "sidebar_dg",
-        # The Widgets state object for the report
+        # (Widgets) The Widgets state object for the report
         "widgets",
+        # (set) The set of widget IDs that have been assigned in the current
+        # report run. This set is cleared at the start of each run.
+        "widget_ids_this_run",
     ],
 )
 
@@ -40,7 +43,7 @@ class ReportThread(threading.Thread):
 
     def __init__(self, main_dg, sidebar_dg, widgets, target=None, name=None):
         super(ReportThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets)
+        self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets, set())
 
 
 def add_report_ctx(thread):
