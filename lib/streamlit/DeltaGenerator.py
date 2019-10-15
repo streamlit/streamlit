@@ -1806,7 +1806,7 @@ class DeltaGenerator(object):
         self,
         element,
         label,
-        value=False,
+        value=NoValue(),
         min_value=None,
         max_value=None,
         step=None,
@@ -1820,6 +1820,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this input is for.
         value : int/float or None
             The value of this widget when it first renders.
+            default: 0
         min_value : int/float or None
             The minimum permitted value.
         max_value : int/float or None
@@ -1844,10 +1845,13 @@ class DeltaGenerator(object):
 
         """
 
+        value = 0 if isinstance(value, NoValue) else value
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
 
-        if value is not None:
+        if value is None:
+            raise ValueError("The value should either be an int/float")
+        else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
@@ -1906,12 +1910,8 @@ class DeltaGenerator(object):
                     % {"value": value, "min": min_value, "max": max_value}
                 )
 
-
-
         element.number_input.label = label
-
-        if value is not None:
-            element.number_input.default = value
+        element.number_input.default = value
 
         if min_value is not None:
             element.number_input.min = min_value

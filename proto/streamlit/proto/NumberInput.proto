@@ -21,10 +21,7 @@ syntax = "proto3";
 message NumberInput {
   string id = 1;
   string label = 2;
-
-  oneof optional_default {
-    float default = 3;
-  }
+  float default = 3;
 
   oneof optional_min {
     float min = 5;

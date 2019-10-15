@@ -53,26 +53,23 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
-  private valueIsInt = () => {
-    const { value } = this.state
-
-    return Number(value) % 1 === 0
-  }
+  private strIsInt = (value: string): boolean => Number(value) % 1 === 0
 
   private getValue = (): number => {
     const { value } = this.state
 
-    return this.valueIsInt() ? parseInt(value) : parseFloat(value)
+    return this.strIsInt(value) ? parseInt(value) : parseFloat(value)
   }
 
   private getStep = (): number => {
     const { element } = this.props
+    const { value } = this.state
     const step = element.get("step")
 
     if (step) {
       return step
     } else {
-      if (this.valueIsInt()) {
+      if (this.strIsInt(value)) {
         return 1
       } else {
         return 0.01
@@ -81,15 +78,18 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const { value } = this.state
+    let { value } = this.state
     const { element, widgetMgr } = this.props
+    const defaultValue: number = element.get("default")
     const widgetId: string = element.get("id")
     const format: string = element.get("format")
-    const formattedValue = format ? sprintf(format, value) : value
 
-    if (value === "") {
-      widgetMgr.setBoolValue(widgetId, false, source)
-    } else if (this.valueIsInt()) {
+    const valueToBeSaved = value === "" ? defaultValue.toString() : value
+    const formattedValue = format
+      ? sprintf(format, valueToBeSaved)
+      : valueToBeSaved
+
+    if (this.strIsInt(valueToBeSaved)) {
       widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
     } else {
       widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)

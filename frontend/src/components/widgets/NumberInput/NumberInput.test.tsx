@@ -72,9 +72,11 @@ describe("NumberInput", () => {
 
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       InputWrapper.props().onChange({
         target: {
+          // tslint:disable-next-line ban-ts-ignore
           // @ts-ignore
           value: 1,
         },
@@ -96,6 +98,7 @@ describe("NumberInput", () => {
 
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       InputWrapper.props().onKeyPress({
         key: "Enter",
@@ -114,6 +117,7 @@ describe("NumberInput", () => {
       })
       const wrapper = shallow(<NumberInput {...props} />)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(1)
     })
@@ -127,6 +131,7 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowUp",
@@ -147,6 +152,7 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
@@ -167,9 +173,11 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       const enhancer = shallow(InputWrapper.props().startEnhancer())
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       enhancer.props().onClick()
 
@@ -187,9 +195,11 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       const enhancer = shallow(InputWrapper.props().endEnhancer())
 
+      // tslint:disable-next-line ban-ts-ignore
       // @ts-ignore
       enhancer.props().onClick()
 
