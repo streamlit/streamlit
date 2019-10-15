@@ -25,6 +25,7 @@ except ImportError:
     # Python 3
     import importlib
 
+from streamlit import compatibility
 from streamlit import config
 from streamlit import util
 from streamlit.folder_black_list import FolderBlackList
@@ -107,11 +108,16 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
+        if compatibility.is_running_py3():
+            ErrorType = PermissionError
+        else:
+            ErrorType = OSError
+
         try:
             wm = WatchedModule(
                 watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
             )
-        except PermissionError:
+        except ErrorType:
             # If you don't have permission to read this file, don't even add it
             # to watchers.
             return
