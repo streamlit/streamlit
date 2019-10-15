@@ -1806,7 +1806,7 @@ class DeltaGenerator(object):
         self,
         element,
         label,
-        value=None,
+        value=False,
         min_value=None,
         max_value=None,
         step=None,

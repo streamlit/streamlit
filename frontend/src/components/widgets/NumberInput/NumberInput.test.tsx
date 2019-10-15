@@ -167,8 +167,10 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // @ts-ignore
       const enhancer = shallow(InputWrapper.props().startEnhancer())
 
+      // @ts-ignore
       enhancer.props().onClick()
 
       expect(wrapper.state("dirty")).toBe(true)
@@ -185,8 +187,10 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      // @ts-ignore
       const enhancer = shallow(InputWrapper.props().endEnhancer())
 
+      // @ts-ignore
       enhancer.props().onClick()
 
       expect(wrapper.state("dirty")).toBe(true)

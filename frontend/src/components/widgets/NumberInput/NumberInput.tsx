@@ -87,8 +87,9 @@ class NumberInput extends React.PureComponent<Props, State> {
     const format: string = element.get("format")
     const formattedValue = format ? sprintf(format, value) : value
 
-    debugger
-    if (this.valueIsInt()) {
+    if (value === "") {
+      widgetMgr.setBoolValue(widgetId, false, source)
+    } else if (this.valueIsInt()) {
       widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
     } else {
       widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
