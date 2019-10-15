@@ -1336,11 +1336,9 @@ class DeltaGenerator(object):
         element.audio.format = format
 
         if isinstance(data, string_types) and url(data):
-            element.audio.data = data
+            element.audio.url = data
         else:
             generic_binary_proto.marshall(element.audio, data)
-            #element.audio.format = format
-            #element.audio.start_time = start_time
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):

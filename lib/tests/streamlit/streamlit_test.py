@@ -126,6 +126,19 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
 
+        # test using a URL instead of data
+        some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+        st.audio(some_url)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.audio.data, some_url)
+
+        # Test that a non-URL string doesn't work
+        non_url = "blah"
+        st.audio(some_url)
+        with self.assertRaises(TypeError):
+            self.get_delta_from_queue().new_element)
+
     def test_st_audio_options(self):
         """Test st.audio with options."""
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
@@ -561,6 +574,19 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.video.data, "ESIzRFVm")
         self.assertEqual(el.video.format, "video/mp4")
+
+        # Test with an arbitrary URL in place of data
+        some_url = "https://all-free-download.com/free-footage/rain_132_download.html" 
+        st.video(some_url)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.video.data, some_url)
+        #TODO: test format?
+
+        # Test that a non-URL string doesn't work
+        non_url = "blah"
+        st.video(some_url)
+        el = self.get_delta_from_queue().new_element
+        #TODO: what happens here? 
 
     def test_st_video_options(self):
         """Test st.video with options."""
