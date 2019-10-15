@@ -46,10 +46,3 @@ h5.modal-title {
   line-height: 1.5;
   text-transform: none;
 }
-
-// This pushes everything after it to the right, so that our
-// Copy To Clipboard button is left-aligned
-.streamlit-dialog .modal-footer .push {
-  margin-left: auto;
-  margin-right: 0;
-}

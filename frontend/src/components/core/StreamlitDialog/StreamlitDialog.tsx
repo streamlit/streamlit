@@ -315,9 +315,10 @@ function uploadedDialog(props: UploadedProps): ReactElement {
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={props.url} onCopy={props.onClose}>
-          <Button outline>Copy to clipboard</Button>
+          <Button outline className="mr-auto">
+            Copy to clipboard
+          </Button>
         </CopyToClipboard>{" "}
-        <div className="push" />
         <Button
           outline
           onClick={() => {
