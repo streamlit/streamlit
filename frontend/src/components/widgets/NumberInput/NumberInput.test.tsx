@@ -16,13 +16,12 @@
  */
 
 import React from "react"
-import { shallow, mount } from "enzyme"
+import { shallow } from "enzyme"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "../../../lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
-import { wrap } from "vega-lite/build/src/log"
 
 jest.mock("../../../lib/WidgetStateManager")
 
