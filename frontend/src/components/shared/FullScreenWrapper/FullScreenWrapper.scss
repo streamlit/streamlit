@@ -17,7 +17,7 @@
 @import "src/assets/css/variables";
 
 .reportview-container .element-container {
-  .stFullScreenFrame--expanded {
+  .fullScreenFrame--expanded {
     position: fixed;
     top: 0;
     left: 0;
@@ -37,7 +37,7 @@
     }
   }
 
-  .stFullScreenFrame:hover {
+  .fullScreenFrame:hover {
     .overlayBtn {
       opacity: $overlayBtn-opacity-visible;
     }
@@ -50,7 +50,7 @@
 
 .streamlit-wide {
   .reportview-container .element-container {
-    .stFullScreenFrame--expanded {
+    .fullScreenFrame--expanded {
       .overlayBtn {
         top: 0.5rem;
         right: 1.25rem;

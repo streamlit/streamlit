@@ -17,10 +17,15 @@ from streamlit import util
 # The files in the folders below should always be blacklisted.
 DEFAULT_FOLDER_BLACKLIST = [
     "**/.*",
+    "**/anaconda",
     "**/anaconda2",
     "**/anaconda3",
+    "**/miniconda",
     "**/miniconda2",
     "**/miniconda3",
+    "**/venv",
+    "**/virtualenv",
+    "**/pyenv",
 ]
 
 

@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-message Video {
-  // The data in Base64 format.
-  string data = 1;
-
-  // The type attribute of the HTML <video> tag's <source> subtag.
-  // ex: "video/mp4"
-  string format = 2;
-
-  // The currentTime attribute of the HTML <video> tag's <source> subtag.
-  int32 start_time = 3;
-}
+export { default } from "./Progress"

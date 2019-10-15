@@ -104,7 +104,12 @@ def streamlit_write(path, binary=False):
     if binary:
         mode += "b"
     path = get_streamlit_file_path(path)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(path))
+    except Exception:
+        # Python 3 supports exist_ok=True which avoids the try/except,
+        # but Python 2 does not.
+        pass
     try:
         with open(path, mode) as handle:
             yield handle
@@ -252,6 +257,7 @@ def open_browser(url):
         #    browser even though 'start url' works from the command prompt.
         # Fun!
         import webbrowser
+
         webbrowser.open(url)
         return
 

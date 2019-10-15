@@ -122,6 +122,7 @@ class Text extends React.PureComponent<Props> {
               source={body}
               escapeHtml={!allowHTML}
               astPlugins={astPlugins}
+              renderers={renderers}
             />
           </div>
         )

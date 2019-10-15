@@ -298,22 +298,9 @@ We're sure you've got your own ideas. When you're done with this tutorial,
 check out all the widgets that Streamlit exposes in our [API
 reference](../api.md).
 
-## Share the app
-
-That's it, you've made it to the end. The last thing to do is share your
-findings. Locate the hamburger menu in the upper-right corner of the app
-and select **Share app**.
-
-```eval_rst
-.. warning::
-   This will not share the interactive version, just the static output.
-   Interactive sharing is in the works, and if you are interested in being in
-   the early beta, send an email to product@streamlit.io.
-```
-
 ## Let's put it all together
 
-So you've made it to the end. Here's the complete script for our interactive
+That's it, you've made it to the end. Here's the complete script for our interactive
 app.
 
 ```eval_rst

@@ -27,7 +27,7 @@ import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "https://streamlit.io/docs"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
-const TEAMS_URL = "https://streamlit.io/teams"
+const TEAMS_URL = "https://streamlit.io/forteams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 interface Props {

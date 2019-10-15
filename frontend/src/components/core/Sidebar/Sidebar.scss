@@ -1,7 +1,7 @@
 @import "src/assets/css/theme";
 
 .sidebar {
-  @media (max-width: 746px) {
+  @include media-breakpoint-down(md) {
     margin-left: 0;
     position: absolute;
     top: 0;
@@ -45,8 +45,6 @@
 
     @include media-breakpoint-down(md) {
       box-shadow: 0 0 2rem #a3a8b488;
-      background-color: $gray-100;
-      background-image: none;
       z-index: $z-index-sidebar-mobile;
     }
 
@@ -56,7 +54,7 @@
       right: 0.5rem;
       z-index: 1;
 
-      svg {
+      .open-iconic {
         fill: $black;
         opacity: 0.25;
       }
@@ -64,7 +62,7 @@
       &:hover {
         background: transparent;
 
-        svg {
+        .open-iconic {
           opacity: 1;
         }
       }
@@ -115,7 +113,7 @@
     transition: left $normal-animation-duration;
     transition-delay: $normal-animation-duration;
 
-    svg {
+    .open-iconic {
       fill: $black;
       opacity: 0.25;
 
@@ -129,7 +127,7 @@
       background-color: $gray-lightest;
       border-color: #1d2124;
 
-      svg {
+      .open-iconic {
         opacity: 1;
       }
     }

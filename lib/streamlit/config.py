@@ -364,7 +364,9 @@ _create_section("server", "Settings for the Streamlit server")
 
 _create_option(
     "server.folderWatchBlacklist",
-    description="""List of folders that should not be watched for changes.
+    description="""List of folders that should not be watched for changes. This
+    impacts both "Run on Save" and @st.cache.
+
     Relative paths will be taken as relative to the current working directory.
 
     Example: ['/home/user1/env', 'relative/path/to/folder']

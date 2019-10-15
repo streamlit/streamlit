@@ -50,6 +50,8 @@ class TextArea extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
+  private isFromMac = /Mac/i.test(navigator.platform)
+
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
@@ -70,28 +72,48 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === "Enter" && e.ctrlKey && this.state.dirty) {
+    const { key, ctrlKey } = e
+    const { dirty } = this.state
+
+    if (key === "Enter" && ctrlKey && dirty) {
+      this.setWidgetValue({ fromUi: true })
+    }
+  }
+
+  private onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    const { key, metaKey } = e
+    const { dirty } = this.state
+
+    if (key === "Enter" && metaKey && dirty) {
       this.setWidgetValue({ fromUi: true })
     }
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { element, disabled, width } = this.props
+    const { value, dirty } = this.state
+
+    const style = { width }
+    const label = element.get("label")
 
     return (
       <div className="Widget stTextArea" style={style}>
         <label>{label}</label>
         <UITextArea
-          value={this.state.value}
+          value={value}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
-          disabled={this.props.disabled}
+          onKeyDown={this.onKeyDown}
+          disabled={disabled}
         />
-        {this.state.dirty ? (
+        {dirty && !this.isFromMac && (
           <div className="instructions">Press Ctrl+Enter to apply</div>
-        ) : null}
+        )}
+
+        {dirty && this.isFromMac && (
+          <div className="instructions">Press ⌘+Enter to apply</div>
+        )}
       </div>
     )
   }

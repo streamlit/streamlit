@@ -12,18 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+@import "src/assets/css/variables";
 
-message Video {
-  // The data in Base64 format.
-  string data = 1;
+// Reset the progress bar to 0 without animating on report re-run.
+.reportview-container {
+  .without-transition .progress-bar {
+    transition: none;
+  }
 
-  // The type attribute of the HTML <video> tag's <source> subtag.
-  // ex: "video/mp4"
-  string format = 2;
+  .with-transition .progress-bar {
+    transition: width 0.1s linear;
+  }
 
-  // The currentTime attribute of the HTML <video> tag's <source> subtag.
-  int32 start_time = 3;
+  .stale-element .progress-bar {
+    background-color: transparent;
+  }
 }

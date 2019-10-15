@@ -36,7 +36,12 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { applyDelta, Elements, BlockElement } from "lib/DeltaParser"
+import {
+  applyDelta,
+  Elements,
+  BlockElement,
+  SimpleElement,
+} from "lib/DeltaParser"
 import {
   ForwardMsg,
   SessionEvent,
@@ -56,6 +61,7 @@ import {
   hashString,
   isEmbeddedInIFrame,
   makeElementWithInfoText,
+  flattenElements,
 } from "lib/utils"
 import { logError, logMessage } from "lib/log"
 
@@ -417,6 +423,19 @@ class App extends PureComponent<Props, State> {
           this.elementListBuffer = this.state.elements
         }
       )
+
+      // This step removes from the WidgetManager the state of those widgets
+      // that are not shown on the page.
+      if (this.elementListBuffer) {
+        const active_widget_ids = flattenElements(this.elementListBuffer.main)
+          .union(flattenElements(this.elementListBuffer.sidebar))
+          .map((e: SimpleElement) => {
+            const type = e.get("type")
+            return e.get(type).get("id") as string
+          })
+          .filter(id => id != null)
+        this.widgetMgr.clean(active_widget_ids)
+      }
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from

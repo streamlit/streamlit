@@ -126,6 +126,18 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
 
+    def test_st_audio_options(self):
+        """Test st.audio with options."""
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        st.audio(fake_audio_data, format="audio/mp3", start_time=10)
+
+        el = self.get_delta_from_queue().new_element
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.audio.data, "ESIzRFVm")
+        self.assertEqual(el.audio.format, "audio/mp3")
+        self.assertEqual(el.audio.start_time, 10)
+
     def test_st_balloons(self):
         """Test st.balloons."""
         with patch("random.randrange") as p:
@@ -549,6 +561,18 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.video.data, "ESIzRFVm")
         self.assertEqual(el.video.format, "video/mp4")
+
+    def test_st_video_options(self):
+        """Test st.video with options."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        st.video(fake_video_data, format="video/mp4", start_time=10)
+
+        el = self.get_delta_from_queue().new_element
+        # Manually base64 encoded payload above via
+        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
+        self.assertEqual(el.video.data, "ESIzRFVm")
+        self.assertEqual(el.video.format, "video/mp4")
+        self.assertEqual(el.video.start_time, 10)
 
     def test_st_warning(self):
         """Test st.warning."""
