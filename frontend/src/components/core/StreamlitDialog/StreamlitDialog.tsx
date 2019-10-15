@@ -309,7 +309,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
           <a href={props.url} target="_blank" rel="noopener noreferrer">
             {props.url}
           </a>
-        </pre>{" "}
+        </pre>
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={props.url} onCopy={props.onClose}>
