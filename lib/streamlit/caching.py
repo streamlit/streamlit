@@ -235,7 +235,7 @@ def _build_caching_func_error_message(persisted, func, caller_frame):
         {copy_code}
         ```
 
-        2. Add `ignore_hash=True` to the `@streamlit.cache` decorator for
+        2. Add `allow_output_mutation=True` to the `@streamlit.cache` decorator for
         `{name}`.  This is an escape hatch for advanced users who really know
         what they're doing.
 
@@ -282,7 +282,7 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
         1. *Preferred:* fix the code by removing the mutation. The simplest way
         to do this is to copy the cached value to a new variable, which you are
         allowed to mutate.
-        2. Add `ignore_hash=True` to the constructor of `streamlit.Cache`. This
+        2. Add `allow_output_mutation=True` to the constructor of `streamlit.Cache`. This
         is an escape hatch for advanced users who really know what they're
         doing.
 
@@ -317,11 +317,11 @@ def _build_args_mutated_message(func):
     return message.format(name=func.__name__)
 
 
-def _read_from_mem_cache(key, ignore_hash):
+def _read_from_mem_cache(key, allow_output_mutation):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
-        if ignore_hash or get_hash(entry.value) == entry.hash:
+        if allow_output_mutation or get_hash(entry.value) == entry.hash:
             LOGGER.debug("Memory cache HIT: %s", type(entry.value))
             return entry.value, entry.args_mutated
         else:
@@ -332,10 +332,10 @@ def _read_from_mem_cache(key, ignore_hash):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, ignore_hash, args_mutated):
+def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated):
     _mem_cache[key] = CacheEntry(
         value=value,
-        hash=None if ignore_hash else get_hash(value),
+        hash=None if allow_output_mutation else get_hash(value),
         args_mutated=args_mutated,
     )
 
@@ -374,7 +374,7 @@ def _write_to_disk_cache(key, value, args_mutated):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(key, persisted, ignore_hash, func_or_code, message_opts):
+def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, message_opts):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -382,7 +382,7 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, message_opts):
     or rerun the code.
     """
     try:
-        return _read_from_mem_cache(key, ignore_hash)
+        return _read_from_mem_cache(key, allow_output_mutation)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
             if inspect.isroutine(func_or_code):
@@ -397,13 +397,13 @@ def _read_from_cache(key, persisted, ignore_hash, func_or_code, message_opts):
 
         if persisted:
             value, args_mutated = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, ignore_hash, args_mutated)
+            _write_to_mem_cache(key, value, allow_output_mutation, args_mutated)
             return value, args_mutated
         raise e
 
 
-def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
-    _write_to_mem_cache(key, value, ignore_hash, args_mutated)
+def _write_to_cache(key, value, persist, allow_output_mutation, args_mutated):
+    _write_to_mem_cache(key, value, allow_output_mutation, args_mutated)
     if persist:
         _write_to_disk_cache(key, value, args_mutated)
 
@@ -411,9 +411,10 @@ def _write_to_cache(key, value, persist, ignore_hash, args_mutated):
 def cache(
     func=None,
     persist=False,
-    ignore_hash=False,
+    allow_output_mutation=False,
     show_spinner=True,
     suppress_st_warning=False,
+    **kwargs
 ):
     """Function decorator to memoize function executions.
 
@@ -427,7 +428,7 @@ def cache(
     persist : boolean
         Whether to persist the cache on disk.
 
-    ignore_hash : boolean
+    allow_output_mutation : boolean
         Disable hashing return values. These hash values are otherwise
         used to validate that return values are not mutated.
 
@@ -464,21 +465,27 @@ def cache(
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
 
-    To disable hashing return values, set the `ignore_hash` parameter to `True`:
+    To disable hashing return values, set the `allow_output_mutation` parameter to `True`:
 
-    >>> @st.cache(ignore_hash=True)
+    >>> @st.cache(allow_output_mutation=True)
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
 
     """
+    # Help users migrate to the new kwarg
+    if "ignore_hash" in kwargs:
+        raise Exception(
+            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
+        )
+
     # Support passing the params via function decorator, e.g.
-    # @st.cache(persist=True, ignore_hash=True)
+    # @st.cache(persist=True, allow_output_mutation=True)
     if func is None:
         return lambda f: cache(
             func=f,
             persist=persist,
-            ignore_hash=ignore_hash,
+            allow_output_mutation=allow_output_mutation,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
         )
@@ -519,7 +526,7 @@ def cache(
             caller_frame = inspect.currentframe().f_back
             try:
                 return_value, args_mutated = _read_from_cache(
-                    key, persist, ignore_hash, func, caller_frame
+                    key, persist, allow_output_mutation, func, caller_frame
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 with _calling_cached_function():
@@ -533,7 +540,9 @@ def cache(
                 args_hasher_after.update([args, kwargs])
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
-                _write_to_cache(key, return_value, persist, ignore_hash, args_mutated)
+                _write_to_cache(
+                    key, return_value, persist, allow_output_mutation, args_mutated
+                )
 
             if args_mutated:
                 # If we're inside a _nested_ cached function, our
@@ -587,9 +596,14 @@ class Cache(dict):
 
     """
 
-    def __init__(self, persist=False, ignore_hash=False):
+    def __init__(self, persist=False, allow_output_mutation=False, **kwargs):
+        if "ignore_hash" in kwargs:
+            raise Exception(
+                "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
+            )
+
         self._persist = persist
-        self._ignore_hash = ignore_hash
+        self._allow_output_mutation = allow_output_mutation
 
         dict.__init__(self)
 
@@ -643,20 +657,20 @@ class Cache(dict):
             value, _ = _read_from_cache(
                 key,
                 self._persist,
-                self._ignore_hash,
+                self._allow_output_mutation,
                 code,
                 [caller_lineno + 1, caller_lineno + len(lines)],
             )
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
-            if self._ignore_hash and not self._persist:
+            if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(key, self, False, True, None)
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(key, self, self._persist, self._ignore_hash, None)
+            _write_to_cache(key, self, self._persist, self._allow_output_mutation, None)
 
         # Return False so that we have control over the execution.
         return False

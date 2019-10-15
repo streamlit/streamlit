@@ -175,7 +175,7 @@ def _hashing_error_message(start):
         following:
 
         * **Preferred:** modify your code to avoid using this type of object.
-        * Or add the argument `ignore_hash=True` to the `st.cache` decorator.
+        * Or add the argument `allow_output_mutation=True` to the `st.cache` decorator.
     """
         % {"start": start}
     ).strip("\n")
