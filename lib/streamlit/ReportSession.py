@@ -37,6 +37,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
@@ -512,13 +513,24 @@ class ReportSession(object):
 
     @tornado.gen.coroutine
     def handle_save_request(self, ws):
-        """Save serialized version of report deltas to the cloud."""
+        """Save serialized version of report deltas to the cloud.
 
+        "Progress" ForwardMsgs will be sent to the client during the upload.
+        These messages are sent "out of band" - that is, they don't get
+        enqueued into the ReportQueue (because they're not part of the report).
+        Instead, they're written directly to the report's WebSocket.
+
+        Parameters
+        ----------
+        ws : _BrowserWebSocketHandler
+            The report's websocket handler.
+
+        """
         @tornado.gen.coroutine
         def progress(percent):
             progress_msg = ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
 
         # Indicate that the save is starting.
         try:
@@ -529,15 +541,16 @@ class ReportSession(object):
             # Indicate that the save is done.
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
+            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
 
         except Exception as e:
             # Horrible hack to show something if something breaks.
             err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield ws.write_message(progress_msg.SerializeToString(), binary=True)
-            raise e
+            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
+
+            LOGGER.warning("Failed to save report:", exc_info=e)
 
     @tornado.gen.coroutine
     def _save_running_report(self):
@@ -550,10 +563,10 @@ class ReportSession(object):
         raise tornado.gen.Return(url)
 
     @tornado.gen.coroutine
-    def _save_final_report(self, progress=None):
+    def _save_final_report(self, progress_coroutine=None):
         files = self._report.serialize_final_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._report.report_id, files, progress
+            self._report.report_id, files, progress_coroutine
         )
 
         if config.get_option("server.liveSave"):
