@@ -1812,6 +1812,38 @@ class DeltaGenerator(object):
         step=None,
         format=None
     ):
+        """Display a single-line numeric input widget.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this input is for.
+        value : int/float or None
+            The value of this widget when it first renders.
+        min_value : int/float or None
+            The minimum permitted value.
+        max_value : int/float or None
+            The maximum permitted value.
+        step : int/float or None
+            The stepping interval.
+            Defaults to 1 if the value is an int, 0.01 otherwise.
+            If the value is not specified, the format parameter will be used.
+        format : str or None
+            Printf/Python format string.
+
+
+        Returns
+        -------
+        int/float
+            The current value of the numeric input widget.
+
+        Example
+        -------
+        >>> number = st.number_input('Insert a number')
+        >>> st.write('The current number is ', number)
+
+        """
+
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
 
@@ -1827,7 +1859,7 @@ class DeltaGenerator(object):
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
-        print(args)
+
         int_args = all(map(lambda a: (
             isinstance(a, int) or isinstance(a, type(None))), args))
         float_args = all(map(lambda a: (
